@@ -746,7 +746,8 @@ define amdgpu_ps i48 @s_orn2_v3i16(<3 x i16> inreg %src0, <3 x i16> inreg %src1)
 ;
 ; GFX11-TRUE16-LABEL: s_orn2_v3i16:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], -1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, -1, s0
 ; GFX11-TRUE16-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
@@ -820,7 +821,8 @@ define amdgpu_ps i48 @s_orn2_v3i16_commute(<3 x i16> inreg %src0, <3 x i16> inre
 ;
 ; GFX11-TRUE16-LABEL: s_orn2_v3i16_commute:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], -1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, -1, s0
 ; GFX11-TRUE16-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
@@ -909,7 +911,8 @@ define amdgpu_ps { i48, i48 } @s_orn2_v3i16_multi_use(<3 x i16> inreg %src0, <3 
 ;
 ; GFX11-TRUE16-LABEL: s_orn2_v3i16_multi_use:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], -1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, -1, s0
 ; GFX11-TRUE16-NEXT:    s_xor_b64 s[4:5], s[4:5], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_or_b64 s[0:1], s[2:3], s[4:5]
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s4, 16
@@ -978,14 +981,33 @@ define <3 x i16> @v_orn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: v_orn2_v3i16:
-; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -11, v3
-; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX10PLUS-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: v_orn2_v3i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX10-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: v_orn2_v3i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, -11, s0
+; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX11-TRUE16-NEXT:    v_xor_b32_e32 v3, s0, v3
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_orn2_v3i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_xor_b32_e32 v2, -1, v2
+; GFX11-FAKE16-NEXT:    v_xor_b32_e32 v3, -11, v3
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -11>
   %or = or <3 x i16> %src0, %not.src1
   ret <3 x i16> %or

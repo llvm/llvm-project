@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefixes=GFX9,GFX900 %s
 ; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck -check-prefixes=GFX9,GFX90APLUS,GFX90A %s
 ; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck -check-prefixes=GFX9,GFX90APLUS,GFX942 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck -check-prefixes=GFX9,GFX11 %s
 
 
 define void @v_shuffle_v3i16_v4i16__u_u_u(ptr addrspace(1) inreg %ptr) {
@@ -51,6 +52,18 @@ define void @v_shuffle_v3i16_v4i16__0_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -93,6 +106,17 @@ define void @v_shuffle_v3i16_v4i16__1_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -132,6 +156,16 @@ define void @v_shuffle_v3i16_v4i16__2_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 poison, i32 poison>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -174,6 +208,17 @@ define void @v_shuffle_v3i16_v4i16__3_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 poison, i32 poison>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -227,6 +272,17 @@ define void @v_shuffle_v3i16_v4i16__5_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 poison, i32 poison>
@@ -267,6 +323,16 @@ define void @v_shuffle_v3i16_v4i16__6_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 poison, i32 poison>
@@ -310,6 +376,17 @@ define void @v_shuffle_v3i16_v4i16__7_u_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 poison>
@@ -363,6 +440,20 @@ define void @v_shuffle_v3i16_v4i16__7_0_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    v_perm_b32 v1, v0, v2, 0x5040302
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 poison>
@@ -419,6 +510,20 @@ define void @v_shuffle_v3i16_v4i16__7_1_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 poison>
@@ -472,6 +577,20 @@ define void @v_shuffle_v3i16_v4i16__7_2_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 poison>
@@ -528,6 +647,20 @@ define void @v_shuffle_v3i16_v4i16__7_3_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 poison>
@@ -571,6 +704,17 @@ define void @v_shuffle_v3i16_v4i16__7_4_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_perm_b32 v1, v0, v1, 0x5040302
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 poison>
@@ -617,6 +761,17 @@ define void @v_shuffle_v3i16_v4i16__7_5_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 poison>
@@ -660,6 +815,17 @@ define void @v_shuffle_v3i16_v4i16__7_6_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_perm_b32 v0, v1, v1, 0x5040302
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 poison>
@@ -706,6 +872,17 @@ define void @v_shuffle_v3i16_v4i16__7_7_u(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 poison>
@@ -765,6 +942,22 @@ define void @v_shuffle_v3i16_v4i16__7_7_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 0>
@@ -824,6 +1017,22 @@ define void @v_shuffle_v3i16_v4i16__7_7_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 1>
@@ -883,6 +1092,22 @@ define void @v_shuffle_v3i16_v4i16__7_7_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 2>
@@ -942,6 +1167,22 @@ define void @v_shuffle_v3i16_v4i16__7_7_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 3>
@@ -991,6 +1232,19 @@ define void @v_shuffle_v3i16_v4i16__7_7_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 4>
@@ -1040,6 +1294,19 @@ define void @v_shuffle_v3i16_v4i16__7_7_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 5>
@@ -1089,6 +1356,19 @@ define void @v_shuffle_v3i16_v4i16__7_7_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v1, 0x7060302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 6>
@@ -1141,6 +1421,19 @@ define void @v_shuffle_v3i16_v4i16__7_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 7>
@@ -1188,6 +1481,19 @@ define void @v_shuffle_v3i16_v4i16__u_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 0, i32 0>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -1236,6 +1542,19 @@ define void @v_shuffle_v3i16_v4i16__0_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> zeroinitializer
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -1282,6 +1601,19 @@ define void @v_shuffle_v3i16_v4i16__1_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v0, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 0, i32 0>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -1330,6 +1662,19 @@ define void @v_shuffle_v3i16_v4i16__2_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 0, i32 0>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -1376,6 +1721,19 @@ define void @v_shuffle_v3i16_v4i16__3_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 0, i32 0>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -1422,6 +1780,19 @@ define void @v_shuffle_v3i16_v4i16__4_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 0, i32 0>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -1477,6 +1848,22 @@ define void @v_shuffle_v3i16_v4i16__5_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 0, i32 0>
@@ -1536,6 +1923,22 @@ define void @v_shuffle_v3i16_v4i16__6_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v2.h, v0.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 0, i32 0>
@@ -1592,6 +1995,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 0>
@@ -1648,6 +2067,22 @@ define void @v_shuffle_v3i16_v4i16__7_u_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 0>
@@ -1707,6 +2142,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v2, 0x7060302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 0>
@@ -1763,6 +2214,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v2, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 0>
@@ -1822,6 +2289,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 0>
@@ -1878,6 +2361,22 @@ define void @v_shuffle_v3i16_v4i16__7_4_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v0, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 0>
@@ -1937,6 +2436,22 @@ define void @v_shuffle_v3i16_v4i16__7_5_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 0>
@@ -1993,6 +2508,22 @@ define void @v_shuffle_v3i16_v4i16__7_6_0(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v1, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 0>
@@ -2036,6 +2567,18 @@ define void @v_shuffle_v3i16_v4i16__u_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 1, i32 1>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2078,6 +2621,18 @@ define void @v_shuffle_v3i16_v4i16__0_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 1, i32 1>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2129,6 +2684,19 @@ define void @v_shuffle_v3i16_v4i16__1_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 1, i32 1>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2180,6 +2748,19 @@ define void @v_shuffle_v3i16_v4i16__2_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 1, i32 1>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2231,6 +2812,19 @@ define void @v_shuffle_v3i16_v4i16__3_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 1, i32 1>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2273,6 +2867,18 @@ define void @v_shuffle_v3i16_v4i16__4_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 1, i32 1>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2334,6 +2940,22 @@ define void @v_shuffle_v3i16_v4i16__5_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 1, i32 1>
@@ -2396,6 +3018,22 @@ define void @v_shuffle_v3i16_v4i16__6_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v2.h, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 1, i32 1>
@@ -2458,6 +3096,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 1>
@@ -2514,6 +3168,22 @@ define void @v_shuffle_v3i16_v4i16__7_u_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 1>
@@ -2570,6 +3240,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 1>
@@ -2626,6 +3312,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v2, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 1>
@@ -2685,6 +3387,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 1>
@@ -2741,6 +3459,22 @@ define void @v_shuffle_v3i16_v4i16__7_4_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v0, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 1>
@@ -2800,6 +3534,22 @@ define void @v_shuffle_v3i16_v4i16__7_5_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 1>
@@ -2856,6 +3606,22 @@ define void @v_shuffle_v3i16_v4i16__7_6_1(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v1, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 1>
@@ -2903,6 +3669,19 @@ define void @v_shuffle_v3i16_v4i16__u_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 2, i32 2>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2951,6 +3730,19 @@ define void @v_shuffle_v3i16_v4i16__0_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 2, i32 2>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -2997,6 +3789,19 @@ define void @v_shuffle_v3i16_v4i16__1_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 2, i32 2>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3045,6 +3850,19 @@ define void @v_shuffle_v3i16_v4i16__2_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 2, i32 2>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3091,6 +3909,19 @@ define void @v_shuffle_v3i16_v4i16__3_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 2, i32 2>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3137,6 +3968,19 @@ define void @v_shuffle_v3i16_v4i16__4_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 2, i32 2>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3192,6 +4036,22 @@ define void @v_shuffle_v3i16_v4i16__5_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 2, i32 2>
@@ -3251,6 +4111,22 @@ define void @v_shuffle_v3i16_v4i16__6_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 2, i32 2>
@@ -3307,6 +4183,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 2>
@@ -3363,6 +4255,22 @@ define void @v_shuffle_v3i16_v4i16__7_u_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 2>
@@ -3419,6 +4327,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v2, v0, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 2>
@@ -3478,6 +4402,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 2>
@@ -3537,6 +4477,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x7060302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 2>
@@ -3593,6 +4549,22 @@ define void @v_shuffle_v3i16_v4i16__7_4_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v0, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 2>
@@ -3652,6 +4624,22 @@ define void @v_shuffle_v3i16_v4i16__7_5_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 2>
@@ -3708,6 +4696,22 @@ define void @v_shuffle_v3i16_v4i16__7_6_2(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v1, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 2>
@@ -3751,6 +4755,18 @@ define void @v_shuffle_v3i16_v4i16__u_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 3, i32 3>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3802,6 +4818,19 @@ define void @v_shuffle_v3i16_v4i16__0_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 3, i32 3>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3853,6 +4882,19 @@ define void @v_shuffle_v3i16_v4i16__1_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 3, i32 3>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3895,6 +4937,18 @@ define void @v_shuffle_v3i16_v4i16__2_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 3, i32 3>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3946,6 +5000,19 @@ define void @v_shuffle_v3i16_v4i16__3_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 3, i32 3>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -3988,6 +5055,18 @@ define void @v_shuffle_v3i16_v4i16__4_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 3, i32 3>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -4049,6 +5128,22 @@ define void @v_shuffle_v3i16_v4i16__5_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 3, i32 3>
@@ -4111,6 +5206,22 @@ define void @v_shuffle_v3i16_v4i16__6_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.h, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 3, i32 3>
@@ -4173,6 +5284,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 3>
@@ -4229,6 +5356,22 @@ define void @v_shuffle_v3i16_v4i16__7_u_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 3>
@@ -4285,6 +5428,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v2, v0, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 3>
@@ -4344,6 +5503,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 3>
@@ -4400,6 +5575,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 3>
@@ -4456,6 +5647,22 @@ define void @v_shuffle_v3i16_v4i16__7_4_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v0, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 3>
@@ -4515,6 +5722,22 @@ define void @v_shuffle_v3i16_v4i16__7_5_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 3>
@@ -4571,6 +5794,22 @@ define void @v_shuffle_v3i16_v4i16__7_6_3(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v1, v1, 0x5040302
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 3>
@@ -4625,6 +5864,18 @@ define void @v_shuffle_v3i16_v4i16__0_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 4, i32 4>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -4667,6 +5918,17 @@ define void @v_shuffle_v3i16_v4i16__1_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 4, i32 4>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -4706,6 +5968,16 @@ define void @v_shuffle_v3i16_v4i16__2_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 4, i32 4>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -4748,6 +6020,17 @@ define void @v_shuffle_v3i16_v4i16__3_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 4, i32 4>
   store <3 x i16> %shuf, ptr addrspace(1) %ptr, align 8
@@ -4805,6 +6088,19 @@ define void @v_shuffle_v3i16_v4i16__5_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v0, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 4, i32 4>
@@ -4854,6 +6150,19 @@ define void @v_shuffle_v3i16_v4i16__6_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 4, i32 4>
@@ -4901,6 +6210,19 @@ define void @v_shuffle_v3i16_v4i16__7_4_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 4>
@@ -4948,6 +6270,19 @@ define void @v_shuffle_v3i16_v4i16__7_u_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 4>
@@ -5004,6 +6339,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v2, v0, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 4>
@@ -5062,6 +6413,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 4>
@@ -5118,6 +6485,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 4>
@@ -5176,6 +6559,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 4>
@@ -5225,6 +6624,19 @@ define void @v_shuffle_v3i16_v4i16__7_5_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v1, 0x7060302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 4>
@@ -5272,6 +6684,19 @@ define void @v_shuffle_v3i16_v4i16__7_6_4(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v1, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 4>
@@ -5315,6 +6740,18 @@ define void @v_shuffle_v3i16_v4i16__u_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 poison, i32 5, i32 5>
@@ -5377,6 +6814,22 @@ define void @v_shuffle_v3i16_v4i16__0_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 0, i32 5, i32 5>
@@ -5439,6 +6892,22 @@ define void @v_shuffle_v3i16_v4i16__1_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 1, i32 5, i32 5>
@@ -5501,6 +6970,22 @@ define void @v_shuffle_v3i16_v4i16__2_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 2, i32 5, i32 5>
@@ -5563,6 +7048,22 @@ define void @v_shuffle_v3i16_v4i16__3_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 3, i32 5, i32 5>
@@ -5606,6 +7107,18 @@ define void @v_shuffle_v3i16_v4i16__4_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 4, i32 5, i32 5>
@@ -5658,6 +7171,19 @@ define void @v_shuffle_v3i16_v4i16__5_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 5, i32 5>
@@ -5710,6 +7236,19 @@ define void @v_shuffle_v3i16_v4i16__6_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 5, i32 5>
@@ -5762,6 +7301,19 @@ define void @v_shuffle_v3i16_v4i16__7_5_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 5>
@@ -5809,6 +7361,19 @@ define void @v_shuffle_v3i16_v4i16__7_u_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 5>
@@ -5865,6 +7430,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v2, v0, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 5>
@@ -5923,6 +7504,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 5>
@@ -5979,6 +7576,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 5>
@@ -6037,6 +7650,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 5>
@@ -6084,6 +7713,19 @@ define void @v_shuffle_v3i16_v4i16__7_4_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 5>
@@ -6131,6 +7773,19 @@ define void @v_shuffle_v3i16_v4i16__7_6_5(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v1, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v0, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 5>
@@ -6178,6 +7833,19 @@ define void @v_shuffle_v3i16_v4i16__u_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 poison, i32 6, i32 6>
@@ -6236,6 +7904,22 @@ define void @v_shuffle_v3i16_v4i16__0_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v2.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 0, i32 6, i32 6>
@@ -6292,6 +7976,22 @@ define void @v_shuffle_v3i16_v4i16__1_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 1, i32 6, i32 6>
@@ -6350,6 +8050,22 @@ define void @v_shuffle_v3i16_v4i16__2_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v3.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 2, i32 6, i32 6>
@@ -6406,6 +8122,22 @@ define void @v_shuffle_v3i16_v4i16__3_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v3, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 3, i32 6, i32 6>
@@ -6455,6 +8187,19 @@ define void @v_shuffle_v3i16_v4i16__4_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 4, i32 6, i32 6>
@@ -6502,6 +8247,19 @@ define void @v_shuffle_v3i16_v4i16__5_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 6, i32 6>
@@ -6551,6 +8309,19 @@ define void @v_shuffle_v3i16_v4i16__6_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v1.l
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 6, i32 6>
@@ -6598,6 +8369,19 @@ define void @v_shuffle_v3i16_v4i16__7_6_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 6>
@@ -6645,6 +8429,19 @@ define void @v_shuffle_v3i16_v4i16__7_u_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 6>
@@ -6701,6 +8498,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 6>
@@ -6759,6 +8572,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 6>
@@ -6815,6 +8644,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 6>
@@ -6873,6 +8718,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 6>
@@ -6920,6 +8781,19 @@ define void @v_shuffle_v3i16_v4i16__7_4_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v0, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 6>
@@ -6969,6 +8843,19 @@ define void @v_shuffle_v3i16_v4i16__7_5_6(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 6>
@@ -7012,6 +8899,18 @@ define void @v_shuffle_v3i16_v4i16__u_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__u_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 poison, i32 7, i32 7>
@@ -7074,6 +8973,22 @@ define void @v_shuffle_v3i16_v4i16__0_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__0_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 0, i32 7, i32 7>
@@ -7136,6 +9051,22 @@ define void @v_shuffle_v3i16_v4i16__1_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__1_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v2, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 1, i32 7, i32 7>
@@ -7198,6 +9129,22 @@ define void @v_shuffle_v3i16_v4i16__2_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__2_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 2, i32 7, i32 7>
@@ -7260,6 +9207,22 @@ define void @v_shuffle_v3i16_v4i16__3_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__3_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 3, i32 7, i32 7>
@@ -7312,6 +9275,19 @@ define void @v_shuffle_v3i16_v4i16__4_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__4_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.h, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 4, i32 7, i32 7>
@@ -7364,6 +9340,19 @@ define void @v_shuffle_v3i16_v4i16__5_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__5_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 7, i32 7>
@@ -7407,6 +9396,18 @@ define void @v_shuffle_v3i16_v4i16__6_7_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v1, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__6_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 7, i32 7>
@@ -7456,6 +9457,19 @@ define void @v_shuffle_v3i16_v4i16__7_u_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v0, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_u_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 7>
@@ -7515,6 +9529,22 @@ define void @v_shuffle_v3i16_v4i16__7_0_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_0_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v1, v0, v2, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 7>
@@ -7577,6 +9607,22 @@ define void @v_shuffle_v3i16_v4i16__7_1_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_1_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[1:2]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v3, v2, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 7>
@@ -7636,6 +9682,22 @@ define void @v_shuffle_v3i16_v4i16__7_2_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v4, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_2_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v3, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 7>
@@ -7698,6 +9760,22 @@ define void @v_shuffle_v3i16_v4i16__7_3_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v4, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_3_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v4, v3, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v4, v1, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 7>
@@ -7747,6 +9825,19 @@ define void @v_shuffle_v3i16_v4i16__7_4_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v3, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_4_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v3, v0, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v3, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 7>
@@ -7799,6 +9890,19 @@ define void @v_shuffle_v3i16_v4i16__7_5_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_short v2, v1, s[0:1] offset:4
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_5_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.h
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 7>
@@ -7848,6 +9952,19 @@ define void @v_shuffle_v3i16_v4i16__7_6_7(ptr addrspace(1) inreg %ptr) {
 ; GFX942-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shuffle_v3i16_v4i16__7_6_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def v[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    v_perm_b32 v0, v1, v1, 0x5040302
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_d16_hi_b16 v2, v1, s[0:1] offset:4
+; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=v"()
   %vec1 = call <4 x i16> asm "; def $0", "=v"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 7>
@@ -7904,6 +10021,17 @@ define void @s_shuffle_v3i16_v4i16__0_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 poison, i32 poison>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -7947,6 +10075,18 @@ define void @s_shuffle_v3i16_v4i16__1_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -7990,6 +10130,18 @@ define void @s_shuffle_v3i16_v4i16__2_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 poison, i32 poison>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -8033,6 +10185,18 @@ define void @s_shuffle_v3i16_v4i16__3_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 poison, i32 poison>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -8091,6 +10255,18 @@ define void @s_shuffle_v3i16_v4i16__5_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 poison, i32 poison>
@@ -8135,6 +10311,18 @@ define void @s_shuffle_v3i16_v4i16__6_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 poison, i32 poison>
@@ -8179,6 +10367,18 @@ define void @s_shuffle_v3i16_v4i16__7_u_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 poison>
@@ -8235,6 +10435,21 @@ define void @s_shuffle_v3i16_v4i16__7_0_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 poison>
@@ -8288,6 +10503,21 @@ define void @s_shuffle_v3i16_v4i16__7_1_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 poison>
@@ -8344,6 +10574,21 @@ define void @s_shuffle_v3i16_v4i16__7_2_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 poison>
@@ -8397,6 +10642,21 @@ define void @s_shuffle_v3i16_v4i16__7_3_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 poison>
@@ -8444,6 +10704,18 @@ define void @s_shuffle_v3i16_v4i16__7_4_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 poison>
@@ -8488,6 +10760,18 @@ define void @s_shuffle_v3i16_v4i16__7_5_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 poison>
@@ -8535,6 +10819,18 @@ define void @s_shuffle_v3i16_v4i16__7_6_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 poison>
@@ -8579,6 +10875,18 @@ define void @s_shuffle_v3i16_v4i16__7_7_u() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_u:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 poison>
@@ -8635,6 +10943,22 @@ define void @s_shuffle_v3i16_v4i16__7_7_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 0>
@@ -8691,6 +11015,22 @@ define void @s_shuffle_v3i16_v4i16__7_7_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 1>
@@ -8744,6 +11084,21 @@ define void @s_shuffle_v3i16_v4i16__7_7_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 2>
@@ -8800,6 +11155,22 @@ define void @s_shuffle_v3i16_v4i16__7_7_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 3>
@@ -8847,6 +11218,19 @@ define void @s_shuffle_v3i16_v4i16__7_7_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 4>
@@ -8894,6 +11278,19 @@ define void @s_shuffle_v3i16_v4i16__7_7_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 5>
@@ -8961,6 +11358,19 @@ define void @s_shuffle_v3i16_v4i16__7_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 7, i32 7>
@@ -9008,6 +11418,19 @@ define void @s_shuffle_v3i16_v4i16__u_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 0, i32 0>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9054,6 +11477,19 @@ define void @s_shuffle_v3i16_v4i16__0_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> zeroinitializer
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9103,6 +11539,19 @@ define void @s_shuffle_v3i16_v4i16__1_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 0, i32 0>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9149,6 +11598,19 @@ define void @s_shuffle_v3i16_v4i16__2_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 0, i32 0>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9198,6 +11660,19 @@ define void @s_shuffle_v3i16_v4i16__3_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 0, i32 0>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9244,6 +11719,19 @@ define void @s_shuffle_v3i16_v4i16__4_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__4_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 0, i32 0>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9302,6 +11790,22 @@ define void @s_shuffle_v3i16_v4i16__5_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s2, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 0, i32 0>
@@ -9358,6 +11862,22 @@ define void @s_shuffle_v3i16_v4i16__6_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 0, i32 0>
@@ -9417,6 +11937,22 @@ define void @s_shuffle_v3i16_v4i16__7_0_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 0>
@@ -9473,6 +12009,22 @@ define void @s_shuffle_v3i16_v4i16__7_u_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 0>
@@ -9529,6 +12081,22 @@ define void @s_shuffle_v3i16_v4i16__7_1_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 0>
@@ -9588,6 +12156,22 @@ define void @s_shuffle_v3i16_v4i16__7_2_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 0>
@@ -9644,6 +12228,22 @@ define void @s_shuffle_v3i16_v4i16__7_3_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 0>
@@ -9703,6 +12303,22 @@ define void @s_shuffle_v3i16_v4i16__7_4_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 0>
@@ -9759,6 +12375,22 @@ define void @s_shuffle_v3i16_v4i16__7_5_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 0>
@@ -9818,6 +12450,22 @@ define void @s_shuffle_v3i16_v4i16__7_6_0() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 0>
@@ -9827,17 +12475,41 @@ define void @s_shuffle_v3i16_v4i16__7_6_0() {
 }
 
 define void @s_shuffle_v3i16_v4i16__u_1_1() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__u_1_1:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshr_b32 s9, s8, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__u_1_1:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__u_1_1:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s8, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 1, i32 1>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9846,17 +12518,41 @@ define void @s_shuffle_v3i16_v4i16__u_1_1() {
 }
 
 define void @s_shuffle_v3i16_v4i16__0_1_1() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__0_1_1:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshr_b32 s9, s8, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__0_1_1:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__0_1_1:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s8, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 1, i32 1>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9903,6 +12599,19 @@ define void @s_shuffle_v3i16_v4i16__1_1_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 1, i32 1>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9949,6 +12658,19 @@ define void @s_shuffle_v3i16_v4i16__2_1_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 1, i32 1>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -9995,6 +12717,19 @@ define void @s_shuffle_v3i16_v4i16__3_1_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 1, i32 1>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -10003,17 +12738,41 @@ define void @s_shuffle_v3i16_v4i16__3_1_1() {
 }
 
 define void @s_shuffle_v3i16_v4i16__4_1_1() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__4_1_1:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshr_b32 s9, s8, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__4_1_1:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__4_1_1:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__4_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s8, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 1, i32 1>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -10069,6 +12828,22 @@ define void @s_shuffle_v3i16_v4i16__5_1_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s2, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 1, i32 1>
@@ -10125,6 +12900,22 @@ define void @s_shuffle_v3i16_v4i16__6_1_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 1, i32 1>
@@ -10181,6 +12972,22 @@ define void @s_shuffle_v3i16_v4i16__7_1_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 1>
@@ -10237,6 +13044,22 @@ define void @s_shuffle_v3i16_v4i16__7_u_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 1>
@@ -10296,6 +13119,22 @@ define void @s_shuffle_v3i16_v4i16__7_0_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 1>
@@ -10355,6 +13194,22 @@ define void @s_shuffle_v3i16_v4i16__7_2_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 1>
@@ -10411,6 +13266,22 @@ define void @s_shuffle_v3i16_v4i16__7_3_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 1>
@@ -10470,6 +13341,22 @@ define void @s_shuffle_v3i16_v4i16__7_4_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 1>
@@ -10526,6 +13413,22 @@ define void @s_shuffle_v3i16_v4i16__7_5_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 1>
@@ -10585,6 +13488,22 @@ define void @s_shuffle_v3i16_v4i16__7_6_1() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 1>
@@ -10594,17 +13513,41 @@ define void @s_shuffle_v3i16_v4i16__7_6_1() {
 }
 
 define void @s_shuffle_v3i16_v4i16__u_2_2() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__u_2_2:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshl_b32 s8, s9, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__u_2_2:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshl_b32 s8, s9, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__u_2_2:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshl_b32 s8, s9, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 2, i32 2>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -10670,6 +13613,18 @@ define void @s_shuffle_v3i16_v4i16__1_2_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s8, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 2, i32 2>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -10735,6 +13690,18 @@ define void @s_shuffle_v3i16_v4i16__3_2_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s9, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 2, i32 2>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -10743,17 +13710,41 @@ define void @s_shuffle_v3i16_v4i16__3_2_2() {
 }
 
 define void @s_shuffle_v3i16_v4i16__4_2_2() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__4_2_2:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshl_b32 s8, s9, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__4_2_2:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshl_b32 s8, s9, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__4_2_2:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshl_b32 s8, s9, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__4_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 2, i32 2>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -10809,6 +13800,21 @@ define void @s_shuffle_v3i16_v4i16__5_2_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 2, i32 2>
@@ -10862,6 +13868,21 @@ define void @s_shuffle_v3i16_v4i16__6_2_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s1, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 2, i32 2>
@@ -10918,6 +13939,21 @@ define void @s_shuffle_v3i16_v4i16__7_2_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 2>
@@ -10971,6 +14007,21 @@ define void @s_shuffle_v3i16_v4i16__7_u_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 2>
@@ -11027,6 +14078,21 @@ define void @s_shuffle_v3i16_v4i16__7_0_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s8
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 2>
@@ -11080,6 +14146,21 @@ define void @s_shuffle_v3i16_v4i16__7_1_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s8
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 2>
@@ -11133,6 +14214,21 @@ define void @s_shuffle_v3i16_v4i16__7_3_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 2>
@@ -11189,6 +14285,21 @@ define void @s_shuffle_v3i16_v4i16__7_4_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 2>
@@ -11242,6 +14353,21 @@ define void @s_shuffle_v3i16_v4i16__7_5_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 2>
@@ -11298,6 +14424,21 @@ define void @s_shuffle_v3i16_v4i16__7_6_2() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 2>
@@ -11345,6 +14486,19 @@ define void @s_shuffle_v3i16_v4i16__u_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 poison, i32 3, i32 3>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -11391,6 +14545,19 @@ define void @s_shuffle_v3i16_v4i16__0_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s0, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 3, i32 3>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -11437,6 +14604,19 @@ define void @s_shuffle_v3i16_v4i16__1_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s0, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 3, i32 3>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -11483,6 +14663,19 @@ define void @s_shuffle_v3i16_v4i16__2_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 3, i32 3>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -11529,6 +14722,19 @@ define void @s_shuffle_v3i16_v4i16__3_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 3, i32 3>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -11575,6 +14781,19 @@ define void @s_shuffle_v3i16_v4i16__4_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__4_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 4, i32 3, i32 3>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -11630,6 +14849,22 @@ define void @s_shuffle_v3i16_v4i16__5_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s2, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 3, i32 3>
@@ -11686,6 +14921,22 @@ define void @s_shuffle_v3i16_v4i16__6_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 3, i32 3>
@@ -11742,6 +14993,22 @@ define void @s_shuffle_v3i16_v4i16__7_3_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 3>
@@ -11798,6 +15065,22 @@ define void @s_shuffle_v3i16_v4i16__7_u_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 3>
@@ -11857,6 +15140,22 @@ define void @s_shuffle_v3i16_v4i16__7_0_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 3>
@@ -11913,6 +15212,22 @@ define void @s_shuffle_v3i16_v4i16__7_1_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 3>
@@ -11972,6 +15287,22 @@ define void @s_shuffle_v3i16_v4i16__7_2_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 3>
@@ -12031,6 +15362,22 @@ define void @s_shuffle_v3i16_v4i16__7_4_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 3>
@@ -12087,6 +15434,22 @@ define void @s_shuffle_v3i16_v4i16__7_5_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 3>
@@ -12146,6 +15509,22 @@ define void @s_shuffle_v3i16_v4i16__7_6_3() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 3>
@@ -12203,6 +15582,17 @@ define void @s_shuffle_v3i16_v4i16__0_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 0, i32 4, i32 4>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -12246,6 +15636,18 @@ define void @s_shuffle_v3i16_v4i16__1_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 1, i32 4, i32 4>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -12289,6 +15691,18 @@ define void @s_shuffle_v3i16_v4i16__2_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 2, i32 4, i32 4>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -12332,6 +15746,18 @@ define void @s_shuffle_v3i16_v4i16__3_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> poison, <3 x i32> <i32 3, i32 4, i32 4>
   %extend3 = shufflevector <3 x i16> %shuf, <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -12396,6 +15822,19 @@ define void @s_shuffle_v3i16_v4i16__5_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 4, i32 4>
@@ -12443,6 +15882,19 @@ define void @s_shuffle_v3i16_v4i16__6_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 4, i32 4>
@@ -12493,6 +15945,19 @@ define void @s_shuffle_v3i16_v4i16__7_4_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 4>
@@ -12540,6 +16005,19 @@ define void @s_shuffle_v3i16_v4i16__7_u_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 4>
@@ -12599,6 +16077,22 @@ define void @s_shuffle_v3i16_v4i16__7_0_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 4>
@@ -12655,6 +16149,22 @@ define void @s_shuffle_v3i16_v4i16__7_1_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 4>
@@ -12714,6 +16224,22 @@ define void @s_shuffle_v3i16_v4i16__7_2_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 4>
@@ -12770,6 +16296,22 @@ define void @s_shuffle_v3i16_v4i16__7_3_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 4>
@@ -12817,6 +16359,19 @@ define void @s_shuffle_v3i16_v4i16__7_5_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 4>
@@ -12867,6 +16422,19 @@ define void @s_shuffle_v3i16_v4i16__7_6_4() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 4>
@@ -12876,17 +16444,41 @@ define void @s_shuffle_v3i16_v4i16__7_6_4() {
 }
 
 define void @s_shuffle_v3i16_v4i16__u_5_5() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__u_5_5:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshr_b32 s9, s8, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__u_5_5:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__u_5_5:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s8, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 poison, i32 5, i32 5>
@@ -12943,6 +16535,22 @@ define void @s_shuffle_v3i16_v4i16__0_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s0, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 0, i32 5, i32 5>
@@ -12999,6 +16607,22 @@ define void @s_shuffle_v3i16_v4i16__1_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s0, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 1, i32 5, i32 5>
@@ -13055,6 +16679,22 @@ define void @s_shuffle_v3i16_v4i16__2_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s1, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 2, i32 5, i32 5>
@@ -13111,6 +16751,22 @@ define void @s_shuffle_v3i16_v4i16__3_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s2
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 3, i32 5, i32 5>
@@ -13120,17 +16776,41 @@ define void @s_shuffle_v3i16_v4i16__3_5_5() {
 }
 
 define void @s_shuffle_v3i16_v4i16__4_5_5() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__4_5_5:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshr_b32 s9, s8, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__4_5_5:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__4_5_5:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshr_b32 s9, s8, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__4_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s8, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 4, i32 5, i32 5>
@@ -13178,6 +16858,19 @@ define void @s_shuffle_v3i16_v4i16__5_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s0, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 5, i32 5>
@@ -13225,6 +16918,19 @@ define void @s_shuffle_v3i16_v4i16__6_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 5, i32 5>
@@ -13272,6 +16978,19 @@ define void @s_shuffle_v3i16_v4i16__7_5_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 5>
@@ -13319,6 +17038,19 @@ define void @s_shuffle_v3i16_v4i16__7_u_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 5>
@@ -13378,6 +17110,22 @@ define void @s_shuffle_v3i16_v4i16__7_0_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 5>
@@ -13434,6 +17182,22 @@ define void @s_shuffle_v3i16_v4i16__7_1_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 5>
@@ -13493,6 +17257,22 @@ define void @s_shuffle_v3i16_v4i16__7_2_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 5>
@@ -13549,6 +17329,22 @@ define void @s_shuffle_v3i16_v4i16__7_3_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s2, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 5>
@@ -13599,6 +17395,19 @@ define void @s_shuffle_v3i16_v4i16__7_4_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 5>
@@ -13649,6 +17458,19 @@ define void @s_shuffle_v3i16_v4i16__7_6_5() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s0, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 5>
@@ -13658,17 +17480,41 @@ define void @s_shuffle_v3i16_v4i16__7_6_5() {
 }
 
 define void @s_shuffle_v3i16_v4i16__u_6_6() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__u_6_6:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshl_b32 s8, s9, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__u_6_6:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshl_b32 s8, s9, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__u_6_6:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshl_b32 s8, s9, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 poison, i32 6, i32 6>
@@ -13722,6 +17568,21 @@ define void @s_shuffle_v3i16_v4i16__0_6_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s0, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 0, i32 6, i32 6>
@@ -13778,6 +17639,21 @@ define void @s_shuffle_v3i16_v4i16__1_6_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s0, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 1, i32 6, i32 6>
@@ -13831,6 +17707,21 @@ define void @s_shuffle_v3i16_v4i16__2_6_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_ll_b32_b16 s8, s1, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 2, i32 6, i32 6>
@@ -13887,6 +17778,21 @@ define void @s_shuffle_v3i16_v4i16__3_6_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 3, i32 6, i32 6>
@@ -13954,6 +17860,18 @@ define void @s_shuffle_v3i16_v4i16__5_6_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s8, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 6, i32 6>
@@ -14021,6 +17939,18 @@ define void @s_shuffle_v3i16_v4i16__7_6_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s9, s9
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 6>
@@ -14030,17 +17960,41 @@ define void @s_shuffle_v3i16_v4i16__7_6_6() {
 }
 
 define void @s_shuffle_v3i16_v4i16__7_u_6() {
-; GFX9-LABEL: s_shuffle_v3i16_v4i16__7_u_6:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; def s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_lshr_b32 s8, s9, 16
-; GFX9-NEXT:    ;;#ASMSTART
-; GFX9-NEXT:    ; use s[8:9]
-; GFX9-NEXT:    ;;#ASMEND
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: s_shuffle_v3i16_v4i16__7_u_6:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s8, s9, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; use s[8:9]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX90APLUS-LABEL: s_shuffle_v3i16_v4i16__7_u_6:
+; GFX90APLUS:       ; %bb.0:
+; GFX90APLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; def s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_lshr_b32 s8, s9, 16
+; GFX90APLUS-NEXT:    ;;#ASMSTART
+; GFX90APLUS-NEXT:    ; use s[8:9]
+; GFX90APLUS-NEXT:    ;;#ASMEND
+; GFX90APLUS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s9, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 6>
@@ -14097,6 +18051,21 @@ define void @s_shuffle_v3i16_v4i16__7_0_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s9, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 6>
@@ -14150,6 +18119,21 @@ define void @s_shuffle_v3i16_v4i16__7_1_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s9, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 6>
@@ -14206,6 +18190,21 @@ define void @s_shuffle_v3i16_v4i16__7_2_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s9, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 6>
@@ -14259,6 +18258,21 @@ define void @s_shuffle_v3i16_v4i16__7_3_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s9, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 6>
@@ -14306,6 +18320,18 @@ define void @s_shuffle_v3i16_v4i16__7_4_6() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_6:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s9, s8
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 6>
@@ -14373,6 +18399,19 @@ define void @s_shuffle_v3i16_v4i16__u_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__u_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 poison, i32 7, i32 7>
@@ -14429,6 +18468,22 @@ define void @s_shuffle_v3i16_v4i16__0_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__0_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s0, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 0, i32 7, i32 7>
@@ -14485,6 +18540,22 @@ define void @s_shuffle_v3i16_v4i16__1_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__1_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s0, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 1, i32 7, i32 7>
@@ -14541,6 +18612,22 @@ define void @s_shuffle_v3i16_v4i16__2_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__2_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s1, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 2, i32 7, i32 7>
@@ -14597,6 +18684,22 @@ define void @s_shuffle_v3i16_v4i16__3_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__3_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s3
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 3, i32 7, i32 7>
@@ -14644,6 +18747,19 @@ define void @s_shuffle_v3i16_v4i16__4_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__4_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_lh_b32_b16 s8, s0, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 4, i32 7, i32 7>
@@ -14691,6 +18807,19 @@ define void @s_shuffle_v3i16_v4i16__5_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__5_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s0, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 5, i32 7, i32 7>
@@ -14738,6 +18867,19 @@ define void @s_shuffle_v3i16_v4i16__6_7_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__6_7_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_mov_b32 s8, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 6, i32 7, i32 7>
@@ -14785,6 +18927,20 @@ define void @s_shuffle_v3i16_v4i16__7_u_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_u_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b32 s9, s8
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 poison, i32 7>
@@ -14841,6 +18997,22 @@ define void @s_shuffle_v3i16_v4i16__7_0_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_0_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 0, i32 7>
@@ -14897,6 +19069,22 @@ define void @s_shuffle_v3i16_v4i16__7_1_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_1_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 1, i32 7>
@@ -14953,6 +19141,22 @@ define void @s_shuffle_v3i16_v4i16__7_2_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_2_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 2, i32 7>
@@ -15009,6 +19213,22 @@ define void @s_shuffle_v3i16_v4i16__7_3_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_3_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[2:3]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s3, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s3, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 3, i32 7>
@@ -15056,6 +19276,19 @@ define void @s_shuffle_v3i16_v4i16__7_4_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_4_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 4, i32 7>
@@ -15103,6 +19336,19 @@ define void @s_shuffle_v3i16_v4i16__7_5_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_5_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hh_b32_b16 s8, s1, s0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 5, i32 7>
@@ -15150,6 +19396,19 @@ define void @s_shuffle_v3i16_v4i16__7_6_7() {
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_shuffle_v3i16_v4i16__7_6_7:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; def s[0:1]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_pack_hl_b32_b16 s9, s1, s0
+; GFX11-NEXT:    s_pack_hl_b32_b16 s8, s1, s1
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s[8:9]
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = call <4 x i16> asm "; def $0", "=s"()
   %vec1 = call <4 x i16> asm "; def $0", "=s"()
   %shuf = shufflevector <4 x i16> %vec0, <4 x i16> %vec1, <3 x i32> <i32 7, i32 6, i32 7>
@@ -15157,5 +19416,3 @@ define void @s_shuffle_v3i16_v4i16__7_6_7() {
   call void asm sideeffect "; use $0", "{s[8:9]}"(<4 x i16> %extend3)
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX90APLUS: {{.*}}

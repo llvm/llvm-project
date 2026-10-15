@@ -1268,27 +1268,27 @@ define <8 x i1> @vector_f32_ole() {
 ; SDAG-GFX1150-LABEL: vector_f32_ole:
 ; SDAG-GFX1150:       ; %bb.0: ; %entry
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v4, 16 :: v_dual_mov_b32 v5, 0
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 16 :: v_dual_mov_b32 v1, 0
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0
 ; SDAG-GFX1150-NEXT:    s_clause 0x1
-; SDAG-GFX1150-NEXT:    global_load_b128 v[0:3], v[0:1], off
-; SDAG-GFX1150-NEXT:    global_load_b128 v[4:7], v[4:5], off
+; SDAG-GFX1150-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; SDAG-GFX1150-NEXT:    global_load_b128 v[0:3], v[2:3], off
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(1)
-; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v3
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v4
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v2
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v6
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v5
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v4
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v3
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v0
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v6
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v2
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v7
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
@@ -1341,34 +1341,34 @@ define <8 x i1> @vector_f32_ole() {
 ; SDAG-GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v4, 16 :: v_dual_mov_b32 v5, 0
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v0, 16 :: v_dual_mov_b32 v1, 0
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0
 ; SDAG-GFX1200-NEXT:    s_clause 0x1
-; SDAG-GFX1200-NEXT:    global_load_b128 v[0:3], v[0:1], off
-; SDAG-GFX1200-NEXT:    global_load_b128 v[4:7], v[4:5], off
+; SDAG-GFX1200-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; SDAG-GFX1200-NEXT:    global_load_b128 v[0:3], v[2:3], off
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x1
-; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v3
+; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v6
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x0
-; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v4
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v2
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v5
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v4
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x0
+; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v3
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v1
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v0
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v6
+; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v2
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_ge_f32_e32 vcc_lo, 0, v7
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
@@ -1434,12 +1434,12 @@ define <4 x i1> @vector_f32_ogt() {
 ; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; SDAG-GFX1150-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-GFX1150-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v1
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v0
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v2
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v0
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v1
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v3
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
@@ -1477,15 +1477,15 @@ define <4 x i1> @vector_f32_ogt() {
 ; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; SDAG-GFX1200-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x0
-; SDAG-GFX1200-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v1
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v0
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v2
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v0
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v1
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v3
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
@@ -1528,97 +1528,94 @@ define <32 x i1> @vector_f32_ueq() {
 ; SDAG-GFX1150-LABEL: vector_f32_ueq:
 ; SDAG-GFX1150:       ; %bb.0: ; %entry
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 48 :: v_dual_mov_b32 v1, 0
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v4, 64 :: v_dual_mov_b32 v5, 0
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v8, 32 :: v_dual_mov_b32 v9, 0
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0x70 :: v_dual_mov_b32 v1, 0
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v2, 0x60 :: v_dual_mov_b32 v3, 0
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v4, 0x50 :: v_dual_mov_b32 v5, 0
 ; SDAG-GFX1150-NEXT:    s_clause 0x1
-; SDAG-GFX1150-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; SDAG-GFX1150-NEXT:    global_load_b128 v[28:31], v[0:1], off
+; SDAG-GFX1150-NEXT:    global_load_b128 v[0:3], v[2:3], off
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v8, 64 :: v_dual_mov_b32 v9, 0
 ; SDAG-GFX1150-NEXT:    global_load_b128 v[4:7], v[4:5], off
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v12, 0x50 :: v_dual_mov_b32 v13, 0
-; SDAG-GFX1150-NEXT:    s_clause 0x1
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v12, 48 :: v_dual_mov_b32 v13, 0
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v16, 32 :: v_dual_mov_b32 v17, 0
 ; SDAG-GFX1150-NEXT:    global_load_b128 v[8:11], v[8:9], off
-; SDAG-GFX1150-NEXT:    global_load_b128 v[20:23], v[12:13], off
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v12, 16 :: v_dual_mov_b32 v13, 0
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v14, 0x60 :: v_dual_mov_b32 v15, 0
-; SDAG-GFX1150-NEXT:    s_clause 0x1
-; SDAG-GFX1150-NEXT:    global_load_b128 v[27:30], v[12:13], off
-; SDAG-GFX1150-NEXT:    global_load_b128 v[31:34], v[14:15], off
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v12, 0 :: v_dual_mov_b32 v13, 0
-; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v14, 0x70 :: v_dual_mov_b32 v15, 0
-; SDAG-GFX1150-NEXT:    s_clause 0x1
-; SDAG-GFX1150-NEXT:    global_load_b128 v[35:38], v[12:13], off
-; SDAG-GFX1150-NEXT:    global_load_b128 v[48:51], v[14:15], off
+; SDAG-GFX1150-NEXT:    global_load_b128 v[12:15], v[12:13], off
+; SDAG-GFX1150-NEXT:    global_load_b128 v[32:35], v[16:17], off
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v16, 16 :: v_dual_mov_b32 v17, 0
+; SDAG-GFX1150-NEXT:    global_load_b128 v[36:39], v[16:17], off
+; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v16, 0 :: v_dual_mov_b32 v17, 0
+; SDAG-GFX1150-NEXT:    global_load_b128 v[48:51], v[16:17], off
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(7)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v3
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(6)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v4
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v2
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v5
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v1
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v6
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v7
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v19, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(5)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v11
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(4)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v20
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v10
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v21
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v9
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v22
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v8
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v23
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v23, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(3)
 ; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v30
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v31
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v24, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v30, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v29
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v32
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v25, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v28
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v33
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v26, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v27
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v34
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v27, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(1)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v38
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v48
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v28, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v37
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v49
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v29, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v36
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v28
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v28, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(6)
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v3
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v27, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v2
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v26, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v1
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v25, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v24, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(5)
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v7
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v23, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v6
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v5
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v4
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(4)
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v11
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v19, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v10
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v9
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v8
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(3)
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v15
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v14
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v13
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v12
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v35
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v34
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v33
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v32
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(1)
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v39
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v38
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v37
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v36
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v51
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v49
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v48
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v50
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v30, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v51
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v31
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v31, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1773,128 +1770,125 @@ define <32 x i1> @vector_f32_ueq() {
 ; SDAG-GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v0, 48 :: v_dual_mov_b32 v1, 0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v4, 64 :: v_dual_mov_b32 v5, 0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v8, 32 :: v_dual_mov_b32 v9, 0
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v0, 0x70 :: v_dual_mov_b32 v1, 0
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v2, 0x60 :: v_dual_mov_b32 v3, 0
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v4, 0x50 :: v_dual_mov_b32 v5, 0
 ; SDAG-GFX1200-NEXT:    s_clause 0x1
-; SDAG-GFX1200-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; SDAG-GFX1200-NEXT:    global_load_b128 v[28:31], v[0:1], off
+; SDAG-GFX1200-NEXT:    global_load_b128 v[0:3], v[2:3], off
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v8, 64 :: v_dual_mov_b32 v9, 0
 ; SDAG-GFX1200-NEXT:    global_load_b128 v[4:7], v[4:5], off
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v12, 0x50 :: v_dual_mov_b32 v13, 0
-; SDAG-GFX1200-NEXT:    s_clause 0x1
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v12, 48 :: v_dual_mov_b32 v13, 0
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v16, 32 :: v_dual_mov_b32 v17, 0
 ; SDAG-GFX1200-NEXT:    global_load_b128 v[8:11], v[8:9], off
-; SDAG-GFX1200-NEXT:    global_load_b128 v[20:23], v[12:13], off
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v12, 16 :: v_dual_mov_b32 v13, 0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v14, 0x60 :: v_dual_mov_b32 v15, 0
-; SDAG-GFX1200-NEXT:    s_clause 0x1
-; SDAG-GFX1200-NEXT:    global_load_b128 v[27:30], v[12:13], off
-; SDAG-GFX1200-NEXT:    global_load_b128 v[31:34], v[14:15], off
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v12, 0 :: v_dual_mov_b32 v13, 0
-; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v14, 0x70 :: v_dual_mov_b32 v15, 0
-; SDAG-GFX1200-NEXT:    s_clause 0x1
-; SDAG-GFX1200-NEXT:    global_load_b128 v[35:38], v[12:13], off
-; SDAG-GFX1200-NEXT:    global_load_b128 v[48:51], v[14:15], off
+; SDAG-GFX1200-NEXT:    global_load_b128 v[12:15], v[12:13], off
+; SDAG-GFX1200-NEXT:    global_load_b128 v[32:35], v[16:17], off
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v16, 16 :: v_dual_mov_b32 v17, 0
+; SDAG-GFX1200-NEXT:    global_load_b128 v[36:39], v[16:17], off
+; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v16, 0 :: v_dual_mov_b32 v17, 0
+; SDAG-GFX1200-NEXT:    global_load_b128 v[48:51], v[16:17], off
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x7
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v3
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x6
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v4
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v2
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v5
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v1
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v6
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v7
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v19, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x5
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v11
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x4
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v20
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v10
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v21
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v9
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v22
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v8
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v23
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v23, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x3
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v30
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x2
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v31
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v24, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v30, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v29
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v32
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v25, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v29, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v28
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v33
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v26, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v27
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v34
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v28, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x6
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v3
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v27, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v2
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v26, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v1
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v25, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v24, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x5
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v7
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v23, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v6
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v22, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v5
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v21, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v4
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v20, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x4
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v11
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v19, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v10
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v9
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v17, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v8
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v16, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x3
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v15
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v15, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v14
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v13
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v13, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v12
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v12, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x2
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v35
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v11, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v34
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v33
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v32
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x1
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v39
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v38
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x0
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v48
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v28, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v37
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v49
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v29, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v36
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x0
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v51
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v49
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v35
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v48
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v50
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v30, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v51
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v31
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v31, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    s_setpc_b64 s[30:31]
@@ -2071,12 +2065,12 @@ define <4 x i1> @vector_f32_ugt() {
 ; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; SDAG-GFX1150-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-GFX1150-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v1
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; SDAG-GFX1150-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v0
-; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v2
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v0
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; SDAG-GFX1150-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v1
+; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v3
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
@@ -2114,15 +2108,15 @@ define <4 x i1> @vector_f32_ugt() {
 ; SDAG-GFX1200-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; SDAG-GFX1200-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt 0x0
-; SDAG-GFX1200-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v1
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; SDAG-GFX1200-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v0
-; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
-; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v2
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v0
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; SDAG-GFX1200-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v1
+; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
+; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v3
 ; SDAG-GFX1200-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
