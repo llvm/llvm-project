@@ -27356,13 +27356,13 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     return std::nullopt;
   // The same conflict when the node with the real element is built first: a
   // non-schedulable copyable element of this node whose scalar is already
-  // vectorized in another node of the block would be reused from that node's
-  // vector, which may be emitted after this node.
+  // vectorized in another node of the block, or belongs to a split node, would
+  // be reused from that node's vector, which may be emitted after this node.
   if (HasCopyables &&
       any_of(make_isa_range<Instruction>(VL), [&](Instruction *I) {
         return I->getParent() == BB && !isa<PHINode>(I) &&
                S.isCopyableElement(I) && S.isNonSchedulable(I) &&
-               SLP->isVectorized(I);
+               (SLP->isVectorized(I) || !SLP->getSplitTreeEntries(I).empty());
       }))
     return std::nullopt;
   if (DoesNotRequireScheduling) {
