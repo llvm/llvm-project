@@ -316,36 +316,36 @@ while.end:                                        ; preds = %while.body, %entry
 ; the input. Make sure that the new trip-count induction variable we introduce
 ; is wide enough so that the preheader and / or decrement don't underflow.
 ;
-; FIXME(@cofibrant): This test is currently broken (see GH issue #230595). In
-; particular, [[TCPHI]] is an i4 when it needs to be at least an i7 to
-; represent the maximum population count as a signed value or i6 to represent
-; it unsigned. The effect is that, for a popcount of N:
+; FIXME: This test is currently broken (see GH issue #230595). In particular,
+; [[TCPHI]] is an i4 when it needs to be at least an i7 to represent the
+; maximum population count as a signed value or i6 to represent it unsigned.
+; The effect is that, for a popcount of N:
 ; - If icmp eq (trunc i4, N), 0, we skip the loop entirely;
 ; - If icmp slt (trunc i4, N), 0, we run the loop exactly once;
 ; - Otherwise, we run the loop trunc i4, N times.
-define i4 @popcount_truncated(i32 noundef %x) {
+define i4 @popcount_truncated(i32 %x) {
 ; CHECK-LABEL: define i4 @popcount_truncated(
-; CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i4 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[HEADER_PREHEADER:.*]]
-; CHECK:       [[HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[HEADER:.*]]
-; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[TCPHI:%.*]] = phi i4 [ [[TMP1]], %[[HEADER_PREHEADER]] ], [ [[TCDEC:%.*]], %[[HEADER]] ]
-; CHECK-NEXT:    [[X_PHI:%.*]] = phi i32 [ [[X_NEXT:%.*]], %[[HEADER]] ], [ [[X]], %[[HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[COUNT:%.*]] = phi i4 [ [[COUNT_NEXT:%.*]], %[[HEADER]] ], [ 0, %[[HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[X_DEC:%.*]] = sub i32 [[X_PHI]], 1
-; CHECK-NEXT:    [[X_NEXT]] = and i32 [[X_PHI]], [[X_DEC]]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[TCPHI:%.*]] = phi i4 [ [[TMP1]], %[[LOOP_PREHEADER]] ], [ [[TCDEC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[X_NEXT:%.*]], %[[LOOP]] ], [ [[X]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i4 [ [[COUNT_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[X_DEC:%.*]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[X_NEXT]] = and i32 [[IV]], [[X_DEC]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[COUNT_NEXT]] = add i4 [[COUNT]], 1
 ; CHECK-NEXT:    [[TCDEC]] = sub nsw i4 [[TCPHI]], 1
-; CHECK-NEXT:    [[X_NEXT_ZERO:%.*]] = icmp sle i4 [[TCDEC]], 0
-; CHECK-NEXT:    br i1 [[X_NEXT_ZERO]], label %[[EXIT_LOOPEXIT:.*]], label %[[HEADER]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp sle i4 [[TCDEC]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i4 [ [[TMP1]], %[[HEADER]] ]
+; CHECK-NEXT:    [[COUNT_NEXT_LCSSA:%.*]] = phi i4 [ [[TMP1]], %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[COUNT_PHI:%.*]] = phi i4 [ 0, %[[ENTRY]] ], [ [[COUNT_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -353,20 +353,20 @@ define i4 @popcount_truncated(i32 noundef %x) {
 ;
 entry:
   %x.zero = icmp eq i32 %x, 0
-  br i1 %x.zero, label %exit, label %header
+  br i1 %x.zero, label %exit, label %loop
 
-header:
-  %x.phi = phi i32 [ %x, %entry ], [ %x.next, %header ]
-  %count = phi i4 [ 0, %entry ], [ %count.next, %header ]
-  %x.dec = sub i32 %x.phi, 1
-  %x.next = and i32 %x.phi, %x.dec
+loop:
+  %iv = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+  %count = phi i4 [ 0, %entry ], [ %count.next, %loop ]
+  %x.dec = sub i32 %iv, 1
+  %x.next = and i32 %iv, %x.dec
   call void @foo()
   %count.next = add i4 %count, 1
-  %x.next.zero = icmp eq i32 %x.next, 0
-  br i1 %x.next.zero, label %exit, label %header
+  %ec = icmp eq i32 %x.next, 0
+  br i1 %ec, label %exit, label %loop
 
 exit:
-  %count.phi = phi i4 [ 0, %entry ], [ %count.next, %header ]
+  %count.phi = phi i4 [ 0, %entry ], [ %count.next, %loop ]
   ret i4 %count.phi
 }
 
