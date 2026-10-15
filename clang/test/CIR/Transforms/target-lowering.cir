@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --cir-target-lowering | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "amdgcn-amd-amdhsa"} {
+  cir.global external lang_address_space(offload_global) @g = #cir.int<0> : !s32i align(4)
+
+  cir.func @f(%arg0: !cir.ptr<!s32i, lang_address_space(offload_local)>) {
+    %0 = cir.alloca "p" align(4) init : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>, lang_address_space(offload_private)>
+    cir.store %arg0, %0 : !cir.ptr<!s32i, lang_address_space(offload_local)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>, lang_address_space(offload_private)>
+    %1 = cir.get_global @g : !cir.ptr<!s32i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// CHECK: cir.global external target_address_space(1) @g = #cir.int<0> : !s32i align(4)
+// CHECK: cir.func @f(%[[ARG:.*]]: !cir.ptr<!s32i, target_address_space(3)>)
+// CHECK:   %[[P:.*]] = cir.alloca "p" align(4) init : !cir.ptr<!cir.ptr<!s32i, target_address_space(3)>, target_address_space(5)>
+// CHECK:   cir.store %[[ARG]], %[[P]] : !cir.ptr<!s32i, target_address_space(3)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(3)>, target_address_space(5)>
+// CHECK:   cir.get_global @g : !cir.ptr<!s32i, target_address_space(1)>

@@ -5201,7 +5201,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
 
       if (Opts.cgp_split_large_offset_gep && isa<GetElementPtrInst>(AddrInst) &&
           TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
-          ConstantOffset > 0) {
+          ConstantOffset != 0) {
         // Record GEPs with non-zero offsets as candidates for splitting in
         // the event that the offset cannot fit into the r+i addressing mode.
         // Simple and common case that only one GEP is used in calculating the
@@ -5715,7 +5715,7 @@ static BasicBlock::iterator findInsertPos(Value *Addr, Instruction *MemoryInst,
   for (User *U : Addr->users()) {
     Instruction *UserInst = dyn_cast<Instruction>(U);
     if (UserInst && UserInst->getParent() == MemoryInst->getParent()) {
-      if (isa<PHINode>(UserInst) || UserInst->isDebugOrPseudoInst())
+      if (isa<PHINode>(UserInst))
         continue;
       if (UserInst->comesBefore(Earliest))
         Earliest = UserInst;
@@ -5868,7 +5868,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       return Modified;
   }
 
-  IRBuilder<> Builder(MemoryInst->getParent(), InsertPos);
+  IRBuilder<> Builder(InsertPos);
 
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode
@@ -6796,7 +6796,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
         NewBaseInsertBB = &BaseGEP->getFunction()->getEntryBlock();
         NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
       }
-      IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
+      IRBuilder<> NewBaseBuilder(NewBaseInsertPt);
       // Create a new base.
       // TODO: Avoid implicit trunc?
       // See https://github.com/llvm/llvm-project/issues/112510.
@@ -9157,7 +9157,7 @@ bool CodeGenPrepare::placePseudoProbes(Function &F) {
   for (auto &Block : F) {
     // Move the rest probes to the beginning of the block.
     auto FirstInst = Block.getFirstInsertionPt();
-    while (FirstInst != Block.end() && FirstInst->isDebugOrPseudoInst())
+    while (FirstInst != Block.end() && isa<PseudoProbeInst>(FirstInst))
       ++FirstInst;
     BasicBlock::iterator I(FirstInst);
     I++;
