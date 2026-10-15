@@ -5821,9 +5821,9 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
   std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp);
   if (!triple)
-    return op.emitOpError() << "requires a '"
-                            << cir::CIRDialect::getTripleAttrName()
-                            << "' module attribute";
+    return op.emitOpError()
+           << "requires a '" << cir::CIRDialect::getTripleAttrName()
+           << "' module attribute";
 
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::Type i64Ty = rewriter.getI64Type();
