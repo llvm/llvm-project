@@ -4115,7 +4115,7 @@ static bool isSafeToRemoveBitCeilSelect(ICmpInst::Predicate Pred, Value *Cond0,
       CR = ConstantRange(*C).sub(CR);
       return true;
     }
-    if (match(CtlzOp, m_Not(m_Specific(CommonAncestor)))) {
+    if (match(CtlzOp, m_NotForbidPoison(m_Specific(CommonAncestor)))) {
       CR = CR.binaryNot();
       return true;
     }
