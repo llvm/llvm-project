@@ -19138,10 +19138,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
-unsigned ARMTargetLowering::getLoadCombineByteProviderDepthLimit(EVT VT) const {
-  return VT == MVT::i64 ? 16 : 10;
-}
-
 bool ARMTargetLowering::isDesirableToTransformToIntegerOp(unsigned Opc,
                                                           EVT VT) const {
   return (VT == MVT::f32) && (Opc == ISD::LOAD || Opc == ISD::STORE);

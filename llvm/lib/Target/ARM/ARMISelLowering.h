@@ -145,7 +145,6 @@ class VectorType;
     SDValue PerformMVEExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue PerformMVETruncCombine(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-    unsigned getLoadCombineByteProviderDepthLimit(EVT VT) const override;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &OriginalDemandedBits,
