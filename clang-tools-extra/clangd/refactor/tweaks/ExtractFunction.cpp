@@ -60,6 +60,7 @@
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
@@ -156,6 +157,106 @@ bool isConditionClause(const Stmt *Parent, const Stmt *Child) {
   if (const auto *ForRange = llvm::dyn_cast<CXXForRangeStmt>(Parent))
     return Child == ForRange->getRangeInit();
   return false;
+}
+
+// Whether N sits in a slot that must be a constant expression: a case
+// label, a bit-field width, an enum constant's initializer, a constexpr or
+// constinit variable's initializer, a non-type template argument, a
+// static_assert condition, or a noexcept-specifier's operand. Extracting
+// out of such a slot is still possible in C++ by marking the extracted
+// function constexpr (see findExpressionExtractionZone), but C has no
+// analogous escape hatch (its C23 constexpr applies only to objects,
+// never functions), so there the context must be rejected outright (this
+// matters for static_assert, which C also has).
+//
+// Deliberately not exhaustive. Known gaps, left alone for concrete
+// reasons rather than just unlisted:
+// - Array bounds in declarators: would be redundant to handle here.
+//   SelectionTree::commonAncestor() never offers the bound expression
+//   as a candidate to begin with, because Selection.cpp's token-claiming
+//   for ArrayTypeLoc claims the whole bracketed span (including the
+//   bound expression's own tokens) for itself, making the TypeLoc --
+//   not an Expr -- the first node commonAncestor() stops its descent
+//   at. Extraction from that slot is already unavailable as a result.
+// - Attribute arguments (e.g. GNU __attribute__((aligned(N)))) and
+//   builtin-call arguments (e.g. __builtin_assume_aligned's alignment):
+//   each has its own ad hoc SelectionTree shape to verify per attribute
+//   or builtin, for constructs rare enough in practice that it isn't
+//   worth the per-case verification cost yet.
+bool isConstantExpressionContext(const Node *N) {
+  // Sema wraps a "manifestly constant evaluated" expression (exactly
+  // these contexts: case labels, bit-field widths, enum initializers,
+  // constexpr variable initializers, and others) in invisible nodes --
+  // at least a ConstantExpr caching its evaluated value, sometimes also
+  // an ImplicitCastExpr -- that aren't the real construct itself and
+  // share N's own source range. outerImplicit() walks up through any
+  // number of those to the real parent.
+  const Node *Parent = N->outerImplicit().Parent;
+  if (!Parent)
+    return false;
+  if (Parent->ASTNode.get<CaseStmt>())
+    return true;
+  if (const auto *Field = Parent->ASTNode.get<FieldDecl>())
+    return Field->isBitField();
+  if (Parent->ASTNode.get<EnumConstantDecl>())
+    return true;
+  if (const auto *Var = Parent->ASTNode.get<VarDecl>())
+    // constinit (unlike constexpr) isn't tracked as a VarDecl bit; it's
+    // just an attribute, but requires a constant initializer all the same.
+    return Var->isConstexpr() || Var->hasAttr<ConstInitAttr>();
+  // A TemplateSpecializationTypeLoc's Expr children (as opposed to TypeLoc
+  // children) are exactly its non-type template arguments -- the
+  // SelectionTree has no separate node for the intervening
+  // TemplateArgumentLoc. Other ways to name a non-type template argument
+  // (a bare function-template call's explicit arguments, a variable
+  // template) aren't verified and so aren't covered here yet.
+  if (Parent->ASTNode.get<TemplateSpecializationTypeLoc>())
+    return true;
+  if (Parent->ASTNode.get<StaticAssertDecl>())
+    return true;
+  // A FunctionProtoTypeLoc's only Expr child is its noexcept-specifier's
+  // operand (verified empirically that a parameter's default argument,
+  // the other candidate Expr near a function's type, instead has that
+  // ParmVarDecl itself as its parent, not the enclosing
+  // FunctionProtoTypeLoc).
+  if (Parent->ASTNode.get<FunctionProtoTypeLoc>())
+    return true;
+  return false;
+}
+
+// Whether E is eligible for extraction to a function. Callers must already
+// know E is a single, fully-selected expression that isn't itself (part
+// of) a root statement -- checked separately, by trying statement
+// extraction first.
+bool eligibleForExpressionExtraction(const Expr *E) {
+  // findEnclosingFunction already rejects a templated enclosing function,
+  // but guard directly too: there's no reasonable deduced return type for
+  // an expression whose own type still depends on a template parameter.
+  if (E->isTypeDependent() || E->isValueDependent())
+    return false;
+
+  // Nothing to return.
+  if (E->getType()->isVoidType())
+    return false;
+
+  // An lvalue would need the extracted function to return a reference to
+  // stay usable the same way it was (e.g. as an assignment target).
+  // FIXME: support lvalue-returning extraction.
+  if (E->isLValue())
+    return false;
+
+  // A plain reference to a name (e.g. a variable, or an enum constant,
+  // which -- unlike a variable -- is a prvalue and so isn't otherwise
+  // excluded above) isn't interesting to extract on its own.
+  if (isa<DeclRefExpr>(E))
+    return false;
+
+  // Extracting from a bare lambda expression would involve non-trivial effort
+  // and be of questionable value.
+  if (isa<LambdaExpr>(E))
+    return false;
+
+  return true;
 }
 
 // A RootStmt is a statement that's fully selected including all its children
@@ -260,6 +361,17 @@ struct ExtractionZone {
   SourceRange EnclosingFuncRange;
   // Set of statements that form the ExtractionZone.
   llvm::DenseSet<const Stmt *> RootStmts;
+  // Set (instead of Parent/RootStmts above) when this zone is a single
+  // sub-expression being extracted, rather than one or more whole
+  // statements -- see findExpressionExtractionZone. Still also present in
+  // RootStmts (Expr is-a Stmt), so the capture/mutation-analysis visitor
+  // needs no changes to handle this case.
+  const Expr *SingleExpr = nullptr;
+  // Only meaningful when SingleExpr is set: whether SingleExpr sits in a
+  // slot that requires a constant expression (see
+  // isConstantExpressionContext), so the extracted function must be
+  // declared constexpr to keep the call there well-formed.
+  bool RequiresConstexpr = false;
 
   SourceLocation getInsertionPoint() const {
     return EnclosingFuncRange.getBegin();
@@ -268,6 +380,16 @@ struct ExtractionZone {
   // The last root statement is important to decide where we need to insert a
   // semicolon after the extraction.
   const Node *getLastRootStmt() const { return Parent->Children.back(); }
+  // The Stmt (in the generalized sense that Expr is-a Stmt) to use for
+  // ExtractionSemicolonPolicy::compute() purposes: the extracted Expr
+  // itself for an expression zone (compute() already special-cases a bare
+  // Expr to mean "needed in the extracted function, not in the original",
+  // exactly matching inline call-site substitution), or the last root
+  // statement otherwise.
+  const Stmt *getRepresentativeStmt() const {
+    return SingleExpr ? static_cast<const Stmt *>(SingleExpr)
+                      : getLastRootStmt()->ASTNode.get<Stmt>();
+  }
 
   // Checks if declarations inside extraction zone are accessed afterwards.
   //
@@ -320,7 +442,7 @@ struct ExtractionZone {
 // This is a very naive check (does it end with a return stmt).
 // Doing some rudimentary control flow analysis would cover more cases.
 bool alwaysReturns(const ExtractionZone &EZ) {
-  const Stmt *Last = EZ.getLastRootStmt()->ASTNode.get<Stmt>();
+  const Stmt *Last = EZ.getRepresentativeStmt();
   // Unwrap enclosing (unconditional) compound statement.
   while (const auto *CS = llvm::dyn_cast<CompoundStmt>(Last)) {
     if (CS->body_empty())
@@ -468,8 +590,10 @@ llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
   return Operands;
 }
 
-// Whether extracting S on its own, as a single root statement, would add
-// no real abstraction over leaving it where it is:
+// Whether extracting S on its own -- a single root statement, or (since
+// Expr is-a Stmt) a bare sub-expression being extracted on its own, e.g.
+// the `func()` in `int A = [[func()]];` -- would add no real abstraction
+// over leaving it where it is:
 // - A value-less `return;` has nothing to abstract over at all.
 // - A call (to a function, method, or operator), or a return of one, is
 //   a pure 1:1 forwarding wrapper if every relevant operand (see
@@ -540,9 +664,9 @@ bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc,
   return true;
 }
 
-std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
-                                                 const SourceManager &SM,
-                                                 const LangOptions &LangOpts) {
+std::optional<ExtractionZone>
+findStatementExtractionZone(const Node *CommonAnc, const SourceManager &SM,
+                            const LangOptions &LangOpts) {
   ExtractionZone ExtZone;
   ExtZone.Parent = getParentOfRootStmts(CommonAnc);
   if (!ExtZone.Parent || ExtZone.Parent->Children.empty())
@@ -570,6 +694,66 @@ std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
   return ExtZone;
 }
 
+// Like findStatementExtractionZone, but for a single sub-expression
+// embedded within a larger expression or statement (e.g. just `a < 5`
+// within `if (a < 5 && c)`), rather than one or more whole statements.
+// Only reached when statement extraction has already failed, since a
+// selection that resolves to a genuine root statement should always be
+// offered as that instead.
+std::optional<ExtractionZone>
+findExpressionExtractionZone(const Node *CommonAnc, const SourceManager &SM,
+                             const LangOptions &LangOpts) {
+  if (!CommonAnc)
+    return std::nullopt;
+  // Invisible wrapper nodes (e.g. an LValueToRValue ImplicitCastExpr) own
+  // no selected characters of their own, so the common ancestor can land
+  // on one of these instead of the expression the user actually selected.
+  const Node &Target = CommonAnc->ignoreImplicit();
+  if (Target.Selected != SelectionTree::Complete)
+    return std::nullopt;
+  const Expr *E = Target.ASTNode.get<Expr>();
+  if (!E || !eligibleForExpressionExtraction(E))
+    return std::nullopt;
+  // E itself (not wrapped in a ReturnStmt) is exactly the "Stmt" a
+  // bare-expression extraction replaces, so the same pure-forwarding
+  // check applies directly: `int A = [[func()]];` becoming
+  // `int A = extracted();` is just as much a rename as a whole
+  // statement's `func();` becoming `extracted();`.
+  if (isTrivialExtraction(E, SM))
+    return std::nullopt;
+  bool RequiresConstexpr = isConstantExpressionContext(&Target);
+  // C has no constexpr-function escape hatch for this (see
+  // isConstantExpressionContext), so there's no way to make the
+  // extraction compile.
+  if (RequiresConstexpr && !LangOpts.CPlusPlus)
+    return std::nullopt;
+
+  ExtractionZone ExtZone;
+  ExtZone.SingleExpr = E;
+  ExtZone.RequiresConstexpr = RequiresConstexpr;
+  ExtZone.EnclosingFunction = findEnclosingFunction(&Target);
+  if (!ExtZone.EnclosingFunction)
+    return std::nullopt;
+  if (auto FuncRange =
+          computeEnclosingFuncRange(ExtZone.EnclosingFunction, SM, LangOpts))
+    ExtZone.EnclosingFuncRange = *FuncRange;
+  if (auto ZoneRange = toHalfOpenFileRange(SM, LangOpts, E->getSourceRange()))
+    ExtZone.ZoneRange = *ZoneRange;
+  if (ExtZone.EnclosingFuncRange.isInvalid() || ExtZone.ZoneRange.isInvalid())
+    return std::nullopt;
+
+  ExtZone.RootStmts.insert(E);
+  return ExtZone;
+}
+
+std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
+                                                 const SourceManager &SM,
+                                                 const LangOptions &LangOpts) {
+  if (auto StmtZone = findStatementExtractionZone(CommonAnc, SM, LangOpts))
+    return StmtZone;
+  return findExpressionExtractionZone(CommonAnc, SM, LangOpts);
+}
+
 // Stores information about the extracted function and provides methods for
 // rendering it.
 struct NewFunction {
@@ -595,6 +779,13 @@ struct NewFunction {
   const DeclContext *SyntacticDC = nullptr;
   const DeclContext *ForwardDeclarationSyntacticDC = nullptr;
   bool CallerReturnsValue = false;
+  // Set for a single-expression extraction (see
+  // findExpressionExtractionZone): the copied-out body is the bare
+  // expression's own source text, which getFuncBody() must still prefix
+  // with "return " -- unlike CallerReturnsValue's `return` prefix, this
+  // is unconditional and belongs to the function's own body, not to how
+  // the call site uses the result.
+  bool IsExpressionExtraction = false;
   bool Static = false;
   ConstexprSpecKind Constexpr = ConstexprSpecKind::Unspecified;
   bool Const = false;
@@ -747,38 +938,40 @@ NewFunction::getFuncBody(const SourceManager &SM) const {
   // - add return statement
   // - Add semicolon
   std::string Body = toSourceCode(SM, BodyRange).str();
-  if (PointerRewriteSites.empty())
-    return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
-
-  // Splice in each site's rewrite. These are all independent
-  // insertions/single-token replacements at distinct, non-overlapping
-  // source locations (two DeclRefExprs can't share a location, and a dot
-  // always follows its own identifier), so none of this should actually
-  // be able to fail -- but if that assumption is ever wrong, surface it
-  // as an extraction failure instead of silently emitting broken code.
-  tooling::Replacements Repls;
-  unsigned BodyBeginOffset = SM.getFileOffset(BodyRange.getBegin());
-  for (const auto &Site : PointerRewriteSites) {
-    unsigned SiteOffset = SM.getFileOffset(Site.Loc) - BodyBeginOffset;
-    if (Site.DotLoc) {
-      // Leave the identifier itself untouched; turn the member access
-      // that follows it into "->" instead of wrapping in a dereference.
-      unsigned DotOffset = SM.getFileOffset(*Site.DotLoc) - BodyBeginOffset;
-      if (auto Err = Repls.add(tooling::Replacement("", DotOffset, 1, "->")))
-        return std::move(Err);
-    } else {
-      if (auto Err = Repls.add(tooling::Replacement("", SiteOffset, 0, "(*")))
-        return std::move(Err);
-      if (auto Err = Repls.add(
-              tooling::Replacement("", SiteOffset + Site.NameLength, 0, ")")))
-        return std::move(Err);
+  if (!PointerRewriteSites.empty()) {
+    // Splice in each site's rewrite. These are all independent
+    // insertions/single-token replacements at distinct, non-overlapping
+    // source locations (two DeclRefExprs can't share a location, and a dot
+    // always follows its own identifier), so none of this should actually
+    // be able to fail -- but if that assumption is ever wrong, surface it
+    // as an extraction failure instead of silently emitting broken code.
+    tooling::Replacements Repls;
+    unsigned BodyBeginOffset = SM.getFileOffset(BodyRange.getBegin());
+    for (const auto &Site : PointerRewriteSites) {
+      unsigned SiteOffset = SM.getFileOffset(Site.Loc) - BodyBeginOffset;
+      if (Site.DotLoc) {
+        // Leave the identifier itself untouched; turn the member access
+        // that follows it into "->" instead of wrapping in a dereference.
+        unsigned DotOffset = SM.getFileOffset(*Site.DotLoc) - BodyBeginOffset;
+        if (auto Err = Repls.add(tooling::Replacement("", DotOffset, 1, "->")))
+          return std::move(Err);
+      } else {
+        if (auto Err = Repls.add(tooling::Replacement("", SiteOffset, 0, "(*")))
+          return std::move(Err);
+        if (auto Err = Repls.add(
+                tooling::Replacement("", SiteOffset + Site.NameLength, 0, ")")))
+          return std::move(Err);
+      }
     }
+    llvm::Expected<std::string> NewBody =
+        tooling::applyAllReplacements(Body, Repls);
+    if (!NewBody)
+      return NewBody.takeError();
+    Body = std::move(*NewBody);
   }
-  llvm::Expected<std::string> NewBody =
-      tooling::applyAllReplacements(Body, Repls);
-  if (!NewBody)
-    return NewBody.takeError();
-  return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+  if (IsExpressionExtraction)
+    Body = "return " + Body;
+  return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
 std::string NewFunction::Parameter::render(const DeclContext &Context) const {
@@ -1435,8 +1628,7 @@ getSemicolonPolicy(ExtractionZone &ExtZone, const SourceManager &SM,
   SourceRange FuncBodyRange = {ExtZone.ZoneRange.getBegin(),
                                ExtZone.ZoneRange.getEnd().getLocWithOffset(-1)};
   auto SemicolonPolicy = tooling::ExtractionSemicolonPolicy::compute(
-      ExtZone.getLastRootStmt()->ASTNode.get<Stmt>(), FuncBodyRange, SM,
-      LangOpts);
+      ExtZone.getRepresentativeStmt(), FuncBodyRange, SM, LangOpts);
   // Update ZoneRange.
   ExtZone.ZoneRange.setEnd(FuncBodyRange.getEnd().getLocWithOffset(1));
   return SemicolonPolicy;
@@ -1523,12 +1715,42 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.BodyRange = ExtZone.ZoneRange;
   ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
 
-  ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
+  if (ExtZone.SingleExpr) {
+    // The extracted function's body is just "return <expr>;" (see
+    // NewFunction::getFuncBody), and the call site substitutes the call
+    // in place of the expression itself -- not as `return extracted();`,
+    // which is what CallerReturnsValue would otherwise render.
+    ExtractedFunc.IsExpressionExtraction = true;
+    ExtractedFunc.CallerReturnsValue = false;
+    ExtractedFunc.ReturnType = ExtZone.SingleExpr->getType();
+  } else {
+    ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
+    if (!generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
+                                  CapturedInfo))
+      return error("Too complex to extract.");
+  }
   if (!createParameters(ExtractedFunc, CapturedInfo,
-                        ExtZone.EnclosingFunction->getASTContext(), LangOpts) ||
-      !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
-                                CapturedInfo))
+                        ExtZone.EnclosingFunction->getASTContext(), LangOpts))
     return error("Too complex to extract.");
+
+  if (ExtZone.RequiresConstexpr) {
+    // Declaring a constexpr function at all requires every parameter and
+    // the return type to be a literal type. Expected to hold in practice
+    // here -- every type this tweak ever generates is either a scalar or
+    // a reference, and both are unconditionally literal types regardless
+    // of what a reference refers to -- but check rather than emit
+    // uncompilable code if some future change (e.g. by-value class-type
+    // parameters) breaks that invariant.
+    const ASTContext &Ctx = ExtZone.EnclosingFunction->getASTContext();
+    bool AllLiteral = ExtractedFunc.ReturnType->isLiteralType(Ctx);
+    for (const auto &P : ExtractedFunc.Parameters)
+      AllLiteral = AllLiteral && P.TypeInfo->isLiteralType(Ctx);
+    if (!AllLiteral)
+      return error("Too complex to extract.");
+    if (ExtractedFunc.Constexpr == ConstexprSpecKind::Unspecified)
+      ExtractedFunc.Constexpr = ConstexprSpecKind::Constexpr;
+  }
+
   return ExtractedFunc;
 }
 
