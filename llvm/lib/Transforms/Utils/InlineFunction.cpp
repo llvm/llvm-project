@@ -1416,11 +1416,12 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       // scopes to arbitrary functions unless we know they don't access any
       // non-parameter pointer-values.
       bool CanAddScopes = !UsesAliasingPtr && (!IsFuncCall || IsArgMemOnlyCall);
-      if (CanAddScopes)
+      if (CanAddScopes) {
         for (const Argument *A : NoAliasArgs) {
           if (ObjSet.count(A))
             Scopes.push_back(NewScopes[A]);
         }
+      }
 
       if (!Scopes.empty()) {
         NI->setMetadata(
