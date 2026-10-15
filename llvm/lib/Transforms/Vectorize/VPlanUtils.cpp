@@ -915,11 +915,12 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   return nullptr;
 }
 
-VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEV *S, bool HasNUW) {
+VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   VPValue *Base = expand(SE.getPointerBase(S));
   VPValue *Offset = expand(SE.removePointerBase(S));
-  GEPNoWrapFlags GEPFlags =
-      HasNUW ? GEPNoWrapFlags::noUnsignedWrap() : GEPNoWrapFlags::none();
+  GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
+                                ? GEPNoWrapFlags::noUnsignedWrap()
+                                : GEPNoWrapFlags::none();
   return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
 }
 
@@ -942,7 +943,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     // Expand pointer SCEVAddExpr as a ptradd of the pointer base and the
     // integer offset, matching SCEVExpander.
     if (S->getType()->isPointerTy())
-      return expandAsPtrAdd(S, WrapFlags.HasNUW);
+      return expandAsPtrAdd(AddE);
 
     // Non-constant-negative add operands are expanded negated and subtracted
     // from the running result below, instead of being negated and added.
@@ -1150,23 +1151,20 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     // scope of VPlan). The AddRec is then scaled and offset using
     // VPInstructions.
     const Loop *L = AR->getLoop();
-    auto CanonicalIVPat =
+    auto m_scev_CanonicalIV = // NOLINT
         m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
-    bool IsCanonicalIV = match(AR, CanonicalIVPat);
-    if (IsCanonicalIV) {
+    if (match(AR, m_scev_CanonicalIV)) {
       // Try to reuse a wider existing canonical IV of the loop by truncating
       // it.
-      for (VPRecipeBase &R : *Plan.getEntry()) {
-        if (&R == Builder.getRecipeAtInsertPoint())
-          break;
-        auto *ExpR = dyn_cast<VPExpandSCEVRecipe>(&R);
-        if (ExpR && match(ExpR->getSCEV(), CanonicalIVPat) &&
-            ExpR->getScalarType()->getIntegerBitWidth() >
+      for (auto &ExpR : make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry())) {
+        if (match(ExpR.getSCEV(), m_scev_CanonicalIV) &&
+            ExpR.getScalarType()->getIntegerBitWidth() >
                 Ty->getIntegerBitWidth())
-          return Builder.createScalarCast(Instruction::Trunc, ExpR, Ty, DL);
+          return Builder.createScalarCast(Instruction::Trunc, &ExpR, Ty, DL);
       }
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
     }
-    if (!AR->isAffine() || IsCanonicalIV)
+    if (!AR->isAffine())
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
     const SCEV *Step = AR->getStepRecurrence(SE);
@@ -1180,11 +1178,11 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
 
     // {X,+,F} --> X + {0,+,F}
     if (Ty->isPointerTy())
-      return expandAsPtrAdd(AR, AR->hasNoUnsignedWrap());
+      return expandAsPtrAdd(AR);
     VPValue *Start = expand(AR->getStart());
     VPValue *Rest = expand(SE.getAddRecExpr(SE.getZero(Ty), Step, L,
                                             AR->getNoWrapFlags(SCEV::FlagNW)));
-    return Builder.createAdd(Rest, Start, DL, "",
+    return Builder.createAdd(Start, Rest, DL, "",
                              {AR->hasNoUnsignedWrap(), false});
   }
   case scCouldNotCompute:

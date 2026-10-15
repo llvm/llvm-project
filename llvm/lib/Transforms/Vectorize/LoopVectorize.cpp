@@ -6763,6 +6763,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
+    const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
     // The VPlan expander cannot hoist bounds out of an enclosing loop.
     if (OrigLoop->getParentLoop())
       return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
@@ -6770,7 +6771,6 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
-    const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
     RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
                    *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
                    HasBranchWeights);
