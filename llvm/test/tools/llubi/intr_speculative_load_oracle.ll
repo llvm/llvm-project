@@ -4,7 +4,7 @@
 @a = global [6 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5]
 
 ; Returns the number of bytes from %p to %end, clamped to 16.
-define i64 @oracle(ptr %p, ptr %end) memory(none) nounwind nosync willreturn {
+define internal i64 @oracle(ptr %p, ptr %end) memory(none) nounwind nosync willreturn "oracle-function" {
   %p.int = ptrtoaddr ptr %p to i64
   %end.int = ptrtoaddr ptr %end to i64
   %diff = sub i64 %end.int, %p.int
@@ -14,7 +14,7 @@ define i64 @oracle(ptr %p, ptr %end) memory(none) nounwind nosync willreturn {
 
 ; Returns the second element at %p plus 3, loaded via an oracle-form
 ; llvm.speculative.load.
-define i64 @oracle_nested(ptr %p) memory(argmem: read) nounwind nosync willreturn {
+define internal i64 @oracle_nested(ptr %p) memory(argmem: read) nounwind nosync willreturn "oracle-function" {
   %v = call <2 x i32> (ptr, i1, ...) @llvm.speculative.load.v2i32.p0(ptr %p, i1 false, ptr @oracle_const, i64 8)
   %e = extractelement <2 x i32> %v, i64 1
   %z = zext i32 %e to i64
@@ -22,7 +22,7 @@ define i64 @oracle_nested(ptr %p) memory(argmem: read) nounwind nosync willretur
   ret i64 %n
 }
 
-define i64 @oracle_const(i64 %n) memory(none) nounwind nosync willreturn {
+define internal i64 @oracle_const(i64 %n) memory(none) nounwind nosync willreturn "oracle-function" {
   ret i64 %n
 }
 

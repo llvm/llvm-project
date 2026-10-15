@@ -40,6 +40,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -997,7 +998,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
 CIRAttrToValue::LoweredGlobalSymbol
 CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   auto moduleOp = parentOp->getParentOfType<mlir::ModuleOp>();
-  mlir::DataLayout dataLayout(moduleOp);
+  cir::CIRDataLayout cirDataLayout(moduleOp);
+  const mlir::DataLayout &dataLayout = cirDataLayout.layout;
   mlir::Type sourceType;
   unsigned addrSpace = 0;
   llvm::StringRef symName;
@@ -1016,9 +1018,11 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   } else if (auto llvmFun = dyn_cast<mlir::LLVM::LLVMFuncOp>(sourceSymbol)) {
     sourceType = llvmFun.getFunctionType();
     symName = llvmFun.getSymName();
+    addrSpace = cirDataLayout.getProgramAddressSpace();
   } else if (auto fun = dyn_cast<cir::FuncOp>(sourceSymbol)) {
     sourceType = converter->convertType(fun.getFunctionType());
     symName = fun.getSymName();
+    addrSpace = cirDataLayout.getProgramAddressSpace();
   } else if (auto alias = dyn_cast<mlir::LLVM::AliasOp>(sourceSymbol)) {
     sourceType = alias.getType();
     symName = alias.getSymName();
@@ -2919,6 +2923,8 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
          attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
+         attr.getName() == CIRDialect::getOptNoneAttrName() ||
+         attr.getName() == CIRDialect::getNakedAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
          attr.getName() == CIRDialect::getDontCallWarnAttrName();
@@ -3055,6 +3061,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
+  if (op->hasAttr(CIRDialect::getOptNoneAttrName()))
+    fn.setOptimizeNone(true);
+
   if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
@@ -3072,7 +3081,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   for (llvm::StringRef flagAttr :
        {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
         CIRDialect::getMustProgressAttrName(),
-        CIRDialect::getNoBuiltinAttrName()})
+        CIRDialect::getNoBuiltinAttrName(), CIRDialect::getNakedAttrName()})
     if (op->hasAttr(flagAttr))
       passthrough.push_back(rewriter.getStringAttr(flagAttr));
 

@@ -2,7 +2,7 @@
 ; This testcase is for testing the negative return values of the
 ; TOCRestoreNeededForCallToImplementation query.
 
-; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff -test-ifunc-warn-noerror -filetype=obj -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff -ppc-test-ifunc-warn-noerror -filetype=obj -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: TOC register save/restore needed for ifunc "foo_ext_decl_ifunc"
 ; CHECK: TOC register save/restore needed for ifunc "foo_ext_default_decl_ifunc"

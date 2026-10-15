@@ -263,6 +263,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchown
     libc.src.unistd.fchownat
     libc.src.unistd.fdatasync
+    libc.src.unistd.fexecve
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
@@ -663,6 +664,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.exp2bf16
   libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
