@@ -12,7 +12,6 @@ from . import run
 from .commands import (
     Files,
     filter_build_artifacts,
-    is_archive,
     is_object,
     summary_of,
     unique,
@@ -30,7 +29,7 @@ def identify_inputs_output(argv):
             output = argv[index + 1]
             index += 2
             continue
-        if not arg.startswith("-") and (is_object(arg) or is_archive(arg)):
+        if not arg.startswith("-") and is_object(arg):
             inputs.append(arg)
         index += 1
     return Files(inputs, output) if inputs else None
