@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_STATPART_H
 #define _LIBCPP___PSTL_BACKENDS_STATPART_H
 
+#include <__pstl/backends/statpart/any_of.h>
 #include <__pstl/backends/statpart/basis.h>
 #include <__pstl/backends/statpart/find_end.h>
 #include <__pstl/backends/statpart/find_if.h>

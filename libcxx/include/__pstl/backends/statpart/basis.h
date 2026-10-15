@@ -129,16 +129,16 @@ struct _LIBCPP_HIDE_FROM_ABI __partitioning_result {
 // before partitioning.
 // __workers_count is normally implicitly queried from hardware_concurrency() and should be explicitly specified only in
 // unit tests.
-template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI __partitioning_result<_ForwardIterator>
-__partition(_ForwardIterator __first,
-            _ForwardIterator __last,
+template <class _Iterator>
+_LIBCPP_HIDE_FROM_ABI __partitioning_result<_Iterator>
+__partition(_Iterator __first,
+            _Iterator __last,
             size_t __min_partition_size = 1,
             size_t __prefix_to_skip     = 0,
             size_t __suffix_to_skip     = 0,
             size_t __workers_count      = thread::hardware_concurrency()) noexcept {
   // Forward iterators will be supported later.
-  static_assert(__has_random_access_iterator_category_or_concept<_ForwardIterator>::value);
+  static_assert(__has_random_access_iterator_category_or_concept<_Iterator>::value);
 
   _LIBCPP_ASSERT_INTERNAL(__min_partition_size >= 1, "minimum partition size must be at least 1 element");
 
@@ -161,7 +161,7 @@ __partition(_ForwardIterator __first,
     return {nullopt, __partitioning_status::__not_enough_elements};
   }
 
-  __iterator_partitions<_ForwardIterator> __p;
+  __iterator_partitions<_Iterator> __p;
   __p.__base_             = __first + __prefix_to_skip;
   __p.__count_            = __effective_count;
   __p.__partition_size_   = __effective_count / __partition_count;

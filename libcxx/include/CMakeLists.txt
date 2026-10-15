@@ -695,7 +695,8 @@ set(files
   __pstl/backends/default.h
   __pstl/backends/libdispatch.h
   __pstl/backends/serial.h
-  __pstl/backends/statpart.h  
+  __pstl/backends/statpart.h
+  __pstl/backends/statpart/any_of.h
   __pstl/backends/statpart/basis.h
   __pstl/backends/statpart/find_end.h
   __pstl/backends/statpart/find_if.h
