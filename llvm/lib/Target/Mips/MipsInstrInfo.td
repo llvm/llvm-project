@@ -179,11 +179,11 @@ def HasMips3_32r2 :   Predicate<"Subtarget->hasMips3_32r2()">,
 def HasMips3     :    Predicate<"Subtarget->hasMips3()">,
                       AssemblerPredicate<(all_of FeatureMips3)>;
 def NotMips3     :    Predicate<"!Subtarget->hasMips3()">,
-                      AssemblerPredicate<(all_of (not FeatureMips3))>;
+                      AssemblerPredicate<(none_of FeatureMips3)>;
 def HasMips4_32  :    Predicate<"Subtarget->hasMips4_32()">,
                       AssemblerPredicate<(all_of FeatureMips4_32)>;
 def NotMips4_32  :    Predicate<"!Subtarget->hasMips4_32()">,
-                      AssemblerPredicate<(all_of (not FeatureMips4_32))>;
+                      AssemblerPredicate<(none_of FeatureMips4_32)>;
 def HasMips4_32r2 :   Predicate<"Subtarget->hasMips4_32r2()">,
                       AssemblerPredicate<(all_of FeatureMips4_32r2)>;
 def HasMips5_32r2 :   Predicate<"Subtarget->hasMips5_32r2()">,
@@ -197,15 +197,15 @@ def HasMips32r5  :    Predicate<"Subtarget->hasMips32r5()">,
 def HasMips32r6  :    Predicate<"Subtarget->hasMips32r6()">,
                       AssemblerPredicate<(all_of FeatureMips32r6)>;
 def NotMips32r6  :    Predicate<"!Subtarget->hasMips32r6()">,
-                      AssemblerPredicate<(all_of (not FeatureMips32r6))>;
+                      AssemblerPredicate<(none_of FeatureMips32r6)>;
 def IsGP64bit    :    Predicate<"Subtarget->isGP64bit()">,
                       AssemblerPredicate<(all_of FeatureGP64Bit)>;
 def IsGP32bit    :    Predicate<"!Subtarget->isGP64bit()">,
-                      AssemblerPredicate<(all_of (not FeatureGP64Bit))>;
+                      AssemblerPredicate<(none_of FeatureGP64Bit)>;
 def HasMips64    :    Predicate<"Subtarget->hasMips64()">,
                       AssemblerPredicate<(all_of FeatureMips64)>;
 def NotMips64    :    Predicate<"!Subtarget->hasMips64()">,
-                      AssemblerPredicate<(all_of (not FeatureMips64))>;
+                      AssemblerPredicate<(none_of FeatureMips64)>;
 def HasMips64r2  :    Predicate<"Subtarget->hasMips64r2()">,
                       AssemblerPredicate<(all_of FeatureMips64r2)>;
 def HasMips64r5  :    Predicate<"Subtarget->hasMips64r5()">,
@@ -213,34 +213,34 @@ def HasMips64r5  :    Predicate<"Subtarget->hasMips64r5()">,
 def HasMips64r6  :    Predicate<"Subtarget->hasMips64r6()">,
                       AssemblerPredicate<(all_of FeatureMips64r6)>;
 def NotMips64r6  :    Predicate<"!Subtarget->hasMips64r6()">,
-                      AssemblerPredicate<(all_of (not FeatureMips64r6))>;
+                      AssemblerPredicate<(none_of FeatureMips64r6)>;
 def InMips16Mode :    Predicate<"Subtarget->inMips16Mode()">,
                       AssemblerPredicate<(all_of FeatureMips16)>;
 def NotInMips16Mode : Predicate<"!Subtarget->inMips16Mode()">,
-                      AssemblerPredicate<(all_of (not FeatureMips16))>;
+                      AssemblerPredicate<(none_of FeatureMips16)>;
 def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<(all_of FeatureCnMips)>;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
-                      AssemblerPredicate<(all_of (not FeatureCnMips))>;
+                      AssemblerPredicate<(none_of FeatureCnMips)>;
 def HasCnMipsP   :    Predicate<"Subtarget->hasCnMipsP()">,
                       AssemblerPredicate<(all_of FeatureCnMipsP)>;
 def NotCnMipsP   :    Predicate<"!Subtarget->hasCnMipsP()">,
-                      AssemblerPredicate<(all_of (not FeatureCnMipsP))>;
+                      AssemblerPredicate<(none_of FeatureCnMipsP)>;
 def IsSym32     :     Predicate<"Subtarget->hasSym32()">,
                       AssemblerPredicate<(all_of FeatureSym32)>;
 def IsSym64     :     Predicate<"!Subtarget->hasSym32()">,
-                      AssemblerPredicate<(all_of (not FeatureSym32))>;
+                      AssemblerPredicate<(none_of FeatureSym32)>;
 def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
-                      AssemblerPredicate<(all_of (not FeatureMips16))>;
+                      AssemblerPredicate<(none_of FeatureMips16)>;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;
 def InMicroMips    :  Predicate<"Subtarget->inMicroMipsMode()">,
                       AssemblerPredicate<(all_of FeatureMicroMips)>;
 def NotInMicroMips :  Predicate<"!Subtarget->inMicroMipsMode()">,
-                      AssemblerPredicate<(all_of (not FeatureMicroMips))>;
+                      AssemblerPredicate<(none_of FeatureMicroMips)>;
 def IsLE           :  Predicate<"Subtarget->isLittle()">;
 def IsBE           :  Predicate<"!Subtarget->isLittle()">;
 def UseTCCInDIV    :  AssemblerPredicate<(all_of FeatureUseTCCInDIV)>;
@@ -249,17 +249,17 @@ def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
 def HasMSA : Predicate<"Subtarget->hasMSA()">,
              AssemblerPredicate<(all_of FeatureMSA)>;
 def HasMadd4 : Predicate<"!Subtarget->disableMadd4()">,
-               AssemblerPredicate<(all_of (not FeatureNoMadd4))>;
+               AssemblerPredicate<(none_of FeatureNoMadd4)>;
 def HasMT  : Predicate<"Subtarget->hasMT()">,
              AssemblerPredicate<(all_of FeatureMT)>;
 def UseIndirectJumpsHazard : Predicate<"Subtarget->useIndirectJumpsHazard()">,
                             AssemblerPredicate<(all_of FeatureUseIndirectJumpsHazard)>;
 def NoIndirectJumpGuards : Predicate<"!Subtarget->useIndirectJumpsHazard()">,
-                           AssemblerPredicate<(all_of (not FeatureUseIndirectJumpsHazard))>;
+                           AssemblerPredicate<(none_of FeatureUseIndirectJumpsHazard)>;
 def IsR5900 : Predicate<"Subtarget->isR5900()">,
               AssemblerPredicate<(all_of FeatureR5900)>;
 def NotR5900 : Predicate<"!Subtarget->isR5900()">,
-               AssemblerPredicate<(all_of (not FeatureR5900))>;
+               AssemblerPredicate<(none_of FeatureR5900)>;
 def HasCRC   : Predicate<"Subtarget->hasCRC()">,
                AssemblerPredicate<(all_of FeatureCRC)>;
 def HasVirt  : Predicate<"Subtarget->hasVirt()">,

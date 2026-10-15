@@ -313,10 +313,10 @@ static void emitOptionsStruct(const Record &Struct,
   for (const Record *R : Opts) {
     StringRef Kind = R->getValueAsDef("Kind")->getValueAsString("Name");
     if (!R->getValue("FieldName")) {
-      if (Kind != "Input" && Kind != "Unknown" &&
-          isa<UnsetInit>(R->getValueInit("Alias")))
+      if (Kind != "Input" && Kind != "Unknown" && !R->getValue("AliasTarget"))
         PrintFatalError(R->getLoc(), "an option of an OptionsStruct must be "
-                                     "declared with BoolField or ValueField");
+                                     "declared with BoolField, ValueField or "
+                                     "AliasOf");
       continue;
     }
     if (Kind != "FlagOrEq" && Kind != "SeparateOrEq")
@@ -447,6 +447,26 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   if (Structs.size() > 1)
     PrintFatalError(Structs[1]->getLoc(), "only one OptionsStruct is allowed");
 
+  StringMap<const Record *> Members;
+  for (const Record *R : Opts)
+    if (R->getValue("FieldName"))
+      Members[R->getValueAsString("Name")] = R;
+  DenseMap<const Record *, const Record *> AliasTargets;
+  for (const Record *R : Opts) {
+    if (!R->getValue("AliasTarget"))
+      continue;
+    StringRef Target = R->getValueAsString("AliasTarget");
+    const Record *T = Members.lookup(Target);
+    if (!T)
+      PrintFatalError(R->getLoc(),
+                      "'-" + Target +
+                          "' is not an option of the OptionsStruct");
+    if (!getCondition(*T).empty())
+      PrintFatalError(R->getLoc(), "an alias cannot refer to an option with a "
+                                   "Condition");
+    AliasTargets[R] = T;
+  }
+
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
   // Generate prefix groups.
@@ -527,10 +547,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   // An OptionsStruct's rows name the IDs, since a false Condition omits a row
   // and shifts the IDs after it.
   auto GetRefID = [&](const Record &R, StringRef Field) -> std::string {
-    const auto *DI = dyn_cast<DefInit>(R.getValueInit(Field));
-    if (!DI)
+    const Record *Ref = Field == "Alias" ? AliasTargets.lookup(&R) : nullptr;
+    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit(Field)))
+      Ref = DI->getDef();
+    if (!Ref)
       return "0";
-    const Record *Ref = DI->getDef();
     if (Structs.empty())
       return utostr(OptionID.lookup(Ref));
     return "OPT_" + getStructOptionID(*Ref);
@@ -702,16 +723,16 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Alias"));
-        DI && !getCondition(*DI->getDef()).empty())
-      PrintFatalError(R.getLoc(), "an alias cannot refer to an option with a "
-                                  "Condition");
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
     OS << ", " << ExtraOffset.lookup(&R);
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
+    // An AliasOf without AliasArgs takes its target's kind.
+    const Record *KindR = AliasTargets.lookup(&R);
+    if (!KindR || !R.getValueAsListOfStrings("AliasArgs").empty())
+      KindR = &R;
     OS << ", llvm::opt::Option::"
-       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class},\n";
+       << KindR->getValueAsDef("Kind")->getValueAsString("Name") << "Class},\n";
   }
   OS << "  };\n\n";
 
