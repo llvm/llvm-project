@@ -436,9 +436,9 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
   else
     os << " stack allocated memory";
   os << " for the \"control\" value. Using such transient memory for "
-  "the control value is potentially dangerous.";
+        "the control value is potentially dangerous.";
   if (isa<VarRegion>(R) && R->hasMemorySpace<StackLocalsSpaceRegion>(state))
-    os << "  Perhaps you intended to declare the variable as 'static'?";
+    os << " Perhaps you intended to declare the variable as 'static'?";
 
   auto report =
       std::make_unique<PathSensitiveBugReport>(BT_pthreadOnce, os.str(), N);
