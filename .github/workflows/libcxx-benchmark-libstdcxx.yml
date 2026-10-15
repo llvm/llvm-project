@@ -139,11 +139,11 @@ jobs:
           cmake --version
           ninja --version
           "${COMPILER}" --version
-          python3 --version
+          python3.14 --version
 
       - name: Setup virtual environment
         run: |
-          python3 -m venv .venv
+          python3.14 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
