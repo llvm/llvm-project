@@ -81,3 +81,15 @@ inputs share, such as one in a header that both translation units include,
 is reported once, and the result does not depend on the order of the
 inputs. A merged report can be merged again.
 
+## Merging conflict reports
+
+`clang-ssaf-src-edit-merge --sarif-conflicts-out=` reports the overlapping
+edits it dropped while merging. `clang-ssaf-merge-conflict-report` merges
+such reports the same way, so that the conflicts found while merging the
+edits of an archive reach the report of the program it is linked into:
+
+```console
+$ clang-ssaf-merge-conflict-report libparse.a.sarif prg.sarif -o all.sarif
+```
+
+The inputs must all have been written by the same tool.

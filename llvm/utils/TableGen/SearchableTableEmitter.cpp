@@ -1008,8 +1008,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
 
   // Translate legacy tables.
   const Record *SearchableTable = Records.getClass("SearchableTable");
-  for (auto &NameRec : Records.getClasses()) {
-    const Record *Class = NameRec.second.get();
+  for (const Record *Class : Records.getClasses()) {
     if (Class->getDirectSuperClasses().size() != 1 ||
         !Class->isSubClassOf(SearchableTable))
       continue;

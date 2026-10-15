@@ -1143,8 +1143,9 @@ void CompilerInstance::parseLLVMArgs() {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = getFrontendOpts().LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr,
+    llvm::cl::parseCommandLineOptions(LibraryOptions,
+                                      ArrayRef(Args.get(), NumArgs + 1),
+                                      /*Overview=*/"", /*Errs=*/nullptr,
                                       /*VFS=*/&getVirtualFileSystem());
   }
 }
