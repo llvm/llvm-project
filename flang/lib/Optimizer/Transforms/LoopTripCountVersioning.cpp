@@ -22,10 +22,10 @@
 /// Heuristic: the loop variable is the leading subscript of an explicit-shape
 /// array whose declared leading extent N is at most max-section-extent. For
 /// `a(1:m, :) = 0` with `real :: a(4, n)`, the inner loop is versioned on
-/// `m == 4`. Loops are skipped when N times the body size exceeds
-/// max-unrolled-ops (LLVM's -O3 full-unroll budget), since the fast arm would
-/// not unroll. This runs on FIR, the only level where both the loop and the
-/// array's declared type exist.
+/// `m == 4`. Loops are skipped when N times the number of FIR operations in
+/// the body exceeds max-unrolled-ops, a proxy for whether LLVM will fully
+/// unroll the fast arm. This runs on FIR, the only level where both the loop
+/// and the array's declared type exist.
 //
 //===----------------------------------------------------------------------===//
 

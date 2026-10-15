@@ -499,9 +499,11 @@ def LoopTripCountVersioning
     be added in the future.
 
     Candidates are limited by the declared extent (`max-section-extent`) and
-    by the size of the fully unrolled fast variant, extent times loop body
-    operations (`max-unrolled-ops`, matching LLVM's -O3 full-unroll budget),
-    so that loops are only duplicated where LLVM is expected to unroll them.
+    by the size of the fully unrolled fast variant, extent times FIR operations
+    in the loop body (`max-unrolled-ops`). The latter is a heuristic proxy for
+    LLVM's full-unroll decision, which is made on target-costed instructions
+    after lowering; the default is chosen so that simple elemental bodies
+    stay under LLVM's -O3 threshold.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
   let options = [
@@ -510,8 +512,8 @@ def LoopTripCountVersioning
            "Do not version on declared extents larger than this; 0 disables">,
     Option<"maxUnrolledOps", "max-unrolled-ops", "unsigned",
            /*default=*/"300",
-           "Do not version if the declared extent times the loop body size "
-           "exceeds this; 0 removes the limit">
+           "Do not version if the declared extent times the number of FIR "
+           "operations in the loop body exceeds this; 0 removes the limit">
   ];
 }
 
