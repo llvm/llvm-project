@@ -35702,19 +35702,11 @@ SDValue AArch64TargetLowering::LowerMASK_BEFOREFIRST(SDValue Op,
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-
-  SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
-  SDValue Mask = convertFixedMaskToScalableVector(Op.getOperand(0), DAG);
-
-  // brkb only supports .b forms, so cast to make sure all our p regs match.
-  SDValue Brk = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_brkb_z, DL, MVT::i64),
-      getSVEPredicateBitCast(MVT::nxv16i1, Pg, DAG),
-      DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask));
-  Brk = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, Pg.getValueType(), Brk);
-
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT PredVT = ContainerVT.changeElementType(*DAG.getContext(), MVT::i1);
+
+  SDValue Mask = convertFixedMaskToScalableVector(Op.getOperand(0), DAG);
+  SDValue Brk = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, PredVT, Mask);
   SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Brk);
   return convertFromScalableVector(DAG, VT, MaskAsInt);
 }
