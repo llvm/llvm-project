@@ -106,11 +106,6 @@ struct ReportMutex {
   ReportStack* stack = nullptr;
 };
 
-struct AddedLocationAddr {
-  uptr addr = 0;
-  usize locs_idx = 0;
-};
-
 struct AddedStack {
   StackTrace stack_trace;
   bool suppressable = false;
@@ -124,7 +119,7 @@ class ReportDesc {
   Vector<AddedStack> added_stacks;
   Vector<ReportMop*> mops;
   Vector<ReportLocation*> locs;
-  Vector<AddedLocationAddr> added_location_addrs;
+  Vector<uptr> loc_addrs;
   Vector<ReportMutex*> mutexes;
   Vector<ReportThread*> threads;
   Vector<Tid> unique_tids;

@@ -97,13 +97,8 @@ void ThreadFinalize(ThreadState *thr) {
 
   for (uptr i = 0; i < leaks.Size(); i++) {
     ScopedReport rep(ReportTypeThreadLeak);
-    // Release locks before symbolizing and outputting the report to avoid
-    // deadlocks.
-    {
-      ThreadRegistryLock l(&ctx->thread_registry);
-      rep.AddThread(leaks[i].tctx, true);
-      rep.SetCount(leaks[i].count);
-    }
+    rep.AddThread(leaks[i].tctx, true);
+    rep.SetCount(leaks[i].count);
     OutputReport(thr, rep);
   }
 #endif

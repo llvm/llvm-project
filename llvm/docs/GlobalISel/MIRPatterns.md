@@ -225,6 +225,24 @@ Semantics:
 - The root cannot have any output operands.
 - The root must be a CodeGenInstruction
 
+#### GIHasOneUse
+
+```{code-block} text
+:caption: Usage
+
+(match (G_MUL $mul, $x, $y),
+       (GIHasOneUse $mul))
+```
+
+Operands:
+
+- `$mul` (in) register defined by a matched instruction
+
+Semantics:
+
+- Can only appear in a 'match' pattern.
+- Checks that the register has exactly one use.
+
 ### Instruction Flags
 
 MIR Patterns support both matching & writing `MIFlags`.

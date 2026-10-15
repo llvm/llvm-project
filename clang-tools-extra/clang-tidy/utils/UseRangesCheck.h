@@ -47,6 +47,8 @@ public:
       enum class Kind {
         Preserve,
         AppendAccessorForUsedResult,
+        KeepFixItOnlyForStructuredBinding,
+        SuppressFixItForUsedResult,
       };
 
       Kind PolicyKind = Kind::Preserve;

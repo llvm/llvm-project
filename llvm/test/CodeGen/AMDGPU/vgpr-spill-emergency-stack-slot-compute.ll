@@ -1,12 +1,11 @@
-; XFAIL: *
 ; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
 ; RUN: llc -mtriple=amdgpu8.03-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
 ; RUN: llc -mtriple=amdgpu9.00-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
-; RUN: llc  -mtriple=amdgpu7.01-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
-; RUN: llc  -mtriple=amdgpu8.03-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
+; RUN: llc  -mtriple=amdgpu7.01-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA %s
+; RUN: llc  -mtriple=amdgpu8.03-unknown-amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA %s
 
-; This ends up using all 256 registers and requires register
-; scavenging which will fail to find an unsued register.
+; This ends up using all available VGPRs and spills. With the default
+; maximum flat workgroup size of 1024, the VGPR budget is 64.
 
 ; Check the ScratchSize to avoid regressions from spilling
 ; intermediate register class copies.
@@ -14,14 +13,7 @@
 ; FIXME: The same register is initialized to 0 for every spill.
 
 ; GCN-LABEL: {{^}}spill_vgpr_compute:
-
-; HSA: enable_sgpr_private_segment_buffer = 1
-; HSA: enable_sgpr_flat_scratch_init = 0
-; HSA: workitem_private_segment_byte_size = 1536
-
 ; GCN-NOT: flat_scr
-; MESA-NOT: s_mov_b32 s3
-; HSA-NOT: s_mov_b32 s7
 
 ; GCNMESA-DAG: s_mov_b32 s16, SCRATCH_RSRC_DWORD0
 ; GCNMESA-DAG: s_mov_b32 s17, SCRATCH_RSRC_DWORD1
@@ -29,39 +21,36 @@
 ; SIMESA-DAG: s_mov_b32 s19, 0xe8f000
 ; VIMESA-DAG: s_mov_b32 s19, 0xe80000
 ; GFX9MESA-DAG: s_mov_b32 s19, 0xe00000
+; GCNMESA-DAG: s_add_u32 s16, s16, s{{[0-9]+}}
+; GCNMESA-DAG: s_addc_u32 s17, s17, 0
 
+; GCNMESA: buffer_store_dword v0, off, s[16:19], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCNMESA: v_mov_b32_e32 v0, 0
+; GCNMESA-NEXT: buffer_store_dword v0, off, s[16:19], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCNMESA: v_mov_b32_e32 v0, 0
+; GCNMESA-NEXT: buffer_store_dword v0, off, s[16:19], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCNMESA: buffer_load_dword {{v[0-9]+}}, off, s[16:19], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 
-; GCNMESAMESA: buffer_store_dword {{v[0-9]+}}, off, s[16:19], s3 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; HSA: s_add_u32 s0, s0, s{{[0-9]+}}
+; HSA-NEXT: s_addc_u32 s1, s1, 0
+; HSA: buffer_store_dword v0, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; HSA: v_mov_b32_e32 v0, 0
+; HSA-NEXT: buffer_store_dword v0, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; HSA: v_mov_b32_e32 v0, 0
+; HSA-NEXT: buffer_store_dword v0, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; HSA: buffer_load_dword {{v[0-9]+}}, off, s[0:3], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 
-; GCNMESA: buffer_store_dword {{v[0-9]}}, off, s[16:19], s3 offset:{{[0-9]+}}
-; GCNMESA: buffer_store_dword {{v[0-9]}}, off, s[16:19], s3 offset:{{[0-9]+}}
-; GCNMESA: buffer_store_dword {{v[0-9]}}, off, s[16:19], s3 offset:{{[0-9]+}}
-; GCNMESA: buffer_store_dword {{v[0-9]}}, off, s[16:19], s3 offset:{{[0-9]+}}
+; GCN-NOT: flat_scr
+; GCN: s_endpgm
 
-; GCNMESA: buffer_load_dword {{v[0-9]+}}, off, s[16:19], s3 offset:{{[0-9]+}}
-; GCNMESA: buffer_load_dword {{v[0-9]+}}, off, s[16:19], s3 offset:{{[0-9]+}}
-; GCNMESA: buffer_load_dword {{v[0-9]+}}, off, s[16:19], s3 offset:{{[0-9]+}}
-; GCNMESA: buffer_load_dword {{v[0-9]+}}, off, s[16:19], s3 offset:{{[0-9]+}}
+; HSA: .amdhsa_private_segment_fixed_size 1408
+; HSA: .amdhsa_user_sgpr_private_segment_buffer 1
+; HSA: .amdhsa_user_sgpr_flat_scratch_init 0
+; HSA: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 
+; GCN: NumVgprs: 64
+; GCN: ScratchSize: 1408
 
-
-; HSA: buffer_store_dword {{v[0-9]+}}, off, s[0:3], s7 offset:{{[0-9]+}} ; 4-byte Folded Spill
-
-; HSA: buffer_store_dword {{v[0-9]}}, off, s[0:3], s7 offset:{{[0-9]+}}
-; HSA: buffer_store_dword {{v[0-9]}}, off, s[0:3], s7 offset:{{[0-9]+}}
-; HSA: buffer_store_dword {{v[0-9]}}, off, s[0:3], s7 offset:{{[0-9]+}}
-; HSA: buffer_store_dword {{v[0-9]}}, off, s[0:3], s7 offset:{{[0-9]+}}
-
-; HSA: buffer_load_dword {{v[0-9]+}}, off, s[0:3], s7 offset:{{[0-9]+}}
-; HSA: buffer_load_dword {{v[0-9]+}}, off, s[0:3], s7 offset:{{[0-9]+}}
-; HSA: buffer_load_dword {{v[0-9]+}}, off, s[0:3], s7 offset:{{[0-9]+}}
-; HSA: buffer_load_dword {{v[0-9]+}}, off, s[0:3], s7 offset:{{[0-9]+}}
-
-
-; GCN: NumVgprs: 256
-; GCN: ScratchSize: 1536
-
-; s[0:3] input user SGPRs. s4,s5,s6 = workgroup IDs. s8 scratch offset.
 define amdgpu_kernel void @spill_vgpr_compute(<4 x float> %arg6, ptr addrspace(1) %arg, i32 %arg1, i32 %arg2, float %arg3, float %arg4, float %arg5) #0 {
 bb:
   %tmp = add i32 %arg1, %arg2
@@ -612,5 +601,5 @@ bb145:                                            ; preds = %bb12
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-no-flat-scratch-init" }
 attributes #1 = { nounwind readnone }
