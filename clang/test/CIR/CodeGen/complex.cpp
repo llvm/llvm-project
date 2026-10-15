@@ -455,30 +455,24 @@ bool foo19(double _Complex a, double _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo19CdS_(double %0, double %1, double %2, double %3)
-// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, align 8
-// LLVM-NEXT: %[[B_SLOT:.*]] = alloca { double, double }, align 8
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo19CdS_(double noundef %0, double noundef %1, double noundef %2, double noundef %3)
+// LLVM: %[[B_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %2, ptr %[[B_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[B_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %3, ptr %[[B_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[B_RELOAD1:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD1]], ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[B_RELOAD2:.*]] = load { double, double }, ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[A_ADDR:.*]] = alloca { double, double }, align 8
+// LLVM-NEXT: %[[B_RELOAD:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[A_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %0, ptr %[[A_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[A_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %1, ptr %[[A_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[A_RELOAD1:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[A_RELOAD1]], ptr %[[A_ADDR]], align 8
-// LLVM-NEXT: %[[A_RELOAD2:.*]] = load { double, double }, ptr %[[A_ADDR]], align 8
+// LLVM-NEXT: %[[A_RELOAD:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
 // LLVM-NEXT: %[[REAL_A_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[REAL_B_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: alloca i8, align 1
-// LLVM-NEXT: store { double, double } %[[A_RELOAD2]], ptr %[[REAL_A_ADDR]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD2]], ptr %[[REAL_B_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[A_RELOAD]], ptr %[[REAL_A_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[B_RELOAD]], ptr %[[REAL_B_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_A:.*]] = load { double, double }, ptr %[[REAL_A_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_B:.*]] = load { double, double }, ptr %[[REAL_B_ADDR]], align 8
 // LLVM: %[[A_REAL:.*]] = extractvalue { double, double } %[[COMPLEX_A]], 0
@@ -568,30 +562,24 @@ bool foo21(double _Complex a, double _Complex b) {
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
-// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo21CdS_(double %0, double %1, double %2, double %3)
-// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, align 8
-// LLVM-NEXT: %[[B_SLOT:.*]] = alloca { double, double }, align 8
+// LLVM-LABEL: define dso_local noundef zeroext i1 @_Z5foo21CdS_(double noundef %0, double noundef %1, double noundef %2, double noundef %3)
+// LLVM: %[[B_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[B_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %2, ptr %[[B_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[B_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %3, ptr %[[B_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[B_RELOAD1:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD1]], ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[B_RELOAD2:.*]] = load { double, double }, ptr %[[B_ADDR]], align 8
-// LLVM-NEXT: %[[A_ADDR:.*]] = alloca { double, double }, align 8
+// LLVM-NEXT: %[[B_RELOAD:.*]] = load { double, double }, ptr %[[B_SLOT]], align 8
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[A_SLOT_REALP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 0
 // LLVM-NEXT: store double %0, ptr %[[A_SLOT_REALP]], align 8
 // LLVM-NEXT: %[[A_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %1, ptr %[[A_SLOT_IMAGP]], align 8
-// LLVM-NEXT: %[[A_RELOAD1:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
-// LLVM-NEXT: store { double, double } %[[A_RELOAD1]], ptr %[[A_ADDR]], align 8
-// LLVM-NEXT: %[[A_RELOAD2:.*]] = load { double, double }, ptr %[[A_ADDR]], align 8
+// LLVM-NEXT: %[[A_RELOAD:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
 // LLVM-NEXT: %[[REAL_A_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[REAL_B_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: alloca i8, align 1
-// LLVM-NEXT: store { double, double } %[[A_RELOAD2]], ptr %[[REAL_A_ADDR]], align 8
-// LLVM-NEXT: store { double, double } %[[B_RELOAD2]], ptr %[[REAL_B_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[A_RELOAD]], ptr %[[REAL_A_ADDR]], align 8
+// LLVM-NEXT: store { double, double } %[[B_RELOAD]], ptr %[[REAL_B_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_A:.*]] = load { double, double }, ptr %[[REAL_A_ADDR]], align 8
 // LLVM-NEXT: %[[COMPLEX_B:.*]] = load { double, double }, ptr %[[REAL_B_ADDR]], align 8
 // LLVM: %[[A_REAL:.*]] = extractvalue { double, double } %[[COMPLEX_A]], 0
