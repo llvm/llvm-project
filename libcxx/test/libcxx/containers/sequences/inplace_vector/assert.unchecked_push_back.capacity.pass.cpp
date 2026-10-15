@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers, std-at-least-c++26
+// UNSUPPORTED: libcpp-has-no-experimental-inplace-vector
 // UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 

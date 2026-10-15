@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+// UNSUPPORTED: libcpp-has-no-experimental-inplace-vector
 // UNSUPPORTED: no-exceptions
 
 // Clang's -Wunreachable-code does not model exceptional exits from [[noreturn]] members
