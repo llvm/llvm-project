@@ -95,6 +95,16 @@ inline constexpr bool isRelocatableBucket =
     std::is_trivially_copy_constructible_v<BucketT> &&
     std::is_trivially_destructible_v<BucketT>;
 
+// Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
+template <typename BucketT> void relocateBucket(BucketT *Dst, BucketT *Src) {
+  using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
+  using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
+  ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
+  ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
+  Src->getSecond().~ValueT();
+  Src->getFirst().~KeyT();
+}
+
 using UsedT = uint32_t;
 
 // Number of used words backing N buckets where N is zero or a power of two.
@@ -259,10 +269,6 @@ public:
     return true;
   }
 
-  // Put the zombie instance in a known good state after a move.
-  // deallocateBuckets() already resets to the empty state.
-  void kill() { deallocateBuckets(); }
-
   static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
     return std::max(64u, MinNumBuckets);
   }
@@ -280,7 +286,7 @@ public:
   }
 
   bool maybeMoveFast(DenseMapStorage &&Other) {
-    swap(Other);
+    *this = Other;
     return true;
   }
 };
@@ -312,16 +318,6 @@ class SmallDenseMapStorage {
     InlineRep Inline;
     LargeRep Large;
   } storage;
-
-  // Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
-  static void relocateBucket(BucketT *Dst, BucketT *Src) {
-    using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
-    using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
-    ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
-    ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
-    Src->getSecond().~ValueT();
-    Src->getFirst().~KeyT();
-  }
 
   const BucketT *getInlineBuckets() const {
     assert(Small);
@@ -466,15 +462,12 @@ public:
   }
 
   void deallocateBuckets() {
-    // Fast path in case storage.Large.NumBuckets == 0, just like destroyAll.
-    // This path is used to destruct zombie instances after moves.
-    if (Small || storage.Large.NumBuckets == 0)
+    if (Small)
       return;
 
     deallocate_buffer(storage.Large.Buckets,
                       allocBytes<BucketT>(storage.Large.NumBuckets),
                       allocAlign<BucketT>());
-    storage.Large.NumBuckets = 0;
   }
 
   bool allocateBuckets(unsigned Num) {
@@ -485,13 +478,6 @@ public:
     setLarge(allocate_buffer(allocBytes<BucketT>(Num), allocAlign<BucketT>()),
              Num);
     return true;
-  }
-
-  // Put the zombie instance in a known good state after a move.
-  void kill() {
-    deallocateBuckets();
-    Small = false;
-    storage.Large = LargeRep{nullptr, nullptr, 0};
   }
 
   static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
@@ -524,16 +510,11 @@ public:
     Small = false;
     NumEntries = Other.NumEntries;
     storage.Large = Other.storage.Large;
-    Other.storage.Large.NumBuckets = 0;
     return true;
   }
 };
 
 } // namespace densemap::detail
-
-// Befriended below so DenseMapBase can expose its bucket-relocation callback
-// erase to ValueHandleBase, the only caller that caches bucket pointers.
-class ValueHandleBase;
 
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
@@ -766,11 +747,11 @@ public:
     auto [Reallocate, NewNumBuckets] = Storage.planShrinkAndClear();
     destroyAll();
     if (!Reallocate) {
-      initEmpty();
+      initEmpty(Storage);
       return;
     }
     Storage.deallocateBuckets();
-    initWithExactBucketCount(NewNumBuckets);
+    initWithExactBucketCount(Storage, NewNumBuckets);
   }
 
   /// Return true if the specified key is in the map, false otherwise.
@@ -947,10 +928,6 @@ public:
     return Ret;
   }
 
-  void eraseFromFilledBucket(BucketT *TheBucket) {
-    eraseFromFilledBucket(TheBucket, [](BucketT &) {});
-  }
-
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
@@ -998,19 +975,6 @@ public:
     return lookupOrInsertIntoBucket(std::move(Key)).first->second;
   }
 
-  /// Return true if the specified pointer points somewhere into the DenseMap's
-  /// array of buckets (i.e. either to a key or value in the DenseMap).
-  [[nodiscard]] bool isPointerIntoBucketsArray(const void *Ptr) const {
-    return Ptr >= getBuckets() && Ptr < getBucketsEnd();
-  }
-
-  /// getPointerIntoBucketsArray() - Return an opaque pointer into the buckets
-  /// array.  In conjunction with the previous method, this can be used to
-  /// determine whether an insertion caused the DenseMap to reallocate.
-  [[nodiscard]] const void *getPointerIntoBucketsArray() const {
-    return getBuckets();
-  }
-
   void swap(DenseMapBase &RHS) {
     this->incrementEpoch();
     RHS.incrementEpoch();
@@ -1023,7 +987,7 @@ public:
   /// that this number of elements can be inserted in the map without grow().
   explicit DenseMapBase(unsigned NumElementsToReserve) {
     initWithExactBucketCount(
-        getMinBucketToReserveForEntries(NumElementsToReserve));
+        Storage, getMinBucketToReserveForEntries(NumElementsToReserve));
   }
 
   DenseMapBase(const DenseMapBase &other) : DenseMapBase() {
@@ -1059,27 +1023,38 @@ public:
   DenseMapBase &operator=(DenseMapBase &&other) {
     this->destroyAll();
     Storage.deallocateBuckets();
-    this->initWithExactBucketCount(0);
+    initWithExactBucketCount(Storage, 0);
     this->swap(other);
     return *this;
   }
 
-protected:
-  StorageT Storage;
+  /// Return the approximate size (in bytes) of the actual map.
+  /// This is just the raw memory used by DenseMap.
+  /// If entries are pointers to objects, the size of the referenced objects
+  /// are not included.
+  [[nodiscard]] size_t getMemorySize() const {
+    return llvm::densemap::detail::allocBytes<BucketT>(getNumBuckets());
+  }
 
-  struct ExactBucketCount {};
+private:
+  StorageT Storage;
 
   using Rep = llvm::densemap::detail::StorageRep<BucketT>;
 
-  DenseMapBase(unsigned NumBuckets, ExactBucketCount) {
-    initWithExactBucketCount(NumBuckets);
+  static void initEmpty(StorageT &S) {
+    S.setNumEntries(0);
+
+    assert((S.getNumBuckets() & (S.getNumBuckets() - 1)) == 0 &&
+           "# initial buckets must be a power of two!");
+    if (S.getNumBuckets())
+      llvm::densemap::detail::clearUsed(S.getUsed(), S.getNumBuckets());
   }
 
-  void initWithExactBucketCount(unsigned NewNumBuckets) {
-    if (Storage.allocateBuckets(NewNumBuckets))
-      initEmpty();
+  static void initWithExactBucketCount(StorageT &S, unsigned NewNumBuckets) {
+    if (S.allocateBuckets(NewNumBuckets))
+      initEmpty(S);
     else
-      setNumEntries(0);
+      S.setNumEntries(0);
   }
 
   void destroyAll() {
@@ -1100,15 +1075,6 @@ protected:
     });
   }
 
-  void initEmpty() {
-    setNumEntries(0);
-
-    assert((getNumBuckets() & (getNumBuckets() - 1)) == 0 &&
-           "# initial buckets must be a power of two!");
-    if (getNumBuckets())
-      llvm::densemap::detail::clearUsed(getUsed(), getNumBuckets());
-  }
-
   /// Returns the number of buckets to allocate to ensure that the DenseMap can
   /// accommodate \p NumEntries without need to grow().
   unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
@@ -1124,33 +1090,27 @@ protected:
     return llvm::densemap::detail::hasherFor<KeyT, KeyInfoT>();
   }
 
-  // Move key/value from Other to *this.
-  // Other is left in a valid but empty state.
-  LLVM_ATTRIBUTE_NOINLINE void moveFrom(DenseMapBase &Other) {
-    assert(getNumEntries() == 0 && "moveFrom requires an empty destination");
-    BucketT *OtherB = Other.getBuckets();
-    UsedT *OtherU = Other.getUsed();
-    const unsigned E = Other.getNumBuckets();
-    UsedT *U = getUsed();
-    BucketT *B = getBuckets();
-    const unsigned Mask = getNumBuckets() - 1;
-    llvm::densemap::detail::forEachUsed(OtherU, E, [&](unsigned I) {
+  // Move key/value from Src to Dst.
+  static LLVM_ATTRIBUTE_NOINLINE void moveFrom(StorageT &Dst, StorageT &Src) {
+    assert(Dst.getNumEntries() == 0 &&
+           "moveFrom requires an empty destination");
+    BucketT *SrcB = Src.getBuckets();
+    UsedT *SrcU = Src.getUsed();
+    const unsigned E = Src.getNumBuckets();
+    UsedT *U = Dst.getUsed();
+    BucketT *B = Dst.getBuckets();
+    const unsigned Mask = Dst.getNumBuckets() - 1;
+    llvm::densemap::detail::forEachUsed(SrcU, E, [&](unsigned I) {
       // Find the first empty slot on this key's probe chain; there is no equal
       // key in the destination, so nothing to compare against.
-      unsigned BucketNo = KeyInfoT::getHashValue(OtherB[I].getFirst()) & Mask;
+      unsigned BucketNo = KeyInfoT::getHashValue(SrcB[I].getFirst()) & Mask;
       while (llvm::densemap::detail::used(U, BucketNo))
         BucketNo = (BucketNo + 1) & Mask;
-      BucketT *DestBucket = B + BucketNo;
-      ::new (&DestBucket->getFirst()) KeyT(std::move(OtherB[I].getFirst()));
-      ::new (&DestBucket->getSecond()) ValueT(std::move(OtherB[I].getSecond()));
+      llvm::densemap::detail::relocateBucket(B + BucketNo, &SrcB[I]);
       llvm::densemap::detail::setUsed(U, BucketNo);
-
-      // Free the moved-out key/value.
-      OtherB[I].getSecond().~ValueT();
-      OtherB[I].getFirst().~KeyT();
     });
-    setNumEntries(Other.getNumEntries());
-    Other.Storage.kill();
+    Dst.setNumEntries(Src.getNumEntries());
+    Src.deallocateBuckets();
   }
 
   LLVM_ATTRIBUTE_NOINLINE void copyFrom(const DenseMapBase &other) {
@@ -1185,18 +1145,9 @@ protected:
     }
   }
 
-private:
-  // ValueHandleBase caches pointers into the bucket array, so it needs the
-  // callback erase below to fix them up as entries shift. It is the only
-  // intended caller; do not add new ones.
-  friend class ValueHandleBase;
-
   /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
-  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
-  /// array, call \p OnMoved per shifted bucket.
-  template <typename OnMovedT>
-  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket,
-                                                     OnMovedT &&OnMoved) {
+  /// TAOCP 6.4 Algorithm R.
+  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket) {
     incrementEpoch();
     TheBucket->getSecond().~ValueT();
     TheBucket->getFirst().~KeyT();
@@ -1216,27 +1167,11 @@ private:
       // If the hole (I) lies on the linear-probe chain from the home bucket
       // (Ideal) to J, shift J into the hole and make J the new hole.
       if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
-        BucketT &BI = BucketsPtr[I];
-        ::new (&BI.getFirst()) KeyT(std::move(BJ.getFirst()));
-        ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
-        BJ.getSecond().~ValueT();
-        BJ.getFirst().~KeyT();
-        OnMoved(BI);
+        llvm::densemap::detail::relocateBucket(&BucketsPtr[I], &BJ);
         I = J;
       }
     }
     llvm::densemap::detail::unsetUsed(U, I);
-  }
-
-  /// Erase \p Val and close the resulting hole by potentially shifting other
-  /// entries into it. For callers that cache pointers into the bucket array,
-  /// call \p OnMoved per shifted bucket.
-  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
-    BucketT *TheBucket = doFind(Val);
-    if (!TheBucket)
-      return false;
-    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
-    return true;
   }
 
   template <typename KeyArgT, typename... Ts>
@@ -1290,12 +1225,6 @@ private:
 
   unsigned getNumBuckets() const { return Storage.getNumBuckets(); }
 
-  BucketT *getBucketsEnd() { return getBuckets() + getNumBuckets(); }
-
-  const BucketT *getBucketsEnd() const {
-    return getBuckets() + getNumBuckets();
-  }
-
   LLVM_ATTRIBUTE_NOINLINE void grow(unsigned MinNumBuckets) {
     assert((MinNumBuckets == 0 || isPowerOf2_32(MinNumBuckets)) &&
            "bucket count must be zero or a power of two");
@@ -1303,12 +1232,13 @@ private:
       Storage.grow(MinNumBuckets, hasher());
     } else {
       unsigned NumBuckets = StorageT::roundUpNumBuckets(MinNumBuckets);
-      DenseMapBase Tmp(NumBuckets, ExactBucketCount{});
-      Tmp.moveFrom(*this);
-      if (Storage.maybeMoveFast(std::move(Tmp.Storage)))
+      StorageT Tmp;
+      initWithExactBucketCount(Tmp, NumBuckets);
+      moveFrom(Tmp, Storage);
+      if (Storage.maybeMoveFast(std::move(Tmp)))
         return;
-      initWithExactBucketCount(NumBuckets);
-      moveFrom(Tmp);
+      initWithExactBucketCount(Storage, NumBuckets);
+      moveFrom(Storage, Tmp);
     }
   }
 
@@ -1398,15 +1328,6 @@ private:
       // Hash collision: continue linear probing.
       BucketNo = (BucketNo + 1) & Mask;
     }
-  }
-
-public:
-  /// Return the approximate size (in bytes) of the actual map.
-  /// This is just the raw memory used by DenseMap.
-  /// If entries are pointers to objects, the size of the referenced objects
-  /// are not included.
-  [[nodiscard]] size_t getMemorySize() const {
-    return llvm::densemap::detail::allocBytes<BucketT>(getNumBuckets());
   }
 };
 

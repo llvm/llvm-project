@@ -429,7 +429,7 @@ define amdgpu_kernel void @add_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
 ; GFX1251-NEXT:    s_wait_loadcnt 0x0
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], 0x64, v[0:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], 0x64
 ; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1] scale_offset
 ; GFX1251-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
