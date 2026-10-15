@@ -105,9 +105,8 @@ class SsafStep(unittest.TestCase):
             ar.invoke_ssaf_tools(shim, self.root)
         self.assertEqual(
             [
-                "no %s feed %s, nothing to merge"
-                % (what, self._id("build/libx.a").get_path())
-                for what in ("edits", "transformation reports", "conflict reports")
+                "no edits feed %s, nothing to merge"
+                % self._id("build/libx.a").get_path()
             ],
             notes,
         )

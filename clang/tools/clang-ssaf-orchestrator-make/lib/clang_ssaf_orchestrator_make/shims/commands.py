@@ -23,9 +23,10 @@ def is_archive(filename):
 
 
 def artifact_of(ssaf_artifact_repo, build_artifact_id, ssaf_artifact_kind):
-    return ssaf_artifact_repo.get_path_if_present(
-        get_ssaf_artifact_id(build_artifact_id, ssaf_artifact_kind)
-    )
+    ssaf_artifact_id = get_ssaf_artifact_id(build_artifact_id, ssaf_artifact_kind)
+    if not ssaf_artifact_repo.has_artifact(ssaf_artifact_id):
+        return None
+    return ssaf_artifact_repo.get_path_for_artifact(ssaf_artifact_id)
 
 
 def summary_of(ssaf_artifact_repo, build_artifact_id):

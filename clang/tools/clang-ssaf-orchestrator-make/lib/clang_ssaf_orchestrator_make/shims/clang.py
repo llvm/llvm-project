@@ -90,7 +90,7 @@ def _summary_extraction_args(shim, build_artifact_id):
         "--ssaf-compilation-unit-id=" + build_artifact_id.get_path(),
         "--ssaf-tu-summary-file=" + summary,
     ]
-    return [summary], extra + shim.pass_config.ssaf_extra_clang_args
+    return summary, extra + shim.pass_config.ssaf_extra_clang_args
 
 
 def _transformation_args(shim, build_artifact_id):
@@ -100,11 +100,6 @@ def _transformation_args(shim, build_artifact_id):
             get_ssaf_artifact_id(build_artifact_id, SSAFArtifactKind.EDITS)
         )
     )
-    report = utils.make_parents(
-        ssaf_artifact_repo.get_path_for_artifact(
-            get_ssaf_artifact_id(build_artifact_id, SSAFArtifactKind.REPORT)
-        )
-    )
     extra = [
         "--ssaf-source-transformation=" + shim.pass_config.transformation,
         "--ssaf-global-scope-analysis-result="
@@ -112,9 +107,14 @@ def _transformation_args(shim, build_artifact_id):
         "--ssaf-compilation-unit-id=" + build_artifact_id.get_path(),
         "--ssaf-link-unit-id=" + shim.pass_config.link_unit_id,
         "--ssaf-src-edit-file=" + edits,
-        "--ssaf-transformation-report-file=" + report,
+        "--ssaf-transformation-report-file="
+        + utils.make_parents(
+            ssaf_artifact_repo.get_path_for_artifact(
+                get_ssaf_artifact_id(build_artifact_id, SSAFArtifactKind.REPORT)
+            )
+        ),
     ]
-    return [edits, report], extra + shim.pass_config.ssaf_extra_clang_args
+    return edits, extra + shim.pass_config.ssaf_extra_clang_args
 
 
 def _run_clang_driven_tool(shim, cwd):
@@ -129,19 +129,18 @@ def _run_clang_driven_tool(shim, cwd):
     output = os.path.join(cwd, job.output)
     build_artifact_id = BuildArtifactId(output)
     if shim.pass_config.pass_kind == config.SSAFPassKind.TRANSFORMATION:
-        artifacts, extra = _transformation_args(shim, build_artifact_id)
+        artifact, extra = _transformation_args(shim, build_artifact_id)
         failure_kind = SSAFFailureKind.TRANSFORM
     else:
-        artifacts, extra = _summary_extraction_args(shim, build_artifact_id)
+        artifact, extra = _summary_extraction_args(shim, build_artifact_id)
         failure_kind = SSAFFailureKind.EXTRACT
     ssaf_command = [shim.pass_config.ssaf_clang] + shim.argv[1:] + extra
 
     if not shim.run(ssaf_command, failure_kind, build_artifact_id):
-        for artifact in artifacts:
-            try:
-                os.remove(artifact)
-            except OSError:
-                pass
+        try:
+            os.remove(artifact)
+        except OSError:
+            pass
         logging_diagnostics.report_error(
             "discarded incomplete artifact for %s" % build_artifact_id.get_path()
         )
