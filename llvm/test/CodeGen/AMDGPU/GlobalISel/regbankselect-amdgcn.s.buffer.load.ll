@@ -705,11 +705,11 @@ define amdgpu_ps void @s_buffer_load_i256_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 8)
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 16, align 8)
   ; GFX7-NEXT:   [[MV:%[0-9]+]]:vgpr(i256) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](i128), [[AMDGPU_BUFFER_LOAD1]](i128)
-  ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](i256)
-  ; GFX7-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(i128), [[UV1:%[0-9]+]]:vgpr(i128) = G_UNMERGE_VALUES [[MV]](i256)
+  ; GFX7-NEXT:   G_STORE [[UV]](i128), [[DEF]](p1) :: (store (i128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C2]](i64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](i128), [[PTR_ADD]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX1200_1250-LABEL: name: s_buffer_load_i256_vgpr_offset
@@ -728,11 +728,11 @@ define amdgpu_ps void @s_buffer_load_i256_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX1200_1250-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 8)
   ; GFX1200_1250-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 16, align 8)
   ; GFX1200_1250-NEXT:   [[MV:%[0-9]+]]:vgpr(i256) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](i128), [[AMDGPU_BUFFER_LOAD1]](i128)
-  ; GFX1200_1250-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](i256)
-  ; GFX1200_1250-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; GFX1200_1250-NEXT:   [[UV:%[0-9]+]]:vgpr(i128), [[UV1:%[0-9]+]]:vgpr(i128) = G_UNMERGE_VALUES [[MV]](i256)
+  ; GFX1200_1250-NEXT:   G_STORE [[UV]](i128), [[DEF]](p1) :: (store (i128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX1200_1250-NEXT:   [[C2:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 16
   ; GFX1200_1250-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C2]](i64)
-  ; GFX1200_1250-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
+  ; GFX1200_1250-NEXT:   G_STORE [[UV1]](i128), [[PTR_ADD]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX1200_1250-NEXT:   S_ENDPGM 0
   %val = call i256 @llvm.amdgcn.s.buffer.load.i256(<4 x i32> %rsrc, i32 %soffset, i32 0)
   store i256 %val, ptr addrspace(1) poison
@@ -759,17 +759,17 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 32, align 8)
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 48, align 8)
   ; GFX7-NEXT:   [[MV:%[0-9]+]]:vgpr(i512) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](i128), [[AMDGPU_BUFFER_LOAD1]](i128), [[AMDGPU_BUFFER_LOAD2]](i128), [[AMDGPU_BUFFER_LOAD3]](i128)
-  ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128), [[UV2:%[0-9]+]]:vgpr(s128), [[UV3:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](i512)
-  ; GFX7-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(i128), [[UV1:%[0-9]+]]:vgpr(i128), [[UV2:%[0-9]+]]:vgpr(i128), [[UV3:%[0-9]+]]:vgpr(i128) = G_UNMERGE_VALUES [[MV]](i512)
+  ; GFX7-NEXT:   G_STORE [[UV]](i128), [[DEF]](p1) :: (store (i128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C2]](i64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](i128), [[PTR_ADD]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C3:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 32
   ; GFX7-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C3]](i64)
-  ; GFX7-NEXT:   G_STORE [[UV2]](s128), [[PTR_ADD1]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 32, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV2]](i128), [[PTR_ADD1]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 32, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C4:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 48
   ; GFX7-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C4]](i64)
-  ; GFX7-NEXT:   G_STORE [[UV3]](s128), [[PTR_ADD2]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 48, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV3]](i128), [[PTR_ADD2]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 48, align 8, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX1200_1250-LABEL: name: s_buffer_load_i512_vgpr_offset
@@ -790,17 +790,17 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX1200_1250-NEXT:   [[AMDGPU_BUFFER_LOAD2:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 32, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 32, align 8)
   ; GFX1200_1250-NEXT:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(i128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x i32>), [[C1]](i32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 48, align 8)
   ; GFX1200_1250-NEXT:   [[MV:%[0-9]+]]:vgpr(i512) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](i128), [[AMDGPU_BUFFER_LOAD1]](i128), [[AMDGPU_BUFFER_LOAD2]](i128), [[AMDGPU_BUFFER_LOAD3]](i128)
-  ; GFX1200_1250-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128), [[UV2:%[0-9]+]]:vgpr(s128), [[UV3:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](i512)
-  ; GFX1200_1250-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; GFX1200_1250-NEXT:   [[UV:%[0-9]+]]:vgpr(i128), [[UV1:%[0-9]+]]:vgpr(i128), [[UV2:%[0-9]+]]:vgpr(i128), [[UV3:%[0-9]+]]:vgpr(i128) = G_UNMERGE_VALUES [[MV]](i512)
+  ; GFX1200_1250-NEXT:   G_STORE [[UV]](i128), [[DEF]](p1) :: (store (i128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX1200_1250-NEXT:   [[C2:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 16
   ; GFX1200_1250-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C2]](i64)
-  ; GFX1200_1250-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
+  ; GFX1200_1250-NEXT:   G_STORE [[UV1]](i128), [[PTR_ADD]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX1200_1250-NEXT:   [[C3:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 32
   ; GFX1200_1250-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C3]](i64)
-  ; GFX1200_1250-NEXT:   G_STORE [[UV2]](s128), [[PTR_ADD1]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 32, align 8, addrspace 1)
+  ; GFX1200_1250-NEXT:   G_STORE [[UV2]](i128), [[PTR_ADD1]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 32, align 8, addrspace 1)
   ; GFX1200_1250-NEXT:   [[C4:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 48
   ; GFX1200_1250-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = nuw inbounds G_PTR_ADD [[DEF]], [[C4]](i64)
-  ; GFX1200_1250-NEXT:   G_STORE [[UV3]](s128), [[PTR_ADD2]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 48, align 8, addrspace 1)
+  ; GFX1200_1250-NEXT:   G_STORE [[UV3]](i128), [[PTR_ADD2]](p1) :: (store (i128) into `ptr addrspace(1) poison` + 48, align 8, addrspace 1)
   ; GFX1200_1250-NEXT:   S_ENDPGM 0
   %val = call i512 @llvm.amdgcn.s.buffer.load.i512(<4 x i32> %rsrc, i32 %soffset, i32 0)
   store i512 %val, ptr addrspace(1) poison

@@ -653,6 +653,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
   if (ci.getInvocation().getFortranOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::CUDA))
     config.EnableCUDA = true;
+  // Give plugins a chance to register passes at the extension points.
+  fir::invokePassPipelineConfigCallbacks(config);
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -797,6 +799,10 @@ void CodeGenAction::generateLLVMIR() {
     config.NSWOnLoopVarInc = false;
 
   config.ComplexRange = opts.getComplexRange();
+
+  // Give plugins a chance to register passes at the extension points, once the
+  // config is fully set up.
+  fir::invokePassPipelineConfigCallbacks(config);
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -1102,7 +1108,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested. In this case, don't run the passes. This mimics the behavior of
   // clang.
-  if (llvm::PrintPipelinePasses) {
+  if (pb.getPrintPipelinePasses()) {
     mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
       auto passName = pic.getPassNameForClassName(className);
       return passName.empty() ? className : passName;

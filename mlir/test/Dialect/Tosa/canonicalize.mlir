@@ -16,6 +16,23 @@ func.func @test_argmax_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
   return %0 : tensor<i64>
 }
 
+
+// CHECK-LABEL: @argmin_nofold
+func.func @argmin_nofold(%arg0: tensor<?x1xf32>) -> tensor<1xi32> {
+  // CHECK: tosa.argmin
+  %0 = tosa.argmin %arg0 axis(0): (tensor<?x1xf32>) -> tensor<1xi32>
+  return %0 : tensor<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_argmin_fold_i64_index
+func.func @test_argmin_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
+  // CHECK: tosa.const values(dense<0> : tensor<i64>) : () -> tensor<i64>
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<1xi8>) -> tensor<i64>
+  return %0 : tensor<i64>
+}
+
 // -----
 
 // CHECK-LABEL: @row_gather_row_count_one_to_gather

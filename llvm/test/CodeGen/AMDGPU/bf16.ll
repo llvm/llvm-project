@@ -1442,8 +1442,7 @@ define void @test_store_fpimm(ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) #0
 ; GFX11TRUE16-LABEL: test_store_fpimm:
 ; GFX11TRUE16:       ; %bb.0:
 ; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x3f80
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0x4228
+; GFX11TRUE16-NEXT:    v_mov_b32_e32 v4, 0x42283f80
 ; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX11TRUE16-NEXT:    global_store_d16_hi_b16 v[2:3], v4, off
 ; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1461,8 +1460,7 @@ define void @test_store_fpimm(ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) #0
 ; GFX1250TRUE16:       ; %bb.0:
 ; GFX1250TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x3f80
-; GFX1250TRUE16-NEXT:    v_mov_b16_e32 v4.h, 0x4228
+; GFX1250TRUE16-NEXT:    v_mov_b32_e32 v4, 0x42283f80
 ; GFX1250TRUE16-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1250TRUE16-NEXT:    global_store_d16_hi_b16 v[2:3], v4, off
 ; GFX1250TRUE16-NEXT:    s_set_pc_i64 s[30:31]

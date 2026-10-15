@@ -475,7 +475,7 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      cf::BranchOp::create(rewriter, loc, remainingOpsBlock,
+      cf::BranchOp::create(rewriter, terminator.getLoc(), remainingOpsBlock,
                            terminatorOperands);
       rewriter.eraseOp(terminator);
     }

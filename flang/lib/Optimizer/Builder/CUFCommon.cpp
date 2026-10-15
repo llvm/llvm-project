@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/AllocationPolicy.h"
@@ -74,15 +75,9 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
 bool cuf::isExecutingOnDevice(mlir::Operation *op) {
   if (!op)
     return false;
-  if (op->getParentOfType<cuf::KernelOp>() ||
-      op->getParentOfType<mlir::acc::OffloadRegionOpInterface>() ||
-      op->getParentOfType<mlir::gpu::GPUModuleOp>() ||
-      op->getParentOfType<mlir::gpu::LaunchOp>() ||
-      op->getParentOfType<mlir::gpu::GPUFuncOp>())
+  if (fir::isInOffloadRegion(op))
     return true;
   if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
-    if (mlir::acc::isSpecializedAccRoutine(funcOp))
-      return true;
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
                 cuf::getProcAttrName())) {

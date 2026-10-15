@@ -720,7 +720,7 @@ printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
     MipsTargetStreamer &TS = getTargetStreamer();

@@ -411,6 +411,22 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
+def O0CanonicalizerPass : Pass<"fir-o0-canonicalize"> {
+  let summary = "Simplify operations while preserving statement-entry branches";
+  let description = [{
+    Clean up IR after CFG lowering at O0, using canonicalization patterns from
+    all loaded dialects except ControlFlow. CF canonicalizations can bypass
+    loop-entry branches carrying an array assignment's source location and
+    move its PHI initializations into preceding statements, losing the
+    assignment's breakpoint location outside the loop.
+
+    Both dialect-wide and operation-level CF pattern registrations are omitted.
+    Folding and dead operation elimination remain enabled; region simplification
+    is disabled. This pass does not promise to preserve arbitrary CFG structure
+    against transformations registered by other dialects.
+  }];
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite"> {
   let summary = "Region simplification";
   let description = [{
@@ -452,6 +468,12 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     loops to be vectorized as well as other loop optimizations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
+  let options = [
+    Option<"enableSlices", "enable-slices", "bool",
+           /*default=*/"true",
+           "Enable versioning for supported static-unit array slices; disabling "
+           "this option leaves other loop versioning active">
+  ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {

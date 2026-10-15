@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFuse.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -98,11 +99,6 @@ STATISTIC(OnlySecondCandidateIsGuarded,
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
-
-static cl::opt<uint32_t> FusionPeelMaxCount(
-    "loop-fusion-peel-max-count", cl::init(0), cl::Hidden,
-    cl::desc("Max number of iterations to be peeled from a loop, such that "
-             "fusion can take place"));
 
 #ifndef NDEBUG
 static cl::opt<bool>
@@ -849,7 +845,9 @@ private:
         // Peeling the second loop is not currently supported.
         bool WillPeel =
             FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
-            *TCDifference <= static_cast<int64_t>(FusionPeelMaxCount);
+            *TCDifference <=
+                static_cast<int64_t>(
+                    ScalarOptions::Global.loop_fusion_peel_max_count);
 
         if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "

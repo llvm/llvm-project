@@ -122,8 +122,7 @@ define void @bitset_verifier_error_freeze_poison() local_unnamed_addr #0 {
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x3f7fbe77
-; SI-NEXT:    v_cmp_ge_f32_e64 s[4:5], |s4|, v0
-; SI-NEXT:    s_and_b64 vcc, exec, s[4:5]
+; SI-NEXT:    v_cmp_ge_f32_e64 vcc, |s4|, v0
 ; SI-NEXT:    s_cbranch_vccnz .LBB6_2
 ; SI-NEXT:  ; %bb.1: ; %bb5
 ; SI-NEXT:  .LBB6_2: ; %bb6

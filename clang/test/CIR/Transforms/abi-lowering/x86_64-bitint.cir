@@ -673,7 +673,6 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @coerce_s(%arg0: !s32i) -> !s32i
-  // CHECK-NEXT:    %[[RETSLOT:[0-9]+]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_S>
   // CHECK-NEXT:    %[[ARGSLOT:[0-9]+]] = cir.alloca "coerce" align(4) : !cir.ptr<!s32i>
   // CHECK-NEXT:    cir.store %arg0, %[[ARGSLOT]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT:    %[[ARGVIEW:[0-9]+]] = cir.cast bitcast %[[ARGSLOT]]
@@ -681,24 +680,19 @@ module attributes {
   // CHECK-NEXT:    %[[REC:[0-9]+]] = cir.load %[[ARGVIEW]] : !cir.ptr<!rec_S>, !rec_S
   // CHECK-NEXT:    %[[LOCAL:[0-9]+]] = cir.alloca "a" align(4) : !cir.ptr<!rec_S>
   // CHECK-NEXT:    cir.store %[[REC]], %[[LOCAL]] : !rec_S, !cir.ptr<!rec_S>
-  // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %[[LOCAL]] : !cir.ptr<!rec_S>, !rec_S
-  // CHECK-NEXT:    cir.store %[[VAL]], %[[RETSLOT]] : !rec_S, !cir.ptr<!rec_S>
-  // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[RETSLOT]]
+  // CHECK-NEXT:    %[[RETVIEW:[0-9]+]] = cir.cast bitcast %[[LOCAL]]
   // CHECK-SAME:      : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-  // CHECK-NEXT:    %[[RES:[0-9]+]] = cir.load %[[RETVIEW]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:    %[[RES:[0-9]+]] = cir.load align(4) %[[RETVIEW]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT:    cir.return %[[RES]] : !s32i
 
   // LLVM-LABEL: define i32 @coerce_s(
   // LLVM-SAME:    i32 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %[[RETSLOT:[0-9]+]] = alloca %struct.S, align 4
   // LLVM-NEXT:    %[[ARGSLOT:[0-9]+]] = alloca i32, align 4
   // LLVM-NEXT:    store i32 %[[ARG]], ptr %[[ARGSLOT]], align 4
   // LLVM-NEXT:    %[[REC:[0-9]+]] = load %struct.S, ptr %[[ARGSLOT]], align 4
   // LLVM-NEXT:    %[[LOCAL:[0-9]+]] = alloca %struct.S, align 4
   // LLVM-NEXT:    store %struct.S %[[REC]], ptr %[[LOCAL]], align 4
-  // LLVM-NEXT:    %[[VAL:[0-9]+]] = load %struct.S, ptr %[[LOCAL]], align 4
-  // LLVM-NEXT:    store %struct.S %[[VAL]], ptr %[[RETSLOT]], align 4
-  // LLVM-NEXT:    %[[RES:[0-9]+]] = load i32, ptr %[[RETSLOT]], align 4
+  // LLVM-NEXT:    %[[RES:[0-9]+]] = load i32, ptr %[[LOCAL]], align 4
   // LLVM-NEXT:    ret i32 %[[RES]]
 
   // A struct holding a two-eightbyte _BitInt flattens into an i64 pair.

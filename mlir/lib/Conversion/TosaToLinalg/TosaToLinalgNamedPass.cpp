@@ -60,6 +60,7 @@ public:
     target.addIllegalOp<tosa::MaxPool2dOp>();
     target.addIllegalOp<tosa::MaxPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();
+    target.addIllegalOp<tosa::AvgPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::TransposeOp>();
 
@@ -68,6 +69,7 @@ public:
     FunctionOpInterface func = getOperation();
     TosaToLinalgNamedOptions options;
     options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
+    options.allowNonFinites = allowNonFinites;
     tosa::populateTosaToLinalgNamedConversionPatterns(converter, &patterns,
                                                       options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))

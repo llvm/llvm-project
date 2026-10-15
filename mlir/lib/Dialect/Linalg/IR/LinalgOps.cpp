@@ -6168,7 +6168,9 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -6268,6 +6270,9 @@ bool PackOp::isLikePad() {
 ::mlir::LogicalResult
 PackOp::fold(FoldAdaptor adaptor,
              ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!hasPureTensorSemantics())
     return failure();
   std::optional<Attribute> paddingValue;
@@ -6301,7 +6306,9 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!op.hasPureTensorSemantics())
       return failure();
 
@@ -6634,7 +6641,9 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -6751,7 +6760,9 @@ bool UnPackOp::isLikeUnPad() {
 ::mlir::LogicalResult
 UnPackOp::fold(FoldAdaptor adaptor,
                ::llvm::SmallVectorImpl<OpFoldResult> &results) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!hasPureTensorSemantics())
     return failure();
 
@@ -6783,7 +6794,9 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!op.hasPureTensorSemantics())
       return failure();
 

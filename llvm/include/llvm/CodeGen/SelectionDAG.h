@@ -2757,7 +2757,7 @@ public:
   }
 
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                         SDValue InChain, const SDLoc &DLoc);
+                                         SDValue InChain, SDNode *Node);
 
   /// Returns the maximum runtime number of elements in VT if known, or 0
   /// otherwise.

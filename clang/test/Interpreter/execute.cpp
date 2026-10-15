@@ -19,3 +19,7 @@ auto r2 = printf("S[f=%f, m=0x%llx]\n", s.f, reinterpret_cast<unsigned long long
 
 inline int foo() { return 42; }
 int r3 = foo();
+
+return;
+printf("not crashed\n");
+// CHECK-NEXT: not crashed

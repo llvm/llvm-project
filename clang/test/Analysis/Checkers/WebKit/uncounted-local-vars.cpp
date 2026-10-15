@@ -945,3 +945,35 @@ void unrelated_temporary_traces_to_guardian(RefCountable &obj) {
 }
 
 } // namespace short_lived_temporaries
+
+namespace call_returning_reference_to_smart_pointer {
+
+template <typename T> struct Vector {
+  T& operator[](unsigned);
+  T* m_buffer;
+};
+
+class Owner {
+public:
+  const RefPtr<RefCountable>& referenceGetter() const { return m_obj; }
+
+  void localFromReferenceGetter() {
+    RefCountable *obj = referenceGetter().get();
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    obj->method();
+  }
+
+  void localFromVectorElement() {
+    RefCountable *obj = m_items[0].ptr();
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    obj->method();
+  }
+
+private:
+  RefPtr<RefCountable> m_obj;
+  Vector<Ref<RefCountable>> m_items;
+};
+
+} // namespace call_returning_reference_to_smart_pointer

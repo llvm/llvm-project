@@ -530,6 +530,11 @@ def TuningSlowVecMaskStore
                         "Vector mask store instruction is slow",
                         [], InlineIgnore>;
 
+def TuningSlowVecCompressStore
+    : SubtargetFeature<"slow-vec-compress-store", "IsVecCompressStoreSlow", "true",
+                        "Vector compress store instruction is slow",
+                        [], InlineIgnore>;
+
 // FIXME: This should not apply to CPUs that do not have SSE.
 def TuningSlowUAMem16 : SubtargetFeature<"slow-unaligned-mem-16",
                                 "IsUnalignedMem16Slow", "true",
@@ -1739,6 +1744,7 @@ def ProcessorFeatures {
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
+                                                TuningSlowVecCompressStore,
                                                 TuningCOMPRESSFalseDeps,
                                                 TuningEXPANDFalseDeps];
   list<SubtargetFeature> ZN4Tuning =
@@ -1765,8 +1771,9 @@ def ProcessorFeatures {
                                                 TuningTZCNTFalseDeps,
                                                 TuningBLSFalseDeps
                                                 ];
+  list<SubtargetFeature> ZN5RemoveTuning = [TuningSlowVecCompressStore];
   list<SubtargetFeature> ZN5Tuning =
-    !listconcat(ZN4Tuning, ZN5AdditionalTuning);
+    !listremove(!listconcat(ZN4Tuning, ZN5AdditionalTuning), ZN5RemoveTuning);
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureVP2INTERSECT,

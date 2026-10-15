@@ -3768,7 +3768,8 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   if (STI->hasFeature(RISCV::Feature32Bit) &&
-      STI->hasFeature(RISCV::FeatureVendorXqcili))
+      STI->hasFeature(RISCV::FeatureVendorXqcili) &&
+      !ParserOptions.IsPicEnabled)
     emitToStreamer(
         Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
   else

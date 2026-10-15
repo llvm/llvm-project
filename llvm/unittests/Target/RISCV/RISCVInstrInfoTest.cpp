@@ -208,7 +208,6 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   const RISCVInstrInfo *TII = ST->getInstrInfo();
-  const TargetRegisterInfo *TRI = ST->getRegisterInfo();
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
@@ -224,7 +223,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
                          .addMemOperand(MMO)
                          .getInstr();
   bool Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
-                                                OffsetIsScalable, Width, TRI);
+                                                OffsetIsScalable, Width);
   ASSERT_TRUE(Res);
   ASSERT_EQ(BaseOps.size(), 1u);
   ASSERT_TRUE(BaseOps.front()->isReg());
@@ -242,7 +241,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addImm(36)
            .addMemOperand(MMO);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI);
+                                           OffsetIsScalable, Width);
   ASSERT_TRUE(Res);
   ASSERT_EQ(BaseOps.size(), 1u);
   ASSERT_TRUE(BaseOps.front()->isReg());
@@ -258,7 +257,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addReg(RISCV::X3)
            .addMemOperand(MMO);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI);
+                                           OffsetIsScalable, Width);
   ASSERT_FALSE(Res); // Vector loads/stored are not handled for now.
 
   BaseOps.clear();
@@ -266,7 +265,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addReg(RISCV::X5)
            .addImm(16);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI);
+                                           OffsetIsScalable, Width);
 
   BaseOps.clear();
   MMO = MF->getMachineMemOperand(MachinePointerInfo(),
@@ -277,7 +276,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
            .addImm(4)
            .addMemOperand(MMO);
   Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI);
+                                           OffsetIsScalable, Width);
   ASSERT_TRUE(Res);
   ASSERT_EQ(BaseOps.size(), 1u);
   ASSERT_TRUE(BaseOps.front()->isFI());
