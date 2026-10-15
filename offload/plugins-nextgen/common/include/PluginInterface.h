@@ -386,19 +386,9 @@ struct KernelLaunchArgsTy {
   /// User-requested number of threads (for x,y,z dimension).
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   struct {
-    /// Maximum number of threads per block that this kernel may use.
-    uint32_t MaxNumThreads = 0;
-    /// Number of blocks originally requested by the program for the first
-    /// dimension (e.g., num_teams clause), or 0 if none was requested.
-    uint32_t RequestedNumBlocks = 0;
-  } KernelLaunchInfo;
-  struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
     uint64_t Unused : 63;
   } Flags = {0, 0};
-  /// Set by the caller when replaying a previously recorded kernel launch, so
-  /// the plugin can report the outcome back; null for a normal launch.
-  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
