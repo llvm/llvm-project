@@ -16,6 +16,7 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -223,6 +224,7 @@ public:
   bool visitMbcntHi(IntrinsicInst &I) const;
   bool visitVectorReduceAdd(IntrinsicInst &I);
   bool visitSaturatingAdd(IntrinsicInst &I);
+  bool foldSharedRangeChecks();
   bool run();
 };
 
@@ -239,7 +241,7 @@ public:
 
     // FIXME: Division expansion needs to preserve the dominator tree.
     if (!ExpandDiv64InIR)
-      AU.setPreservesAll();
+      AU.setPreservesCFG();
   }
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
@@ -264,12 +266,87 @@ bool AMDGPUCodeGenPrepareImpl::run() {
     }
   }
 
+  // Division expansion invalidates the cycle information used by uniformity.
+  if (CLOpts.codegenprepare_fold_shared_ranges && !FlowChanged)
+    MadeChange |= foldSharedRangeChecks();
+
   while (!DeadVals.empty()) {
     if (auto *I = dyn_cast_or_null<Instruction>(DeadVals.pop_back_val()))
       RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
   }
 
   return MadeChange;
+}
+
+// Replace repeated L <=s X && X <s U checks with unsigned offset tests.
+// Share the uniform clamp and size within a block to reduce divergent
+// comparison and mask work when the target lowers the setup to scalar ALU.
+bool AMDGPUCodeGenPrepareImpl::foldSharedRangeChecks() {
+  bool Changed = false;
+  for (BasicBlock &BB : F) {
+    MapVector<std::pair<Value *, Value *>, SmallVector<SelectInst *, 4>> Groups;
+    for (Instruction &I : BB) {
+      auto *SI = dyn_cast<SelectInst>(&I);
+      if (!SI || SI->use_empty() || !match(SI->getFalseValue(), m_Zero()))
+        continue;
+      auto *LowerCmp = dyn_cast<ICmpInst>(SI->getCondition());
+      auto *UpperCmp = dyn_cast<ICmpInst>(SI->getTrueValue());
+      // Match in this block so use-site uniformity applies to the setup.
+      if (!LowerCmp || !UpperCmp || LowerCmp->getParent() != &BB ||
+          UpperCmp->getParent() != &BB || !LowerCmp->hasOneUse() ||
+          !UpperCmp->hasOneUse() ||
+          LowerCmp->getPredicate() != ICmpInst::ICMP_SGE ||
+          UpperCmp->getPredicate() != ICmpInst::ICMP_SLT) {
+        continue;
+      }
+      Value *X = LowerCmp->getOperand(0);
+      Type *Ty = X->getType();
+      if (X != UpperCmp->getOperand(0) ||
+          !Ty->getScalarType()->isIntegerTy(32) ||
+          isa<ScalableVectorType>(Ty)) {
+        continue;
+      }
+      Value *Lower = LowerCmp->getOperand(1);
+      Value *Upper = UpperCmp->getOperand(1);
+      // Loop-uniform definitions can be divergent at uses after a loop exit.
+      if (UA.isUniformAtUse(LowerCmp->getOperandUse(0)) ||
+          !UA.isUniformAtUse(LowerCmp->getOperandUse(1)) ||
+          !UA.isUniformAtUse(UpperCmp->getOperandUse(1))) {
+        continue;
+      }
+      Groups[{Lower, Upper}].push_back(SI);
+    }
+
+    for (auto &[Bounds, Checks] : Groups) {
+      if (Checks.size() < 2)
+        continue;
+      Value *Lower = Bounds.first;
+      Value *Upper = Bounds.second;
+      IRBuilder<> Builder(Checks.front());
+      // The original select suppresses poison in Upper when X <s Lower.
+      // Any frozen Upper still produces false in that case. Clamping also
+      // makes reversed bounds empty, including across signed overflow.
+      // Lower has one use in each original check and is duplicated below.
+      // Freeze it too so an undef lower bound cannot choose different values
+      // for the clamp, size and offset.
+      Lower = Builder.CreateFreeze(Lower, "range.lower");
+      Value *FrozenUpper = Builder.CreateFreeze(Upper, "range.upper");
+      Value *End =
+          Builder.CreateBinaryIntrinsic(Intrinsic::smax, FrozenUpper, Lower);
+      Value *Size = Builder.CreateSub(End, Lower, "range.size");
+      for (SelectInst *SI : Checks) {
+        Builder.SetInsertPoint(SI);
+        Value *X = cast<ICmpInst>(SI->getCondition())->getOperand(0);
+        Value *Offset = Builder.CreateSub(X, Lower, "range.offset");
+        Value *InRange = Builder.CreateICmpULT(Offset, Size);
+        InRange->takeName(SI);
+        SI->replaceAllUsesWith(InRange);
+        DeadVals.push_back(SI);
+      }
+      Changed = true;
+    }
+  }
+  return Changed;
 }
 
 bool AMDGPUCodeGenPrepareImpl::isLegalFloatingTy(const Type *Ty) const {
