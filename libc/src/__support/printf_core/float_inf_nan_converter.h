@@ -68,7 +68,7 @@ LIBC_INLINE int convert_inf_nan(Writer<mode, CharT> *writer,
     } else {
 #if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
       static_assert(false, "wchar_t not supported.");
-#else // LIBC_COPT_PRINTF_DISABLE_WIDE
+#else  // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       RET_IF_RESULT_NEGATIVE(writer->write(
           internal::islower(to_conv.conv_name) ? L"inf" : L"INF"));
@@ -81,7 +81,7 @@ LIBC_INLINE int convert_inf_nan(Writer<mode, CharT> *writer,
     } else {
 #if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
       static_assert(false, "wchar_t not supported.");
-#else // LIBC_COPT_PRINTF_DISABLE_WIDE
+#else  // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       RET_IF_RESULT_NEGATIVE(writer->write(
           internal::islower(to_conv.conv_name) ? L"nan" : L"NAN"));

@@ -196,7 +196,7 @@ convert_finite_float_hex_exp(Writer<mode, CharT> *writer,
     } else {
 #if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
       static_assert(false, "wchar_t not supported.");
-#else // LIBC_COPT_PRINTF_DISABLE_WIDE
+#else  // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       new_digit = internal::int_to_b36_wchar(mant_mod_16);
 #endif // LIBC_COPT_PRINTF_DISABLE_WIDE
@@ -237,7 +237,7 @@ convert_finite_float_hex_exp(Writer<mode, CharT> *writer,
     } else {
 #if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
       static_assert(false, "wchar_t not supported.");
-#else // LIBC_COPT_PRINTF_DISABLE_WIDE
+#else  // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       exp_buffer[exp_cur - 1] =
           internal::int_to_b36_wchar(fp_bits_properties.exponent % 10);
