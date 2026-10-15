@@ -10,7 +10,6 @@
 #include <__pstl/backends/statpart.h>
 
 // Hardcoded to use libdispatch for now.
-// CMake switches to be introduced later.
 
 #if __has_include(<dispatch/dispatch.h>)
 #  include <dispatch/dispatch.h>
