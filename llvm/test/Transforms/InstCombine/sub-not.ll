@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i8)
+declare void @use.i1(i1)
+declare void @llvm.assume(i1)
 
 define i8 @sub_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_not(
@@ -59,6 +61,95 @@ define i8 @dec_sub_extra_use(i8 %x, i8 %y) {
   %s = sub i8 %x, %y
   %r = add i8 %s, -1
   call void @use(i8 %s)
+  ret i8 %r
+}
+
+; A fact about %s is not a reason to keep the decrement.
+
+define i8 @dec_sub_extra_use_assume(i8 %x, i8 %y, i8 %n) {
+; CHECK-LABEL: @dec_sub_extra_use_assume(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 %x, %y
+  %c = icmp ult i8 %s, %n
+  call void @llvm.assume(i1 %c)
+  %r = add i8 %s, -1
+  ret i8 %r
+}
+
+define i8 @dec_sub_extra_use_assume_and(i8 %x, i8 %y, i8 %n) {
+; CHECK-LABEL: @dec_sub_extra_use_assume_and(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[LO:%.*]] = icmp sgt i8 [[S]], 0
+; CHECK-NEXT:    [[HI:%.*]] = icmp sle i8 [[S]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LO]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[HI]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 %x, %y
+  %lo = icmp sgt i8 %s, 0
+  %hi = icmp sle i8 %s, %n
+  %c = and i1 %lo, %hi
+  call void @llvm.assume(i1 %c)
+  %r = add i8 %s, -1
+  ret i8 %r
+}
+
+define i8 @dec_sub_extra_use_assume_bundle(i8 %x, i8 %y, ptr %p) {
+; CHECK-LABEL: @dec_sub_extra_use_assume_bundle(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i8 [[S]]) ]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 %x, %y
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i8 %s) ]
+  %r = add i8 %s, -1
+  ret i8 %r
+}
+
+; The decrement itself only feeds the assume; folding it would only reshape
+; the fact.
+
+define i8 @dec_sub_in_assume(i8 %x, i8 %y, i8 %n) {
+; CHECK-LABEL: @dec_sub_in_assume(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[S]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[R]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %s = sub i8 %x, %y
+  %r = add i8 %s, -1
+  %c = icmp ult i8 %r, %n
+  call void @llvm.assume(i1 %c)
+  ret i8 %s
+}
+
+; The comparison is also used outside the assume.
+
+define i8 @dec_sub_extra_use_assume_and_use(i8 %x, i8 %y, i8 %n) {
+; CHECK-LABEL: @dec_sub_extra_use_assume_and_use(
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    call void @use.i1(i1 [[C]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[S]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub i8 %x, %y
+  %c = icmp ult i8 %s, %n
+  call void @llvm.assume(i1 %c)
+  call void @use.i1(i1 %c)
+  %r = add i8 %s, -1
   ret i8 %r
 }
 

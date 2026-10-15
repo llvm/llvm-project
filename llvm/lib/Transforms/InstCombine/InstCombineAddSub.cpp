@@ -881,8 +881,8 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   Value *Y;
 
   // add (sub X, Y), -1 --> add (not Y), X
-  if (match(Op0, m_OneUse(m_Sub(m_Value(X), m_Value(Y)))) &&
-      match(Op1, m_AllOnes()))
+  if (match(Op0, m_Sub(m_Value(X), m_Value(Y))) && match(Op1, m_AllOnes()) &&
+      !hasNUsesOrMoreIgnoringAssumes(Add.getOperandUse(0), 2))
     return BinaryOperator::CreateAdd(Builder.CreateNot(Y), X);
 
   // zext(bool) + C -> bool ? C + 1 : C
