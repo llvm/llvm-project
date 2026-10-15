@@ -285,7 +285,7 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     ME |= FnME;
     RecursiveArgME |= FnRecursiveArgME;
     // Reached bottom of the lattice, we will not be able to improve the result.
-    if (ME == MemoryEffects::unknown())
+    if (ME == MemoryEffects::unknown_mem())
       return;
   }
 

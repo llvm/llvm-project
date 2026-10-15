@@ -1985,7 +1985,7 @@ attributes #2 = { noinline }
 ;.
 ; NOPRELINK: attributes #[[ATTR0]] = { strictfp }
 ; NOPRELINK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
-; NOPRELINK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
+; NOPRELINK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(fpcontrol: read, fpstatus: readwrite) }
 ; NOPRELINK: attributes #[[ATTR3]] = { noinline }
 ; NOPRELINK: attributes #[[ATTR4]] = { nobuiltin }
 ;.

@@ -2749,6 +2749,10 @@ static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
     return {Loc::InaccessibleMem};
   case lltok::kw_errnomem:
     return {Loc::ErrnoMem};
+  case lltok::kw_fpcontrol:
+    return {Loc::FPControl};
+  case lltok::kw_fpstatus:
+    return {Loc::FPStatus};
   case lltok::kw_target_mem0:
     return {Loc::TargetMem0};
   case lltok::kw_target_mem1:
@@ -2824,7 +2828,8 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
     std::optional<ModRefInfo> MR = keywordToModRef(Lex.getKind());
     if (!MR) {
       if (Locs.empty())
-        tokError("expected memory location (argmem, inaccessiblemem, errnomem) "
+        tokError("expected memory location (argmem, inaccessiblemem, errnomem, "
+                 "fpcontrol, fpstatus) "
                  "or access kind (none, read, write, readwrite)");
       else
         tokError("expected access kind (none, read, write, readwrite)");
@@ -2849,7 +2854,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
         tokError("default access kind must be specified first");
         return std::nullopt;
       }
-      ME = MemoryEffects(*MR);
+      ME = MemoryEffects(*MR, false);
     }
 
     if (EatIfPresent(lltok::rparen))
