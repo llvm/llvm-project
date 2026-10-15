@@ -523,9 +523,8 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
               !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
               ((getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
                (getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {
-            AsyncInfoTy AsyncInfo(Device);
-            if (Device.submitData(DeviceEntry.Address, Entry.Address,
-                                  Entry.Size, AsyncInfo) != OFFLOAD_SUCCESS)
+            if (Device.submitDataSync(DeviceEntry.Address, Entry.Address,
+                                      Entry.Size) != OFFLOAD_SUCCESS)
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
           }
         } else if (Entry.Address) {

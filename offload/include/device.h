@@ -133,8 +133,9 @@ struct DeviceTy {
   /// allocator should be used (host, shared, device).
   int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
-  // Data transfer. When AsyncInfo is nullptr, the transfer will be
-  // synchronous.
+  // Data transfer. The transfer is enqueued on the queue associated with
+  // \p AsyncInfo; the *Sync variants below do not need a queue and always
+  // transfer the data synchronously.
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
@@ -146,6 +147,18 @@ struct DeviceTy {
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
+  // Copy data from host to device synchronously
+  int32_t
+  submitDataSync(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                 HostDataToTargetTy *Entry = nullptr,
+                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
+  // Copy data from device back to host synchronously
+  int32_t
+  retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                   HostDataToTargetTy *Entry = nullptr,
+                   MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
 
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
@@ -252,6 +265,18 @@ struct DeviceTy {
   }
 
 private:
+  /// Copy data from host to device. A null \p Queue means the transfer is
+  /// performed synchronously.
+  int32_t submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
+                         ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                         MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr);
+
+  /// Copy data from device back to host. A null \p Queue means the transfer is
+  /// performed synchronously.
+  int32_t retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                           ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr);
+
   /// Unique identifier of the device.
   llvm::SmallString<32> Uid;
 
