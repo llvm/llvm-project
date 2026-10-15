@@ -329,12 +329,17 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     for (EdgeTy Edge : OutEdges)
       Edges.erase(Edge);
 
-    // If the value is a phi postdominated by VPBB, then look through the inner
-    // incoming values instead of propagating the phi.
-    if (auto *Phi = dyn_cast<VPPhi>(Common))
-      if (Phi->hasOneUse() && VPPDT.dominates(VPBB, Phi->getParent())) {
-        for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
-          AddEdge(InVPBB, Phi->getParent(), InV);
+    // If the value is a phi postdominated by VPBB which shares an incoming
+    // value in Edges, then look through the inner incoming values instead of
+    // propagating the phi. This deduplicates a select.
+    if (auto *InnerPhi = dyn_cast<VPPhi>(Common))
+      if (InnerPhi->hasOneUse() &&
+          VPPDT.dominates(VPBB, InnerPhi->getParent()) &&
+          any_of(InnerPhi->incoming_values(), [&Edges](VPValue *InV) {
+            return is_contained(make_second_range(Edges), InV);
+          })) {
+        for (auto [InV, InVPBB] : InnerPhi->incoming_values_and_blocks()) {
+          AddEdge(InVPBB, InnerPhi->getParent(), InV);
           Worklist.insert(InVPBB);
         }
         continue;

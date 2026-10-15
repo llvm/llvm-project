@@ -1118,6 +1118,80 @@ exit:
   ret void
 }
 
+; Don't look through %phi3 as it doesn't share any incoming values with %phi4.
+define void @look_thru_phi_no_shared_values(i1 %c0, i1 %c1, i32 %x, i32 %y, i32 %z, ptr %p) {
+; CHECK-LABEL: VPlan for loop in 'look_thru_phi_no_shared_values'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:    Successor(s): bb1
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb1:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:    Successor(s): bb2
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb2:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c1>
+; CHECK-NEXT:    Successor(s): bb3
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb3:
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi3> = ir<%z>/vp<[[VP5]]> ir<%y>/vp<[[VP7]]>
+; CHECK-NEXT:    Successor(s): bb4
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb4:
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%phi3>/vp<[[VP4]]> ir<%x>/ir<%c0>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+;     bb0
+;     |  \
+;     |  bb1
+;     |  |  \
+;     |  |  bb2
+;     |  |  /
+;     |  bb3
+;     |  /
+;     bb4
+entry:
+  br label %bb0
+
+bb0:
+  %iv = phi i32 [0, %entry], [%iv.next, %bb4]
+  br i1 %c0, label %bb4, label %bb1
+
+bb1:
+  br i1 %c1, label %bb2, label %bb3
+
+bb2:
+  br label %bb3
+
+bb3:
+  %phi3 = phi i32 [%y, %bb1], [%z, %bb2]
+  br label %bb4
+
+bb4:
+  %phi4 = phi i32 [%x, %bb0], [%phi3, %bb3]
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 %phi4, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 ; bb4 will create the edge mask bb1->bb3 before bb3. Make sure bb4
 ; inserts its blend after the already created edge mask.
 define i32 @look_thru_phi_blend_insert_pos(i1 %c0, i1 %c1) {
@@ -1219,7 +1293,7 @@ define void @diamond_phi2_look_thru_phi(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = not ir<%c2>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP10]]>
-; CHECK-NEXT:      BLEND ir<%phi5> = ir<3>/vp<[[VP11]]> ir<2>/vp<[[VP9]]> ir<1>/vp<[[VP5]]> ir<0>/vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<%phi4>/vp<[[VP7]]> ir<3>/vp<[[VP11]]> ir<2>/vp<[[VP9]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
