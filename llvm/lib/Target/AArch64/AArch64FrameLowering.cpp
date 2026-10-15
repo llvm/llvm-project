@@ -1871,6 +1871,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
           const int NumRegs = 4;
           int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
 
+          // Note: ST1B has the same offset constraints.
           if ((Reg4 - AArch64::Z0) % 4 == 0 && Consecutive &&
               isValidMemOpOffset(TII, AArch64::LD1B_4Z_IMM, Offset))
             RGI.Reg2 = Reg4;
@@ -1983,9 +1984,16 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         ((!IsWindows && RGI.Reg2 == AArch64::FP) ||
          (IsWindows && RGI.Reg2 == AArch64::LR)))
       Offset += 8;
-    RGI.Offset = Offset / Scale;
 
-    assert((!RGI.isPaired() ||
+    assert(
+        (!RGI.isGrouped() || RGI.Type != RegGroupInfo::ZPR ||
+         isValidMemOpOffset(
+             TII, (RGI.isQuad() ? AArch64::LD1B_4Z_IMM : AArch64::LD1B_2Z_IMM),
+             Offset)) &&
+        "Offset invalid for LD1B/ST1B pair/quad variant immediate");
+
+    RGI.Offset = Offset / Scale;
+    assert((!RGI.isGrouped() || RGI.Type == RegGroupInfo::ZPR ||
             (!RGI.isScalable() && RGI.Offset >= -64 && RGI.Offset <= 63) ||
             (RGI.isScalable() && RGI.Offset >= -256 && RGI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
@@ -2162,6 +2170,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
+    for (Register Reg :
+         reverse_conditionally(RGI.getRegisters(), isTargetWindows(MF)))
+      if (!MRI.isReserved(Reg))
+        MBB.addLiveIn(Reg);
+
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
     if (RGI.isGrouped() && RGI.isScalable()) {
       assert(!isTargetWindows(MF) &&
@@ -2180,9 +2193,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       assert(!(PPRBegin < ZPRBegin) &&
              "Expected callee save predicate to be handled first");
 #endif
-      for (Register Reg : RGI.getRegisters())
-        if (!MRI.isReserved(Reg))
-          MBB.addLiveIn(Reg);
 
       assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR pair");
       MIB.addReg((RGI.isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
@@ -2199,11 +2209,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       // and not (x+1,x).
       if (isTargetWindows(MF) && RGI.isPaired())
         std::swap(Reg1, Reg2);
-      if (!MRI.isReserved(Reg1))
-        MBB.addLiveIn(Reg1);
       if (RGI.isPaired()) {
-        if (!MRI.isReserved(Reg2))
-          MBB.addLiveIn(Reg2);
         MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
       }
       MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
