@@ -3742,8 +3742,8 @@ static bool mayFreeOrLetArgumentsEscape(const CallEvent &Call) {
     // Look for the deallocator argument. We know that the memory ownership
     // is not transferred only if the deallocator argument is
     // 'kCFAllocatorNull'.
-    for (unsigned i = 1; i < Call.getNumArgs(); ++i) {
-      const Expr *ArgE = Call.getArgExpr(i)->IgnoreParenCasts();
+    for (unsigned I = 1; I < Call.getNumArgs(); ++I) {
+      const Expr *ArgE = Call.getArgExpr(I)->IgnoreParenCasts();
       if (const DeclRefExpr *DE = dyn_cast<DeclRefExpr>(ArgE)) {
         StringRef DeallocatorName = DE->getFoundDecl()->getName();
         if (DeallocatorName == "kCFAllocatorNull")
@@ -3854,54 +3854,55 @@ static bool mayFreeOrLetArgumentsEscape(const CallEvent &Call) {
 static bool mayEscapeThroughKnownObjCAPI(const CallEvent &Call,
                                          SymbolRef &EscapingSymbol) {
   // Check Objective-C messages by selector name.
-  if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(&Call)) {
-    EscapingSymbol = nullptr;
-    // If it takes a callback, assume it can free memory.
-    if (Call.hasNonZeroCallbackArg())
-      return true;
-
-    // If it's a method we know about, handle it explicitly post-call.
-    // This should happen before the "freeWhenDone" check below.
-    if (isKnownDeallocObjCMethodName(*Msg))
-      return false;
-
-    // If there's a "freeWhenDone" parameter, but the method isn't one we know
-    // about, we can't be sure that the object will use free() to deallocate the
-    // memory, so we can't model it explicitly. The best we can do is use it to
-    // decide whether the pointer escapes.
-    if (std::optional<bool> FreeWhenDone = getFreeWhenDoneArg(*Msg))
-      return *FreeWhenDone;
-
-    // If the first selector piece ends with "NoCopy", and there is no
-    // "freeWhenDone" parameter set to zero, we know ownership is being
-    // transferred. Again, though, we can't be sure that the object will use
-    // free() to deallocate the memory, so we can't model it explicitly.
-    StringRef FirstSlot = Msg->getSelector().getNameForSlot(0);
-    if (FirstSlot.ends_with("NoCopy"))
-      return true;
-
-    // If the first selector starts with addPointer, insertPointer,
-    // or replacePointer, assume we are dealing with NSPointerArray or similar.
-    // This is similar to C++ containers (vector); we still might want to check
-    // that the pointers get freed by following the container itself.
-    if (FirstSlot.starts_with("addPointer") ||
-        FirstSlot.starts_with("insertPointer") ||
-        FirstSlot.starts_with("replacePointer") ||
-        FirstSlot == "valueWithPointer") {
-      return true;
-    }
-
-    // We should escape receiver on call to 'init'. This is especially relevant
-    // to the receiver, as the corresponding symbol is usually not referenced
-    // after the call.
-    if (Msg->getMethodFamily() == OMF_init) {
-      EscapingSymbol = Msg->getReceiverSVal().getAsSymbol();
-      return true;
-    }
-    // Otherwise, assume that the method does not free memory.
-    // Most framework methods do not free memory.
+  const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(&Call);
+  if (!Msg)
     return false;
+
+  EscapingSymbol = nullptr;
+  // If it takes a callback, assume it can free memory.
+  if (Call.hasNonZeroCallbackArg())
+    return true;
+
+  // If it's a method we know about, handle it explicitly post-call.
+  // This should happen before the "freeWhenDone" check below.
+  if (isKnownDeallocObjCMethodName(*Msg))
+    return false;
+
+  // If there's a "freeWhenDone" parameter, but the method isn't one we know
+  // about, we can't be sure that the object will use free() to deallocate the
+  // memory, so we can't model it explicitly. The best we can do is use it to
+  // decide whether the pointer escapes.
+  if (std::optional<bool> FreeWhenDone = getFreeWhenDoneArg(*Msg))
+    return *FreeWhenDone;
+
+  // If the first selector piece ends with "NoCopy", and there is no
+  // "freeWhenDone" parameter set to zero, we know ownership is being
+  // transferred. Again, though, we can't be sure that the object will use
+  // free() to deallocate the memory, so we can't model it explicitly.
+  StringRef FirstSlot = Msg->getSelector().getNameForSlot(0);
+  if (FirstSlot.ends_with("NoCopy"))
+    return true;
+
+  // If the first selector starts with addPointer, insertPointer,
+  // or replacePointer, assume we are dealing with NSPointerArray or similar.
+  // This is similar to C++ containers (vector); we still might want to check
+  // that the pointers get freed by following the container itself.
+  if (FirstSlot.starts_with("addPointer") ||
+      FirstSlot.starts_with("insertPointer") ||
+      FirstSlot.starts_with("replacePointer") ||
+      FirstSlot == "valueWithPointer") {
+    return true;
   }
+
+  // We should escape receiver on call to 'init'. This is especially relevant
+  // to the receiver, as the corresponding symbol is usually not referenced
+  // after the call.
+  if (Msg->getMethodFamily() == OMF_init) {
+    EscapingSymbol = Msg->getReceiverSVal().getAsSymbol();
+    return true;
+  }
+  // Otherwise, assume that the method does not free memory.
+  // Most framework methods do not free memory.
   return false;
 }
 
