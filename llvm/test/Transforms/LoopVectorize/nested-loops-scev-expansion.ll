@@ -397,7 +397,7 @@ define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[O:%.*]] = phi i64 [ 10, %[[ENTRY]] ], [ [[O_NEXT:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[BOUND:%.*]] = add i64 [[O]], 8
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[INDVAR]], 17
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 17, [[INDVAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
@@ -480,9 +480,9 @@ define void @test_expand_narrow_canonical_iv_as_trunc_of_wider(ptr noalias %dst.
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[OUTER_IV_I32:%.*]] = phi i32 [ 10, %[[ENTRY]] ], [ [[OUTER_IV_I32_NEXT:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[OUTER_IV_I64:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[OUTER_IV_I64_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[INDVAR]], 12
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 12, [[INDVAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVAR]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 13
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 13, [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
@@ -572,8 +572,8 @@ define void @test_no_reuse_of_wider_canonical_iv_of_other_loop(ptr noalias %dst.
 ; CHECK:       [[MIDDLE]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[MIDDLE_LATCH:.*]] ], [ 0, %[[OUTER]] ]
 ; CHECK-NEXT:    [[MIDDLE_IV_I32:%.*]] = phi i32 [ 10, %[[OUTER]] ], [ [[MIDDLE_IV_I32_NEXT:%.*]], %[[MIDDLE_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[INDVAR1]], 12
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[INDVAR]], 13
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 12, [[INDVAR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 13, [[INDVAR]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0

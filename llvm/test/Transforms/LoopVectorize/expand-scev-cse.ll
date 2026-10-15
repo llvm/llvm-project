@@ -23,7 +23,7 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND1]], i64 [[TMP15]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 3, [[BOUND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -4
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMAX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
@@ -107,7 +107,7 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i64 [ [[IV_OUTER_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[IV_OUTER]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 1, [[IV_OUTER]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[SMAX]], [[IV_OUTER]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK2:%.*]] = icmp ult i64 [[TMP2]], 4
@@ -139,7 +139,7 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp slt i64 [[IV0_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP0]], label %[[INNER0]], label %[[INNER1_PREHEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[INNER1_PREHEADER]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i64 [[IV_OUTER]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i64 1, [[IV_OUTER]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP8]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP13]], [[IV_OUTER]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP14]], 4
@@ -233,7 +233,7 @@ define i32 @nested_loop_min_iters_check_expanded_repeatedly(i64 %n) {
 ; CHECK-NEXT:    [[K_START:%.*]] = shl nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 [[K_START]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 -4, [[TMP2]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP29]], i64 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP29]], [[TMP30]]
