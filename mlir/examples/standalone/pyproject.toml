@@ -6,9 +6,9 @@
 [project]
 name = "standalone-python-bindings"
 version = "0.0.1"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
-    "numpy>=1.19.5, <=2.1.2",
+    "numpy>=1.19.5, <=2.5.4",
     "PyYAML>=5.4.0, <=6.0.1",
     "ml_dtypes>=0.1.0, <=0.6.0; python_version<'3.13'",
     "ml_dtypes>=0.5.0, <=0.6.0; python_version>='3.13'",
@@ -24,7 +24,7 @@ Discussions = "https://discourse.llvm.org/"
 requires = [
     "scikit-build-core>=0.10.7",
     "typing_extensions>=4.12.2",
-    "nanobind>=2.9, <3.0",
+    "nanobind>=2.13, <3.0",
 ]
 build-backend = "scikit_build_core.build"
 

@@ -1,6 +1,6 @@
 # Macros and functions related to detecting details of the Python environment.
 
-set(MLIR_MINIMUM_PYTHON_VERSION 3.10)
+set(MLIR_MINIMUM_PYTHON_VERSION 3.11)
 # Finds and configures python packages needed to build MLIR Python bindings.
 macro(mlir_configure_python_dev_packages)
   if(NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES)
@@ -81,7 +81,7 @@ macro(mlir_configure_python_dev_packages)
       endif()
       set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}")
     endif()
-    find_package(nanobind 2.9 CONFIG REQUIRED)
+    find_package(nanobind 2.13 CONFIG REQUIRED)
     message(STATUS "Found nanobind v${nanobind_VERSION}")
   endif()
 endmacro()
