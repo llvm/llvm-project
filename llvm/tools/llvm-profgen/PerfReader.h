@@ -21,6 +21,7 @@
 #include <map>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace llvm {
 
@@ -81,6 +82,8 @@ struct InputFile {
   std::string InputFilePath;
   InputFormat Format = InputFormat::UnknownFormat;
   PerfContent Content = PerfContent::UnknownContent;
+  // Keep the address-resolution mode when perf.data becomes temporary text.
+  bool UseProcessMappings = false;
 };
 
 // The parsed LBR sample entry.
@@ -588,8 +591,9 @@ protected:
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
+                   std::optional<int32_t> PID, bool UseProcessMappings = false)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PID),
+        UseProcessMappings(UseProcessMappings) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
@@ -640,11 +644,11 @@ protected:
   // Return a binary address only if the most recent covering map is a target.
   std::optional<uint64_t> resolveMappedAddress(uint64_t Address,
                                                int32_t PID) const;
-  // Parse mmap event and update binary address
+  // Parse an mmap and update the binary load base or per-process mappings.
   void parseMMapEvent(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
   void parseAndAggregateTrace();
-  // Parse either an MMAP event or a perf sample
+  // Parse mmap/task metadata or a sample, preserving input order.
   void parseEventOrSample(TraceStream &TraceIt);
   // Warn if the relevant mmap event is missing.
   void warnIfMissingMMap();
@@ -680,9 +684,17 @@ protected:
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
   std::optional<int32_t> PIDFilter;
+  // Both flat and hybrid readers resolve addresses before sharing the existing
+  // range counting, unwinding and profile-generation paths.
+  bool UseProcessMappings;
   // Append in event order and search backwards. Kernel mappings use key -1
   // because they are shared across the task PIDs carried by kernel samples.
   std::unordered_map<int32_t, SmallVector<ExecutableMapping, 2>> MappingsByPID;
+  // Track known live threads so one worker's exit does not clear its process.
+  std::unordered_map<int32_t, std::unordered_set<int32_t>> ThreadsByPID;
+  // A live process birth or exec establishes a complete thread inventory.
+  // Unannounced threads withdraw completeness without removing mappings.
+  std::unordered_set<int32_t> CompleteThreadPIDs;
   // Remember usable mappings even after an exec or exit removes their state.
   bool HadUsableMapping = false;
 };
@@ -696,8 +708,8 @@ protected:
 class LBRPerfReader : public PerfScriptReader {
 public:
   LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID) {};
+                std::optional<int32_t> PID, bool UseProcessMappings = false)
+      : PerfScriptReader(Binary, PerfTrace, PID, UseProcessMappings) {};
   // Parse the LBR only sample.
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
@@ -714,8 +726,8 @@ public:
 class HybridPerfReader : public PerfScriptReader {
 public:
   HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID) {};
+                   std::optional<int32_t> PID, bool UseProcessMappings = false)
+      : PerfScriptReader(Binary, PerfTrace, PID, UseProcessMappings) {};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateUnsymbolizedProfile() override;

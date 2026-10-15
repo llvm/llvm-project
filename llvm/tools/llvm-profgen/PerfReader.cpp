@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
+#include <cmath>
 #include <limits>
 
 #define DEBUG_TYPE "perf-reader"
@@ -374,10 +375,11 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
 
   Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
   if (Input.Content == PerfContent::LBRStack) {
-    PerfReader.reset(
-        new HybridPerfReader(Binary, Input.InputFilePath, PIDFilter));
+    PerfReader.reset(new HybridPerfReader(Binary, Input.InputFilePath,
+                                          PIDFilter, Input.UseProcessMappings));
   } else if (Input.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter));
+    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter,
+                                       Input.UseProcessMappings));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -454,6 +456,65 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
     }
   }
   return Error::success();
+}
+
+enum class TaskKind { Fork, Comm, Exec, Exit };
+
+struct TaskEvent {
+  TaskKind Kind;
+  // PID owns the address space; TID identifies a thread using that space.
+  int32_t PID;
+  int32_t TID;
+  int32_t ParentPID = 0;
+  int32_t ParentTID = 0;
+  // Perf's timestamp-zero task snapshot describes tasks already present when
+  // recording began. Its fork records do not imply a new inherited mapping.
+  bool IsSynthetic;
+};
+
+static TaskEvent parseTaskEvent(StringRef Line) {
+  size_t Marker = Line.find("PERF_RECORD_");
+  // The timestamp is in the perf prefix, but task ownership comes from the
+  // record payload. The prefix can describe the task that emitted the event.
+  StringRef Prefix = Line.take_front(Marker).rtrim();
+  auto [BeforeTime, Time] = Prefix.rsplit(' ');
+  double Timestamp = 0;
+  if (BeforeTime.empty() || !Time.consume_back(":") ||
+      Time.getAsDouble(Timestamp) || !std::isfinite(Timestamp))
+    exitWithError("Invalid perf script task event");
+
+  StringRef Record = Line.drop_front(Marker).rtrim();
+  SmallVector<StringRef, 6> Fields;
+  auto ParsePID = [](StringRef Field) {
+    int32_t PID = 0;
+    if (Field.getAsInteger(10, PID) || PID < 0)
+      exitWithError("Invalid perf script task event");
+    return PID;
+  };
+  TaskEvent Event{TaskKind::Comm, 0, 0, 0, 0, Timestamp == 0};
+  // FORK carries child and parent IDs. EXIT uses the same printed shape,
+  // but only the exiting PID/TID pair changes our ownership state.
+  if (Regex("^PERF_RECORD_(FORK|EXIT)\\((-?[0-9]+):([0-9]+)\\):"
+            "\\((-?[0-9]+):([0-9]+)\\)$")
+          .match(Record, &Fields)) {
+    Event.Kind = Fields[1] == "FORK" ? TaskKind::Fork : TaskKind::Exit;
+    Event.PID = ParsePID(Fields[2]);
+    Event.TID = ParsePID(Fields[3]);
+    if (Event.Kind == TaskKind::Fork) {
+      Event.ParentPID = ParsePID(Fields[4]);
+      Event.ParentTID = ParsePID(Fields[5]);
+    }
+  } else if (Regex("^PERF_RECORD_COMM( exec)?: .*:(-?[0-9]+)/([0-9]+)$")
+                 .match(Record, &Fields)) {
+    // A name change keeps the mappings; COMM with the exec flag replaces the
+    // process image, even when its PID and name happen to stay the same.
+    Event.Kind = Fields[1].empty() ? TaskKind::Comm : TaskKind::Exec;
+    Event.PID = ParsePID(Fields[2]);
+    Event.TID = ParsePID(Fields[3]);
+  } else {
+    exitWithError("Invalid perf script task event");
+  }
+  return Event;
 }
 
 InputFile
@@ -653,6 +714,11 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
 
 void PerfScriptReader::updateExecutableMapping(const MMapEvent &Event,
                                                bool IsTarget) {
+  // An mmap is also evidence that its emitting thread is alive. The map is
+  // owned by PID even when a worker TID, not the leader, emitted the record.
+  if (!Binary->isKernel() && Event.PID >= 0 &&
+      ThreadsByPID[static_cast<int32_t>(Event.PID)].insert(Event.TID).second)
+    CompleteThreadPIDs.erase(Event.PID);
   if (Event.Size == 0 || (!Binary->isKernel() && Event.PID < 0))
     return;
   if (Binary->isKernel() && Event.PID != -1)
@@ -1385,15 +1451,80 @@ bool PerfScriptReader::extractMMapEventForBinary(
 
 void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {
   MMapEvent MMap;
-  if (extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap))
+  bool IsTarget = extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(),
+                                            MMap, UseProcessMappings);
+  if (UseProcessMappings)
+    updateExecutableMapping(MMap, IsTarget);
+  else if (IsTarget)
     updateBinaryAddress(MMap);
   TraceIt.advance();
 }
 
 void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
-  if (isMMapEvent(TraceIt.getCurrentLine()))
+  if (UseProcessMappings && TraceIt.getCurrentLine().trim().empty()) {
+    TraceIt.advance();
+    return;
+  }
+  StringRef Line = TraceIt.getCurrentLine();
+  if (UseProcessMappings ? Line.contains("PERF_RECORD_MMAP")
+                         : isMMapEvent(Line))
     parseMMapEvent(TraceIt);
-  else
+  else if (UseProcessMappings && Line.contains("PERF_RECORD_")) {
+    // Replay metadata in input order before resolving subsequent samples.
+    // The kernel address space is shared and outlives individual tasks.
+    TaskEvent Event = parseTaskEvent(Line);
+    if (!Binary->isKernel()) {
+      if (Event.Kind == TaskKind::Fork && !Event.IsSynthetic) {
+        // FORK also proves the parent thread is live, even when recording
+        // began too late to include a separate record announcing that thread.
+        if (ThreadsByPID[Event.ParentPID].insert(Event.ParentTID).second)
+          CompleteThreadPIDs.erase(Event.ParentPID);
+        if (Event.PID == Event.ParentPID) {
+          // Thread creation shares the existing process map.
+          ThreadsByPID[Event.PID].insert(Event.TID);
+        } else {
+          // Process creation snapshots the parent's current map history.
+          // Copying keeps later remaps or execs in either process independent.
+          ThreadsByPID[Event.PID] = {Event.TID};
+          CompleteThreadPIDs.insert(Event.PID);
+          auto Parent = MappingsByPID.find(Event.ParentPID);
+          if (Parent == MappingsByPID.end()) {
+            // A reused child PID must not retain maps from its old lifetime.
+            MappingsByPID.erase(Event.PID);
+          } else {
+            MappingsByPID[Event.PID] = Parent->second;
+            if (!PIDFilter || Event.PID == *PIDFilter)
+              HadUsableMapping = true;
+          }
+        }
+      } else if (Event.Kind == TaskKind::Comm) {
+        // A name change reveals a live thread but does not replace its image.
+        if (ThreadsByPID[Event.PID].insert(Event.TID).second)
+          CompleteThreadPIDs.erase(Event.PID);
+      } else if (Event.Kind == TaskKind::Exec) {
+        // Exec keeps the PID, replaces its image and removes sibling threads.
+        // New mmap/task records will describe the replacement process state.
+        MappingsByPID.erase(Event.PID);
+        ThreadsByPID[Event.PID] = {Event.TID};
+        if (Event.IsSynthetic)
+          CompleteThreadPIDs.erase(Event.PID);
+        else
+          CompleteThreadPIDs.insert(Event.PID);
+      } else if (Event.Kind == TaskKind::Exit) {
+        // Only a complete inventory proves this is the final thread. Retain
+        // mappings when recording began too late to observe every thread.
+        auto It = ThreadsByPID.find(Event.PID);
+        if (It == ThreadsByPID.end() || !It->second.erase(Event.TID)) {
+          CompleteThreadPIDs.erase(Event.PID);
+        } else if (It->second.empty()) {
+          ThreadsByPID.erase(It);
+          if (CompleteThreadPIDs.erase(Event.PID))
+            MappingsByPID.erase(Event.PID);
+        }
+      }
+    }
+    TraceIt.advance();
+  } else
     parseSample(TraceIt);
 }
 
