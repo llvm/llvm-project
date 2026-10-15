@@ -1214,12 +1214,8 @@ void* asan_new(uptr size, BufferedStackTrace* stack, bool array) {
 
 void* asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace* stack,
                        bool array) {
-  if (UNLIKELY(alignment == 0 || !IsPowerOfTwo(alignment))) {
-    errno = errno_EINVAL;
-    if (AllocatorMayReturnNull())
-      return nullptr;
+  if (UNLIKELY(!CheckAlignedNewAlignment(alignment)))
     ReportInvalidAllocationAlignment(alignment, stack);
-  }
   return SetErrnoOnNull(instance.Allocate(size, alignment, stack,
                                           array ? FROM_NEW_BR : FROM_NEW,
                                           /*can_fill=*/true));

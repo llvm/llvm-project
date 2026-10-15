@@ -416,6 +416,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
   case spirv::Decoration::Volatile:
+  case spirv::Decoration::SaturatedConversion:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))

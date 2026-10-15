@@ -157,17 +157,11 @@ constexpr int arr4[](1);
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr5 = #cir.const_array<[#cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 2> align(4)
 constexpr int arr5[2](2);
 
-// CIR reads the coerced return out of a fresh slot it copies the record into,
-// where classic coerce-loads out of the return slot directly.
-// LLVM:         define dso_local { i8, double } @{{.*foo1.*}}
-// LLVMCIR:      [[COERCE:%.*]] = alloca [[STRUCT_A]], align 8
-// LLVM:         [[RETVAL:%.*]] = alloca [[STRUCT_A]], align 8
-// LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A1]], i64 16, i1 false)
-// LLVMCIR-NEXT: [[REC:%.*]] = load [[STRUCT_A]], ptr [[RETVAL]], align 8
-// LLVMCIR-NEXT: store [[STRUCT_A]] [[REC]], ptr [[COERCE]], align 8
-// LLVMCIR-NEXT: [[TMP_0:%.*]] = load { i8, double }, ptr [[COERCE]], align 8
-// OGCG-NEXT:    [[TMP_0:%.*]] = load { i8, double }, ptr [[RETVAL]], align 8
-// LLVM-NEXT:    ret { i8, double } [[TMP_0]]
+// LLVM:      define dso_local { i8, double } @{{.*foo1.*}}
+// LLVM:        [[RETVAL:%.*]] = alloca [[STRUCT_A]], align 8
+// LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A1]], i64 16, i1 false)
+// LLVM-NEXT:   [[TMP_0:%.*]] = load { i8, double }, ptr [[RETVAL]], align 8
+// LLVM-NEXT:   ret { i8, double } [[TMP_0]]
 // CIR-LABEL: cir.func {{.*}}@_Z4foo1v()
 // CIR: %[[A_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_A1:.*]] = cir.get_global @_ZL2a1 : !cir.ptr<![[STRUCT_A]]>
@@ -219,7 +213,7 @@ C foo3() {
 // CIR: %[[C2_ALLOCA:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<![[STRUCT_C]]>
 // CIR: %[[B_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[STRUCT_B]]>
 // CIR: %[[A_TMP:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<![[STRUCT_A]]>
-// CIR: %[[C_BASE:.*]] = cir.base_class_addr %[[C2_ALLOCA]] : !cir.ptr<![[STRUCT_C]]> nonnull [0] -> !cir.ptr<![[STRUCT_B]]>
+// CIR: %[[C_BASE:.*]] = cir.base_class_addr nonnull %[[C2_ALLOCA]] [0] : !cir.ptr<![[STRUCT_C]]> -> !cir.ptr<![[STRUCT_B]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[B_TMP]][0] {name = "a"} : !cir.ptr<![[STRUCT_B]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[GET_A]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
@@ -232,7 +226,7 @@ C foo3() {
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[ONE]], %[[GET_B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.copy %[[B_TMP]] align(8) to %[[C_BASE]] align(8) : !cir.ptr<![[STRUCT_B]]>
-// CIR: %[[C_BASE_A:.*]] = cir.base_class_addr %[[C2_ALLOCA]] : !cir.ptr<![[STRUCT_C]]> nonnull [24] -> !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[C_BASE_A:.*]] = cir.base_class_addr nonnull %[[C2_ALLOCA]] [24] : !cir.ptr<![[STRUCT_C]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[A_TMP]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[NINETYSEVEN:.*]] = cir.const #cir.int<97> : !s8i
 // CIR: cir.store{{.*}} %[[NINETYSEVEN]], %[[GET_I]] : !s8i, !cir.ptr<!s8i>
@@ -248,12 +242,9 @@ void foo4() {
 }
 
 // LLVM:         define dso_local { i64, double } @{{.*foo5.*}}
-// LLVMCIR:      [[COERCE:%.*]] = alloca [[UNION_U]], align 8
 // LLVM:         [[RETVAL:%.*]] = alloca [[UNION_U]], align 8
 // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[U1]], i64 16, i1 false)
-// LLVMCIR-NEXT: [[REC:%.*]] = load [[UNION_U]], ptr [[RETVAL]], align 8
-// LLVMCIR-NEXT: store [[UNION_U]] [[REC]], ptr [[COERCE]], align 8
-// LLVMCIR-NEXT: [[TMP_0:%.*]] = load { i64, double }, ptr [[COERCE]], align 8
+// LLVMCIR-NEXT: [[TMP_0:%.*]] = load { i64, double }, ptr [[RETVAL]], align 8
 // OGCG-NEXT:    [[DIVE:%.*]] = getelementptr inbounds nuw [[UNION_U]], ptr [[RETVAL]], i32 0, i32 0
 // OGCG-NEXT:    [[TMP_0:%.*]] = load { i64, double }, ptr [[DIVE]], align 8
 // LLVM-NEXT:    ret { i64, double } [[TMP_0]]
@@ -267,13 +258,10 @@ U foo5() {
 
 
 // LLVM:         define dso_local { i64, double } @{{.*foo6.*}}(i8 %{{.+}}, double %{{.+}})
-// LLVMCIR:      [[COERCE:%.*]] = alloca [[UNION_U]], align 8
 // LLVMCIR:      [[A:%.*]] = alloca [[STRUCT_A]], align 8
 // LLVMCIR-NEXT: [[RETVAL:%.*]] = alloca [[UNION_U]], align 8
 // LLVMCIR:      call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A]], i64 16, i1 false)
-// LLVMCIR-NEXT: [[REC:%.*]] = load [[UNION_U]], ptr [[RETVAL]], align 8
-// LLVMCIR-NEXT: store [[UNION_U]] [[REC]], ptr [[COERCE]], align 8
-// LLVMCIR-NEXT: [[TMP_0:%.*]] = load { i64, double }, ptr [[COERCE]], align 8
+// LLVMCIR-NEXT: [[TMP_0:%.*]] = load { i64, double }, ptr [[RETVAL]], align 8
 // OGCG:         [[RETVAL:%.*]] = alloca [[UNION_U]], align 8
 // OGCG-NEXT:    [[A:%.*]] = alloca [[STRUCT_A]], align 8
 // OGCG:         call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A]], i64 16, i1 false)
@@ -476,15 +464,11 @@ void foo12(int a, int b) {
   int arr3[](a, b);
 }
 
-// LLVM:         define dso_local { i8, double } @{{.*foo13.*}}
-// LLVMCIR:      [[COERCE:%.*]] = alloca [[STRUCT_A]], align 8
-// LLVM:         [[RETVAL:%.*]] = alloca [[STRUCT_A]], align 8
-// LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A2]], i64 16, i1 false)
-// LLVMCIR-NEXT: [[REC:%.*]] = load [[STRUCT_A]], ptr [[RETVAL]], align 8
-// LLVMCIR-NEXT: store [[STRUCT_A]] [[REC]], ptr [[COERCE]], align 8
-// LLVMCIR-NEXT: [[TMP_0:%.*]] = load { i8, double }, ptr [[COERCE]], align 8
-// OGCG-NEXT:    [[TMP_0:%.*]] = load { i8, double }, ptr [[RETVAL]], align 8
-// LLVM-NEXT:    ret { i8, double } [[TMP_0]]
+// LLVM:      define dso_local { i8, double } @{{.*foo13.*}}
+// LLVM:        [[RETVAL:%.*]] = alloca [[STRUCT_A]], align 8
+// LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RETVAL]], ptr align 8 [[A2]], i64 16, i1 false)
+// LLVM-NEXT:   [[TMP_0:%.*]] = load { i8, double }, ptr [[RETVAL]], align 8
+// LLVM-NEXT:   ret { i8, double } [[TMP_0]]
 // CIR-LABEL: cir.func no_inline dso_local @_Z5foo13v()
 // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_A]]>
 // CIR; %[[GET_GLOB:.*]] = cir.get_global @_ZL2a2 : !cir.ptr<![[STRUCT_A]]>

@@ -7,7 +7,7 @@
 subroutine scal_ptr(p)
   real, pointer :: p
   real :: x
-  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFscal_ptrEp"}
+  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} uniq_name("_QFscal_ptrEp") fortran_attrs<pointer>
   ! CHECK: %[[boxload:.*]] = fir.load %[[pdecl]]#0
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[boxload]]
   ! CHECK: hlfir.assign %{{.*}} to %[[addr]]
@@ -27,7 +27,7 @@ subroutine char_ptr(p)
   character(12), pointer :: p
   character(12) :: x
 
-  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFchar_ptrEp"}
+  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} uniq_name("_QFchar_ptrEp") fortran_attrs<pointer>
   ! CHECK: %[[straddr:.*]] = fir.address_of(@_QQclX68656C6C6F20776F726C6421) : !fir.ref<!fir.char<1,12>>
   ! CHECK: %[[str:.*]]:2 = hlfir.declare %[[straddr]] typeparams %{{.*}} {{.*}} : (!fir.ref<!fir.char<1,12>>, index) -> (!fir.ref<!fir.char<1,12>>, !fir.ref<!fir.char<1,12>>)
   ! CHECK: %[[boxload:.*]] = fir.load %[[pdecl]]#0
@@ -47,8 +47,8 @@ end subroutine
 subroutine arr_ptr_read(p)
   real, pointer :: p(:)
   real :: x(100)
-  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFarr_ptr_readEp"}
-  ! CHECK: %[[xdecl:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFarr_ptr_readEx"}
+  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} uniq_name("_QFarr_ptr_readEp") fortran_attrs<pointer>
+  ! CHECK: %[[xdecl:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFarr_ptr_readEx")
   ! CHECK: %[[boxload:.*]] = fir.load %[[pdecl]]#0
   ! CHECK: hlfir.assign %[[boxload]] to %[[xdecl]]#0 : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.array<100xf32>>
   x = p
@@ -60,8 +60,8 @@ end subroutine
 subroutine arr_contig_ptr_read(p)
   real, pointer, contiguous :: p(:)
   real :: x(100)
-  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFarr_contig_ptr_readEp"}
-  ! CHECK: %[[xdecl:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFarr_contig_ptr_readEx"}
+  ! CHECK: %[[pdecl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}} uniq_name("_QFarr_contig_ptr_readEp") fortran_attrs<contiguous, pointer>
+  ! CHECK: %[[xdecl:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFarr_contig_ptr_readEx")
   ! CHECK: %[[boxload:.*]] = fir.load %[[pdecl]]#0
   ! CHECK: hlfir.assign %[[boxload]] to %[[xdecl]]#0 : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.array<100xf32>>
   x = p
@@ -71,8 +71,8 @@ end subroutine
 
   ! CHECK-LABEL: func @_QParr_ptr_target_write(
   ! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>{{.*}}) {
-  ! CHECK:         %[[VAL_P:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFarr_ptr_target_writeEp"}
-  ! CHECK:         %[[VAL_X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFarr_ptr_target_writeEx"}
+  ! CHECK:         %[[VAL_P:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}} uniq_name("_QFarr_ptr_target_writeEp") fortran_attrs<pointer>
+  ! CHECK:         %[[VAL_X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFarr_ptr_target_writeEx")
   ! CHECK:         %[[VAL_PLOAD:.*]] = fir.load %[[VAL_P]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK:         %[[VAL_DESIG:.*]] = hlfir.designate %[[VAL_PLOAD]] (%c2{{.*}}:%c601{{.*}}:%c6{{.*}})  shape %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<100xf32>>
   ! CHECK:         hlfir.assign %[[VAL_X]]#0 to %[[VAL_DESIG]] : !fir.ref<!fir.array<100xf32>>, !fir.box<!fir.array<100xf32>>
@@ -89,8 +89,8 @@ end subroutine
 
   ! CHECK-LABEL: func @_QParr_contig_ptr_target_write(
   ! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {{{.*}}, fir.contiguous}) {
-  ! CHECK:         %[[VAL_P:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFarr_contig_ptr_target_writeEp"}
-  ! CHECK:         %[[VAL_X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFarr_contig_ptr_target_writeEx"}
+  ! CHECK:         %[[VAL_P:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}} uniq_name("_QFarr_contig_ptr_target_writeEp") fortran_attrs<contiguous, pointer>
+  ! CHECK:         %[[VAL_X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFarr_contig_ptr_target_writeEx")
   ! CHECK:         %[[VAL_PLOAD:.*]] = fir.load %[[VAL_P]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK:         %[[VAL_DESIG:.*]] = hlfir.designate %[[VAL_PLOAD]] (%c2{{.*}}:%c601{{.*}}:%c6{{.*}})  shape %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<100xf32>>
   ! CHECK:         hlfir.assign %[[VAL_X]]#0 to %[[VAL_DESIG]] : !fir.ref<!fir.array<100xf32>>, !fir.box<!fir.array<100xf32>>

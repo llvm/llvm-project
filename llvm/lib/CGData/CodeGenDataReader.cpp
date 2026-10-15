@@ -11,20 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/CodeGenDataReader.h"
+#include "CGDataOptions.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
 
 using namespace llvm;
-
-static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
-    "indexed-codegen-data-read-function-map-names", cl::init(true), cl::Hidden,
-    cl::desc("Read function map names in indexed CodeGenData. Can be "
-             "disabled to save memory and time for final consumption of the "
-             "indexed CodeGenData in production."));
 
 namespace llvm {
 
@@ -41,11 +35,11 @@ Error CodeGenDataReader::mergeFromObjectFile(
     const object::ObjectFile *Obj, OutlinedHashTreeRecord &GlobalOutlineRecord,
     StableFunctionMapRecord &GlobalFunctionMapRecord,
     stable_hash *CombinedHash) {
-  Triple TT = Obj->makeTriple();
+  Triple::ObjectFormatType OF = Obj->getTripleObjectFormat();
   auto CGOutlineName =
-      getCodeGenDataSectionName(CG_outline, TT.getObjectFormat(), false);
+      getCodeGenDataSectionName(CG_outline, OF, /*AddSegmentInfo=*/false);
   auto CGMergeName =
-      getCodeGenDataSectionName(CG_merge, TT.getObjectFormat(), false);
+      getCodeGenDataSectionName(CG_merge, OF, /*AddSegmentInfo=*/false);
 
   auto processSectionContents = [&](const StringRef &Name,
                                     const StringRef &Contents) {
@@ -117,7 +111,7 @@ Error IndexedCodeGenDataReader::read() {
     if (Ptr >= End)
       return error(cgdata_error::eof);
     FunctionMapRecord.setReadStableFunctionMapNames(
-        IndexedCodeGenDataReadFunctionMapNames);
+        CGDataOptions::Global.indexed_codegen_data_read_function_map_names);
     if (LazyLoading)
       FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
                                         Header.StableFunctionMapOffset);

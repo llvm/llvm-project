@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "slotindexes"
+#define DEBUG_TYPE "slot-indexes"
 
 AnalysisKey SlotIndexesAnalysis::Key;
 
@@ -120,6 +120,35 @@ void SlotIndexes::analyze(MachineFunction &fn) {
   llvm::sort(idx2MBBMap, less_first());
 
   LLVM_DEBUG(mf->print(dbgs(), this));
+}
+
+bool SlotIndexes::isBlockBoundaryIndex(SlotIndex Idx) const {
+  if (getInstructionFromIndex(Idx))
+    return false;
+
+  // Adjacent blocks share a boundary entry, so a boundary is either the start
+  // index of the block Idx falls in or the end index of the last block. A block
+  // dropped by removeMBBFromMaps() is gone from idx2MBBMap, so its start entry
+  // classifies as stale.
+  assert(!idx2MBBMap.empty() && "Index -> MBB mapping is empty");
+  SlotIndex Base = Idx.getBaseIndex();
+  MBBIndexIterator I = std::prev(getMBBUpperBound(Base));
+  return Base == I->first || Base == getMBBEndIdx(I->second);
+}
+
+SlotIndex SlotIndexes::canonicalizeIndex(SlotIndex Idx) const {
+  if (!isStaleIndex(Idx))
+    return Idx;
+
+  // The block start is a boundary entry, so it bounds the walk.
+  SlotIndex BlockStart = getMBBStartIdx(getMBBFromIndex(Idx));
+  IndexList::iterator I = Idx.listEntry()->getIterator();
+  while (&*I != BlockStart.listEntry()) {
+    --I;
+    if (I->getInstr())
+      return SlotIndex(&*I, SlotIndex::Slot_Register);
+  }
+  return BlockStart;
 }
 
 void SlotIndexes::removeMachineInstrFromMaps(MachineInstr &MI,

@@ -127,6 +127,8 @@ protected:
   // Targets provide a default setting, user flags override.
   bool DisableVerify = false;
 
+  MachineVerifierMode VerifyMode = MachineVerifierMode::End;
+
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge = true;
 
@@ -134,6 +136,10 @@ protected:
   /// folded into the addressing mode of a memory load/store instruction or
   /// replace a copy.
   bool EnableSinkAndFold = false;
+
+  /// Enable insertion of SSAMachineScheduler pass, this triggers early
+  /// computation of live intervals.
+  bool EnableSSAMachineScheduler = false;
 
   /// Require processing of functions such that callees are generated before
   /// callers.
@@ -194,6 +200,9 @@ public:
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 
+  /// Return where the machine verifier runs in the pipeline.
+  MachineVerifierMode getMachineVerifierMode() const { return VerifyMode; }
+
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }
 
@@ -203,6 +212,13 @@ public:
   bool requiresCodeGenSCCOrder() const { return RequireCodeGenSCCOrder; }
   void setRequiresCodeGenSCCOrder(bool Enable = true) {
     setOpt(RequireCodeGenSCCOrder, Enable);
+  }
+
+  bool getEnableSSAMachineScheduler() const {
+    return EnableSSAMachineScheduler;
+  }
+  void setEnableSSAMachineScheduler(bool Enable) {
+    setOpt(EnableSSAMachineScheduler, Enable);
   }
 
   /// Allow the target to override a specific pass without overriding the pass

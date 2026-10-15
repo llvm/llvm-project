@@ -39,8 +39,9 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -442,9 +443,16 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
       if (!ReferenceTemporaryDtor)
         return;
 
+      // Like in `EmitDeclDestroy`, destructors that return `this` need a helper
+      // if the target does not tolerate the mismatch (e.g. WebAssembly).
+      bool CanRegisterDestructor =
+          !CGF.CGM.getCXXABI().HasThisReturn(
+              GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete)) ||
+          CGF.CGM.getCXXABI().canCallMismatchedFunctionType();
+
       llvm::FunctionCallee CleanupFn;
       llvm::Constant *CleanupArg;
-      if (E->getType()->isArrayType()) {
+      if (E->getType()->isArrayType() || !CanRegisterDestructor) {
         CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
             ReferenceTemporary, E->getType(), CodeGenFunction::destroyCXXObject,
             CGF.getLangOpts().Exceptions,
@@ -637,8 +645,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
         OldIP = Builder.saveIP();
         llvm::BasicBlock *Block = OldConditional->getStartingBlock();
-        Builder.restoreIP(CGBuilderTy::InsertPoint(
-            Block, llvm::BasicBlock::iterator(Block->back())));
+        Builder.restoreIP(Block->back().getIterator());
       }
 
       if (EmitLifetimeStart(Alloca.getPointer())) {
@@ -1340,8 +1347,45 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
             IndexInst);
 }
 
+/// Returns the qualified name of \p D for use as the function name in
+/// !alloc_token metadata, or "" if \p D is null or not a NamedDecl.
+static SmallString<64> getAllocTokenFunctionName(const Decl *D,
+                                                 const ASTContext &Ctx) {
+  SmallString<64> Name;
+  const auto *ND = dyn_cast_if_present<NamedDecl>(D);
+  if (!ND)
+    return Name;
+  PrintingPolicy Policy(Ctx.getLangOpts());
+  // Do not use name lookup to decide whether to print inline namespaces.
+  Policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
+  // Do not print file paths for unnamed types, e.g. in template arguments.
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
+  llvm::raw_svector_ostream OS(Name);
+  ND->printQualifiedName(OS, Policy);
+  return Name;
+}
+
 llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
-  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, getContext());
+  std::optional<llvm::AllocTokenMetadata> ATMD;
+  if (!AllocType.isNull())
+    ATMD = infer_alloc::getAllocTokenMetadata(AllocType, getContext());
+
+  const llvm::AllocTokenMode Mode =
+      getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  if (Mode == llvm::AllocTokenMode::TypeFuncHash ||
+      Mode == llvm::AllocTokenMode::TypeFuncHashPointerSplit) {
+    // Even if the type cannot be inferred, emit metadata for a function-based
+    // token. This allows distinguishing allocations that would otherwise all
+    // share the fallback token.
+    if (!ATMD)
+      ATMD = llvm::AllocTokenMetadata{{}, false};
+    // Use the outermost non-closure function, i.e. allocations in lambdas,
+    // blocks, and captured statements use the enclosing function. Allocations
+    // outside of any function (e.g. global initializers) use "".
+    ATMD->FunctionName = getAllocTokenFunctionName(CurFuncDecl, getContext());
+  }
   if (!ATMD)
     return nullptr;
 
@@ -1350,8 +1394,11 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
   auto *ContainsPtrC = Builder.getInt1(ATMD->ContainsPointer);
   auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
 
-  // Format: !{<type-name>, <contains-pointer>}
-  return llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
+  // Format: !{<type-name>, <contains-pointer>[, <function-name>]}
+  SmallVector<llvm::Metadata *, 3> Ops = {TypeNameMD, ContainsPtrMD};
+  if (ATMD->FunctionName)
+    Ops.push_back(MDB.createString(*ATMD->FunctionName));
+  return llvm::MDNode::get(CGM.getLLVMContext(), Ops);
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
@@ -1362,10 +1409,8 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  QualType AllocType = infer_alloc::inferPossibleType(E, getContext(), CurCast);
-  if (!AllocType.isNull())
-    return buildAllocToken(AllocType);
-  return nullptr;
+  return buildAllocToken(
+      infer_alloc::inferPossibleType(E, getContext(), CurCast));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
@@ -2313,7 +2358,8 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  bool HasBoolRep = Ty->hasBooleanRepresentation() || Ty->isExtVectorBoolType();
+  bool HasBoolRep = Ty->hasBooleanRepresentation() ||
+                    Ty->isExtVectorBoolType() || Ty->isConstantMatrixBoolType();
   if (HasBoolRep && CGM.getCodeGenOpts().isConvertingBoolWithCmp0()) {
     return Builder.CreateICmpNE(
         Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
@@ -2354,6 +2400,25 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
   return Addr;
 }
 
+// Emit a store of a matrix LValue. This may require casting the original
+// pointer to memory address (ArrayType) to a pointer to the value type
+// (VectorType).
+static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
+                                    bool isInit, CodeGenFunction &CGF) {
+  if (CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), lvalue.getType())) {
+    const auto *MatrixTy = lvalue.getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(CGF.Builder);
+    value = MB.CreateColumnMajorToRowMajorTransform(
+        value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+  }
+  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
+                                           value->getType()->isVectorTy());
+  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
+                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
+                        lvalue.isNontemporal());
+}
+
 LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   LValue Base;
   if (E->getBase()->isGLValue())
@@ -2364,11 +2429,8 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     llvm::Value *Mat = EmitScalarExpr(E->getBase());
     Address MatMem = CreateMemTemp(E->getBase()->getType());
     QualType Ty = E->getBase()->getType();
-    llvm::Type *LTy = convertTypeForLoadStore(Ty, Mat->getType());
-    if (LTy->getScalarSizeInBits() > Mat->getType()->getScalarSizeInBits())
-      Mat = Builder.CreateZExt(Mat, LTy);
-    Builder.CreateStore(Mat, MatMem);
     Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
+    EmitStoreOfMatrixScalar(Mat, Base, /*isInit=*/true, *this);
   }
   QualType ResultType =
       E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
@@ -2418,25 +2480,6 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   return LValue::MakeExtVectorElt(
       MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
       ResultType, Base.getBaseInfo(), TBAAAccessInfo());
-}
-
-// Emit a store of a matrix LValue. This may require casting the original
-// pointer to memory address (ArrayType) to a pointer to the value type
-// (VectorType).
-static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
-                                    bool isInit, CodeGenFunction &CGF) {
-  if (CGF.getLangOpts().HLSL &&
-      isMatrixRowMajor(CGF.getLangOpts(), lvalue.getType())) {
-    const auto *MatrixTy = lvalue.getType()->castAs<ConstantMatrixType>();
-    llvm::MatrixBuilder MB(CGF.Builder);
-    value = MB.CreateColumnMajorToRowMajorTransform(
-        value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
-  }
-  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
-                                           value->getType()->isVectorTy());
-  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
-                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
-                        lvalue.isNontemporal());
 }
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
@@ -5905,7 +5948,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                          const FieldDecl *field,
                                          bool IsInBounds) {
-  if (isEmptyFieldForLayout(CGF.getContext(), field))
+  if (CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
@@ -6188,9 +6231,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   // scope in C.
   if (!getLangOpts().CPlusPlus)
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
-      pushLifetimeExtendedDestroy(getCleanupKind(DtorKind), DeclPtr,
-                                  E->getType(), getDestroyer(DtorKind),
-                                  DtorKind & EHCleanup);
+      pushLifetimeExtendedDestroy(DtorKind, DeclPtr, E->getType());
 
   return Result;
 }

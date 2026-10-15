@@ -12,7 +12,7 @@ end
 ! CHECK-LABEL:   func.func @_QQmain() {
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i", pinned, uniq_name = "_QFEi"}>
-! CHECK:             %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             omp.sections {
 ! CHECK:               omp.section {
 ! CHECK:                 fir.do_loop %[[VAL_12:.*]] = %[[LB1:.*]] to %[[UB1:.*]] step %[[ST1:.*]] : i32 {
