@@ -220,8 +220,7 @@ bool getSpirvBuiltInIdByName(llvm::StringRef Name,
 
   const SPIRV::SymbolicOperand *Lookup =
       SPIRV::lookupSymbolicOperandByCategoryAndMnemonic(
-          SPIRV::OperandCategory::BuiltInOperand,
-          Name.drop_front(Prefix.length()));
+          SPIRV::OperandCategory::BuiltInOperand, Name.drop_front(Prefix.length()));
 
   if (!Lookup)
     return false;
