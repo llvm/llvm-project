@@ -98,8 +98,6 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     const MachineInstr &Instr) {
   assert(!isAlwaysUniform(Instr));
-  if (Instr.isTerminator())
-    return;
   for (const MachineOperand &Op : Instr.all_defs()) {
     auto Reg = Op.getReg();
     if (isDivergent(Reg))

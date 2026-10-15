@@ -44,8 +44,6 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Instruction &Instr) {
   assert(!isAlwaysUniform(Instr));
-  if (Instr.isTerminator())
-    return;
   pushUsers(cast<Value>(&Instr));
 }
 

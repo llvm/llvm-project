@@ -75,7 +75,7 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
     // Conservatively consider the return value of function calls as divergent.
     // We could analyze callees with bodies more precisely using
     // inter-procedural analysis.
-    if (isa<CallInst>(I))
+    if (isa<CallBase>(I))
       return true;
   }
 
