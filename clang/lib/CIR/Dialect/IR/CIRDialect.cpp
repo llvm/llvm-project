@@ -2045,14 +2045,31 @@ LogicalResult cir::CleanupScopeOp::verify() {
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
+  // Execution always starts in the body region.
+  if (point.isParent()) {
+    regions.emplace_back(&getBodyRegion());
     return;
   }
 
-  // Execution always proceeds from the body region to the cleanup region.
-  regions.push_back(RegionSuccessor(&getBodyRegion()));
-  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+  mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+  assert(term && "expected a terminator predecessor");
+
+  if (term->getParentRegion() == &getBodyRegion()) {
+    // cir.resume unwinds out of the body. Every other terminator, such as
+    // cir.yield or cir.co_return, is a normal exit.
+    cir::CleanupKindAttr kind = getCleanupKindAttr();
+    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
+      regions.emplace_back(&getCleanupRegion());
+      return;
+    }
+  }
+
+  // Exiting the cleanup region, or a body exit that skips it, leaves the
+  // operation. An unwind out of the middle of the body is not a
+  // RegionBranchPoint, and neither are cir.return, cir.break, cir.continue or
+  // cir.goto, so a cleanup region reached only that way has no predecessor
+  // here.
+  regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
