@@ -248,7 +248,6 @@ DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
 static llvm::Expected<std::pair<void *, uint64_t>>
 setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
                        const ProgramTy &Program) {
-  AsyncInfoTy AsyncInfo(Device);
   llvm::ArrayRef<llvm::offloading::EntryTy> Entries(Image->EntriesBegin,
                                                     Image->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
@@ -273,12 +272,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       void *Vtable = *VtableOrErr;
 
       // HstPtr = Entry.Address;
-      if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
+      if (Device.retrieveDataSync(&res, Vtable, PtrSize))
         return createError(ErrorCode::InvalidBinary, "failed to load %s",
-                           Entry.SymbolName);
-      if (Device.synchronize(AsyncInfo))
-        return createError(ErrorCode::InvalidBinary,
-                           "failed to synchronize after retrieving %s",
                            Entry.SymbolName);
       // Calculate and emplace entire Vtable from first Vtable byte
       for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
@@ -300,14 +295,10 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       void *Ptr = *PtrOrErr;
 
       HstPtr = Entry.Address;
-      if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
+      if (Device.retrieveDataSync(&DevPtr, Ptr, Entry.Size))
         return createError(ErrorCode::InvalidBinary, "failed to load %s",
                            Entry.SymbolName);
     }
-    if (Device.synchronize(AsyncInfo))
-      return createError(ErrorCode::InvalidBinary,
-                         "failed to synchronize after retrieving %s",
-                         Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -321,15 +312,14 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   uint64_t TableSize =
       IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
-  if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
-                        AsyncInfo, /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                        /*Loc=*/nullptr, /*Name=*/"IndirectCallTable"))
+  // The IndirectCallTable is on the stack, so the copy must be synchronous to
+  // ensure the data is copied before we return.
+  if (Device.submitDataSync(DevicePtr, IndirectCallTable.data(),
+                            TableSize,
+                            /*Entry=*/nullptr,
+                            /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                            /*Name=*/"IndirectCallTable"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
-  // The IndirectCallTable is on the stack, so we must synchronize to ensure
-  // the data is copied before we return.
-  if (Device.synchronize(AsyncInfo))
-    return createError(ErrorCode::InvalidBinary,
-                       "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
@@ -386,11 +376,13 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   DeviceEnvironment.HardwareParallelism =
       getInfo<uint64_t>(DeviceInfo::HARDWARE_PARALLELISM);
 
-  AsyncInfoTy AsyncInfo(*this);
-  if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
-                 sizeof(DeviceEnvironment), AsyncInfo, /*Entry=*/nullptr,
-                 /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
-                 /*Name=*/"DeviceEnvironment"))
+  // DeviceEnvironment is on the stack, so the copy must be synchronous.
+  if (submitDataSync(DeviceEnvironmentPtr, &DeviceEnvironment,
+                     sizeof(DeviceEnvironment),
+                     /*Entry=*/nullptr,
+                     /*HDTTMapPtr=*/nullptr,
+                     /*Loc=*/nullptr,
+                     /*Name=*/"DeviceEnvironment"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
   return Program;
@@ -441,6 +433,28 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
                              MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                              const ident_t *Loc, const char *Name) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, Queue, Entry,
+                        HDTTMapPtr, Loc, Name);
+}
+
+// Submit data to device synchronously
+int32_t DeviceTy::submitDataSync(void *TgtPtrBegin, void *HstPtrBegin,
+                                 int64_t Size, HostDataToTargetTy *Entry,
+                                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                 const ident_t *Loc, const char *Name) {
+  return submitDataImpl(TgtPtrBegin, HstPtrBegin, Size, /*Queue=*/nullptr,
+                        Entry, HDTTMapPtr, Loc, Name);
+}
+
+int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
+                                 int64_t Size, ol_queue_handle_t Queue,
+                                 HostDataToTargetTy *Entry,
+                                 MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                                 const ident_t *Loc, const char *Name) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/true,
                               Entry, HDTTMapPtr, Loc, Name);
@@ -452,11 +466,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  ol_queue_handle_t queue = AsyncInfo.getQueue();
-  if (!queue)
-    return OFFLOAD_FAIL;
-
-  if (auto Res = olMemcpy(queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
+  if (auto Res = olMemcpy(Queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
                           PM->getHostDevice(), Size)) {
     REPORT() << "Failure to copy data from host to device. Pointers: host "
              << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
@@ -472,6 +482,29 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                HostDataToTargetTy *Entry,
                                MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                                const ident_t *Loc) {
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_FAIL;
+
+  return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, Queue, Entry,
+                          HDTTMapPtr, Loc);
+}
+
+// Retrieve data from device synchronously
+int32_t
+DeviceTy::retrieveDataSync(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                           HostDataToTargetTy *Entry,
+                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                           const ident_t *Loc) {
+  return retrieveDataImpl(HstPtrBegin, TgtPtrBegin, Size, /*Queue=*/nullptr,
+                          Entry, HDTTMapPtr, Loc);
+}
+
+int32_t
+DeviceTy::retrieveDataImpl(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
+                           ol_queue_handle_t Queue, HostDataToTargetTy *Entry,
+                           MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                           const ident_t *Loc) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
                               Entry, HDTTMapPtr, Loc);
@@ -483,10 +516,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  ol_queue_handle_t queue = AsyncInfo.getQueue();
-  if (!queue)
-    return OFFLOAD_FAIL;
-  if (auto Res = olMemcpy(queue, HstPtrBegin, PM->getHostDevice(), TgtPtrBegin,
+  if (auto Res = olMemcpy(Queue, HstPtrBegin, PM->getHostDevice(), TgtPtrBegin,
                           DeviceHandle, Size)) {
     REPORT() << "Failure to copy data from device to host. Pointers: host "
              << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
