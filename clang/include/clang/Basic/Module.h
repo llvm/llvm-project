@@ -737,6 +737,11 @@ public:
 
     /// The message provided to the user when there is a conflict.
     std::string Message;
+
+    /// Construct an unresolved conflict.
+    UnresolvedConflict() = default;
+    UnresolvedConflict(ModuleId Id, std::string Message)
+        : Id(Id), Message(Message) {}
   };
 
   /// The list of conflicts for which the module-id has not yet been

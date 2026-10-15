@@ -2301,8 +2301,8 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
-  ActiveModule->LinkLibraries.push_back(
-      Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
+  ActiveModule->LinkLibraries.emplace_back(std::string{LD.Library},
+                                           LD.Framework);
 }
 
 void ModuleMapLoader::handleConfigMacros(
@@ -2322,13 +2322,8 @@ void ModuleMapLoader::handleConfigMacros(
 }
 
 void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {
-  Module::UnresolvedConflict Conflict;
-
-  Conflict.Id = CD.Id;
-  Conflict.Message = CD.Message;
-
-  // FIXME: when we move to C++20 we should consider using emplace_back
-  ActiveModule->UnresolvedConflicts.push_back(std::move(Conflict));
+  ActiveModule->UnresolvedConflicts.emplace_back(CD.Id,
+                                                 std::string{CD.Message});
 }
 
 void ModuleMapLoader::handleInferredModuleDecl(
