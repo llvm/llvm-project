@@ -9,6 +9,6 @@ target triple = "dxil-pc-shadermodel6.7-vertex"
 ; Function Attrs: noinline nounwind optnone
 define i32 @test_thread_id_in_group(i32 %a) #0 {
 entry:
-  %0 = call i32 @llvm.dx.thread.id.in.group(i32 %a)
+  %0 = call i32 @llvm.dx.thread.id.in.group(i32 2)
   ret i32 %0
 }
