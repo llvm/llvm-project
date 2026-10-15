@@ -194,7 +194,8 @@ LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     const Triple &TargetTriple,
-    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
+    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default,
+    const cl::LibraryOptionsContext *LibraryOptions = nullptr);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,
 /// based on the value of the flag. Must be called before the tool run to

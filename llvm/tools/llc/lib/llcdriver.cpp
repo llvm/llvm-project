@@ -571,6 +571,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     Options.MCOptions.IASSearchPaths = IncludeDirs;
     Options.MCOptions.InstPrinterOptions = InstPrinterOptions;
     Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
+    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
     if (DwarfDirectory.getPosition()) {
       Options.MCOptions.MCUseDwarfDirectory =
           DwarfDirectory ? MCTargetOptions::EnableDwarfDirectory
