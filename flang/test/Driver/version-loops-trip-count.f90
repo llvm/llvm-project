@@ -15,6 +15,10 @@
 ! RUN: %flang -### %s -o %t 2>&1 -O3 -fno-version-loops-for-stride \
 ! RUN:   | FileCheck %s --check-prefix=CHECK-O3-no-stride
 
+! A later -O0 overrides an earlier -O3 for both passes.
+! RUN: %flang -### %s -o %t 2>&1 -O3 -O0 \
+! RUN:   | FileCheck %s --check-prefix=CHECK-O3-O0
+
 ! CHECK-O3: "{{.*}}flang{{.*}}" "-fc1"
 ! CHECK-O3-SAME: "-fversion-loops-for-trip-count"
 ! CHECK-O3-SAME: "-O3"
@@ -32,3 +36,8 @@
 ! CHECK-O3-no-stride-NOT: "-fversion-loops-for-stride"
 ! CHECK-O3-no-stride-SAME: "-fversion-loops-for-trip-count"
 ! CHECK-O3-no-stride-SAME: "-O3"
+
+! CHECK-O3-O0: "{{.*}}flang{{.*}}" "-fc1"
+! CHECK-O3-O0-NOT: "-fversion-loops-for-stride"
+! CHECK-O3-O0-NOT: "-fversion-loops-for-trip-count"
+! CHECK-O3-O0-SAME: "-O0"

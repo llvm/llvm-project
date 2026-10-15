@@ -177,8 +177,9 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 ///
 /// Check if a loop versioning pass should be enabled.
 /// We look for the last of one of the following:
-///   -Ofast, -O4, -O<number> and the pass's -f[no-]version-loops-for-* flag.
-/// Loop versioning is disabled if the last option is the -fno- flag.
+///   -Ofast, -O4, -O<number>, -O0 and the pass's -f[no-]version-loops-for-*
+///   flag.
+/// Loop versioning is disabled if the last option is the -fno- flag or -O0.
 /// Loop versioning is enabled if the last option is one of:
 ///  the -f flag
 ///  -Ofast
@@ -191,12 +192,14 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 /// @return true if loop-versioning should be enabled, otherwise false.
 static bool shouldLoopVersion(const ArgList &Args, options::ID PosFlag,
                               options::ID NegFlag) {
-  const Arg *LoopVersioningArg = Args.getLastArg(
-      options::OPT_Ofast, options::OPT_O, options::OPT_O4, PosFlag, NegFlag);
+  const Arg *LoopVersioningArg =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4,
+                      options::OPT_O0, PosFlag, NegFlag);
   if (!LoopVersioningArg)
     return false;
 
-  if (LoopVersioningArg->getOption().matches(NegFlag))
+  if (LoopVersioningArg->getOption().matches(NegFlag) ||
+      LoopVersioningArg->getOption().matches(options::OPT_O0))
     return false;
 
   if (LoopVersioningArg->getOption().matches(PosFlag))

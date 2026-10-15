@@ -12,6 +12,30 @@
 ! RUN:   -mmlir --mlir-disable-threading \
 ! RUN:   -mmlir --mlir-print-ir-after=loop-tripcount-versioning \
 ! RUN:   %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=OFF --allow-empty
+!
+! The -mmlir overrides reach the pass. `zero` has extent 4 and a three-
+! operation body (12 unrolled operations), so a limit one below each is the
+! boundary: 3 and 11 leave it unversioned, 4 and 12 version it.
+! RUN: %flang_fc1 -emit-llvm -O3 -fversion-loops-for-trip-count \
+! RUN:   -mmlir --mlir-disable-threading \
+! RUN:   -mmlir --mlir-print-ir-after=loop-tripcount-versioning \
+! RUN:   -mmlir -loop-tripcount-versioning-max-section-extent=3 \
+! RUN:   %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LIMIT
+! RUN: %flang_fc1 -emit-llvm -O3 -fversion-loops-for-trip-count \
+! RUN:   -mmlir --mlir-disable-threading \
+! RUN:   -mmlir --mlir-print-ir-after=loop-tripcount-versioning \
+! RUN:   -mmlir -loop-tripcount-versioning-max-section-extent=4 \
+! RUN:   %s -o /dev/null 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -O3 -fversion-loops-for-trip-count \
+! RUN:   -mmlir --mlir-disable-threading \
+! RUN:   -mmlir --mlir-print-ir-after=loop-tripcount-versioning \
+! RUN:   -mmlir -loop-tripcount-versioning-max-unrolled-ops=11 \
+! RUN:   %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LIMIT
+! RUN: %flang_fc1 -emit-llvm -O3 -fversion-loops-for-trip-count \
+! RUN:   -mmlir --mlir-disable-threading \
+! RUN:   -mmlir --mlir-print-ir-after=loop-tripcount-versioning \
+! RUN:   -mmlir -loop-tripcount-versioning-max-unrolled-ops=12 \
+! RUN:   %s -o /dev/null 2>&1 | FileCheck %s
 
 ! The section bound is a runtime value; the declared leading extent is 4.
 subroutine zero(tau, ncol)
@@ -34,3 +58,9 @@ end subroutine
 
 ! Without the flag the pass is not in the pipeline, so there is no IR dump.
 ! OFF-NOT: IR Dump After LoopTripCountVersioning
+
+! With a binding limit the pass runs but leaves the loop alone.
+! LIMIT-LABEL: IR Dump After LoopTripCountVersioning
+! LIMIT-LABEL: func.func @_QPzero(
+! LIMIT-NOT:     fir.if
+! LIMIT:         return
