@@ -149,8 +149,8 @@ bool optimizeVaListPattern(CallInst *VaStart, Function &F) {
     if (!VaArgType->isIntegerTy() && !VaArgType->isPointerTy())
       return false; // Only handle integer/pointer types for now.
 
-    // Replace va_arg with undef (proves the concept works).
-    Value *Replacement = UndefValue::get(VaArgType);
+    // Replace va_arg with poison (proves the concept works).
+    Value *Replacement = PoisonValue::get(VaArgType);
     VaArg->replaceAllUsesWith(Replacement);
     VaArg->eraseFromParent();
 
