@@ -6,6 +6,8 @@ declare i32 @llvm.nvvm.f2tf32.rn(float %f1)
 declare i32 @llvm.nvvm.f2tf32.rn.relu(float %f1)
 declare i32 @llvm.nvvm.f2tf32.rz(float %f1)
 declare i32 @llvm.nvvm.f2tf32.rz.relu(float %f1)
+declare i16 @llvm.nvvm.bf2h.rn(bfloat)
+declare i16 @llvm.nvvm.bf2h.rn.ftz(bfloat)
 
 define i32 @cvt_rn_tf32_f32(float %f1) {
 ; CHECK-LABEL: cvt_rn_tf32_f32(
@@ -61,4 +63,18 @@ define i32 @cvt_rz_relu_tf32_f32(float %f1) {
 ; CHECK-NEXT:    ret;
   %val = call i32 @llvm.nvvm.f2tf32.rz.relu(float %f1)
   ret i32 %val
+}
+
+define i16 @cvt_rn_f16_bf16(bfloat %in) {
+; CHECK-LABEL: cvt_rn_f16_bf16(
+; CHECK:       cvt.rn.f16.bf16
+  %val = call i16 @llvm.nvvm.bf2h.rn(bfloat %in)
+  ret i16 %val
+}
+
+define i16 @cvt_rn_ftz_f16_bf16(bfloat %in) {
+; CHECK-LABEL: cvt_rn_ftz_f16_bf16(
+; CHECK:       cvt.rn.f16.bf16
+  %val = call i16 @llvm.nvvm.bf2h.rn.ftz(bfloat %in)
+  ret i16 %val
 }
