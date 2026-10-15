@@ -855,6 +855,7 @@ class PredTwoOpPseudo<Instruction I, ZPRRegOp zprty,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2), []> {
   let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 class PredTwoOpImmPseudo<Instruction I, ZPRRegOp zprty, Operand immty,
@@ -863,6 +864,7 @@ class PredTwoOpImmPseudo<Instruction I, ZPRRegOp zprty, Operand immty,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, immty:$imm), []> {
   let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 class PredThreeOpPseudo<Instruction I, ZPRRegOp zprty,
@@ -871,6 +873,7 @@ class PredThreeOpPseudo<Instruction I, ZPRRegOp zprty,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
   let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 class UnpredRegImmPseudo<Instruction I, ZPRRegOp zprty, Operand immty>
@@ -897,6 +900,7 @@ class PredOneOpPassthruPseudo<Instruction I, ZPRRegOp zprty,
   let Constraints = !if(!eq(flags, FalseLanesZero), "$Zd = $Passthru,@earlyclobber $Zd", "");
   let ElementSize = size;
   let FalseLanes = flags;
+  let mayRaiseFPException = I.mayRaiseFPException;
 }
 
 //===----------------------------------------------------------------------===//
