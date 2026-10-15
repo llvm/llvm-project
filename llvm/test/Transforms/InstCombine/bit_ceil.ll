@@ -399,7 +399,7 @@ entry:
 ; Do not remove the select when the not operand contains a poison lane.
 define <2 x i8> @bit_ceil_poison_not(<2 x i8> %x) {
 ; CHECK-LABEL: @bit_ceil_poison_not(
-; CHECK:         [[SEL:%.*]] = select <2 x i1> {{.*}}, <2 x i8> {{.*}}, <2 x i8> <i8 1, i8 1>
+; CHECK:         [[SEL:%.*]] = select <2 x i1> {{.*}}, <2 x i8> {{.*}}, <2 x i8> splat (i8 1)
 ; CHECK:         ret <2 x i8> [[SEL]]
   %dec = add <2 x i8> %x, splat (i8 -1)
   %ult = icmp ult <2 x i8> %dec, splat (i8 -2)
