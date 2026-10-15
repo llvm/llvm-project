@@ -6,29 +6,43 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces that let a statically-shaped
-// memref be promoted into a single SSA value, provided every access to
-// the buffer is a whole-buffer read or write (or a whole-sub-region access of
-// such a buffer via a subview). With these models, Mem2Reg replaces the memory
-// slot with a vector value (*), threading it as the reaching definition:
+// This file implements memory slot interface models used by Mem2Reg to promote
+// a memref to a single vector SSA value. `PromotableAliaserInterface` exposes
+// `memref.subview` aliases, and `PromotableOpInterface` removes the subviews
+// after promotion. Vector transfer ops are handled by the models in the
+// Vector dialect.
 //
-//   * a static, same-rank `memref.subview` is exposed as a promotable sub-slice
-//     alias of the buffer's slot (via `PromotableAliaserInterface`): a read of
-//     the subview projects out of the vector value with
-//     `vector.extract_strided_slice`, and a write into it composes back into
-//     the value with `vector.insert_strided_slice`. This lets a buffer that is
-//     only ever accessed through static subviews promote as well, with partial
-//     and overlapping sub-writes composing in program order.
+// A memory slot pairs a memref with the vector type used to represent its
+// contents. Promotion replaces accesses to the slot with uses and definitions
+// of that vector value. All uses, including those through subviews, must be
+// supported by the models.
 //
-// Accesses that are not whole-(sub-)buffer -- dynamic offsets, rank-reducing or
-// non-unit-stride subviews -- are left untouched, so the buffer is not
-// promoted.
+// The accesses are rewritten as follows:
 //
-// (*) Addging support for scalar values is left as a TODO.
+//   * A same-rank, unit-stride `memref.subview` gets an alias slot that is
+//     promoted together with the parent:
+//
+//     - A static subview holds the corresponding sub-vector. Reads extract it
+//       with `vector.extract_strided_slice`; writes update the parent with
+//       `vector.insert_strided_slice`.
+//
+//     - A dynamic subview holds the whole parent vector because vector shapes
+//       must be static. `vector.create_mask` and `arith.select` restrict
+//       accesses to the subview's extent. The subview must start at the
+//       parent's origin.
+//
+// Subviews require a statically shaped parent buffer. A dynamically
+// shaped buffer can instead promote to a 1-D scalable vector through
+// whole-buffer transfers, but subviews are not supported.
+//
+// Unsupported accesses, such as dynamic subview offsets, rank reduction,
+// non-unit subview strides, or non-zero transfer indices, prevent promotion.
+//
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/Transforms/MemorySlotOpInterfaceImpl.h"
 
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -39,88 +53,190 @@ using namespace mlir::memref;
 using namespace mlir::vector;
 
 //===----------------------------------------------------------------------===//
-//  memref.subview aliaser
+//  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns the offsets of `subView` as a static, contiguous, same-rank slice of
-/// its source, or nullopt if the subview is not promotable as a whole-buffer
-/// sub-slice. Promotion projects the parent buffer's vector value through
-/// `vector.extract_strided_slice` / `insert_strided_slice`, which require:
-///   * fully static offsets and sizes,
-///   * unit strides,
-///   * no rank reduction (result rank == source rank),
-/// so a dropped or dynamic dimension disqualifies the subview.
-static std::optional<SmallVector<int64_t>>
-getPromotableSubViewOffsets(memref::SubViewOp subView) {
-  auto srcType = dyn_cast<MemRefType>(subView.getSource().getType());
-  auto resType = dyn_cast<MemRefType>(subView.getResult().getType());
-  if (!srcType || !resType || !srcType.hasStaticShape() ||
-      !resType.hasStaticShape())
-    return std::nullopt;
+/// Checks the requirements shared by static and dynamic subview aliases: a
+/// parent with a static shape and a valid vector element type, no rank
+/// reduction, and unit slice strides.
+static bool isUnitStrideSliceOfStaticParent(memref::SubViewOp subView) {
+  MemRefType srcType = subView.getSourceType();
+  // vector requires a static parent shape.
+  if (!srcType.hasStaticShape())
+    return false;
 
-  // No rank reduction: extract/insert_strided_slice operate at a single rank.
-  if (srcType.getRank() != resType.getRank())
-    return std::nullopt;
+  // implementation limitation: vector.extract_strided_slice must have the same
+  // rank (static). Alternative vector.extract could be used but only drop
+  // leading dimensions.
+  if (srcType.getRank() != subView.getType().getRank())
+    return false;
 
-  // Unit strides only.
-  for (OpFoldResult stride : subView.getMixedStrides()) {
-    std::optional<int64_t> s = getConstantIntValue(stride);
-    if (!s || *s != 1)
-      return std::nullopt;
-  }
+  // No straightforward mapping to vector code for non-unit stride slices.
+  if (!subView.hasUnitStride())
+    return false;
 
-  // Static offsets.
+  return VectorType::isValidElementType(srcType.getElementType());
+}
+
+/// Returns whether static `subView` can alias a slice of the parent vector
+/// using `vector.extract_strided_slice` and `vector.insert_strided_slice`.
+/// Requires static source and result shapes, constant offsets, unit strides,
+/// and no rank reduction.
+static bool isAliasableStaticShapeSubView(memref::SubViewOp subView) {
+  if (!subView.getType().hasStaticShape())
+    return false;
+
+  if (!isUnitStrideSliceOfStaticParent(subView))
+    return false;
+
+  // extract/insert_strided_slice requires all offsets to be constant.
+  return llvm::all_of(subView.getMixedOffsets(), [](OpFoldResult offset) {
+    return getConstantIntValue(offset).has_value();
+  });
+}
+
+/// Returns whether dynamic `subView` can alias the whole parent vector. The
+/// alias uses the parent vector's shape because vector dimensions cannot be
+/// dynamic. Requires a static source shape, a dynamic result shape, zero
+/// offsets, unit strides, and no rank reduction.
+static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
+  if (subView.getType().hasStaticShape())
+    return false;
+
+  if (!isUnitStrideSliceOfStaticParent(subView))
+    return false;
+
+  /// TODO: Allow non-zero offsets by improving buildSubViewMask().
+  return subView.hasZeroOffset();
+}
+
+/// Returns the static offsets of `subView` within the parent vector for
+/// `vector.extract_strided_slice` and `vector.insert_strided_slice`.
+static SmallVector<int64_t> getStaticSubViewOffsets(memref::SubViewOp subView) {
   SmallVector<int64_t> offsets;
   for (OpFoldResult offset : subView.getMixedOffsets()) {
-    std::optional<int64_t> o = getConstantIntValue(offset);
-    if (!o)
-      return std::nullopt;
-    offsets.push_back(*o);
-  }
-
-  // Static sizes (already implied by the result's static shape, but the sizes
-  // must match the result shape so the slice covers exactly the subview).
-  for (auto [size, dim] :
-       llvm::zip_equal(subView.getMixedSizes(), resType.getShape())) {
-    std::optional<int64_t> s = getConstantIntValue(size);
-    if (!s || *s != dim)
-      return std::nullopt;
+    std::optional<int64_t> value = getConstantIntValue(offset);
+    assert(value && "expected a static offset");
+    offsets.push_back(*value);
   }
   return offsets;
 }
+
+/// The vector type covering `subView`'s whole parent buffer, which is the type
+/// the alias slot of a dynamically-shaped subview takes.
+static VectorType getWholeParentVectorType(memref::SubViewOp subView) {
+  auto parentType = cast<MemRefType>(subView.getSource().getType());
+  assert(parentType.hasStaticShape() && "expected a statically-shaped parent");
+  return VectorType::get(parentType.getShape(), parentType.getElementType());
+}
+
+/// If `slotPtr` is a dynamic subview, returns it.
+static memref::SubViewOp getDynamicSubView(Value slotPtr) {
+  auto subView = slotPtr.getDefiningOp<memref::SubViewOp>();
+  if (subView && isAliasableDynamicShapeSubView(subView))
+    return subView;
+  return {};
+}
+
+/// Builds the mask of `subView`'s valid region: a `vector.create_mask` of the
+/// subview's sizes, in the shape of the whole parent that its alias holds.
+static Value buildSubViewMask(OpBuilder &builder, Location loc,
+                              memref::SubViewOp subView) {
+  VectorType parentVecType = getWholeParentVectorType(subView);
+  SmallVector<Value> bounds =
+      getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
+  return vector::CreateMaskOp::create(
+      builder, loc,
+      VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
+}
+
+bool mlir::memref::isDynamicSubViewSlot(Value slotPtr) {
+  return static_cast<bool>(getDynamicSubView(slotPtr));
+}
+
+Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
+                                            Value slotPtr) {
+  memref::SubViewOp subView = getDynamicSubView(slotPtr);
+  if (!subView)
+    return {};
+  return buildSubViewMask(builder, loc, subView);
+}
+
 namespace {
-/// Exposes a static, same-rank `memref.subview` as a sub-slice alias of a
-/// whole-buffer vector slot. Reads of the subview become
-/// `vector.extract_strided_slice` of the parent value; writes become
-/// `vector.insert_strided_slice` into the current reaching definition.
+//===----------------------------------------------------------------------===//
+//  PromotableOpInterface model for memref.subview
+//===----------------------------------------------------------------------===//
+
+/// `PromotableOpInterface` model for `memref.subview`. Works with the
+/// `PromotableAliaserInterface` model below to remove the subview once its
+/// result's uses have been promoted.
+struct SubViewOpPromotableModel
+    : public PromotableOpInterface::ExternalModel<SubViewOpPromotableModel,
+                                                  memref::SubViewOp> {
+  bool canUsesBeRemoved(Operation *op,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    // Removing the subview requires removing all uses of its memref result.
+    for (OpOperand &use : op->getResult(0).getUses())
+      newBlockingUses.push_back(&use);
+    return true;
+  }
+
+  DeletionKind
+  removeBlockingUses(Operation *op,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder) const {
+    return DeletionKind::Delete;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+//  PromotableAliaserInterface model for memref.subview
+//===----------------------------------------------------------------------===//
+
+/// `PromotableAliaserInterface` model exposing a same-rank `memref.subview` as
+/// an alias of a vector slot.
+///
+/// `projectSlotValueToAliasValue` provides the alias value for loads and for a
+/// store's `getStored` hook. `projectAliasValueToSlotValue` merges the stored
+/// alias value back into the parent.
+///
+/// Static subviews use `vector.extract_strided_slice` and
+/// `vector.insert_strided_slice`. Dynamic subviews keep the whole parent
+/// vector: loads use it directly, and stores use `arith.select` with a mask of
+/// the subview's sizes to preserve the parent value outside the subview.
 struct SubViewOpAliasModel
     : public PromotableAliaserInterface::ExternalModel<SubViewOpAliasModel,
                                                        memref::SubViewOp> {
   void getPromotableSlotAliases(Operation *op,
-
                                 OpOperand &aliasedSlotPointerOperand,
                                 const MemorySlot &parentSlot,
                                 SmallVectorImpl<MemorySlot> &newSlots) const {
     auto subView = cast<memref::SubViewOp>(op);
+    // Called once per operand holding the slot pointer; only the viewed source
+    // exposes an alias.
     if (aliasedSlotPointerOperand.get() != subView.getSource())
       return;
 
-    // The parent slot must promote to a vector (whole-buffer promotion). A
-    // scalar (single-element) parent slot cannot be sliced.
+    // The parent slot must promote to a vector. A scalar (single-element)
+    // parent slot cannot be sliced.
     auto parentVecType = dyn_cast<VectorType>(parentSlot.valueType);
     if (!parentVecType)
       return;
 
-    if (!getPromotableSubViewOffsets(subView))
-      return;
+    // A static slice aliases the sub-vector matching the subview's shape.
+    if (isAliasableStaticShapeSubView(subView)) {
+      auto resType = cast<MemRefType>(subView.getResult().getType());
+      VectorType aliasVecType =
+          VectorType::get(resType.getShape(), resType.getElementType());
+      newSlots.push_back(MemorySlot{subView.getResult(), aliasVecType});
+    }
 
-    // The alias's value type is the sub-vector matching the subview's shape.
-    auto resType = cast<MemRefType>(subView.getResult().getType());
-    if (!VectorType::isValidElementType(resType.getElementType()))
-      return;
-    VectorType aliasVecType =
-        VectorType::get(resType.getShape(), resType.getElementType());
-    newSlots.push_back(MemorySlot{subView.getResult(), aliasVecType});
+    // A dynamic slice aliases the whole parent value.
+    if (isAliasableDynamicShapeSubView(subView)) {
+      newSlots.push_back(MemorySlot{subView.getResult(), parentVecType});
+    }
   }
 
   Value projectSlotValueToAliasValue(Operation *op,
@@ -130,7 +246,13 @@ struct SubViewOpAliasModel
                                      Value slotValue,
                                      OpBuilder &builder) const {
     auto subView = cast<memref::SubViewOp>(op);
-    SmallVector<int64_t> offsets = *getPromotableSubViewOffsets(subView);
+    // Identity: the alias holds the whole parent value. Masking is left to
+    // `TransferReadOpMemOpModel::removeBlockingUses`, which unlike this hook
+    // can see the consuming read's padding value.
+    if (isAliasableDynamicShapeSubView(subView))
+      return slotValue;
+
+    SmallVector<int64_t> offsets = getStaticSubViewOffsets(subView);
     auto aliasVecType = cast<VectorType>(aliasSlot.valueType);
     SmallVector<int64_t> strides(offsets.size(), 1);
     return vector::ExtractStridedSliceOp::create(
@@ -146,35 +268,20 @@ struct SubViewOpAliasModel
                                      Value aliasValue, Value reachingDef,
                                      OpBuilder &builder) const {
     auto subView = cast<memref::SubViewOp>(op);
-    SmallVector<int64_t> offsets = *getPromotableSubViewOffsets(subView);
+    // Compose the stored value over the subview's extent only, leaving the rest
+    // of the parent value untouched.
+    if (isAliasableDynamicShapeSubView(subView)) {
+      Location loc = op->getLoc();
+      Value mask = buildSubViewMask(builder, loc, subView);
+      return arith::SelectOp::create(builder, loc, mask, aliasValue,
+                                     reachingDef);
+    }
+
+    SmallVector<int64_t> offsets = getStaticSubViewOffsets(subView);
     SmallVector<int64_t> strides(offsets.size(), 1);
     return vector::InsertStridedSliceOp::create(
                builder, op->getLoc(), aliasValue, reachingDef, offsets, strides)
         .getResult();
-  }
-};
-
-/// Companion `PromotableOpInterface` model: once the slot is promoted, the
-/// subview has no remaining memory uses and is erased.
-struct SubViewOpPromotableModel
-    : public PromotableOpInterface::ExternalModel<SubViewOpPromotableModel,
-                                                  memref::SubViewOp> {
-  bool canUsesBeRemoved(Operation *op,
-                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
-                        SmallVectorImpl<OpOperand *> &newBlockingUses,
-                        const DataLayout &dataLayout) const {
-    // The subview result is itself a blocking use of the parent slot; its own
-    // users (the transfers) are resolved through the alias projections.
-    for (OpOperand &use : op->getResult(0).getUses())
-      newBlockingUses.push_back(&use);
-    return true;
-  }
-
-  DeletionKind
-  removeBlockingUses(Operation *op,
-                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
-                     OpBuilder &builder) const {
-    return DeletionKind::Delete;
   }
 };
 } // namespace

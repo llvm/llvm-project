@@ -40,6 +40,11 @@ class AMDGPURsrcIntrinsic<int rsrcarg, bit isimage = false> {
   bit IsImage = isimage;
 }
 
+// Marker class for DMA transfers between global memory and LDS.
+class AMDGPULDSDMAIntrinsic {
+  Intrinsic Intr = !cast<Intrinsic>(NAME);
+}
+
 let TargetPrefix = "r600" in {
 
   multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz<
@@ -2179,7 +2184,7 @@ def int_amdgcn_struct_tbuffer_store : DefaultAttrsIntrinsic <
      ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
 
-class AMDGPURawBufferLoadLDS : Intrinsic <
+class AMDGPURawBufferLoadLDS : AMDGPULDSDMAIntrinsic, Intrinsic <
   [],
   [llvm_v4i32_ty,             // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
@@ -2202,7 +2207,7 @@ let TargetFeatures = "vmem-to-lds-load-insts" in {
   def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
-class AMDGPURawPtrBufferLoadLDS :
+class AMDGPURawPtrBufferLoadLDS : AMDGPULDSDMAIntrinsic,
   Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
@@ -2232,7 +2237,7 @@ let TargetFeatures = "vmem-to-lds-load-insts" in {
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
 
-class AMDGPUStructBufferLoadLDS : Intrinsic <
+class AMDGPUStructBufferLoadLDS : AMDGPULDSDMAIntrinsic, Intrinsic <
   [],
   [llvm_v4i32_ty,             // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
@@ -2256,7 +2261,7 @@ let TargetFeatures = "vmem-to-lds-load-insts" in {
   def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
 } // End TargetFeatures = "vmem-to-lds-load-insts"
 
-class AMDGPUStructPtrBufferLoadLDS :
+class AMDGPUStructPtrBufferLoadLDS : AMDGPULDSDMAIntrinsic,
   Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
@@ -2994,7 +2999,7 @@ def int_amdgcn_perm :
 /// This allows abstracting over both global pointers (address space 1) and
 /// the buffer-resource-wrapper pointers (address space 7 and 9).
 /// TODO: add support for address space 5 and scratch_load_lds.
-class AMDGPULoadToLDS :
+class AMDGPULoadToLDS : AMDGPULDSDMAIntrinsic,
   Intrinsic <
     [],
     [llvm_anyptr_ty,                    // Base pointer to load from. Varies per lane.
@@ -3012,7 +3017,7 @@ class AMDGPULoadToLDS :
 def int_amdgcn_load_to_lds : AMDGPULoadToLDS;
 def int_amdgcn_load_async_to_lds : AMDGPULoadToLDS;
 
-class AMDGPUGlobalLoadLDS : Intrinsic<
+class AMDGPUGlobalLoadLDS : AMDGPULDSDMAIntrinsic, Intrinsic<
           [],
           [LLVMQualPointerType<1>, // Base global pointer to load from
            LLVMQualPointerType<3>, // LDS base pointer to store to
@@ -4128,7 +4133,7 @@ def int_amdgcn_fdiv_fast : PureIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
 
 // Async instructions increment ASYNCcnt which is modeled as InaccessibleMem.
-class AMDGPUAsyncClusterLoadLDS : Intrinsic <
+class AMDGPUAsyncClusterLoadLDS : AMDGPULDSDMAIntrinsic, Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
    local_ptr_ty,           // LDS base pointer to store to
@@ -4142,7 +4147,7 @@ class AMDGPUAsyncClusterLoadLDS : Intrinsic <
   "", [SDNPMemOperand]
 >;
 
-class AMDGPUAsyncGlobalLoadToLDS : Intrinsic <
+class AMDGPUAsyncGlobalLoadToLDS : AMDGPULDSDMAIntrinsic, Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to load from
    local_ptr_ty,           // LDS base pointer to store to.
@@ -4155,7 +4160,7 @@ class AMDGPUAsyncGlobalLoadToLDS : Intrinsic <
   "", [SDNPMemOperand]
 >;
 
-class AMDGPUAsyncGlobalStoreFromLDS : Intrinsic <
+class AMDGPUAsyncGlobalStoreFromLDS : AMDGPULDSDMAIntrinsic, Intrinsic <
   [],
   [global_ptr_ty,          // Base global pointer to store to
    local_ptr_ty,           // LDS base pointer to load from
@@ -4435,7 +4440,7 @@ def int_amdgcn_swmmac_i32_16x16x128_iu8     : AMDGPUSWmmacIntrinsicABIdxClamp<ll
 }
 
 class AMDGPUTensorLoadStore:
-  Intrinsic<
+  AMDGPULDSDMAIntrinsic, Intrinsic<
     [],
     [llvm_v4i32_ty, // D# group 0
      llvm_v8i32_ty, // D# group 1

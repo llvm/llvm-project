@@ -1,0 +1,8 @@
+executable("clang-ssaf-merge-conflict-report") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/ScalableStaticAnalysis/Tool",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "MergeConflictReport.cpp" ]
+}

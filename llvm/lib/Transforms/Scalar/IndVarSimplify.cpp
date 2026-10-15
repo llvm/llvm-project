@@ -1193,10 +1193,6 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     if (I->mayHaveSideEffects() || I->mayReadFromMemory())
       continue;
 
-    // Skip debug info intrinsics.
-    if (isa<DbgInfoIntrinsic>(I))
-      continue;
-
     // Skip eh pad instructions.
     if (I->isEHPad())
       continue;
@@ -1237,9 +1233,9 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       // Skip debug info intrinsics.
       do {
         --I;
-      } while (I->isDebugOrPseudoInst() && I != Preheader->begin());
+      } while (isa<PseudoProbeInst>(I) && I != Preheader->begin());
 
-      if (I->isDebugOrPseudoInst() && I == Preheader->begin())
+      if (isa<PseudoProbeInst>(I) && I == Preheader->begin())
         Done = true;
     } else {
       Done = true;
