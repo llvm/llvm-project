@@ -519,10 +519,12 @@ static void collectLoads(SmallSetVector<SUnit *, 8> &Loads, BitVector &Visited,
 /// the corresponding set in \p LoadPredsCache should hold all transitive load
 /// dependencies (via collectLoads with StopAtLoads=false). The \p Scratch
 /// bitvector should allocate enough bits for the number of SUnits.
-static bool loadsMayOverlap(
-    [[maybe_unused]] SUnit &I, const SmallSetVector<SUnit *, 8> &ILoadSuccs,
-    SUnit &J, BitVector &LoadPredsComputed,
-    SmallVector<SmallSetVector<SUnit *, 8>> &LoadPredsCache, BitVector &Scratch) {
+static bool
+loadsMayOverlap([[maybe_unused]] SUnit &I,
+                const SmallSetVector<SUnit *, 8> &ILoadSuccs, SUnit &J,
+                BitVector &LoadPredsComputed,
+                SmallVector<SmallSetVector<SUnit *, 8>> &LoadPredsCache,
+                BitVector &Scratch) {
 
   if (ILoadSuccs.empty())
     return false;
