@@ -607,6 +607,21 @@ body:             |
     %copy:_(f32) = COPY %fmul
 ...
 ---
+# Self multiply cannot be applied if the value may be undef.
+name:            FMul_MaybeUndef
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FMul_MaybeUndef
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fmul:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %fmul:_(f32) = G_FMUL %val, %val
+    %copy:_(f32) = COPY %fmul
+...
+---
 # f0x00000001 is the smallest positive subnormal. The result underflows, so
 # zero cannot be ruled out under roundTiesToEven.
 name:            FMul_Subnormal
