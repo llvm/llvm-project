@@ -35,6 +35,9 @@ enum class RelocSectionSymType {
 };
 
 class StringRef;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
 class MCTargetOptions {
 public:
@@ -132,6 +135,11 @@ public:
   // and TType encodings; on AArch64/PPC64 only the FDE CFI encoding changes
   // (personality/LSDA/TType already default to sdata8).
   bool LargeEHEncoding = false;
+
+  // The library options of the compilation, usually its LLVMContext's.
+  // TODO: Make it non-null once every tool sets it. Null means the global
+  // values.
+  const cl::LibraryOptionsContext *LibraryOptions = nullptr;
 
   LLVM_ABI MCTargetOptions();
 
