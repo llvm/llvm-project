@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements verification of PISA-specific IR requirements.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISA.h"
 #include "llvm/ADT/ArrayRef.h"

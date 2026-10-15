@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements expansion of memory intrinsics for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISA.h"
 #include "PISASubtarget.h"
