@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines all of the PISA-specific intrinsics.
-//
+///
+/// \file
+/// This file defines all of the PISA-specific intrinsics.
+///
 //===----------------------------------------------------------------------===//
 
 // Generic pointer type. See the PISA address-space specification:
