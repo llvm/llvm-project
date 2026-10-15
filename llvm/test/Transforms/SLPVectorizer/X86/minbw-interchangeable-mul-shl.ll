@@ -6,21 +6,35 @@
 define void @test(ptr %p, ptr %in) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], splat (i32 7)
-; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i32> [[TMP3]], <i32 3, i32 20, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP4]] to <4 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i8> [[TMP5]], i64 0
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[IN]], align 1
+; CHECK-NEXT:    [[GI1:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 1
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[GI1]], align 1
+; CHECK-NEXT:    [[GI2:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[GI2]], align 1
+; CHECK-NEXT:    [[GI3:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 3
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr [[GI3]], align 1
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[L0]] to i32
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[L1]] to i32
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i32
+; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i32
+; CHECK-NEXT:    [[X0:%.*]] = and i32 [[Z0]], 7
+; CHECK-NEXT:    [[X1:%.*]] = and i32 [[Z1]], 7
+; CHECK-NEXT:    [[X2:%.*]] = and i32 [[Z2]], 7
+; CHECK-NEXT:    [[X3:%.*]] = and i32 [[Z3]], 7
+; CHECK-NEXT:    [[S0:%.*]] = shl i32 [[X0]], 3
+; CHECK-NEXT:    [[S1:%.*]] = mul i32 1048576, [[X1]]
+; CHECK-NEXT:    [[S2:%.*]] = shl i32 [[X2]], 3
+; CHECK-NEXT:    [[S3:%.*]] = shl i32 [[X3]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[S0]] to i8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[S1]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[S2]] to i8
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[S3]] to i8
 ; CHECK-NEXT:    store i8 [[TMP6]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i8> [[TMP5]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP7]], ptr [[G1]], align 1
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i8> [[TMP5]], i64 2
 ; CHECK-NEXT:    store i8 [[TMP8]], ptr [[G2]], align 1
 ; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i8> [[TMP5]], i64 3
 ; CHECK-NEXT:    store i8 [[TMP9]], ptr [[G3]], align 1
 ; CHECK-NEXT:    ret void
 ;

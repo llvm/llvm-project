@@ -31,14 +31,18 @@ define { float, float, float } @test(float %x0, float %x1, float %x2, float %x3)
 define double @second_level_seeds(ptr noalias %x, ptr noalias %y, ptr noalias %m) {
 ; CHECK-LABEL: define double @second_level_seeds(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], ptr noalias [[M:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[S0:%.*]] = fadd double [[Y0]], [[X0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast double [[S0]], 1.000000e+00
 ; CHECK-NEXT:    store double [[TMP5]], ptr [[M]], align 8
+; CHECK-NEXT:    [[Y_1:%.*]] = getelementptr i8, ptr [[Y]], i64 8
+; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y_1]], align 8
+; CHECK-NEXT:    [[X_1:%.*]] = getelementptr i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X_1]], align 8
+; CHECK-NEXT:    [[S1:%.*]] = fadd double [[Y1]], [[X1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast double [[S1]], 1.000000e+00
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[M]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[TMP6]], [[L]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -63,33 +67,39 @@ define double @second_level_seeds(ptr noalias %x, ptr noalias %y, ptr noalias %m
 define void @second_level_seeds_keep_windows(ptr noalias %a, ptr noalias %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: define void @second_level_seeds_keep_windows(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]]) {
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd double [[A0]], [[B0]]
 ; CHECK-NEXT:    [[C0:%.*]] = load double, ptr [[C]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[T0:%.*]] = fadd double [[TMP4]], [[C0]]
 ; CHECK-NEXT:    store double [[T0]], ptr [[D]], align 8
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[PA1]], align 8
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[PB1]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[A1]], [[B1]]
 ; CHECK-NEXT:    [[PC1:%.*]] = getelementptr i8, ptr [[C]], i64 8
 ; CHECK-NEXT:    [[C1:%.*]] = load double, ptr [[PC1]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[T1:%.*]] = fadd double [[TMP5]], [[C1]]
 ; CHECK-NEXT:    [[PD1:%.*]] = getelementptr i8, ptr [[D]], i64 8
 ; CHECK-NEXT:    store double [[T1]], ptr [[PD1]], align 8
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[PA2]], align 8
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[PB2]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd double [[A2]], [[B2]]
 ; CHECK-NEXT:    [[PC2:%.*]] = getelementptr i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    [[C2:%.*]] = load double, ptr [[PC2]], align 8
-; CHECK-NEXT:    [[PD2:%.*]] = getelementptr i8, ptr [[D]], i64 16
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[PA2]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[PB2]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
 ; CHECK-NEXT:    [[T2:%.*]] = fadd double [[TMP9]], [[C2]]
+; CHECK-NEXT:    [[PD2:%.*]] = getelementptr i8, ptr [[D]], i64 16
 ; CHECK-NEXT:    store double [[T2]], ptr [[PD2]], align 8
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[A3:%.*]] = load double, ptr [[PA3]], align 8
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr i8, ptr [[B]], i64 24
+; CHECK-NEXT:    [[B3:%.*]] = load double, ptr [[PB3]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[A3]], [[B3]]
 ; CHECK-NEXT:    [[PC3:%.*]] = getelementptr i8, ptr [[C]], i64 24
 ; CHECK-NEXT:    [[C3:%.*]] = load double, ptr [[PC3]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[T3:%.*]] = fadd double [[TMP10]], [[C3]]
 ; CHECK-NEXT:    [[PD3:%.*]] = getelementptr i8, ptr [[D]], i64 24
 ; CHECK-NEXT:    store double [[T3]], ptr [[PD3]], align 8

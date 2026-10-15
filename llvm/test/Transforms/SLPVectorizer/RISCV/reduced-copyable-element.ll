@@ -7,15 +7,19 @@ define i32 @main() {
 ; CHECK-LABEL: define i32 @main(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 8 @n, i64 32, <2 x i1> splat (i1 true), i32 2)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[TMP3]], <2 x i64> splat (i64 17179869184))
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr (i8, ptr @n, i64 32), align 8
+; CHECK-NEXT:    [[CONV13_I_1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND_I_1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[CONV13_I_1]], i32 0)
+; CHECK-NEXT:    [[CONV40_I_1:%.*]] = sext i32 [[COND_I_1]] to i64
+; CHECK-NEXT:    [[COND47_I_1:%.*]] = tail call i64 @llvm.umin.i64(i64 [[CONV40_I_1]], i64 17179869184)
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[COND47_I_1]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @n, align 8
+; CHECK-NEXT:    [[CONV13_I_2:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[COND_I_2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[CONV13_I_2]], i32 0)
+; CHECK-NEXT:    [[CONV40_I_2:%.*]] = sext i32 [[COND_I_2]] to i64
+; CHECK-NEXT:    [[COND47_I_2:%.*]] = tail call i64 @llvm.umin.i64(i64 [[CONV40_I_2]], i64 17179869184)
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[COND47_I_2]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;

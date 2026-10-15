@@ -210,15 +210,16 @@ define i32 @satd_4x4(ptr %pix1, i64 %i_pix1, ptr %pix2, i64 %i_pix2) {
 ; CHECK-NEXT:    [[TMP88:%.*]] = add <2 x i32> [[TMP87]], [[TMP67]]
 ; CHECK-NEXT:    [[TMP89:%.*]] = xor <2 x i32> [[TMP88]], [[TMP87]]
 ; CHECK-NEXT:    [[TMP90:%.*]] = add <2 x i32> [[TMP84]], [[TMP89]]
-; CHECK-NEXT:    [[TMP91:%.*]] = lshr <2 x i32> [[TMP90]], splat (i32 16)
-; CHECK-NEXT:    [[SHR_1:%.*]] = extractelement <2 x i32> [[TMP91]], i64 1
-; CHECK-NEXT:    [[TMP93:%.*]] = and <2 x i32> [[TMP90]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP91:%.*]] = extractelement <2 x i32> [[TMP90]], i64 1
+; CHECK-NEXT:    [[CONV77:%.*]] = and i32 [[TMP91]], 65535
+; CHECK-NEXT:    [[TMP93:%.*]] = lshr <2 x i32> [[TMP90]], splat (i32 16)
 ; CHECK-NEXT:    [[ADD79:%.*]] = extractelement <2 x i32> [[TMP93]], i64 1
-; CHECK-NEXT:    [[ADD78_1:%.*]] = add nuw nsw i32 [[SHR_1]], [[ADD79]]
-; CHECK-NEXT:    [[TMP95:%.*]] = extractelement <2 x i32> [[TMP91]], i64 0
-; CHECK-NEXT:    [[ADD78_2:%.*]] = add nuw nsw i32 [[TMP95]], [[ADD78_1]]
+; CHECK-NEXT:    [[ADD80:%.*]] = add nuw nsw i32 [[ADD79]], [[CONV77]]
+; CHECK-NEXT:    [[TMP94:%.*]] = extractelement <2 x i32> [[TMP90]], i64 0
+; CHECK-NEXT:    [[CONV77_1:%.*]] = and i32 [[TMP94]], 65535
 ; CHECK-NEXT:    [[TMP96:%.*]] = extractelement <2 x i32> [[TMP93]], i64 0
-; CHECK-NEXT:    [[ADD79_1:%.*]] = add nuw nsw i32 [[ADD78_2]], [[TMP96]]
+; CHECK-NEXT:    [[ADD78_1:%.*]] = add nuw nsw i32 [[TMP96]], [[ADD80]]
+; CHECK-NEXT:    [[ADD79_1:%.*]] = add nuw nsw i32 [[ADD78_1]], [[CONV77_1]]
 ; CHECK-NEXT:    [[SHR83:%.*]] = lshr i32 [[ADD79_1]], 1
 ; CHECK-NEXT:    ret i32 [[SHR83]]
 ;

@@ -6,22 +6,18 @@ define double @test(ptr %p, double %d) {
 ; CHECK-SAME: ptr [[P:%.*]], double [[D:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv double 0.000000e+00, [[D]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul double [[TMP2]], 0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul double [[TMP7]], 0.000000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv double [[TMP4]], [[D]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fdiv double 0.000000e+00, [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = fdiv <2 x double> [[TMP5]], [[TMP17]]
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x double> [[TMP10]], [[TMP12]]
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul <2 x double> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = fsub <2 x double> zeroinitializer, [[TMP18]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul double [[TMP8]], 0.000000e+00
+; CHECK-NEXT:    [[TMP9:%.*]] = fsub double 0.000000e+00, [[TMP13]]
 ; CHECK-NEXT:    store double [[TMP9]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP15]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul double [[TMP7]], 0.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = fdiv double [[TMP15]], [[D]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP10]], [[TMP6]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul double [[TMP11]], 0.000000e+00
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub double 0.000000e+00, [[TMP12]]
 ; CHECK-NEXT:    ret double [[TMP14]]
 ;
   %2 = fdiv double 0.000000e+00, %d

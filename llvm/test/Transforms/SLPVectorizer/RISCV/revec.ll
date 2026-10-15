@@ -147,15 +147,20 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul <2 x float> zeroinitializer, [[TMP9]]
-; POWEROF2-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> [[TMP15]], <2 x i32> <i32 0, i32 2>
-; POWEROF2-NEXT:    [[TMP19:%.*]] = fadd reassoc nsz <2 x float> [[TMP18]], [[TMP17]]
-; POWEROF2-NEXT:    [[TMP20:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> [[TMP15]], <2 x i32> <i32 1, i32 3>
-; POWEROF2-NEXT:    [[TMP21:%.*]] = fadd reassoc nsz <2 x float> [[TMP19]], [[TMP20]]
-; POWEROF2-NEXT:    [[TMP25:%.*]] = extractelement <2 x float> [[TMP21]], i64 0
-; POWEROF2-NEXT:    [[TMP28:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP25]])
-; POWEROF2-NEXT:    [[TMP27:%.*]] = extractelement <2 x float> [[TMP21]], i64 1
+; POWEROF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
+; POWEROF2-NEXT:    [[TMP18:%.*]] = fmul float 0.000000e+00, [[TMP17]]
+; POWEROF2-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
+; POWEROF2-NEXT:    [[TMP20:%.*]] = fmul float [[TMP19]], 0.000000e+00
+; POWEROF2-NEXT:    [[TMP21:%.*]] = extractelement <2 x float> [[TMP13]], i64 0
+; POWEROF2-NEXT:    [[TMP22:%.*]] = fadd reassoc nsz float [[TMP21]], [[TMP18]]
+; POWEROF2-NEXT:    [[TMP23:%.*]] = extractelement <2 x float> [[TMP15]], i64 0
+; POWEROF2-NEXT:    [[TMP24:%.*]] = fadd reassoc nsz float [[TMP23]], [[TMP20]]
+; POWEROF2-NEXT:    [[TMP25:%.*]] = extractelement <2 x float> [[TMP13]], i64 1
+; POWEROF2-NEXT:    [[TMP27:%.*]] = fadd reassoc nsz float [[TMP22]], [[TMP25]]
+; POWEROF2-NEXT:    [[TMP31:%.*]] = extractelement <2 x float> [[TMP15]], i64 1
+; POWEROF2-NEXT:    [[TMP28:%.*]] = fadd reassoc nsz float [[TMP24]], [[TMP31]]
 ; POWEROF2-NEXT:    [[TMP29:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP27]])
+; POWEROF2-NEXT:    [[TMP30:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP28]])
 ; POWEROF2-NEXT:    ret ptr null
 ;
 ; NONPOWEROF2-LABEL: @test4(

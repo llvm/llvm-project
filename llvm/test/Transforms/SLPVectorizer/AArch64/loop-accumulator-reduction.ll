@@ -1359,8 +1359,6 @@ define double @loop_acc_fmul_chain(ptr %a, ptr %b, i64 %n, i64 %na, i64 %nb, dou
 ; CHECK-LABEL: define double @loop_acc_fmul_chain(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]], i64 [[NA:%.*]], i64 [[NB:%.*]], double [[ALPHA:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[ALPHA]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[K_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
@@ -1385,19 +1383,20 @@ define double @loop_acc_fmul_chain(ptr %a, ptr %b, i64 %n, i64 %na, i64 %nb, dou
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[PROD1]], [[ADD0]]
 ; CHECK-NEXT:    [[K2:%.*]] = add nuw nsw i64 [[K]], 2
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr double, ptr [[A]], i64 [[K2]]
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[PA2]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast double [[A2]], [[ALPHA]]
 ; CHECK-NEXT:    [[BM2:%.*]] = mul nuw nsw i64 [[K2]], [[NB]]
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr double, ptr [[B]], i64 [[BM2]]
 ; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[PB2]], align 8
-; CHECK-NEXT:    [[K3:%.*]] = add nuw nsw i64 [[K]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PA2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[PROD2:%.*]] = fmul fast double [[TMP4]], [[B2]]
 ; CHECK-NEXT:    [[DOT:%.*]] = fadd fast double [[PROD2]], [[ADD1]]
+; CHECK-NEXT:    [[K3:%.*]] = add nuw nsw i64 [[K]], 3
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr double, ptr [[A]], i64 [[K3]]
+; CHECK-NEXT:    [[A3:%.*]] = load double, ptr [[PA3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast double [[A3]], [[ALPHA]]
 ; CHECK-NEXT:    [[BM3:%.*]] = mul nuw nsw i64 [[K3]], [[NB]]
 ; CHECK-NEXT:    [[PB3:%.*]] = getelementptr double, ptr [[B]], i64 [[BM3]]
 ; CHECK-NEXT:    [[B3:%.*]] = load double, ptr [[PB3]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fmul fast double [[TMP5]], [[B3]]
 ; CHECK-NEXT:    [[OP_RDX1]] = fadd fast double [[OP_RDX]], [[DOT]]
 ; CHECK-NEXT:    [[K_NEXT]] = add nuw nsw i64 [[K]], 4

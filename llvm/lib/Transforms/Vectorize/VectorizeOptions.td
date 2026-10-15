@@ -300,7 +300,7 @@ defm : BoolField<"slp-vectorize-loop-acc-rdx", "true",
   "Emit loop-carried horizontal reductions as a vector accumulator in the loop plus a single reduction after it">;
 defm : BoolField<"slp-vectorize-non-power-of-2", "false",
   "Try to vectorize with non-power-of-2 number of elements">;
-defm : BoolField<"slp-vectorize-once-used", "true",
+defm : BoolField<"slp-vectorize-once-used", "false",
   "Use instructions with the single user as standalone vectorization seeds">;
 defm : BoolField<"slp-vectorize-poor-throughput", "true",
   "Use poor-throughput instructions (e.g. fdiv, frem, fsqrt) as standalone vectorization seeds">;
