@@ -446,8 +446,6 @@ exit:
   ret i32 %rdx.next
 }
 
-; Don't look through %phi3 as it doesn't share any incoming values with %phi4.
-
 define i32 @find_last_phi_of_two_updates(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-LABEL: define i32 @find_last_phi_of_two_updates(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) {
