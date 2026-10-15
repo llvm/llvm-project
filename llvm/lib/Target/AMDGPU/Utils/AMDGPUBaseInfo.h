@@ -1178,6 +1178,9 @@ unsigned getXcntBitMask(const IsaVersion &Version);
 /// depends on the ISA version.
 unsigned getStorecntBitMask(const IsaVersion &Version);
 
+/// \returns barrier member count bit mask in M0 for given isa \p Version.
+unsigned getBarrierMemberCountBitMask(const IsaVersion &Version);
+
 namespace Hwreg {
 
 using HwregId = EncodingField<5, 0>;
@@ -1779,6 +1782,9 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns true if the intrinsic executes an LDSDMA operation
+bool isLDSDMAIntrinsic(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.

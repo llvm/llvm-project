@@ -89,6 +89,7 @@ private:
 
   void emitGetInitRuntimeLibcallNames(raw_ostream &OS) const;
   void emitGetInitRuntimeLibcallSignatures(raw_ostream &OS) const;
+  void emitMaskedVectorLibcallMapping(raw_ostream &OS) const;
 
   // Emit the sorted per-predicate `setAvailable` tables/loops. The
   // always-available bucket emits at \p BaseIndent; each predicated bucket is
@@ -137,6 +138,9 @@ private:
   MapVector<StringRef, std::vector<const Record *>>
   collectLibrariesByName() const;
 
+  // Get the sorted, unique list of every defined LibraryName.
+  std::vector<StringRef> collectLibraryNames() const;
+
   void emitRuntimeLibcallsInfoMemberDecls(raw_ostream &OS) const;
 
   void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
@@ -165,6 +169,18 @@ public:
 };
 
 } // End anonymous namespace.
+
+// Emit the linker name \p Name as a C++ identifier suffix, replacing characters
+// invalid in an identifier (e.g. the '-' in "compiler-rt") with '_'.
+static void emitLibFuncSuffix(raw_ostream &OS, StringRef Name) {
+  for (char C : Name)
+    OS << (isAlnum(C) || C == '_' ? C : '_');
+}
+
+static void emitRuntimeLibraryEnumerator(raw_ostream &OS, StringRef Name) {
+  OS << "RTLIB::RuntimeLibrary::";
+  emitLibFuncSuffix(OS, Name);
+}
 
 void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
   IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_ENUM");
@@ -200,6 +216,15 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
     if (R->getName() == "NoneType")
       continue;
     OS << "  " << R->getName() << ",\n";
+  }
+
+  OS << "};\n\n"
+        "enum class RuntimeLibrary : unsigned char {\n"
+        "  UnknownLibrary = 0,\n";
+  for (StringRef Name : collectLibraryNames()) {
+    OS << "  ";
+    emitLibFuncSuffix(OS, Name);
+    OS << ",\n";
   }
 
   OS << "};\n"
@@ -474,6 +499,55 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
   OS << "};\n";
 }
 
+static void emitMaskedVectorLibcallSwitch(
+    raw_ostream &OS, StringRef FuncName, bool ToUnmasked,
+    ArrayRef<std::pair<const RuntimeLibcall *, const RuntimeLibcall *>>
+        MaskedToUnmasked) {
+  OS << "RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::" << FuncName
+     << "(RTLIB::Libcall LC) {\n"
+        "  switch (LC) {\n";
+  for (auto [Masked, Unmasked] : MaskedToUnmasked) {
+    OS << "  case ";
+    if (ToUnmasked) {
+      Masked->emitEnumEntry(OS);
+      OS << ":\n    return ";
+      Unmasked->emitEnumEntry(OS);
+    } else {
+      Unmasked->emitEnumEntry(OS);
+      OS << ":\n    return ";
+      Masked->emitEnumEntry(OS);
+    }
+
+    OS << ";\n";
+  }
+
+  OS << "  default:\n"
+        "    return RTLIB::UNKNOWN_LIBCALL;\n"
+        "  }\n"
+        "}\n";
+}
+
+void RuntimeLibcallEmitter::emitMaskedVectorLibcallMapping(
+    raw_ostream &OS) const {
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_MASKED_VECTOR_LIBCALL_MAPPING");
+
+  SmallVector<std::pair<const RuntimeLibcall *, const RuntimeLibcall *>, 0>
+      MaskedToUnmasked;
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
+    const Record *Def = LC.getDef();
+    if (Def->isSubClassOf("MaskedRuntimeLibcall")) {
+      MaskedToUnmasked.emplace_back(
+          &LC, Libcalls.getRuntimeLibcall(Def->getValueAsDef("Unmasked")));
+    }
+  }
+
+  emitMaskedVectorLibcallSwitch(OS, "getUnmaskedVectorLibcall",
+                                /*ToUnmasked=*/true, MaskedToUnmasked);
+  OS << '\n';
+  emitMaskedVectorLibcallSwitch(OS, "getMaskedVectorLibcall",
+                                /*ToUnmasked=*/false, MaskedToUnmasked);
+}
+
 void RuntimeLibcallEmitter::emitPredicateGroups(
     raw_ostream &OS, const Record *R,
     DenseMap<PredicateWithCC, LibcallsWithCC> &Pred2Funcs,
@@ -563,13 +637,6 @@ void RuntimeLibcallEmitter::emitPredicateGroups(
       OS << '\n';
     }
   }
-}
-
-// Emit the linker name \p Name as a C++ identifier suffix, replacing characters
-// invalid in an identifier (e.g. the '-' in "compiler-rt") with '_'.
-static void emitLibFuncSuffix(raw_ostream &OS, StringRef Name) {
-  for (char C : Name)
-    OS << (isAlnum(C) || C == '_' ? C : '_');
 }
 
 void RuntimeLibcallEmitter::emitLibraryVariant(raw_ostream &OS,
@@ -752,6 +819,15 @@ RuntimeLibcallEmitter::collectLibrariesByName() const {
   return LibsByName;
 }
 
+std::vector<StringRef> RuntimeLibcallEmitter::collectLibraryNames() const {
+  std::vector<StringRef> Names;
+  for (const Record *Lib : Records.getAllDerivedDefinitions("LibcallLibrary"))
+    Names.push_back(Lib->getValueAsString("LibraryName"));
+  llvm::sort(Names);
+  Names.erase(llvm::unique(Names), Names.end());
+  return Names;
+}
+
 void RuntimeLibcallEmitter::emitRuntimeLibcallsInfoMemberDecls(
     raw_ostream &OS) const {
   IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO_MEMBER_DECLS");
@@ -850,8 +926,9 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     }
 
     for (auto [Name, FuncSuffix] : DispatchLibs) {
-      OS << indent(4) << "if (isLibraryAvailable(\"" << Name << "\"))\n"
-         << indent(6) << "setAvailableLibFuncs_";
+      OS << indent(4) << "if (isLibraryAvailable(";
+      emitRuntimeLibraryEnumerator(OS, Name);
+      OS << "))\n" << indent(6) << "setAvailableLibFuncs_";
       emitLibFuncSuffix(OS, FuncSuffix);
       OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
          << DefaultCCArg << ");\n";
@@ -1034,6 +1111,7 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
 
   emitGetInitRuntimeLibcallNames(OS);
   emitGetInitRuntimeLibcallSignatures(OS);
+  emitMaskedVectorLibcallMapping(OS);
 
   emitRuntimeLibcallsInfoMemberDecls(OS);
 

@@ -1397,6 +1397,705 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The reduction loop accumulators are carried in by an enclosing loop.
+// The carried values are added to the AMX results instead of reloading C.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+!memrefC = memref<16x32xi32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @matmul_int8_loop_carried_acc(
+    %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>, %arg2: memref<64x128xi32>,
+    %bias: !vecC) {
+  %0 = ub.poison : i32
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xi32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+
+      %r:2 = scf.for %b = %c0 to %c2 step %c1 iter_args(%acc0 = %2, %acc1 = %3) -> (!vecC, !vecC) {
+        %4:2 = scf.for %arg5 = %c0 to %c64 step %c16 iter_args(%arg6 = %acc0, %arg7 = %acc1) -> (!vecC, !vecC) {
+
+          %subview_0 = memref.subview %arg0[%arg3, %arg5, 0] [16, 16, 4] [1, 1, 1] :
+                  memref<64x64x4xi8> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg4, 0] [16, 32, 4] [1, 1, 1] :
+                  memref<64x128x4xi8> to !memrefB
+          %5 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefA, !vecAB
+          %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+          %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+
+          %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %7, %arg7 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+          scf.yield %8, %9 : !vecC, !vecC
+        }
+
+        %10 = arith.addi %4#0, %bias : !vecC
+        %11 = arith.addi %4#1, %bias : !vecC
+        scf.yield %10, %11 : !vecC, !vecC
+      }
+
+      vector.transfer_write %r#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %r#0, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @matmul_int8_loop_carried_acc
+// CHECK: scf.for {{.*}} iter_args(%[[ACC0:arg[0-9]+]] = %{{.+}}, %[[ACC1:arg[0-9]+]] = %{{.+}})
+// CHECK-COUNT-2: x86.amx.tile_zero : !x86.amx.tile<16x16xi32>
+// CHECK: %[[TILES:.+]]:2 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
+// CHECK: x86.amx.tile_store %[[BUF:.+]][%{{.+}}, %{{.+}}], %[[TILES]]#0
+// CHECK: x86.amx.tile_store %[[BUF]][%{{.+}}, %{{.+}}], %[[TILES]]#1
+// CHECK-NOT: vector.load
+// CHECK: %[[RES0:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: %[[RES1:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: %[[SUM0:.+]] = arith.addi %[[RES0]], %[[ACC0]] : vector<16x16xi32>
+// CHECK: %[[SUM1:.+]] = arith.addi %[[RES1]], %[[ACC1]] : vector<16x16xi32>
+// CHECK: arith.addi %[[SUM0]], %{{.+}} : vector<16x16xi32>
+// CHECK: arith.addi %[[SUM1]], %{{.+}} : vector<16x16xi32>
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The reduction loop accumulators with a unit batch dim are carried in by an
+// enclosing loop.
+// The carried values are reshaped and added to the AMX results.
+
+!vecAB = vector<1x16x16x4xi8>
+!vecC = vector<1x16x16xi32>
+!memrefA = memref<1x16x16x4xi8, strided<[16384, 256, 4, 1], offset: ?>>
+!memrefB = memref<1x16x32x4xi8, strided<[32768, 512, 4, 1], offset: ?>>
+!memrefC = memref<1x16x32xi32, strided<[8192, 128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4, d1)>
+#map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d4, d3, d1)>
+#map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d3)>
+
+func.func @batch_matmul_int8_loop_carried_acc(
+    %arg0: memref<16x64x64x4xi8>, %arg1: memref<16x64x128x4xi8>, %arg2: memref<16x64x128xi32>,
+    %bias: !vecC) {
+  %0 = ub.poison : i32
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+      scf.for %arg5 = %c0 to %c16 step %c1 {
+
+        %subview = memref.subview %arg2[%arg5, %arg3, %arg4] [1, 16, 32] [1, 1, 1] :
+                memref<16x64x128xi32> to !memrefC
+        %2 = vector.transfer_read %subview[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+                !memrefC, !vecC
+        %3 = vector.transfer_read %subview[%c0, %c0, %c16], %0 {in_bounds = [true, true, true]} :
+                !memrefC, !vecC
+
+        %r:2 = scf.for %b = %c0 to %c2 step %c1 iter_args(%acc0 = %2, %acc1 = %3) -> (!vecC, !vecC) {
+          %4:2 = scf.for %arg6 = %c0 to %c64 step %c16 iter_args(%arg7 = %acc0, %arg8 = %acc1) -> (!vecC, !vecC) {
+
+            %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg6, 0] [1, 16, 16, 4] [1, 1, 1, 1] :
+                    memref<16x64x64x4xi8> to !memrefA
+            %subview_1 = memref.subview %arg1[%arg5, %arg6, %arg4, 0] [1, 16, 32, 4] [1, 1, 1, 1] :
+                    memref<16x64x128x4xi8> to !memrefB
+            %5 = vector.transfer_read %subview_0[%c0, %c0, %c0, %c0], %1 {in_bounds = [true, true, true, true]} :
+                    !memrefA, !vecAB
+            %6 = vector.transfer_read %subview_1[%c0, %c0, %c0, %c0], %1 {in_bounds = [true, true, true, true]} :
+                    !memrefB, !vecAB
+            %7 = vector.transfer_read %subview_1[%c0, %c0, %c16, %c0], %1 {in_bounds = [true, true, true, true]} :
+                    !memrefB, !vecAB
+
+            %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                    ["parallel", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                    %5, %6, %arg7 {unroll_shape = array<i64: 1, 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+            %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                    ["parallel", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                    %5, %7, %arg8 {unroll_shape = array<i64: 1, 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+            scf.yield %8, %9 : !vecC, !vecC
+          }
+
+          %10 = arith.addi %4#0, %bias : !vecC
+          %11 = arith.addi %4#1, %bias : !vecC
+          scf.yield %10, %11 : !vecC, !vecC
+        }
+
+        vector.transfer_write %r#1, %subview[%c0, %c0, %c16] {in_bounds = [true, true, true]} :
+                !vecC, !memrefC
+        vector.transfer_write %r#0, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+                !vecC, !memrefC
+      }
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @batch_matmul_int8_loop_carried_acc
+// CHECK: scf.for {{.*}} iter_args(%[[ACC0:arg[0-9]+]] = %{{.+}}, %[[ACC1:arg[0-9]+]] = %{{.+}})
+// CHECK-COUNT-2: x86.amx.tile_zero : !x86.amx.tile<16x16xi32>
+// CHECK: %[[TILES:.+]]:2 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
+// CHECK: x86.amx.tile_store %[[BUF:.+]][%{{.+}}, %{{.+}}], %[[TILES]]#0
+// CHECK: x86.amx.tile_store %[[BUF]][%{{.+}}, %{{.+}}], %[[TILES]]#1
+// CHECK-NOT: vector.load
+// CHECK: %[[RES0:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: %[[RES1:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: %[[CAST0:.+]] = vector.shape_cast %[[ACC0]] : vector<1x16x16xi32> to vector<16x16xi32>
+// CHECK: arith.addi %[[RES0]], %[[CAST0]] : vector<16x16xi32>
+// CHECK: %[[CAST1:.+]] = vector.shape_cast %[[ACC1]] : vector<1x16x16xi32> to vector<16x16xi32>
+// CHECK: arith.addi %[[RES1]], %[[CAST1]] : vector<16x16xi32>
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The batch-reduce and K reduction loops are nested in a loop that carries in
+// the accumulators, starting from zero.
+// The carried values are added to the AMX results.
+
+!vecAB = vector<1x16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<1x16x16x4xi8, strided<[16384, 256, 4, 1], offset: ?>>
+!memrefB = memref<1x16x32x4xi8, strided<[32768, 512, 4, 1], offset: ?>>
+!memrefC = memref<16x32xi32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4, d1)>
+#map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d4, d3, d1)>
+#map2 = affine_map<(d0, d1, d2, d3, d4) -> (d2, d3)>
+
+func.func @brgemm_int8_loop_carried_zero_acc(
+    %arg0: memref<16x64x64x4xi8>, %arg1: memref<16x64x128x4xi8>, %arg2: memref<64x128xi32>,
+    %bias: !vecC) {
+  %cst = arith.constant dense<0> : !vecC
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xi32> to !memrefC
+
+      %r:2 = scf.for %b = %c0 to %c2 step %c1 iter_args(%acc0 = %cst, %acc1 = %cst) -> (!vecC, !vecC) {
+        %2:2 = scf.for %arg5 = %c0 to %c16 step %c1 iter_args(%arg6 = %acc0, %arg7 = %acc1) -> (!vecC, !vecC) {
+          %3:2 = scf.for %arg8 = %c0 to %c64 step %c16 iter_args(%arg9 = %arg6, %arg10 = %arg7) -> (!vecC, !vecC) {
+
+            %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg8, 0] [1, 16, 16, 4] [1, 1, 1, 1] :
+                    memref<16x64x64x4xi8> to !memrefA
+            %subview_1 = memref.subview %arg1[%arg5, %arg8, %arg4, 0] [1, 16, 32, 4] [1, 1, 1, 1] :
+                    memref<16x64x128x4xi8> to !memrefB
+            %5 = vector.transfer_read %subview_0[%c0, %c0, %c0, %c0], %1 {in_bounds = [true, true, true, true]} :
+                    !memrefA, !vecAB
+            %6 = vector.transfer_read %subview_1[%c0, %c0, %c0, %c0], %1 {in_bounds = [true, true, true, true]} :
+                    !memrefB, !vecAB
+            %7 = vector.transfer_read %subview_1[%c0, %c0, %c16, %c0], %1 {in_bounds = [true, true, true, true]} :
+                    !memrefB, !vecAB
+
+            %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                    ["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                    %5, %6, %arg9 {unroll_shape = array<i64: 1, 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+            %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                    ["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                    %5, %7, %arg10 {unroll_shape = array<i64: 1, 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+            scf.yield %8, %9 : !vecC, !vecC
+          }
+          scf.yield %3#0, %3#1 : !vecC, !vecC
+        }
+
+        %10 = arith.addi %2#0, %bias : !vecC
+        %11 = arith.addi %2#1, %bias : !vecC
+        scf.yield %10, %11 : !vecC, !vecC
+      }
+
+      vector.transfer_write %r#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %r#0, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @brgemm_int8_loop_carried_zero_acc
+// CHECK: scf.for {{.*}} iter_args(%[[ACC0:arg[0-9]+]] = %{{.+}}, %[[ACC1:arg[0-9]+]] = %{{.+}})
+// CHECK-COUNT-2: x86.amx.tile_zero : !x86.amx.tile<16x16xi32>
+// CHECK-COUNT-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
+// CHECK: x86.amx.tile_store %[[BUF:.+]][%{{.+}}, %{{.+}}], %{{.+}}#0
+// CHECK: x86.amx.tile_store %[[BUF]][%{{.+}}, %{{.+}}], %{{.+}}#1
+// CHECK: %[[RES0:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: %[[RES1:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: arith.addi %[[RES0]], %[[ACC0]] : vector<16x16xi32>
+// CHECK: arith.addi %[[RES1]], %[[ACC1]] : vector<16x16xi32>
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Only one of the reduction loop accumulators is carried in by an enclosing
+// loop, the other one starts from zero.
+// Only the carried value is added to its AMX result.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+!memrefC = memref<16x32xi32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @matmul_int8_loop_carried_and_zero_acc(
+    %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>, %arg2: memref<64x128xi32>,
+    %bias: !vecC) {
+  %cst = arith.constant dense<0> : !vecC
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xi32> to !memrefC
+
+      %r = scf.for %b = %c0 to %c2 step %c1 iter_args(%acc0 = %cst) -> (!vecC) {
+        %4:2 = scf.for %arg5 = %c0 to %c64 step %c16 iter_args(%arg6 = %acc0, %arg7 = %cst) -> (!vecC, !vecC) {
+
+          %subview_0 = memref.subview %arg0[%arg3, %arg5, 0] [16, 16, 4] [1, 1, 1] :
+                  memref<64x64x4xi8> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg4, 0] [16, 32, 4] [1, 1, 1] :
+                  memref<64x128x4xi8> to !memrefB
+          %5 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefA, !vecAB
+          %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+          %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+
+          %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %7, %arg7 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+          scf.yield %8, %9 : !vecC, !vecC
+        }
+
+        vector.transfer_write %4#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                  !vecC, !memrefC
+        %10 = arith.addi %4#0, %bias : !vecC
+        scf.yield %10 : !vecC
+      }
+
+      vector.transfer_write %r, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @matmul_int8_loop_carried_and_zero_acc
+// CHECK: scf.for {{.*}} iter_args(%[[ACC0:arg[0-9]+]] = %{{.+}})
+// CHECK-COUNT-2: x86.amx.tile_zero : !x86.amx.tile<16x16xi32>
+// CHECK: %[[TILES:.+]]:2 = scf.for {{.*}} -> (!x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>) {
+// CHECK: x86.amx.tile_store %[[BUF:.+]][%{{.+}}, %{{.+}}], %[[TILES]]#0
+// CHECK: x86.amx.tile_store %[[BUF]][%{{.+}}, %{{.+}}], %[[TILES]]#1
+// CHECK: %[[RES0:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: %[[RES1:.+]] = vector.transfer_read %[[BUF]]
+// CHECK: arith.addi %[[RES0]], %[[ACC0]] : vector<16x16xi32>
+// CHECK-NOT: arith.addi %[[RES1]]
+// CHECK: vector.transfer_write %[[RES1]]
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// One of the reduction loop accumulators is carried in by an enclosing loop,
+// the other one is read from memory: not supported.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+!memrefC = memref<16x32xi32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @negative_matmul_int8_loop_carried_and_memory_acc(
+    %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>, %arg2: memref<64x128xi32>,
+    %bias: !vecC) {
+  %0 = ub.poison : i32
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xi32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+
+      %r = scf.for %b = %c0 to %c2 step %c1 iter_args(%acc0 = %2) -> (!vecC) {
+        %4:2 = scf.for %arg5 = %c0 to %c64 step %c16 iter_args(%arg6 = %acc0, %arg7 = %3) -> (!vecC, !vecC) {
+
+          %subview_0 = memref.subview %arg0[%arg3, %arg5, 0] [16, 16, 4] [1, 1, 1] :
+                  memref<64x64x4xi8> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg4, 0] [16, 32, 4] [1, 1, 1] :
+                  memref<64x128x4xi8> to !memrefB
+          %5 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefA, !vecAB
+          %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+          %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+
+          %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %7, %arg7 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+          scf.yield %8, %9 : !vecC, !vecC
+        }
+
+        vector.transfer_write %4#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                  !vecC, !memrefC
+        %10 = arith.addi %4#0, %bias : !vecC
+        scf.yield %10 : !vecC
+      }
+
+      vector.transfer_write %r, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_carried_and_memory_acc
+// CHECK-NOT: x86.amx
+// CHECK-COUNT-2: vector.contract
+// CHECK-NOT: x86.amx
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The accumulator of a contraction is computed inside the reduction loop
+// instead of entering it through the loop init args: not supported.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+!memrefC = memref<16x32xi32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @negative_matmul_int8_loop_acc_in_loop(
+    %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>, %arg2: memref<64x128xi32>,
+    %bias: !vecC) {
+  %0 = ub.poison : i32
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xi32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+
+      %r:2 = scf.for %b = %c0 to %c2 step %c1 iter_args(%acc0 = %2, %acc1 = %3) -> (!vecC, !vecC) {
+        %4:2 = scf.for %arg5 = %c0 to %c64 step %c16 iter_args(%arg6 = %acc0, %arg7 = %acc1) -> (!vecC, !vecC) {
+
+          %subview_0 = memref.subview %arg0[%arg3, %arg5, 0] [16, 16, 4] [1, 1, 1] :
+                  memref<64x64x4xi8> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg4, 0] [16, 32, 4] [1, 1, 1] :
+                  memref<64x128x4xi8> to !memrefB
+          %5 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefA, !vecAB
+          %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+          %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                  !memrefB, !vecAB
+          %acc = arith.addi %arg7, %bias : !vecC
+
+          %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                  ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                  %5, %7, %acc {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+          scf.yield %8, %9 : !vecC, !vecC
+        }
+
+        %10 = arith.addi %4#0, %bias : !vecC
+        %11 = arith.addi %4#1, %bias : !vecC
+        scf.yield %10, %11 : !vecC, !vecC
+      }
+
+      vector.transfer_write %r#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %r#0, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_acc_in_loop
+// CHECK-NOT: x86.amx
+// CHECK-COUNT-2: vector.contract
+// CHECK-NOT: x86.amx
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The reduction loop accumulators are carried in by an enclosing loop, with
+// the operands packed during the computation.
+// The carried values are added to the AMX results instead of reloading C.
+
+!vecA = vector<16x32xbf16>
+!vecB = vector<32x16xbf16>
+!vecC = vector<16x16xf32>
+!memrefA = memref<32x32xbf16, strided<[96, 1], offset: ?>>
+!memrefB = memref<32x32xbf16, strided<[128, 1], offset: ?>>
+!memrefC = memref<32x32xf32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d1, d2, d3) -> (d1, d3)>
+#map1 = affine_map<(d1, d2, d3) -> (d3, d2)>
+#map2 = affine_map<(d1, d2, d3) -> (d1, d2)>
+
+func.func @online_packing_bf16_loop_carried_acc(%arg0: memref<64x96xbf16>, %arg1: memref<96x128xbf16>, %arg2: memref<64x128xf32>, %bias: !vecC) {
+  %0 = ub.poison : f32
+  %1 = ub.poison : bf16
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c96 = arith.constant 96 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c32 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [32, 32] [1, 1] :
+                memref<64x128xf32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %4 = vector.transfer_read %subview[%c16, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %5 = vector.transfer_read %subview[%c16, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+
+      %r:4 = scf.for %iv = %c0 to %c2 step %c1 iter_args(%acc0 = %2, %acc1 = %3, %acc2 = %4, %acc3 = %5) -> (!vecC, !vecC, !vecC, !vecC) {
+        %7:4 = scf.for %arg10 = %c0 to %c96 step %c32 iter_args(%arg11 = %acc0, %arg12 = %acc1, %arg13 = %acc2, %arg14 = %acc3) -> (!vecC, !vecC, !vecC, !vecC) {
+          %subview_0 = memref.subview %arg0[%arg3, %arg10] [32, 32] [1, 1] :
+                memref<64x96xbf16> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg10, %arg4] [32, 32] [1, 1] :
+                memref<96x128xbf16> to !memrefB
+          %8 = vector.transfer_read %subview_0[%c0, %c0], %1 {in_bounds = [true, true]} :
+                !memrefA, !vecA
+          %9 = vector.transfer_read %subview_0[%c16, %c0], %1 {in_bounds = [true, true]} :
+                !memrefA, !vecA
+          %10 = vector.transfer_read %subview_1[%c0, %c0], %1 {in_bounds = [true, true]} :
+                !memrefB, !vecB
+          %11 = vector.transfer_read %subview_1[%c0, %c16], %1 {in_bounds = [true, true]} :
+                !memrefB, !vecB
+
+          %12 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %8, %10, %arg11 {unroll_shape = array<i64: 1, 16, 16, 32>} : !vecA, !vecB into !vecC
+          %13 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %8, %11, %arg12 {unroll_shape = array<i64: 1, 16, 16, 32>} : !vecA, !vecB into !vecC
+          %14 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %9, %10, %arg13 {unroll_shape = array<i64: 1, 16, 16, 32>} : !vecA, !vecB into !vecC
+          %15 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %9, %11, %arg14 {unroll_shape = array<i64: 1, 16, 16, 32>} : !vecA, !vecB into !vecC
+
+          scf.yield %12, %13, %14, %15 : !vecC, !vecC, !vecC, !vecC
+        }
+        %a = arith.addf %7#0, %bias : !vecC
+        %b = arith.addf %7#1, %bias : !vecC
+        %c = arith.addf %7#2, %bias : !vecC
+        %d = arith.addf %7#3, %bias : !vecC
+        scf.yield %a, %b, %c, %d : !vecC, !vecC, !vecC, !vecC
+      }
+      vector.transfer_write %r#3, %subview[%c16, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %r#2, %subview[%c16, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %r#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %r#0, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: @online_packing_bf16_loop_carried_acc
+// CHECK: scf.for {{.*}} iter_args(%[[ACC0:arg[0-9]+]] = %{{.+}}, %[[ACC1:arg[0-9]+]] = %{{.+}}, %[[ACC2:arg[0-9]+]] = %{{.+}}, %[[ACC3:arg[0-9]+]] = %{{.+}})
+// CHECK-COUNT-4: x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
+// CHECK: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) {
+// CHECK: x86.amx.tile_mulf
+// CHECK: vector.shuffle{{.*}}[0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23] : vector<16xf32>, vector<16xf32>
+// CHECK-NEXT: vector.shuffle{{.*}}[8, 9, 10, 11, 24, 25, 26, 27, 12, 13, 14, 15, 28, 29, 30, 31] : vector<16xf32>, vector<16xf32>
+// CHECK-NOT: arith.addf {{.*}} : vector<16xf32>
+// CHECK: %[[RES0:.+]] = vector.transfer_read
+// CHECK: %[[RES1:.+]] = vector.transfer_read
+// CHECK: %[[RES2:.+]] = vector.transfer_read
+// CHECK: %[[RES3:.+]] = vector.transfer_read
+// CHECK: arith.addf %[[RES0]], %[[ACC0]] : vector<16x16xf32>
+// CHECK: arith.addf %[[RES1]], %[[ACC1]] : vector<16x16xf32>
+// CHECK: arith.addf %[[RES2]], %[[ACC2]] : vector<16x16xf32>
+// CHECK: arith.addf %[[RES3]], %[[ACC3]] : vector<16x16xf32>
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecA = vector<1x16x32xbf16>
 !vecB = vector<1x32x16xbf16>
 !vecC = vector<16x16xf32>
@@ -3271,6 +3970,69 @@ func.func @negative_mixed_acc(%arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4x
 // CHECK-NOT: x86.amx.tile_muli
 // CHECK-NOT: scf.yield {{.*}} !x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>
 
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The zero initialized accumulation results are not written to memory: not
+// supported.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @negative_matmul_int8_loop_result_not_written(
+    %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>) -> (!vecC, !vecC) {
+  %cst = arith.constant dense<0> : !vecC
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c16 = arith.constant 16 : index
+
+  %4:2 = scf.for %arg5 = %c0 to %c64 step %c16 iter_args(%arg6 = %cst, %arg7 = %cst) -> (!vecC, !vecC) {
+
+    %subview_0 = memref.subview %arg0[0, %arg5, 0] [16, 16, 4] [1, 1, 1] :
+            memref<64x64x4xi8> to !memrefA
+    %subview_1 = memref.subview %arg1[%arg5, 0, 0] [16, 32, 4] [1, 1, 1] :
+            memref<64x128x4xi8> to !memrefB
+    %5 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+            !memrefA, !vecAB
+    %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+    %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+
+    %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+    %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %5, %7, %arg7 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+    scf.yield %8, %9 : !vecC, !vecC
+  }
+
+  return %4#0, %4#1 : !vecC, !vecC
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_result_not_written
+// CHECK-NOT: x86.amx
+// CHECK-COUNT-2: vector.contract
+// CHECK-NOT: x86.amx
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

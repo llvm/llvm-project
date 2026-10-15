@@ -2071,7 +2071,7 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
 }
 
 bool ASTContext::isAlignmentRequired(const Type *T) const {
-  return getTypeInfo(T).AlignRequirement != AlignRequirementKind::None;
+  return getTypeInfo(T).isAlignRequired();
 }
 
 bool ASTContext::isAlignmentRequired(QualType T) const {
@@ -2201,6 +2201,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
              VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
+    // Vector types have their natural alignment resist reduction by
+    // #pragma pack in MSVC record layout.
+    AlignRequirement = AlignRequirementKind::ResistPragmaPack;
     break;
   }
 
@@ -2362,6 +2365,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
         Width = Target->getLongDoubleWidth();
         Align = Target->getLongDoubleAlign();
       }
+      // x87 extended precision (fp80) has its natural alignment resist
+      // reduction by #pragma pack in MSVC record layout.
+      if (&Target->getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
+        AlignRequirement = AlignRequirementKind::ResistPragmaPack;
       break;
     case BuiltinType::Float128:
       if (Target->hasFloat128Type() || !getLangOpts().OpenMP ||
@@ -3096,6 +3103,14 @@ bool ASTContext::hasUniqueObjectRepresentations(
          "hasUniqueObjectRepresentations should not be called with an "
          "incomplete type");
 
+  // _Atomic(T) shares T's object representation unless its size was rounded
+  // up to a power of two, in which case the extra bytes are padding. Atomic
+  // types are never trivially copyable, so (9.1) is judged on the value type.
+  if (const auto *AT = Ty->getAs<AtomicType>())
+    return getTypeSize(AT) == getTypeSize(AT->getValueType()) &&
+           hasUniqueObjectRepresentations(AT->getValueType(),
+                                          CheckIfTriviallyCopyable);
+
   // (9.1) - T is trivially copyable...
   if (CheckIfTriviallyCopyable && !Ty.isTriviallyCopyableType(*this))
     return false;
@@ -3136,7 +3151,6 @@ bool ASTContext::hasUniqueObjectRepresentations(
   // FIXME: More cases to handle here (list by rsmith):
   // vectors (careful about, eg, vector of 3 foo)
   // _Complex int and friends
-  // _Atomic T
   // Obj-C block pointers
   // Obj-C object pointers
   // and perhaps OpenCL's various builtin types (pipe, sampler_t, event_t,
