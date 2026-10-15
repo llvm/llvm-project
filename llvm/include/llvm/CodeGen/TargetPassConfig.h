@@ -24,6 +24,7 @@ namespace llvm {
 
 class TargetMachine;
 class PassConfigImpl;
+struct CodeGenOptions;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
 
@@ -84,6 +85,7 @@ public:
 class LLVM_ABI TargetPassConfig : public ImmutablePass {
 private:
   PassManagerBase *PM = nullptr;
+  const CodeGenOptions *CGOpts = nullptr;
   AnalysisID StartBefore = nullptr;
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
