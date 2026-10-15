@@ -72,7 +72,7 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   ComplexPairTy EmitLoadOfLValue(const Expr *E) {
-    return EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc());
+    return EmitLoadOfLValue(CGF.EmitAccessedLValue(E), E->getExprLoc());
   }
 
   ComplexPairTy EmitLoadOfLValue(LValue LV, SourceLocation Loc);
@@ -196,7 +196,7 @@ public:
   // Operators.
   ComplexPairTy VisitPrePostIncDec(const UnaryOperator *E, bool isInc,
                                    bool isPre) {
-    LValue LV = CGF.EmitLValue(E->getSubExpr());
+    LValue LV = CGF.EmitAccessedLValue(E->getSubExpr());
     return CGF.EmitComplexPrePostIncDec(E, LV, isInc, isPre);
   }
   ComplexPairTy VisitUnaryPostDec(const UnaryOperator *E) {
@@ -1269,7 +1269,7 @@ LValue ComplexExprEmitter::EmitCompoundAssignLValue(
     }
   }
 
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitAccessedLValue(E->getLHS());
 
   // Load from the l-value and convert it.
   SourceLocation Loc = E->getExprLoc();
@@ -1356,7 +1356,7 @@ LValue ComplexExprEmitter::EmitBinAssignLValue(const BinaryOperator *E,
   Val = Visit(E->getRHS());
 
   // Compute the address to store into.
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitAccessedLValue(E->getLHS());
 
   // Store the result value into the LHS lvalue.
   EmitStoreOfComplex(Val, LHS, /*isInit*/ false);
