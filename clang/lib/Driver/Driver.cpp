@@ -3905,13 +3905,10 @@ static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
                                         const llvm::Triple &Triple) {
-  // Lookup the CUDA / HIP architecture string. Only report an error if we were
-  // expecting the triple to be only NVPTX / AMDGPU.
+  // Look up the architecture. Only report an error if the triple expects an
+  // NVPTX or AMDGPU one.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  // An Intel name takes no target features, so "xe-pvc:foo" is not "xe-pvc".
-  if (Arch.isIntel() && ArchStr.contains(':'))
-    Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
