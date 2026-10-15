@@ -56,7 +56,7 @@ static bool wasAvailableExternally(const GlobalObject *GO) {
       SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
 }
 
-// Conservative: true if any defined function may get an AuxData record.
+// Return true if any function definition may get an AuxData record.
 static bool hasFunctionAuxData(const Module &M) {
   return any_of(M.functions(), [](const Function &F) {
     return !F.isDeclaration() &&
@@ -64,8 +64,6 @@ static bool hasFunctionAuxData(const Module &M) {
   });
 }
 
-// Records targeting functions are forward references; prepareModuleOutput
-// enables SPV_KHR_relaxed_extended_instruction for them when available.
 static bool canUseForwardRefs(const SPIRV::ModuleAnalysisInfo &MAI) {
   return MAI.Reqs.getExtensions().contains(
       SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
@@ -87,15 +85,14 @@ bool llvm::spirvPreserveAuxData(const Triple &TT) {
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {
   if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
-    report_fatal_error("-spirv-preserve-auxdata requires the "
-                       "SPV_KHR_non_semantic_info extension to be enabled.");
+    reportFatalUsageError("-spirv-preserve-auxdata requires the "
+                          "SPV_KHR_non_semantic_info extension to be enabled.");
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
   if (!MAI.ExtInstSetMap.contains(NonSemanticAuxDataSet))
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
 
-  // Instructions and functions are defined after the AuxData section, so
-  // records targeting them are forward references. That requires
-  // SPV_KHR_relaxed_extended_instruction; drop them if unavailable.
+  // Drop NonSemantic forward references if
+  // SPV_KHR_relaxed_extended_instruction not enabled.
   if (MAI.InstrAuxDataRecords.empty() && !hasFunctionAuxData(Mod))
     return;
   if (ST.canUseExtension(

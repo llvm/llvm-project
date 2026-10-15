@@ -22,17 +22,21 @@
 ; SPV_KHR_relaxed_extended_instruction; without it they are dropped.
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s --check-prefix=NORELAXED
+; RUN:   %s -o %t
+; Separate FileCheck runs: NOTs without positive checks scan the whole output.
+; RUN: FileCheck %s --input-file=%t --check-prefix=NORELAXED
+; RUN: FileCheck %s --input-file=%t --check-prefix=NOFWD
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
 ; RUN:   %s -o - -filetype=obj | spirv-val %}
 
-; NORELAXED-NOT: SPV_KHR_relaxed_extended_instruction
-; NORELAXED-NOT: OpString "my-attr"
-; NORELAXED-NOT: OpExtInstWithForwardRefsKHR
 ; NORELAXED-DAG: OpName %[[#gv:]] "gv"
 ; NORELAXED-DAG: %[[#mdname:]] = OpString "some.md"
 ; NORELAXED-DAG: %[[#]] = OpExtInst %[[#]] %[[#]] {{.+}} %[[#gv]] %[[#mdname]]
+
+; NOFWD-NOT: SPV_KHR_relaxed_extended_instruction
+; NOFWD-NOT: OpString "my-attr"
+; NOFWD-NOT: OpExtInstWithForwardRefsKHR
 
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"

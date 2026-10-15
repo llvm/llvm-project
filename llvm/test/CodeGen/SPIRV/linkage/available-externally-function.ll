@@ -9,7 +9,7 @@
 
 ; Passing the flag without the extension is a fatal error.
 
-; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown --spirv-preserve-auxdata %s -o - 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-preserve-auxdata %s -o - 2>&1 | FileCheck %s --check-prefix=ERR
 ; ERR: -spirv-preserve-auxdata requires the SPV_KHR_non_semantic_info extension to be enabled.
 
 ; NOAUX-NOT: OpExtension "SPV_KHR_non_semantic_info"
