@@ -185,18 +185,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
         << ArgExpr->getSourceRange();
     return true;
   }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
-  case AMDGPU::BI__builtin_amdgcn_s_buffer_prefetch_data: {
-    // The length may be a register; a constant one is encoded in 5 bits.
-    unsigned LenArgNo =
-        BuiltinID == AMDGPU::BI__builtin_amdgcn_s_buffer_prefetch_data ? 2 : 1;
-    const Expr *Len = TheCall->getArg(LenArgNo);
-    if (Len->isValueDependent() || !Len->isIntegerConstantExpr(getASTContext()))
-      return false;
-    return SemaRef.BuiltinConstantArgRange(TheCall, LenArgNo, /*Low=*/0,
-                                           /*High=*/31);
-  }
   case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
     llvm::APSInt Result;
     if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))

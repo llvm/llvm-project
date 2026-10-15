@@ -1160,6 +1160,12 @@ defm : SMPrefetchPat<"INST", i32imm_zero>;
 let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
 defm : SMPrefetchPat<"DATA", i32imm_one>;
 
+// The length field holds 5 bits; the high bits of a constant length are
+// dropped.
+def as_prefetch_len : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 0x1f, SDLoc(N), MVT::i8);
+}]>;
+
 let SubtargetPredicate = HasSmemPrefetchInsts in {
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
@@ -1173,12 +1179,12 @@ let SubtargetPredicate = HasSmemPrefetchInsts in {
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), imm:$len),
-    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), imm:$len),
-    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
 
   >;
 
@@ -1189,7 +1195,7 @@ let SubtargetPredicate = HasSmemPrefetchInsts in {
 
   def : GCNPat <
     (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), imm:$len),
-    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 
   def : GCNPat <
@@ -1204,12 +1210,12 @@ let SubtargetPredicate = HasSmemPrefetchInsts in {
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (SMRDImm i64:$sbase, i32:$offset), imm:$len),
-    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (i64 SReg_64:$sbase), imm:$len),
-    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 } // End let SubtargetPredicate = HasSmemPrefetchInsts
 
