@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements constant propagation utilities for the PISA backend.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAConstProp.h"
 #include "llvm/IR/Constants.h"

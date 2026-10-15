@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file prevents unsafe merging of convergent PISA instructions.
+///
+//===----------------------------------------------------------------------===//
 //
 // Mark convergent instructions with the NoMerge flag to prevent the branch
 // folder from tail-merging blocks that contain them. Convergent instructions
