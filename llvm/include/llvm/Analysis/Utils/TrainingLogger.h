@@ -57,6 +57,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"
@@ -140,6 +141,14 @@ public:
     writeTensor(FeatureSpecs[FeatureID], RawData);
   }
 };
+
+/// Context name for \p Name. An empty name gets a placeholder built from
+/// \p Number, braced so it does not clash with ordinary symbol names.
+inline std::string getLoggerContextName(StringRef Name, unsigned Number) {
+  if (!Name.empty())
+    return Name.str();
+  return ("{__unnamed_" + Twine(Number) + "}").str();
+}
 
 } // namespace llvm
 #endif // LLVM_ANALYSIS_UTILS_TRAININGLOGGER_H

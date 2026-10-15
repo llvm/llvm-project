@@ -210,7 +210,8 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
         return cir::GlobalViewAttr::get(
             tc.convertType(gva.getType()), gva.getSymbol(),
             mlir::cast<mlir::ArrayAttr>(
-                rewriteAttribute(tc, ctx, gva.getIndices())));
+                rewriteAttribute(tc, ctx, gva.getIndices())),
+            gva.getAddressPoint());
       })
       .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
         return cir::GlobalOffsetAttr::get(tc.convertType(goa.getType()),
@@ -408,6 +409,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          const mlir::TypeConverter &tc,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
+  if (mlir::isa_and_present<cir::UndefAttr>(initVal))
+    return cir::UndefAttr::get(tc.convertType(ty));
+
+  if (mlir::isa_and_present<cir::PoisonAttr>(initVal))
+    return cir::PoisonAttr::get(tc.convertType(ty));
+
   if (mlir::isa<cir::DataMemberType>(ty)) {
     // Members without a CIR field index (e.g. no_unique_address empty fields)
     // are represented by an explicit byte offset instead of a field path.
@@ -468,14 +475,6 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
     if (auto recVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
       return cir::ZeroAttr::get(convertedTy);
 
-    if (auto undefVal = mlir::dyn_cast_if_present<cir::UndefAttr>(initVal))
-      return cir::UndefAttr::get(convertedTy);
-
-    // This might not be possible from Clang directly, but we can get here with
-    // hand-written IR.
-    if (auto poisonVal = mlir::dyn_cast_if_present<cir::PoisonAttr>(initVal))
-      return cir::PoisonAttr::get(convertedTy);
-
     if (auto recVal =
             mlir::dyn_cast_if_present<cir::ConstRecordAttr>(initVal)) {
       auto recordMembers = mlir::cast<ArrayAttr>(recVal.getMembers());
@@ -504,7 +503,7 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
 
     if (auto gva = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(initVal))
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
-                                      gva.getIndices());
+                                      gva.getIndices(), gva.getAddressPoint());
 
     if (auto goa = mlir::dyn_cast_if_present<cir::GlobalOffsetAttr>(initVal))
       return cir::GlobalOffsetAttr::get(convertedTy, goa.getSymbol(),
@@ -615,9 +614,16 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
   mlir::Attribute loweredInit = lowerInitialValue(
       lowerModule, layout, *getTypeConverter(), ty, op.getInitialValueAttr());
 
-  auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
+  cir::GlobalOp newOp = rewriter.cloneWithoutRegions(op);
   newOp.setInitialValueAttr(loweredInit);
   newOp.setSymType(loweredTy);
+  // Regions have to be separately moved(rather than cloned), else we cause
+  // multi-block regions/eh stuff to be double-referenced, and thus can't be
+  // removed properly during collectUnreachable.
+  rewriter.inlineRegionBefore(op.getCtorRegion(), newOp.getCtorRegion(),
+                              newOp.getCtorRegion().end());
+  rewriter.inlineRegionBefore(op.getDtorRegion(), newOp.getDtorRegion(),
+                              newOp.getDtorRegion().end());
   rewriter.replaceOp(op, newOp);
   return mlir::success();
 }
@@ -695,6 +701,15 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   // exception handling flow will be connected to the cleanup region here to
   // call the delete operator on the exception path.
   mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
+
+  // Make sure the calls and the callees agree on calling convention.
+  auto getCalleeCallingConv = [&](mlir::FlatSymbolRefAttr callee) {
+    if (auto fn =
+            mlir::SymbolTable::lookupNearestSymbolFrom<cir::FuncOp>(op, callee))
+      return fn.getCallingConv();
+    return cir::CallingConv::C;
+  };
+
   cir::CleanupKind cleanupKind =
       op.getDtorMayThrow() ? cir::CleanupKind::All : cir::CleanupKind::Normal;
   cir::CleanupScopeOp::create(
@@ -710,6 +725,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
                     bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
                 auto dtorCall = cir::CallOp::create(
                     bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
+                dtorCall.setCallingConv(getCalleeCallingConv(dtorFn));
                 if (!op.getDtorMayThrow())
                   dtorCall.setNothrowAttr(bb.getUnitAttr());
                 cir::YieldOp::create(bb, ll);
@@ -743,6 +759,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
 
         auto deleteCall =
             cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
+        deleteCall.setCallingConv(getCalleeCallingConv(deleteFn));
         // operator delete[] is implicitly nothrow per [basic.stc.dynamic],
         // matching classic CodeGen's `nounwind` attribute on the call.
         deleteCall.setNothrowAttr(b.getUnitAttr());

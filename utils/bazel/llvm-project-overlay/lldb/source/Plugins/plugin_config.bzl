@@ -21,6 +21,8 @@ DEFAULT_PLUGINS = [
     "ArchitectureArm",
     "ArchitectureMips",
     "ArchitecturePPC64",
+    "ArchitectureRISCV",
+    "ArchitectureWasm",
     "ClangREPL",
     "CPlusPlusLanguage",
     "CPPRuntime",
@@ -34,6 +36,7 @@ DEFAULT_PLUGINS = [
     "DynamicLoaderStatic",
     "DynamicLoaderWasmDYLD",
     "DynamicLoaderWindowsDYLD",
+    "FortranLanguage",
     "GNUstepObjCRuntime",
     "InstructionARM",
     "InstructionARM64",
@@ -97,6 +100,14 @@ DEFAULT_PLUGINS = [
     "TypeSystemFortran",
     "UnwindAssemblyInstEmulation",
     "UnwindAssemblyX86",
+]
+
+# Fallback plugins that must be registered after the plugins they back up,
+# including optional ones selected in BUILD.bazel. These are kept separate so
+# that reordering DEFAULT_PLUGINS cannot move them earlier.
+FALLBACK_PLUGINS = [
+    # Bug reporters are tried in registration order, so None must be last.
+    "BugReporterNone",
 ]
 
 DEFAULT_SCRIPT_PLUGINS = [

@@ -1449,11 +1449,9 @@ public:
                  llvm::SmallVectorImpl<cir::ResumeOp> &resumeOpsToChain,
                  mlir::PatternRewriter &rewriter) const {
     mlir::Location loc = cleanupOp.getLoc();
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
-    bool hasNormalCleanup = cleanupKind == cir::CleanupKind::Normal ||
-                            cleanupKind == cir::CleanupKind::All;
-    bool hasEHCleanup = cleanupKind == cir::CleanupKind::EH ||
-                        cleanupKind == cir::CleanupKind::All;
+    cir::CleanupKindAttr cleanupKind = cleanupOp.getCleanupKindAttr();
+    bool hasNormalCleanup = cleanupKind.isNormal();
+    bool hasEHCleanup = cleanupKind.isEH();
     bool isMultiExit = exits.size() > 1;
 
     // If every exit from the body is a musttail return, nothing reaches the

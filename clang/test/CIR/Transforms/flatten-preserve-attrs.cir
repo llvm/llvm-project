@@ -141,7 +141,27 @@ cir.func @test_preserve_all_attrs_indirect(
 // CHECK-SAME:        %[[OBJ:.*]]: !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.try_call %[[FN_PTR]](%[[OBJ]]) ^{{bb[0-9]+}}, ^{{bb[0-9]+}} {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> (!s32i {llvm.nonnull})
 
+// Test that the calling convention on a cir.call is preserved on the resulting
+// cir.try_call after flattening.
+cir.func @test_preserve_calling_conv() {
+  cir.scope {
+    cir.try {
+      cir.call @spirFunc() cc(spir_function) : () -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_preserve_calling_conv()
+// CHECK:         cir.try_call @spirFunc() ^{{.*}}, ^{{.*}} cc(spir_function) : () -> ()
+
 cir.func private @generalFunc(!cir.ptr<!s32i>) -> !cir.ptr<!s32i>
 cir.func private @takesPtr(!cir.ptr<!s32i>)
 cir.func private @returnsPtr() -> !cir.ptr<!s32i>
 cir.func private @pureFunc() -> !s32i
+cir.func private @spirFunc() cc(spir_function)

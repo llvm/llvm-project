@@ -7,7 +7,7 @@ define <2 x double> @test_v2f64_fadd(<2 x double> %vec, double inreg %a) {
 ; GFX1251-SDAG:       ; %bb.0: ; %entry
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
+; GFX1251-SDAG-NEXT:    v_mul_f64_e64 v[4:5], s[0:1], 0x40240000
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7]
@@ -17,7 +17,7 @@ define <2 x double> @test_v2f64_fadd(<2 x double> %vec, double inreg %a) {
 ; GFX1251-GISEL:       ; %bb.0: ; %entry
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
+; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], s[0:1], 0x40240000
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
@@ -44,7 +44,7 @@ define <2 x double> @test_v2f64_fmul_fadd(<2 x double> %vec, double inreg %a) {
 ; GFX1251-SDAG:       ; %bb.0: ; %entry
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
+; GFX1251-SDAG-NEXT:    v_mul_f64_e64 v[4:5], s[0:1], 0x40240000
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX1251-SDAG-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], v[4:7], v[4:7]
@@ -54,7 +54,7 @@ define <2 x double> @test_v2f64_fmul_fadd(<2 x double> %vec, double inreg %a) {
 ; GFX1251-GISEL:       ; %bb.0: ; %entry
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
+; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], s[0:1], 0x40240000
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
@@ -82,7 +82,7 @@ define <2 x double> @test_v2f64_fmul_fmul(<2 x double> %vec, double inreg %a) {
 ; GFX1251-SDAG:       ; %bb.0: ; %entry
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
+; GFX1251-SDAG-NEXT:    v_mul_f64_e64 v[4:5], s[0:1], 0x40240000
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
 ; GFX1251-SDAG-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7]
@@ -94,7 +94,7 @@ define <2 x double> @test_v2f64_fmul_fmul(<2 x double> %vec, double inreg %a) {
 ; GFX1251-GISEL:       ; %bb.0: ; %entry
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[8:9], 0x40240000, s[0:1]
+; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[8:9], s[0:1], 0x40240000
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v9

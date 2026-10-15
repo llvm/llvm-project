@@ -721,6 +721,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return HistCost;
     break;
   }
+  case Intrinsic::experimental_vector_histogram_uadd_sat:
+  case Intrinsic::experimental_vector_histogram_umax:
+  case Intrinsic::experimental_vector_histogram_umin:
+    // No hardware support for these histogram variants on AArch64.
+    return InstructionCost::getInvalid();
   case Intrinsic::clmul: {
     auto LT = getTypeLegalizationCost(RetTy);
 
@@ -795,6 +800,52 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         break;
       }
     }
+    break;
+  }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    InstructionCost MulCost =
+        getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+    // Wide types like i128 need every partial product of a wide multiply
+    // and the carry chain between them. This is a crude cost approximation.
+    if (RetTy->getScalarSizeInBits() > 64)
+      return 2 * MulCost;
+
+    auto LT = getTypeLegalizationCost(RetTy);
+    MVT MTy = LT.second;
+
+    // Per-register cost to extend the operands.
+    InstructionCost ExtraCost =
+        LT.first *
+        (MTy.getScalarSizeInBits() != RetTy->getScalarSizeInBits() ? 2 : 0);
+
+    // MULH and MUL lower similarly for 64-bit products. For vectors, they
+    // also share the reduced vector multiply bandwidth seen on some cores.
+    if (MTy.getScalarSizeInBits() == 64)
+      return MulCost + ExtraCost;
+
+    // Scalable vectors (and fixed-length vectors, when possible) use SVE.
+    if (MTy.isScalableVector() ||
+        (MTy.isFixedLengthVector() && ST->isSVEorStreamingSVEAvailable()))
+      return LT.first + ExtraCost;
+
+    static const CostTblEntry MulHighCostTbl[] = {
+        {ISD::MULHU, MVT::i32, 2}, // [su]mull + lsr
+
+        {ISD::MULHU, MVT::v8i8, 2},  // [su]mull + shrn
+        {ISD::MULHU, MVT::v4i16, 2}, // "
+        {ISD::MULHU, MVT::v2i32, 2}, // "
+
+        {ISD::MULHU, MVT::v16i8, 3}, // [su]mull + [su]mull2 + uzp2
+        {ISD::MULHU, MVT::v8i16, 3}, // "
+        {ISD::MULHU, MVT::v4i32, 3}, // "
+    };
+
+    // Currently we assume SMULH has the same cost as UMULH.
+    if (const auto *Entry = CostTableLookup(MulHighCostTbl, ISD::MULHU, MTy))
+      return LT.first * Entry->Cost + ExtraCost;
+
     break;
   }
   case Intrinsic::umin:
@@ -1331,7 +1382,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // vectors we know for the worst case it can be scalarised.
     EVT VT = getTLI()->getValueType(DL, RetTy);
     RTLIB::Libcall LC = RTLIB::getPOW(VT);
-    bool HasLibcall = getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool HasLibcall =
+        getTLI()->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
+        RTLIB::Unsupported;
     bool CanLowerWithLibcalls = !isa<ScalableVectorType>(RetTy) || HasLibcall;
 
     // If we know that the call can be lowered with libcalls then it's safe to
@@ -3984,6 +4037,16 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // Codegen is not able to select all <vscale x 1 x Ty> casts yet.
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Dst);
+      VTy && VTy->getElementCount() == ElementCount::getScalable(1)) {
+    if (!is_contained({ISD::TRUNCATE, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND,
+                       ISD::BITCAST, ISD::ADDRSPACECAST},
+                      ISD))
+      return InstructionCost::getInvalid();
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
@@ -4053,6 +4116,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
+
+  // SVE has no elements wider than 64 bits. The generic cost for a bitcast
+  // between unsupported scalable types can otherwise appear to be free.
+  if ((SrcTy.isScalableVector() && SrcTy.getScalarSizeInBits() > 64) ||
+      (DstTy.isScalableVector() && DstTy.getScalarSizeInBits() > 64))
+    return InstructionCost::getInvalid();
 
   // From a vector to a scalarized vector will be an series of extract-element
   // and extends.
@@ -4985,6 +5054,15 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
+
+  // There's no scalarization overhead if ld1/st1 is cheap and the
+  // insert/extracts can be folded into the load/stores.
+  if (ST->hasFastLD1Single()) {
+    if ((VIC == TTI::VectorInstrContext::Store && Extract) ||
+        (VIC == TTI::VectorInstrContext::Load && Insert))
+      return 0;
+  }
+
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);
@@ -7071,11 +7149,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // i8 -> i64 is supported with an extra level of extends
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i8)
-      // FIXME: This cost should probably be a little higher, e.g. Cost + 2
-      // because it requires two extra extends on the inputs. But if we'd change
-      // that now, a regular reduction would be cheaper because the costs of
-      // the extends in the IR are still counted. This can be fixed
-      // after https://github.com/llvm/llvm-project/pull/147302 has landed.
+      // FIXME: Also account for folding the i32 dot product results into the
+      // i64 accumulator, as the NEON case below does.
       return Cost + INegCost;
     // i8 -> i16 is natively supported with SVE2p3 udot/sdot
     // For sub-reductions, we prefer using the *mlslb/t instructions.
@@ -7084,6 +7159,26 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
         (ST->hasSVE2p3() || ST->hasSME2p3()) && !IsSub)
       return Cost;
   }
+
+  // With +dotprod, NEON lowers an extended i8 -> i64 partial reduction to a
+  // udot/sdot into a zeroed i32 vector followed by an [SU]ADALP into the i64
+  // accumulator. Charge one basic cost for each of the two steps per legal
+  // input vector. This must stay after the SVE cases, as IsSupported's NEON
+  // predicate also holds for fixed-length vectors on SVE targets.
+  // TODO: Handle zero-extended multiplies and sub-reductions. In loops,
+  // CodeGenPrepare turns zero extends that do not directly feed the partial
+  // reduction (such as the operands of a multiply, or of the negation in a
+  // sub-reduction) into TBLs, which hides the udot from instruction selection.
+  // Sign-extended sub-reductions have not been measured yet.
+  // TODO: Without +dotprod, pure adds with a ratio of 4 or 8 lower to a chain
+  // of [SU]ADDLPs and an [SU]ADALP, which is not costed yet either.
+  bool IsSExtMul = BinOp && OpAExtend == TTI::PR_SignExtend &&
+                   OpBExtend == TTI::PR_SignExtend;
+  if ((!BinOp || IsSExtMul) && !IsSub &&
+      AccumLT.second.getScalarType() == MVT::i64 &&
+      InputLT.second.getScalarType() == MVT::i8 &&
+      IsSupported(false, ST->hasDotProd()))
+    return Cost * 2;
 
   // f16 -> f32 is natively supported for fdot using either
   // SVE or NEON instruction.
@@ -7590,44 +7685,6 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return InstructionCost::getInvalid();
-}
-
-bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
-                                           int64_t BaseOffset, bool HasBaseReg,
-                                           int64_t Scale, unsigned AddrSpace,
-                                           Instruction *I,
-                                           int64_t ScalableOffset) const {
-  LLVMContext &Ctx = Ty->getContext();
-  const AArch64TargetLowering *TLI = getTLI();
-
-  // LSR can make an illegal scalable vector access easier to split and combine
-  // by preferring a base+scalable-offset form. Note: This is an LSR preference
-  // rather than a legal machine addressing mode.
-  if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
-    EVT MemVT = TLI->getValueType(DL, Ty);
-    TargetLowering::LegalizeTypeAction Action = TLI->getTypeAction(Ctx, MemVT);
-
-    // Note: If MemVT cannot be legalized (e.g. no scalable vectors) then
-    // LegalVT could be MVT::Other (which would assert on getStoreSize()).
-    EVT LegalVT = TLI->getLegalTypeToTransformTo(Ctx, MemVT);
-    if (Action == TargetLowering::TypeSplitVector && LegalVT.isScalableVT() &&
-        LegalVT.getVectorElementType() == MemVT.getVectorElementType()) {
-      uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
-      assert(MemVT.getStoreSize().getKnownMinValue() % LegalNumBytes == 0 &&
-             "expected vector split");
-
-      // Don't prefer scaled access if the type may need splitting. Only the
-      // first access can use the scaled offset. Later accesses need to
-      // materialize a new base + mul vl offset.
-      if (Scale)
-        return false;
-      if (ScalableOffset && ScalableOffset % LegalNumBytes == 0)
-        return true;
-    }
-  }
-
-  return BaseT::isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
-                                      AddrSpace, I, ScalableOffset);
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(

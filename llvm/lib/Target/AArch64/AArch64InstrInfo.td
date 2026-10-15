@@ -237,6 +237,10 @@ def HasF16F32DOT     : Predicate<"Subtarget->hasF16F32DOT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32DOT), "f16f32dot">;
 def HasF16F32MM      : Predicate<"Subtarget->hasF16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32MM), "f16f32mm">;
+def HasCFLT          : Predicate<"Subtarget->hasCFLT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCFLT), "cflt">;
+def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -417,7 +421,7 @@ def UseAlternateSExtLoadCVTF32
 
 def UseNegativeImmediates
                      : Predicate<"false">,
-                                 AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
+                                 AssemblerPredicate<(none_of FeatureNoNegativeImmediates),
                                  "NegativeImmediates">;
 
 def UseScalarIncVL   : Predicate<"Subtarget->useScalarIncVL()">;
@@ -1617,6 +1621,9 @@ def : InstAlias<"stshh strm", (HINT 49), 1>;
 def : InstAlias<"shuh", (HINT 50), 1>;
 def : InstAlias<"shuh ph", (HINT 51), 1>;
 def : InstAlias<"stcph", (HINT 52), 1>;
+def : InstAlias<"srls", (HINT 54)>;
+def : InstAlias<"srls stshstrm", (HINT 55)>;
+def : InstAlias<"slbnd", (HINT 56)>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
@@ -8280,12 +8287,12 @@ def : Pat<(v8bf16 (AArch64dup (bf16 FPR16:$Rn))),
             (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
             (i64 0)))>;
 
-// Patterns for importing fpr i8 G_DUP under GISel.
-def : Pat<(v8i8 (AArch64dup (i8 FPR8:$Rn))),
+// Patterns for importing fpr i8 G_SPLAT_VECTOR under GISel.
+def : Pat<(v8i8 (splat_vector (i8 FPR8:$Rn))),
           (v8i8 (DUPv8i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;
-def : Pat<(v16i8 (AArch64dup (i8 FPR8:$Rn))),
+def : Pat<(v16i8 (splat_vector (i8 FPR8:$Rn))),
           (v16i8 (DUPv16i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;
@@ -12180,12 +12187,12 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
-  defm LD64B: LoadStore64B<0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
+  defm LD64B: LoadStore64B<0b00, 0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
                                            (outs GPR64x8:$Rt)>;
-  defm ST64B: LoadStore64B<0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
+  defm ST64B: LoadStore64B<0b00, 0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
                                            (outs)>;
-  def ST64BV:   Store64BV<0b011, "st64bv">;
-  def ST64BV0:  Store64BV<0b010, "st64bv0">;
+  def ST64BV:   Store64BV<0b00, 0b011, "st64bv">;
+  def ST64BV0:  Store64BV<0b00, 0b010, "st64bv0">;
 
   class ST64BPattern<Intrinsic intrinsic, Instruction instruction>
     : Pat<(intrinsic GPR64sp:$addr, GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3, GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7),
@@ -12194,6 +12201,13 @@ let Predicates = [HasLS64] in {
   def : ST64BPattern<int_aarch64_st64b, ST64B>;
   def : ST64BPattern<int_aarch64_st64bv, ST64BV>;
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
+}
+
+let Predicates = [HasLS64, HasLSC64B] in {
+  defm LDA64B:  LoadStore64B<0b10, 0b101, "lda64b", 1, 0, (ins GPR64sp:$Rn), (outs GPR64x8:$Rt)>;
+  defm STL64B:  LoadStore64B<0b01, 0b001, "stl64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs)>;
+  def STL64BV:  Store64BV<0b01, 0b011, "stl64bv">;
+  def STL64BV0: Store64BV<0b01, 0b010, "stl64bv0">;
 }
 
 let Predicates = [HasMOPS] in {
@@ -12754,6 +12768,53 @@ let Predicates = [HasS1POE2] in {
 let Predicates = [HasTEV] in {
   defm TENTER : TENTER<"tenter">;
   defm TEXIT : TEXIT<"texit">;
+}
+
+//===-----------------------------------------------------===//
+// Conditional Fault instructions (FEAT_CFLT)
+//===-----------------------------------------------------===//
+let Predicates = [HasCFLT] in {
+  def FLTcc : BaseCondFLT;
+
+  defm CFLTEQ : CFLTReg<0b110, "cflteq">;
+  defm CFLTEQ : CFLTImm<0b100, "cflteq", simm9>;
+
+  defm CFLTNE : CFLTReg<0b111, "cfltne">;
+  defm CFLTNE : CFLTImm<0b101, "cfltne", simm9>;
+
+  defm CFLTGT : CFLTReg<0b000, "cfltgt">;
+  defm CFLTGT : CFLTImm<0b000, "cfltgt", simm9>;
+
+  defm CFLTGE : CFLTReg<0b001, "cfltge">;
+  defm CFLTLT : CFLTImm<0b001, "cfltlt", simm9>;
+
+  defm CFLTHI : CFLTReg<0b010, "cflthi">;
+  defm CFLTHI : CFLTImm<0b010, "cflthi", uimm9>;
+
+  defm CFLTHS : CFLTReg<0b011, "cflths">;
+  defm CFLTLO : CFLTImm<0b011, "cfltlo", uimm9>;
+
+  defm : CFLTImmAlias<"cfltge", "CFLTGT", simm9p1>;
+  defm : CFLTImmAlias<"cflths", "CFLTHI", uimm9p1>;
+  defm : CFLTImmAlias<"cfltle", "CFLTLT", simm9m1>;
+  defm : CFLTImmAlias<"cfltls", "CFLTLO", uimm9m1>;
+
+  defm : CFLTRegAlias<"cfltle", "CFLTGE">;
+  defm : CFLTRegAlias<"cfltlo", "CFLTHI">;
+  defm : CFLTRegAlias<"cfltls", "CFLTHS">;
+  defm : CFLTRegAlias<"cfltlt", "CFLTGT">;
+
+  def : InstAlias<"cfltnz\t$reason, $Rt",
+                  (CFLTNEWi imm0_3:$reason, GPR32:$Rt, 0), 0>;
+  def : InstAlias<"cfltnz\t$reason, $Rt",
+                  (CFLTNEXi imm0_3:$reason, GPR64:$Rt, 0), 0>;
+  def : InstAlias<"cfltz\t$reason, $Rt",
+                  (CFLTEQWi imm0_3:$reason, GPR32:$Rt, 0), 0>;
+  def : InstAlias<"cfltz\t$reason, $Rt",
+                  (CFLTEQXi imm0_3:$reason, GPR64:$Rt, 0), 0>;
+
+  defm TFLTZ  : TFLT<0, "tfltz">;
+  defm TFLTNZ : TFLT<1, "tfltnz">;
 }
 
 include "AArch64InstrAtomics.td"
