@@ -12161,6 +12161,33 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
+  // Transform (BR_CC eq/ne, (SRL val, imm), 0) to TST + BRCOND when those
+  // instructions can be fused.
+  {
+    using namespace llvm::SDPatternMatch;
+
+    SDValue ShiftVal;
+    uint64_t ShiftAmt;
+    if (isIntEqualitySetCC(CC) && isNullConstant(RHS) &&
+        sd_match(LHS, m_OneUse(m_Node(ISD::SRL, m_Value(ShiftVal),
+                                      m_ConstInt(ShiftAmt))))) {
+      const EVT VT = LHS.getValueType();
+      assert(VT == MVT::i32 || VT == MVT::i64);
+
+      const auto BrCC = (CC == ISD::SETEQ) ? AArch64CC::EQ : AArch64CC::NE;
+
+      SDValue AndCst =
+          DAG.getConstant(APInt::getHighBitsSet(VT.getSizeInBits(),
+                                                VT.getSizeInBits() - ShiftAmt),
+                          DL, VT);
+      SDValue Flags =
+          DAG.getNode(AArch64ISD::ANDS, DL, {VT, FlagsVT}, {ShiftVal, AndCst})
+              .getValue(1);
+      return DAG.getNode(AArch64ISD::BRCOND, DL, MVT::Other, Chain, Dest,
+                         getCondCode(DAG, BrCC), Flags);
+    }
+  }
+
   if (LHS.getValueType().isInteger()) {
     assert((LHS.getValueType() == RHS.getValueType()) &&
            (LHS.getValueType() == MVT::i32 || LHS.getValueType() == MVT::i64));
@@ -19559,7 +19586,7 @@ bool hasNearbyPairedStore(Iter It, Iter End, Value *Ptr, const DataLayout &DL) {
                                              /*AllowNonInbounds=*/true);
 
   while (++It != End) {
-    if (It->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(*It))
       continue;
     if (MaxLookupDist-- == 0)
       break;
@@ -29984,8 +30011,8 @@ static SDValue performVselectPowCombine(SDNode *N,
   RTLIB::Libcall LC = RTLIB::getPOW(VT);
   SelectionDAG &DAG = DCI.DAG;
   auto &TLI = DAG.getTargetLoweringInfo();
-  bool HasLibCall =
-      TLI.getLibcallLoweringInfo().getLibcallImpl(LC) != RTLIB::Unsupported;
+  bool HasLibCall = TLI.getLibcallLoweringInfo().getVectorLibcallImplOrMasked(
+                        LC) != RTLIB::Unsupported;
   if (!HasLibCall)
     return SDValue();
 

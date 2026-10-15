@@ -52,7 +52,7 @@ struct __set_union {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires mergeable<_InIter1, _InIter2, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr set_union_result<_InIter1, _InIter2, _OutIter> operator()(
+  constexpr set_union_result<_InIter1, _InIter2, _OutIter> operator()(
       _InIter1 __first1,
       _Sent1 __last1,
       _InIter2 __first2,
@@ -78,7 +78,7 @@ struct __set_union {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires mergeable<iterator_t<_Range1>, iterator_t<_Range2>, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr set_union_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>, _OutIter>
+  constexpr set_union_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>, _OutIter>
   operator()(_Range1&& __range1,
              _Range2&& __range2,
              _OutIter __result,
