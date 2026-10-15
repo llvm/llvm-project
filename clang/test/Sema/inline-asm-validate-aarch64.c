@@ -10,6 +10,10 @@ void test_s(int i) {
   /// Codegen error
   asm("" :: "S"(i));
   asm("" :: "S"(test_s(i))); // expected-error{{invalid type 'void' in asm input for constraint 'S'}}
+
+  // GH204773: braces are ordinary characters on this target.
+  asm("{a{b}}" :: "r"(i));
+  asm("{" :: "r"(i));
 }
 #else
 uint8_t constraint_r(uint8_t *addr) {
