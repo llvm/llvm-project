@@ -633,6 +633,22 @@ func.func @omp_target(%a: !fir.ref<!fir.array<4xi32>>, %n: !fir.ref<i32>) {
 // CHECK-NOT:     fir.if
 // CHECK:         return
 
+// !$acc routine: the device copy is cloned from this func.func after this
+// pass runs, so versioning it would version the GPU code too.
+func.func @acc_routine(%a: !fir.ref<!fir.array<4xi32>>, %n: index) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>} {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  fir.do_loop %i = %c1 to %n step %c1 {
+    %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+    fir.store %c0_i32 to %p : !fir.ref<i32>
+  }
+  return
+}
+acc.routine @acc_routine_0 func(@acc_routine) seq
+// CHECK-LABEL: func.func @acc_routine(
+// CHECK-NOT:     fir.if
+// CHECK:         return
+
 // A loop containing a loop that is not a fir.do_loop is not innermost and is
 // not versioned.
 func.func @contains_iterate_while(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<i32>, %arg2: i1) {

@@ -13,17 +13,19 @@
 ///   if (ub == N) { copy of the loop with ub := N } else { original loop }
 ///
 /// Both arms are the original loop with only the bound changed, so the
-/// transformation is always legal. The constant trip count lets LLVM fully
-/// unroll the fast arm, or vectorize it without a remainder loop.
+/// transformation is legal wherever the guard is uniform, which holds on a CPU
+/// and not on a GPU: a thread-varying guard could split threads across two
+/// copies of a barrier, so device code is excluded. The constant trip count
+/// lets LLVM fully unroll the fast arm, or vectorize it without a remainder
+/// loop.
 ///
 /// Heuristic: the loop variable is the leading subscript of an explicit-shape
 /// array whose declared leading extent N is at most max-section-extent. For
 /// `a(1:m, :) = 0` with `real :: a(4, n)`, the inner loop is versioned on
 /// `m == 4`. Loops are skipped when N times the body size exceeds
 /// max-unrolled-ops (LLVM's -O3 full-unroll budget), since the fast arm would
-/// not unroll. Loops that run on a GPU are skipped: the guard could split
-/// threads across two copies of a barrier. This runs on FIR, the only level
-/// where both the loop and the array's declared type exist.
+/// not unroll. This runs on FIR, the only level where both the loop and the
+/// array's declared type exist.
 //
 //===----------------------------------------------------------------------===//
 
@@ -243,15 +245,22 @@ static void versionLoop(mlir::OpBuilder &builder, fir::DoLoopOp loop,
 }
 
 /// Device code may contain convergent operations which must not be duplicated
-/// under a condition that can differ between threads. attributes(host,device)
-/// procedures are included: their device copy is split off after this pass
-/// runs, so there is only one func.func here and it would be versioned for
-/// both. omp.target is not covered by the CUF helpers so we add it here.
+/// under a condition that can differ between threads. Three things make a loop
+/// device code: a device ancestor (cuf.kernel, gpu.launch, acc compute region,
+/// omp.target), a device function (cuf.proc_attr, acc routine), or a device
+/// module (omp.is_target_device, where every remaining function is compiled
+/// for the target). attributes(host,device) and unspecialized acc routines
+/// count: their device copy is split off after this pass runs, so the one
+/// func.func here would be versioned for both.
 static bool runsOnDevice(fir::DoLoopOp loop) {
+  if (cuf::isExecutingOnDevice(loop) ||
+      loop->getParentOfType<mlir::omp::TargetOp>())
+    return true;
   auto func = loop->getParentOfType<mlir::func::FuncOp>();
-  return cuf::isExecutingOnDevice(loop) ||
-         (func && cuf::isDeviceProcedure(func)) ||
-         loop->getParentOfType<mlir::omp::TargetOp>();
+  if (func && (cuf::isDeviceProcedure(func) || mlir::acc::isAccRoutine(func)))
+    return true;
+  auto offloadMod = loop->getParentOfType<mlir::omp::OffloadModuleInterface>();
+  return offloadMod && offloadMod.getIsTargetDevice();
 }
 
 /// Innermost means no nested loop of any kind. Loops containing OpenMP or
