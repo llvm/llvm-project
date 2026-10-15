@@ -48,7 +48,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -71,50 +70,6 @@ STATISTIC(NumCallsOrJumpsHardened,
           "Number of calls or jumps requiring extra hardening");
 STATISTIC(NumInstsInserted, "Number of instructions inserted");
 STATISTIC(NumLFENCEsInserted, "Number of lfence instructions inserted");
-
-static cl::opt<bool> EnableSpeculativeLoadHardening(
-    "x86-speculative-load-hardening",
-    cl::desc("Force enable speculative load hardening"), cl::init(false),
-    cl::Hidden);
-
-static cl::opt<bool> HardenEdgesWithLFENCE(
-    PASS_KEY "-lfence",
-    cl::desc(
-        "Use LFENCE along each conditional edge to harden against speculative "
-        "loads rather than conditional movs and poisoned pointers."),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<bool> EnablePostLoadHardening(
-    PASS_KEY "-post-load",
-    cl::desc("Harden the value loaded *after* it is loaded by "
-             "flushing the loaded bits to 1. This is hard to do "
-             "in general but can be done easily for GPRs."),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> FenceCallAndRet(
-    PASS_KEY "-fence-call-and-ret",
-    cl::desc("Use a full speculation fence to harden both call and ret edges "
-             "rather than a lighter weight mitigation."),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<bool> HardenInterprocedurally(
-    PASS_KEY "-ip",
-    cl::desc("Harden interprocedurally by passing our state in and out of "
-             "functions in the high bits of the stack pointer."),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    HardenLoads(PASS_KEY "-loads",
-                cl::desc("Sanitize loads from memory. When disable, no "
-                         "significant security is provided."),
-                cl::init(true), cl::Hidden);
-
-static cl::opt<bool> HardenIndirectCallsAndJumps(
-    PASS_KEY "-indirect",
-    cl::desc("Harden indirect calls and jumps against using speculatively "
-             "stored attacker controlled addresses. This is designed to "
-             "mitigate Spectre v1.2 style attacks."),
-    cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -415,11 +370,12 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
 
   // Only run if this pass is forced enabled or we detect the relevant function
   // attribute requesting SLH.
-  if (!EnableSpeculativeLoadHardening &&
+  Subtarget = &MF.getSubtarget<X86Subtarget>();
+  const X86Options &CLOpts = Subtarget->getCLOpts();
+  if (!CLOpts.speculative_load_hardening &&
       !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     return false;
 
-  Subtarget = &MF.getSubtarget<X86Subtarget>();
   MRI = &MF.getRegInfo();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
@@ -432,7 +388,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     return false;
 
   // We support an alternative hardening technique based on a debug flag.
-  if (HardenEdgesWithLFENCE) {
+  if (CLOpts.slh_lfence) {
     hardenEdgesWithLFENCE(MF);
     return true;
   }
@@ -464,7 +420,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
 
   // If we have loads being hardened and we've asked for call and ret edges to
   // get a full fence-based mitigation, inject that fence.
-  if (HasVulnerableLoad && FenceCallAndRet) {
+  if (HasVulnerableLoad && CLOpts.slh_fence_call_and_ret) {
     // We need to insert an LFENCE at the start of the function to suspend any
     // incoming misspeculation from the caller. This helps two-fold: the caller
     // may not have been protected as this code has been, and this code gets to
@@ -478,12 +434,12 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
 
   // If we guarded the entry with an LFENCE and have no conditionals to protect
   // in blocks, then we're done.
-  if (FenceCallAndRet && Infos.empty())
+  if (CLOpts.slh_fence_call_and_ret && Infos.empty())
     // We may have changed the function's code at this point to insert fences.
     return true;
 
   // For every basic block in the function which can b
-  if (HardenInterprocedurally && !FenceCallAndRet) {
+  if (CLOpts.slh_ip && !CLOpts.slh_fence_call_and_ret) {
     // Set up the predicate state by extracting it from the incoming stack
     // pointer so we pick up any misspeculation in our caller.
     PS->InitialReg = extractPredStateFromSP(Entry, EntryInsertPt, Loc);
@@ -526,7 +482,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
   // predicate state in the stack pointer, so extract fresh predicate state from
   // the stack pointer and make it available in SSA.
   // FIXME: Handle non-itanium ABI EH models.
-  if (HardenInterprocedurally) {
+  if (CLOpts.slh_ip) {
     for (MachineBasicBlock &MBB : MF) {
       assert(!MBB.isEHScopeEntry() && "Only Itanium ABI EH supported!");
       assert(!MBB.isEHFuncletEntry() && "Only Itanium ABI EH supported!");
@@ -539,7 +495,7 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     }
   }
 
-  if (HardenIndirectCallsAndJumps) {
+  if (CLOpts.slh_indirect) {
     // If we are going to harden calls and jumps we need to unfold their memory
     // operands.
     unfoldCallAndJumpLoads(MF);
@@ -1273,6 +1229,7 @@ static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
 /// time to simplify reasoning about reachability and sequencing.
 void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
     MachineFunction &MF) {
+  const X86Options &CLOpts = Subtarget->getCLOpts();
   SmallPtrSet<MachineInstr *, 16> HardenPostLoad;
   SmallPtrSet<MachineInstr *, 16> HardenLoadAddr;
 
@@ -1301,7 +1258,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
     // be free (due to reuse).
     //
     // Note that we only need this pass if we are actually hardening loads.
-    if (HardenLoads)
+    if (CLOpts.slh_loads)
       for (MachineInstr &MI : MBB) {
         // We naively assume that all def'ed registers of an instruction have
         // a data dependency on all of their operands.
@@ -1368,7 +1325,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
         // address registers, queue it up to be hardened post-load. Notably,
         // even once hardened this won't introduce a useful dependency that
         // could prune out subsequent loads.
-        if (EnablePostLoadHardening && X86InstrInfo::isDataInvariantLoad(MI) &&
+        if (CLOpts.slh_post_load && X86InstrInfo::isDataInvariantLoad(MI) &&
             !isEFLAGSDefLive(MI) && MI.getDesc().getNumDefs() == 1 &&
             MI.getOperand(0).isReg() &&
             canHardenRegister(MI.getOperand(0).getReg()) &&
@@ -1398,7 +1355,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
     // which we will do post-load hardening and can defer it in certain
     // circumstances.
     for (MachineInstr &MI : MBB) {
-      if (HardenLoads) {
+      if (CLOpts.slh_loads) {
         // We cannot both require hardening the def of a load and its address.
         assert(!(HardenLoadAddr.count(&MI) && HardenPostLoad.count(&MI)) &&
                "Requested to harden both the address and def of a load!");
@@ -1457,13 +1414,13 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughBlocksAndHarden(
         // avoid hardening it for some reason. Note that here we cannot break
         // out afterward as we may still need to handle any call aspect of this
         // instruction.
-        if ((MI.isCall() || MI.isBranch()) && HardenIndirectCallsAndJumps)
+        if ((MI.isCall() || MI.isBranch()) && CLOpts.slh_indirect)
           hardenIndirectCallOrJumpInstr(MI, AddrRegToHardenedReg);
       }
 
       // After we finish hardening loads we handle interprocedural hardening if
       // enabled and relevant for this instruction.
-      if (!HardenInterprocedurally)
+      if (!CLOpts.slh_ip)
         continue;
       if (!MI.isCall() && !MI.isReturn())
         continue;
@@ -2015,7 +1972,7 @@ void X86SpeculativeLoadHardeningImpl::hardenReturnInstr(MachineInstr &MI) {
   const DebugLoc &Loc = MI.getDebugLoc();
   auto InsertPt = MI.getIterator();
 
-  if (FenceCallAndRet)
+  if (Subtarget->getCLOpts().slh_fence_call_and_ret)
     // No need to fence here as we'll fence at the return site itself. That
     // handles more cases than we can handle here.
     return;
@@ -2063,7 +2020,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughCall(
   auto InsertPt = MI.getIterator();
   const DebugLoc &Loc = MI.getDebugLoc();
 
-  if (FenceCallAndRet) {
+  if (Subtarget->getCLOpts().slh_fence_call_and_ret) {
     if (MI.isReturn())
       // Tail call, we don't return to this function.
       // FIXME: We should also handle noreturn calls.

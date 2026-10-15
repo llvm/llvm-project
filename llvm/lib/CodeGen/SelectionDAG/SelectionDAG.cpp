@@ -1486,6 +1486,10 @@ bool SelectionDAG::shouldOptForSize() const {
   return llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
 }
 
+const BasicBlock *SelectionDAG::getBasicBlock() const {
+  return FLI->MBB->getBasicBlock();
+}
+
 void SelectionDAG::allnodes_clear() {
   assert(&*AllNodes.begin() == &EntryNode);
   AllNodes.remove(AllNodes.begin());
@@ -2752,9 +2756,9 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
   }
 
-  if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2)) {
+  if (ConstantSDNode *N2C = isConstOrConstSplat(N2)) {
     const APInt &C2 = N2C->getAPIntValue();
-    if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
+    if (ConstantSDNode *N1C = isConstOrConstSplat(N1)) {
       const APInt &C1 = N1C->getAPIntValue();
 
       return getBoolConstant(ICmpInst::compare(C1, C2, getICmpCondCode(Cond)),
@@ -3354,7 +3358,23 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   if (auto OptAPInt = Op->bitcastToAPInt()) {
     // We know all of the bits for a constant!
-    return KnownBits::makeConstant(*std::move(OptAPInt));
+    APInt V = *std::move(OptAPInt);
+
+    // Swap the low-order and high-order double of a ppc_fp128 when casting to
+    // i128, see #44482.
+    //
+    // A ppc_fp128 is two doubles, with the high-order double stored at the
+    // lower address. Reading that as an integer therefore puts the high-order
+    // double in the high 64 bits on big-endian targets and in the low 64 bits
+    // on little-endian targets.
+    //
+    // But APFloat::bitcastToAPInt is endianness-agnostic and always places the
+    // high-order double in the low 64 bits. Hence the two doubles must be
+    // flipped on big-endian targets.
+    if (getDataLayout().isBigEndian() && Op.getValueType() == MVT::ppcf128)
+      V = V.rotl(64);
+
+    return KnownBits::makeConstant(V);
   }
 
   if (Depth >= MaxRecursionDepth)
@@ -5337,10 +5357,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return std::min(Tmp, Tmp2) - 1;
   case ISD::MUL: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
-    unsigned SignBitsOp0 = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned SignBitsOp0 =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (SignBitsOp0 == 1)
       break;
-    unsigned SignBitsOp1 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    unsigned SignBitsOp1 =
+        ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (SignBitsOp1 == 1)
       break;
     unsigned OutValidBits =
@@ -5363,7 +5385,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
-    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned NumSrcSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
       return NumSrcSignBits - (NumSrcBits - VTBits);
     break;
@@ -7466,6 +7489,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
     break;
+  case ISD::MASK_BEFOREFIRST:
+    // With a single lane, the result is true iff that lane is false.
+    if (VT.getVectorElementCount().isScalar())
+      return getLogicalNOT(DL, N1, VT);
+    break;
   case ISD::VECTOR_REPEAT:
     assert(N1.getValueType().isFixedLengthVector() &&
            "VECTOR_REPEAT requires a fixed-length vector operand");
@@ -8255,6 +8283,62 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                                    : getBuildVector(VT, DL, ScalarResults);
   NewSDValueDbgMsg(V, "New node fold constant vector: ", this);
   return V;
+}
+
+SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                             SDVTList VTList,
+                                             ArrayRef<SDValue> Ops,
+                                             SDNodeFlags Flags) {
+  if (VTList.NumVTs == 1)
+    return FoldConstantArithmetic(Opcode, DL, VTList.VTs[0], Ops, Flags);
+
+  switch (Opcode) {
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+  case ISD::SMULO:
+  case ISD::UMULO: {
+    // TODO: Support non-splat vector constants.
+    ConstantSDNode *C1 = isConstOrConstSplat(Ops[0]);
+    ConstantSDNode *C2 = isConstOrConstSplat(Ops[1]);
+    if (!C1 || !C2 || C1->isOpaque() || C2->isOpaque())
+      return SDValue();
+
+    const APInt &V1 = C1->getAPIntValue(), &V2 = C2->getAPIntValue();
+    bool Overflow;
+    APInt Result;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected overflow opcode");
+    case ISD::SADDO:
+      Result = V1.sadd_ov(V2, Overflow);
+      break;
+    case ISD::UADDO:
+      Result = V1.uadd_ov(V2, Overflow);
+      break;
+    case ISD::SSUBO:
+      Result = V1.ssub_ov(V2, Overflow);
+      break;
+    case ISD::USUBO:
+      Result = V1.usub_ov(V2, Overflow);
+      break;
+    case ISD::SMULO:
+      Result = V1.smul_ov(V2, Overflow);
+      break;
+    case ISD::UMULO:
+      Result = V1.umul_ov(V2, Overflow);
+      break;
+    }
+
+    EVT VT = VTList.VTs[0];
+    return getNode(ISD::MERGE_VALUES, DL, VTList,
+                   {getConstant(Result, DL, VT),
+                    getBoolConstant(Overflow, DL, VTList.VTs[1], VT)},
+                   Flags);
+  }
+  }
+  return SDValue();
 }
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
@@ -10480,10 +10564,14 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
 
+    MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
     TargetLowering::ArgListTy Args;
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
-    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(getAnyExtOrTrunc(Src, dl, IntVT),
+                      Type::getIntNTy(Ctx, LibInfo->getIntSize()),
+                      LibInfo->getExtAttrForI32Param());
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
+
     CLI.setLibCallee(Libcalls->getLibcallImplCallingConv(MemsetImpl),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),
@@ -12027,6 +12115,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     assert(Op.getOpcode() != ISD::DELETED_NODE &&
            "Operand is DELETED_NODE!");
 #endif
+
+  if (SDValue V = FoldConstantArithmetic(Opcode, DL, VTList, Ops, Flags))
+    return V;
 
   switch (Opcode) {
   case ISD::SADDO:
@@ -13925,6 +14016,10 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, const APInt &DemandedElts,
     }
   }
 
+  if (N.getOpcode() == ISD::MERGE_VALUES)
+    return isConstOrConstSplat(N.getOperand(N.getResNo()), DemandedElts,
+                               AllowUndefs, AllowTruncation);
+
   return nullptr;
 }
 
@@ -13979,12 +14074,6 @@ bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   ConstantSDNode *C =
       isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation=*/true);
   return C && C->getAPIntValue().countTrailingOnes() >= BitWidth;
-}
-
-bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {
-  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && APInt::isSameValue(C->getAPIntValue(),
-                                 APInt(C->getAPIntValue().getBitWidth(), 1));
 }
 
 bool llvm::isZeroOrZeroSplat(SDValue N, bool AllowUndefs) {
@@ -14499,7 +14588,8 @@ MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
     llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     if (AlignBits)
-      return commonAlignment(Align(1ull << std::min(31U, AlignBits)), GVOffset);
+      return commonAlignment(Align::fromLog2(std::min(31U, AlignBits)),
+                             GVOffset);
   }
 
   // If this is a direct reference to a stack slot, use information about the
@@ -15088,9 +15178,9 @@ std::optional<bool> SelectionDAG::isBoolConstant(SDValue N) const {
   if (!Const)
     return std::nullopt;
 
-  EVT VT = N->getValueType(0);
+  EVT VT = N.getValueType();
   const APInt CVal = Const->getAPIntValue().trunc(VT.getScalarSizeInBits());
-  switch (TLI->getBooleanContents(N.getValueType())) {
+  switch (TLI->getBooleanContents(VT)) {
   case TargetLowering::ZeroOrOneBooleanContent:
     if (CVal.isOne())
       return true;
@@ -15232,24 +15322,28 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
 /// \param LibFunc Reference to library function (value of RTLIB::Libcall).
 /// \param Ptr Pointer used to save/load state.
 /// \param InChain Ingoing token chain.
+/// \param Node Node being legalized
 /// \returns Outgoing chain token.
 SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                            SDValue InChain,
-                                            const SDLoc &DLoc) {
+                                            SDValue InChain, SDNode *Node) {
   assert(InChain.getValueType() == MVT::Other && "Expected token chain");
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::LibcallImpl LibcallImpl =
       Libcalls->getLibcallImpl(static_cast<RTLIB::Libcall>(LibFunc));
-  if (LibcallImpl == RTLIB::Unsupported)
-    reportFatalUsageError("emitting call to unsupported libcall");
+  if (LibcallImpl == RTLIB::Unsupported) {
+    getContext()->emitError(Twine("no libcall available for ") +
+                            Node->getOperationName(this));
+    return InChain;
+  }
 
+  TargetLowering::ArgListTy Args;
+  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   SDValue Callee =
       getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
-      Libcalls->getLibcallImplCallingConv(LibcallImpl),
-      Type::getVoidTy(*getContext()), Callee, std::move(Args));
+  CLI.setDebugLoc(SDLoc(Node))
+      .setChain(InChain)
+      .setLibCallee(Libcalls->getLibcallImplCallingConv(LibcallImpl),
+                    Type::getVoidTy(*getContext()), Callee, std::move(Args));
   return TLI->LowerCallTo(CLI).second;
 }
 

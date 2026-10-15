@@ -43,4 +43,4 @@ entry:
 
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"shared: %in"}
-!3 = distinct !{!3, !"shared"}
+!3 = distinct !{!3, i1 false, !"shared"}

@@ -85,9 +85,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "Incompatible kernel argument version for plugin");
     // Cooperative kernel launch is not supported for host
     if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
@@ -140,7 +137,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   ~GenELF64DeviceTy() {}
 
   /// Initialize the device, which is a no-op
-  Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
+    return Plugin::success();
+  }
 
   /// Unload the binary image
   ///
@@ -485,10 +485,10 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   }
 
   Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            void *HostPtr, TargetAllocTy Kind,
-                            size_t Alignment) override {
-    auto PtrOrErr =
-        PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
+                            void *HostPtr, TargetAllocTy Kind, size_t Alignment,
+                            GenericProfilerTy *ProfilerPtr) override {
+    auto PtrOrErr = PluginContextTy::allocate(Device, Size, HostPtr, Kind,
+                                              Alignment, ProfilerPtr);
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     void *Ptr = *PtrOrErr;
@@ -497,13 +497,13 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
     return Ptr;
   }
 
-  Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                   TargetAllocTy Kind) override {
+  Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                   GenericProfilerTy *ProfilerPtr) override {
     {
       std::lock_guard<std::mutex> Lock(AllocsMutex);
       Allocs.erase(Ptr);
     }
-    return PluginContextTy::deallocate(Device, Ptr, Kind);
+    return PluginContextTy::deallocate(Device, Ptr, Kind, ProfilerPtr);
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {

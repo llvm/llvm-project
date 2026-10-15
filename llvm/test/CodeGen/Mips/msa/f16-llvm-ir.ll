@@ -3545,9 +3545,9 @@ define half @uitofp_i64_f16(i64 %x) {
 ; MIPSR6-N32-NEXT:    dmtc1 $1, $f0
 ; MIPSR6-N32-NEXT:    cvt.s.l $f0, $f0
 ; MIPSR6-N32-NEXT:    add.s $f0, $f0, $f0
-; MIPSR6-N32-NEXT:    slti $1, $4, 0
 ; MIPSR6-N32-NEXT:    dmtc1 $4, $f1
 ; MIPSR6-N32-NEXT:    cvt.s.l $f1, $f1
+; MIPSR6-N32-NEXT:    slti $1, $4, 0
 ; MIPSR6-N32-NEXT:    mtc1 $1, $f2
 ; MIPSR6-N32-NEXT:    sel.s $f2, $f1, $f0
 ; MIPSR6-N32-NEXT:    splati.w $w0, $w2[0]
@@ -3563,9 +3563,9 @@ define half @uitofp_i64_f16(i64 %x) {
 ; MIPSR6-N64-NEXT:    dmtc1 $1, $f0
 ; MIPSR6-N64-NEXT:    cvt.s.l $f0, $f0
 ; MIPSR6-N64-NEXT:    add.s $f0, $f0, $f0
-; MIPSR6-N64-NEXT:    slti $1, $4, 0
 ; MIPSR6-N64-NEXT:    dmtc1 $4, $f1
 ; MIPSR6-N64-NEXT:    cvt.s.l $f1, $f1
+; MIPSR6-N64-NEXT:    slti $1, $4, 0
 ; MIPSR6-N64-NEXT:    mtc1 $1, $f2
 ; MIPSR6-N64-NEXT:    sel.s $f2, $f1, $f0
 ; MIPSR6-N64-NEXT:    splati.w $w0, $w2[0]

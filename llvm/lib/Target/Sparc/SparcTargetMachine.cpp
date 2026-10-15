@@ -81,7 +81,8 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
           getEffectiveSparcCodeModel(CM, getEffectiveRelocModel(RM),
                                      TT.isSPARC64(), JIT),
           OL),
-      CLOpts(SparcOptions::Global),
+      CLOpts(cl::LibraryOptionsContext::get<SparcOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
 }

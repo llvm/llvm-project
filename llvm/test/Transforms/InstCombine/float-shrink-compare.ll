@@ -493,7 +493,7 @@ define i1 @test_fmaximum_num(float %x, float %y, float %z) {
 
 define i1 @test19(float %x, float %y, float %z) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[COPYSIGNF:%.*]] = call float @copysignf(float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[COPYSIGNF:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[COPYSIGNF]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;

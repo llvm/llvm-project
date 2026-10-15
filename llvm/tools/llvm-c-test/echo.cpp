@@ -422,8 +422,9 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       for (int i = 1; i <= NumIdx; i++)
         Idx.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
 
-      return LLVMConstGEPWithNoWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
-                                         LLVMGEPGetNoWrapFlags(Cst));
+      return LLVMConstPtrAddFromIndices(LLVMGetModuleDataLayout(M), ElemTy, Ptr,
+                                        Idx.data(), NumIdx,
+                                        LLVMGEPGetNoWrapFlags(Cst));
     }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
@@ -1262,6 +1263,7 @@ FunDecl:
     LLVMTypeRef Ty = TypeCloner(M).Clone(LLVMGlobalGetValueType(Cur));
 
     auto F = LLVMAddFunction(M, Name, Ty);
+    LLVMSetDSOLocal(F, LLVMIsDSOLocal(Cur));
 
     // Copy attributes
     for (int i = LLVMAttributeFunctionIndex, c = LLVMCountParams(F);
@@ -1431,6 +1433,7 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     LLVMSetSection(G, LLVMGetSection(Cur));
     LLVMSetVisibility(G, LLVMGetVisibility(Cur));
     LLVMSetUnnamedAddress(G, LLVMGetUnnamedAddress(Cur));
+    LLVMSetDSOLocal(G, LLVMIsDSOLocal(Cur));
     LLVMSetAlignment(G, LLVMGetAlignment(Cur));
 
     Next = LLVMGetNextGlobal(Cur);
@@ -1533,6 +1536,7 @@ AliasClone:
 
     LLVMSetLinkage(Alias, LLVMGetLinkage(Cur));
     LLVMSetUnnamedAddress(Alias, LLVMGetUnnamedAddress(Cur));
+    LLVMSetDSOLocal(Alias, LLVMIsDSOLocal(Cur));
 
     Next = LLVMGetNextGlobalAlias(Cur);
     if (Next == nullptr) {
