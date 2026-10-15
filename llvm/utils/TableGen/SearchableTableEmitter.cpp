@@ -608,11 +608,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
 
   bool HasStrings = false;
   for (const auto &Field : Table.Fields)
-    if (isa<StringRecTy>(Field.RecType) && !Field.IsCode)
-      HasStrings |= any_of(Table.Entries, [&](const Record *Entry) {
-        return !cast<StringInit>(Entry->getValueInit(Field.Name))
-                    ->hasCodeFormat();
-      });
+    HasStrings |= isa<StringRecTy>(Field.RecType);
   if (HasStrings)
     OS << "StringRef get" << Table.CppTypeName << "Str(StringTable::Offset);\n";
 

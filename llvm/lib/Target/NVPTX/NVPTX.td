@@ -146,5 +146,3 @@ def NVPTX : Target {
   let InstructionSet = NVPTXInstrInfo;
   let AssemblyWriters = [NVPTXAsmWriter];
 }
-
-include "NVPTXIntrinsicInfo.td"
