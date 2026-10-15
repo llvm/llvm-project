@@ -18874,25 +18874,29 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     }
   }
 
-  // Truncate 64-bit setcc to test only upper 32-bits of its operands in the
-  // following cases where information about the lower 32-bits of its operands
-  // is known:
-  //
-  // If LHS.lo32 == RHS.lo32:
-  //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, eq/ne
-  // If LHS.lo32 != RHS.lo32:
-  //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, false/true
-  // If LHS.lo32 >= RHS.lo32 (unsigned):
-  //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]lt/ge
-  // If LHS.lo32 > RHS.lo32 (unsigned):
-  //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]lt/ge
-  // If LHS.lo32 <= RHS.lo32 (unsigned):
-  //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]le/gt
-  // If LHS.lo32 < RHS.lo32 (unsigned):
-  //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]le/gt
+  // Truncate 64-bit setcc to only test upper or lower 32-bits.
   if (VT == MVT::i64) {
-    const KnownBits LHSKnownLo32 = DAG.computeKnownBits(LHS).trunc(32);
-    const KnownBits RHSKnownLo32 = DAG.computeKnownBits(RHS).trunc(32);
+    const KnownBits LHSKnown = DAG.computeKnownBits(LHS);
+    const KnownBits RHSKnown = DAG.computeKnownBits(RHS);
+    const KnownBits LHSKnownLo32 = LHSKnown.trunc(32);
+    const KnownBits RHSKnownLo32 = RHSKnown.trunc(32);
+    bool IsIntegerSetCC = true;
+    // Truncate 64-bit setcc to test only upper 32-bits of its operands in the
+    // following cases where information about the lower 32-bits of its operands
+    // is known:
+    //
+    // If LHS.lo32 == RHS.lo32:
+    //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, eq/ne
+    // If LHS.lo32 != RHS.lo32:
+    //    setcc LHS, RHS, eq/ne => setcc LHS.hi32, RHS.hi32, false/true
+    // If LHS.lo32 >= RHS.lo32 (unsigned):
+    //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]lt/ge
+    // If LHS.lo32 > RHS.lo32 (unsigned):
+    //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]lt/ge
+    // If LHS.lo32 <= RHS.lo32 (unsigned):
+    //    setcc LHS, RHS, [u]le/gt => LHS.hi32, RHS.hi32, [u]le/gt
+    // If LHS.lo32 < RHS.lo32 (unsigned):
+    //    setcc LHS, RHS, [u]lt/ge => LHS.hi32, RHS.hi32, [u]le/gt
 
     // NewCC is valid iff we can truncate the setcc to only test the upper 32
     // bits
@@ -18900,6 +18904,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
 
     switch (CC) {
     default:
+      IsIntegerSetCC = false;
       break;
     case ISD::SETEQ: {
       const std::optional<bool> KnownEq =
@@ -18962,6 +18967,41 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     if (NewCC != ISD::SETCC_INVALID)
       return DAG.getSetCC(SL, N->getValueType(0), getHiHalf64(LHS, DAG),
                           getHiHalf64(RHS, DAG), NewCC);
+
+    // Truncate 64-bit setcc to test only lower 32-bits when upper 32-bits are
+    // known equal.
+    if (IsIntegerSetCC) {
+      const KnownBits LHSKnownHi32 = LHSKnown.extractBits(32, 32);
+      const KnownBits RHSKnownHi32 = RHSKnown.extractBits(32, 32);
+      const std::optional<bool> KnownEq =
+          KnownBits::eq(LHSKnownHi32, RHSKnownHi32);
+
+      if (KnownEq && *KnownEq) {
+        ISD::CondCode NewCC = CC;
+
+        // For signed comparisons, convert to unsigned since upper halves match
+        switch (CC) {
+        case ISD::SETGT:
+          NewCC = ISD::SETUGT;
+          break;
+        case ISD::SETGE:
+          NewCC = ISD::SETUGE;
+          break;
+        case ISD::SETLT:
+          NewCC = ISD::SETULT;
+          break;
+        case ISD::SETLE:
+          NewCC = ISD::SETULE;
+          break;
+        default:
+          break;
+        }
+
+        SDValue LHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+        SDValue RHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
+        return DAG.getSetCC(SL, N->getValueType(0), LHSLo, RHSLo, NewCC);
+      }
+    }
   }
 
   // Eliminate setcc by using carryout from add/sub instruction
