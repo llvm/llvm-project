@@ -149,10 +149,8 @@ define void @select_v8f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI9_0)
-; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI9_0)
-; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a0, 0
+; CHECK-NEXT:    xvextrins.w $xr1, $xr0, 34
+; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x float>, ptr %a0
   %v1 = load <8 x float>, ptr %a1
@@ -201,10 +199,8 @@ define void @select_v4f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a1, 0
 ; LA64-NEXT:    xvld $xr1, $a2, 0
-; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
-; LA64-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI11_0)
-; LA64-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; LA64-NEXT:    xvst $xr2, $a0, 0
+; LA64-NEXT:    xvshuf4i.d $xr0, $xr1, 12
+; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <4 x double>, ptr %a0
   %v1 = load <4 x double>, ptr %a1
