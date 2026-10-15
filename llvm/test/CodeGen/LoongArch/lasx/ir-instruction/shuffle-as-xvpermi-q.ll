@@ -7,12 +7,8 @@ define void @xvpermiq_v32i8(ptr %src, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
-; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 78
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 33
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %src
   %b = load <32 x i8>, ptr %dst
@@ -26,12 +22,8 @@ define void @xvpermiq_v16i16(ptr %src, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
-; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 78
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 3
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, ptr %src
   %b = load <16 x i16>, ptr %dst
@@ -45,10 +37,8 @@ define void @xvpermiq_v8i32(ptr %src, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 48
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, ptr %src
   %b = load <8 x i32>, ptr %dst
@@ -62,12 +52,8 @@ define void @xvpermiq_v8f32(ptr %src, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 68
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 2
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %src
   %b = load <8 x float>, ptr %dst
@@ -81,12 +67,8 @@ define void @xvpermiq_v4i64(ptr %src, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 238
-; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 238
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 49
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i64>, ptr %src
   %b = load <4 x i64>, ptr %dst
@@ -100,10 +82,8 @@ define void @xvpermiq_v4f64(ptr %src, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a1, 0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, ptr %src
   %b = load <4 x double>, ptr %dst
