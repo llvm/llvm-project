@@ -1486,6 +1486,10 @@ bool SelectionDAG::shouldOptForSize() const {
   return llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
 }
 
+const BasicBlock *SelectionDAG::getBasicBlock() const {
+  return FLI->MBB->getBasicBlock();
+}
+
 void SelectionDAG::allnodes_clear() {
   assert(&*AllNodes.begin() == &EntryNode);
   AllNodes.remove(AllNodes.begin());
@@ -2752,9 +2756,9 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
   }
 
-  if (ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2)) {
+  if (ConstantSDNode *N2C = isConstOrConstSplat(N2)) {
     const APInt &C2 = N2C->getAPIntValue();
-    if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
+    if (ConstantSDNode *N1C = isConstOrConstSplat(N1)) {
       const APInt &C1 = N1C->getAPIntValue();
 
       return getBoolConstant(ICmpInst::compare(C1, C2, getICmpCondCode(Cond)),
@@ -7484,6 +7488,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VECREDUCE_UMIN:
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
+    break;
+  case ISD::MASK_BEFOREFIRST:
+    // With a single lane, the result is true iff that lane is false.
+    if (VT.getVectorElementCount().isScalar())
+      return getLogicalNOT(DL, N1, VT);
     break;
   case ISD::VECTOR_REPEAT:
     assert(N1.getValueType().isFixedLengthVector() &&
@@ -14007,6 +14016,10 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, const APInt &DemandedElts,
     }
   }
 
+  if (N.getOpcode() == ISD::MERGE_VALUES)
+    return isConstOrConstSplat(N.getOperand(N.getResNo()), DemandedElts,
+                               AllowUndefs, AllowTruncation);
+
   return nullptr;
 }
 
@@ -14061,12 +14074,6 @@ bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   ConstantSDNode *C =
       isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation=*/true);
   return C && C->getAPIntValue().countTrailingOnes() >= BitWidth;
-}
-
-bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {
-  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && APInt::isSameValue(C->getAPIntValue(),
-                                 APInt(C->getAPIntValue().getBitWidth(), 1));
 }
 
 bool llvm::isZeroOrZeroSplat(SDValue N, bool AllowUndefs) {
@@ -15171,9 +15178,9 @@ std::optional<bool> SelectionDAG::isBoolConstant(SDValue N) const {
   if (!Const)
     return std::nullopt;
 
-  EVT VT = N->getValueType(0);
+  EVT VT = N.getValueType();
   const APInt CVal = Const->getAPIntValue().trunc(VT.getScalarSizeInBits());
-  switch (TLI->getBooleanContents(N.getValueType())) {
+  switch (TLI->getBooleanContents(VT)) {
   case TargetLowering::ZeroOrOneBooleanContent:
     if (CVal.isOne())
       return true;

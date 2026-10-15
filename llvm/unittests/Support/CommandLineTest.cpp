@@ -2346,7 +2346,7 @@ struct TestLibrary final : cl::LibraryOptions {
     Fn("library-flag", "", "A flag");
     Fn("library-int", " <int>", "");
   }
-  Error parse(ArrayRef<const char *> Argv, unsigned &Consumed,
+  Error parse(void *, ArrayRef<const char *> Argv, unsigned &Consumed,
               BumpPtrAllocator &) override {
     Consumed = 1;
     Args.push_back(Argv[0]);
@@ -2360,6 +2360,8 @@ struct TestLibrary final : cl::LibraryOptions {
       return createStringError("bad value");
     return Error::success();
   }
+  void *global() override { return this; }
+  void *copyGlobal(BumpPtrAllocator &) const override { return nullptr; }
   void reset() override { Args.clear(); }
 };
 

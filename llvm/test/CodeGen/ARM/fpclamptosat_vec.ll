@@ -118,8 +118,7 @@ define <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    vdup.32 d16, r5
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vdup.32 d17, r2
-; CHECK-NEXT:    vand q9, q4, q8
-; CHECK-NEXT:    vorn q8, q9, q8
+; CHECK-NEXT:    vorn q8, q4, q8
 ; CHECK-NEXT:    vmovn.i64 d0, q8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, r5, r11, pc}
@@ -384,11 +383,9 @@ define <4 x i32> @utest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    vdup.32 d16, r7
 ; CHECK-NEXT:    vdup.32 d19, r2
 ; CHECK-NEXT:    vmov.32 d11[1], r4
-; CHECK-NEXT:    vand q10, q4, q9
+; CHECK-NEXT:    vorn q9, q4, q9
 ; CHECK-NEXT:    vdup.32 d17, r3
-; CHECK-NEXT:    vorn q9, q10, q9
-; CHECK-NEXT:    vand q11, q5, q8
-; CHECK-NEXT:    vorn q8, q11, q8
+; CHECK-NEXT:    vorn q8, q5, q8
 ; CHECK-NEXT:    vmovn.i64 d0, q9
 ; CHECK-NEXT:    vmovn.i64 d1, q8
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
@@ -836,11 +833,9 @@ define <4 x i32> @utest_f16i32(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    vdup.32 d18, r5
 ; CHECK-NEON-NEXT:    vdup.32 d16, r7
 ; CHECK-NEON-NEXT:    vdup.32 d19, r2
-; CHECK-NEON-NEXT:    vand q10, q4, q9
 ; CHECK-NEON-NEXT:    vdup.32 d17, r3
-; CHECK-NEON-NEXT:    vand q11, q5, q8
-; CHECK-NEON-NEXT:    vorn q9, q10, q9
-; CHECK-NEON-NEXT:    vorn q8, q11, q8
+; CHECK-NEON-NEXT:    vorn q9, q4, q9
+; CHECK-NEON-NEXT:    vorn q8, q5, q8
 ; CHECK-NEON-NEXT:    vmovn.i64 d0, q9
 ; CHECK-NEON-NEXT:    vmovn.i64 d1, q8
 ; CHECK-NEON-NEXT:    vpop {d8, d9, d10, d11}
@@ -910,11 +905,9 @@ define <4 x i32> @utest_f16i32(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    mvnne r2, #0
 ; CHECK-FP16-NEXT:    vdup.32 d16, r7
 ; CHECK-FP16-NEXT:    vdup.32 d19, r2
-; CHECK-FP16-NEXT:    vand q10, q5, q9
 ; CHECK-FP16-NEXT:    vdup.32 d17, r3
-; CHECK-FP16-NEXT:    vand q11, q6, q8
-; CHECK-FP16-NEXT:    vorn q9, q10, q9
-; CHECK-FP16-NEXT:    vorn q8, q11, q8
+; CHECK-FP16-NEXT:    vorn q9, q5, q9
+; CHECK-FP16-NEXT:    vorn q8, q6, q8
 ; CHECK-FP16-NEXT:    vmovn.i64 d0, q9
 ; CHECK-FP16-NEXT:    vmovn.i64 d1, q8
 ; CHECK-FP16-NEXT:    vpop {d8}
