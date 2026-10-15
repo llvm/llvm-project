@@ -462,7 +462,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtP() && !Subtarget.is64Bit()) {
     // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
     // paadd.w, paaddu.w and extracting.
-    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, MVT::i32, Legal);
+    setOperationAction(
+        {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGSUBFLOORS, ISD::AVGSUBFLOORU},
+        MVT::i32, Legal);
   }
 
   if (Subtarget.hasStdExtZbkc()) {
@@ -549,7 +551,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SADDSAT, VTs, Legal);
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
-    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
+    setOperationAction(
+        {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGSUBFLOORS, ISD::AVGSUBFLOORU},
+        VTs, Legal);
     setOperationAction(ISD::BITREVERSE, VTs, Legal);
     setOperationAction(ISD::VECTOR_SHUFFLE, VTs, Custom);
     setOperationAction(ISD::VECTOR_REVERSE, VTs, Legal);
@@ -609,7 +613,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           Legal);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, P64VecVTs, Legal);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
-      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, P64VecVTs, Legal);
+      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGSUBFLOORS,
+                          ISD::AVGSUBFLOORU},
+                         P64VecVTs, Legal);
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          P64VecVTs, Legal);
       setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU},
@@ -12412,9 +12418,9 @@ static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
   case Intrinsic::riscv_aaddu_u32:
     return ISD::AVGFLOORU;
   case Intrinsic::riscv_asub_i32:
-    return RISCVISD::ASUB;
+    return ISD::AVGSUBFLOORS;
   case Intrinsic::riscv_asubu_u32:
-    return RISCVISD::ASUBU;
+    return ISD::AVGSUBFLOORU;
   }
 }
 
@@ -12973,12 +12979,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       OddOpc = ISD::SSUBSAT;
       break;
     case Intrinsic::riscv_paas:
-      EvenOpc = RISCVISD::ASUB;
+      EvenOpc = ISD::AVGSUBFLOORS;
       OddOpc = ISD::AVGFLOORS;
       break;
     case Intrinsic::riscv_pasa:
       EvenOpc = ISD::AVGFLOORS;
-      OddOpc = RISCVISD::ASUB;
+      OddOpc = ISD::AVGSUBFLOORS;
       break;
     default:
       llvm_unreachable("Unexpected exchanged add/sub intrinsic");
@@ -13060,10 +13066,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       Opc = ISD::AVGFLOORU;
       break;
     case Intrinsic::riscv_pasub:
-      Opc = RISCVISD::ASUB;
+      Opc = ISD::AVGSUBFLOORS;
       break;
     case Intrinsic::riscv_pasubu:
-      Opc = RISCVISD::ASUBU;
+      Opc = ISD::AVGSUBFLOORU;
       break;
     case Intrinsic::riscv_pabd:
       Opc = ISD::ABDS;
@@ -17585,8 +17591,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NewRes));
     break;
   }
-  case RISCVISD::ASUB:
-  case RISCVISD::ASUBU:
   case RISCVISD::MULHSU:
   case RISCVISD::MULHR:
   case RISCVISD::MULHRU:
@@ -17595,18 +17599,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     unsigned Opcode = N->getOpcode();
-    // PMULH* variants don't support i8
-    [[maybe_unused]] bool IsMulH =
-        Opcode == RISCVISD::MULHSU || Opcode == RISCVISD::MULHR ||
-        Opcode == RISCVISD::MULHRU || Opcode == RISCVISD::MULHRSU;
-    assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
+    assert(VT == MVT::v2i16);
     MVT NewVT = MVT::v4i16;
-    if (VT == MVT::v4i8)
-      NewVT = MVT::v8i8;
     SDValue Undef = DAG.getUNDEF(VT);
-    Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op0, Undef});
-    Op1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op1, Undef});
-    Results.push_back(DAG.getNode(Opcode, DL, NewVT, {Op0, Op1}));
+    Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Op0, Undef);
+    Op1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Op1, Undef);
+    Results.push_back(DAG.getNode(Opcode, DL, NewVT, Op0, Op1));
     return;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -17975,10 +17973,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = ISD::AVGFLOORU;
         break;
       case Intrinsic::riscv_pasub:
-        Opc = RISCVISD::ASUB;
+        Opc = ISD::AVGSUBFLOORS;
         break;
       case Intrinsic::riscv_pasubu:
-        Opc = RISCVISD::ASUBU;
+        Opc = ISD::AVGSUBFLOORU;
         break;
       case Intrinsic::riscv_pabd:
         Opc = ISD::ABDS;
@@ -19718,9 +19716,9 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     if (ShAmtVal != 1)
       return SDValue();
     if (LHSIsSExt && RHSIsSExt)
-      Opc = RISCVISD::ASUB;
+      Opc = ISD::AVGSUBFLOORS;
     else if (LHSIsZExt && RHSIsZExt)
-      Opc = RISCVISD::ASUBU;
+      Opc = ISD::AVGSUBFLOORU;
     else
       return SDValue();
     break;

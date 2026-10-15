@@ -266,7 +266,7 @@ class BC1F_FT<string opstr, DAGOperand opnd,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   let hasFCCRegOperand = 1;
 }
 
@@ -277,7 +277,7 @@ class BC1XL_FT<string opstr, DAGOperand opnd> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   let hasFCCRegOperand = 1;
 }
 
@@ -1020,8 +1020,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//
-def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>, ISA_MIPS1;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0), (MTC1 R0)>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 R0))>, ISA_MIPS1;
 
 def : MipsPat<(f32 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
@@ -1054,8 +1054,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 (CVT_D32_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_32;
 }
 
-def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
-def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
+def : MipsPat<(f64 fpimm0), (DMTC1 R0_64)>, ISA_MIPS3, GPR_64, FGR_64;
+def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 R0_64))>, ISA_MIPS3, GPR_64,
       FGR_64;
 
 def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 0)),

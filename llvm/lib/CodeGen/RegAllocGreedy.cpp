@@ -2622,7 +2622,10 @@ BlockFrequency RAGreedy::getBrokenHintFreq(const HintsInfo &List,
 /// For a given live range, profitability is determined by the sum of the
 /// frequencies of the non-identity copies it would introduce with the old
 /// and new register.
-void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
+/// \p NoRecolorRegs holds registers whose walk is known to recolor nothing.
+/// It is cleared whenever a recoloring happens.
+void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg,
+                                 DenseSet<Register> &NoRecolorRegs) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
@@ -2633,6 +2636,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // it will propagate to the ones that are copy-related with it.
   SmallDenseSet<Register, 8> Visited = {Reg};
   SmallVector<Register, 2> RecoloringCandidates = {Reg};
+  SmallVector<Register, 8> Reached;
+  bool Changed = false;
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
@@ -2684,6 +2689,9 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
       // Recolor the live-range.
       Matrix->unassign(LI);
       Matrix->assign(LI, PhysReg);
+      Changed = true;
+    } else {
+      Reached.push_back(Reg);
     }
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
@@ -2693,6 +2701,11 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());
+
+  if (Changed)
+    NoRecolorRegs.clear();
+  else
+    NoRecolorRegs.insert_range(Reached);
 }
 
 /// Try to recolor broken hints.
@@ -2732,14 +2745,15 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
 /// This is likely that we can assign the same register for b, c, and d,
 /// getting rid of 2 copies.
 void RAGreedy::tryHintsRecoloring() {
+  DenseSet<Register> NoRecolorRegs;
   for (const LiveInterval *LI : SetOfBrokenHints) {
     assert(LI->reg().isVirtual() &&
            "Recoloring is possible only for virtual registers");
     // Some dead defs may be around (e.g., because of debug uses).
     // Ignore those.
-    if (!VRM->hasPhys(LI->reg()))
+    if (!VRM->hasPhys(LI->reg()) || NoRecolorRegs.contains(LI->reg()))
       continue;
-    tryHintRecoloring(*LI);
+    tryHintRecoloring(*LI, NoRecolorRegs);
   }
 }
 
