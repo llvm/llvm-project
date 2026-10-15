@@ -498,6 +498,26 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lockf
+  SRCS
+    lockf.cpp
+  HDRS
+    ../lockf.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.types.off_t
+    libc.hdr.types.struct_flock
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   lseek
   SRCS
     lseek.cpp

@@ -118,12 +118,12 @@ define void @call_f_va() nounwind {
 ;
 ; GISEL-LABEL: call_f_va:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    fmov s0, #1.00000000
-; GISEL-NEXT:    fmov w0, s0
+; GISEL-NEXT:    fmov s1, #1.00000000
 ; GISEL-NEXT:    mov w1, #2 // =0x2
 ; GISEL-NEXT:    fmov d0, #3.00000000
-; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    mov w3, #4 // =0x4
+; GISEL-NEXT:    fmov w0, s1
+; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    b other_f_va_fn
 entry:
   tail call void (float, i32, ...) @other_f_va_fn(float 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
@@ -151,12 +151,12 @@ define void @call_d_va() nounwind {
 ;
 ; GISEL-LABEL: call_d_va:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    fmov d0, #1.00000000
-; GISEL-NEXT:    fmov x0, d0
+; GISEL-NEXT:    fmov d1, #1.00000000
 ; GISEL-NEXT:    mov w1, #2 // =0x2
 ; GISEL-NEXT:    fmov d0, #3.00000000
-; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    mov w3, #4 // =0x4
+; GISEL-NEXT:    fmov x0, d1
+; GISEL-NEXT:    fmov x2, d0
 ; GISEL-NEXT:    b other_d_va_fn
 entry:
   tail call void (double, i32, ...) @other_d_va_fn(double 1.000000e+00, i32 2, double 3.000000e+00, i32 4)
