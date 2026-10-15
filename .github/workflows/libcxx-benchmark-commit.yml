@@ -211,14 +211,19 @@ jobs:
 
           cat "${COMMIT}.json"
 
-      - name: Submit to LNT
-        if: ${{ inputs.submit-lnt }}
-        env:
-          COMMIT: ${{ inputs.commit }}
-          LNT_URL: ${{ inputs.lnt-url }}
-        run: |
-          source .venv/bin/activate
-          libcxx/utils/ci/lnt/submit-benchmarks             \
-            --lnt-url "${LNT_URL}"                          \
-            --test-suite libcxx                             \
-            "${COMMIT}.json"
+      - name: Upload the LNT report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lnt-report
+          path: ${{ inputs.commit }}.json
+          if-no-files-found: error
+
+  submit:
+    needs:
+      - run-benchmarks
+    if: ${{ inputs.submit-lnt }}
+    uses: $/.github/workflows/libcxx-lnt-submit.yml
+    with:
+      artifact-name: lnt-report
+      test-suite: libcxx
+      lnt-url: ${{ inputs.lnt-url }}
