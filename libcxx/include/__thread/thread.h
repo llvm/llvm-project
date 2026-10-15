@@ -264,7 +264,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() _NOEXCEPT { return __t_; }
 
 #  if defined(_LIBCPP_BUILDING_LIBRARY) || !_LIBCPP_AVAILABILITY_HAS_HARDWARE_CONCURRENCY_FREE_FUNCTION
-  [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI static unsigned hardware_concurrency() _NOEXCEPT;
+  [[__nodiscard__]] static unsigned hardware_concurrency() _NOEXCEPT;
 #  else
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static unsigned hardware_concurrency() _NOEXCEPT {
     return std::__thread_hardware_concurrency();
