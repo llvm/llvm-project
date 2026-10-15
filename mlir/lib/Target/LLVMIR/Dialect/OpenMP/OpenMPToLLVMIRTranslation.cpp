@@ -8577,9 +8577,8 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                       iterInfo](llvm::IRBuilderBase &b,
                                 llvm::Value *linearIV) mutable
           -> llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> {
-        if (failed(convertIteratorRegion(linearIV, iterInfo,
-                                         itersOp.getRegion(), b,
-                                         moduleTranslation)))
+        if (failed(convertIteratorRegion(
+                linearIV, iterInfo, itersOp.getRegion(), b, moduleTranslation)))
           return llvm::make_error<PreviouslyReportedError>();
         // `mapInfoOp` (the omp.yield operand) has no translated value of its
         // own; its runtime address is its var_ptr operand.
