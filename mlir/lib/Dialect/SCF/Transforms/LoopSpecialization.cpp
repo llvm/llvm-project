@@ -233,6 +233,12 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
 /// original lower bound plus the step (i.e. skips the first iteration).
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
+  // TODO: Add support for unsigned loops. The current logic
+  // uses `affine.min` and `arith.index_cast`, which is incorrect for
+  // unsigned comparisons.
+  if (forOp.getUnsignedCmp())
+    return failure();
+
   RewriterBase::InsertionGuard guard(b);
   auto lbInt = getConstantIntValue(forOp.getLowerBound());
   auto ubInt = getConstantIntValue(forOp.getUpperBound());
