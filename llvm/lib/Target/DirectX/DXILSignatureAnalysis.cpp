@@ -96,6 +96,12 @@ static Error diagnoseSemanticType(const SemanticSignatureElement &E) {
       return signatureError(
           "SV_ShadingRate requires a scalar 16- or 32-bit unsigned integer");
     break;
+  case dxbc::PSV::SemanticKind::Barycentrics:
+    if (E.Rows != 1 || E.Cols != 3 ||
+        (E.CompType != ElementType::F16 && E.CompType != ElementType::F32))
+      return signatureError("SV_Barycentrics requires one row of three 16- or "
+                            "32-bit floating-point components");
+    break;
   default:
     break;
   }
@@ -113,6 +119,24 @@ static Error diagnoseSemanticIndex(const SemanticSignatureElement &E) {
     if (E.SemanticIndices.front() != 0)
       return signatureError("SV_VertexID requires semantic index 0");
     break;
+  case dxbc::PSV::SemanticKind::Barycentrics:
+    if (E.SemanticIndices.front() != 0)
+      return signatureError("SV_Barycentrics requires semantic index 0");
+    break;
+  default:
+    break;
+  }
+  return Error::success();
+}
+
+static Error
+diagnoseSemanticShaderModel(const SemanticSignatureElement &E,
+                            const VersionTuple &ShaderModelVersion) {
+  switch (E.SemanticKind) {
+  case dxbc::PSV::SemanticKind::Barycentrics:
+    if (ShaderModelVersion < VersionTuple(6, 1))
+      return signatureError("SV_Barycentrics requires shader model 6.1");
+    break;
   default:
     break;
   }
@@ -123,6 +147,7 @@ static Error parseSignature(Metadata *MD,
                             SmallVectorImpl<SemanticSignatureElement> &Out,
                             ModuleSignatureInfo &Info,
                             Triple::EnvironmentType Stage, IOType IO,
+                            const VersionTuple &ShaderModelVersion,
                             bool Native16, unsigned &Extent) {
   if (!MD)
     return Error::success();
@@ -172,13 +197,19 @@ static Error parseSignature(Metadata *MD,
     if (E.SemanticKind != ExpectedKind)
       return signatureError("semantic name and kind disagree at this signature "
                             "point");
-    if (!E.isAllocated())
-      return signatureError("signature element " + Twine(E.SigId) + " ('" +
-                            E.SemanticName + "') has no allocated location");
-    if (E.StartRow >= MaxSignatureRows ||
-        E.Rows > MaxSignatureRows - E.StartRow || E.StartCol + E.Cols > 4)
-      return signatureError(
-          "allocated signature element exceeds register bounds");
+    if (Interpretation == SemanticInterpretation::NotPacked) {
+      if (E.isAllocated())
+        return signatureError(
+            "SV_Barycentrics must not have an allocated location");
+    } else {
+      if (!E.isAllocated())
+        return signatureError("signature element " + Twine(E.SigId) + " ('" +
+                              E.SemanticName + "') has no allocated location");
+      if (E.StartRow >= MaxSignatureRows ||
+          E.Rows > MaxSignatureRows - E.StartRow || E.StartCol + E.Cols > 4)
+        return signatureError(
+            "allocated signature element exceeds register bounds");
+    }
     if (E.InterpMode == dxbc::PSV::InterpolationMode::Invalid)
       return signatureError("invalid interpolation mode");
 
@@ -189,6 +220,14 @@ static Error parseSignature(Metadata *MD,
       return Err;
     if (Error Err = diagnoseSemanticIndex(E))
       return Err;
+    if (Error Err = diagnoseSemanticShaderModel(E, ShaderModelVersion))
+      return Err;
+    if (E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics) {
+      using Mode = dxbc::PSV::InterpolationMode;
+      if (E.InterpMode == Mode::Undefined || E.InterpMode == Mode::Constant)
+        return signatureError(
+            "SV_Barycentrics requires perspective or noperspective interpolation");
+    }
 
     if (Stage == Triple::Vertex && IO == IOType::In &&
         (E.StartRow != Extent || E.StartCol != 0))
@@ -205,29 +244,31 @@ static Error parseSignature(Metadata *MD,
       return signatureError(
           "integer pixel inputs require constant interpolation");
 
-    // Co-packed elements must obey row constraints, even when their component
-    // masks do not overlap. Min-precision types occupy 32-bit components.
-    bool IsNative16 = Native16 && (E.CompType == ElementType::F16 ||
-                                   E.CompType == ElementType::I16 ||
-                                   E.CompType == ElementType::U16);
-    uint8_t Mask = E.getDeclaredMask();
-    for (unsigned Row = E.StartRow; Row != E.StartRow + E.Rows; ++Row) {
-      if (AllocatedColumns[Row] & Mask)
-        return signatureError("signature elements overlap at row " +
-                              Twine(Row) + " (element " + Twine(E.SigId) + ")");
-      if (AllocatedColumns[Row] && RowModes[Row] != E.InterpMode)
-        return signatureError("signature elements have different interpolation "
-                              "modes at row " +
-                              Twine(Row) + " (element " + Twine(E.SigId) + ")");
-      if (AllocatedColumns[Row] && RowNative16[Row] != IsNative16)
-        return signatureError("signature elements have different component "
-                              "widths at row " +
-                              Twine(Row) + " (element " + Twine(E.SigId) + ")");
-      AllocatedColumns[Row] |= Mask;
-      RowModes[Row] = E.InterpMode;
-      RowNative16[Row] = IsNative16;
+    if (E.isAllocated()) {
+      // Co-packed elements must obey row constraints, even when their component
+      // masks do not overlap. Min-precision types occupy 32-bit components.
+      bool IsNative16 = Native16 && (E.CompType == ElementType::F16 ||
+                                     E.CompType == ElementType::I16 ||
+                                     E.CompType == ElementType::U16);
+      uint8_t Mask = E.getDeclaredMask();
+      for (unsigned Row = E.StartRow; Row != E.StartRow + E.Rows; ++Row) {
+        if (AllocatedColumns[Row] & Mask)
+          return signatureError("signature elements overlap at row " +
+                                Twine(Row) + " (element " + Twine(E.SigId) + ")");
+        if (AllocatedColumns[Row] && RowModes[Row] != E.InterpMode)
+          return signatureError("signature elements have different interpolation "
+                                "modes at row " +
+                                Twine(Row) + " (element " + Twine(E.SigId) + ")");
+        if (AllocatedColumns[Row] && RowNative16[Row] != IsNative16)
+          return signatureError("signature elements have different component "
+                                "widths at row " +
+                                Twine(Row) + " (element " + Twine(E.SigId) + ")");
+        AllocatedColumns[Row] |= Mask;
+        RowModes[Row] = E.InterpMode;
+        RowNative16[Row] = IsNative16;
+      }
+      Extent = std::max(Extent, E.StartRow + E.Rows);
     }
-    Extent = std::max(Extent, E.StartRow + E.Rows);
     E.SemanticName = Info.Names.insert(E.SemanticName).first->getKey();
 
     // Access masks will be recomputed so reset to 0 here.
@@ -296,7 +337,7 @@ static Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   if (!CorrectType)
     return AccessError("signature access type disagrees with its element");
   uint8_t Mask = ((1U << Width) - 1) << Col->getZExtValue();
-  E.UsageMask |= Mask << E.StartCol;
+  E.UsageMask |= Mask << (E.isAllocated() ? E.StartCol : 0);
   if (!Row)
     E.DynIndexMask |= Mask;
   return Error::success();
@@ -312,7 +353,9 @@ static void buildDependencyMap(EntrySignature &Sig) {
   // dependencies without incorrectly claiming that unknown dependencies are
   // absent. Unused components and padding remain zero. Both DXIL and PSV use
   // this same map; a more precise dependency analysis can refine it later.
-  for (const auto &Input : Sig.Inputs)
+  for (const auto &Input : Sig.Inputs) {
+    if (!Input.isAllocated())
+      continue;
     for (unsigned IR = 0; IR != Input.Rows; ++IR)
       for (unsigned IC = 0; IC != 4; ++IC) {
         if (!(Input.UsageMask & (1U << IC)))
@@ -327,6 +370,7 @@ static void buildDependencyMap(EntrySignature &Sig) {
               Sig.InputOutputMap[Base + Bit / 32] |= 1U << (Bit % 32);
             }
       }
+  }
 }
 
 static Expected<ModuleSignatureInfo>
@@ -364,11 +408,12 @@ analyzeModule(Module &M, const ModuleMetadataInfo &MMI) {
       };
       if (Error Err =
               parseSignature(Record->getOperand(1), Sig.Inputs, Info, Sig.Stage,
-                             IOType::In, Sig.UseNative16Bit, Sig.InputVectors))
+                             IOType::In, MMI.ShaderModelVersion,
+                             Sig.UseNative16Bit, Sig.InputVectors))
         return AddContext(std::move(Err), "input");
-      if (Error Err = parseSignature(Record->getOperand(2), Sig.Outputs, Info,
-                                     Sig.Stage, IOType::Out, Sig.UseNative16Bit,
-                                     Sig.OutputVectors))
+      if (Error Err = parseSignature(
+              Record->getOperand(2), Sig.Outputs, Info, Sig.Stage, IOType::Out,
+              MMI.ShaderModelVersion, Sig.UseNative16Bit, Sig.OutputVectors))
         return AddContext(std::move(Err), "output");
       for (const Instruction &I : instructions(F))
         if (auto *II = dyn_cast<IntrinsicInst>(&I);
