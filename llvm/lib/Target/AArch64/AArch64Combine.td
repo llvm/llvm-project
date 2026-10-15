@@ -76,6 +76,14 @@ def emit_bzero : GICombineRule<
                                                            CInfo.EnableMinSize); }]),
   (apply [{ llvm::AArch64GISelUtils::applyEmitBZero(*${root}, B); }])>;
 
+// Convert store + shuffle to st2/st3/st4
+def interleave_store : GICombineRule<
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
+  (match (G_STORE $value, $addr):$root,
+         [{ return matchInterleavingStore(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyInterleavingStore(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -92,7 +100,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_sext,
                                       simplify_uaddo,
                                       memcpy_family_combines,
-                                      emit_bzero]> {
+                                      emit_bzero, interleave_store]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
