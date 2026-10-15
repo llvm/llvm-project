@@ -1360,6 +1360,7 @@ struct WholeProgramDevirtResolution {
     BranchFunnel, ///< When retpoline mitigation is enabled, use a branch funnel
                   ///< that is defined in the merged module. Otherwise same as
                   ///< Indir.
+    Speculative,  ///< Speculative devirtualization
   } TheKind = Indir;
 
   std::string SingleImplName;
