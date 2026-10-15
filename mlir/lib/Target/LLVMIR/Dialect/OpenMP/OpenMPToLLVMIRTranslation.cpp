@@ -5071,7 +5071,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.splitLinearFiniBB(builder, loopInfo->getExit());
     }
 
-    builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+    builder.SetInsertPoint((*regionBlock)->begin());
 
     for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
       linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
