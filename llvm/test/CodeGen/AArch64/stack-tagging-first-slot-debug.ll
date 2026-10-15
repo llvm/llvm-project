@@ -4,8 +4,6 @@
 
 ; The DBG_VALUE of %a_t must not affect which stack slot is pinned to the
 ; unoffset IRG result. The second RUN line removes only the debug information.
-source_filename = "first-slot-debug.ll"
-
 declare ptr @llvm.aarch64.irg.sp(i64)
 declare ptr @llvm.aarch64.tagp.p0(ptr, ptr, i64 immarg)
 declare void @use2(ptr, ptr)
