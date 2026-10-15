@@ -3962,7 +3962,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
     CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
 
     CodeGenModule &CGM = CGF.CGM;
-    if (CGM.getOpenMPRuntime().canPromoteToNoLoop()) {
+    if (CGM.getOpenMPRuntime().canPromoteToNoLoop(S)) {
       // Prepare the loop variables and their privatization.
       emitLoopIterationspaceVars(CGF, S);
       OMPLoopScope PreInitScope(CGF, S);
@@ -6591,7 +6591,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
           !isOpenMPTeamsDirective(S.getDirectiveKind()))
         EmitOMPReductionClauseInit(S, LoopScope);
 
-      const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop();
+      const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop(S);
       HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
       EmitOMPPrivateLoopCounters(S, LoopScope);
       (void)LoopScope.Privatize();

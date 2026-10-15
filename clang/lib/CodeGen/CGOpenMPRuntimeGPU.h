@@ -146,12 +146,11 @@ public:
   bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
                                    const VarDecl *VD) const override;
 
-  /// Check whether the target kernel being emitted is tagged SPMD_NO_LOOP, to
-  /// complete the promotion to a "no-loop" SPMD kernel, mirroring Flang's MLIR
-  /// promotion path.
-  bool canPromoteToNoLoop() const override {
-    return KernelAttrs.ExecFlags ==
-           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  /// Check whether \a S is the loop the target kernel being emitted was
+  /// promoted for, to complete the promotion to a "no-loop" SPMD kernel,
+  /// mirroring Flang's MLIR promotion path.
+  bool canPromoteToNoLoop(const OMPLoopDirective &S) const override {
+    return &S == NoLoopDirective;
   }
 
   /// Get call to __kmpc_alloc_shared
@@ -386,9 +385,9 @@ private:
   /// - otherwise.
   bool IsInTTDRegion = false;
 
-  /// The default attributes of the target region being emitted, filled in by
-  /// the kernel prologue and read back while the region's body is emitted.
-  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs KernelAttrs;
+  /// The loop the target region being emitted was promoted to no-loop for, set
+  /// by the kernel prologue and read back while the region's body is emitted.
+  const OMPLoopDirective *NoLoopDirective = nullptr;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;
