@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "DWARFExpressionPrinterImpl.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
