@@ -148,37 +148,25 @@ class LinkUnitName(unittest.TestCase):
         self.assertIsNone(self._name())
 
 
-class Conflicts(unittest.TestCase):
+class PresentArtifacts(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.ssaf_artifact_repo = configs.repository_for(self.tmp)
+        self.report = repository.get_ssaf_artifact_id(
+            build_graph.BuildArtifactId("/p/prg"),
+            repository.SSAFArtifactKind.CONFLICT_REPORT,
+        )
 
-    def _write(self, build_artifact_path, results):
+    def test_an_artifact_on_disk_is_found(self):
         path = utils.make_parents(
-            self.ssaf_artifact_repo.get_path_for_artifact(
-                repository.get_ssaf_artifact_id(
-                    build_graph.BuildArtifactId(build_artifact_path),
-                    repository.SSAFArtifactKind.CONFLICTS,
-                )
-            )
+            self.ssaf_artifact_repo.get_path_for_artifact(self.report)
         )
-        with open(path, "w") as handle:
-            json.dump({"version": "2.1.0", "runs": [{"results": results}]}, handle)
-        return path
+        open(path, "w").close()
+        self.assertEqual(path, self.ssaf_artifact_repo.get_path_if_present(self.report))
 
-    def test_a_merge_that_dropped_nothing_reports_nothing(self):
-        self._write("/p/prg", [])
-        self.assertEqual([], self.ssaf_artifact_repo.get_conflicts())
-
-    def test_every_merge_that_dropped_an_edit_is_reported(self):
-        library = self._write("/p/libx.a", [{"ruleId": "conflict"}])
-        program = self._write("/p/prg", [{"ruleId": "conflict"}])
-        self._write("/p/other", [])
-        self.assertEqual(
-            sorted([library, program]),
-            self.ssaf_artifact_repo.get_conflicts(),
-        )
+    def test_an_artifact_not_on_disk_is_not(self):
+        self.assertIsNone(self.ssaf_artifact_repo.get_path_if_present(self.report))
 
 
 class Counts(unittest.TestCase):

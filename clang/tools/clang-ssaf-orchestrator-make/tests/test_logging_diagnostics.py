@@ -88,15 +88,16 @@ class Results(unittest.TestCase):
             ),
         )
 
-    def test_the_transformation_names_every_file_that_holds_conflicts(self):
+    def test_the_transformation_names_the_link_units_edits_and_reports(self):
         self.assertEqual(
             "source-edits: /out/prg.edits.yaml\n"
-            "edit-conflicts: /out/libx.a.conflicts.sarif\n"
-            "edit-conflicts: /out/prg.conflicts.sarif\n",
+            "transformation-report: /out/prg.report.sarif\n"
+            "conflict-report: /out/prg.conflict-report.sarif\n",
             self._stdout(
                 lambda: logging_diagnostics.report_transformation(
                     "/out/prg.edits.yaml",
-                    ["/out/libx.a.conflicts.sarif", "/out/prg.conflicts.sarif"],
+                    "/out/prg.report.sarif",
+                    "/out/prg.conflict-report.sarif",
                 )
             ),
         )
@@ -104,7 +105,7 @@ class Results(unittest.TestCase):
             "source-edits: /out/prg.edits.yaml\n",
             self._stdout(
                 lambda: logging_diagnostics.report_transformation(
-                    "/out/prg.edits.yaml", []
+                    "/out/prg.edits.yaml", None, None
                 )
             ),
         )
