@@ -736,6 +736,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
+- Fixed a use-after-free when a variable whose initializer folded to a different type was emitted
+  twice through OpenMP or header units.
 
 #### Bug Fixes to Compiler Builtins
 
