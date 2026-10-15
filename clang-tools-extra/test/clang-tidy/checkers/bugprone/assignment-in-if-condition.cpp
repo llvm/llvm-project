@@ -99,11 +99,29 @@ void f8(int arg) {
     return;
 }
 
-int get_value();
+void f9(int x, int y) {
+  if (({ x = 1; ({ y = 2; }); }))
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+    return;
+}
 
-void f9(int arg) {
-  if (({ [[clang::nomerge]] arg = get_value(); }))
-  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+void f10(int x) {
+  if (({ ({ x = 1; }); }))
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+    return;
+}
+
+void f11(int arg) {
+  BrokenOperator bo1, bo2;
+  if (({ bo1 = arg; ({ bo2 = arg; }); }))
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+    return;
+}
+
+void f12(int arg) {
+  BrokenOperator bo;
+  if (({ ({ bo = arg; }); }))
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
     return;
 }
 
@@ -143,6 +161,17 @@ void awesome_f5(int arg) {
 
 void awesome_f6(int arg) {
   if (({ int r; r = arg; r; }))
+    return;
+}
+
+void awesome_f7(int x, int y) {
+  if (({ x = 1; ({ y = 2; y; }); }))
+    return;
+}
+
+void awesome_f8(int arg) {
+  BrokenOperator bo;
+  if (({ bo = arg; ({ bo = 2; bo.d; }); }))
     return;
 }
 

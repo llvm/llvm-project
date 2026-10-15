@@ -49,16 +49,9 @@ void AssignmentInIfConditionCheck::check(
         // looking through labels and attributes on the last statement.
         bool TraverseStmtExpr(StmtExpr *SE,
                               DataRecursionQueue *Queue = nullptr) {
-          Stmt *Last = SE->getSubStmt()->body_back();
-          while (Last && !isa<Expr>(Last))
-            if (auto *LS = dyn_cast<LabelStmt>(Last))
-              Last = LS->getSubStmt();
-            else if (auto *AS = dyn_cast<AttributedStmt>(Last))
-              Last = AS->getSubStmt();
-            else
-              return true;
-          if (auto *E = dyn_cast_if_present<Expr>(Last))
-            return TraverseStmt(E, Queue);
+          if (auto *Last =
+                  dyn_cast_if_present<ValueStmt>(SE->getSubStmt()->body_back()))
+            return TraverseStmt(Last->getExprStmt(), Queue);
           return true;
         }
 
