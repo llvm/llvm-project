@@ -1751,7 +1751,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return nullptr;
 
     // TODO: Can raise lower bound by inspecting first argument.
-    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    // Wave64 mbcnt_lo adds at most 32. Otherwise these add at most 31.
+    unsigned MaxCount =
+        IID == Intrinsic::amdgcn_mbcnt_lo && ST->isWave64() ? 32 : 31;
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, MaxCount + 1));
     ConstantRange ComputedRange = AccRange.add(MbcntRange);
     if (ComputedRange.isFullSet())
       return nullptr;
