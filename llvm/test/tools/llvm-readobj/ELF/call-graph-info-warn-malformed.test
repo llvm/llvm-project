@@ -462,3 +462,55 @@ Sections:
 Symbols:
   - Name: foo
   - Name: bar
+...
+
+## Check that a warning is reported when the address that a relocation resolves
+## to can't be computed, because the relocation has an unsupported type or the
+## section of its symbol can't be found. The Relocation object is still
+## printed, without Names.
+# RUN: yaml2obj --docnum=9 -DTYPE=R_X86_64_PLT32 %s -o %t17
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t17 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t17 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NO-NAMES,UNSUPPORTED-RELOC
+# RUN: yaml2obj --docnum=9 -DINDEX=255 %s -o %t18
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t18 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t18 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NO-NAMES,BAD-SYM-SECTION
+
+# NO-NAMES:               Function {
+# UNSUPPORTED-RELOC-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation at offset 0x2: R_X86_64_PLT32
+# BAD-SYM-SECTION-NEXT:   warning: '[[FILE]]': unable to get the section of symbol with index 1: invalid section index: 255
+# NO-NAMES-NEXT:            Relocation {
+# NO-NAMES-NEXT:              SymbolIndex: 1
+# NO-NAMES-NEXT:              SymbolName: foo
+# NO-NAMES-NEXT:            }
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .llvm_call_graph
+    Type: SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+        '0', ## Format version number
+        '0', ## Flags
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID
+      ]
+  - Name: .rela.llvm_call_graph
+    Type: SHT_RELA
+    Info: .llvm_call_graph
+    Relocations:
+      - Offset: 0x2
+        Symbol: foo
+        Type:   [[TYPE=R_X86_64_64]]
+Symbols:
+  - Name:  foo
+    Type:  STT_FUNC
+    Index: [[INDEX=1]] ## .text
+...
