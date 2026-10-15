@@ -588,11 +588,9 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @unloaded_param_to_coerced_direct(%[[PTR:.*]]: !cir.ptr<!rec_Two>
   // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
-  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_Two>
-  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Two>, !rec_Two
-  // CHECK:        cir.store %[[VAL]], %[[SLOT]] : !rec_Two, !cir.ptr<!rec_Two>
-  // CHECK:        %[[AS:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
-  // CHECK:        %[[COERCED:.*]] = cir.load %[[AS]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NOT:    cir.alloca
+  // CHECK:        %[[AS:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
+  // CHECK:        %[[COERCED:.*]] = cir.load align(8) %[[AS]] : !cir.ptr<!s64i>, !s64i
   // CHECK:        cir.call @takes_two_coerced(%[[COERCED]]) : (!s64i) -> ()
 
 }

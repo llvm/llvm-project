@@ -12,11 +12,14 @@
 
 #include "CIRGenFunction.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -66,6 +69,24 @@ static cir::SyncScopeKind decodeAMDGPUSyncScope(const Expr *arg) {
       .Case("workgroup", cir::SyncScopeKind::Workgroup)
       .Case("agent", cir::SyncScopeKind::Device)
       .Default(cir::SyncScopeKind::System);
+}
+
+static cir::SyncScopeKind convertAtomicScopeToCIR(llvm::AtomicScope scope) {
+  switch (scope) {
+  case llvm::AtomicScope::Single:
+    return cir::SyncScopeKind::SingleThread;
+  case llvm::AtomicScope::Wavefront:
+    return cir::SyncScopeKind::Wavefront;
+  case llvm::AtomicScope::Workgroup:
+    return cir::SyncScopeKind::Workgroup;
+  case llvm::AtomicScope::Cluster:
+    return cir::SyncScopeKind::Cluster;
+  case llvm::AtomicScope::Device:
+    return cir::SyncScopeKind::Device;
+  case llvm::AtomicScope::System:
+    return cir::SyncScopeKind::System;
+  }
+  llvm_unreachable("unknown atomic scope");
 }
 
 /// Emit one of the AMDGPU raw hardware atomic builtins as a cir.atomic.fetch.
@@ -1244,13 +1265,49 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_fence: {
-    CIRGenBuilderTy &b = getBuilder();
-    cir::MemOrder mo = decodeAtomicOrder(expr->getArg(0), getContext());
-    cir::SyncScopeKind syncScope = decodeAMDGPUSyncScope(expr->getArg(1));
-    cir::SyncScopeKindAttr syncScopeAttr =
-        cir::SyncScopeKindAttr::get(b.getContext(), syncScope);
-    cir::AtomicFenceOp::create(b, getLoc(expr->getExprLoc()), mo,
-                               syncScopeAttr);
+    // The scope uses AMDGPU spelling on every target, like mapScopeToSPIRV.
+    const llvm::Triple &triple = getTarget().getTriple();
+    std::optional<std::pair<llvm::AtomicScope, bool>> parsed;
+    if (std::optional<std::string> name =
+            expr->getArg(1)->tryEvaluateString(getContext())) {
+      parsed = llvm::parseAtomicScopeIRString(llvm::Triple("amdgcn-amd-amdhsa"),
+                                              *name);
+      if (!parsed && triple.isSPIRV())
+        parsed = llvm::parseAtomicScopeIRString(triple, *name);
+    }
+    // SPIR-V drops one-as, AMDGPU needs a CIR sync scope for it.
+    if (!parsed || (parsed->second && !triple.isSPIRV())) {
+      cgm.errorNYI(expr->getSourceRange(), "__builtin_amdgcn_fence scope");
+      return mlir::Value{};
+    }
+    // Sorted and unique, like MMRAMetadata::appendTags.
+    llvm::SmallVector<std::string> addrSpaces;
+    addrSpaces.reserve(expr->getNumArgs() - 2);
+    for (unsigned i = 2; i < expr->getNumArgs(); ++i) {
+      if (std::optional<std::string> as =
+              expr->getArg(i)->tryEvaluateString(getContext()))
+        addrSpaces.push_back(std::move(*as));
+      else
+        cgm.error(expr->getExprLoc(),
+                  "expected an address space name as a string literal");
+    }
+    llvm::sort(addrSpaces);
+    addrSpaces.erase(llvm::unique(addrSpaces), addrSpaces.end());
+    llvm::SmallVector<mlir::Attribute> mmras;
+    mmras.reserve(addrSpaces.size());
+    for (const std::string &as : addrSpaces)
+      mmras.push_back(mlir::LLVM::MMRATagAttr::get(
+          &getMLIRContext(), "amdgpu-synchronize-as", as));
+
+    auto fence = cir::AtomicFenceOp::create(
+        builder, getLoc(expr->getExprLoc()),
+        decodeAtomicOrder(expr->getArg(0), getContext()),
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    convertAtomicScopeToCIR(parsed->first)));
+    if (!mmras.empty())
+      fence->setAttr(mlir::LLVM::LLVMDialect::getMmraAttrName(),
+                     mmras.size() == 1 ? mmras.front()
+                                       : builder.getArrayAttr(mmras));
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:

@@ -2108,6 +2108,12 @@ class RVPBinaryIntrinsic
   def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
   def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
 
+  // Packed Narrowing Clip.
+  def int_riscv_pnclipu  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipru : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclip   : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipr  : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
