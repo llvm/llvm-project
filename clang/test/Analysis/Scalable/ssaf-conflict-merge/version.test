@@ -1,0 +1,5 @@
+// Test clang-ssaf-conflict-merge version
+
+// RUN: clang-ssaf-conflict-merge --version | FileCheck %s
+
+// CHECK: clang-ssaf-conflict-merge 0.1
