@@ -222,7 +222,7 @@ jobs:
     needs:
       - run-benchmarks
     if: ${{ inputs.submit-lnt }}
-    uses: ./.github/workflows/libcxx-lnt-submit.yml
+    uses: $/.github/workflows/libcxx-lnt-submit.yml
     with:
       artifact-name: lnt-report
       test-suite: libcxx
