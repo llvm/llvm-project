@@ -114,6 +114,11 @@ jobs:
           FILTER: ${{ inputs.filter }}
           LIBRARY_BUILD: ${{ steps.build.outcome }}
         run: |
+          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
+          (while sleep 60; do echo "Still running the benchmarks..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
+
           source .venv/bin/activate
           filter_arg=()
           if [ -n "${FILTER}" ]; then
@@ -134,6 +139,7 @@ jobs:
           fi
 
           libcxx/utils/ci/lnt/run-benchmarks                            \
+            --verbose                                                   \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
