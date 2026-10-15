@@ -217,6 +217,7 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
 //        intent-stmt | intrinsic-stmt | namelist-stmt | optional-stmt |
 //        pointer-stmt | protected-stmt | save-stmt | target-stmt |
 //        volatile-stmt | value-stmt | common-stmt | equivalence-stmt |
+// (F'2028) protected-target-stmt |
 // (CUDA) CUDA-attributes-stmt
 TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<AccessStmt>{})),
@@ -232,6 +233,8 @@ TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<NamelistStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<OptionalStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<PointerStmt>{})),
+    // PROTECTED_TARGET must be tried before its prefix PROTECTED
+    construct<OtherSpecificationStmt>(indirect(Parser<ProtectedTargetStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<ProtectedStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<SaveStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<TargetStmt>{})),

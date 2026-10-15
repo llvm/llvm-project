@@ -365,6 +365,13 @@ bool ExprHasTypeCategory(
 bool ExprTypeKindIsDefault(
     const SomeExpr &expr, const SemanticsContext &context);
 
+// F'2028 8.5.16: when an object designator (see GetSymbolVector()) or a
+// reference to a pointer-valued function designates the target of a data
+// pointer with the PROTECTED_TARGET attribute, or a subobject of that target,
+// returns that pointer or function result, else null.
+const Symbol *FindProtectedTargetPointer(const SymbolVector &);
+const Symbol *FindProtectedTargetPointer(const SomeExpr &);
+
 class GetExprHelper {
 public:
   explicit GetExprHelper(SemanticsContext *context) : context_{context} {}

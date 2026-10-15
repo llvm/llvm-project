@@ -1151,6 +1151,47 @@ print *, [(j,j=1,10)]
   dependent compilation that uses `-fno-out-of-bounds-subscripts`, since the
   interface is re-analyzed there; those errors point into the module file.
 
+* The Fortran 2028 working draft J3/26-007r1 is inconsistent about a
+  USE-associated nonpointer object with the `PROTECTED` and `TARGET`
+  attributes: constraint C864 prohibits it from being a data-target, but
+  8.5.16 NOTE 1 shows its association with a `PROTECTED_TARGET` pointer as
+  valid.  This compiler follows NOTE 1 and accepts that association without
+  a diagnostic; the target still cannot be defined through that pointer.
+  (C864 is not enforced as an error for ordinary pointers either;
+  `-Wpointer-to-undefinable` reports such associations.)
+
+* The same draft does not list `PROTECTED_TARGET` among the characteristics
+  of a dummy data object (15.3.2.2) or of a function result (15.3.3), so
+  interfaces that differ only in this attribute are compatible; this applies
+  to procedure pointer assignment, actual procedure arguments, separate
+  module procedures, and type-bound procedure overrides.  An actual argument
+  is checked against the interface used in the reference (C872, C874), so a
+  procedure that is referenced through an interface whose dummy argument has
+  the attribute can define the target of a `PROTECTED_TARGET` pointer when
+  its own dummy argument does not have it.
+
+* A reference to a function whose result is a `PROTECTED_TARGET` pointer,
+  and an associate name whose selector is the target of such a pointer or a
+  subobject of it, are treated like that pointer for C866, C870-C874, and
+  8.5.16 paragraph 2.  The C872 and C874 checks do not apply to intrinsic
+  procedures, whose `INTENT(OUT)` and `INTENT(IN OUT)` arguments are still
+  checked for definability.
+
+* Changing the association of a pointer component through a
+  `PROTECTED_TARGET` pointer is permitted: pointer components do not
+  determine the definition status of the containing derived-type object
+  (J3/26-007r1 20.6.1 paragraph 4).  Nonpointer subobjects remain protected,
+  and a pointer component's own `PROTECTED_TARGET` attribute still restricts
+  its allocation, deallocation, and target definition.
+
+* The same draft requires the POINTER attribute for a component with the
+  `PROTECTED_TARGET` attribute (C781) and for an entity in a
+  `PROTECTED_TARGET` statement (C8109), but has no such constraint for the
+  attribute in a type declaration statement.  J3/25-179r1 (S1) makes the
+  attribute applicable only to pointers, and J3/25-182r1 (section 3)
+  specifies data pointers.  This compiler requires every entity with the
+  `PROTECTED_TARGET` attribute to be a data pointer.
+
 ## Behavior in cases where the standard is clear but disputed
 
 * Unless one uses `-ffast-math`, directly or by implication,

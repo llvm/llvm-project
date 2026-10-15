@@ -811,6 +811,16 @@ void IoChecker::Leave(const parser::InquireStmt &stmt) {
     CheckForProhibitedSpecifier(IoSpecKind::File, IoSpecKind::Unit); // C1246
     CheckForRequiredSpecifier(IoSpecKind::Id, IoSpecKind::Pending); // C1248
     CheckForUselessIomsg();
+  } else if (const auto *iolength{
+                 std::get_if<parser::InquireStmt::Iolength>(&stmt.u)}) {
+    const auto &variable{std::get<parser::ScalarIntVariable>(iolength->t)};
+    if (const auto *expr{GetExpr(context_, variable)}) {
+      auto at{parser::FindSourceLocation(variable)};
+      if (auto whyNot{WhyNotDefinableViaProtectedTarget(at, *expr)}) {
+        context_.Say(at, "IOLENGTH variable is not definable"_err_en_US)
+            .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
+      }
+    }
   }
   Done();
 }

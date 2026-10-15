@@ -396,6 +396,42 @@ bool ExprTypeKindIsDefault(
       dynamicType->kind() == context.GetDefaultKind(dynamicType->category());
 }
 
+const Symbol *FindProtectedTargetPointer(const SymbolVector &symbols) {
+  // Only the rightmost pointer is pertinent, since the target of a pointer
+  // component is not a subobject of the object that contains the component
+  // (F'2023 9.4.2p5).
+  for (auto iter{symbols.rbegin()}; iter != symbols.rend(); ++iter) {
+    if (IsPointer(**iter)) {
+      return (*iter)->attrs().test(Attr::PROTECTED_TARGET) ? &**iter : nullptr;
+    }
+  }
+  if (!symbols.empty()) {
+    // An associate name whose selector designates the target of a
+    // PROTECTED_TARGET pointer or a subobject of it
+    if (const auto *assoc{
+            symbols.front()->GetUltimate().detailsIf<AssocEntityDetails>()}) {
+      if (const auto &selector{assoc->expr()}) {
+        return FindProtectedTargetPointer(*selector);
+      }
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(const SomeExpr &expr) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointer(evaluate::GetSymbolVector(*dataRef));
+  } else if (const auto *funcRef{evaluate::UnwrapProcedureRef(expr)}) {
+    if (const Symbol *proc{funcRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)}; result &&
+          IsPointer(*result) && result->attrs().test(Attr::PROTECTED_TARGET)) {
+        return result;
+      }
+    }
+  }
+  return nullptr;
+}
+
 // If an analyzed expr or assignment is missing, dump the node and die.
 template <typename T>
 static void CheckMissingAnalysis(

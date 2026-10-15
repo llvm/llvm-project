@@ -168,6 +168,12 @@ page](https://llvm.org/releases/).
   F2023 15.5.2.10 p1). Declare the target `SIMPLE` if it satisfies the
   `SIMPLE` constraints, or give the pointer or dummy an explicit `PURE`
   interface.
+- The `PROTECTED_TARGET` attribute and statement from the Fortran 2028 working
+  draft (J3/26-007r1 8.5.16 and 8.6.14) are now accepted. The target of a
+  data pointer with this attribute cannot be defined through that pointer, and
+  semantic diagnostics include errors for C781, C866-C874, and C8109.
+  Draft interpretations and exceptions are described in [Extensions](Extensions.md).
+  The attribute has no effect on generated code.
 
 ## Build System Changes
 

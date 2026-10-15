@@ -682,6 +682,12 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             "Allocatable object declared here with rank %d"_en_US, rank_);
     return false;
   }
+  if (ultimate_->attrs().test(Attr::PROTECTED_TARGET) &&
+      !allocateInfo_.gotSource) { // F'2028 C869
+    context.Say(name_.source,
+        "A PROTECTED_TARGET pointer may be allocated only by an ALLOCATE statement with SOURCE="_err_en_US);
+    return false;
+  }
   context.CheckIndexVarRedefine(name_);
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};

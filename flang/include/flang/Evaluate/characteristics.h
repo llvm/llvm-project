@@ -234,10 +234,14 @@ private:
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
+      Volatile, Pointer, Target, ProtectedTarget, DeducedFromActual,
+      OnlyIntrinsicInquiry)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
+  // F'2028 PROTECTED_TARGET is not a characteristic (15.3.2.2); it is kept
+  // for checking actual arguments (C872) and ignored in comparisons.
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
-    return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
+    return (x - Attr::DeducedFromActual - Attr::ProtectedTarget) ==
+        (y - Attr::DeducedFromActual - Attr::ProtectedTarget);
   }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyDataObject)
   explicit DummyDataObject(const TypeAndShape &t) : type{t} {}
@@ -327,7 +331,9 @@ using DummyArguments = std::vector<DummyArgument>;
 
 // 15.3.3
 struct FunctionResult {
-  ENUM_CLASS(Attr, Allocatable, Pointer, Contiguous)
+  // F'2028 PROTECTED_TARGET is not a characteristic and is ignored in
+  // comparisons.
+  ENUM_CLASS(Attr, Allocatable, Pointer, Contiguous, ProtectedTarget)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(FunctionResult)
   explicit FunctionResult(DynamicType);

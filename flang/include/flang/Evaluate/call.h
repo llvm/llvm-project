@@ -52,7 +52,7 @@ using SymbolRef = common::Reference<const Symbol>;
 
 class ActualArgument {
 public:
-  ENUM_CLASS(Attr, PassedObject, PercentVal, PercentRef);
+  ENUM_CLASS(Attr, PassedObject, PercentVal, PercentRef, DefinedAssignmentRhs);
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
 
   // Dummy arguments that are TYPE(*) can be forwarded as actual arguments.
@@ -259,6 +259,17 @@ public:
   bool isPercentRef() const { return attrs_.test(Attr::PercentRef); };
   ActualArgument &set_isPercentRef() {
     attrs_ = attrs_ + Attr::PercentRef;
+    return *this;
+  }
+
+  // The right-hand side of a defined assignment, which is passed as if it
+  // were enclosed in parentheses even when it has not been wrapped in them
+  // (e.g., for a VALUE dummy argument).
+  bool isDefinedAssignmentRhs() const {
+    return attrs_.test(Attr::DefinedAssignmentRhs);
+  }
+  ActualArgument &set_isDefinedAssignmentRhs() {
+    attrs_ = attrs_ + Attr::DefinedAssignmentRhs;
     return *this;
   }
 

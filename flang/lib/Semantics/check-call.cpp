@@ -70,6 +70,12 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
+    if (const Symbol *protectedTarget{
+            FindProtectedTargetPointer(*expr)}) { // F'2028 C873
+      messages.Say(
+          "The target of PROTECTED_TARGET pointer '%s' may not be an actual argument to a procedure with an implicit interface"_err_en_US,
+          protectedTarget->name());
+    }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
           expr->AsFortran());
@@ -400,6 +406,36 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
+  // F'2028 C872, C873, C874.  Like the definability checks below, these do
+  // not affect generic resolution (no scope).  A nonpointer dummy argument
+  // with INTENT(OUT) or INTENT(IN OUT) is caught below as an undefinable
+  // actual argument.  Intrinsic procedures are exempt: their nonpointer
+  // arguments are INTENT(IN) unless stated otherwise, and their pointer
+  // arguments (e.g., ASSOCIATED(POINTER=), C_F_POINTER(FPTR=)) do not define a
+  // target.  So is the right-hand side of a defined assignment, which is
+  // passed as if it were enclosed in parentheses.
+  if (const Symbol *protectedTarget{
+          scope && !intrinsic && !arg.isDefinedAssignmentRhs()
+              ? FindProtectedTargetPointer(actual)
+              : nullptr}) {
+    if (procedure.isStmtFunction) {
+      // The interface of a statement function is implicit.
+      messages.Say(
+          "The target of PROTECTED_TARGET pointer '%s' may not be an actual argument to a procedure with an implicit interface"_err_en_US,
+          protectedTarget->name());
+    } else if (dummyIsPointer) {
+      if (!dummy.attrs.test(
+              characteristics::DummyDataObject::Attr::ProtectedTarget)) {
+        messages.Say(
+            "POINTER %s must have the PROTECTED_TARGET attribute to be associated with the target of PROTECTED_TARGET pointer '%s'"_err_en_US,
+            dummyName, protectedTarget->name());
+      }
+    } else if (dummy.intent == common::Intent::Default) {
+      messages.Say(
+          "Nonpointer %s must have INTENT(IN) to be associated with the target of PROTECTED_TARGET pointer '%s'"_err_en_US,
+          dummyName, protectedTarget->name());
+    }
+  }
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{
       (dummy.ignoreTKR.test(common::IgnoreTKR::Type) &&

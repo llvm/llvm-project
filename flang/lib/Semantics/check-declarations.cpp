@@ -347,6 +347,20 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    // F'2028 C781 and C8109 cover components and the PROTECTED_TARGET
+    // statement; the attribute applies only to data pointers in any
+    // declaration (J3/25-179r1 S1, J3/25-182r1 section 3).
+    if (!IsObjectPointer(&symbol)) {
+      messages_.Say(symbol.owner().IsDerivedType()
+              ? "A component with the PROTECTED_TARGET attribute must also have the POINTER attribute"_err_en_US
+              : "An entity with the PROTECTED_TARGET attribute must be a data pointer"_err_en_US);
+    }
+    if (FindCommonBlockContaining(symbol)) { // F'2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
@@ -4177,7 +4191,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,

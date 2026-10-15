@@ -5922,6 +5922,7 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
       actualsCopy.at(1).value().Parenthesize();
     }
   }
+  actualsCopy.at(1).value().set_isDefinedAssignmentRhs();
   if (passedObjectIndex) {
     actualsCopy[*passedObjectIndex]->set_isPassedObject();
   }

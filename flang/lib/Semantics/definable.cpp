@@ -94,6 +94,31 @@ static bool DefinesComponentPointerTarget(
   }
 }
 
+// F'2028 C866, 8.5.16p2: the target of a data pointer with the
+// PROTECTED_TARGET attribute is not definable via that pointer.
+static std::optional<parser::Message> BlameProtectedTarget(
+    parser::CharBlock at, const Symbol *pointer) {
+  if (pointer) {
+    return BlameSymbol(at,
+        "'%s' is a PROTECTED_TARGET pointer whose target may not be defined through it"_en_US,
+        *pointer);
+  }
+  return std::nullopt;
+}
+
+// Pointer association does not define the nonpointer value of a containing
+// derived-type object (F'2028 20.6.1p4).
+static std::optional<parser::Message> WhyNotDefinableViaProtectedTarget(
+    parser::CharBlock at, DefinabilityFlags flags, SymbolVector &&symbols) {
+  if (flags.test(DefinabilityFlag::PointerDefinition) && !symbols.empty()) {
+    if (IsPointer(*symbols.back())) {
+      return std::nullopt;
+    }
+    symbols.pop_back();
+  }
+  return BlameProtectedTarget(at, FindProtectedTargetPointer(symbols));
+}
+
 // Check the leftmost (or only) symbol from a data-ref or expression.
 static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original,
@@ -253,6 +278,10 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  if (auto whyNot{WhyNotDefinableViaProtectedTarget(
+          at, flags, evaluate::GetSymbolVector(dataRef))}) {
+    return whyNot;
+  }
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
@@ -270,6 +299,10 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  if (auto whyNot{WhyNotDefinableViaProtectedTarget(
+          at, flags, evaluate::GetSymbolVector(original))}) {
+    return whyNot;
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -425,8 +458,16 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
   } else if (!evaluate::IsVariable(expr)) {
     return parser::Message{
         at, "'%s' is not a variable or pointer"_err_en_US, expr.AsFortran()};
+  } else if (auto whyNot{WhyNotDefinableViaProtectedTarget(at, expr)}) {
+    // A reference to a function whose result is a PROTECTED_TARGET pointer
+    return whyNot;
   }
   return portabilityWarning;
+}
+
+std::optional<parser::Message> WhyNotDefinableViaProtectedTarget(
+    parser::CharBlock at, const evaluate::Expr<evaluate::SomeType> &expr) {
+  return BlameProtectedTarget(at, FindProtectedTargetPointer(expr));
 }
 
 } // namespace Fortran::semantics
