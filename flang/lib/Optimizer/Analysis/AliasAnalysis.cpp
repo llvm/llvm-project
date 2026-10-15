@@ -591,23 +591,14 @@ static bool typeContains(mlir::Type ty, mlir::Type subTy) {
   return false;
 }
 
-/// Return the type of the parent component of \p recTy, if any. The parent
-/// component is the first component, named after the parent type.
-static fir::RecordType getParentType(fir::RecordType recTy) {
-  if (recTy.getNumFields() == 0)
-    return {};
-  const auto &[name, fieldTy] = recTy.getTypeList().front();
-  auto parentTy = mlir::dyn_cast<fir::RecordType>(fieldTy);
-  if (!parentTy ||
-      fir::NameUniquer::deconstruct(parentTy.getName()).second.name != name)
-    return {};
-  return parentTy;
-}
+using GetParentTypeFn = llvm::function_ref<fir::RecordType(fir::RecordType)>;
 
-/// Return true if \p ty is an extension of \p ancestor. Extensible types
-/// are never SEQUENCE or BIND(C) types, so they are only the same Fortran
-/// type when they are the same FIR type.
-static bool isProperExtensionOf(fir::RecordType ty, fir::RecordType ancestor) {
+/// Return true if \p ty is an extension of \p ancestor, given the parent
+/// type of each derived type by \p getParentType. Extensible types are never
+/// SEQUENCE or BIND(C) types, so they are only the same Fortran type when
+/// they are the same FIR type.
+static bool isProperExtensionOf(fir::RecordType ty, fir::RecordType ancestor,
+                                GetParentTypeFn getParentType) {
   for (fir::RecordType parent = getParentType(ty); parent;
        parent = getParentType(parent))
     if (parent == ancestor)
@@ -625,7 +616,8 @@ static bool isProperExtensionOf(fir::RecordType ty, fir::RecordType ancestor) {
 /// address of an object extending beyond the component.
 static bool
 componentsAreDisjoint(const fir::AliasAnalysis::Source::PathStep &lhs,
-                      const fir::AliasAnalysis::Source::PathStep &rhs) {
+                      const fir::AliasAnalysis::Source::PathStep &rhs,
+                      GetParentTypeFn getParentType) {
   if (!lhs.recordType || !rhs.recordType)
     return false;
   if (lhs.recordType == rhs.recordType)
@@ -634,8 +626,8 @@ componentsAreDisjoint(const fir::AliasAnalysis::Source::PathStep &lhs,
   auto rhsRecTy = mlir::dyn_cast<fir::RecordType>(rhs.recordType);
   // Different FIR types may be the same SEQUENCE or BIND(C) Fortran type.
   if (!lhsRecTy || !rhsRecTy ||
-      (!isProperExtensionOf(lhsRecTy, rhsRecTy) &&
-       !isProperExtensionOf(rhsRecTy, lhsRecTy)))
+      (!isProperExtensionOf(lhsRecTy, rhsRecTy, getParentType) &&
+       !isProperExtensionOf(rhsRecTy, lhsRecTy, getParentType)))
     return false;
   mlir::Type lhsFieldTy = lhsRecTy.getType(lhs.component.getValue());
   mlir::Type rhsFieldTy = rhsRecTy.getType(rhs.component.getValue());
@@ -647,16 +639,23 @@ componentsAreDisjoint(const fir::AliasAnalysis::Source::PathStep &lhs,
 
 /// Return true if two access paths from the same origin variable address
 /// disjoint subobjects of the root variable. The paths are not compared step
-/// by step: views of the root (e.g. CLASS views of an object of extended
+/// by step: views of an object (e.g. CLASS views of an object of extended
 /// type, or SELECT TYPE selectors) change the type of the addressed object,
 /// so steps at the same index may be components of different types. Instead,
 /// the paths are disjoint if a component step of one path is disjoint from a
-/// component step of the other path (see componentsAreDisjoint). For
-/// example, paths [Component("a")] and [Component("b")] of the same record
-/// type are disjoint, while [Component("a"), Component("x")] and
+/// component step of the other path (see componentsAreDisjoint), and both
+/// steps select components of the same object. For example, paths
+/// [Component("a")] and [Component("b")] of the same record type are
+/// disjoint, while [Component("a"), Component("x")] and
 /// [Component("a"), Component("y")] are disjoint at their second steps.
 /// Paths crossing different storage-associated declarations are not
 /// compared.
+///
+/// A PointerDeref or AllocDeref step reaches another object, whose type may
+/// be related to the type of the root variable (e.g. an allocatable
+/// component of the parent type). So two component steps are compared only
+/// if neither of them follows a dereference, or if the steps up to and
+/// including the last dereference before each of them are the same.
 ///
 /// When either path continues through a PointerDeref or AllocDeref after
 /// the disjoint steps, the runtime address could potentially reach a
@@ -673,37 +672,42 @@ componentsAreDisjoint(const fir::AliasAnalysis::Source::PathStep &lhs,
 /// pointers could independently be associated with the same third-party
 /// TARGET variable, so such steps do not prove disjointness.
 static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
-                                    const fir::AliasAnalysis::Source &rhsSrc) {
+                                    const fir::AliasAnalysis::Source &rhsSrc,
+                                    GetParentTypeFn getParentType) {
   using PathStep = fir::AliasAnalysis::Source::PathStep;
   if (lhsSrc.accessPath.storageDecl != rhsSrc.accessPath.storageDecl)
     return false;
-  auto &lhsSteps = lhsSrc.accessPath.steps;
-  auto &rhsSteps = rhsSrc.accessPath.steps;
+  llvm::ArrayRef<PathStep> lhsSteps = lhsSrc.accessPath.steps;
+  llvm::ArrayRef<PathStep> rhsSteps = rhsSrc.accessPath.steps;
   auto hasPtrDeref = [](llvm::ArrayRef<PathStep> steps) {
     return llvm::any_of(steps, [](const PathStep &s) {
       return s.kind == PathStep::Kind::PointerDeref;
     });
   };
+  // Return the steps that reach the object whose component steps[idx]
+  // selects.
+  auto getObjectSteps = [](llvm::ArrayRef<PathStep> steps, size_t idx) {
+    llvm::ArrayRef<PathStep> prefix = steps.take_front(idx);
+    while (!prefix.empty() && prefix.back().kind == PathStep::Kind::Component)
+      prefix = prefix.drop_back();
+    return prefix;
+  };
   for (size_t i = 0; i < lhsSteps.size(); ++i) {
     if (lhsSteps[i].kind != PathStep::Kind::Component)
       continue;
+    llvm::ArrayRef<PathStep> objectSteps = getObjectSteps(lhsSteps, i);
     for (size_t j = 0; j < rhsSteps.size(); ++j) {
       if (rhsSteps[j].kind != PathStep::Kind::Component ||
-          !componentsAreDisjoint(lhsSteps[i], rhsSteps[j]))
+          getObjectSteps(rhsSteps, j) != objectSteps ||
+          !componentsAreDisjoint(lhsSteps[i], rhsSteps[j], getParentType))
         continue;
-      bool lhsHasPtrDeref =
-          hasPtrDeref(llvm::ArrayRef<PathStep>(lhsSteps).drop_front(i + 1));
-      bool rhsHasPtrDeref =
-          hasPtrDeref(llvm::ArrayRef<PathStep>(rhsSteps).drop_front(j + 1));
+      bool lhsHasPtrDeref = hasPtrDeref(lhsSteps.drop_front(i + 1));
+      bool rhsHasPtrDeref = hasPtrDeref(rhsSteps.drop_front(j + 1));
       if (lhsHasPtrDeref && rhsHasPtrDeref)
         continue;
-      if (lhsHasPtrDeref || rhsHasPtrDeref) {
-        if (hasPtrDeref(llvm::ArrayRef<PathStep>(lhsSteps).take_front(i)) ||
-            hasPtrDeref(llvm::ArrayRef<PathStep>(rhsSteps).take_front(j)))
-          continue;
-        if (lhsSrc.isTarget() || rhsSrc.isTarget())
-          continue;
-      }
+      if ((lhsHasPtrDeref || rhsHasPtrDeref) &&
+          (hasPtrDeref(objectSteps) || lhsSrc.isTarget() || rhsSrc.isTarget()))
+        continue;
       return true;
     }
   }
@@ -909,6 +913,20 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   }
 
   if (lhsSrc.kind == rhsSrc.kind) {
+    // A derived type without fir.type_info is not known to be an extension.
+    auto getParentType = [&](fir::RecordType recTy) -> fir::RecordType {
+      mlir::Region *region = lhs.getParentRegion();
+      if (!region)
+        return {};
+      const mlir::SymbolTable *symTab =
+          getNearestSymbolTable(region->getParentOp());
+      auto module =
+          symTab ? mlir::dyn_cast<mlir::ModuleOp>(symTab->getOp()) : nullptr;
+      if (!module)
+        return {};
+      fir::TypeInfoOp typeInfo = fir::lookupTypeInfoOp(recTy, module, symTab);
+      return typeInfo ? typeInfo.getIfParentType() : fir::RecordType{};
+    };
     // If the kinds and origins are the same, then lhs and rhs must alias unless
     // either source is approximate.  Approximate sources are for parts of the
     // origin, but we don't have info here on which parts and whether they
@@ -917,7 +935,7 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
       if (approximateSource) {
-        if (pathsDivergeAtComponent(lhsSrc, rhsSrc)) {
+        if (pathsDivergeAtComponent(lhsSrc, rhsSrc, getParentType)) {
           LLVM_DEBUG(llvm::dbgs()
                      << "  no alias: different components of same origin\n");
           return AliasResult::NoAlias;
@@ -957,7 +975,7 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
         ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
          (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
-      if (pathsDivergeAtComponent(lhsSrc, rhsSrc)) {
+      if (pathsDivergeAtComponent(lhsSrc, rhsSrc, getParentType)) {
         LLVM_DEBUG(llvm::dbgs()
                    << "  no alias: different components of same origin\n");
         return AliasResult::NoAlias;

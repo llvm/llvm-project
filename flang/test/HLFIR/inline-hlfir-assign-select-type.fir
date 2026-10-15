@@ -23,6 +23,8 @@
 
 !base = !fir.type<_QMmTbase{v:!fir.array<4xf32>}>
 !child = !fir.type<_QMmTchild{base:!base,extra:!fir.array<4xf32>}>
+fir.type_info @_QMmTbase : !base
+fir.type_info @_QMmTchild extends !base : !child
 func.func @_QMmPshift(%arg0: !fir.class<!base> {fir.bindc_name = "this"}) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

@@ -1,7 +1,9 @@
 // Tests for access paths in fir::AliasAnalysis through views that change the
 // type of the addressed object: CLASS views of objects of extended types,
 // SELECT TYPE, storage association, sequence association, and component
-// sections of arrays.
+// sections of arrays, and through dereferences of allocatable and pointer
+// components. The parent type of an extended type is given by its
+// fir.type_info.
 
 // RUN: fir-opt %s -split-input-file -o /dev/null --mlir-disable-threading  \
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
@@ -20,6 +22,8 @@
 
 !t1 = !fir.type<_QMmTt1{a:!fir.array<4xf32>}>
 !t2 = !fir.type<_QMmTt2{t1:!t1,b:f32}>
+fir.type_info @_QMmTt1 : !t1
+fir.type_info @_QMmTt2 extends !t1 : !t2
 func.func @_QPparent_view() {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -52,6 +56,8 @@ func.func @_QPparent_view() {
 
 !t1 = !fir.type<_QMmTt1{a:!fir.array<4xf32>}>
 !t2 = !fir.type<_QMmTt2{t1:!t1,b:f32}>
+fir.type_info @_QMmTt1 : !t1
+fir.type_info @_QMmTt2 extends !t1 : !t2
 func.func @_QParray_view(%i: index) {
   %c10 = arith.constant 10 : index
   %sh = fir.shape %c10 : (index) -> !fir.shape<1>
@@ -83,6 +89,9 @@ func.func @_QParray_view(%i: index) {
 !t1 = !fir.type<_QMmTt1{a:!fir.array<4xf32>}>
 !t2 = !fir.type<_QMmTt2{t1:!t1,b:f32}>
 !t3 = !fir.type<_QMmTt3{t2:!t2,c:f32}>
+fir.type_info @_QMmTt1 : !t1
+fir.type_info @_QMmTt2 extends !t1 : !t2
+fir.type_info @_QMmTt3 extends !t2 : !t3
 func.func @_QPtwo_level() {
   %0 = fir.alloca !t3 {bindc_name = "obj", uniq_name = "_QFtwo_levelEobj"}
   %obj = fir.declare %0 uniq_name("_QFtwo_levelEobj") : (!fir.ref<!t3>) -> !fir.ref<!t3>
@@ -111,6 +120,8 @@ func.func @_QPtwo_level() {
 
 !t1 = !fir.type<_QMmTt1{a:!fir.array<4xf32>}>
 !t2 = !fir.type<_QMmTt2{t1:!t1,b:f32}>
+fir.type_info @_QMmTt1 : !t1
+fir.type_info @_QMmTt2 extends !t1 : !t2
 func.func @_QPup_down() {
   %0 = fir.alloca !t2 {bindc_name = "obj", uniq_name = "_QFup_downEobj"}
   %obj = fir.declare %0 uniq_name("_QFup_downEobj") : (!fir.ref<!t2>) -> !fir.ref<!t2>
@@ -142,6 +153,8 @@ func.func @_QPup_down() {
 
 !t1 = !fir.type<_QMmTt1{a:!fir.array<4xf32>}>
 !t2 = !fir.type<_QMmTt2{t1:!t1,b:f32}>
+fir.type_info @_QMmTt1 : !t1
+fir.type_info @_QMmTt2 extends !t1 : !t2
 func.func @_QPsel(%arg0: !fir.class<!t1> {fir.bindc_name = "this"}) {
   %c4 = arith.constant 4 : index
   %sh = fir.shape %c4 : (index) -> !fir.shape<1>
@@ -170,6 +183,8 @@ func.func @_QPsel(%arg0: !fir.class<!t1> {fir.bindc_name = "this"}) {
 
 !base = !fir.type<_QMmTbase{v:!fir.array<4xf32>}>
 !child = !fir.type<_QMmTchild{base:!base,extra:!fir.array<4xf32>}>
+fir.type_info @_QMmTbase : !base
+fir.type_info @_QMmTchild extends !base : !child
 func.func @_QMmPshift(%arg0: !fir.class<!base> {fir.bindc_name = "this"}) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -197,6 +212,8 @@ func.func @_QMmPshift(%arg0: !fir.class<!base> {fir.bindc_name = "this"}) {
 
 !base = !fir.type<_QMmTbase{v:!fir.array<4xf32>}>
 !child = !fir.type<_QMmTchild{base:!base,extra:!fir.array<4xf32>}>
+fir.type_info @_QMmTbase : !base
+fir.type_info @_QMmTchild extends !base : !child
 func.func @_QMmPshift_inlined(%arg0: !fir.class<!base> {fir.bindc_name = "this"}, %i: index) {
   %c4 = arith.constant 4 : index
   %sh = fir.shape %c4 : (index) -> !fir.shape<1>
@@ -226,6 +243,8 @@ func.func @_QMmPshift_inlined(%arg0: !fir.class<!base> {fir.bindc_name = "this"}
 
 !t1 = !fir.type<_QMmTt1{a:!fir.array<4xf32>}>
 !t2 = !fir.type<_QMmTt2{t1:!t1,b:f32}>
+fir.type_info @_QMmTt1 : !t1
+fir.type_info @_QMmTt2 extends !t1 : !t2
 func.func @_QPunlimited() {
   %0 = fir.alloca !t2 {bindc_name = "obj", uniq_name = "_QFunlimitedEobj"}
   %obj = fir.declare %0 uniq_name("_QFunlimitedEobj") : (!fir.ref<!t2>) -> !fir.ref<!t2>
@@ -364,6 +383,102 @@ func.func @_QPsame_sequence_type() {
 
 // -----
 
+// A first component named after its type is not a parent component:
+//   use ma, only: ta => t, shift
+//   use mb, only: tb => t
+//   type outer
+//     type(ta) :: t
+//     type(tb) :: other
+//   end type
+//   type(outer) :: obj
+//   call shift(obj%other)
+// where modules ma and mb both define
+//   type t
+//     sequence
+//     real :: a(4)
+//   end type
+// and ma also contains
+//   subroutine shift(x)
+//     type(t) :: x
+//     x%a(2:4) = x%a(1:3)
+//   end subroutine
+// The two definitions of t describe the same type (F2023 7.5.2.4 p2). After
+// inlining, the actual argument obj%other (of type tb) is accessed through the
+// dummy x (of type ta): obj%other%a and x%a are the same memory.
+
+// CHECK-LABEL: Testing : "_QPsequence_component"
+// CHECK-DAG: obj_t_a#0 <-> x_a_i#0: NoAlias
+// CHECK-DAG: obj_other_a#0 <-> x_a_i#0: MayAlias
+// CHECK-DAG: x_a_i#0 <-> x_a_j#0: MayAlias
+
+!ta = !fir.type<_QMmaTt,sequence{a:!fir.array<4xf32>}>
+!tb = !fir.type<_QMmbTt,sequence{a:!fir.array<4xf32>}>
+!outer = !fir.type<_QFsequence_componentTouter{t:!ta,other:!tb}>
+fir.type_info @_QMmaTt : !ta
+fir.type_info @_QMmbTt : !tb
+fir.type_info @_QFsequence_componentTouter : !outer
+func.func @_QPsequence_component(%i: index, %j: index) {
+  %c4 = arith.constant 4 : index
+  %sh = fir.shape %c4 : (index) -> !fir.shape<1>
+  %caller_scope = fir.dummy_scope : !fir.dscope
+  %0 = fir.alloca !outer {bindc_name = "obj", uniq_name = "_QFsequence_componentEobj"}
+  %obj = fir.declare %0 uniq_name("_QFsequence_componentEobj") : (!fir.ref<!outer>) -> !fir.ref<!outer>
+  %ta = fir.coordinate_of %obj, t, a : (!fir.ref<!outer>) -> !fir.ref<!fir.array<4xf32>>
+  %obj_t_a = fir.array_coor %ta(%sh) %i {test.ptr = "obj_t_a"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %other = fir.coordinate_of %obj, other : (!fir.ref<!outer>) -> !fir.ref<!tb>
+  %oa = fir.coordinate_of %other, a : (!fir.ref<!tb>) -> !fir.ref<!fir.array<4xf32>>
+  %obj_other_a = fir.array_coor %oa(%sh) %i {test.ptr = "obj_other_a"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %actual = fir.convert %other : (!fir.ref<!tb>) -> !fir.ref<!ta>
+  %ds = fir.dummy_scope : !fir.dscope
+  %x = fir.declare %actual dummy_scope %ds arg 1 uniq_name("_QMmaFshiftEx") : (!fir.ref<!ta>, !fir.dscope) -> !fir.ref<!ta>
+  %xa = fir.coordinate_of %x, a : (!fir.ref<!ta>) -> !fir.ref<!fir.array<4xf32>>
+  %x_a_i = fir.array_coor %xa(%sh) %i {test.ptr = "x_a_i"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %x_a_j = fir.array_coor %xa(%sh) %j {test.ptr = "x_a_j"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+// The same with BIND(C) types t, which are the same type too, but are not
+// SEQUENCE types in FIR. Modules ma and mb both use c_float from iso_c_binding
+// and define
+//   type, bind(c) :: t
+//     real(c_float) :: a(4)
+//   end type
+
+// CHECK-LABEL: Testing : "_QPbind_c_component"
+// CHECK-DAG: obj_t_a#0 <-> x_a_i#0: NoAlias
+// CHECK-DAG: obj_other_a#0 <-> x_a_i#0: MayAlias
+// CHECK-DAG: x_a_i#0 <-> x_a_j#0: MayAlias
+
+!ta = !fir.type<_QMmaTt{a:!fir.array<4xf32>}>
+!tb = !fir.type<_QMmbTt{a:!fir.array<4xf32>}>
+!outer = !fir.type<_QFbind_c_componentTouter{t:!ta,other:!tb}>
+fir.type_info @_QMmaTt : !ta
+fir.type_info @_QMmbTt : !tb
+fir.type_info @_QFbind_c_componentTouter : !outer
+func.func @_QPbind_c_component(%i: index, %j: index) {
+  %c4 = arith.constant 4 : index
+  %sh = fir.shape %c4 : (index) -> !fir.shape<1>
+  %caller_scope = fir.dummy_scope : !fir.dscope
+  %0 = fir.alloca !outer {bindc_name = "obj", uniq_name = "_QFbind_c_componentEobj"}
+  %obj = fir.declare %0 uniq_name("_QFbind_c_componentEobj") : (!fir.ref<!outer>) -> !fir.ref<!outer>
+  %ta = fir.coordinate_of %obj, t, a : (!fir.ref<!outer>) -> !fir.ref<!fir.array<4xf32>>
+  %obj_t_a = fir.array_coor %ta(%sh) %i {test.ptr = "obj_t_a"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %other = fir.coordinate_of %obj, other : (!fir.ref<!outer>) -> !fir.ref<!tb>
+  %oa = fir.coordinate_of %other, a : (!fir.ref<!tb>) -> !fir.ref<!fir.array<4xf32>>
+  %obj_other_a = fir.array_coor %oa(%sh) %i {test.ptr = "obj_other_a"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %actual = fir.convert %other : (!fir.ref<!tb>) -> !fir.ref<!ta>
+  %ds = fir.dummy_scope : !fir.dscope
+  %x = fir.declare %actual dummy_scope %ds arg 1 uniq_name("_QMmaFshiftEx") : (!fir.ref<!ta>, !fir.dscope) -> !fir.ref<!ta>
+  %xa = fir.coordinate_of %x, a : (!fir.ref<!ta>) -> !fir.ref<!fir.array<4xf32>>
+  %x_a_i = fir.array_coor %xa(%sh) %i {test.ptr = "x_a_i"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %x_a_j = fir.array_coor %xa(%sh) %j {test.ptr = "x_a_j"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
 // Sequence association of an element of a component after inlining:
 //   type r
 //     real :: c(10), d(10)
@@ -454,5 +569,128 @@ func.func @_QPdescriptor_cast() {
   %cbox = fir.load %cast : !fir.ref<!fir.box<!fir.ptr<!u>>>
   %caddr = fir.box_addr %cbox : (!fir.box<!fir.ptr<!u>>) -> !fir.ptr<!u>
   %cast_y = fir.coordinate_of %caddr, y {test.ptr = "cast_y"} : (!fir.ptr<!u>) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
+// Allocatable components of an extended type:
+//   type base
+//     real :: v(4)
+//   end type
+//   type, extends(base) :: child
+//     type(base), allocatable :: a, b
+//   end type
+//   type(child) :: x
+//   x%a%v(2:4) = x%a%v(1:3)
+// The access path of both sections is [a, AllocDeref, v]: component a of x,
+// the allocated object x%a, and component v of x%a. Component a of x is
+// disjoint from the parent component of x, which contains x%v, but v here is
+// a component of x%a, not of x, so this does not prove the sections disjoint.
+
+// CHECK-LABEL: Testing : "_QPalloc_component"
+// CHECK-DAG: a_v_lo#0 <-> a_v_hi#0: MayAlias
+// CHECK-DAG: a_v_lo#0 <-> b_v#0: NoAlias
+// CHECK-DAG: a_v_lo#0 <-> x_v#0: NoAlias
+
+!base = !fir.type<_QMmTbase{v:!fir.array<4xf32>}>
+!child = !fir.type<_QMmTchild{base:!base,a:!fir.box<!fir.heap<!base>>,b:!fir.box<!fir.heap<!base>>}>
+fir.type_info @_QMmTbase : !base
+fir.type_info @_QMmTchild extends !base : !child
+func.func @_QPalloc_component(%arg0: !fir.ref<!child> {fir.bindc_name = "x"}) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %sh4 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %sh3 = fir.shape %c3 : (index) -> !fir.shape<1>
+  %ds = fir.dummy_scope : !fir.dscope
+  %x:2 = hlfir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFalloc_componentEx") : (!fir.ref<!child>, !fir.dscope) -> (!fir.ref<!child>, !fir.ref<!child>)
+  %a = hlfir.designate %x#0{"a"} fortran_attrs<allocatable> : (!fir.ref<!child>) -> !fir.ref<!fir.box<!fir.heap<!base>>>
+  %abox = fir.load %a : !fir.ref<!fir.box<!fir.heap<!base>>>
+  %aaddr = fir.box_addr %abox : (!fir.box<!fir.heap<!base>>) -> !fir.heap<!base>
+  %a_v_lo = hlfir.designate %aaddr{"v"} <%sh4> (%c1:%c3:%c1) shape %sh3 {test.ptr = "a_v_lo"} : (!fir.heap<!base>, !fir.shape<1>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+  %a_v_hi = hlfir.designate %aaddr{"v"} <%sh4> (%c2:%c4:%c1) shape %sh3 {test.ptr = "a_v_hi"} : (!fir.heap<!base>, !fir.shape<1>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+  %b = hlfir.designate %x#0{"b"} fortran_attrs<allocatable> : (!fir.ref<!child>) -> !fir.ref<!fir.box<!fir.heap<!base>>>
+  %bbox = fir.load %b : !fir.ref<!fir.box<!fir.heap<!base>>>
+  %baddr = fir.box_addr %bbox : (!fir.box<!fir.heap<!base>>) -> !fir.heap<!base>
+  %b_v = hlfir.designate %baddr{"v"} shape %sh4 {test.ptr = "b_v"} : (!fir.heap<!base>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf32>>
+  %parent = hlfir.designate %x#0{"base"} : (!fir.ref<!child>) -> !fir.ref<!base>
+  %x_v = hlfir.designate %parent{"v"} shape %sh4 {test.ptr = "x_v"} : (!fir.ref<!base>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf32>>
+  return
+}
+
+// -----
+
+// A pointer component that may be associated with an allocatable component
+// of the same object:
+//   type, extends(base) :: child
+//     type(base), allocatable :: a
+//     type(base), pointer :: p
+//   end type
+//   type(child), target :: x
+//   x%a%v(2:4) = x%p%v(1:3)
+
+// CHECK-LABEL: Testing : "_QPtarget_component"
+// CHECK-DAG: p_v#0 <-> a_v#0: MayAlias
+
+!base = !fir.type<_QMmTbase{v:!fir.array<4xf32>}>
+!child = !fir.type<_QMmTchild{base:!base,a:!fir.box<!fir.heap<!base>>,p:!fir.box<!fir.ptr<!base>>}>
+fir.type_info @_QMmTbase : !base
+fir.type_info @_QMmTchild extends !base : !child
+func.func @_QPtarget_component(%arg0: !fir.ref<!child> {fir.bindc_name = "x", fir.target}) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %sh4 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %sh3 = fir.shape %c3 : (index) -> !fir.shape<1>
+  %ds = fir.dummy_scope : !fir.dscope
+  %x:2 = hlfir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFtarget_componentEx") fortran_attrs<target> : (!fir.ref<!child>, !fir.dscope) -> (!fir.ref<!child>, !fir.ref<!child>)
+  %p = hlfir.designate %x#0{"p"} fortran_attrs<pointer> : (!fir.ref<!child>) -> !fir.ref<!fir.box<!fir.ptr<!base>>>
+  %pbox = fir.load %p : !fir.ref<!fir.box<!fir.ptr<!base>>>
+  %paddr = fir.box_addr %pbox : (!fir.box<!fir.ptr<!base>>) -> !fir.ptr<!base>
+  %p_v = hlfir.designate %paddr{"v"} <%sh4> (%c1:%c3:%c1) shape %sh3 {test.ptr = "p_v"} : (!fir.ptr<!base>, !fir.shape<1>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+  %a = hlfir.designate %x#0{"a"} fortran_attrs<allocatable> : (!fir.ref<!child>) -> !fir.ref<!fir.box<!fir.heap<!base>>>
+  %abox = fir.load %a : !fir.ref<!fir.box<!fir.heap<!base>>>
+  %aaddr = fir.box_addr %abox : (!fir.box<!fir.heap<!base>>) -> !fir.heap<!base>
+  %a_v = hlfir.designate %aaddr{"v"} <%sh4> (%c2:%c4:%c1) shape %sh3 {test.ptr = "a_v"} : (!fir.heap<!base>, !fir.shape<1>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+  return
+}
+
+// -----
+
+// A recursive allocatable component:
+//   type t
+//     real :: v(4)
+//     type(t), allocatable :: next
+//   end type
+//   type(t) :: x
+//   x%next%v(2:4) = x%next%v(1:3)
+// The access path of both sections is [next, AllocDeref, v]: component next
+// of x, the allocated object x%next, and component v of x%next. The steps
+// next and v select different components of type t, but of different objects
+// (x and x%next), so they do not prove the sections disjoint.
+
+// CHECK-LABEL: Testing : "_QPrecursive_component"
+// CHECK-DAG: next_v_lo#0 <-> next_v_hi#0: MayAlias
+// CHECK-DAG: next_v_lo#0 <-> x_v#0: NoAlias
+
+!t = !fir.type<_QMmTt{v:!fir.array<4xf32>,next:!fir.box<!fir.heap<!fir.type<_QMmTt>>>}>
+func.func @_QPrecursive_component(%arg0: !fir.ref<!t> {fir.bindc_name = "x"}) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %sh4 = fir.shape %c4 : (index) -> !fir.shape<1>
+  %sh3 = fir.shape %c3 : (index) -> !fir.shape<1>
+  %ds = fir.dummy_scope : !fir.dscope
+  %x:2 = hlfir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFrecursive_componentEx") : (!fir.ref<!t>, !fir.dscope) -> (!fir.ref<!t>, !fir.ref<!t>)
+  %next = hlfir.designate %x#0{"next"} fortran_attrs<allocatable> : (!fir.ref<!t>) -> !fir.ref<!fir.box<!fir.heap<!t>>>
+  %nbox = fir.load %next : !fir.ref<!fir.box<!fir.heap<!t>>>
+  %naddr = fir.box_addr %nbox : (!fir.box<!fir.heap<!t>>) -> !fir.heap<!t>
+  %next_v_lo = hlfir.designate %naddr{"v"} <%sh4> (%c1:%c3:%c1) shape %sh3 {test.ptr = "next_v_lo"} : (!fir.heap<!t>, !fir.shape<1>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+  %next_v_hi = hlfir.designate %naddr{"v"} <%sh4> (%c2:%c4:%c1) shape %sh3 {test.ptr = "next_v_hi"} : (!fir.heap<!t>, !fir.shape<1>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<3xf32>>
+  %x_v = hlfir.designate %x#0{"v"} shape %sh4 {test.ptr = "x_v"} : (!fir.ref<!t>, !fir.shape<1>) -> !fir.ref<!fir.array<4xf32>>
   return
 }
