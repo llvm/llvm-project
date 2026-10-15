@@ -706,15 +706,16 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
-static bool isNoLoopEligible(ASTContext &Ctx, const OMPExecutableDirective &D) {
+static const OMPLoopDirective *
+checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
   const LangOptions &LangOpts = Ctx.getLangOpts();
   if (!LangOpts.OpenMPTeamSubscription || !LangOpts.OpenMPThreadSubscription)
-    return false;
+    return nullptr;
 
   OpenMPDirectiveKind DKind = D.getDirectiveKind();
   if (DKind != OMPD_target_teams_distribute_parallel_for &&
       DKind != OMPD_target_teams_distribute_parallel_for_simd)
-    return false;
+    return nullptr;
 
   const auto &LD = cast<OMPLoopDirective>(D);
   // Do not filter out 'ordered' since Sema rejects it on these directives.
@@ -724,12 +725,12 @@ static bool isNoLoopEligible(ASTContext &Ctx, const OMPExecutableDirective &D) {
       LD.hasClausesOfKind<OMPLinearClause>() ||
       LD.getSingleClause<OMPScheduleClause>() ||
       LD.getSingleClause<OMPDistScheduleClause>())
-    return false;
+    return nullptr;
 
   if (const auto *TTD =
           dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&LD))
-    return !TTD->hasCancel();
-  return true;
+    return TTD->hasCancel() ? nullptr : &LD;
+  return &LD;
 }
 
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
@@ -771,7 +772,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
   IsInTTDRegion = false;
-  KernelAttrs = {};
+  NoLoopDirective = nullptr;
 }
 
 void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
@@ -789,19 +790,21 @@ void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
 void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
-  KernelAttrs = {};
-  if (IsSPMD && isNoLoopEligible(CGM.getContext(), D))
-    KernelAttrs.ExecFlags =
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  NoLoopDirective =
+      IsSPMD ? checkAndGetNoLoopDirective(CGM.getContext(), D) : nullptr;
+  if (NoLoopDirective)
+    Attrs.ExecFlags =
         llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
   else
-    KernelAttrs.ExecFlags =
+    Attrs.ExecFlags =
         IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
                : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
-  computeMinAndMaxThreadsAndTeams(D, CGF, KernelAttrs);
+  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
 
   CGBuilderTy &Bld = CGF.Builder;
-  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, KernelAttrs));
+  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, Attrs));
   if (!IsSPMD)
     emitGenericVarsProlog(CGF, EST.Loc);
 }
@@ -890,7 +893,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
   IsInTTDRegion = false;
-  KernelAttrs = {};
+  NoLoopDirective = nullptr;
 }
 
 void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
