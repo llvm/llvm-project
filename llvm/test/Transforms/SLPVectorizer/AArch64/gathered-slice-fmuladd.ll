@@ -4,35 +4,49 @@
 define void @test(ptr %p, ptr %out0, ptr %out1, ptr %base, double %i319, double %i312, double %i317, double %i777, double %i318, double %i781, double %i320, double %i810, double %i809, double %i808, double %i813, double %i814, double %i842, double %factor.op.fmul14550, double %factor.op.fmul14547, double %i782, double %i338, double %mul21969, double %i343, double %i778) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x double> poison, double [[I810:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x double> [[TMP0]], double [[I813:%.*]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x double> [[TMP1]], double [[I814:%.*]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x double> [[TMP2]], double [[I778:%.*]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x double> [[TMP3]], double [[I781:%.*]], i64 6
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x double> [[TMP4]], double [[I782:%.*]], i64 7
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> poison, double [[I320:%.*]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x double> [[TMP6]], double [[I319:%.*]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x double> [[TMP7]], double [[I317:%.*]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x double> [[TMP8]], double [[I318:%.*]], i64 3
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x double> [[TMP9]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 0, i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[I810:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[I778:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[I320:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[I317:%.*]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[I809:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[I777:%.*]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP3]], double [[I319:%.*]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[I813:%.*]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[I781:%.*]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP6]], double [[I318:%.*]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP10]], double [[I320]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[I312:%.*]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[FACTOR_OP_FMUL14547:%.*]], i64 3
 ; CHECK-NEXT:    br label [[FOR_BODY473:%.*]]
 ; CHECK:       for.body473:
 ; CHECK-NEXT:    [[ARRAYIDX6701:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 -8
-; CHECK-NEXT:    [[I776:%.*]] = load double, ptr [[ARRAYIDX6701]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <8 x double> [[TMP10]], <double 2.000000e-01, double 8.000000e-01, double f0x3FA3813813813814, double f0x3F6D41D41D41D41E, double 2.000000e-01, double 8.000000e-01, double f0x3FA3813813813814, double f0x3F6D41D41D41D41E>
-; CHECK-NEXT:    [[REASS_ADD12772:%.*]] = fsub fast double [[I809:%.*]], [[I808:%.*]]
-; CHECK-NEXT:    [[REASS_ADD12756:%.*]] = fsub fast double [[I777:%.*]], [[I776]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x double> [[TMP5]], double [[REASS_ADD12772]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x double> [[TMP12]], double [[REASS_ADD12756]], i64 5
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <8 x double> [[TMP13]], [[TMP11]]
-; CHECK-NEXT:    [[REASS_MUL14238_REASS:%.*]] = fmul fast double [[I842:%.*]], [[FACTOR_OP_FMUL14550:%.*]]
-; CHECK-NEXT:    [[MUL21969:%.*]] = load double, ptr [[BASE]], align 8
-; CHECK-NEXT:    [[FACTOR_OP_FMUL14549:%.*]] = fmul fast double [[I312:%.*]], 8.000000e-01
-; CHECK-NEXT:    [[REASS_MUL12789_REASS:%.*]] = fmul fast double [[MUL21969]], [[FACTOR_OP_FMUL14549]]
-; CHECK-NEXT:    [[ADD7254:%.*]] = fadd fast double [[REASS_MUL14238_REASS]], [[REASS_MUL12789_REASS]]
-; CHECK-NEXT:    [[MUL21969_NEG:%.*]] = fmul fast double [[MUL21969]], [[ADD21968:%.*]]
-; CHECK-NEXT:    [[TMP36:%.*]] = fadd fast double [[ADD7254]], [[MUL21969_NEG]]
-; CHECK-NEXT:    [[TMP38:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP14]])
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <2 x double> [[TMP3]], splat (double 2.000000e-01)
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP6]], splat (double 8.000000e-01)
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul fast <2 x double> [[TMP9]], splat (double f0x3FA3813813813814)
+; CHECK-NEXT:    [[MUL21969_NEG:%.*]] = fmul fast double [[MUL21969:%.*]], [[ADD21968:%.*]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load <2 x double>, ptr [[ARRAYIDX6701]], align 8
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[TMP18]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> [[TMP19]], double [[I808:%.*]], i64 0
+; CHECK-NEXT:    [[TMP21:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fmul fast <2 x double> [[TMP21]], [[TMP15]]
+; CHECK-NEXT:    [[TMP23:%.*]] = fadd fast <2 x double> [[TMP17]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = fmul fast <2 x double> [[TMP8]], [[TMP16]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fadd fast <2 x double> [[TMP23]], [[TMP24]]
+; CHECK-NEXT:    [[TMP26:%.*]] = fmul reassoc arcp contract afn <4 x double> [[TMP13]], <double f0x3F6D41D41D41D41E, double f0x3F6D41D41D41D41E, double 8.000000e-01, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x double> [[TMP18]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x double> [[TMP27]], double [[I814:%.*]], i64 0
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x double> [[TMP28]], double [[I782:%.*]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast <4 x double> [[TMP29]], [[TMP26]]
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double -0.000000e+00>, double [[MUL21969_NEG]], i64 2
+; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <2 x double> [[TMP25]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x double> [[TMP31]], <4 x double> [[TMP32]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP34:%.*]] = fadd fast <4 x double> [[TMP30]], [[TMP33]]
+; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <4 x double> [[TMP34]], <4 x double> [[TMP30]], <2 x i32> <i32 2, i32 7>
+; CHECK-NEXT:    [[TMP36:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP35]])
+; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <4 x double> [[TMP34]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP38:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP37]])
 ; CHECK-NEXT:    [[ADD21969:%.*]] = fadd fast double [[TMP36]], [[TMP38]]
 ; CHECK-NEXT:    [[MUL21969_NEG1:%.*]] = fmul fast double [[MUL21970:%.*]], [[ADD21969]]
 ; CHECK-NEXT:    store double [[MUL21969_NEG1]], ptr [[OUT0:%.*]], align 8

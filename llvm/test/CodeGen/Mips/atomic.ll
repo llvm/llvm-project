@@ -190,7 +190,7 @@ define i32 @AtomicLoadAdd32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAdd32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB0_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -446,7 +446,7 @@ define i32 @AtomicLoadSub32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadSub32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadSub32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB1_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -702,7 +702,7 @@ define i32 @AtomicLoadXor32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadXor32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadXor32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB2_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -957,7 +957,7 @@ define i32 @AtomicLoadOr32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadOr32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadOr32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB3_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1212,7 +1212,7 @@ define i32 @AtomicLoadAnd32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAnd32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAnd32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB4_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1476,7 +1476,7 @@ define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadNand32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadNand32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB5_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -2094,7 +2094,7 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicCmpSwap32)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap32)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    move $2, $5
 ; MIPS64R6O0-NEXT:    sw $2, 12($sp)
 ; MIPS64R6O0-NEXT:    lw $5, 12($sp)
@@ -6679,7 +6679,7 @@ define i32 @CheckSync(i32 signext %v) nounwind noinline {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(CheckSync)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(CheckSync)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    sync
 ; MIPS64R6O0-NEXT:    ld $3, %got_disp(countsint)($1)
 ; MIPS64R6O0-NEXT:  .LBB16_1: # %entry
@@ -7370,7 +7370,7 @@ define i32 @AtomicLoadAdd32_OffGt9Bit(i32 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAdd32_OffGt9Bit)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd32_OffGt9Bit)))
-; MIPS64R6O0-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
+; MIPS64R6O0-NEXT:    # kill: def $r4 killed $r4 killed $r4_64
 ; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:    daddiu $3, $1, 1024
 ; MIPS64R6O0-NEXT:  .LBB18_1: # %entry
