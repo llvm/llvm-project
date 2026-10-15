@@ -2785,9 +2785,10 @@ multiclass PTXReadSRegIntrinsicNB_v4i32<list<list<IntrinsicProperty>> properties
 
 // Intrinsics to read registers with non-constant values. E.g. the values that
 // do change over the kernel lifetime. Such reads should not be CSE'd.
+// Model memory effects to keep profiling reads ordered with memory accesses.
 class PTXReadNCSRegIntrinsic<LLVMType ty>
-  : Intrinsic<[ty], [], [IntrInaccessibleMemOnly, IntrNoCallback,
-                         IntrNoFree, IntrWillReturn, NoUndef<RetIndex>]>,
+  : Intrinsic<[ty], [], [IntrNoCallback, IntrNoFree, IntrWillReturn,
+                         NoUndef<RetIndex>]>,
     NVVMBuiltin;
 
 defvar MAX_BLOCK_ID_RANGE = [[Range<RetIndex, 0, MAX_BLOCK_SIZE_X>],
