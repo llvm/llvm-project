@@ -94,9 +94,8 @@ struct SMCoords {
   SMCoords() = default;
   SMCoords(const SourceMgr &Mgr, SMLoc Loc) {
     Buf = Mgr.FindBufferContainingLoc(Loc);
-    // TODO: SourceMgr::getLineAndColumn is not a fast method. Find a better way
-    // to do this. For example we don't need the column number for every token,
-    // only the first token on each output line.
+    // TODO: Find a faster way to do this. For example we don't need the column
+    // number for every token, only the first token on each output line.
     std::tie(Line, Col) = Mgr.getLineAndColumn(Loc, Buf);
   }
 };
