@@ -83,6 +83,8 @@ __device__ bool cmpxchg(int *p, int e, int d) {
                                               __ATOMIC_RELAXED, 4);
 }
 
+// CIR-LABEL: @_Z10global_addPU3AS1ii
+// CIR: cir.atomic.fetch add relaxed syncscope(hip_agent) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i, target_address_space(1)>, !s32i) -> !s32i {cir.amdgpu_no_fine_grained_memory, cir.amdgpu_no_private_addrspace, cir.amdgpu_no_remote_memory}
 // LLVM-LABEL: @_Z10global_addPU3AS1ii
 // LLVM: atomicrmw add ptr addrspace(1) %{{.+}}, i32 %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory
 __device__ int global_add(__attribute__((address_space(1))) int *p, int v) {

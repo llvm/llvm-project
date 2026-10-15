@@ -75,11 +75,10 @@ public:
                attribute.getName() ==
                    cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName() ||
                attribute.getName() ==
-                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()) {
+                   cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName() ||
+               attribute.getName() ==
+                   cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
       amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
-    } else if (attribute.getName() ==
-               cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
-      amendAMDGPUNoPrivateAddrSpace(instructions, moduleTranslation);
     }
     return mlir::success();
   }
@@ -111,6 +110,16 @@ private:
       llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
+      llvm::MDBuilder mdHelper(moduleTranslation.getLLVMContext());
+      llvm::MDNode *asRange = mdHelper.createRange(
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+          llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+      for (llvm::Instruction *inst : instructions)
+        inst->setMetadata(llvm::LLVMContext::MD_noalias_addrspace, asRange);
+      return;
+    }
     llvm::MDNode *empty =
         llvm::MDNode::get(moduleTranslation.getLLVMContext(), {});
     // !atomic.ignore.denormal.mode is a fixed metadata kind so it has to be
@@ -131,17 +140,6 @@ private:
       mdName = "amdgpu.no.remote.memory";
     for (llvm::Instruction *inst : instructions)
       inst->setMetadata(mdName, empty);
-  }
-
-  void amendAMDGPUNoPrivateAddrSpace(
-      llvm::ArrayRef<llvm::Instruction *> instructions,
-      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
-    llvm::MDBuilder mdHelper(moduleTranslation.getLLVMContext());
-    llvm::MDNode *asRange = mdHelper.createRange(
-        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
-        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
-    for (llvm::Instruction *inst : instructions)
-      inst->setMetadata(llvm::LLVMContext::MD_noalias_addrspace, asRange);
   }
 
   mlir::LogicalResult amendRISCVNontemporalDomain(

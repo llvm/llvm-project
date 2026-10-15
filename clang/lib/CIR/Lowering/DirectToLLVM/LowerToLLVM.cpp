@@ -1416,8 +1416,8 @@ static void forwardAMDGPUNoPrivateAddrSpace(mlir::Operation *op,
                                             mlir::Value llvmPtr) {
   llvm::StringRef name = cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName();
   auto ptrTy = mlir::cast<mlir::LLVM::LLVMPointerType>(llvmPtr.getType());
-  if (mlir::Attribute a = op->getAttr(name);
-      a && ptrTy.getAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS)
+  mlir::Attribute a = op->getAttr(name);
+  if (a && ptrTy.getAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS)
     llvmOp->setAttr(name, a);
 }
 

@@ -159,6 +159,41 @@ private:
 };
 } // namespace
 
+/// Attach the AMDGPU atomic metadata markers that the current atomic options
+/// call for. The "no.X" metadata is emitted when the corresponding option is
+/// off, since it asserts the absence of that memory kind. The clang::atomic
+/// attribute is what turns the options on and off.
+static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op,
+                                    const AtomicExpr *expr) {
+  // TODO: AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata also calls
+  // CGF.AddAMDGPUAvailableVisibleMMRA on every atomic instruction; this is
+  // tied to the AMDGPUAvailableVisible statement attribute, which
+  // CIRGenStmt.cpp's emitAttributedStmt currently rejects via errorNYI.
+  assert(!cir::MissingFeatures::atomicAMDGPUAvailableVisibleMMRA());
+
+  // Lowering keeps this only on a flat pointer.
+  mlir::UnitAttr unit = cgf.getBuilder().getUnitAttr();
+  if (expr->threadPrivateMemoryAtomicsAreUndefined())
+    op->setAttr(cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName(), unit);
+
+  // Only a read-modify-write instruction carries these; a plain load, store or
+  // cmpxchg does not.
+  auto fetchOp = mlir::dyn_cast<cir::AtomicFetchOp>(op);
+  if (!fetchOp)
+    return;
+
+  clang::AtomicOptions atomicOpts = cgf.cgm.getAtomicOpts();
+  if (!atomicOpts.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+    op->setAttr(cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(), unit);
+  if (!atomicOpts.getOption(clang::AtomicOptionKind::RemoteMemory))
+    op->setAttr(cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(), unit);
+  // Denormal flushing only matters for a float add.
+  if (atomicOpts.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      fetchOp.getBinop() == cir::AtomicFetchKind::Add &&
+      mlir::isa<cir::SingleType>(fetchOp.getVal().getType()))
+    op->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(), unit);
+}
+
 // This function emits any expression (scalar, complex, or aggregate)
 // into a temporary alloca.
 static Address emitValToTemp(CIRGenFunction &cgf, Expr *e) {
@@ -481,41 +516,6 @@ static void emitMemOrderCaseLabel(CIRGenBuilderTy &builder, mlir::Location loc,
   cir::CaseOp::create(builder, loc, ordersAttr, cir::CaseOpKind::Anyof,
                       insertPoint);
   builder.restoreInsertionPoint(insertPoint);
-}
-
-/// Attach the AMDGPU atomic metadata markers that the current atomic options
-/// call for. The "no.X" metadata is emitted when the corresponding option is
-/// off, since it asserts the absence of that memory kind. The clang::atomic
-/// attribute is what turns the options on and off.
-static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op,
-                                    const AtomicExpr *expr) {
-  // TODO: AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata also calls
-  // CGF.AddAMDGPUAvailableVisibleMMRA on every atomic instruction; this is
-  // tied to the AMDGPUAvailableVisible statement attribute, which
-  // CIRGenStmt.cpp's emitAttributedStmt currently rejects via errorNYI.
-  assert(!cir::MissingFeatures::atomicAMDGPUAvailableVisibleMMRA());
-
-  // Lowering keeps this only on a flat pointer.
-  mlir::UnitAttr unit = cgf.getBuilder().getUnitAttr();
-  if (expr->threadPrivateMemoryAtomicsAreUndefined())
-    op->setAttr(cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName(), unit);
-
-  // Only a read-modify-write instruction carries these; a plain load, store or
-  // cmpxchg does not.
-  auto fetchOp = mlir::dyn_cast<cir::AtomicFetchOp>(op);
-  if (!fetchOp)
-    return;
-
-  clang::AtomicOptions atomicOpts = cgf.cgm.getAtomicOpts();
-  if (!atomicOpts.getOption(clang::AtomicOptionKind::FineGrainedMemory))
-    op->setAttr(cir::CIRDialect::getAMDGPUNoFineGrainedMemoryAttrName(), unit);
-  if (!atomicOpts.getOption(clang::AtomicOptionKind::RemoteMemory))
-    op->setAttr(cir::CIRDialect::getAMDGPUNoRemoteMemoryAttrName(), unit);
-  // Denormal flushing only matters for a float add.
-  if (atomicOpts.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      fetchOp.getBinop() == cir::AtomicFetchKind::Add &&
-      mlir::isa<cir::SingleType>(fetchOp.getVal().getType()))
-    op->setAttr(cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName(), unit);
 }
 
 static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
