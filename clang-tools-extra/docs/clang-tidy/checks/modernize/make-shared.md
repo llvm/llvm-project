@@ -1,56 +1,63 @@
-.. title:: clang-tidy - modernize-make-shared
+```{title} clang-tidy - modernize-make-shared
+```
 
-modernize-make-shared
-=====================
+# modernize-make-shared
 
-This check finds the creation of ``std::shared_ptr`` objects by explicitly
-calling the constructor and a ``new`` expression, and replaces it with a call
-to ``std::make_shared``.
+This check finds the creation of `std::shared_ptr` objects by explicitly
+calling the constructor and a `new` expression, and replaces it with a call
+to `std::make_shared`.
 
-.. code-block:: c++
+```c++
+auto my_ptr = std::shared_ptr<MyPair>(new MyPair(1, 2));
 
-  auto my_ptr = std::shared_ptr<MyPair>(new MyPair(1, 2));
+// becomes
 
-  // becomes
+auto my_ptr = std::make_shared<MyPair>(1, 2);
+```
 
-  auto my_ptr = std::make_shared<MyPair>(1, 2);
+This check also finds calls to `std::shared_ptr::reset()` with a `new`
+expression, and replaces it with a call to `std::make_shared`.
 
-This check also finds calls to ``std::shared_ptr::reset()`` with a ``new``
-expression, and replaces it with a call to ``std::make_shared``.
+```c++
+my_ptr.reset(new MyPair(1, 2));
 
-.. code-block:: c++
+// becomes
 
-  my_ptr.reset(new MyPair(1, 2));
+my_ptr = std::make_shared<MyPair>(1, 2);
+```
 
-  // becomes
+## Options
 
-  my_ptr = std::make_shared<MyPair>(1, 2);
+(modernize-make-shared-make-smart-ptr-function)=
 
-Options
--------
+```{option} MakeSmartPtrFunction
+A string specifying the name of make-shared-ptr function. Default is
+`std::make_shared`.
+```
 
-.. option:: MakeSmartPtrFunction
+(modernize-make-shared-make-smart-ptr-function-header)=
 
-   A string specifying the name of make-shared-ptr function. Default is
-   `std::make_shared`.
+```{option} MakeSmartPtrFunctionHeader
+A string specifying the corresponding header of make-shared-ptr function.
+Default is `<memory>`.
+```
 
-.. option:: MakeSmartPtrFunctionHeader
+(modernize-make-shared-include-style)=
 
-   A string specifying the corresponding header of make-shared-ptr function.
-   Default is `<memory>`.
+```{option} IncludeStyle
+A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.
+```
 
-.. option:: IncludeStyle
+(modernize-make-shared-ignore-macros)=
 
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
+```{option} IgnoreMacros
+If set to `true`, the check will not give warnings inside macros. Default is `true`.
+```
 
-.. option:: IgnoreMacros
+(modernize-make-shared-ignore-default-initialization)=
 
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
-
-.. option:: IgnoreDefaultInitialization
-
-   If set to `false`, the check does not suggest edits that will transform
-   default initialization into value initialization, as this can cause
-   performance regressions. Default is `true`.
+```{option} IgnoreDefaultInitialization
+If set to `false`, the check does not suggest edits that will transform
+default initialization into value initialization, as this can cause
+performance regressions. Default is `true`.
+```
