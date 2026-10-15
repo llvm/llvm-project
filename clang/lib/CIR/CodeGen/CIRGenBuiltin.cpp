@@ -27,6 +27,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/FunctionUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3480,11 +3481,21 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
   // to build this up so provide a small stack buffer to handle the vast
   // majority of names.
   llvm::SmallString<64> name;
-
-  assert(!cir::MissingFeatures::asmLabelAttr());
-  name = astContext.BuiltinInfo.getName(builtinID).substr(10);
-
   GlobalDecl d(fd);
+
+  // If the builtin has been declared explicitly with an assembler label,
+  // use the mangled name. This differs from the plain label on platforms
+  // that prefix labels.
+  if (fd->hasAttr<AsmLabelAttr>())
+    name = getMangledName(d);
+  else if (llvm::StringRef targetName =
+               CodeGenUtils::getTargetBuiltinLibFunctionName(builtinID,
+                                                             getTarget());
+           !targetName.empty())
+    name = targetName;
+  else
+    name = astContext.BuiltinInfo.getName(builtinID).substr(10);
+
   mlir::Type type = convertType(fd->getType());
   return getOrCreateCIRFunction(name, type, d, /*forVTable=*/false);
 }
