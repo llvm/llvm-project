@@ -107,6 +107,7 @@ public:
 class SectionWriter : public SectionVisitor {
 protected:
   WritableMemoryBuffer &Out;
+  virtual void writeSectionContents(ArrayRef<uint8_t> Data, uint64_t Offset);
 
 public:
   ~SectionWriter() override = default;
