@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares lowering of by-value PISA kernel arguments.
+///
+//===----------------------------------------------------------------------===//
 //
 // This pass lowers byval arguments. The byval semantics cannot work with the
 // PISA calling convention, so the pass replaces byval with byref as follows:

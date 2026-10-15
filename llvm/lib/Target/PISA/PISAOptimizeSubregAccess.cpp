@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements optimization of PISA subregister accesses.
+///
+//===----------------------------------------------------------------------===//
 //
 // Given two consecutive COPY operations utilizing same destination and source
 // registers (and differing in subregister index), attempt to combine them into

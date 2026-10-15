@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements verification of PISA Machine IR types.
+///
+//===----------------------------------------------------------------------===//
 //
 // Mixing of scalar/integer/float types causes issues with extended LLT
 // (scalar == integer, scalar == float, but integer != float), especially

@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements control-flow layout for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #define GET_PISAAtomicSubOpcode_DECL
 #include "PISAGenSearchableTables.inc"

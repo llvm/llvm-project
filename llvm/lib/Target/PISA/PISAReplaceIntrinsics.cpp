@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements replacement of PISA intrinsics with generic MIR.
+///
+//===----------------------------------------------------------------------===//
 //
 // This pass runs just after IRTranslator. It will replace some of intrinsics
 // with an equivalent GMIR opcode, so that subsequent optimizations can be made.
