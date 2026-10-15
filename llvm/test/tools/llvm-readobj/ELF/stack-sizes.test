@@ -1133,8 +1133,8 @@ Symbols:
 
 ## Check that on ARM the Thumb bit is also cleared from the address that a
 ## relocation resolves to, so that Thumb functions are found in relocatable
-## object files too. The addend of a SHT_REL relocation is the value stored in
-## the address field, as in --call-graph-info.
+## object files too. The Addend of a SHT_REL relocation is the value stored in
+## the address field.
 
 # RUN: yaml2obj --docnum=16 %s -o %t21
 # RUN: llvm-readelf --stack-sizes %t21 2>&1 | \
