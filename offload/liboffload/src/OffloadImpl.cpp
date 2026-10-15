@@ -1547,6 +1547,10 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
 __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
   return Queue ? Queue->AsyncInfo : nullptr;
 }
+
+GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
+  return std::get<GenericKernelTy *>(Symbol->PluginImpl);
+}
 } // namespace tmp
 
 } // namespace offload
