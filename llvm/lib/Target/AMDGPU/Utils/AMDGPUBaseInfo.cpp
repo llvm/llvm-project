@@ -3111,10 +3111,10 @@ std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
   if (Signed >= -16 && Signed <= -1)
     return 192 + std::abs(Signed);
 
-  // For float inline constants on GFX11+, both halves must be equal
+  // The shared helper would treat small halves as 32-bit integer constants.
   uint16_t Lo = static_cast<uint16_t>(Literal);
   uint16_t Hi = static_cast<uint16_t>(Literal >> 16);
-  if (Lo != Hi)
+  if (Lo != Hi || isInlinableIntLiteral(Lo))
     return std::nullopt;
   return getInlineEncodingV216(/*IsFloat=*/true, Lo);
 }
