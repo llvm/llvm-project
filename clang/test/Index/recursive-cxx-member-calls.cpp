@@ -438,7 +438,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "size_t" [41:16 - 41:22] TypeRef=size_t:2:25
 // CHECK-tokens: Identifier: "npos" [41:23 - 41:27] VarDecl=npos:41:23
 // CHECK-tokens: Punctuation: "=" [41:28 - 41:29] VarDecl=npos:41:23
-// CHECK-tokens: Punctuation: "~" [41:30 - 41:31] UnaryOperator=
+// CHECK-tokens: Punctuation: "~" [41:30 - 41:31] UnaryOperator=~
 // CHECK-tokens: Identifier: "size_t" [41:31 - 41:37] TypeRef=size_t:2:25
 // CHECK-tokens: Punctuation: "(" [41:37 - 41:38] CXXFunctionalCastExpr=
 // CHECK-tokens: Literal: "0" [41:38 - 41:39] IntegerLiteral=
@@ -867,7 +867,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: ")" [89:62 - 89:63] FunctionTemplate=Case:88:42 (Definition)
 // CHECK-tokens: Punctuation: "{" [89:64 - 89:65] CompoundStmt=
 // CHECK-tokens: Keyword: "return" [90:5 - 90:11] ReturnStmt=
-// CHECK-tokens: Punctuation: "*" [90:12 - 90:13] UnaryOperator=
+// CHECK-tokens: Punctuation: "*" [90:12 - 90:13] UnaryOperator=*
 // CHECK-tokens: Keyword: "this" [90:13 - 90:17] CXXThisExpr=
 // CHECK-tokens: Punctuation: ";" [90:17 - 90:18] CompoundStmt=
 // CHECK-tokens: Punctuation: "}" [91:3 - 91:4] CompoundStmt=
@@ -1629,7 +1629,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 40:23: TypedefDecl=iterator:40:23 (Definition) Extent=[40:3 - 40:31]
 // CHECK: 41:23: VarDecl=npos:41:23 Extent=[41:3 - 41:40]
 // CHECK: 41:16: TypeRef=size_t:2:25 Extent=[41:16 - 41:22]
-// CHECK: 41:30: UnaryOperator= Extent=[41:30 - 41:40]
+// CHECK: 41:30: UnaryOperator=~ Extent=[41:30 - 41:40]
 // CHECK: 41:31: CXXFunctionalCastExpr= Extent=[41:31 - 41:40]
 // CHECK: 41:31: TypeRef=size_t:2:25 Extent=[41:31 - 41:37]
 // CHECK: 41:38: UnexposedExpr= Extent=[41:38 - 41:39]
@@ -1856,7 +1856,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 89:57: ParmDecl=Value:89:57 (Definition) Extent=[89:47 - 89:62]
 // CHECK: 89:64: CompoundStmt= Extent=[89:64 - 91:4]
 // CHECK: 90:5: ReturnStmt= Extent=[90:5 - 90:17]
-// CHECK: 90:12: UnaryOperator= Extent=[90:12 - 90:17]
+// CHECK: 90:12: UnaryOperator=* Extent=[90:12 - 90:17]
 // CHECK: 90:13: CXXThisExpr= Extent=[90:13 - 90:17]
 // CHECK: 92:5: CXXMethod=Default:92:5 (Definition) (const) Extent=[92:3 - 94:4] [access=public]
 // CHECK: 92:23: ParmDecl=Value:92:23 (Definition) Extent=[92:13 - 92:28]

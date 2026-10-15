@@ -59,7 +59,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_simd(
 ! CHECK:         %[[SIMD_AFTER:.*]]:2 = hlfir.declare %arg2
-! CHECK-SAME:      uniq_name = "_QFtest_simdEafter"
+! CHECK-SAME:      uniq_name("_QFtest_simdEafter")
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}
 ! CHECK: %[[SIMD_I:.*]]:2 = hlfir.declare {{.*}}_QFtest_simdEi
 ! CHECK-NOT:     {{omp\.(wsloop|simd|loop_nest)|fir\.do_loop}}

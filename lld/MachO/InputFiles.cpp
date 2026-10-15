@@ -65,6 +65,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1035,6 +1036,11 @@ ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
   }
 }
 
+static bool isUnwindSection(const Section &sec) {
+  return sec.name == section_names::compactUnwind ||
+         sec.name == section_names::ehFrame;
+}
+
 template <class LP> void ObjFile::parse() {
   using Header = typename LP::mach_header;
   using SegmentCommand = typename LP::segment_command;
@@ -1079,8 +1085,12 @@ template <class LP> void ObjFile::parse() {
 
   // The relocations may refer to the symbols, so we parse them after we have
   // parsed all the symbols.
+  //
+  // Parse sections that are consumed by registerCompactUnwind() and
+  // registerEhFrames() immediately. The rest can be deferred to be done in
+  // parallel.
   for (size_t i = 0, n = sections.size(); i < n; ++i)
-    if (!sections[i]->subsections.empty())
+    if (!sections[i]->subsections.empty() && isUnwindSection(*sections[i]))
       parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
 
   parseDebugInfo();
@@ -1157,6 +1167,41 @@ void ObjFile::parseDebugInfo() {
   compileUnit = it != units.end() ? it->get() : nullptr;
 }
 
+template <class LP> void ObjFile::parseDeferredRelocationsImpl() {
+  using Header = typename LP::mach_header;
+  using SegmentCommand = typename LP::segment_command;
+  using SectionHeader = typename LP::section;
+
+  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+  const load_command *cmd = findCommand(hdr, LP::segmentLCType);
+  if (!cmd)
+    return;
+  auto *c = reinterpret_cast<const SegmentCommand *>(cmd);
+  ArrayRef<SectionHeader> sectionHeaders{
+      reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
+
+  // Mirroring section filter in parse() since we already parsed unwind
+  // sections.
+  for (size_t i = 0, n = sections.size(); i < n; ++i)
+    if (!sections[i]->subsections.empty() && !isUnwindSection(*sections[i]))
+      parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
+}
+
+void ObjFile::parseDeferredRelocations() {
+  if (target->wordSize == 8)
+    parseDeferredRelocationsImpl<LP64>();
+  else
+    parseDeferredRelocationsImpl<ILP32>();
+}
+
+void macho::parseDeferredRelocations() {
+  TimeTraceScope timeScope("Parse relocations");
+  parallelForEach(inputFiles, [](InputFile *file) {
+    if (auto *objFile = dyn_cast<ObjFile>(file))
+      objFile->parseDeferredRelocations();
+  });
+}
+
 ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const load_command *cmd = findCommand(buf, LC_DATA_IN_CODE);
@@ -1217,7 +1262,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         continue;
       }
       uint64_t add = r.addend;
-      if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
+      if (auto *sym = cast_or_null<Defined>(dyn_cast<Symbol *>(r.referent))) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
         if (sym->getFile() != this) {
@@ -1228,7 +1273,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         referentIsec = cast<ConcatInputSection>(sym->isec());
       } else {
         referentIsec =
-            cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
+            cast<ConcatInputSection>(dyn_cast<InputSection *>(r.referent));
       }
       // Unwind info lives in __DATA, and finalization of __TEXT will occur
       // before finalization of __DATA. Moreover, the finalization of unwind

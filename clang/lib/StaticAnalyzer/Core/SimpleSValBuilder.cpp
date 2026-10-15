@@ -289,14 +289,14 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
 
 // Simplify "(LSym + LInt) Op (RSym + RInt)" assuming all values are of the
 // same signed integral type and no overflows occur (which should be checked
-// by the caller).
-static NonLoc doRearrangeUnchecked(ProgramStateRef State,
-                                   BinaryOperator::Opcode Op,
-                                   SymbolRef LSym, llvm::APSInt LInt,
-                                   SymbolRef RSym, llvm::APSInt RInt) {
+// by the caller). May return UnknownVal if the symbol complexity threshold is
+// reached.
+static SVal doRearrangeUnchecked(ProgramStateRef State,
+                                 BinaryOperator::Opcode Op, SymbolRef LSym,
+                                 llvm::APSInt LInt, SymbolRef RSym,
+                                 llvm::APSInt RInt) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
-  SymbolManager &SymMgr = SVB.getSymbolManager();
 
   QualType SymTy = LSym->getType();
   assert(SymTy == RSym->getType() &&
@@ -320,7 +320,13 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .castAs<NonLoc>();
 
-  SymbolRef ResultSym = nullptr;
+  auto MakeSymExprVal = [&SVB, SymTy](SymbolRef Lhs, BinaryOperatorKind Op,
+                                      SymbolRef Rhs) {
+    return SVB.makeSymExprValNN(Op, nonloc::SymbolVal(Lhs),
+                                nonloc::SymbolVal(Rhs), SymTy);
+  };
+
+  SVal ResultSV = UnknownVal();
   BinaryOperator::Opcode ResultOp;
   llvm::APSInt ResultInt;
   if (BinaryOperator::isComparisonOp(Op)) {
@@ -328,16 +334,16 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
     // FIXME: Maybe it'd be better to have consistency in
     // "$x - $y" vs. "$y - $x" because those are solver's keys.
     if (LInt > RInt) {
-      ResultSym = SymMgr.acquire<SymSymExpr>(RSym, BO_Sub, LSym, SymTy);
+      ResultSV = MakeSymExprVal(RSym, BO_Sub, LSym);
       ResultOp = BinaryOperator::reverseComparisonOp(Op);
       ResultInt = LInt - RInt; // Opposite order!
     } else {
-      ResultSym = SymMgr.acquire<SymSymExpr>(LSym, BO_Sub, RSym, SymTy);
+      ResultSV = MakeSymExprVal(LSym, BO_Sub, RSym);
       ResultOp = Op;
       ResultInt = RInt - LInt; // Opposite order!
     }
   } else {
-    ResultSym = SymMgr.acquire<SymSymExpr>(LSym, Op, RSym, SymTy);
+    ResultSV = MakeSymExprVal(LSym, Op, RSym);
     ResultInt = (Op == BO_Add) ? (LInt + RInt) : (LInt - RInt);
     ResultOp = BO_Add;
     // Bring back the cosmetic difference.
@@ -346,12 +352,14 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
       ResultOp = BO_Sub;
     } else if (ResultInt == 0) {
       // Shortcut: Simplify "$x + 0" to "$x".
-      return nonloc::SymbolVal(ResultSym);
+      return ResultSV;
     }
   }
-  APSIntPtr PersistentResultInt = BV.getValue(ResultInt);
-  return nonloc::SymbolVal(SymMgr.acquire<SymIntExpr>(
-      ResultSym, ResultOp, PersistentResultInt, ResultTy));
+  if (auto ResultNL = ResultSV.getAs<NonLoc>()) {
+    nonloc::ConcreteInt ResultCI(BV.getValue(ResultInt));
+    return SVB.makeSymExprValNN(ResultOp, *ResultNL, ResultCI, ResultTy);
+  }
+  return UnknownVal();
 }
 
 // Rearrange if symbol type matches the result type and if the operator is a
@@ -374,9 +382,7 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   // We expect everything to be of the same type - this type.
   QualType SingleTy;
 
-  // FIXME: After putting complexity threshold to the symbols we can always
-  //        rearrange additive operations but rearrange comparisons only if
-  //        option is set.
+  // FIXME: This should be enabled by default, at least for additive operations.
   if (!SVB.getAnalyzerOptions().ShouldAggressivelySimplifyBinaryOperation)
     return std::nullopt;
 
@@ -401,6 +407,7 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   assert(!SingleTy.isNull() && "We should have figured out the type by now!");
 
   // Rearrange signed symbolic expressions only
+  // FIXME: This should also handle unsigned, at least for additive operations.
   if (!SingleTy->isSignedIntegerOrEnumerationType())
     return std::nullopt;
 
@@ -417,7 +424,8 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     return std::nullopt;
 
   // We know that no overflows can occur anymore.
-  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt);
+  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt)
+      .getAs<NonLoc>();
 }
 
 SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,

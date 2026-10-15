@@ -453,26 +453,25 @@ optMain(int argc, char **argv,
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  SmallVector<PassPluginLibraryInfo, 0> Extensions;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    Extensions.push_back(Plugin->getInfo());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
-  cl::ParseCommandLineOptions(
-      argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(
+      Context.getLibraryOptions(), ArrayRef(argv, argc),
+      "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    Extensions.push_back(Plugin->getInfo());
+  }
 #define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
 #include "llvm/Support/Extension.def"
   if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
-
-  LLVMContext Context;
 
   // TODO: remove shouldForceLegacyPM().
   const bool UseNPM =
@@ -699,8 +698,8 @@ optMain(int argc, char **argv,
     TuneCPUStr = codegen::getTuneCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(ModuleTriple,
-                                              GetCodeGenOptLevel());
+        codegen::createTargetMachineForTriple(
+            Context.getLibraryOptions(), ModuleTriple, GetCodeGenOptLevel());
     if (auto E = ExpectedTM.takeError()) {
       errs() << argv[0] << ": WARNING: failed to create target machine for '"
              << ModuleTriple.str() << "': " << toString(std::move(E)) << "\n";

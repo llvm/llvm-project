@@ -28,14 +28,14 @@ func.func @_QMmPbug(%val: !fir.char<1>, %var: !fir.ref<!fir.array<10x!fir.char<1
 // CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> <{bindc_name = ".tmp.array", uniq_name = ""}>
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) typeparams %[[VAL_3]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) typeparams %[[VAL_3]] uniq_name(".tmp.array") : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
 // CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_4]] step %[[VAL_9]] unordered {
 // CHECK:             %[[VAL_11:.*]] = fir.allocmem !fir.char<1>
 // CHECK:             fir.store %[[VAL_0]] to %[[VAL_11]] : !fir.heap<!fir.char<1>>
 // CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.heap<!fir.char<1>>) -> !fir.ref<!fir.char<1>>
 // CHECK:             %[[VAL_13:.*]] = arith.constant 1 : index
-// CHECK:             %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_13]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+// CHECK:             %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_13]] uniq_name(".tmp") : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
 // CHECK:             hlfir.assign %[[VAL_12]] to %[[VAL_15]]#0 temporary_lhs : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>
 // CHECK:             %[[VAL_14:.*]] = arith.constant false
 // CHECK:             %[[VAL_16:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1>>, i1>

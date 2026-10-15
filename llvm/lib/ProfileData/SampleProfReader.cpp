@@ -677,7 +677,10 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
-  M.reserve(*NumVTableTypes);
+  // With FS discriminators, M may already hold the types of another raw
+  // location that maps to the same masked location (see below), so reserve
+  // for both the existing and the incoming vtables.
+  M.reserve(M.size() + *NumVTableTypes);
 
   for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
     auto VTableType(readStringFromTable());
@@ -687,10 +690,15 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
     auto VTableSamples = readNumber<uint64_t>();
     if (std::error_code EC = VTableSamples.getError())
       return EC;
-    // The source profile should not have duplicate vtable records at the same
-    // location. In case duplicate vtables are found, reader can emit a warning
-    // but continue processing the profile.
-    if (!M.insert(std::make_pair(*VTableType, *VTableSamples)).second) {
+
+    auto [It, Inserted] = M.try_emplace(*VTableType, *VTableSamples);
+    if (Inserted)
+      continue;
+
+    // Without FS discriminators, the source profile should not have duplicate
+    // vtable records at the same location. Emit a warning about duplicate
+    // vtables and continue processing the profile.
+    if (!ProfileIsFS) {
       Ctx.diagnose(DiagnosticInfoSampleProfile(
           Buffer->getBufferIdentifier(), 0,
           "Duplicate vtable type " + VTableType->str() +
@@ -698,6 +706,12 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
           DS_Warning));
       continue;
     }
+
+    // With flow-sensitive discriminators enabled in the profiled binary,
+    // several raw locations of the profiled instruction may map to the same
+    // masked location. Accumulate vtable counts for the same masked location,
+    // like body and callsite samples are accumulated.
+    It->second = SaturatingAdd(It->second, *VTableSamples);
   }
   return sampleprof_error::success;
 }

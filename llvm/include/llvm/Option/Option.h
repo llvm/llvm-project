@@ -59,19 +59,22 @@ public:
     InputClass,
     UnknownClass,
     FlagClass,
+    FlagOrEqClass,
     JoinedClass,
     ValuesClass,
     SeparateClass,
+    SeparateOrEqClass,
     RemainingArgsClass,
     RemainingArgsJoinedClass,
     CommaJoinedClass,
     MultiArgClass,
     JoinedOrSeparateClass,
-    JoinedAndSeparateClass
+    JoinedAndSeparateClass,
   };
 
   enum RenderStyleKind {
     RenderCommaJoinedStyle,
+    RenderEqStyle,
     RenderJoinedStyle,
     RenderSeparateStyle,
     RenderValuesStyle
@@ -136,14 +139,14 @@ public:
   /// Get the meta-variable list for this option.
   StringRef getMetaVar() const { return Owner->getOptionMetaVar(getID()); }
 
-  unsigned getNumArgs() const { return Info->Param; }
+  unsigned getNumArgs() const { return Owner->getExtra(*Info).Param; }
 
-  bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput;}
+  bool hasNoOptAsInput() const { return hasFlag(RenderAsInput); }
 
   RenderStyleKind getRenderStyle() const {
-    if (Info->Flags & RenderJoined)
+    if (hasFlag(RenderJoined))
       return RenderJoinedStyle;
-    if (Info->Flags & RenderSeparate)
+    if (hasFlag(RenderSeparate))
       return RenderSeparateStyle;
     switch (getKind()) {
     case GroupClass:
@@ -153,6 +156,9 @@ public:
     case JoinedClass:
     case JoinedAndSeparateClass:
       return RenderJoinedStyle;
+    case FlagOrEqClass:
+    case SeparateOrEqClass:
+      return RenderEqStyle;
     case CommaJoinedClass:
       return RenderCommaJoinedStyle;
     case FlagClass:
@@ -169,12 +175,12 @@ public:
 
   /// Test if this option has the flag \a Val.
   bool hasFlag(unsigned Val) const {
-    return Info->Flags & Val;
+    return Owner->getExtra(*Info).Flags & Val;
   }
 
   /// Test if this option has the visibility flag \a Val.
   bool hasVisibilityFlag(unsigned Val) const {
-    return Info->Visibility & Val;
+    return Owner->getExtra(*Info).Visibility & Val;
   }
 
   /// getUnaliasedOption - Return the final option this option
