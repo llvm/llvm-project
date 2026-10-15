@@ -26,8 +26,7 @@
 // CHECK-NEXT:  string S = "a\"b\\c" # "d" ;
 // CHECK-NEXT:  code K = [{
 // CHECK-NEXT:    multi
-// CHECK-NEXT:      line }]
-// CHECK-NEXT:             ;
+// CHECK-NEXT:      line }] ;
 // CHECK-NEXT:  int I = !if ( !eq ( n , 0 ) , 1 , !add ( n , -1 ) ) ;
 // CHECK-NEXT:  dag D = ( ops $x , i32 : $y ) ;
 // CHECK-NEXT:  bit Q = ? ;

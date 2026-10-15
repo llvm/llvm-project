@@ -127,9 +127,16 @@ static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
 
     const char *Start = Lex.getLoc().getPointer();
     const char *End = Lex.getLocRange().End.getPointer();
-    OS << StringRef(Start, End - Start);
+    StringRef Text(Start, End - Start);
+    OS << Text;
 
     Last = This;
+    // A code block is the only kind of token that can span multiple lines.
+    // Record the line it ends on, so that a following token on that line stays
+    // on the same output line. Count '\n' characters to match how SourceMgr
+    // counts lines.
+    if (Lex.getCode() == tgtok::CodeFragment)
+      Last.Line += Text.count('\n');
   }
   if (Last.Buf != 0)
     OS << '\n';

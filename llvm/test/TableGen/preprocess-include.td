@@ -19,6 +19,32 @@
 // CHECK-NEXT:               def main_last ;
 // CHECK-NOT:{{.}}
 
+// Check more than one include on a single line, and multi-line tokens before,
+// inside and after included files. A token that follows a multi-line token on
+// the same line stays on the same output line, even if there are includes in
+// between, as long as they do not output any tokens.
+
+// RUN: llvm-tblgen -E -I %t %t/multi.td | FileCheck %s --check-prefix=MULTI --match-full-lines --strict-whitespace
+
+// MULTI:{{^}}def p ;
+// MULTI-NEXT:def c ; code cc = [{
+// MULTI-NEXT:  c }] ;
+// MULTI-NEXT:                      def q ;
+// MULTI-NEXT:def c ; code cc = [{
+// MULTI-NEXT:  c }] ;
+// MULTI-NEXT:                                            def r ;
+// MULTI-NEXT:code x = [{
+// MULTI-NEXT:  x }] ; def s ;
+// MULTI-NEXT:def c ; code cc = [{
+// MULTI-NEXT:  c }] ;
+// MULTI-NEXT:                                                                    def t ;
+// MULTI-NEXT:def c ; code cc = [{
+// MULTI-NEXT:  c }] ;
+// MULTI-NEXT:def c ; code cc = [{
+// MULTI-NEXT:  c }] ;
+// MULTI-NEXT:def u ;
+// MULTI-NOT:{{.}}
+
 //--- main.td
 def main_first; include "a.td"
 def main_middle;
@@ -39,3 +65,16 @@ def a_last;
 #define FROM_B
 #endif
 def b;
+
+//--- multi.td
+def p; include "c.td" def q; include "c.td" def r;
+code x = [{
+  x }]; include "empty.td" def s; include "empty.td" include "c.td" def t;
+include "c.td" include "empty.td" include "c.td"
+def u;
+
+//--- c.td
+def c; code cc = [{
+  c }];
+
+//--- empty.td
