@@ -48,7 +48,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
@@ -1413,6 +1412,11 @@ void CodeGenModule::Release() {
     // Note if we are compiling with /kernel.
     getModule().addModuleFlag(llvm::Module::Warning, "ms-kernel", 1);
   }
+  if (CodeGenOpts.HotPatch) {
+    // Note if we are compiling with /hotpatch. Min ensures that LTO only keeps
+    // it if every module was compiled with /hotpatch.
+    getModule().addModuleFlag(llvm::Module::Min, "ms-hotpatch", 1);
+  }
   if (CodeGenOpts.OptimizationLevel > 0 && CodeGenOpts.StrictVTablePointers) {
     // We don't support LTO with 2 with different StrictVTablePointers
     // FIXME: we could support it by stripping all the information introduced
@@ -2537,15 +2541,21 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
 
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
                                       const NamedDecl *ND,
-                                      bool OmitMultiVersionMangling = false) {
+                                      bool OmitMultiVersionMangling = false,
+                                      bool IgnoreAsmLabel = false) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   MangleContext &MC = CGM.getCXXABI().getMangleContext();
   if (!CGM.getModuleNameHash().empty())
     MC.needsUniqueInternalLinkageNames();
-  bool ShouldMangle = MC.shouldMangleDeclName(ND);
+  bool ShouldMangle = !IgnoreAsmLabel
+                          ? MC.shouldMangleDeclName(ND)
+                          : MC.shouldMangleDeclNameIgnoringAsmLabel(ND);
   if (ShouldMangle)
-    MC.mangleName(GD.getWithDecl(ND), Out);
+    if (!IgnoreAsmLabel)
+      MC.mangleName(GD.getWithDecl(ND), Out);
+    else
+      MC.mangleNameIgnoringAsmLabel(GD.getWithDecl(ND), Out);
   else {
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
@@ -2737,6 +2747,14 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();
+}
+
+std::string CodeGenModule::getMangledNameIgnoringAsmLabel(GlobalDecl GD,
+                                                          const NamedDecl *ND) {
+  std::string MangledName =
+      getMangledNameImpl(*this, GD, ND, /*OmitMultiVersionMangling=*/false,
+                         /*IgnoreAsmLabel=*/true);
+  return MangledName;
 }
 
 StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
@@ -3310,7 +3328,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
     ExplicitAlignment = llvm::Align(alignment);
   else if (LangOpts.FunctionAlignment)
-    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
+    ExplicitAlignment = llvm::Align::fromLog2(LangOpts.FunctionAlignment);
 
   if (ExplicitAlignment) {
     F->setAlignment(ExplicitAlignment);
@@ -4745,14 +4763,6 @@ ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {
   return ConstantAddress(Aliasee, DeclTy, Alignment);
 }
 
-template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
-  if (!D)
-    return false;
-  if (auto *A = D->getAttr<AttrT>())
-    return A->isImplicit();
-  return D->isImplicit();
-}
-
 static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
                                     const ValueDecl *Global) {
   const LangOptions &LangOpts = CGM.getLangOpts();
@@ -4785,19 +4795,6 @@ static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
   return false;
 }
 
-bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
-  assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
-  // We need to emit host-side 'shadows' for all global
-  // device-side variables because the CUDA runtime needs their
-  // size and host-side address in order to provide access to
-  // their device-side incarnations.
-  return !LangOpts.CUDAIsDevice || Global->hasAttr<CUDADeviceAttr>() ||
-         Global->hasAttr<CUDAConstantAttr>() ||
-         Global->hasAttr<CUDASharedAttr>() ||
-         Global->getType()->isCUDADeviceBuiltinSurfaceType() ||
-         Global->getType()->isCUDADeviceBuiltinTextureType();
-}
-
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
@@ -4822,31 +4819,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     return emitCPUDispatchDefinition(GD);
 
   // If this is CUDA, be selective about which declarations we emit.
-  // Non-constexpr non-lambda implicit host device functions are not emitted
-  // unless they are used on device side.
-  if (LangOpts.CUDA) {
-    assert((isa<FunctionDecl>(Global) || isa<VarDecl>(Global)) &&
-           "Expected Variable or Function");
-    if (const auto *VD = dyn_cast<VarDecl>(Global)) {
-      if (!shouldEmitCUDAGlobalVar(VD))
-        return;
-    } else if (LangOpts.CUDAIsDevice) {
-      const auto *FD = dyn_cast<FunctionDecl>(Global);
-      if ((!Global->hasAttr<CUDADeviceAttr>() ||
-           (LangOpts.OffloadImplicitHostDeviceTemplates &&
-            hasImplicitAttr<CUDAHostAttr>(FD) &&
-            hasImplicitAttr<CUDADeviceAttr>(FD) && !FD->isConstexpr() &&
-            !isLambdaCallOperator(FD) &&
-            !getContext().CUDAImplicitHostDeviceFunUsedByDevice.count(FD))) &&
-          !Global->hasAttr<CUDAGlobalAttr>() &&
-          !(LangOpts.HIPStdPar && isa<FunctionDecl>(Global) &&
-            !Global->hasAttr<CUDAHostAttr>()))
-        return;
-      // Device-only functions are the only things we skip.
-    } else if (!Global->hasAttr<CUDAHostAttr>() &&
-               Global->hasAttr<CUDADeviceAttr>())
-      return;
-  }
+  if (LangOpts.CUDA && !getContext().shouldEmitCUDADecl(Global))
+    return;
 
   if (LangOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
@@ -5523,8 +5497,8 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
       IFunc = GI;
     }
 
-    std::string AliasName = getMangledNameImpl(
-        *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+    std::string AliasName =
+        getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
     llvm::Constant *AliasFunc = GetGlobalValue(AliasName);
     if (!AliasFunc) {
       auto *GA = llvm::GlobalAlias::create(DeclTy, AS, Linkage, AliasName,
@@ -7038,7 +7012,7 @@ static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
 void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   auto DK = VD->isThisDeclarationADefinition();
   if ((DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>()) ||
-      (LangOpts.CUDA && !shouldEmitCUDAGlobalVar(VD)))
+      (LangOpts.CUDA && !getContext().shouldEmitCUDADecl(VD)))
     return;
 
   TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();

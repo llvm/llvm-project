@@ -9,8 +9,8 @@ define ptr @vla(i32 %n) {
   ; SMALL-NEXT: {{  $}}
   ; SMALL-NEXT:   [[COPY:%[0-9]+]]:gprnopc = COPY $r0
   ; SMALL-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 7, 14 /* CC::al */, $noreg, $noreg
-  ; SMALL-NEXT:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri killed [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
-  ; SMALL-NEXT:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2BICri]], 2, 14 /* CC::al */, $noreg, $noreg
+  ; SMALL-NEXT:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
+  ; SMALL-NEXT:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri [[t2BICri]], 2, 14 /* CC::al */, $noreg, $noreg
   ; SMALL-NEXT:   $r4 = COPY [[t2LSRri]]
   ; SMALL-NEXT:   tBL 14 /* CC::al */, $noreg, &__chkstk, implicit-def dead $lr, implicit $sp, implicit killed $r4, implicit-def $r4, implicit-def dead $r12, implicit-def dead $cpsr
   ; SMALL-NEXT:   $sp = frame-setup t2SUBrr killed $sp, killed $r4, 14 /* CC::al */, $noreg, $noreg
@@ -24,8 +24,8 @@ define ptr @vla(i32 %n) {
   ; LARGE-NEXT: {{  $}}
   ; LARGE-NEXT:   [[COPY:%[0-9]+]]:gprnopc = COPY $r0
   ; LARGE-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 7, 14 /* CC::al */, $noreg, $noreg
-  ; LARGE-NEXT:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri killed [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
-  ; LARGE-NEXT:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2BICri]], 2, 14 /* CC::al */, $noreg, $noreg
+  ; LARGE-NEXT:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri [[t2ADDri]], 4, 14 /* CC::al */, $noreg, $noreg
+  ; LARGE-NEXT:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri [[t2BICri]], 2, 14 /* CC::al */, $noreg, $noreg
   ; LARGE-NEXT:   $r4 = COPY [[t2LSRri]]
   ; LARGE-NEXT:   [[t2MOVi32imm:%[0-9]+]]:rgpr = t2MOVi32imm &__chkstk
   ; LARGE-NEXT:   tBLXr 14 /* CC::al */, $noreg, [[t2MOVi32imm]], implicit-def dead $lr, implicit $sp, implicit killed $r4, implicit-def $r4, implicit-def dead $r12, implicit-def dead $cpsr

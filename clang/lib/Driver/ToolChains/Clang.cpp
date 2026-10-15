@@ -357,6 +357,9 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
     case types::TY_PP_CXXModule:
       ClangType = "c++-cpp-output";
       break;
+    case types::TY_CIRBC:
+      ClangType = "cir";
+      break;
     default:
       ClangType = types::getTypeName(Input.getType());
       break;
@@ -1417,7 +1420,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   // Check CmdArgs because some toolchains bypass the driver args and add to
   // the frontend args directly.
   bool HasPtrauthReturns =
-      llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
+      llvm::is_contained(CmdArgs, StringRef("-fptrauth-returns")) ||
       Args.hasFlagNoClaim(options::OPT_fptrauth_returns,
                           options::OPT_fno_ptrauth_returns, false);
 
@@ -4014,6 +4017,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_hlsl_entrypoint,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
+      options::OPT_fdx_semantic_signature_packing_mode_EQ,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
@@ -5622,6 +5626,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       rewriteKind = RK_Fragile;
     } else if (JA.getType() == types::TY_CIR) {
       CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_CIRBC) {
+      CmdArgs.push_back("-emit-cir-bc");
     } else if (JA.getType() == types::TY_Image && IsAMDSPIRVForHIPDevice) {
       CmdArgs.push_back("-emit-obj");
     } else {

@@ -631,6 +631,12 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
       return $_get(type.getContext(), type,
                    mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
+    // Pointer-to-data-member reusing an existing path attribute.
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                       "mlir::DenseI32ArrayAttr":$member_path),
+                                  [{
+      return $_get(type.getContext(), type, member_path);
+    }]>,
   ];
 
   // This attribute gets lowered during CXXABILowering.
@@ -1033,28 +1039,35 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
       int b;
     };
     ```
+    `address_point` marks a vtable address point: `symbol` is a vtable and
+    `indices` are the vtable within the group and the address point within
+    it. As in classic codegen, it lowers to an `inbounds` GEP whose `inrange`
+    spans that one vtable.
+
     VTT for B in CIR:
     ```
     cir.global linkonce_odr @_ZTT1B = #cir.const_array<[
-              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]>
-                   : !cir.array<!cir.ptr<!u8i> x 1>
+              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32], address_point>
+                   : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>
     ```
     VTT for B in LLVM IR:
     ```
     @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds
-              ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
+              inrange(-24, 0) (i8, ptr @_ZTV1B, i64 24)], align 8
     ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
                         "mlir::FlatSymbolRefAttr":$symbol,
-                        OptionalParameter<"mlir::ArrayAttr">:$indices);
+                        OptionalParameter<"mlir::ArrayAttr">:$indices,
+                        DefaultValuedParameter<"bool", "false">:$address_point);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "mlir::FlatSymbolRefAttr":$symbol,
-                                        CArg<"mlir::ArrayAttr", "{}">:$indices), [{
-      return $_get(type.getContext(), type, symbol, indices);
+                                        CArg<"mlir::ArrayAttr", "{}">:$indices,
+                                        CArg<"bool", "false">:$addressPoint), [{
+      return $_get(type.getContext(), type, symbol, indices, addressPoint);
     }]>
   ];
 
@@ -1063,6 +1076,7 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
     `<`
       $symbol
       (`,` $indices^)?
+      (`,` `address_point` $address_point^)?
     `>`
   }];
 }
@@ -1443,6 +1457,55 @@ def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
     documentation:
         The ‘uwtable’ attribute is about the ABI or the user mandating an /
             entry in the unwind table.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FramePointerKind
+//===----------------------------------------------------------------------===//
+
+def CIR_FramePointerKind : CIR_I32Enum<"FramePointerKind",
+                                       "frame pointer kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"NonLeaf", 1, "non_leaf">,
+  I32EnumCase<"All", 2, "all">,
+  I32EnumCase<"Reserved", 3, "reserved">,
+  I32EnumCase<"NonLeafNoReserve", 4, "non_leaf_no_reserve">
+]>;
+
+def CIR_FramePointerKindAttr
+    : CIR_EnumAttr<CIR_FramePointerKind, "frame_pointer"> {
+  let summary = "Encodes the frame pointer kind for a function or a module.";
+
+  let description = [{
+    Mirrors the `frame-pointer` function attribute and module flag of LLVM
+    IR (https://llvm.org/docs/LangRef.html#function-attributes), which tell
+    the code generator whether a function should keep its frame pointer.  The
+    code generator may keep a frame pointer even when the kind says it can
+    be eliminated.
+
+    - `none`: the frame pointer can be eliminated, and its register can be
+      used for other purposes.
+    - `reserved`: the frame pointer register must either be updated to point
+      to a valid frame record for the current function, or not be modified.
+    - `non_leaf`: the frame pointer should be kept if the function calls
+      other functions.
+    - `non_leaf_no_reserve`: like `non_leaf`, but a leaf function may use
+      the frame pointer register for other purposes.
+    - `all`: the frame pointer should be kept.
+
+    On a function, the attribute applies to that function.  On the module,
+    it becomes the `frame-pointer` module flag, which LLVM applies to the
+    functions it creates after CIR is lowered, such as sanitizer
+    constructors.  Without the attribute, the kind is `none`.
+
+    Example:
+
+    ```
+    module attributes {cir.frame_pointer = #cir.frame_pointer<all>} {
+      cir.func private @f() attributes {frame_pointer = #cir.frame_pointer<all>}
+    }
+    ```
   }];
 }
 
@@ -2436,7 +2499,7 @@ def CIR_LoweringLangOptionsAttr
     width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
 
     Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
-    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `gpu_rdc`,
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
     `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
     `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
     `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
@@ -2459,6 +2522,7 @@ def CIR_LoweringLangOptionsAttr
     "bool":$cuda,
     "bool":$cuda_is_device,
     "bool":$hip,
+    "bool":$hlsl,
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
@@ -2467,7 +2531,7 @@ def CIR_LoweringLangOptionsAttr
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
-               $gpu_rdc, $openmp, $openmp_is_target_device,
+               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
                $clang_abi_compat) `>`
   }];
 

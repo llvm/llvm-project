@@ -780,7 +780,7 @@ lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
 }
 
 void PlatformDarwin::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 static FileSpec GetCommandLineToolsLibraryPath() {
