@@ -1910,23 +1910,6 @@ public:
                         __tgt_async_info *AsyncInfoPtr,
                         GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Creates an event in the given plugin if supported.
-  int32_t create_event(int32_t DeviceId, void **EventPtr);
-
-  /// Records an event that has occurred.
-  int32_t record_event(int32_t DeviceId, void *EventPtr,
-                       __tgt_async_info *AsyncInfoPtr);
-
-  /// Wait until an event has occurred.
-  int32_t wait_event(int32_t DeviceId, void *EventPtr,
-                     __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize execution until an event is done.
-  int32_t sync_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
   /// Creates an asynchronous queue for the given plugin.
   int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
 

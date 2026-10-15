@@ -1573,6 +1573,7 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return R;
 }
 
+#if 0//<<<<<<< HEAD
 int32_t GenericPluginTy::create_event(int32_t DeviceId, void **EventPtr) {
   auto T = logger::log<int32_t>(__func__, DeviceId, EventPtr);
   auto R = [&]() {
@@ -1653,7 +1654,7 @@ int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
   T.res(R);
   return R;
 }
-
+#endif
 // Register mapped or allocated memory (with omp_target_alloc or omp_alloc)
 // as coarse grain
 // \arg DeviceId is the ID of the device for which the memory should be switched

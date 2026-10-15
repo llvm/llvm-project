@@ -712,7 +712,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   for (VPWidenIntOrFpInductionRecipe &IV :
        make_isa_range<VPWidenIntOrFpInductionRecipe>(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    if (IV.getTruncInst())
+    if (IV.isTruncated())
       continue;
 
     // A sequence of IR Casts has potentially been recorded for IV, which
@@ -887,8 +887,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
-        WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder, WrapFlags);
+        WideIV->getScalarType(), WideIV->getStartValue(),
+        WideIV->getStepValue(), WideIV->getDebugLoc(), Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -916,7 +916,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    return (IntOrFpIV && IntOrFpIV->getTruncInst()) ? nullptr : WideIV;
+    return (IntOrFpIV && IntOrFpIV->isTruncated()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -1019,7 +1019,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
   // Truncated wide inductions resume from the last lane of their vector value
   // in the last vector iteration which is handled elsewhere.
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
+  if (WideIntOrFp && WideIntOrFp->isTruncated())
     return nullptr;
 
   VPValue *Start = WideIV->getStartValue();
@@ -2114,7 +2114,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    assert(!WideIV->getTruncInst() &&
+    assert(!WideIV->isTruncated() &&
            "canonical IV is not expected to have a truncation");
     auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
         WideIV->getPHINode(), Plan.getZero(NewIVTy),
@@ -6259,11 +6259,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
 
-      // Underlying Trunc is necessary to create VPWidenIntOrFpInductionRecipe.
-      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
-      if (!Trunc)
-        continue;
-
       // A truncate that is not widened is left to the scalarization decisions
       // made earlier.
       if (vputils::onlyFirstLaneUsed(&VPI))
@@ -6297,8 +6292,9 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
           WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
-          WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
-          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
+          WideIV->getVFValue(), WideIV->getInductionDescriptor(),
+          VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
+          VPI.getDebugLoc());
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

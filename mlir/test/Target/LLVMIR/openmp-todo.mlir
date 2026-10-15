@@ -1,5 +1,53 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s
 
+// -----
+
+llvm.func @target_enter_data_iterated_depend(%x: !llvm.ptr) {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%i: i64) = (%one to %one step %one) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@+2 {{Unhandled clause depend in omp.target_enter_data}}
+  // expected-error@+1 {{LLVM Translation failed}}
+  omp.target_enter_data depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_exit_data_iterated_depend(%x: !llvm.ptr) {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%i: i64) = (%one to %one step %one) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@+2 {{Unhandled clause depend in omp.target_exit_data}}
+  // expected-error@+1 {{LLVM Translation failed}}
+  omp.target_exit_data depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_update_iterated_depend(%x: !llvm.ptr) {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%i: i64) = (%one to %one step %one) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@+2 {{Unhandled clause depend in omp.target_update}}
+  // expected-error@+1 {{LLVM Translation failed}}
+  omp.target_update depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+
 llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
   // expected-warning@below {{hint clause discarded}}
   omp.atomic.capture hint(uncontended) {
@@ -714,7 +762,6 @@ llvm.func @wsloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 }
 
 // -----
-
 llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause order in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
