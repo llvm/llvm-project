@@ -175,11 +175,13 @@ int test_unser_defined_cast_with_aligned_load(B x) {
 }
 
 // CIR: cir.func{{.*}} @_Z41test_unser_defined_cast_with_aligned_load1B
-// CIR:   cir.store %{{.*}}, %[[B_PTR:.*]] : !rec_B, !cir.ptr<!rec_B>
+// CIR:   %[[B_PTR:.*]] = cir.alloca "x" align(8) init : !cir.ptr<!rec_B>
+// CIR:   cir.copy %{{.*}} align(8) to %[[B_PTR]] align(8) : !cir.ptr<!rec_B>
 // CIR:   %[[CAST:.*]] = cir.call @_ZNK1BcvPiEv(%[[B_PTR]])
 // CIR:   %[[LOAD:.*]] = cir.load{{.*}} %[[CAST]]
 
 // LLVM: define{{.*}} i32 @_Z41test_unser_defined_cast_with_aligned_load1B
-// LLVM:   store %struct.B %{{.*}}, ptr %[[B_PTR:.*]], align 8
+// LLVM:   %[[B_PTR:.*]] = alloca %struct.B, align 8
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[B_PTR]], ptr align 8 %{{.*}}, i64 8, i1 false)
 // LLVM:   %[[CAST:.*]] = call {{.*}} ptr @_ZNK1BcvPiEv(ptr {{.*}} %[[B_PTR]])
 // LLVM:   %[[LOAD:.*]] = load i32, ptr %[[CAST]]

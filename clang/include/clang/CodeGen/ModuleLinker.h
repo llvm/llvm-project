@@ -19,6 +19,7 @@ class Module;
 } // namespace llvm
 
 namespace clang {
+class BackendDiagnosticConsumer;
 class CodeGenOptions;
 class CompilerInstance;
 class LangOptions;
@@ -38,6 +39,16 @@ struct LinkModule {
 /// Appends to \p LinkModules; does not clear it.
 bool loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
                      llvm::SmallVectorImpl<LinkModule> &LinkModules);
+
+/// Link every module in \p LinkModules into \p M, propagating default
+/// function attributes and internalizing as each entry requests. Linker
+/// diagnostics are attributed to the module being linked through
+/// \p DiagConsumer. Returns true on error. Clears \p LinkModules on success.
+bool linkInModules(llvm::Module &M,
+                   llvm::SmallVectorImpl<LinkModule> &LinkModules,
+                   const CodeGenOptions &CodeGenOpts,
+                   const LangOptions &LangOpts, const TargetOptions &TargetOpts,
+                   BackendDiagnosticConsumer &DiagConsumer);
 
 namespace CodeGen {
 /// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as

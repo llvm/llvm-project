@@ -108,6 +108,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
@@ -3526,13 +3527,13 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                 Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
                getPreprocessedType(InputType) == types::TY_INVALID)
         Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
-            << InputArg->getAsString(Args) << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << InputArg->getAsString(Args) << !FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       else
         Diag(clang::diag::warn_drv_input_file_unused)
             << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
-            << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << !FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       continue;
     }
 
@@ -3904,13 +3905,10 @@ static StringRef getCanonicalArchString(Compilation &C,
                                         const llvm::opt::DerivedArgList &Args,
                                         StringRef ArchStr,
                                         const llvm::Triple &Triple) {
-  // Lookup the CUDA / HIP architecture string. Only report an error if we were
-  // expecting the triple to be only NVPTX / AMDGPU.
+  // Look up the architecture. Only report an error if the triple expects an
+  // NVPTX or AMDGPU one.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  // An Intel name takes no target features, so "xe-pvc:foo" is not "xe-pvc".
-  if (Arch.isIntel() && ArchStr.contains(':'))
-    Arch = OffloadArch::getUnknown();
   if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
@@ -3938,14 +3936,21 @@ static StringRef getCanonicalArchString(Compilation &C,
   if (Arch.isNVPTX() || Arch.isIntelGPU())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
-    llvm::StringMap<bool> Features;
-    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
-    if (!Arch) {
+  // AMDGCN target IDs carry a processor and xnack/sramecc modifiers to
+  // canonicalize. Other AMD offload arches (e.g. the amdgcnspirv pseudo-arch on
+  // a SPIR-V triple) have no target-id features and pass through unchanged.
+  if (Arch.isAMDGPU() && Triple.isAMDGCN()) {
+    StringRef TargetIDStr = ArchStr;
+    if (llvm::Triple::parseSubArch(ArchStr) != llvm::Triple::NoSubArch)
+      TargetIDStr = getProcessorFromTargetID(Triple, ArchStr);
+
+    std::optional<llvm::AMDGPU::TargetID> ID =
+        llvm::AMDGPU::TargetID::parse(Triple, TargetIDStr);
+    if (!ID) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
       return StringRef();
     }
-    return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
+    return Args.MakeArgStringRef(ID->getCanonicalTargetIDString());
   }
 
   // If the input isn't CUDA or HIP just return the architecture.
@@ -3956,13 +3961,18 @@ static StringRef getCanonicalArchString(Compilation &C,
 /// incompatible pair if a conflict occurs.
 static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
-                                  llvm::Triple Triple) {
+                                  const llvm::Triple &Triple) {
   if (!Triple.isAMDGPU())
     return std::nullopt;
 
-  std::set<StringRef> ArchSet;
-  llvm::copy(Archs, std::inserter(ArchSet, ArchSet.begin()));
-  return getConflictTargetIDCombination(ArchSet);
+  // Sort for a deterministic conflicting pair in the diagnostic.
+  llvm::SmallVector<StringRef> ArchList(Archs.begin(), Archs.end());
+  llvm::sort(ArchList);
+
+  llvm::SmallVector<clang::TargetIDEntry> Entries;
+  for (StringRef Arch : ArchList)
+    Entries.emplace_back(Triple, Arch);
+  return getConflictTargetIDCombination(Entries);
 }
 
 llvm::SmallVector<BoundArch>
@@ -4457,8 +4467,13 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
-    if (Args.hasArg(options::OPT_emit_cir))
+    if (Args.hasArg(options::OPT_emit_cir)) {
+      // Like -emit-llvm, -c selects the binary form; bare -emit-cir and
+      // -emit-cir -S keep emitting text.
+      if (Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S))
+        return C.MakeAction<CompileJobAction>(Input, types::TY_CIRBC);
       return C.MakeAction<CompileJobAction>(Input, types::TY_CIR);
+    }
     if (Args.hasArg(options::OPT_module_file_info))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
@@ -5344,8 +5359,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
 
-  ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
+  ToolSelector TS(
+      JA, *TC, C, isSaveTempsEnabled(),
+      embedBitcodeInObject() &&
+          !TC->isUsingLTO(C.getArgs(), JA->getOffloadingDeviceKind()));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)

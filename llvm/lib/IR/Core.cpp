@@ -2206,6 +2206,14 @@ void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr) {
   }
 }
 
+LLVMBool LLVMIsDSOLocal(LLVMValueRef Global) {
+  return unwrap<GlobalValue>(Global)->isDSOLocal();
+}
+
+void LLVMSetDSOLocal(LLVMValueRef Global, LLVMBool IsDSOLocal) {
+  unwrap<GlobalValue>(Global)->setDSOLocal(IsDSOLocal);
+}
+
 LLVMBool LLVMHasUnnamedAddr(LLVMValueRef Global) {
   return unwrap<GlobalValue>(Global)->hasGlobalUnnamedAddr();
 }

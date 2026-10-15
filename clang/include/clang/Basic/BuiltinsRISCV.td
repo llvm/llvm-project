@@ -261,6 +261,15 @@ def pmerge_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned ch
 def pmerge_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, _Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 def pmerge_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
 
+// Scalar Bitmanip
+def rev16_64 : RISCVBuiltin<"uint64_t(uint64_t)", "64bit">;
+
+// Scalar Averaging Addition and Subtraction
+def aadd_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def aaddu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def asub_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def asubu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+
 // Scalar Multiply High
 def mulh_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulhr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
@@ -541,6 +550,15 @@ def pnsra_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned in
 def pnsrar_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
 def pnsrar_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
 
+// Packed Narrowing Clip
+def pnclipu_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned short>, unsigned int)">;
+def pnclipu_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned int>, unsigned int)">;
+def pnclipru_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned short>, unsigned int)">;
+def pnclipru_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned int>, unsigned int)">;
+def pnclip_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
+def pnclip_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
+def pnclipr_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
+def pnclipr_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
 
 // Packed Narrowing Clip Pair (32-bit)
 def pnclipp_i8x4   : RISCVBuiltin<"_Vector<4, signed char>(_Vector<2, short>, _Vector<2, short>)">;

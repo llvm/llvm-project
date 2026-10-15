@@ -446,13 +446,6 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
   cl::init(true),
   cl::Hidden);
 
-// Option to control global loads scalarization
-static cl::opt<bool> ScalarizeGlobal(
-  "amdgpu-scalarize-global-loads",
-  cl::desc("Enable global load scalarization"),
-  cl::init(true),
-  cl::Hidden);
-
 // Option to run internalize pass.
 static cl::opt<bool> InternalizeSymbols(
   "amdgpu-internalize-symbols",
@@ -1409,8 +1402,6 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
                                        TBufRelaxed, Xnack, SramEcc);
   }
 
-  I->setScalarizeGlobalBehavior(ScalarizeGlobal);
-
   return I.get();
 }
 
@@ -1496,10 +1487,6 @@ public:
   GCNPassConfig(TargetMachine &TM, PassManagerBase &PM)
       : AMDGPUPassConfig(TM, PM) {
     substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
-  }
-
-  GCNTargetMachine &getGCNTargetMachine() const {
-    return getTM<GCNTargetMachine>();
   }
 
   bool addPreISel() override;

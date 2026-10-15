@@ -2568,8 +2568,8 @@ cases. This will typically be used in conjunction with
 ------------------------------------------
 
 This is generic IR metadata for floating-point :ref:`atomicrmw
-<i_atomicrmw>` operations; see `'atomic.ignore.denormal.mode' Metadata
-<https://llvm.org/docs/LangRef.html#atomic-ignore-denormal-mode-metadata>`_
+<i_atomicrmw>` operations; see :ref:`'atomic.ignore.denormal.mode' Metadata
+<md_atomic.ignore.denormal.mode>`
 in the language reference for its definition. It is required to emit a
 native atomic instruction for AMDGPU global memory, which
 unconditionally flushes float denormals.
@@ -2738,6 +2738,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-no-completion-action"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+
+     "amdgpu-no-lds-dma"                              Indicates the function does not execute any :ref:`LDS DMA operations
+                                                      <amdgpu-dma-operations>`.
 
      "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
                                                       consistently set (or unset) for all reachable functions. This is only
@@ -6326,9 +6329,9 @@ The fields used by CP for code objects before V3 also match those specified in
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
      457:455 3 bits                                  Reserved, must be 0.
-     458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9, GFX125*
+     458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX11, GFX120*, GFX13
+                                                     GFX10-GFX11
                                                        - If 0 execute in
                                                          wavefront size 64 mode.
                                                        - If 1 execute in
@@ -7589,6 +7592,16 @@ treated as non-atomic.
 
 A memory synchronization scope wider than work-group is not meaningful for the
 group (LDS) address space and is treated as work-group.
+
+When a work-group's maximum flat work-group size does not exceed the wavefront
+size, the work-group fits within a single wavefront. So long as no LDSDMA
+operations occur, the LLVM ``workgroup`` synchronization scope is equivalent to
+its ``wavefront`` scope.
+
+If the compiler can determine these conditions (e.g., through the function
+attributes ``amdgpu-flat-work-group-size`` and ``amdgpu-no-lds-dma``), the
+AMDGPU backend optimizes ``workgroup`` scope operations by lowering them to
+``wavefront``-scoped machine instructions.
 
 The memory model does not support the region address space which is treated as
 non-atomic.
@@ -21868,9 +21881,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX13  Controls ENABLE_WAVEFRONT_SIZE32 in
-                                                              Feature             (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-                                                              Specific            GFX125*)
+     ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
+                                                              Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                              Specific
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.

@@ -23,13 +23,6 @@
 // CHK-NO-ARCH: offload, "device-sycl (spirv64-unknown-unknown:generic)"
 // CHK-NO-ARCH-NOT: bmg
 
-/// An Intel GPU name takes no target-ID features, so a suffix is not dropped to
-/// turn the name into a device.
-// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
-// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:foo -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-SUFFIX %s
-// CHK-SUFFIX: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc:foo)"
-
 /// -Xarch_ may name an Intel GPU by either spelling.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_20.1.0 \

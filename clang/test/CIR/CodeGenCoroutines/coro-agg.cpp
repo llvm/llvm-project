@@ -36,8 +36,7 @@ coro_t aggregate_coawait_expr() {
   // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP:.*]] : !u64i, !cir.ptr<!u64i>
   // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_B>
-  // CIR:   %[[LOAD:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_B>, !rec_B
-  // CIR:   cir.store align(4) %[[LOAD]], %[[VAL]] : !rec_B, !cir.ptr<!rec_B>
+  // CIR:   cir.copy %[[CAST]] align(8) to %[[VAL]] align(4) : !cir.ptr<!rec_B>
   // CIR:   cir.yield
   // CIR: },)
 
@@ -74,8 +73,7 @@ coro_t aggregate_coyield_expr() {
   // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP:.*]] : !u64i, !cir.ptr<!u64i>
   // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_B>
-  // CIR:   %[[LOAD:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_B>, !rec_B
-  // CIR:   cir.store align(4) %[[LOAD]], %[[VAL]] : !rec_B, !cir.ptr<!rec_B>
+  // CIR:   cir.copy %[[CAST]] align(8) to %[[VAL]] align(4) : !cir.ptr<!rec_B>
   // CIR:   cir.yield
   // CIR: },)
 

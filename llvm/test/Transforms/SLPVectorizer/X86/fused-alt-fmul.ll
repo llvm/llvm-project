@@ -261,3 +261,92 @@ define void @fmsubadd_float(ptr noalias %a1p, ptr noalias %a3p, ptr noalias %ep)
   store float %si, ptr %a1i.p, align 4
   ret void
 }
+
+; The fused alternate node with reuse shuffles: the mask is sized by the
+; unique scalars, the vector type must match.
+
+define void @fmaddsub_reuse(ptr noalias %p, ptr noalias %out) {
+; CHECK-LABEL: define void @fmaddsub_reuse(
+; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
+; CHECK-NEXT:    [[A2R:%.*]] = load float, ptr [[P2]], align 4
+; CHECK-NEXT:    [[A2I:%.*]] = load float, ptr [[P3]], align 4
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 32
+; CHECK-NEXT:    [[P10:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 40
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[A2R]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[A2I]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <2 x float> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x float> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <4 x i32> <i32 0, i32 3, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x float>, ptr [[P8]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = load <2 x float>, ptr [[P10]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> poison, <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd fast <2 x float> [[TMP16]], [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> poison, <2 x i32> <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd fast <2 x float> [[TMP18]], [[TMP15]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <2 x float> [[TMP20]], [[TMP17]]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP23:%.*]] = fadd fast <2 x float> [[TMP22]], [[TMP19]]
+; CHECK-NEXT:    [[TMP24:%.*]] = fadd fast <2 x float> [[TMP21]], [[TMP23]]
+; CHECK-NEXT:    store <2 x float> [[TMP24]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 4
+  %p2 = getelementptr inbounds i8, ptr %p, i64 8
+  %p3 = getelementptr inbounds i8, ptr %p, i64 12
+  %er = load float, ptr %p, align 4
+  %ei = load float, ptr %p1, align 4
+  %a2r = load float, ptr %p2, align 4
+  %a2i = load float, ptr %p3, align 4
+  %m1 = fmul fast float %er, %a2r
+  %m2 = fmul fast float %er, %a2i
+  %m3 = fmul fast float %ei, %a2r
+  %m4 = fmul fast float %ei, %a2i
+  %g0 = fsub fast float %m1, %m4
+  %g1 = fadd fast float %m3, %m2
+  %p4 = getelementptr inbounds i8, ptr %p, i64 16
+  %p5 = getelementptr inbounds i8, ptr %p, i64 20
+  %p6 = getelementptr inbounds i8, ptr %p, i64 24
+  %p7 = getelementptr inbounds i8, ptr %p, i64 28
+  %w0 = load float, ptr %p4, align 4
+  %w1 = load float, ptr %p5, align 4
+  %w2 = load float, ptr %p6, align 4
+  %w3 = load float, ptr %p7, align 4
+  %u0 = fadd fast float %g0, %w0
+  %u1 = fadd fast float %g1, %w1
+  %u2 = fadd fast float %g0, %w2
+  %u3 = fadd fast float %g1, %w3
+  %p8 = getelementptr inbounds i8, ptr %p, i64 32
+  %p9 = getelementptr inbounds i8, ptr %p, i64 36
+  %p10 = getelementptr inbounds i8, ptr %p, i64 40
+  %p11 = getelementptr inbounds i8, ptr %p, i64 44
+  %b0 = load float, ptr %p8, align 4
+  %b1 = load float, ptr %p9, align 4
+  %b2 = load float, ptr %p10, align 4
+  %b3 = load float, ptr %p11, align 4
+  %a0 = fadd fast float %u2, %b0
+  %a1 = fadd fast float %u2, %b1
+  %a2 = fadd fast float %u3, %b2
+  %a3 = fadd fast float %u3, %b3
+  %t0 = fadd fast float %u0, %a0
+  %t1 = fadd fast float %u0, %a1
+  %t2 = fadd fast float %u1, %a2
+  %t3 = fadd fast float %u1, %a3
+  %v0 = fadd fast float %t0, %t2
+  %v1 = fadd fast float %t1, %t3
+  store float %v0, ptr %out, align 4
+  %o1 = getelementptr inbounds i8, ptr %out, i64 4
+  store float %v1, ptr %o1, align 4
+  ret void
+}
