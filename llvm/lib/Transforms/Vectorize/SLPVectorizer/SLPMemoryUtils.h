@@ -61,7 +61,7 @@ public:
 
 private:
   using KeyT = std::tuple<Type *, Value *, Type *, Value *, unsigned>;
-  SmallDenseMap<KeyT, std::optional<int64_t>> Cache;
+  SmallDenseMap<KeyT, std::optional<int64_t>, 16> Cache;
 };
 
 /// \p MaxDepth is the recursion limit for getUnderlyingObject.
