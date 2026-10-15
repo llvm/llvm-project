@@ -97,7 +97,7 @@ write_character_as_wchar(Writer<mode, wchar_t> *writer,
 
     write_char = static_cast<wchar_t>(wi);
   } else {
-    char c = static_cast<char>(to_conv.conv_val_raw);
+    int c = static_cast<int>(to_conv.conv_val_raw);
     if (c < 0 || c > 127)
       return MB_CONVERSION_ERROR;
 

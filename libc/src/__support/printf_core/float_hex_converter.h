@@ -19,7 +19,10 @@
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/float_inf_nan_converter.h"
 #include "src/__support/printf_core/writer.h"
+
+#if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
 #include "src/__support/wctype_utils.h"
+#endif // !LIBC_COPT_PRINTF_DISABLE_WIDE
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -191,8 +194,12 @@ convert_finite_float_hex_exp(Writer<mode, CharT> *writer,
     if constexpr (cpp::is_same_v<CharT, char>) {
       new_digit = internal::int_to_b36_char(mant_mod_16);
     } else {
+#if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
+      static_assert(false, "wchar_t not supported.");
+#else // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       new_digit = internal::int_to_b36_wchar(mant_mod_16);
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
     }
     if (is_upper)
       new_digit = internal::toupper(new_digit);
@@ -228,9 +235,13 @@ convert_finite_float_hex_exp(Writer<mode, CharT> *writer,
       exp_buffer[exp_cur - 1] =
           internal::int_to_b36_char(fp_bits_properties.exponent % 10);
     } else {
+#if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
+      static_assert(false, "wchar_t not supported.");
+#else // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       exp_buffer[exp_cur - 1] =
           internal::int_to_b36_wchar(fp_bits_properties.exponent % 10);
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
     }
   }
   if (exp_cur == EXP_LEN) { // if nothing else was written, write a 0.

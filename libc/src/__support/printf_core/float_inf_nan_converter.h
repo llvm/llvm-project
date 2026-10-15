@@ -16,7 +16,10 @@
 #include "src/__support/printf_core/converter_utils.h"
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/writer.h"
+
+#if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
 #include "src/__support/wctype_utils.h"
+#endif // !LIBC_COPT_PRINTF_DISABLE_WIDE
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -63,18 +66,26 @@ LIBC_INLINE int convert_inf_nan(Writer<mode, CharT> *writer,
       RET_IF_RESULT_NEGATIVE(
           writer->write(internal::islower(to_conv.conv_name) ? "inf" : "INF"));
     } else {
+#if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
+      static_assert(false, "wchar_t not supported.");
+#else // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       RET_IF_RESULT_NEGATIVE(writer->write(
           internal::islower(to_conv.conv_name) ? L"inf" : L"INF"));
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
     }
   } else { // nan
     if constexpr (cpp::is_same_v<CharT, char>) {
       RET_IF_RESULT_NEGATIVE(
           writer->write(internal::islower(to_conv.conv_name) ? "nan" : "NAN"));
     } else {
+#if defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
+      static_assert(false, "wchar_t not supported.");
+#else // LIBC_COPT_PRINTF_DISABLE_WIDE
       static_assert(cpp::is_same_v<CharT, wchar_t>);
       RET_IF_RESULT_NEGATIVE(writer->write(
           internal::islower(to_conv.conv_name) ? L"nan" : L"NAN"));
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
     }
   }
 

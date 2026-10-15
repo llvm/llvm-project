@@ -22,7 +22,10 @@
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/float_inf_nan_converter.h"
 #include "src/__support/printf_core/writer.h"
+
+#if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
 #include "src/__support/wctype_utils.h"
+#endif // !LIBC_COPT_PRINTF_DISABLE_WIDE
 
 #include <inttypes.h>
 #include <stddef.h>
