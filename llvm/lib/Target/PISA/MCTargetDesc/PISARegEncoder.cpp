@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements encoding of PISA virtual registers.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISARegEncoder.h"
 #include "llvm/CodeGen/Register.h"
