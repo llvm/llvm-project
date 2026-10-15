@@ -1953,6 +1953,72 @@ void ClauseProcessor::processMapObjects(
   }
 }
 
+static mlir::omp::DeclareMapperOp
+getEnclosingDeclareMapper(lower::AbstractConverter &converter) {
+  return mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
+      converter.getFirOpBuilder().getRegion().getParentOp());
+}
+
+static bool isDeclareMapperVariable(lower::AbstractConverter &converter,
+                                    mlir::omp::DeclareMapperOp declareMapper,
+                                    const semantics::Symbol *symbol) {
+  if (!declareMapper || !symbol)
+    return false;
+
+  mlir::Value address = converter.getSymbolAddress(*symbol);
+  while (address) {
+    if (auto declare = address.getDefiningOp<hlfir::DeclareOp>()) {
+      address = declare.getMemref();
+      continue;
+    }
+    if (auto declare = address.getDefiningOp<fir::DeclareOp>()) {
+      address = declare.getMemref();
+      continue;
+    }
+    break;
+  }
+  return address == declareMapper.getRegion().front().getArgument(0);
+}
+
+// Only the mapper variable and the iterators have values in the mapper region.
+// Locator roots are diagnosed per item.
+static void checkDeclareMapperIteratorReferences(
+    lower::AbstractConverter &converter,
+    mlir::omp::DeclareMapperOp declareMapper, mlir::Location loc,
+    const omp::clause::Iterator &iterator, const omp::ObjectList &objects) {
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> iteratorSymbols;
+  for (const auto &specifier : iterator)
+    iteratorSymbols.insert(&std::get<1>(specifier.t).sym()->GetUltimate());
+
+  auto check = [&](const omp::SomeExpr &expr, const semantics::Symbol *root) {
+    for (const semantics::Symbol &symbol : evaluate::CollectSymbols(expr)) {
+      const semantics::Symbol &ultimate = symbol.GetUltimate();
+      if (&ultimate == root || iteratorSymbols.contains(&ultimate) ||
+          ultimate.owner().IsDerivedType() ||
+          !(semantics::IsVariableName(ultimate) ||
+            semantics::IsProcedurePointer(ultimate)))
+        continue;
+      if (!isDeclareMapperVariable(converter, declareMapper, &ultimate))
+        TODO(loc, "iterator modifier with reference outside declare mapper "
+                  "variable");
+    }
+  };
+
+  for (const auto &specifier : iterator) {
+    const auto &[lb, ub, step] = std::get<2>(specifier.t).t;
+    check(lb, nullptr);
+    check(ub, nullptr);
+    if (step)
+      check(*step, nullptr);
+  }
+  for (const omp::Object &object : objects) {
+    if (const auto &ref = object.ref()) {
+      const semantics::Symbol *root = analyzeIteratorMapObject(object).rootSym;
+      check(*ref, root ? &root->GetUltimate() : nullptr);
+    }
+  }
+}
+
 // Ordinary map bounds report these sections as errors without failing, and
 // then map the whole base.
 static bool hasUnsupportedMapSection(const omp::SomeExpr &ref) {
@@ -2000,28 +2066,7 @@ void ClauseProcessor::processMapObjectsWithIterator(
     return;
   }
 
-  auto declareMapper = mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
-      converter.getFirOpBuilder().getRegion().getParentOp());
-  auto isDeclareMapperVariable =
-      [&](const IteratorMapObjectAnalysis &analysis) {
-        if (!declareMapper || !analysis.rootSym)
-          return false;
-
-        mlir::Value rootAddress = converter.getSymbolAddress(*analysis.rootSym);
-        while (rootAddress) {
-          if (auto declare = rootAddress.getDefiningOp<hlfir::DeclareOp>()) {
-            rootAddress = declare.getMemref();
-            continue;
-          }
-          if (auto declare = rootAddress.getDefiningOp<fir::DeclareOp>()) {
-            rootAddress = declare.getMemref();
-            continue;
-          }
-          break;
-        }
-
-        return rootAddress == declareMapper.getRegion().front().getArgument(0);
-      };
+  auto declareMapper = getEnclosingDeclareMapper(converter);
 
   constexpr mlir::omp::ClauseMapFlags unsupportedReferenceModifiers =
       mlir::omp::ClauseMapFlags::ref_ptr | mlir::omp::ClauseMapFlags::ref_ptee |
@@ -2042,7 +2087,8 @@ void ClauseProcessor::processMapObjectsWithIterator(
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,
              "iterator modifier with reference or attach modifier");
-      bool isMapperVariable = isDeclareMapperVariable(analysis);
+      bool isMapperVariable =
+          isDeclareMapperVariable(converter, declareMapper, analysis.rootSym);
       if (analysis.isDerivedTypeMember && !isMapperVariable)
         TODO(clauseLocation, "iterator modifier with derived type member map");
       if (declareMapper && analysis.rootSym && !isMapperVariable)
@@ -2069,6 +2115,10 @@ void ClauseProcessor::processMapObjectsWithIterator(
       TODO(clauseLocation, "object type not supported by iterator modifier");
     if (object.ref() && hasUnsupportedMapSection(*object.ref()))
       TODO(clauseLocation, "iterator modifier with unsupported array section");
+    if (declareMapper &&
+        !isDeclareMapperVariable(converter, declareMapper, analysis.rootSym))
+      TODO(clauseLocation,
+           "iterator modifier with locator outside declare mapper variable");
     omp::ObjectList singleObj{object};
     processMapObjects(stmtCtx, clauseLocation, singleObj, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapObjects,
@@ -2207,6 +2257,9 @@ bool ClauseProcessor::processMap(
       if (directive == llvm::omp::Directive::OMPD_target)
         TODO(clauseLocation, "TARGET construct with MAP iterator modifier");
 
+      if (auto declareMapper = getEnclosingDeclareMapper(converter))
+        checkDeclareMapperIteratorReferences(
+            converter, declareMapper, clauseLocation, *iterator, objects);
       iteratorRanges = lowerIteratorRanges(clause, converter, stmtCtx);
     }
     processMapObjectsWithIterator(

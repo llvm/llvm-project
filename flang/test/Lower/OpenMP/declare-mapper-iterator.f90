@@ -10,8 +10,21 @@
 ! RUN:   -module-dir %t %t/mapper.f90 -o /dev/null
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   -J %t %t/consumer.f90 -o - | FileCheck %t/consumer.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   %t/cleanup.f90 -o - | FileCheck %t/cleanup.f90
+! RUN: %flang_fc1 -emit-llvm -O2 -fopenmp -fopenmp-version=52 \
+! RUN:   %t/cleanup.f90 -o - | FileCheck %t/cleanup.f90 --check-prefix=LLVM
 
 !--- maps.f90
+subroutine declare_mapper_mapper_references()
+  type :: t
+    integer :: n
+    integer :: idx(4)
+    integer :: a(4)
+  end type
+  !$omp declare mapper(m: t :: v) map(iterator(i = 1:v%n): v%a(v%idx(i)))
+end
+
 subroutine declare_mapper_scalar_parent()
   type :: inner_t
     integer :: a(2)
@@ -264,6 +277,22 @@ end
 ! CHECK:     omp.yield(%[[MAP]] : !llvm.ptr)
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
+! Ranges and subscripts may reference the mapper variable.
+! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_mapper_referencesm
+! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdeclare_mapper_mapper_referencesEv")
+! CHECK:   %[[N_REF:.*]] = hlfir.designate %[[DECL]]#0{"n"}
+! CHECK:   %[[N:.*]] = fir.load %[[N_REF]] : !fir.ref<i32>
+! CHECK:   %[[IT:.*]] = omp.iterator(%{{.*}}: i32) = (%{{.*}} to %[[N]] step %{{.*}}) {
+! CHECK:     %[[A:.*]] = hlfir.designate %[[DECL]]#0{"a"}
+! CHECK:     %[[IDX:.*]] = hlfir.designate %[[DECL]]#0{"idx"}
+! CHECK:     %[[SUB:.*]] = fir.load %[[IDX]] : !fir.ref<i32>
+! CHECK:     %[[SUB_I64:.*]] = fir.convert %[[SUB]] : (i32) -> i64
+! CHECK:     %[[SUB_IDX:.*]] = fir.convert %[[SUB_I64]] : (i64) -> index
+! CHECK:     %[[LB:.*]] = arith.subi %[[SUB_IDX]], %{{.*}} : index
+! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB]] : index) upper_bound(%[[LB]] : index)
+! CHECK:     omp.map.info var_ptr(%[[A]] : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]])
+! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
 !--- ranges.f90
 subroutine mapper_ranges()
   type :: t
@@ -303,3 +332,28 @@ end subroutine
 ! CHECK: %[[MAP:.*]] = omp.map.info
 ! CHECK: omp.yield(%[[MAP]] : !llvm.ptr)
 ! CHECK: omp.declare_mapper.info map_iterated(%[[ITER]]
+
+!--- cleanup.f90
+! Cleanups for the range expression stay inside the single-block mapper region.
+subroutine declare_mapper_range_cleanup()
+  interface
+    integer function extent_of(n)
+      integer :: n
+    end function
+  end interface
+  type :: t
+    integer :: n
+    integer :: a(4)
+  end type
+  !$omp declare mapper(m: t :: v) map(iterator(i = 1:extent_of(v%n + 1)): v%a(i))
+end
+
+! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_range_cleanupm
+! CHECK:   %[[TMP:.*]]:3 = hlfir.associate
+! CHECK:   fir.call @_QPextent_of(%[[TMP]]#0)
+! CHECK:   %[[IT:.*]] = omp.iterator
+! CHECK:   } inclusive -> !omp.iterated<!llvm.ptr>
+! CHECK-NEXT: hlfir.end_associate %[[TMP]]#1, %[[TMP]]#2
+! CHECK-NEXT: omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+! LLVM: define void @declare_mapper_range_cleanup_()
