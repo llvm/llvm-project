@@ -16,7 +16,6 @@ target triple = "thumbv7-none-linux-gnueabi"
 ; CHECK-NOT: vorr
 ; CHECK: bx lr
 
-; Function Attrs: nounwind
 define void @foo(ptr captures(none) %A) #0 !dbg !6 {
     #dbg_value(ptr poison, !10, !DIExpression(), !23)
     #dbg_value(ptr poison, !10, !DIExpression(), !23)
@@ -241,15 +240,7 @@ define void @foo(ptr captures(none) %A) #0 !dbg !6 {
   ret void, !dbg !34
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
-declare void @llvm.arm.neon.vst4.p0.v4f32(ptr, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32) #1
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-declare { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.arm.neon.vld4.v4f32.p0(ptr, i32) #2
-
 attributes #0 = { nounwind "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!5}
