@@ -461,9 +461,17 @@ SDValue SuperHTargetLowering::LowerGlobalAddress(SDValue Op,
     auto DL = SDLoc(G);
 
     SHRefClass OpFlags = Subtarget->classifyGlobalReference(G->getGlobal());
-    SDValue Addr =
+    SDValue Addr = 
         DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, OpFlags);
-    return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+
+    // NOTE: GlobalAddress nodes may have an offset baked in, eg. for GEP
+    // instructions in LLVM IR, as such we need to wrap the WRAPPER in an
+    // ADD instruction if we have an offset.
+    SDValue Res = DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+    if (G->getOffset() != 0) 
+      Res = DAG.getNode(ISD::ADD, DL, MVT::i32, Res, DAG.getSignedConstant(G->getOffset(), DL, MVT::i32));
+
+    return Res;
   }
   return SDValue();
 }
@@ -500,7 +508,15 @@ SDValue SuperHTargetLowering::LowerBlockAddress(SDValue Op,
 
     SDValue Addr =
         DAG.getTargetBlockAddress(BA->getBlockAddress(), PtrVT, 0, OpFlags);
-    return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+
+    // NOTE: BlockAddress nodes may have an offset baked in, eg. for GEP
+    // instructions in LLVM IR, as such we need to wrap the WRAPPER in an
+    // ADD instruction if we have an offset.
+    SDValue Res = DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
+    if (BA->getOffset() != 0) 
+      Res = DAG.getNode(ISD::ADD, DL, MVT::i32, Res, DAG.getSignedConstant(BA->getOffset(), DL, MVT::i32));
+
+    return Res;
   }
   return SDValue();
 }
