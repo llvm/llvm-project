@@ -9,6 +9,7 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -188,7 +189,7 @@ void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage, uint32_t Version) {
     Res.swapBytes();
 }
 
-void Signature::write(raw_ostream &OS) {
+void Signature::write(raw_ostream &OS, bool PadToDword) {
   SmallVector<dxbc::ProgramSignatureElement> SigParams;
   SigParams.reserve(Params.size());
   StringTableBuilder StrTabBuilder((StringTableBuilder::DWARF));
@@ -234,4 +235,7 @@ void Signature::write(raw_ostream &OS) {
   OS.write(reinterpret_cast<const char *>(SigParams.data()),
            sizeof(dxbc::ProgramSignatureElement) * SigParams.size());
   StrTabBuilder.write(OS);
+  if (PadToDword)
+    OS.write_zeros(
+        offsetToAlignment(TableStart + StrTabBuilder.getSize(), Align(4)));
 }
