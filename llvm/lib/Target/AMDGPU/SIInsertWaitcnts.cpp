@@ -55,11 +55,6 @@ static cl::opt<bool> ForceEmitZeroLoadFlag(
     cl::desc("Force all waitcnt load counters to wait until 0"),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> ExpertSchedulingModeFlag(
-    "amdgpu-expert-scheduling-mode",
-    cl::desc("Enable expert scheduling mode 2 for all functions (GFX12+ only)"),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 template <typename EmitWaitcntFn>
@@ -3484,12 +3479,7 @@ bool SIInsertWaitcnts::run() {
   Limits = AMDGPU::HardwareLimits(IV);
 
   if (ST.hasExtendedWaitCounts()) {
-    IsExpertMode = ST.hasExpertSchedulingMode() &&
-                   (ExpertSchedulingModeFlag.getNumOccurrences()
-                        ? ExpertSchedulingModeFlag
-                        : MF.getFunction()
-                              .getFnAttribute("amdgpu-expert-scheduling-mode")
-                              .getValueAsBool());
+    IsExpertMode = AMDGPU::isExpertSchedulingMode(ST, MF.getFunction());
     MaxCounter = IsExpertMode ? AMDGPU::NUM_EXPERT_INST_CNTS
                               : AMDGPU::NUM_EXTENDED_INST_CNTS;
     // Initialize WCG per MF. It contains state that depends on MF attributes.
