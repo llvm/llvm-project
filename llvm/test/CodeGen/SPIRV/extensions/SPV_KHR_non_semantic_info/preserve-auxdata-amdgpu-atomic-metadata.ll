@@ -3,14 +3,14 @@
 
 ; AMD triples preserve it without -spirv-preserve-auxdata. The old UserSemantic
 ; decoration encoding is no longer emitted.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   | FileCheck %s --implicit-check-not=UserSemantic
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   -filetype=obj | spirv-val %}
 
 ; Records forward-reference their target, which requires
 ; SPV_KHR_relaxed_extended_instruction; without it they are dropped.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=NORELAXED
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \

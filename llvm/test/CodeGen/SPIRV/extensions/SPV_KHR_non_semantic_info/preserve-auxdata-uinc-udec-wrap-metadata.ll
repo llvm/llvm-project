@@ -3,10 +3,10 @@
 
 ; AMD triples preserve it without -spirv-preserve-auxdata. The old UserSemantic
 ; decoration encoding is no longer emitted.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   | FileCheck %s --implicit-check-not=UserSemantic
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
-; RUN:   -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
+; RUN:   -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"

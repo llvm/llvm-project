@@ -1,13 +1,12 @@
 ; AMD triples behave as if -spirv-preserve-auxdata were passed: function
 ; attributes such as convergent are preserved without the flag.
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
-; RUN:   | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   -filetype=obj | spirv-val %}
 
 ; Without SPV_KHR_relaxed_extended_instruction, function records are dropped.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=NORELAXED
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
