@@ -12,6 +12,10 @@
 # CHECK:      StackSizes [
 # CHECK-NEXT:   Entry {
 # CHECK-NEXT:     Functions: [test]
+# CHECK-NEXT:     Relocation {
+# CHECK-NEXT:       SymbolIndex: 2
+# CHECK-NEXT:       SymbolName: .text
+# CHECK-NEXT:     }
 # CHECK-NEXT:     Size: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
