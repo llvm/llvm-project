@@ -6731,7 +6731,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 }
 
 void LoopVectorizationPlanner::attachRuntimeChecks(
-    VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights) const {
+    VPlan &Plan, GeneratedRTChecks &RTChecks, ElementCount VF, unsigned UF,
+    bool HasBranchWeights) const {
   const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
   if (SCEVCheckBlock && SCEVCheckBlock->hasNPredecessors(0)) {
     assert((!Config.OptForSize ||
@@ -6762,25 +6763,33 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
-    auto IsUnsupported = IsaPred<SCEVAddRecExpr>;
-    // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
-    // hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    if (RtPtrChecking.getDiffChecks() || OrigLoop->getParentLoop() ||
-        any_of(RtPtrChecking.CheckingGroups,
-               [&](const RuntimeCheckingPtrGroup &CG) {
-                 return SCEVExprContains(CG.Low, IsUnsupported) ||
-                        SCEVExprContains(CG.High, IsUnsupported);
-               }))
+    auto DiffChecks = RtPtrChecking.getDiffChecks();
+    auto HasUnsupportedBounds = [&]() {
+      // VPSCEVExpander expands AddRecs in the plan's entry, not the check
+      // block.
+      auto IsUnsupported = [](const SCEV *S) {
+        return SCEVExprContains(S, IsaPred<SCEVAddRecExpr>);
+      };
+      if (DiffChecks)
+        return any_of(*DiffChecks, [&](const PointerDiffInfo &C) {
+          return IsUnsupported(C.SrcStart) || IsUnsupported(C.SinkStart);
+        });
+      return any_of(RtPtrChecking.CheckingGroups,
+                    [&](const RuntimeCheckingPtrGroup &CG) {
+                      return IsUnsupported(CG.Low) || IsUnsupported(CG.High);
+                    });
+    };
+    // The VPlan expander cannot hoist bounds out of an enclosing loop.
+    if (OrigLoop->getParentLoop() || HasUnsupportedBounds())
       return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
                             MemCheckCond, MemCheckBlock, HasBranchWeights);
 
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
-    RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan,
-                   RtPtrChecking.getChecks(), *PSE.getSE(),
-                   OrigLoop->getStartLoc(), HasBranchWeights);
+    RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
+                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
+                   HasBranchWeights);
   }
 }
 
@@ -7865,7 +7874,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // checks for the main plan.
     LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0));
-    LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
+    LVP.attachRuntimeChecks(BestMainPlan, Checks, VF.Width, IC,
+                            HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
                    VF.Width, IC, BestMainPlan.requiresScalarEpilogue(), L,
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
@@ -7919,7 +7929,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                            BestPlan);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
-    LVP.attachRuntimeChecks(BestPlan, Checks, HasBranchWeights);
+    LVP.attachRuntimeChecks(BestPlan, Checks, VF.Width, IC, HasBranchWeights);
 
     if (!IsInnerLoop)
       LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \"" << F->getName()
