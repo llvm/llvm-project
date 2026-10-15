@@ -1581,9 +1581,9 @@ public:
 
     // On a coroutine body, the OnFallthrough sub stmt holds the handler
     // (CoreturnStmt) for control flow falling off the body. Keep track
-    // of emitted co_return in this scope and allow OnFallthrough to be
-    // skipeed.
-    bool hasCoreturnStmt = false;
+    // of a co_return emitted in this scope and not followed by a label, and
+    // allow OnFallthrough to be skipped.
+    bool hasCoreturnSinceLastLabel = false;
 
     // Only Regular is used at the moment. Support for other kinds will be
     // added as the relevant statements/expressions are upstreamed.
@@ -1635,8 +1635,16 @@ public:
     // ---
     // Coroutine tracking
     // ---
-    bool hasCoreturn() const { return hasCoreturnStmt; }
-    void setCoreturn() { hasCoreturnStmt = true; }
+    bool hasCoreturn() const { return hasCoreturnSinceLastLabel; }
+    // Record an emitted co_return for fallthrough tracking.
+    // A later label clears this state.
+    void markCoreturnEmitted() { hasCoreturnSinceLastLabel = true; }
+    // A goto can reach a label after a co_return, and the code after it, so
+    // the end of this scope and of the enclosing ones may be reachable again.
+    void clearCoreturnInEnclosingScopes() {
+      for (LexicalScope *s = this; s; s = s->parentScope)
+        s->hasCoreturnSinceLastLabel = false;
+    }
 
     // ---
     // Kind

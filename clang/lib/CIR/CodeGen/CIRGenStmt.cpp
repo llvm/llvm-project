@@ -836,6 +836,10 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
 
   builder.setInsertionPointToEnd(labelBlock);
   cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
+  // In a coroutine, the label makes the end of the body reachable again even
+  // after a co_return, so the implicit `co_return;` must not be left out.
+  if (curLexScope)
+    curLexScope->clearCoreturnInEnclosingScopes();
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
