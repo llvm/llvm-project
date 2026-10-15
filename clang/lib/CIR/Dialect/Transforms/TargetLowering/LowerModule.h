@@ -57,7 +57,7 @@ public:
 
   bool hasTarget() const {
     // Null target means module had no cir.triple; but when cir.triple becomes
-    // mandatory this function becomes useless.
+    // mandatory this function should be removed.
     assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
     return target != nullptr;
   }

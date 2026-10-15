@@ -124,12 +124,10 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   assert(!cir::MissingFeatures::lowerModuleCodeGenOpts());
   clang::CodeGenOptions codeGenOpts;
 
-  if (auto optAttr = module->getAttr(cir::CIRDialect::getOptInfoAttrName())) {
-    auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(optAttr);
-    if (optInfo) {
-      codeGenOpts.OptimizationLevel = optInfo.getLevel();
-      codeGenOpts.OptimizeSize = optInfo.getSize();
-    }
+  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
+        module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
+    codeGenOpts.OptimizationLevel = optInfo.getLevel();
+    codeGenOpts.OptimizeSize = optInfo.getSize();
   }
 
   return std::make_unique<LowerModule>(std::move(langOpts),

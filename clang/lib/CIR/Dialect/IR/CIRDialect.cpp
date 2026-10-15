@@ -293,16 +293,15 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     if (!tripleStr)
       return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
                                << "be a string";
-    llvm::Triple triple = llvm::Triple(tripleStr.getValue());
+    llvm::Triple triple(tripleStr.getValue());
     clang::TargetOptions targetOptions;
     targetOptions.Triple = tripleStr.getValue();
     // "Validate" our triple by checking if it can successfully initialize into
     // a TargetInfo:
-    if (!clang::targets::AllocateTarget(triple, targetOptions)) {
+    if (!clang::targets::AllocateTarget(triple, targetOptions))
       return op->emitOpError()
              << "unknown triple '" << tripleStr.getValue() << "' in '"
              << getTripleAttrName() << "' attribute";
-    }
   }
 
   if (attrName == getOptInfoAttrName()) {
@@ -431,11 +430,8 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
 }
 
 std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
-  if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName()))
-    return std::nullopt;
-
-  auto tripleAttr = mod->getAttrOfType<mlir::StringAttr>(
-      cir::CIRDialect::getTripleAttrName());
+  auto tripleAttr =
+    mod->getAttrOfType<mlir::StringAttr>(CIRDialect::getTripleAttrName());
   if (!tripleAttr)
     return std::nullopt;
 
