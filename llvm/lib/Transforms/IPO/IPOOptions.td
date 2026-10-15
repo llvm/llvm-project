@@ -339,8 +339,6 @@ defm : BoolField<"strip-global-constants", "false",
   "Removes debug compile units which reference to non-existing global constants">;
 
 // WholeProgramDevirt.cpp
-// TODO: This option eventually should support any public visibility vtables
-// with/out LTO.
 defm : BoolField<"devirtualize-speculatively", "false",
   "Enable speculative devirtualization optimization">;
 defm : ValueField<"wholeprogramdevirt-branch-funnel-threshold", "unsigned", "10",

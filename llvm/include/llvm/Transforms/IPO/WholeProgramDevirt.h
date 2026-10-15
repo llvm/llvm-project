@@ -33,6 +33,7 @@ template <typename T> class MutableArrayRef;
 class GlobalVariable;
 class ModuleSummaryIndex;
 struct ValueInfo;
+struct IPOOptions;
 
 namespace wholeprogramdevirt {
 
@@ -226,15 +227,13 @@ struct WholeProgramDevirtPass
     : public OptionalPassInfoMixin<WholeProgramDevirtPass> {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
+  const IPOOptions *Opts = nullptr;
   bool UseCommandLine = false;
-  bool DevirtSpeculatively = false;
   WholeProgramDevirtPass()
       : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true) {}
   WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
-                         const ModuleSummaryIndex *ImportSummary,
-                         bool DevirtSpeculatively = false)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DevirtSpeculatively(DevirtSpeculatively) {
+                         const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
     assert(!(ExportSummary && ImportSummary));
   }
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
@@ -273,7 +272,8 @@ LLVM_ABI void getVisibleToRegularObjVtableGUIDs(
 LLVM_ABI void runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr,
+    const LLVMContext *Ctx = nullptr);
 
 /// Call after cross-module importing to update the recorded single impl
 /// devirt target names for any locals that were exported.
