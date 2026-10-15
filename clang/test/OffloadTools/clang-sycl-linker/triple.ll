@@ -8,23 +8,23 @@
 ; RUN: llvm-as %t/no-triple.ll -o %t/no-triple.bc
 ; RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t/no-triple.bc -o %t/no-triple-input.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-TRIPLE-INPUT
-; NO-TRIPLE-INPUT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; NO-TRIPLE-INPUT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ;
-; Test that only the architecture is recorded in the offload image, both when
-; the full triple comes from -triple= and when it is inferred from the input.
-; RUN: clang-sycl-linker --dry-run -v -triple=spirv64-unknown-unknown %t/no-triple.bc -o %t/short-explicit.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=SHORT-TRIPLE
+; Test that an already three-part triple is recorded unchanged, whether it comes
+; from -triple= or is inferred from the input.
+; RUN: clang-sycl-linker --dry-run -v -triple=spirv64-unknown-unknown %t/no-triple.bc -o %t/full-explicit.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=FULL-TRIPLE
 ; RUN: llvm-as %t/full-triple.ll -o %t/full-triple.bc
-; RUN: clang-sycl-linker --dry-run -v %t/full-triple.bc -o %t/short-inferred.out 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=SHORT-TRIPLE
-; SHORT-TRIPLE: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; RUN: clang-sycl-linker --dry-run -v %t/full-triple.bc -o %t/full-inferred.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=FULL-TRIPLE
+; FULL-TRIPLE: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ;
 ; Test that triple was inferred from inputs and recorded in the offload image.
 ; RUN: llvm-as %t/input1.ll -o %t/input1.bc
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=TRIPLE-INFERENCE
-; TRIPLE-INFERENCE: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; TRIPLE-INFERENCE: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: {{$}}
 ;
 ; Test error on mismatched triple between inputs.
 ; RUN: llvm-as %t/input-mismatch.ll -o %t/input-mismatch.bc
