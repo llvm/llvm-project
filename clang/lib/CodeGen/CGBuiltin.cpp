@@ -195,9 +195,8 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   // that prefix labels.
   if (FD->hasAttr<AsmLabelAttr>())
     Name = getMangledName(D);
-  else if (StringRef TargetName =
-               CodeGenUtils::getTargetBuiltinLibFunctionName(BuiltinID,
-                                                             getTarget());
+  else if (StringRef TargetName = CodeGenUtils::getTargetBuiltinLibFunctionName(
+               BuiltinID, getTarget());
            !TargetName.empty())
     Name = TargetName;
   else
