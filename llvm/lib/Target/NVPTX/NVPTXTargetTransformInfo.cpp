@@ -9,7 +9,9 @@
 #include "NVPTXTargetTransformInfo.h"
 #include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -18,6 +20,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -27,60 +30,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "NVPTXtti"
-
-// Whether the given intrinsic reads threadIdx.x/y/z.
-static bool readsThreadIndex(const IntrinsicInst *II) {
-  switch (II->getIntrinsicID()) {
-    default: return false;
-    case Intrinsic::nvvm_read_ptx_sreg_tid_x:
-    case Intrinsic::nvvm_read_ptx_sreg_tid_y:
-    case Intrinsic::nvvm_read_ptx_sreg_tid_z:
-      return true;
-  }
-}
-
-static bool readsLaneId(const IntrinsicInst *II) {
-  return II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_laneid;
-}
-
-bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
-  // Without inter-procedural analysis, we conservatively assume that arguments
-  // to __device__ functions are divergent.
-  if (const Argument *Arg = dyn_cast<Argument>(V))
-    return !isKernelFunction(*Arg->getParent());
-
-  if (const Instruction *I = dyn_cast<Instruction>(V)) {
-    // Without pointer analysis, we conservatively assume values loaded from
-    // generic or local address space are divergent.
-    if (const LoadInst *LI = dyn_cast<LoadInst>(I)) {
-      unsigned AS = LI->getPointerAddressSpace();
-      return AS == ADDRESS_SPACE_GENERIC || AS == ADDRESS_SPACE_LOCAL;
-    }
-    // Atomic instructions may cause divergence. Atomic instructions are
-    // executed sequentially across all threads in a warp. Therefore, an earlier
-    // executed thread may see different memory inputs than a later executed
-    // thread. For example, suppose *a = 0 initially.
-    //
-    //   atom.global.add.s32 d, [a], 1
-    //
-    // returns 0 for the first thread that enters the critical region, and 1 for
-    // the second thread.
-    if (I->isAtomic())
-      return true;
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      // Instructions that read threadIdx are obviously divergent.
-      if (readsThreadIndex(II) || readsLaneId(II))
-        return true;
-    }
-    // Conservatively consider the return value of function calls as divergent.
-    // We could analyze callees with bodies more precisely using
-    // inter-procedural analysis.
-    if (isa<CallBase>(I))
-      return true;
-  }
-
-  return false;
-}
 
 // Convert NVVM intrinsics to target-generic LLVM code where possible.
 static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
@@ -691,9 +640,215 @@ bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
   return true;
 }
 
+// Operands whose defined, uniform values make the collective result uniform.
+// Other data operands may vary between lanes.
+static SmallVector<unsigned, 2> getUniformityOperands(const IntrinsicInst &II) {
+  using namespace PatternMatch;
+  uint64_t Clamp, Index;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::nvvm_shfl_sync_idx_f32:
+  case Intrinsic::nvvm_shfl_sync_idx_f32p:
+  case Intrinsic::nvvm_shfl_sync_idx_i32:
+  case Intrinsic::nvvm_shfl_sync_idx_i32p:
+    // Require no segmentation or per-lane fallback to the input value.
+    if (match(II.getArgOperand(3), m_ConstantInt(Clamp)) &&
+        (Clamp & 0x1f00) == 0 &&
+        ((Clamp & 31) == 31 ||
+         (match(II.getArgOperand(2), m_ConstantInt(Index)) &&
+          (Index & 31) <= (Clamp & 31))))
+      return {0, 2};
+    return {};
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_and_all:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_or_all:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_red_popc_all:
+  case Intrinsic::nvvm_match_all_sync_i32p:
+  case Intrinsic::nvvm_match_all_sync_i64p:
+  case Intrinsic::nvvm_vote_all_sync:
+  case Intrinsic::nvvm_vote_any_sync:
+  case Intrinsic::nvvm_vote_ballot_sync:
+  case Intrinsic::nvvm_vote_uni_sync:
+    return {0};
+  case Intrinsic::nvvm_match_any_sync_i32:
+  case Intrinsic::nvvm_match_any_sync_i64:
+  case Intrinsic::nvvm_barrier_cta_red_and_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_and_count:
+  case Intrinsic::nvvm_barrier_cta_red_or_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_or_count:
+  case Intrinsic::nvvm_barrier_cta_red_popc_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_red_popc_count:
+    return {0, 1};
+  case Intrinsic::nvvm_redux_sync_add:
+  case Intrinsic::nvvm_redux_sync_and:
+  case Intrinsic::nvvm_redux_sync_fmax:
+  case Intrinsic::nvvm_redux_sync_fmax_NaN:
+  case Intrinsic::nvvm_redux_sync_fmax_abs:
+  case Intrinsic::nvvm_redux_sync_fmax_abs_NaN:
+  case Intrinsic::nvvm_redux_sync_fmin:
+  case Intrinsic::nvvm_redux_sync_fmin_NaN:
+  case Intrinsic::nvvm_redux_sync_fmin_abs:
+  case Intrinsic::nvvm_redux_sync_fmin_abs_NaN:
+  case Intrinsic::nvvm_redux_sync_max:
+  case Intrinsic::nvvm_redux_sync_min:
+  case Intrinsic::nvvm_redux_sync_or:
+  case Intrinsic::nvvm_redux_sync_umax:
+  case Intrinsic::nvvm_redux_sync_umin:
+  case Intrinsic::nvvm_redux_sync_xor:
+    return {1};
+  default:
+    return {};
+  }
+}
+
 ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
-  if (isSourceOfDivergence(V))
+  using namespace PatternMatch;
+
+  if (const auto *Arg = dyn_cast<Argument>(V))
+    return isKernelFunction(*Arg->getParent()) ? ValueUniformity::Default
+                                               : ValueUniformity::NeverUniform;
+
+  const auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return ValueUniformity::Default;
+
+  // Even a uniform address can observe different writes between lanes.
+  if (const auto *LI = dyn_cast<LoadInst>(I))
+    return LI->isSimple() && LI->getPointerAddressSpace() == ADDRESS_SPACE_CONST
+               ? ValueUniformity::Default
+               : ValueUniformity::NeverUniform;
+  if (I->isAtomic() || isa<AllocaInst>(I))
+    return ValueUniformity::NeverUniform;
+  if (const auto *Cast = dyn_cast<AddrSpaceCastInst>(I))
+    if (Cast->getSrcAddressSpace() == ADDRESS_SPACE_LOCAL &&
+        Cast->getDestAddressSpace() == ADDRESS_SPACE_GENERIC)
+      return ValueUniformity::NeverUniform;
+  if (const auto *Freeze = dyn_cast<FreezeInst>(I))
+    if (!isGuaranteedNotToBeUndefOrPoison(Freeze->getOperand(0)))
+      return ValueUniformity::NeverUniform;
+
+  if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+    auto UniformityOperands = getUniformityOperands(*II);
+    if (!UniformityOperands.empty()) {
+      // Undef controls can select different, individually valid groups/lanes.
+      return llvm::all_of(UniformityOperands,
+                          [&](unsigned Op) {
+                            return isGuaranteedNotToBeUndefOrPoison(
+                                II->getArgOperand(Op));
+                          })
+                 ? ValueUniformity::Custom
+                 : ValueUniformity::NeverUniform;
+    }
+
+    Intrinsic::ID IID = II->getIntrinsicID();
+    if (const auto *CFP = dyn_cast<ConstrainedFPIntrinsic>(II)) {
+      switch (IID) {
+      case Intrinsic::experimental_constrained_lround:
+      case Intrinsic::experimental_constrained_llround:
+      case Intrinsic::experimental_constrained_lrint:
+      case Intrinsic::experimental_constrained_llrint:
+        // An out-of-range result can be an arbitrary defined integer.
+        return ValueUniformity::NeverUniform;
+      default:
+        return CFP->getExceptionBehavior() == fp::ebIgnore &&
+                       CFP->getRoundingMode() != RoundingMode::Dynamic
+                   ? ValueUniformity::Default
+                   : ValueUniformity::NeverUniform;
+      }
+    }
+
+    switch (IID) {
+    case Intrinsic::frexp:
+      // The exponent is unspecified for NaN and infinity.
+      return isKnownNeverInfOrNaN(II->getArgOperand(0),
+                                  SimplifyQuery(I->getDataLayout()))
+                 ? ValueUniformity::Default
+                 : ValueUniformity::NeverUniform;
+    case Intrinsic::nvvm_read_ptx_sreg_tid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_tid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_tid_z: {
+      auto ReqNTID = getReqNTID(*I->getFunction());
+      if (!isKernelFunction(*I->getFunction()) || ReqNTID.empty())
+        return ValueUniformity::NeverUniform;
+      ReqNTID.resize(3, 1);
+      unsigned Dim = IID == Intrinsic::nvvm_read_ptx_sreg_tid_x   ? 0
+                     : IID == Intrinsic::nvvm_read_ptx_sreg_tid_y ? 1
+                                                                  : 2;
+      unsigned Stride = llvm::product_of(ArrayRef(ReqNTID).take_front(Dim));
+      return ReqNTID[Dim] == 1 || Stride % 32 == 0
+                 ? ValueUniformity::AlwaysUniform
+                 : ValueUniformity::NeverUniform;
+    }
+    case Intrinsic::nvvm_is_explicit_cluster:
+    case Intrinsic::nvvm_read_ptx_sreg_aggr_smem_size:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctaid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_ctarank:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctaid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_cluster_nctarank:
+    case Intrinsic::nvvm_read_ptx_sreg_clusterid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_clusterid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_clusterid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_clusterid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_ctaid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_dynamic_smem_size:
+    case Intrinsic::nvvm_read_ptx_sreg_gridid:
+    case Intrinsic::nvvm_read_ptx_sreg_nclusterid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_nclusterid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_nclusterid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_nclusterid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_nctaid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_nsmid:
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_x:
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_y:
+    case Intrinsic::nvvm_read_ptx_sreg_ntid_z:
+    case Intrinsic::nvvm_read_ptx_sreg_nwarpid:
+    case Intrinsic::nvvm_read_ptx_sreg_reserved_smem_offset_begin:
+    case Intrinsic::nvvm_read_ptx_sreg_reserved_smem_offset_cap:
+    case Intrinsic::nvvm_read_ptx_sreg_reserved_smem_offset_end:
+    case Intrinsic::nvvm_read_ptx_sreg_tid_w:
+    case Intrinsic::nvvm_read_ptx_sreg_total_smem_size:
+    case Intrinsic::nvvm_read_ptx_sreg_warpsize:
+      return ValueUniformity::AlwaysUniform;
+    default:
+      return ValueUniformity::NeverUniform;
+    }
+  }
+  if (isa<CallBase>(I))
     return ValueUniformity::NeverUniform;
 
+  uint64_t C;
+  if ((match(V, m_Shr(m_Intrinsic<Intrinsic::nvvm_read_ptx_sreg_tid_x>(),
+                      m_ConstantInt(C))) &&
+       C >= 5) ||
+      (match(V, m_c_And(m_Intrinsic<Intrinsic::nvvm_read_ptx_sreg_tid_x>(),
+                        m_ConstantInt(C))) &&
+       (C & 31) == 0)) {
+    // maxntid limits only the total thread count, not individual dimensions.
+    const auto ReqNTID = getReqNTID(*I->getFunction());
+    if (isKernelFunction(*I->getFunction()) && !ReqNTID.empty() &&
+        (ReqNTID[0] <= 32 || ReqNTID[0] % 32 == 0 ||
+         llvm::all_of(drop_begin(ReqNTID), [](unsigned N) { return N == 1; })))
+      return ValueUniformity::AlwaysUniform;
+  }
   return ValueUniformity::Default;
+}
+
+bool NVPTXTTIImpl::isUniform(const Instruction *I,
+                             const SmallBitVector &UniformArgs) const {
+  return llvm::all_of(getUniformityOperands(*cast<IntrinsicInst>(I)),
+                      [&](unsigned Op) { return UniformArgs[Op]; });
 }
