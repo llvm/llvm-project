@@ -21,8 +21,11 @@
 ; CHECK-LABEL: {{^}}chain_and_gfx:
 ; CHECK:         .set .Lchain_and_gfx.private_seg_size, 32+max(.Lgfx_alloca.private_seg_size){{$}}
 
+; CHECK-LABEL: {{^}}gfx_stack_only:
+; CHECK:         .set .Lgfx_stack_only.private_seg_size, 20{{$}}
+
 ; CHECK-LABEL: {{^}}cs_to_chain_and_wwf:
-; CHECK:         .set .Lcs_to_chain_and_wwf.private_seg_size, 12{{$}}
+; CHECK:         .set .Lcs_to_chain_and_wwf.private_seg_size, 16+max(.Lgfx_stack_only.private_seg_size){{$}}
 
 ; CHECK-LABEL: {{^}}chain_indirect_and_wwf:
 ; CHECK:         .set .Lchain_indirect_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
@@ -31,9 +34,6 @@
 ; CHECK-LABEL: {{^}}chain_indirect_gfx_and_wwf:
 ; CHECK:         .set .Lchain_indirect_gfx_and_wwf.private_seg_size, 64+max(.Lwwf_alloca.private_seg_size){{$}}
 ; CHECK:         .set .Lchain_indirect_gfx_and_wwf.has_indirect_call, 1{{$}}
-
-; CHECK-LABEL: {{^}}gfx_stack_only:
-; CHECK:         .set .Lgfx_stack_only.private_seg_size, 20{{$}}
 
 ; CHECK-LABEL: {{^}}wwf_callee_stack_only:
 ; CHECK:         .set .Lwwf_callee_stack_only.private_seg_size, 16+max(.Lgfx_stack_only.private_seg_size){{$}}
@@ -47,8 +47,9 @@
 ; CHECK-NEXT:   - .api:            Vulkan
 ; CHECK-LABEL:         .hardware_stages:
 ; CHECK:      .cs:
+; CHECK:             .backend_stack_size: 0x24{{$}}
 ; CHECK:             .entry_point_symbol: cs_to_chain_and_wwf
-; CHECK:             .scratch_memory_size: 0x10{{$}}
+; CHECK:             .scratch_memory_size: 0x30{{$}}
 ; CHECK:         .shader_functions:
 ; CHECK-LABEL:      amdgpu_cs_chain_func:
 ; CHECK:             .backend_stack_size: 0x10{{$}}
@@ -146,6 +147,7 @@ define amdgpu_cs void @cs_to_chain_and_wwf(<40 x i32> %v) {
 .entry:
   %a = alloca [2 x i32], addrspace(5)
   store volatile i32 9, ptr addrspace(5) %a
+  call amdgpu_gfx void @gfx_stack_only()
   call void (ptr, i32, {}, <40 x i32>, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.s.v40i32(ptr @chain_and_wwf, i32 -1, {} inreg poison, <40 x i32> %v, i32 0)
   unreachable
 }
