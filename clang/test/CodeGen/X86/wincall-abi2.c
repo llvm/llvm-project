@@ -40,14 +40,15 @@ __attribute__((wincall)) float f_of(struct one_float { float f; } s) {
 
 // A 16-byte-aligned struct holding one double is NOT treated as a scalar:
 // its size (16) is bigger than the member (8), so it stays an aggregate and
-// is expanded into its parts (the single double field; padding is dropped).
-// CHECK: define dso_local x86_wincallcc double @"\01f_ad@win"(double %s.0)
+// is coerced to its two eight-byte parts, like the GCC wincall port.
+// CHECK: define dso_local x86_wincallcc double @"\01f_ad@win"(i64 %s.coerce0, i64 %s.coerce1)
 __attribute__((wincall)) double f_ad(struct aligned_double { double d; } __attribute__((aligned(16))) s) {
   return s.d;
 }
 
-// A two-double struct is a normal two-register aggregate.
-// CHECK: define dso_local x86_wincallcc double @"\01f_td@win"(double %s.0, double %s.1)
+// A two-double struct is a normal two-register aggregate: its two eight-byte
+// parts, like the GCC wincall port.
+// CHECK: define dso_local x86_wincallcc double @"\01f_td@win"(i64 %s.coerce0, i64 %s.coerce1)
 // ASM-LABEL: f_td@win:
 __attribute__((wincall)) double f_td(struct two_double { double a, b; } s) {
   return s.a;

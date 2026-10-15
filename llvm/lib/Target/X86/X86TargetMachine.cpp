@@ -38,6 +38,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
@@ -231,6 +232,27 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS =
       FSAttr.isValid() ? FSAttr.getValueAsString() : (StringRef)TargetFS;
 
+  // The WinCall calling convention (x86_wincallcc) passes the fifth and later
+  // integer arguments in the APX extended GPRs R16-R19. A function therefore
+  // needs the egpr feature when it either uses WinCall itself or calls a WinCall
+  // function, because the backend sizes its physical register tables from
+  // X86RegisterInfo::getNumSupportedRegs(), which only covers R16-R19 when egpr
+  // is enabled. The frontend accepts `wincall` on any x86-64 target, so this
+  // cannot be left to the triple the way the x86_64apx sub-architecture does.
+  bool NeedsWinCallEGPR = F.getCallingConv() == CallingConv::X86_WinCall;
+  if (!NeedsWinCallEGPR)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (CB && CB->getCallingConv() == CallingConv::X86_WinCall) {
+          NeedsWinCallEGPR = true;
+          break;
+        }
+      }
+      if (NeedsWinCallEGPR)
+        break;
+    }
+
   SmallString<512> Key;
   // The additions here are ordered so that the definitely short strings are
   // added first so we won't exceed the small size. We append the
@@ -284,6 +306,13 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     Key += FS.empty() ? "+soft-float" : "+soft-float,";
 
   Key += FS;
+
+  // Enable egpr for functions that take part in WinCall, see above.
+  if (NeedsWinCallEGPR) {
+    if (Key.size() > FSStart && Key.back() != ',')
+      Key += ',';
+    Key += "+egpr";
+  }
 
   // We may have added +soft-float to the features so move the StringRef to
   // point to the full string in the Key.

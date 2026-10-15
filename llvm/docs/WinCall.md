@@ -72,6 +72,14 @@ which returns the full register count only when ``egpr`` is enabled. If the
 registers were not enabled, WinCall would still assign R16-R19 as argument
 registers, and passes such as ``LiveVariables`` would index out of bounds.
 
+WinCall is also selectable per-function with the ``wincall`` attribute on any
+x86-64 target, where the triple does not turn APX on. There
+``X86TargetMachine::getSubtargetImpl`` enables ``egpr`` for every function that
+takes part in WinCall - both the callee itself and any function that calls a
+WinCall function, since a caller has to materialise R16-R19 as well - so the
+register tables are sized correctly without requiring ``-mapxf`` on the command
+line.
+
 ## Argument passing
 
 ### Integer and pointer arguments
@@ -171,8 +179,23 @@ always enables it for ``x86_64apx``):
 RBX, RBP, RDI, RSI, R12, R13, R14, R15, R30, R31, XMM6-XMM15
 ```
 
-R30 and R31 are APX registers preserved in addition to the standard Windows
-x64 set.
+That is exactly the classic Windows x64 set once the APX registers are
+available (only R30 and R31 are added; R16-R29 stay volatile), so the two
+conventions share one callee-saved set and the whole point of calling it the
+"classic Windows x64 caller-saved model" is that a call can be switched from
+one convention to the other without saving or restoring a single
+callee-saved register.  The only instructions such a transition needs are
+the ones that move the arguments the two conventions place differently
+(``RCX``/``RDX``/``R8``/``R9`` and ``XMM0``-``XMM3`` are shared, so
+everything below the fifth argument has to be rearranged, and a WinCall
+return may occupy up to four registers).
+
+Because R16-R19 and XMM0-XMM7 are also argument registers, they are not
+preserved for a call that passes an argument in them: the caller has already
+overwritten its own value there, and a callee that wants to use such a
+register as scratch preserves the incoming argument value rather than
+assuming it is dead.  R30 and R31 are the APX addition to the classic set;
+on the SysV ABI they remain volatile.
 
 ## Symbol decoration: the ``@win`` suffix
 

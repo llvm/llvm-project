@@ -314,6 +314,17 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (HasSSE)
       return HasEGPR ? CSR_Win64_APX_SaveList : CSR_Win64_SaveList;
     return CSR_Win64_NoSSE_SaveList;
+  case CallingConv::X86_WinCall:
+    // WinCall always uses the Windows x64 callee-saved set -- including
+    // XMM6-XMM15 -- on every target, not just on Windows targets.  This
+    // is what makes a transition between WinCall and the classic x64
+    // conventions free of callee-saved register shuffling, and it is
+    // what CSR_Win64_APX (which WinCall.md documents) describes.  Note
+    // that getCallPreservedMask() has to agree, since a caller in any
+    // convention must not assume that a WinCall call clobbers these.
+    if (HasSSE)
+      return HasEGPR ? CSR_Win64_APX_SaveList : CSR_Win64_SaveList;
+    return CSR_Win64_NoSSE_SaveList;
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_SaveList;
@@ -456,6 +467,12 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_MostRegs_RegMask;
     break;
   case CallingConv::Win64:
+    return HasEGPR ? CSR_Win64_APX_RegMask : CSR_Win64_RegMask;
+  case CallingConv::X86_WinCall:
+    // Agree with getCalleeSavedRegs(): a WinCall call does not clobber the
+    // Windows x64 callee-saved registers -- including XMM6-XMM15 -- even on
+    // non-Windows targets, so a caller in any convention needs no
+    // callee-saved register shuffling around it.
     return HasEGPR ? CSR_Win64_APX_RegMask : CSR_Win64_RegMask;
   case CallingConv::SwiftTail:
     if (!Is64Bit)

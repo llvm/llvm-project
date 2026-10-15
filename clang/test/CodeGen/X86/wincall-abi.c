@@ -35,7 +35,9 @@ __attribute__((wincall)) struct span2 make_span(void) {
   struct span2 s = {0, 1};
   return s;
 }
-// CHECK-LABEL: define dso_local x86_wincallcc %struct.span2 @"\01make_span@win"
+// The 16-byte record is coerced to two eight-byte parts, like the GCC wincall
+// port.
+// CHECK-LABEL: define dso_local x86_wincallcc { i64, i64 } @"\01make_span@win"
 // ASM-LABEL: make_span@win:
 // ASM: movq (%rsp), %rax
 // ASM: movq 8(%rsp), %rdx
@@ -48,7 +50,9 @@ __attribute__((wincall)) struct vec4 make_vec4(void) {
   struct vec4 v = {1, 2, 3, 4};
   return v;
 }
-// CHECK-LABEL: define dso_local x86_wincallcc %struct.vec4 @"\01make_vec4@win"
+// The 32-byte record is coerced to four eight-byte parts, like the GCC wincall
+// port.
+// CHECK-LABEL: define dso_local x86_wincallcc { i64, i64, i64, i64 } @"\01make_vec4@win"
 // ASM-LABEL: make_vec4@win:
 // ASM: movq (%rsp), %rax
 // ASM: movq 8(%rsp), %rdx

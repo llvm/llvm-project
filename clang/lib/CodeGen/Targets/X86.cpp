@@ -3079,10 +3079,16 @@ X86_64ABIInfo::getX86ABIAVXLevel(const FunctionDecl *FD,
 
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   const unsigned CallingConv = FI.getCallingConvention();
-  // It is possible to force Win64 calling convention on any x86_64 target by
-  // using __attribute__((ms_abi)). In such case to correctly emit Win64
-  // compatible code delegate this call to WinX86_64ABIInfo::computeInfo.
-  if (CallingConv == llvm::CallingConv::Win64) {
+  // It is possible to force the Win64 calling convention on any x86_64 target
+  // by using __attribute__((ms_abi)), and the WinCall convention
+  // (__attribute__((wincall))) is likewise valid on any x86_64 target rather
+  // than only the x86_64apx Windows ones. In both cases the Windows-compatible
+  // argument and return classification has to be used, so delegate to
+  // WinX86_64ABIInfo::computeInfo. It picks up the extra WinCall rules
+  // (aggregates up to 32 bytes in registers, empty records taking no slot)
+  // from the calling convention itself.
+  if (CallingConv == llvm::CallingConv::Win64 ||
+      CallingConv == llvm::CallingConv::X86_WinCall) {
     WinX86_64ABIInfo Win64ABIInfo(CGT, AVXLevel);
     Win64ABIInfo.computeInfo(FI);
     return;
@@ -3503,12 +3509,13 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
 
-    // WinCall passes a record that is a single FP/SIMD member exactly like the
-    // scalar it wraps (in a vector register), as long as the record's size and
-    // alignment match the member's natural size and alignment. If the user
-    // bumped the alignment so that the record is bigger than the member (e.g.
-    // a 16-byte-aligned struct holding one double), fall through to the normal
-    // aggregate rules.
+    // WinCall passes a record that is a single scalar FP member exactly like
+    // the floating-point scalar it wraps (in an XMM register), as long as the
+    // record is exactly as big as that member so that no padding or alignment
+    // is being carried. This mirrors the GCC wincall port, which passes such a
+    // record in the XMM bank because the record's mode collapses to the
+    // member's scalar mode. Anything else -- including a record wrapping a
+    // vector or a complex -- is an integer-chunked aggregate.
     if (IsWinCall && !Ty->isAnyComplexType() && !Ty->isMemberPointerType() &&
         !RT->getDecl()->isUnion()) {
       unsigned NumFields = 0;
@@ -3528,59 +3535,56 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
         llvm::Type *FieldLLTy = CGT.ConvertType(FieldTy);
         bool IsScalarFP =
             FieldTy->isFloatingType() && !FieldTy->isComplexType();
-        bool IsVector = FieldTy->isVectorType();
-        if ((IsScalarFP || IsVector) &&
-            (FieldLLTy->isFloatingPointTy() || FieldLLTy->isVectorTy())) {
-          // The record must be exactly as big as the single member so that no
-          // padding/alignment is being carried by the struct.
-          if (getContext().getTypeSize(Ty) ==
-              getContext().getTypeSize(FieldTy)) {
-            if (Kind == ClassifyKind::Return)
-              return ABIArgInfo::getDirect(FieldLLTy);
-            if (Width <= 128)
-              return ABIArgInfo::getDirect(FieldLLTy);
-            return ABIArgInfo::getExpand();
-          }
-        }
+        if (IsScalarFP && FieldLLTy->isFloatingPointTy() &&
+            getContext().getTypeSize(Ty) ==
+                getContext().getTypeSize(FieldTy))
+          return ABIArgInfo::getDirect(FieldLLTy);
       }
     }
 
-    // wincall passes/returns aggregates that fit in 1, 2, 4, 8, 16 or 32 bytes
-    // (e.g. 4x size_t, like std::string/std::vector) directly in registers,
-    // instead of by pointer/sret like the MS x64 ABI.
+    // WinCall passes/returns aggregates that fit in 1..32 bytes directly in
+    // registers, instead of by pointer/sret like the MS x64 ABI. Like the GCC
+    // wincall port, a record is coerced to eight-byte integer parts: up to four
+    // bytes travel as one i32, up to eight bytes as one i64, and anything
+    // larger (up to 32 bytes) as ceil(size/8) i64 parts. 4x size_t (e.g.
+    // std::string/std::vector) therefore travels in four GPRs.
     if (IsWinCall && Width <= 256 && !Ty->isAnyComplexType() &&
         !Ty->isMemberPointerType()) {
       // Empty C++ objects take no register slots.
       if (isEmptyRecord(getContext(), Ty, /*AllowArrays=*/true))
         return ABIArgInfo::getIgnore();
-      if (Kind == ClassifyKind::Return)
-        return ABIArgInfo::getDirect();
-      // Pass as an integer of the aggregate size when it fits in one register,
-      // otherwise expand it into its 8-byte parts.
+      if (Width <= 32)
+        return ABIArgInfo::getDirect(
+            llvm::IntegerType::get(getVMContext(), 32));
       if (Width <= 64)
         return ABIArgInfo::getDirect(
-            llvm::IntegerType::get(getVMContext(), Width));
-      return ABIArgInfo::getExpand();
+            llvm::IntegerType::get(getVMContext(), 64));
+      // Expand the record into its 8-byte parts.
+      unsigned NumParts = (Width + 63) / 64;
+      SmallVector<llvm::Type *, 4> Parts(
+          NumParts, llvm::Type::getInt64Ty(getVMContext()));
+      return ABIArgInfo::getDirect(
+          llvm::StructType::get(getVMContext(), Parts));
     }
   }
 
   // WinCall passes complex scalars in the vector registers: a complex value is
   // just two elements of its component type, so coerce _Complex float/double
-  // to v2f32/v2f64 and pass/return them in XMM registers instead of by
+  // to v2f32/v2f64 and pass/return them in a single XMM register instead of by
   // pointer/sret like the MS x64 ABI.
   if (IsWinCall && Ty->isAnyComplexType()) {
     QualType ElemTy = cast<ComplexType>(Ty)->getElementType();
     llvm::Type *ElemLLTy = CGT.ConvertType(ElemTy);
-    if (llvm::FixedVectorType::isValidElementType(ElemLLTy)) {
+    if (Width <= 128 && llvm::FixedVectorType::isValidElementType(ElemLLTy)) {
       auto *V2 = llvm::FixedVectorType::get(ElemLLTy, 2);
-      if (Kind == ClassifyKind::Return)
-        return ABIArgInfo::getDirect(V2);
-      // A 128-bit complex value fits in one XMM register; a wider one (e.g.
-      // long double complex) is expanded into its 64-bit parts.
-      if (Width <= 128)
-        return ABIArgInfo::getDirect(V2);
-      return ABIArgInfo::getExpand();
+      return ABIArgInfo::getDirect(V2);
     }
+    // A complex whose components do not fit the XMM bank -- only `_Complex
+    // long double' -- is passed and returned by invisible reference, matching
+    // the GCC wincall port: WinCall has no x87 register bank, so x87 values
+    // (`long double' and `_Complex long double') travel by pointer.
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
   }
 
   const Type *Base = nullptr;
