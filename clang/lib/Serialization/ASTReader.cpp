@@ -1888,6 +1888,7 @@ InputFileLoc ASTReader::getLoadedFileLoc(FileEntryRef Wanted) {
     return InputFileLoc();
 
   time_t WantedTime = Wanted.getModificationTime();
+  StringRef WantedName = llvm::sys::path::filename(Wanted.getName());
 
   for (const LoadedModuleInputFile &In : Known->second) {
     InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
@@ -1900,6 +1901,10 @@ InputFileLoc ASTReader::getLoadedFileLoc(FileEntryRef Wanted) {
     StringRef Unresolved = FI.UnresolvedImportedFilename;
     if (!llvm::sys::path::is_absolute(Unresolved) ||
         Unresolved != Wanted.getName()) {
+      // Size alone can put many files in one bucket, so rule out the ones
+      // that disagree on their file name before resolving any path.
+      if (llvm::sys::path::filename(Unresolved) != WantedName)
+        continue;
       // Determine whether the actual files are equivalent.
       auto Filename = ResolveImportedPath(PathBuf, Unresolved, *In.F);
       if (FileMgr.getOptionalFileRef(*Filename) != Wanted)
