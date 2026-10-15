@@ -243,14 +243,16 @@ struct DC : KW {
   // CHECK-FIXES: ~DC() override = default;
 };
 
-// Delegating constructor with multiple initializers.
-struct DCM : KW, N {
-  DCM() : KW(), N() {}
+// Delegating constructor with multiple bases.
+struct Base {
+  Base();
+};
+
+struct DCM : KW, Base {
+  DCM() : KW(), Base() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: DCM() = default;
 };
-
-struct dummy {};
 
 // Delegating constructor with field initializer.
 struct DCF : KW {
@@ -259,7 +261,27 @@ struct DCF : KW {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: DCF() = default;
 
-  dummy d;
+  Base d{};
+};
+
+struct non_empty {
+  int a,b;
+};
+
+// Delegating constructor with zero-init
+struct DCN : non_empty {
+
+  DCN() : non_empty() {}
+  // defaulting would remove the zero-init of non_empty.
+};
+
+// Delegating constructor with zero-init
+struct DCNF {
+
+  DCNF() : n() {}
+  // defaulting would remove the zero-init of n
+
+  non_empty n;
 };
 
 // Delegating constructor with noexcept.
