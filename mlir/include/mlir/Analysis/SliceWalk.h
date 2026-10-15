@@ -10,9 +10,9 @@
 #define MLIR_ANALYSIS_SLICEWALK_H
 
 #include "mlir/IR/ValueRange.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 
 namespace mlir {
-
 /// A class to signal how to proceed with the walk of the backward slice:
 /// - Interrupt: Stops the walk.
 /// - AdvanceTo: Continues the walk to user-specified values.
@@ -29,15 +29,16 @@ public:
   };
 
   WalkContinuation(WalkAction action, mlir::ValueRange nextValues)
-      : action(action), nextValues(nextValues) {}
+      : nextValues(static_cast<unsigned>(action), nextValues.begin(),
+                   nextValues.end()) {}
 
   /// Allows diagnostics to interrupt the walk.
   explicit WalkContinuation(mlir::Diagnostic &&)
-      : action(WalkAction::Interrupt) {}
+      : WalkContinuation(WalkAction::Interrupt, {}) {}
 
   /// Allows diagnostics to interrupt the walk.
   explicit WalkContinuation(mlir::InFlightDiagnostic &&)
-      : action(WalkAction::Interrupt) {}
+      : WalkContinuation(WalkAction::Interrupt, {}) {}
 
   /// Creates a continuation that interrupts the walk.
   static WalkContinuation interrupt() {
@@ -57,21 +58,33 @@ public:
   }
 
   /// Returns true if the walk was interrupted.
-  bool wasInterrupted() const { return action == WalkAction::Interrupt; }
+  bool wasInterrupted() const { return getAction() == WalkAction::Interrupt; }
 
   /// Returns true if the walk was skipped.
-  bool wasSkipped() const { return action == WalkAction::Skip; }
+  bool wasSkipped() const { return getAction() == WalkAction::Skip; }
 
   /// Returns true if the walk was advanced to user-specified values.
-  bool wasAdvancedTo() const { return action == WalkAction::AdvanceTo; }
+  bool wasAdvancedTo() const { return getAction() == WalkAction::AdvanceTo; }
 
   /// Returns the next values to continue the walk with.
   mlir::ArrayRef<mlir::Value> getNextValues() const { return nextValues; }
 
 private:
-  WalkAction action;
-  /// The next values to continue the walk with.
-  mlir::SmallVector<mlir::Value> nextValues;
+  WalkAction getAction() const {
+    return static_cast<WalkAction>(nextValues.getFlags());
+  }
+
+  /// A vector with the same inline capacity as SmallVector<Value>, with two
+  /// flag bits for the walk action.
+  using NextValues = llvm::SmallVectorWithFlags<
+      mlir::Value,
+      llvm::CalculateSmallVectorDefaultInlinedElements<mlir::Value>::value, 2>;
+  static_assert(static_cast<unsigned>(WalkAction::Skip) <
+                    (1u << NextValues::NumFlagBits),
+                "WalkAction does not fit in the flag bits");
+
+  /// The next values to continue the walk with; the flags store the action.
+  NextValues nextValues;
 };
 
 /// A callback that is invoked for each value encountered during the walk of the
@@ -92,7 +105,6 @@ WalkContinuation walkSlice(mlir::ValueRange rootValues,
 /// determine predecessors. Returns nullopt if `value` has no predecessors or
 /// when the relevant operations are missing the interface implementations.
 std::optional<SmallVector<Value>> getControlFlowPredecessors(Value value);
-
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_SLICEWALK_H
