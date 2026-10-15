@@ -679,7 +679,7 @@ public:
                                 cir::FuncOp func, bool isThunk);
 
   /// Set extra attributes (inline, etc.) for a function.
-  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+  void setCIRFunctionAttributesForDefinition(const clang::Decl *decl,
                                              cir::FuncOp f);
 
   /// Generate OpenCL kernel argument metadata for a kernel function.

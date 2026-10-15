@@ -878,22 +878,26 @@ bb:
   ret <4 x i32> %g
 }
 
-declare <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i32>)
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i32>)
-declare <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i32>)
-declare <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x float>)
-declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x float>)
-declare <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x float>)
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
-declare <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i16>)
-declare <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i16>)
-declare <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i16>)
-declare <4 x half> @llvm.masked.gather.v4f16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x half>)
-declare <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x half>)
-declare <16 x half> @llvm.masked.gather.v16f16.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x half>)
-declare <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i8>)
-declare <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr>, i32, <8 x i1>, <8 x i8>)
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x i8>)
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32, <32 x i1>, <32 x i8>)
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
+define arm_aapcs_vfpcc void @pr231773(ptr %base, ptr %out) {
+; CHECK-LABEL: pr231773:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    adr r2, .LCPI33_0
+; CHECK-NEXT:    adds r0, #24
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    vldrw.u32 q1, [r0, q0, uxtw #2]
+; CHECK-NEXT:    vstrw.32 q1, [r1]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI33_0:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 3 @ 0x3
+  %g1   = getelementptr i8,  ptr %base, i32 8
+  %g2   = getelementptr i8,  ptr %g1,   i32 16
+  %ptrs = getelementptr i32, ptr %g2,   <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> splat (i1 true), <4 x i32> poison)
+  store <4 x i32> %v, ptr %out
+  ret void
+}

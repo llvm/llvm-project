@@ -201,7 +201,7 @@ void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
 
 void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   // SPIRVModuleAnalysis needs every MachineFunction before printing starts.
-  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+  if (CompletesPipeline) {
     flushFPMsToMPM(PMW);
     addModulePass(RequireAnalysisPass<SPIRVModuleAnalysis, Module>(), PMW,
                   /*Force=*/true);

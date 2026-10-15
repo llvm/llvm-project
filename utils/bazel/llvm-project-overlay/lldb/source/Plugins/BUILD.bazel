@@ -444,6 +444,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginObjectContainerClangOffloadBundle",
+    srcs = glob(["ObjectContainer/Clang-Offload-Bundle/*.cpp"]),
+    hdrs = glob(["ObjectContainer/Clang-Offload-Bundle/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "StructuredDataDarwinLogProperties",
     strip_include_prefix = "StructuredData/DarwinLog",
