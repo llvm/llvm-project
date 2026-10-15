@@ -17,7 +17,6 @@
 
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
@@ -29,9 +28,8 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
   using Base = ConstStmtVisitor<FactsGenerator>;
 
 public:
-  FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC,
-                 const LifetimeSafetyOpts &LSOpts)
-      : FactMgr(FactMgr), AC(AC), LSOpts(LSOpts),
+  FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
+      : FactMgr(FactMgr), AC(AC),
         IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
                 !AC.getASTContext().getLangOpts().ObjC) {}
 
@@ -165,11 +163,8 @@ private:
   bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
-  void issueFieldPlaceholderLoans(const CXXMethodDecl *MD,
-                                  llvm::SmallVectorImpl<Fact *> &Facts);
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
-  const LifetimeSafetyOpts &LSOpts;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
   // Collect origins that escape the function in this block (OriginEscapesFact),
   // appended at the end of CurrentBlockFacts to ensure they appear after

@@ -70,42 +70,32 @@ private:
   const FieldDecl *FD;
 };
 
-/// Represents the base of a placeholder access path, which is a function
-/// parameter, the implicit 'this' object of an instance method, or a field of
-/// the enclosing class. Placeholder paths never expire within the function
-/// scope, as they represent storage from the caller's or object's scope.
+/// Represents the base of a placeholder access path, which is either a
+/// function parameter or the implicit 'this' object of an instance method.
+/// Placeholder paths never expire within the function scope, as they represent
+/// storage from the caller's scope.
 class PlaceholderBase : public llvm::FoldingSetNode {
-  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *,
-                     const FieldDecl *>
-      ParamMethodOrField;
+  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *> ParamOrMethod;
 
 public:
-  PlaceholderBase(const ParmVarDecl *PVD) : ParamMethodOrField(PVD) {}
-  PlaceholderBase(const CXXMethodDecl *MD) : ParamMethodOrField(MD) {}
-  PlaceholderBase(const FieldDecl *FD) : ParamMethodOrField(FD) {}
+  PlaceholderBase(const ParmVarDecl *PVD) : ParamOrMethod(PVD) {}
+  PlaceholderBase(const CXXMethodDecl *MD) : ParamOrMethod(MD) {}
 
   const ParmVarDecl *getParmVarDecl() const {
-    return dyn_cast<const ParmVarDecl *>(ParamMethodOrField);
+    return dyn_cast<const ParmVarDecl *>(ParamOrMethod);
   }
 
   const CXXMethodDecl *getImplicitThisParent() const {
-    return dyn_cast<const CXXMethodDecl *>(ParamMethodOrField);
+    return dyn_cast<const CXXMethodDecl *>(ParamOrMethod);
   }
 
-  const FieldDecl *getFieldDecl() const {
-    return dyn_cast<const FieldDecl *>(ParamMethodOrField);
+  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamOrMethod) {
+    ID.AddPointer(ParamOrMethod.getOpaqueValue());
   }
 
-  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *,
-                                   const FieldDecl *>;
-
-  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamMethodOrField) {
-    ID.AddPointer(ParamMethodOrField.getOpaqueValue());
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, ParamMethodOrField);
-  }
+  void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, ParamOrMethod); }
 };
 
 /// Represents the storage location being borrowed, e.g., a specific stack
@@ -239,9 +229,6 @@ public:
   Loan *createPlaceholderLoan(const CXXMethodDecl *MD) {
     return createLoan(AccessPath(getOrCreatePlaceholderBase(MD)));
   }
-  Loan *createPlaceholderLoan(const FieldDecl *FD) {
-    return createLoan(AccessPath(getOrCreatePlaceholderBase(FD)));
-  }
 
   const Loan *getLoan(LoanID ID) const {
     assert(ID.Value < AllLoans.size());
@@ -253,11 +240,9 @@ public:
 private:
   LoanID getNextLoanID() { return NextLoanID++; }
 
-  /// Gets or creates a placeholder base for a given parameter, method, or
-  /// field.
+  /// Gets or creates a placeholder base for a given parameter or method.
   const PlaceholderBase *getOrCreatePlaceholderBase(const ParmVarDecl *PVD);
   const PlaceholderBase *getOrCreatePlaceholderBase(const CXXMethodDecl *MD);
-  const PlaceholderBase *getOrCreatePlaceholderBase(const FieldDecl *FD);
 
   LoanID NextLoanID{0};
 

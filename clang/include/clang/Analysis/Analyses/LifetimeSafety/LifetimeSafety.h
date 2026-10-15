@@ -46,7 +46,6 @@ struct LifetimeSafetyOpts {
   bool CheckLifetimeboundViolations;
   bool CheckMisplacedLifetimebound;
   bool CheckInapplicableLifetimebound;
-  bool CheckFieldOriginEscape;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -164,11 +163,6 @@ public:
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
-
-  // Reports when a member function returns an origin of a field.
-  virtual void reportFieldOriginEscape(const CXXMethodDecl *MD,
-                                       const FieldDecl *FD,
-                                       const Expr *EscapeExpr) {}
 
   // Adds inferred lifetime bound attribute for implicit this to its
   // TypeSourceInfo.

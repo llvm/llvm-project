@@ -744,16 +744,6 @@ Validates correct usage and adherence to lifetime safety annotations like [[clan
   }];
 }
 
-def LifetimeSafetyFieldOriginEscape
-    : DiagGroup<"experimental-lifetime-safety-field-origin-escape"> {
-  code Documentation = [{
-Experimental. Detects member functions returning a value derived from a
-pointer, reference, or view field rather than from ``*this``. May report owned
-pointer fields (e.g., ``Vector::data()``), which can be silenced by marking the
-method ``[[clang::lifetimebound]]``.
-  }];
-}
-
 def LifetimeSafetyAll : DiagGroup<"lifetime-safety-all",
                                   [LifetimeSafety,
                                   LifetimeSafetySuggestions,
