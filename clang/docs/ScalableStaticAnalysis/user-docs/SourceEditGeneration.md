@@ -65,3 +65,18 @@ $ clang-apply-replacements --remove-change-desc-files <dir-with-yaml>
 
 The transformation report can be consumed by any SARIF viewer.
 
+
+## Merging transformation reports
+
+A transformation report covers one translation unit. `clang-ssaf-report-merge`
+merges the reports of the translation units of a link unit into one:
+
+```console
+$ clang-ssaf-report-merge foo.sarif bar.sarif -o prg.sarif
+```
+
+The inputs must come from the same transformation. A finding that several
+inputs share, such as one in a header that both translation units include,
+is reported once, and the result does not depend on the order of the
+inputs. A merged report can be merged again.
+
