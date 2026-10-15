@@ -519,7 +519,8 @@ public:
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII)
-      : MCTargetAsmParser(sti, MII), CLOpts(MipsMCOptions::Global),
+      : MCTargetAsmParser(sti, MII),
+        CLOpts(MIPS_MC::getCLOpts(parser.getContext().getTargetOptions())),
         ABI(MipsABIInfo::computeTargetABI(
             sti.getTargetTriple(),
             parser.getContext().getTargetOptions().getABIName())) {
