@@ -209,14 +209,28 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
   return I;
 }
 
+bool MachineBasicBlock::isInBBProlog(const_instr_iterator I) const {
+  while (I != instr_end() && (I->isDebugOrPseudoInstr() || I->isPosition()))
+    ++I;
+  return I != instr_end() && I->getFlag(MachineInstr::BBProlog);
+}
+
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
-  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-
   iterator E = end();
-  while (I != E && (I->isPHI() || I->isPosition() ||
-                    TII->isBasicBlockPrologue(*I)))
-    ++I;
+  while (I != E) {
+    if (I->isPHI() || I->isPosition() || I->getFlag(MachineInstr::BBProlog)) {
+      ++I;
+      continue;
+    }
+    // Debug instructions in front of prolog instructions are skipped too.
+    iterator Next = I;
+    while (Next != E && (Next->isDebugOrPseudoInstr() || Next->isPosition()))
+      ++Next;
+    if (Next == I || Next == E || !Next->getFlag(MachineInstr::BBProlog))
+      break;
+    I = Next;
+  }
   // FIXME: This needs to change if we wish to bundle labels
   // inside the bundle.
   assert((I == E || !I->isInsideBundle()) &&
@@ -226,13 +240,11 @@ MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I,
-                                          Register Reg, bool SkipPseudoOp) {
-  const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-
+                                          bool SkipPseudoOp) {
   iterator E = end();
   while (I != E && (I->isPHI() || I->isPosition() || I->isDebugInstr() ||
                     (SkipPseudoOp && I->isPseudoProbe()) ||
-                    TII->isBasicBlockPrologue(*I, Reg)))
+                    I->getFlag(MachineInstr::BBProlog)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.

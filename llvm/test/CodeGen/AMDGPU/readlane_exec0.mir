@@ -29,5 +29,5 @@ body:       |
 
   bb.2:
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
 ...

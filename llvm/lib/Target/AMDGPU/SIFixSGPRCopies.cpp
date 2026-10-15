@@ -437,16 +437,6 @@ static bool isReachable(const MachineInstr *From,
            (const MachineBasicBlock *MBB) { return MBB == MBBFrom; });
 }
 
-// Return the first non-prologue instruction in the block.
-static MachineBasicBlock::iterator
-getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
-  MachineBasicBlock::iterator I = MBB->getFirstNonPHI();
-  while (I != MBB->end() && TII->isBasicBlockPrologue(*I))
-    ++I;
-
-  return I;
-}
-
 // Hoist and merge identical SGPR initializations into a common predecessor.
 // This is intended to combine M0 initializations, but can work with any
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
@@ -560,7 +550,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
             continue;
           }
 
-          MachineBasicBlock::iterator I = getFirstNonPrologue(MBB, TII);
+          MachineBasicBlock::iterator I = MBB->SkipPHIsAndLabels(MBB->begin());
           if (!interferes(MI1, I) && !interferes(MI2, I)) {
             LLVM_DEBUG(dbgs()
                        << "Erasing from "
@@ -599,11 +589,11 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
     auto &Defs = Init.second;
     for (auto *MI : Defs) {
       auto *MBB = MI->getParent();
-      MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB, TII);
+      MachineInstr &BoundaryMI = *MBB->SkipPHIsAndLabels(MBB->begin());
       MachineBasicBlock::reverse_iterator B(BoundaryMI);
       // Check if B should actually be a boundary. If not set the previous
       // instruction as the boundary instead.
-      if (!TII->isBasicBlockPrologue(*B))
+      if (!B->getFlag(MachineInstr::BBProlog))
         B++;
 
       auto R = std::next(MI->getReverseIterator());

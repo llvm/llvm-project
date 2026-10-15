@@ -156,6 +156,7 @@ struct MachineVerifier {
 
   const MachineInstr *FirstNonPHI = nullptr;
   const MachineInstr *FirstTerminator = nullptr;
+  const MachineInstr *FirstNonBBProlog = nullptr;
   BlockSet FunctionBlocks;
 
   BitVector regsReserved;
@@ -729,6 +730,7 @@ void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
+  FirstNonBBProlog = nullptr;
 
   if (MRI->tracksLiveness() && hasPHIs(*MF)) {
     // If this block has allocatable physical registers live-in, check that
@@ -2345,6 +2347,20 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Found PHI instruction after non-PHI", MI);
   } else if (FirstNonPHI == nullptr)
     FirstNonPHI = MI;
+
+  // Until register allocation is done, block prolog instructions form a block
+  // prefix. Only PHIs, labels, debug instructions and pseudo probes may precede
+  // them.
+  if (!MF->getProperties().hasNoVRegs() && !MI->isPHI() && !MI->isPosition() &&
+      !MI->isDebugOrPseudoInstr()) {
+    if (!MI->getFlag(MachineInstr::BBProlog)) {
+      if (!FirstNonBBProlog)
+        FirstNonBBProlog = MI;
+    } else if (FirstNonBBProlog) {
+      report("Block prolog instruction after non-prolog instruction", MI);
+      OS << "First non-prolog instruction: " << *FirstNonBBProlog;
+    }
+  }
 
   // Check the tied operands.
   if (MI->isInlineAsm())
