@@ -693,8 +693,13 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
                                       ArrayRef<bool> dimsToMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
-  return vector::MultiDimReductionOp::create(
-      b, reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
+  // Keep the combiner's fast-math flags on the reduction.
+  arith::FastMathFlags fastMathFlags = arith::FastMathFlags::none;
+  if (auto fmfOp = dyn_cast<arith::ArithFastMathInterface>(reduceOp))
+    fastMathFlags = fmfOp.getFastMathFlagsAttr().getValue();
+  return vector::MultiDimReductionOp::create(b, reduceOp->getLoc(),
+                                             valueToReduce, acc, dimsToMask,
+                                             *maybeKind, fastMathFlags);
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {

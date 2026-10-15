@@ -39,6 +39,45 @@ func.func @multidimreduction_contract_int(
 
 // -----
 
+// The contraction's flags apply to both its multiply and its add, so it keeps
+// only the flags that both the mulf and the multi_reduction carry.
+
+// CHECK-LABEL: multidimreduction_contract_fastmath
+//  CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan,contract>,
+//  CHECK-SAME:   kind = #vector.kind<add>}
+func.func @multidimreduction_contract_fastmath(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 fastmath<nnan,contract> : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<nnan,contract> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: multidimreduction_contract_fastmath_intersect
+//  CHECK-NEXT:   vector.contract {fastmath = #arith.fastmath<nnan>,
+//  CHECK-SAME:   kind = #vector.kind<add>}
+func.func @multidimreduction_contract_fastmath_intersect(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 fastmath<nnan,contract> : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<nnan,nsz> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: multidimreduction_contract_fastmath_strict_mul
+//  CHECK-NEXT:   vector.contract {indexing_maps =
+//  CHECK-NOT:    fastmath
+func.func @multidimreduction_contract_fastmath_strict_mul(
+  %arg0: vector<8x32x16xf32>,%arg1: vector<8x32x16xf32>, %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %0 = arith.mulf %arg0, %arg1 : vector<8x32x16xf32>
+  %1 = vector.multi_reduction <add>, %0, %acc fastmath<fast> [1] : vector<8x32x16xf32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// -----
+
 //-----------------------------------------------------------------------------
 // [Pattern: CombineContractABTranspose]
 //-----------------------------------------------------------------------------
