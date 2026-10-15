@@ -523,9 +523,9 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    sltu a0, a1, s0
 ; RV32I-NEXT:  .LBB3_2: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB3_3 Depth=1
+; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    addi a2, a4, 1
 ; RV32I-NEXT:    seqz a3, a2
-; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    add a3, a1, a3
 ; RV32I-NEXT:    and a2, a0, a2
 ; RV32I-NEXT:    and a3, a0, a3
@@ -583,9 +583,9 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    sltu a0, a1, s0
 ; RV32IA-NEXT:  .LBB3_2: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB3_3 Depth=1
+; RV32IA-NEXT:    neg a0, a0
 ; RV32IA-NEXT:    addi a2, a4, 1
 ; RV32IA-NEXT:    seqz a3, a2
-; RV32IA-NEXT:    neg a0, a0
 ; RV32IA-NEXT:    add a3, a1, a3
 ; RV32IA-NEXT:    and a2, a0, a2
 ; RV32IA-NEXT:    and a3, a0, a3

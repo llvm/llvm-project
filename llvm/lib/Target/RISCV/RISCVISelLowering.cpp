@@ -19543,8 +19543,8 @@ static SDValue combineSubShiftToOrcB(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::ORC_B, SDLoc(N), VT, LeftShiftOperand);
 }
 
-// fold (sub 0, (select_cc lhs, rhs, cc, (sub X, Y), (sub Y, X))) ->
-//      (select_cc lhs, rhs, cc, (sub Y, X), (sub X, Y))
+// fold (sub 0, (select_cc lhs, rhs, cc, A, B)) ->
+//      (select_cc lhs, rhs, cc, (sub 0, A), (sub 0, B))
 static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
   if (!isNullConstant(N->getOperand(0)))
     return SDValue();
@@ -19553,17 +19553,20 @@ static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
   if (Sel.getOpcode() != RISCVISD::SELECT_CC || !Sel.hasOneUse())
     return SDValue();
 
-  SDValue TrueV = Sel.getOperand(3);
-  SDValue FalseV = Sel.getOperand(4);
-  using namespace SDPatternMatch;
-  SDValue X, Y;
-  if (!sd_match(TrueV, m_Sub(m_Value(X), m_Value(Y))) ||
-      !sd_match(FalseV, m_Sub(m_Specific(Y), m_Specific(X))))
+  SDValue A = Sel.getOperand(3);
+  SDValue B = Sel.getOperand(4);
+
+  if (!A.hasOneUse() || !B.hasOneUse())
     return SDValue();
+
+  SDValue NewA = DAG.getNode(ISD::SUB, SDLoc(N), A.getValueType(),
+                             N->getOperand(0), A);
+  SDValue NewB = DAG.getNode(ISD::SUB, SDLoc(N), B.getValueType(),
+                             N->getOperand(0), B);
 
   return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
                      Sel.getOperand(0), Sel.getOperand(1), Sel.getOperand(2),
-                     FalseV, TrueV);
+                     NewA, NewB);
 }
 
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
