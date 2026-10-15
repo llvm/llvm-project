@@ -40,6 +40,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -997,7 +998,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
 CIRAttrToValue::LoweredGlobalSymbol
 CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   auto moduleOp = parentOp->getParentOfType<mlir::ModuleOp>();
-  mlir::DataLayout dataLayout(moduleOp);
+  cir::CIRDataLayout cirDataLayout(moduleOp);
+  const mlir::DataLayout &dataLayout = cirDataLayout.layout;
   mlir::Type sourceType;
   unsigned addrSpace = 0;
   llvm::StringRef symName;
@@ -1016,9 +1018,11 @@ CIRAttrToValue::getAddressOfSymbol(mlir::FlatSymbolRefAttr symbol) {
   } else if (auto llvmFun = dyn_cast<mlir::LLVM::LLVMFuncOp>(sourceSymbol)) {
     sourceType = llvmFun.getFunctionType();
     symName = llvmFun.getSymName();
+    addrSpace = cirDataLayout.getProgramAddressSpace();
   } else if (auto fun = dyn_cast<cir::FuncOp>(sourceSymbol)) {
     sourceType = converter->convertType(fun.getFunctionType());
     symName = fun.getSymName();
+    addrSpace = cirDataLayout.getProgramAddressSpace();
   } else if (auto alias = dyn_cast<mlir::LLVM::AliasOp>(sourceSymbol)) {
     sourceType = alias.getType();
     symName = alias.getSymName();
