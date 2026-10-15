@@ -4043,15 +4043,8 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
 }
 
 /// Computes the primitive bit size of an LLVM-compatible scalar or vector
-/// type, following the rules of \c llvm::Type::getPrimitiveSizeInBits.
-/// Returns failure for types without a primitive bit size (pointers, void,
-/// labels, metadata, functions, tokens, target extensions and aggregates)
-/// and for vector sizes overflowing \c uint64_t. Vector dimensions are always
-/// positive (dynamic dimensions are not representable in \c VectorType).
-///
-/// This intentionally does not reuse \c getPrimitiveTypeSizeInBits, whose
-/// assert-based contract and conflation of sizeless types with size 0 make it
-/// unsuitable for use in a verifier.
+/// type, following \c llvm::Type::getPrimitiveSizeInBits. Returns failure if
+/// the type has no primitive bit size or the size overflows.
 static FailureOr<llvm::TypeSize> getBitcastSizeInBits(Type type) {
   if (type.isIntOrFloat())
     return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
@@ -4094,8 +4087,7 @@ LogicalResult LLVM::BitcastOp::verify() {
   auto sourceType = llvm::dyn_cast<LLVMPointerType>(srcElemType);
 
   // Bitcasts between bytes and pointers are always valid, matching
-  // 'CastInst::castIsValid'. Byte casts against anything else are
-  // size-checked below like any other type.
+  // 'CastInst::castIsValid'.
   if ((isa<LLVMByteType>(srcElemType) && resultType) ||
       (sourceType && isa<LLVMByteType>(dstElemType)))
     return success();
@@ -4108,8 +4100,7 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType) {
     FailureOr<llvm::TypeSize> srcSize = getBitcastSizeInBits(srcType);
     FailureOr<llvm::TypeSize> dstSize = getBitcastSizeInBits(dstType);
-    // Types without a primitive bit width (void, labels, metadata,
-    // functions, tokens, target extensions) cannot be bitcast, matching
+    // Types without a primitive bit width cannot be bitcast, matching
     // 'CastInst::castIsValid'.
     if (failed(srcSize) || failed(dstSize))
       return emitOpError("operand and result must have a primitive bit width");

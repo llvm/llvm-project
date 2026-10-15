@@ -1383,12 +1383,10 @@ llvm.func @bitcast_same_size(%arg0: !llvm.ppc_fp128, %arg1: vector<[4]xi32>,
 
 // CHECK-LABEL: @bitcast_byte
 llvm.func @bitcast_byte(%ptr: !llvm.ptr, %i64: i64) {
-  // Byte casts against non-pointers are size-checked.
   // CHECK: llvm.bitcast {{.*}} : i64 to !llvm.byte<64>
   %0 = llvm.bitcast %i64 : i64 to !llvm.byte<64>
   // CHECK: llvm.bitcast {{.*}} : !llvm.byte<64> to i64
   %1 = llvm.bitcast %0 : !llvm.byte<64> to i64
-  // Byte casts to and from pointers are always valid.
   // CHECK: llvm.bitcast {{.*}} : !llvm.ptr to !llvm.byte<64>
   %2 = llvm.bitcast %ptr : !llvm.ptr to !llvm.byte<64>
   // CHECK: llvm.bitcast {{.*}} : !llvm.byte<64> to !llvm.ptr
