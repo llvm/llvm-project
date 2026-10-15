@@ -95,10 +95,11 @@ int llvm::compileModuleWithNewPM(
     const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     ArrayRef<PassPlugin> PassPlugins, CodeGenFileType FileType) {
 
-  if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
+  if (!PassPipeline.empty() &&
+      TargetPassConfig::hasLimitedCodeGenPipeline(*Target)) {
     WithColor::error(errs(), Arg0)
         << "--passes cannot be used with "
-        << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
+        << TargetPassConfig::getLimitedCodeGenPipelineReason(*Target) << ".\n";
     return 1;
   }
 
@@ -112,7 +113,7 @@ int llvm::compileModuleWithNewPM(
   }
 
   // Fetch options from TargetPassConfig
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
+  CGPassBuilderOption Opt = getCGPassBuilderOption(*Target);
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
   if (VK == VerifierKind::EachPass)
     Opt.VerifyMachineCode = MachineVerifierMode::Each;

@@ -807,10 +807,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       }
       TargetPassConfig *PTPC = Target->createPassConfig(PM);
       TargetPassConfig &TPC = *PTPC;
-      if (TPC.hasLimitedCodeGenPipeline()) {
+      if (TPC.hasLimitedCodeGenPipeline(*Target)) {
         WithColor::error(errs(), argv[0])
             << "run-pass cannot be used with "
-            << TPC.getLimitedCodeGenPipelineReason() << ".\n";
+            << TPC.getLimitedCodeGenPipelineReason(*Target) << ".\n";
         delete PTPC;
         delete MMIWP;
         return 1;

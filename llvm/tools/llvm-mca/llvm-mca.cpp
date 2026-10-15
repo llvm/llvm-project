@@ -614,6 +614,9 @@ int main(int argc, char **argv) {
   mca::PipelineOptions PO(MicroOpQueue, DecoderThroughput, DispatchWidth,
                           RegisterFileSize, LoadQueueSize, StoreQueueSize,
                           AssumeNoAlias, EnableBottleneckAnalysis);
+  float ReservationStationScaleFactor =
+      MCSchedModel::getReservationStationScaleFactor(MCOptions);
+  PO.ReservationStationScaleFactor = ReservationStationScaleFactor;
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
@@ -809,7 +812,8 @@ int main(int argc, char **argv) {
       Printer.addView(std::make_unique<mca::DispatchStatistics>());
 
     if (PrintSchedulerStats)
-      Printer.addView(std::make_unique<mca::SchedulerStatistics>(*STI));
+      Printer.addView(std::make_unique<mca::SchedulerStatistics>(
+          *STI, ReservationStationScaleFactor));
 
     if (PrintRetireStats)
       Printer.addView(std::make_unique<mca::RetireControlUnitStatistics>(SM));
@@ -826,7 +830,7 @@ int main(int argc, char **argv) {
           TimelineMaxIterations ? TimelineMaxIterations : 10;
       Printer.addView(std::make_unique<mca::TimelineView>(
           *STI, *IP, Insts, std::min(TimelineIterations, S.getNumIterations()),
-          TimelineMaxCycles));
+          TimelineMaxCycles, ReservationStationScaleFactor));
     }
 
     // Fetch custom Views that are to be placed after all other Views.

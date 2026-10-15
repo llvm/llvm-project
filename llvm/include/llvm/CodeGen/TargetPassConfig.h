@@ -173,16 +173,16 @@ public:
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.
-  static bool hasLimitedCodeGenPipeline();
+  static bool hasLimitedCodeGenPipeline(const TargetMachine &TM);
 
   /// Returns true if none of the `-stop-before` and `-stop-after` options is
   /// set.
-  static bool willCompleteCodeGenPipeline();
+  static bool willCompleteCodeGenPipeline(const TargetMachine &TM);
 
   /// If hasLimitedCodeGenPipeline is true, this method returns
   /// a string with the name of the options that caused this
   /// pipeline to be limited.
-  static std::string getLimitedCodeGenPipelineReason();
+  static std::string getLimitedCodeGenPipelineReason(const TargetMachine &TM);
 
   struct StartStopInfo {
     bool StartAfter;
@@ -196,7 +196,7 @@ public:
   /// Returns pass name in `-stop-before` or `-stop-after`
   /// NOTE: New pass manager migration only
   static Expected<StartStopInfo>
-  getStartStopInfo(PassInstrumentationCallbacks &PIC);
+  getStartStopInfo(const TargetMachine &TM, PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 

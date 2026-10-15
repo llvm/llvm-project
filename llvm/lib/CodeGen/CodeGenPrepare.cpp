@@ -168,7 +168,7 @@ class TypePromotionTransaction;
 
 class CodeGenPrepare {
   friend class CodeGenPrepareLegacyPass;
-  const CodeGenOptions &Opts = CodeGenOptions::Global;
+  const CodeGenOptions &Opts;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *SubtargetInfo = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -229,8 +229,8 @@ class CodeGenPrepare {
   const DataLayout *DL = nullptr;
 
 public:
-  CodeGenPrepare() = default;
-  CodeGenPrepare(const TargetMachine *TM) : TM(TM){};
+  CodeGenPrepare(const CodeGenOptions &Opts, const TargetMachine *TM)
+      : Opts(Opts), TM(TM) {}
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
 
@@ -368,7 +368,8 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   auto TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  CodeGenPrepare CGP(TM);
+  CodeGenPrepare CGP(F.getContext().getLibraryOptions().get<CodeGenOptions>(),
+                     TM);
   CGP.DL = &F.getDataLayout();
   CGP.SubtargetInfo = TM->getSubtargetImpl(F);
   CGP.TLI = CGP.SubtargetInfo->getTargetLowering();
@@ -408,7 +409,8 @@ FunctionPass *llvm::createCodeGenPrepareLegacyPass() {
 
 PreservedAnalyses CodeGenPreparePass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
-  CodeGenPrepare CGP(TM);
+  CodeGenPrepare CGP(F.getContext().getLibraryOptions().get<CodeGenOptions>(),
+                     TM);
 
   bool Changed = CGP.run(F, AM);
   if (!Changed)
@@ -7613,7 +7615,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     return false;
 
   // If the SelectOptimize pass is enabled, selects have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
+  if (!getCGPassBuilderOption(*TM).DisableSelectOptimize)
     return false;
 
   // Find all consecutive select instructions that share the same condition.
