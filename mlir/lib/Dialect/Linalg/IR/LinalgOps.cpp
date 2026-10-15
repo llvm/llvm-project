@@ -2051,7 +2051,7 @@ enum class BroadcastReduceKind {
   XOrI,
 };
 
-/// Match a supported max/min reduction body and return its reduction kind.
+/// Match a supported reduction body and return its reduction kind.
 static std::optional<BroadcastReduceKind>
 matchBroadcastReduceBody(ReduceOp reduceOp) {
   if (reduceOp.getNumDpsInputs() != 1 || reduceOp.getNumDpsInits() != 1 ||
@@ -2146,7 +2146,7 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
 ///  maxsi(broadcast(x)) -> x
 ///  minsi(broadcast(y)) -> y
 ///
-// TODO: We can add other op. e.g., add, mul, and, or, xor.
+// TODO: We can add other op.
 struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
   using OpRewritePattern<linalg::ReduceOp>::OpRewritePattern;
 
