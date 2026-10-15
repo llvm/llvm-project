@@ -353,7 +353,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaUsesInfo &Info) const {
             Info.HaveUnpromotableMerge = true;
             WorkList.push_back(Inst);
           } else {
-            return RejectUser(Inst, "phi/select with unkown object");
+            return RejectUser(Inst, "phi/select with unknown object");
           }
         }
       }
@@ -438,7 +438,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   std::vector<AllocaAnalysis> Allocas;
   // Construct one AllocaAnalysis for each alloca group and merge the
   // information from each alloca.
-  for (const auto *ECV : Groups) {
+  for (const EquivalenceClasses<AllocaInst *>::ECValue *ECV : Groups) {
     if (!ECV->isLeader())
       continue;
 
@@ -461,7 +461,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
 
     if (HasNonCandidateMember) {
       LLVM_DEBUG(dbgs() << "  Group containing " << *ECV->getData()
-                        << " is not promotable\n");
+                        << " is not promotable to vector\n");
       continue;
     }
 
@@ -1158,8 +1158,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
         return;
 
       // Abort on type with different sizes in memory and register.
-      if (DL.getTypeSizeInBits(MemberTy) != DL.getTypeAllocSizeInBits(MemberTy))
+      if (DL.getTypeSizeInBits(MemberTy) !=
+          DL.getTypeAllocSizeInBits(MemberTy)) {
+        LLVM_DEBUG(
+            dbgs() << "  Cannot convert to vector because the allocation size "
+                      "does not match the type's size\n");
         return;
+      }
 
       CombinedEltTy = MemberTy;
       ElemCnt = 1;
@@ -1168,8 +1173,11 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       // Failed to find a proper vector type or found a different element type,
       // abort promotion.
       if (!MemberTy ||
-          (CombinedEltTy && CombinedEltTy != MemberTy->getScalarType()))
+          (CombinedEltTy && CombinedEltTy != MemberTy->getScalarType())) {
+        LLVM_DEBUG(dbgs() << "  Cannot convert to vector because we didn't "
+                             "find a proper vector type\n");
         return;
+      }
       CombinedEltTy = MemberTy->getScalarType();
       ElemCnt = cast<FixedVectorType>(MemberTy)->getNumElements();
     }
