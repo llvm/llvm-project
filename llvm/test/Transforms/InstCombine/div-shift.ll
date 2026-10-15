@@ -468,8 +468,8 @@ define i5 @udiv_mul_shl_nuw_exact_commute1(i5 %x, i5 %y, i5 %z) {
 define i5 @udiv_mul_shl_nuw_commute2(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nuw_commute2(
 ; CHECK-NEXT:    [[M1:%.*]] = mul nuw i5 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nuw i5 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i5 [[M1]], [[X]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[TMP1]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nuw i5 %x, %y
@@ -648,8 +648,8 @@ define i5 @sdiv_shl_mul_nuw(i5 %x, i5 %y, i5 %z) {
 define i5 @udiv_mul_shl_missing_nsw1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_missing_nsw1(
 ; CHECK-NEXT:    [[M1:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nuw i5 [[Y]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i5 [[M1]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nsw i5 %x, %y
@@ -673,10 +673,13 @@ define i5 @udiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; X u/ (Y << Z) --> (X >> Z) u/ Y  when shl is nuw
+; https://alive2.llvm.org/ce/z/FjoN_A
+
 define i8 @udiv_shl_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_nuw(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %s = shl nuw i8 %y, %z
@@ -686,13 +689,37 @@ define i8 @udiv_shl_nuw(i8 %x, i8 %y, i8 %z) {
 
 define <2 x i4> @udiv_shl_nuw_exact(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @udiv_shl_nuw_exact(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i4> [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i4> [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact <2 x i4> [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i4> [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[D]]
 ;
   %s = shl nuw <2 x i4> %y, %z
   %d = udiv exact <2 x i4> %x, %s
   ret <2 x i4> %d
+}
+
+; Y is a power-of-2 constant: defer to existing shl-of-pow2 chain.
+define i8 @udiv_shl_nuw_pow2_const(i8 %x, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_pow2_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 4, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+; Y power-of-2 with udiv exact: existing path preserves the exact flag.
+define i8 @udiv_shl_nuw_pow2_const_exact(i8 %x, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_pow2_const_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Z:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = lshr exact i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 4, %z
+  %d = udiv exact i8 %x, %s
+  ret i8 %d
 }
 
 define i8 @udiv_shl(i8 %x, i8 %y, i8 %z) {
@@ -967,9 +994,9 @@ define i8 @udiv_shl_shl_nuw_nsw(i8 %x, i8 %y, i8 %z) {
 
 define i8 @udiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nsw_nuw(
-; CHECK-NEXT:    [[XZ:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YZ:%.*]] = shl nuw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[Y1:%.*]], [[Z]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nsw i8 %x, %z
@@ -986,20 +1013,6 @@ define i8 @udiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
   %xz = shl nuw nsw i8 %x, %z
   %yz = shl nsw i8 %y, %z
   %d = udiv i8 %xz, %yz
-  ret i8 %d
-}
-
-; TODO: X / (Y << Z) --> (X >> Z) / Y
-; https://alive2.llvm.org/ce/z/FjoN_A
-
-define i8 @udiv_shl_nuw_divisor(i8 %x, i8 %y, i8 %z) {
-; CHECK-LABEL: @udiv_shl_nuw_divisor(
-; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
-; CHECK-NEXT:    ret i8 [[D]]
-;
-  %s = shl nuw i8 %y, %z
-  %d = udiv i8 %x, %s
   ret i8 %d
 }
 
