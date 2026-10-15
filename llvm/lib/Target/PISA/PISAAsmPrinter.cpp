@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements assembly output for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PISAInstPrinter.h"
 #include "MCTargetDesc/PISARegEncoder.h"
