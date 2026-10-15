@@ -71,7 +71,7 @@ end subroutine linear_clause_04
 ! Case 5
 subroutine linear_clause_05(x)
     integer :: x(:)
-    !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute
+    !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !$omp declare simd linear(x : ref)
 end subroutine linear_clause_05
 
