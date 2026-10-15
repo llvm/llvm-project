@@ -197,9 +197,20 @@ public:
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
 
+  /// Return the unmasked variant of the masked vector libcall \p LC, or
+  /// RTLIB::UNKNOWN_LIBCALL if \p LC is not a masked vector libcall.
+  LLVM_ABI static RTLIB::Libcall getUnmaskedVectorLibcall(RTLIB::Libcall LC);
+
+  /// Return the masked variant of the vector libcall \p LC, or
+  /// RTLIB::UNKNOWN_LIBCALL if \p LC has no masked variant.
+  LLVM_ABI static RTLIB::Libcall getMaskedVectorLibcall(RTLIB::Libcall LC);
+
   /// Returns true if the function has a vector mask argument, which is assumed
   /// to be the last argument.
-  LLVM_ABI static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl);
+  static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
+    return getUnmaskedVectorLibcall(getLibcallFromImpl(Impl)) !=
+           RTLIB::UNKNOWN_LIBCALL;
+  }
 
 private:
   // Generated per-library setup helpers, dispatched from

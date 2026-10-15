@@ -246,6 +246,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  fexecve_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fexecve_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.unistd.fexecve
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   ftruncate_test
   SUITE
     libc_unistd_unittests

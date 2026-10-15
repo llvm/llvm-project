@@ -408,8 +408,8 @@ private:
   /// LowerGEP is true, it finds in indices of both sequential and structure
   /// types, otherwise it only finds in sequential indices. The output
   /// NeedsExtraction indicates whether we successfully find a constant
-  /// offset, and SignedOverflow indicates if there was signed overflow in
-  /// offset calculation.
+  /// offset, and SignedOverflow indicates if calculating or removing offsets
+  /// may have signed overflow.
   APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction,
                              bool &SignedOverflow);
 
@@ -963,12 +963,21 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
+        const uint64_t Stride = GTI.getSequentialElementStride(*DL);
         bool Overflow;
         auto ByteOffset = ConstantOffset->sextOrTrunc(IdxWidth).smul_ov(
-            APInt(IdxWidth, GTI.getSequentialElementStride(*DL),
-                  /*IsSigned=*/true, /*ImplicitTrunc=*/true),
+            APInt(IdxWidth, Stride, /*IsSigned=*/true, /*ImplicitTrunc=*/true),
             Overflow);
         SignedOverflow |= Overflow;
+        // Removing an offset must not introduce signed overflow. For strides
+        // greater than one, the non-wrapping multiplication of both the
+        // original index and extracted offset already rules out this wrap.
+        if (Stride == 1) {
+          auto *Offset = ConstantInt::get(GEP->getContext(), *ConstantOffset);
+          SignedOverflow |=
+              computeOverflowForSignedSub(GEP->getOperand(I), Offset, *DL) !=
+              OverflowResult::NeverOverflows;
+        }
         AccumulativeByteOffset =
             AccumulativeByteOffset.sadd_ov(ByteOffset, Overflow);
         SignedOverflow |= Overflow;
@@ -1237,10 +1246,10 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // Therefore, the final code will be a semantically equivalent.
   GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
 
-  // If the initial GEP was inbounds/nusw and all variable indices and the
-  // accumulated offsets are non-negative, they can be added in any order and
-  // the intermediate results are in bounds and don't overflow in a nusw sense.
-  // So, we can preserve the inbounds/nusw flag for both GEPs.
+  // If removing and scaling offsets cannot have signed overflow, and all
+  // remaining indices and accumulated offsets are nonnegative, they can be
+  // added in any order. An initially inbounds/nusw GEP then guarantees that the
+  // intermediate results stay in bounds and do not overflow in a nusw sense.
   bool CanPreserveInBoundsNUSW = AllOffsetsNonNegative;
 
   // If the initial GEP was NUW and all operations that we reassociate were NUW
