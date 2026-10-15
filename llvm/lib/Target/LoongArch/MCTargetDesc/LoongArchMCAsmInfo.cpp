@@ -249,7 +249,6 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
   CommentString = "#";
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 }
 
 void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

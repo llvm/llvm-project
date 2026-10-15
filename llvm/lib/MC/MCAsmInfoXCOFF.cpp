@@ -39,8 +39,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
   HasDotTypeDotSizeDirective = false;
   ParseInlineAsmUsingAsmParser = true;
-
-  ExceptionsType = ExceptionHandling::AIX;
 }
 
 bool MCAsmInfoXCOFF::useCodeAlign(const MCSection &Sec) const {
