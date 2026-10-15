@@ -613,8 +613,11 @@ public:
   static InputFile convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                           InputFile &File,
                                           std::optional<int32_t> PIDFilter);
-  // Extract perf script type by peaking at the input
-  static PerfContent checkPerfScriptType(StringRef FileName);
+  // Select the reader type using samples and their mapping/task metadata.
+  static PerfContent
+  checkPerfScriptType(ProfiledBinary *Binary, StringRef FileName,
+                      bool UseProcessMappings = false,
+                      std::optional<int32_t> PIDFilter = std::nullopt);
 
   // Cleanup installers for temporary files created by perf script command.
   // Those files will be automatically removed when running destructor or
@@ -660,7 +663,8 @@ protected:
   void warnIfBranchTargetMismatch();
   // Extract call stack from the perf trace lines
   bool extractCallstack(TraceStream &TraceIt,
-                        SmallVectorImpl<uint64_t> &CallStack);
+                        SmallVectorImpl<uint64_t> &CallStack,
+                        std::optional<int32_t> PID = std::nullopt);
   // Extract an LBR stack, consuming any mapped header and unused frames.
   bool extractLBRStack(TraceStream &TraceIt,
                        SmallVectorImpl<LBREntry> &LBRStack,

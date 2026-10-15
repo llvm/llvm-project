@@ -373,7 +373,8 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
   assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
+  Input.Content = PerfScriptReader::checkPerfScriptType(
+      Binary, Input.InputFilePath, Input.UseProcessMappings, PIDFilter);
   if (Input.Content == PerfContent::LBRStack) {
     PerfReader.reset(new HybridPerfReader(Binary, Input.InputFilePath,
                                           PIDFilter, Input.UseProcessMappings));
@@ -1040,7 +1041,8 @@ bool PerfScriptReader::parseLBRLine(StringRef Line,
 }
 
 bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
-                                        SmallVectorImpl<uint64_t> &CallStack) {
+                                        SmallVectorImpl<uint64_t> &CallStack,
+                                        std::optional<int32_t> PID) {
   // The raw format of call stack is like:
   //            4005dc      # leaf frame
   //	          400634
@@ -1051,17 +1053,21 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
   while (!TraceIt.isAtEoF() && !isLBRSample(TraceIt.getCurrentLine(), true)) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
     uint64_t FrameAddr = 0;
-    if (parseAddress(FrameStr, FrameAddr, false)) {
-      // We might parse a non-perf sample line like empty line and comments,
-      // skip it
-      TraceIt.advance();
+    if (parseAddress(FrameStr, FrameAddr, false, /*AllowSymbols=*/!PID)) {
+      // With PID headers, leave non-frame lines for the outer parser.
+      if (!PID)
+        TraceIt.advance();
       return false;
     }
     TraceIt.advance();
 
-    FrameAddr = Binary->canonicalizeVirtualAddress(FrameAddr);
+    // Relocate before decoding the saved return PC into a call instruction.
+    // The instruction decoder and debug information use binary addresses.
+    std::optional<uint64_t> ResolvedFrameAddr =
+        PID ? resolveMappedAddress(FrameAddr, *PID)
+            : Binary->canonicalizeVirtualAddress(FrameAddr);
     // Currently intermixed frame from different binaries is not supported.
-    if (!Binary->addressIsCode(FrameAddr)) {
+    if (!ResolvedFrameAddr || !Binary->addressIsCode(*ResolvedFrameAddr)) {
       if (CallStack.empty())
         NumLeafExternalFrame++;
       // Push a special value(ExternalAddr) for the external frames so that
@@ -1072,6 +1078,7 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
         CallStack.emplace_back(ExternalAddr);
       continue;
     }
+    FrameAddr = *ResolvedFrameAddr;
 
     // We need to translate return address to call address for non-leaf frames.
     if (!CallStack.empty()) {
@@ -1097,8 +1104,15 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
   // Note that even for empty call stack, we should skip the address at the
   // bottom, otherwise the following pass may generate a truncated callstack
   while (!TraceIt.isAtEoF() && !isLBRSample(TraceIt.getCurrentLine(), true)) {
+    // Leave the next sample header and mapping events for the outer parser.
+    uint64_t FrameAddr = 0;
+    if (PID && parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false,
+                            /*AllowSymbols=*/false))
+      return false;
     TraceIt.advance();
   }
+  if (PID && TraceIt.isAtEoF())
+    return false;
   // Filter out broken stack sample. We may not have complete frame info
   // if sample end up in prolog/epilog, the result is dangling context not
   // connected to entry point. This should be relatively rare thus not much
@@ -1147,12 +1161,23 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
   //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
   //
+  std::optional<int32_t> PID;
+  if (UseProcessMappings) {
+    // Perf puts PID/time on their own line for a resolved callchain. An IP
+    // still on that header means this sample has no stack to seed the unwinder.
+    StringRef Header = TraceIt.getCurrentLine();
+    PID = parseSamplePID(Header);
+    bool HasCallchain = Header.empty();
+    TraceIt.advance();
+    if (!HasCallchain)
+      return;
+  }
   std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
 #ifndef NDEBUG
   Sample->Linenum = TraceIt.getLineNumber();
 #endif
   // Parsing call stack and populate into PerfSample.CallStack
-  if (!extractCallstack(TraceIt, Sample->CallStack)) {
+  if (!extractCallstack(TraceIt, Sample->CallStack, PID)) {
     // Skip the next LBR line matched current call stack
     if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true))
       TraceIt.advance();
@@ -1163,7 +1188,7 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 
   if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true)) {
     // Parsing LBR stack and populate into PerfSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+    if (extractLBRStack(TraceIt, Sample->LBRStack, PID)) {
       if (IgnoreStackSamples) {
         Sample->CallStack.clear();
       } else {
@@ -1653,8 +1678,57 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
 // Determine the perfscript contains hybrid samples(call stack + LBRs) by
 // checking whether there is a non-empty call stack immediately followed by
 // a LBR sample
-PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
+PerfContent PerfScriptReader::checkPerfScriptType(
+    ProfiledBinary *Binary, StringRef FileName, bool UseProcessMappings,
+    std::optional<int32_t> PIDFilter) {
   TraceStream TraceIt(FileName);
+  if (UseProcessMappings) {
+    // Discover the reader type using the same mapping/task replay as the real
+    // parse. A callchain from another PID or binary must not select CS mode
+    // for a target whose usable samples contain only branch stacks.
+    PerfScriptReader Reader(Binary, FileName, PIDFilter, true);
+    bool HasLBR = false;
+    while (!TraceIt.isAtEoF()) {
+      StringRef Line = TraceIt.getCurrentLine().trim();
+      if (Line.contains("PERF_RECORD_MMAP")) {
+        MMapEvent MMap;
+        extractMMapEvent(TraceIt.getCurrentLine(), MMap,
+                         /*RequireProcessMappingInfo=*/true);
+        Reader.updateExecutableMapping(MMap, mmapMatchesBinary(*Binary, MMap));
+        TraceIt.advance();
+        continue;
+      }
+      if (Line.contains("PERF_RECORD_")) {
+        Reader.parseEventOrSample(TraceIt);
+        continue;
+      }
+      if (!Line.empty()) {
+        int32_t PID = parseSamplePID(Line);
+        if (Line.empty()) {
+          TraceIt.advance();
+          bool HasCallchain = skipCallchainFrames(TraceIt);
+          if (!TraceIt.isAtEoF() &&
+              isLBRSample(TraceIt.getCurrentLine(), false)) {
+            HasLBR = true;
+            SmallVector<LBREntry, 16> LBRStack;
+            if (!PIDFilter || PID == *PIDFilter)
+              Reader.parseLBRLine(TraceIt.getCurrentLine(), LBRStack, PID);
+            TraceIt.advance();
+            // Require a selected sample with a branch touching target code,
+            // not merely a syntactically valid stack from some other image.
+            if (!LBRStack.empty() && HasCallchain)
+              return PerfContent::LBRStack;
+          }
+          continue;
+        }
+        HasLBR |= isLBRSample(Line, false);
+      }
+      TraceIt.advance();
+    }
+    if (HasLBR)
+      return PerfContent::LBR;
+    exitWithError("Invalid perf script input!");
+  }
   uint64_t FrameAddr = 0;
   while (!TraceIt.isAtEoF()) {
     // Skip the aggregated count
