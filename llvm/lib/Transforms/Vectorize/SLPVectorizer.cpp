@@ -3363,9 +3363,9 @@ private:
   /// SCEVs with \p Exp.
   Value *emitRuntimeAliasCheck(IRBuilderBase &Builder, SCEVExpander &Exp);
 
-  /// State which could potentially be shared accross candidates during
-  /// candidate construction, costing and emission.
-  class SharedCandidateState {
+  /// Candidate graph state which could potentially be shared accross candidates
+  // during construction, costing and emission.
+  class SharedGraphState {
     friend class BoUpSLP;
 
     /// Maps a specific scalar to its tree entry(ies).
@@ -3704,7 +3704,7 @@ private:
 
   // Destroy shared and scheduler references before candidate entries.
   CandidateState Candidate;
-  SharedCandidateState Shared;
+  SharedGraphState Shared;
 
   /// Candidate views used by graph traits.
   ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
