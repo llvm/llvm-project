@@ -10,7 +10,7 @@ define i32 @use_global() {
   ; X86-NEXT:   [[MOVPC32r:%[0-9]+]]:gr32 = MOVPC32r 0, implicit $esp, implicit $ssp
   ; X86-NEXT:   [[ADD32ri:%[0-9]+]]:gr32_nosp = ADD32ri [[MOVPC32r]], target-flags(x86-got-absolute-address) &_GLOBAL_OFFSET_TABLE_, implicit-def dead $eflags
   ; X86-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[ADD32ri]], 1, $noreg, target-flags(x86-got) @g, $noreg :: (load (s32) from got)
-  ; X86-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm killed [[MOV32rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @g)
+  ; X86-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @g)
   ; X86-NEXT:   $eax = COPY [[MOV32rm1]]
   ; X86-NEXT:   RET 0, $eax
   ;
@@ -20,8 +20,8 @@ define i32 @use_global() {
   ; LARGE-NEXT:   [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri target-flags(x86-pic-base-offset) &_GLOBAL_OFFSET_TABLE_
   ; LARGE-NEXT:   [[ADD64rr:%[0-9]+]]:gr64_nosp = ADD64rr killed [[LEA64r]], killed [[MOV64ri]], implicit-def dead $eflags
   ; LARGE-NEXT:   [[MOV64ri1:%[0-9]+]]:gr64_nosp = MOV64ri target-flags(x86-got) @g
-  ; LARGE-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[ADD64rr]], 1, killed [[MOV64ri1]], 0, $noreg :: (load (s64) from got)
-  ; LARGE-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @g)
+  ; LARGE-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[ADD64rr]], 1, [[MOV64ri1]], 0, $noreg :: (load (s64) from got)
+  ; LARGE-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @g)
   ; LARGE-NEXT:   $eax = COPY [[MOV32rm]]
   ; LARGE-NEXT:   RET 0, $eax
   %v = load i32, ptr @g

@@ -163,7 +163,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
         mapAtomInstance(DL.get(), VMap);
     }
 
-    if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
+    if (isa<CallInst>(I)) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
@@ -609,7 +609,7 @@ void PruningFunctionCloner::CloneBlock(
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
-    if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
+    if (isa<CallInst>(II)) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);

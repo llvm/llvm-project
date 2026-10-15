@@ -517,6 +517,7 @@ add_header_macro(
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.errno_t
+    .llvm-libc-types.fpos_t
     .llvm-libc-types.off_t
     .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
@@ -1108,6 +1109,8 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+    .llvm-libc-types.id_t
+    .llvm-libc-types.idtype_t
 )
 
 add_header_macro(
@@ -1208,6 +1211,7 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.speed_t
     .llvm-libc-types.struct_termios
+    .llvm-libc-types.struct_winsize
     .llvm-libc-types.tcflag_t
 )
 

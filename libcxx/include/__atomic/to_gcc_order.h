@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if defined(__ATOMIC_RELAXED) && defined(__ATOMIC_CONSUME) && defined(__ATOMIC_ACQUIRE) &&                             \
     defined(__ATOMIC_RELEASE) && defined(__ATOMIC_ACQ_REL) && defined(__ATOMIC_SEQ_CST)
 
-_LIBCPP_HIDE_FROM_ABI inline int __to_gcc_order(memory_order __order) {
+inline int __to_gcc_order(memory_order __order) {
   switch (__order) {
   case memory_order_relaxed:
     return __ATOMIC_RELAXED;
@@ -40,7 +40,7 @@ _LIBCPP_HIDE_FROM_ABI inline int __to_gcc_order(memory_order __order) {
   std::__libcpp_unreachable();
 }
 
-_LIBCPP_HIDE_FROM_ABI inline int __to_gcc_failure_order(memory_order __order) {
+inline int __to_gcc_failure_order(memory_order __order) {
   switch (__order) {
   case memory_order_relaxed:
     return __ATOMIC_RELAXED;

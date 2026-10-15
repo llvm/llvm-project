@@ -35,7 +35,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 struct __lexicographical_compare {
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Proj1, class _Proj2, class _Comp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __lexicographical_compare_unwrap(
+  static constexpr bool __lexicographical_compare_unwrap(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -62,7 +62,7 @@ struct __lexicographical_compare {
             class _Proj1                                                                           = identity,
             class _Proj2                                                                           = identity,
             indirect_strict_weak_order<projected<_Iter1, _Proj1>, projected<_Iter2, _Proj2>> _Comp = ranges::less>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] constexpr bool operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -80,7 +80,7 @@ struct __lexicographical_compare {
             class _Proj2 = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range1>, _Proj1>, projected<iterator_t<_Range2>, _Proj2>>
                 _Comp = ranges::less>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] constexpr bool operator()(
       _Range1&& __range1, _Range2&& __range2, _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     return __lexicographical_compare_unwrap(
         ranges::begin(__range1),

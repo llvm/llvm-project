@@ -152,6 +152,7 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
@@ -162,7 +163,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<std::string> UseCtxProfile;
-extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
@@ -175,9 +175,9 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopUnrolling = true;
   LoopInterchange = Opts.enable_loopinterchange;
   LoopFusion = false;
-  ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
-  LicmMssaOptCap = SetLicmMssaOptCap;
-  LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
+  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll();
+  LicmMssaOptCap = getLicmMssaOptCap();
+  LicmMssaNoAccForPromotionCap = getLicmMssaNoAccForPromotionCap();
   CallGraphProfile = true;
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;
@@ -277,6 +277,24 @@ static void instructionCountersPass(ModulePassManager &MPM,
     MPM.addPass(createModuleToFunctionPassAdaptor(
         FunctionPropertiesStatisticsPass(IsPreOptimization)));
   }
+}
+
+// Add passes to run at the start of the pipeline. This includes things like
+// statistics passes.
+static void addPipelineStartPasses(ModulePassManager &MPM,
+                                   const PassesOptions &Opts) {
+  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
+  if (Opts.enable_profcheck_in_pipeline)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
+}
+
+// Add passes to run at the end of the pipeline. This includes things like
+// statistics passes.
+static void addPipelineEndPasses(ModulePassManager &MPM,
+                                 const PassesOptions &Opts) {
+  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
+  if (Opts.enable_profcheck_in_pipeline)
+    MPM.addPass(ProfileVerifierPass());
 }
 
 // Helper to add AnnotationRemarksPass.
@@ -874,14 +892,17 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   if (Opts.attributor_enable & AttributorRunOption::CGSCC)
     MainCGPipeline.addPass(AttributorCGSCCPass());
-  else if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT)
-    MainCGPipeline.addPass(AttributorLightCGSCCPass());
 
   // Deduce function attributes. We do another run of this after the function
   // simplification pipeline, so this only needs to run when it could affect the
   // function simplification pipeline, which is only the case with recursive
   // functions.
-  MainCGPipeline.addPass(PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true));
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT) {
+    MainCGPipeline.addPass(AttributorLightCGSCCPass());
+  } else {
+    MainCGPipeline.addPass(
+        PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true));
+  }
 
   // When at O3 add argument promotion to the pass pipeline.
   // FIXME: It isn't at all clear why this should be limited to O3.
@@ -903,7 +924,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   // Finally, deduce any function attributes based on the fully simplified
   // function.
-  MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT)
+    MainCGPipeline.addPass(AttributorLightCGSCCPass());
+  else
+    MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
 
   // Mark that the function is fully simplified and that it shouldn't be
   // simplified again if we somehow revisit it due to CGSCC mutations unless
@@ -1118,11 +1142,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsCtxProfUse = !UseCtxProfile.empty() && isThinLTOPreLink(Phase);
 
   assert((Opts.instrument_cold_function_only_path.empty() ||
-          PGOInstrumentColdFunctionOnly) &&
+          isPGOInstrumentColdFunctionOnly()) &&
          "--instrument-cold-function-only-path is provided but "
          "--pgo-instrument-cold-function-only is not enabled");
   const bool IsColdFuncOnlyInstrGen =
-      PGOInstrumentColdFunctionOnly && IsPGOPreLink &&
+      isPGOInstrumentColdFunctionOnly() && IsPGOPreLink &&
       !Opts.instrument_cold_function_only_path.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
@@ -1392,7 +1416,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
-  MPM.addPass(ReversePostOrderFunctionAttrsPass());
+  if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
+    MPM.addPass(AttributorLightPass());
+  else
+    MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
   // Do a post inline PGO instrumentation and use pass. This is a context
   // sensitive PGO pass. We don't want to do this in LTOPreLink phrase as
@@ -1520,7 +1547,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(DivRemPairsPass());
 
   // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
-  // TODO: move this furter up so that it can be optimized by GVN, etc.
+  // TODO: move this further up so that it can be optimized by GVN, etc.
   if (Opts.enable_mergeicmps)
     OptimizePM.addPass(MergeICmpsPass());
   OptimizePM.addPass(ExpandMemCmpPass());
@@ -1612,7 +1639,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
     return buildO0DefaultPipeline(Level, Phase);
 
   ModulePassManager MPM;
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
   // Currently this pipeline is only invoked in an LTO pre link pass or when we
   // are not running LTO. If that changes the below checks may need updating.
   assert(isLTOPreLink(Phase) || Phase == ThinOrFullLTOPhase::None);
@@ -1654,7 +1681,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
   return MPM;
 }
 
@@ -1663,7 +1690,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
                                         bool EmitSummary, bool Verify) {
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   if (ThinLTO)
     MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
@@ -1714,7 +1741,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     addAnnotationRemarksPass(MPM);
   }
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -1726,7 +1753,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
@@ -1783,7 +1810,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   addRequiredLTOPreLinkPasses(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -1792,7 +1819,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   invokeThinLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
@@ -1865,7 +1892,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -1882,7 +1909,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
@@ -1954,7 +1981,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Promoting by-reference arguments to by-value exposes more constants to
     // IPSCCP.
     CGSCCPassManager CGPM;
-    CGPM.addPass(PostOrderFunctionAttrsPass());
+    if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT)
+      CGPM.addPass(AttributorLightCGSCCPass());
+    else
+      CGPM.addPass(PostOrderFunctionAttrsPass());
     CGPM.addPass(ArgumentPromotionPass());
     CGPM.addPass(
         createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
@@ -1973,7 +2003,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
-  MPM.addPass(ReversePostOrderFunctionAttrsPass());
+  if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
+    MPM.addPass(AttributorLightPass());
+  else
+    MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
   // Use in-range annotations on GEP indices to split globals where beneficial.
   MPM.addPass(GlobalSplitPass());
@@ -2007,7 +2040,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
 
-    instructionCountersPass(MPM, /* IsPreOptimization */ false);
+    addPipelineEndPasses(MPM, Opts);
 
     return MPM;
   }
@@ -2112,8 +2145,13 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC_LIGHT) {
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(AttributorLightCGSCCPass()));
+  } else {
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+  }
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // MainFPM.
@@ -2206,6 +2244,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // flattening of blocks.
   LateFPM.addPass(DivRemPairsPass());
 
+  // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
+  // TODO: move this further up so that it can be optimized by GVN, etc.
+  if (Opts.enable_mergeicmps)
+    LateFPM.addPass(MergeICmpsPass());
+  LateFPM.addPass(ExpandMemCmpPass());
+
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                       .convertSwitchRangeToICmp(true)
@@ -2239,7 +2283,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -2252,7 +2296,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   // Perform pseudo probe instrumentation in O0 mode. This is for the
   // consistency between different build modes. For example, a LTO build can be
@@ -2373,7 +2417,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }

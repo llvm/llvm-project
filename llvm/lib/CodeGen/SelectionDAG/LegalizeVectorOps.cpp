@@ -30,7 +30,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -495,6 +494,18 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_MATCH:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE: {
+    EVT VT = Node->getValueType(0);
+    unsigned Factor = Node->getNumOperands();
+    Action = TLI.getVectorInterleaveAction(Node->getOpcode(), Factor, VT);
+    // Early Custom Lowering causes RISC-V regressions.
+    if (Action == TargetLowering::Custom &&
+        (VT.isScalableVector() || Factor != 2)) {
+      Action = TargetLowering::Legal;
+    }
+    break;
+  }
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
@@ -955,6 +966,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::MERGE_VALUES:
     for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
       Results.push_back(Node->getOperand(i));
+    return;
+  case ISD::VECTOR_INTERLEAVE:
+    TLI.expandVectorInterleave(Node, Results, DAG);
+    return;
+  case ISD::VECTOR_DEINTERLEAVE:
+    TLI.expandVectorDeinterleave(Node, Results, DAG);
     return;
   case ISD::SIGN_EXTEND_INREG:
     if (SDValue Expanded = ExpandSEXTINREG(Node)) {
@@ -2237,7 +2254,8 @@ bool VectorLegalizer::tryExpandVecMathCall(
 
   // Try to widen the vector type when no libcall is available at that width.
   EVT CallVT = VT;
-  RTLIB::LibcallImpl LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+  RTLIB::LibcallImpl LCImpl =
+      Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   if (LCImpl == RTLIB::Unsupported && VT.getVectorElementCount().isScalar())
     return false;
   while (LCImpl == RTLIB::Unsupported) {
@@ -2245,7 +2263,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
     if (!CallVT.isSimple())
       return false;
     if (TLI.isTypeLegal(CallVT))
-      LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+      LCImpl = Libcalls.getVectorLibcallImplOrMasked(GetLibcall(CallVT));
   }
 
   const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
@@ -2316,6 +2334,12 @@ bool VectorLegalizer::tryExpandVecMathCall(
 void VectorLegalizer::UnrollStrictFPOp(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   EVT VT = Node->getValueType(0);
+
+  // Cannot unroll a scalable vector. Delay error reporting until the final
+  // operation legalisation phase to maximise the chances of removing the node.
+  if (VT.isScalableVector())
+    return;
+
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElems = VT.getVectorNumElements();
   unsigned NumOpers = Node->getNumOperands();

@@ -231,14 +231,14 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI, MachineOperand &Src0,
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
-  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     unsigned toIdx) const;
   bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
 
 public:
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     unsigned toIdx) const;
   enum TargetOperandFlags {
     MO_MASK = 0xf,
 
@@ -442,8 +442,8 @@ public:
 
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
-                       Register TrueReg, Register FalseReg, int &CondCycles,
-                       int &TrueCycles, int &FalseCycles) const override;
+                       Register TrueReg, Register FalseReg,
+                       SelectExpansion &Exp) const override;
 
   void insertSelect(MachineBasicBlock &MBB,
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
@@ -1303,6 +1303,8 @@ public:
     case AMDGPU::S_WAIT_DSCNT:
     case AMDGPU::S_WAIT_KMCNT:
     case AMDGPU::S_WAIT_XCNT:
+    case AMDGPU::S_WAIT_ASYNCCNT:
+    case AMDGPU::S_WAIT_TENSORCNT:
     case AMDGPU::S_WAIT_IDLE:
       return true;
     default:
@@ -1557,6 +1559,13 @@ public:
   isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
                                    const MachineInstr &MI, unsigned SrcN,
                                    const MachineOperand *MO = nullptr) const;
+
+  /// Check if \p MI has legal GFX950 v_pk_fma op_sel.
+  bool isLegalPkFMAF32OpSel(const MachineInstr &MI) const;
+
+  /// Decompose a GFX950 v_pk_fma_f32 with invalid op_sel into two independent
+  /// scalar V_FMA_F32_e64 instructions, replacing \p MI.
+  void decomposePkFMAF32(MachineInstr &MI, MachineRegisterInfo &MRI) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.

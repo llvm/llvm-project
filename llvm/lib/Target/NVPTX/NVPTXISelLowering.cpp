@@ -4030,7 +4030,7 @@ static SDValue lowerLOADi1(LoadSDNode *LD, SelectionDAG &DAG) {
   // The legalizer (the caller) is expecting two values from the legalized
   // load, so we build a MergeValues node for it. See ExpandUnalignedLoad()
   // in LegalizeDAG.cpp which also uses MergeValues.
-  return DAG.getMergeValues({result, LD->getChain()}, dl);
+  return DAG.getMergeValues({result, newLD.getValue(1)}, dl);
 }
 
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
@@ -4186,7 +4186,8 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *Store = cast<StoreSDNode>(Op);
   EVT VT = Store->getMemoryVT();
 
-  if (VT == MVT::i1)
+  // Leave truncating stores to i1 to the generic legalizer.
+  if (VT == MVT::i1 && !Store->isTruncatingStore())
     return LowerSTOREi1(Op, DAG);
 
   // Lower store of any other vector type, including v2f32 as we want to break
@@ -7386,10 +7387,8 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
 
 static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
                                      APFloat::roundingMode RoundingMode) {
-  const bool IsFTZ =
-      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
-  const bool IsSat =
-      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSaturating(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16: {
     static constexpr unsigned SubRNOpcodes[2][2] = {
@@ -7444,22 +7443,21 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
 // TODO: Remove the type-legality checks here once
 // https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
 // explicit type constraints for overloaded intrinsics in tablegen.
-static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
-                            Intrinsic::ID IID,
-                            APFloat::roundingMode RoundingMode) {
+static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
+                               unsigned ISDOpcode, Intrinsic::ID IID,
+                               APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
   if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
     return false;
 
   const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ =
-      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
-  const bool IsSat =
-      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSaturating(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
     return IsRN;
   case MVT::bf16:
-    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISD::FADD);
+    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
     return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
   case MVT::f64:
@@ -7469,9 +7467,9 @@ static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
   }
 }
 
-static SDValue diagnoseUnsupportedFAdd(SDNode *N, SelectionDAG &DAG,
-                                       Intrinsic::ID IID,
-                                       APFloat::roundingMode RoundingMode) {
+static SDValue diagnoseUnsupportedFPArith(SDNode *N, SelectionDAG &DAG,
+                                          Intrinsic::ID IID,
+                                          APFloat::roundingMode RoundingMode) {
   const EVT VT = N->getValueType(0);
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(),
@@ -7497,13 +7495,23 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFAdd(N->getValueType(0), STI, IID, RoundingMode))
-      return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
+    if (!isSupportedFPArith(N, STI, ISD::FADD, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
   case Intrinsic::nvvm_spcompress:
   case Intrinsic::nvvm_spdecompress:
     return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
+  }
   }
   return SDValue();
 }
@@ -7901,9 +7909,12 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
-  Type *Ty = AI->getValOperand()->getType();
+/// Returns how NVPTX should expand a scalar atomicrmw.
+static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
+    AtomicRMWInst::BinOp Op, Type *Ty, unsigned AddressSpace, const Function &F,
+    bool IgnoreDenormalMode, const NVPTXSubtarget &STI) {
+  using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
+  assert(!Ty->isVectorTy() && "Expected a scalar atomicrmw type");
 
   // Try to lower LLVM atomicrmw fadd/fsub to PTX atomic.add. Fsub is first
   // expanded to an fadd with a negated operand. This is complicated by the
@@ -7916,28 +7927,22 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atom.add; otherwise, we lower to a CAS loop. But we always allow
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
-  if (AI->isFloatingPointOperation() &&
-      (AI->getOperation() == AtomicRMWInst::BinOp::FAdd ||
-       AI->getOperation() == AtomicRMWInst::BinOp::FSub)) {
-    const Function *F = AI->getFunction();
-    AtomicExpansionKind ExpansionKind =
-        AI->getOperation() == AtomicRMWInst::BinOp::FSub
-            ? AtomicExpansionKind::Expand
-            : AtomicExpansionKind::None;
+  if (Op == AtomicRMWInst::BinOp::FAdd || Op == AtomicRMWInst::BinOp::FSub) {
+    AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::FSub
+                                            ? AtomicExpansionKind::Expand
+                                            : AtomicExpansionKind::None;
 
     // Both the -nvptx-allow-ftz-atomics option and per-instruction
     // !atomic.ignore.denormal.mode say that denormal handling is insignificant
     // here, so atom.add may be used even when its FTZ behavior disagrees with
     // the function's.
-    const bool IgnoreFTZMismatch =
-        AllowFTZAtomics ||
-        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+    const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
       bool UseNative = IgnoreFTZMismatch;
-      switch (AI->getPointerAddressSpace()) {
+      switch (AddressSpace) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
         break;
@@ -7953,7 +7958,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     if (Ty->isHalfTy()) {
       // atom.add.f16 never flushes denormals, so it only agrees with a
       // function that is not in FTZ mode for f16.
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Output ==
                        DenormalMode::PreserveSign;
       if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
@@ -7968,28 +7973,24 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
-  if (AI->isFloatingPointOperation())
+  if (AtomicRMWInst::isFPOperation(Op))
     return AtomicExpansionKind::CmpXChg;
 
-  if (Ty->isVectorTy())
-    return AtomicExpansionKind::CmpXChg;
-
-  assert(Ty->isIntegerTy() && "Ty should be integer at this point");
+  assert(Ty->isIntegerTy() && "Expected an integer atomicrmw type");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
-  switch (AI->getOperation()) {
+  switch (Op) {
   default:
     return AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::BinOp::Xchg:
+  case AtomicRMWInst::Xchg:
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
   case AtomicRMWInst::BinOp::Add:
   case AtomicRMWInst::BinOp::Sub: {
-    AtomicExpansionKind ExpansionKind =
-        AI->getOperation() == AtomicRMWInst::BinOp::Sub
-            ? AtomicExpansionKind::Expand
-            : AtomicExpansionKind::None;
+    AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::Sub
+                                            ? AtomicExpansionKind::Expand
+                                            : AtomicExpansionKind::None;
     switch (BitWidth) {
     case 8:
     case 16:
@@ -8025,8 +8026,8 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::UIncWrap:
-  case AtomicRMWInst::BinOp::UDecWrap:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
     switch (BitWidth) {
     case 32:
       return AtomicExpansionKind::None;
@@ -8043,18 +8044,86 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 
+NVPTXTargetLowering::AtomicExpansionKind
+NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  const DataLayout &DL = AI->getDataLayout();
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+  const bool IgnoreDenormalMode =
+      AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+
+  // TODO: once we support native elementwise vector atoms,
+  // return `AtomicExpansionKind::None` to preserve and lower them.
+  if (AI->isElementwise()) {
+    auto *VecTy = cast<FixedVectorType>(AI->getType());
+    Type *Ty = VecTy->getElementType();
+
+    // Collapse <1 x T> elementwise RMWs to scalar RMWs
+    if (VecTy->getNumElements() == 1)
+      return AtomicExpansionKind::Expand;
+
+    uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
+    uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+
+    if (Op == AtomicRMWInst::BinOp::Xchg) {
+      // Split exchanges that are too wide or insufficiently aligned until
+      // each piece can be lowered atomically.
+      if (VecBits > getMaxAtomicSizeInBitsSupported() ||
+          AI->getAlign().value() < VecBytes)
+        return AtomicExpansionKind::Expand;
+
+      // Expand subword exchanges to a masked cmpxchg loop.
+      if (VecBits < getMinCmpXchgSizeInBits())
+        return AtomicExpansionKind::CmpXChg;
+
+      return AtomicExpansionKind::None;
+    }
+
+    // If the scalar lane op is natively supported or expands to one, return
+    // Expand so halving eventually bottoms out at the scalar base case. The
+    // latter includes sub and fsub, which expand to add and fadd, respectively.
+    AtomicExpansionKind LaneExpansionKind = getScalarAtomicRMWExpansion(
+        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(),
+        IgnoreDenormalMode, STI);
+    if (LaneExpansionKind == AtomicExpansionKind::None ||
+        LaneExpansionKind == AtomicExpansionKind::Expand)
+      return AtomicExpansionKind::Expand;
+
+    // If the whole vector fits a single native cmpxchg, emit one wide
+    // cmpxchg loop at the current width.
+    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+      return AtomicExpansionKind::CmpXChg;
+
+    // If the vector is too wide for a single native cmpxchg, halve further to
+    // emit multiple cmpxchg loops.
+    return AtomicExpansionKind::Expand;
+  }
+
+  Type *Ty = AI->getValOperand()->getType();
+  if (Ty->isVectorTy())
+    return AtomicExpansionKind::CmpXChg;
+  return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
+                                     *AI->getFunction(), IgnoreDenormalMode,
+                                     STI);
+}
+
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  // This function returns true iff the operation is emulated using a CAS-loop,
-  // the target does not support memory-order qualifiers, or the operation has
-  // the memory order seq_cst (which is not natively supported in the PTX
-  // `atom` instruction).
+  // This function returns true iff AtomicExpandPass should enforce the
+  // instruction's ordering with fences instead of leaving that ordering on the
+  // atomic instruction itself. This covers CAS-loop emulation, seq_cst
+  // operations (which are not natively supported by the PTX `atom`
+  // instruction), and elementwise atomicrmw expansion.
   //
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
   // syncscope, and volatile semantics. For PTX, it is more efficient to use
   // atom.cas.relaxed.sco instructions within the loop, and fences before and
   // after the loop to restore order.
+  //
+  // For ordered elementwise atomicrmw, if we expand elementwise, it is also
+  // more efficient to insert fences around the whole split sequence once and
+  // downgrade the ordering for the entire sequence, rather than having the
+  // stronger ordering on every expanded atomicrmw.
   //
   // On targets with memory-order qualifiers, atomic instructions efficiently
   // supported by PTX are lowered to `atom.<op>.<sem>.<scope>` instructions with
@@ -8067,10 +8136,13 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            !STI.hasMemoryOrdering() ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
-  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
-    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
+    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+    return Expansion == AtomicExpansionKind::CmpXChg ||
+           (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) ||
            !STI.hasMemoryOrdering() ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  }
   return false;
 }
 
@@ -8105,8 +8177,10 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
+    // A non-elementwise `Expand` means we are expanding sub(x) to add(-x).
+    // The atomic add will have acquire ordering.
     if (ExpansionKind == AtomicExpansionKind::None ||
-        ExpansionKind == AtomicExpansionKind::Expand)
+        (ExpansionKind == AtomicExpansionKind::Expand && !RI->isElementwise()))
       return AtomicOrdering::Acquire;
   }
 
@@ -8152,11 +8226,17 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   auto SSID = getAtomicSyncScopeID(Inst);
   assert(SSID.has_value() && "Expected an atomic operation");
 
-  bool IsEmulated =
-      !STI.hasMemoryOrdering() ||
-      (CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-          : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg);
+  bool IsEmulated = !STI.hasMemoryOrdering();
+  if (CI)
+    IsEmulated |=
+        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits();
+  else {
+    AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
+    IsEmulated |=
+        Expansion == AtomicExpansionKind::CmpXChg ||
+        (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand);
+  }
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());

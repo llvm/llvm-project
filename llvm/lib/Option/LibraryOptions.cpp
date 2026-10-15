@@ -34,8 +34,8 @@ void LibraryOptionsParser::forEachOption(
   }
 }
 
-Error LibraryOptionsParser::parse(ArrayRef<const char *> Args,
-                                  unsigned &Consumed) {
+Error LibraryOptionsParser::parse(void *Opts, ArrayRef<const char *> Args,
+                                  unsigned &Consumed, BumpPtrAllocator &Alloc) {
   InputArgList List(Args.begin(), Args.end());
   Consumed = 0;
   std::unique_ptr<Arg> A = Table().ParseOneArg(List, Consumed);
@@ -45,7 +45,7 @@ Error LibraryOptionsParser::parse(ArrayRef<const char *> Args,
                              "' requires an argument");
   if (A->getOption().getKind() == Option::UnknownClass)
     return createStringError("unknown argument '" + Twine(Args[0]) + "'");
-  if (!Apply(*A))
+  if (!Apply(Opts, *A, Alloc))
     return createStringError("invalid value '" + Twine(A->getValue()) +
                              "' in '" + A->getAsString(List) + "'");
   return Error::success();

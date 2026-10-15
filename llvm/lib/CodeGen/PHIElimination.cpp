@@ -100,7 +100,8 @@ class PHIEliminationImpl {
   bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineLoopInfo *MLI, MachineDomTreeUpdater &MDTU);
 
-  bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
+  void computeLiveOutSets(const MachineFunction &MF);
+
   bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
 
   using BBVRegPair = std::pair<unsigned, Register>;
@@ -121,11 +122,12 @@ class PHIEliminationImpl {
       DenseMap<MachineInstr *, Register, MachineInstrExpressionTrait>;
   LoweredPHIMap LoweredPHIs;
 
-  MachineFunctionPass *P = nullptr;
-  MachineFunctionAnalysisManager *MFAM = nullptr;
+  // A set of live-out regs for each MBB which is used to update LIS
+  // efficiently also with large functions.
+  std::vector<SparseBitVector<>> LiveOutSets;
 
 public:
-  PHIEliminationImpl(MachineFunctionPass *P) : P(P) {
+  PHIEliminationImpl(MachineFunctionPass *P) {
     auto *SIWrapper = P->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
@@ -154,8 +156,7 @@ public:
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
         PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
         MBPI(AM.getCachedResult<MachineBranchProbabilityAnalysis>(MF)),
-        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)), MFAM(&AM) {
-  }
+        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)) {}
 
   bool run(MachineFunction &MF);
 };
@@ -480,10 +481,9 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       assert(DestVNI && "PHI destination should be live at its definition.");
       DestVNI->def = NewStart;
     }
-  }
 
-  // Adjust the VRegPHIUseCount map to account for the removal of this PHI node.
-  if (LIS) {
+    // Adjust the VRegPHIUseCount map to account for the removal of this PHI
+    // node.
     for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
       if (!MPhi->getOperand(i).isUndef()) {
         --VRegPHIUseCount[BBVRegPair(
@@ -712,7 +712,8 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       // is likely to be left after coalescing. If we are looking at a loop
       // exiting edge, split it so we won't insert code in the loop, otherwise
       // don't bother.
-      ShouldSplit = ShouldSplit && !isLiveIn(Reg, &MBB);
+      ShouldSplit =
+          ShouldSplit && !LIS->isLiveInToMBB(LIS->getInterval(Reg), &MBB);
 
       // Check for a loop exiting edge.
       if (!ShouldSplit && CurLoop != PreLoop) {
@@ -731,11 +732,10 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       }
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
-      MachineBasicBlock *NewBB;
-      if (P)
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *P, &MDTU);
-      else
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *MFAM, &MDTU);
+      if (LiveOutSets.empty())
+        computeLiveOutSets(MF);
+      MachineBasicBlock *NewBB =
+          PreMBB->SplitCriticalEdge(&MBB, {LIS, SI, MLI, &LiveOutSets}, &MDTU);
       if (!NewBB) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
@@ -754,20 +754,29 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
   return Changed;
 }
 
-bool PHIEliminationImpl::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveIn() requires LiveIntervals");
-  return LIS->isLiveInToMBB(LIS->getInterval(Reg), MBB);
+void PHIEliminationImpl::computeLiveOutSets(const MachineFunction &MF) {
+  LiveOutSets.resize(MF.getNumBlockIDs());
+  for (unsigned Idx = 0, NumVRegs = MRI->getNumVirtRegs(); Idx != NumVRegs;
+       ++Idx) {
+    Register Reg = Register::index2VirtReg(Idx);
+    if (!LIS->hasInterval(Reg))
+      continue;
+    for (const LiveRange::Segment &S : LIS->getInterval(Reg)) {
+      for (const MachineBasicBlock *MBB = LIS->getMBBFromIndex(S.start);
+           MBB && LIS->getMBBEndIdx(MBB) <= S.end; MBB = MBB->getNextNode())
+        LiveOutSets[MBB->getNumber()].set(Idx);
+    }
+  }
 }
 
 bool PHIEliminationImpl::isLiveOutPastPHIs(Register Reg,
                                            const MachineBasicBlock *MBB) {
-  assert(LIS && "isLiveOutPastPHIs() requires LiveIntervals");
   // LiveIntervals considers uses in PHIs to be on the edge rather than in the
   // predecessor basic block, so that a register used only in a PHI is live out
   // of the block.
   const LiveInterval &LI = LIS->getInterval(Reg);
   for (const MachineBasicBlock *SI : MBB->successors())
-    if (LI.liveAt(LIS->getMBBStartIdx(SI)))
+    if (LIS->isLiveInToMBB(LI, SI))
       return true;
   return false;
 }
