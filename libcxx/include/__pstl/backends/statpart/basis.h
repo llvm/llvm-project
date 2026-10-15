@@ -220,7 +220,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __for_each_iter_pair(
     _RandomAccessIterator1 __last1,
     _RandomAccessIterator2 __first2,
     _BrickFunction __f) {
-  return __for_each(
+  return __statpart::__for_each(
       __first1,
       __last1,
       [__first1, __first2, __f = std::move(__f)](
