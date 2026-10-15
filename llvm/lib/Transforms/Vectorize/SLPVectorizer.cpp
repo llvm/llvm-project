@@ -14513,6 +14513,42 @@ void BoUpSLP::transformNodes() {
     }
     return false;
   };
+  // Marks the fadd/fsub node \p E as fmuladd, if its fmul operand is fused
+  // into it.
+  auto CombineFMulAdd = [&](TreeEntry &E) {
+    // Check if possible to convert (a*b)+c to fma; fma takes exactly two
+    // operands, so bail out on reassociated (>2-operand) nodes.
+    if (E.State != TreeEntry::Vectorize ||
+        !E.getOperations().isAddSubLikeOp() ||
+        E.getOperations().isAltShuffle() || E.getNumOperands() != 2)
+      return;
+    const TreeEntry *LHS = getOperandEntry(&E, 0);
+    const TreeEntry *RHS = getOperandEntry(&E, 1);
+    auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
+      return TE->State == TreeEntry::Vectorize && TE->ReorderIndices.empty() &&
+             TE->ReuseShuffleIndices.empty() &&
+             TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
+             all_of(TE->Scalars, [&](Value *V) {
+               return (TE->hasCopyableElements() && TE->isCopyableElement(V)) ||
+                      V->hasOneUse();
+             });
+    };
+    // Both a*b - c and c - a*b are fused.
+    const bool IsLHSFMul = IsOneUseVectorFMulOperand(LHS);
+    if (!IsLHSFMul && !IsOneUseVectorFMulOperand(RHS))
+      return;
+    if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI,
+                         *this)
+             .isValid())
+      return;
+    // This node is a fmuladd node.
+    E.CombinedOp = TreeEntry::FMulAdd;
+    TreeEntry *FMulEntry = getOperandEntry(&E, IsLHSFMul ? 0 : 1);
+    if (FMulEntry->UserTreeIndex && FMulEntry->State == TreeEntry::Vectorize) {
+      // The FMul node is part of the combined fmuladd node.
+      FMulEntry->State = TreeEntry::CombinedVectorize;
+    }
+  };
   // The tree may grow here, so iterate over nodes, built before.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
@@ -14873,43 +14909,9 @@ void BoUpSLP::transformNodes() {
       break;
     }
     case Instruction::FSub:
-    case Instruction::FAdd: {
-      // Check if possible to convert (a*b)+c to fma; fma takes exactly two
-      // operands, so bail out on reassociated (>2-operand) nodes.
-      if (E.State != TreeEntry::Vectorize ||
-          !E.getOperations().isAddSubLikeOp() ||
-          E.getOperations().isAltShuffle() || E.getNumOperands() != 2)
-        break;
-      const TreeEntry *LHS = getOperandEntry(&E, 0);
-      const TreeEntry *RHS = getOperandEntry(&E, 1);
-      auto IsOneUseVectorFMulOperand = [](const TreeEntry *TE) {
-        return TE->State == TreeEntry::Vectorize &&
-               TE->ReorderIndices.empty() && TE->ReuseShuffleIndices.empty() &&
-               TE->getOpcode() == Instruction::FMul && !TE->isAltShuffle() &&
-               all_of(TE->Scalars, [&](Value *V) {
-                 return (TE->hasCopyableElements() &&
-                         TE->isCopyableElement(V)) ||
-                        V->hasOneUse();
-               });
-      };
-      // Both a*b - c and c - a*b are fused.
-      const bool IsLHSFMul = IsOneUseVectorFMulOperand(LHS);
-      if (!IsLHSFMul && !IsOneUseVectorFMulOperand(RHS))
-        break;
-      if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI,
-                           *this)
-               .isValid())
-        break;
-      // This node is a fmuladd node.
-      E.CombinedOp = TreeEntry::FMulAdd;
-      TreeEntry *FMulEntry = getOperandEntry(&E, IsLHSFMul ? 0 : 1);
-      if (FMulEntry->UserTreeIndex &&
-          FMulEntry->State == TreeEntry::Vectorize) {
-        // The FMul node is part of the combined fmuladd node.
-        FMulEntry->State = TreeEntry::CombinedVectorize;
-      }
+    case Instruction::FAdd:
+      CombineFMulAdd(E);
       break;
-    }
     case Instruction::Shl:
     case Instruction::And: {
       // Shl/And are not reassociated; guard since this case indexes operands
@@ -15000,6 +15002,13 @@ void BoUpSLP::transformNodes() {
       break;
     }
   }
+  // The nodes, built for the slices of the gathered nodes, are fused with their
+  // fmul operands in the vector code too.
+  for (std::unique_ptr<TreeEntry> &TE :
+       drop_begin(VectorizableTree, BaseGraphSize))
+    if (TE->hasState() &&
+        is_contained({Instruction::FAdd, Instruction::FSub}, TE->getOpcode()))
+      CombineFMulAdd(*TE);
 
   if (LoadEntriesToVectorize.empty()) {
     // Single load node - exit.
