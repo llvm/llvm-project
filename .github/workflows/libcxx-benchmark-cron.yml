@@ -3,7 +3,7 @@
 #
 # The workflow keeps no state: on every invocation, the commits that should be benchmarked
 # are recomputed from Git and the ones that have been benchmarked are recomputed from LNT
-# and from the Github Actions API. It then dispatches libcxx-benchmark-commit.yml for the
+# and from the Github Actions API. It then dispatches libcxx-lnt-pipeline.yml for the
 # difference, within a budget. This makes the system converge towards having data for all
 # the desired commits, without necessarily ever reaching that state (as new commits land).
 #
@@ -64,7 +64,7 @@ jobs:
   request-runs:
     permissions:
       contents: read
-      actions: write # to dispatch libcxx-benchmark-commit.yml
+      actions: write # to dispatch libcxx-lnt-pipeline.yml
     needs:
       - select-machines
     strategy:
