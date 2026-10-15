@@ -10,9 +10,12 @@
 #define LLVM_LIBC_TEST_UNITTEST_STRINGUTILS_H
 
 #include "src/__support/CPP/string.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
+#include "src/__support/wchar/string_converter.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -31,6 +34,38 @@ int_to_hex(T value, size_t length = sizeof(T) * 2) {
   }
 
   return "0x" + s;
+}
+
+LIBC_INLINE cpp::string try_convert_to_utf8(cpp::wstring_view str) {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  LIBC_NAMESPACE::internal::mbstate state;
+  LIBC_NAMESPACE::internal::StringConverter<wchar_t> string_conv(
+      str.data(), &state, /* dstlen = */ SIZE_MAX, str.size());
+
+  cpp::string result;
+  for (auto conv = string_conv.pop<char8_t>(); conv.has_value();
+       conv = string_conv.pop<char8_t>()) {
+    result += static_cast<char>(*conv);
+  }
+
+  if (result.empty() && !str.empty())
+    result = cpp::string("<Failed Conversion To UTF-8>");
+
+  return result;
+#else  // LIBC_TYPES_WCHAR_T_IS_UTF32
+  if (str.empty())
+    return "{}";
+
+  cpp::string result;
+  result += '{';
+  for (const wchar_t *iter = str.begin(); iter + 1 != str.end(); ++iter) {
+    result += cpp::to_string(*iter);
+    result += ',';
+  }
+  result += cpp::to_string(str.back());
+  result += '}';
+  return result;
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -3,7 +3,7 @@
 ; RUN:     -riscv-v-vector-bits-min=-1 -riscv-v-slp-max-vf=0 \
 ; RUN:     | FileCheck %s
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=riscv64 -mattr=+v,+f \
-; RUN:     | FileCheck %s --check-prefix=DEFAULT
+; RUN:     | FileCheck %s
 
 declare float @fabsf(float) readonly nounwind willreturn
 
@@ -14,13 +14,6 @@ define <4 x float> @fabs_4x(ptr %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
-;
-; DEFAULT-LABEL: define <4 x float> @fabs_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP0]])
-; DEFAULT-NEXT:    ret <4 x float> [[TMP1]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -49,13 +42,6 @@ define <4 x float> @int_fabs_4x(ptr %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
-; DEFAULT-LABEL: define <4 x float> @int_fabs_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP0]])
-; DEFAULT-NEXT:    ret <4 x float> [[TMP1]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -82,13 +68,6 @@ define <4 x float> @sqrt_4x(ptr %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
-;
-; DEFAULT-LABEL: define <4 x float> @sqrt_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]])
-; DEFAULT-NEXT:    ret <4 x float> [[TMP1]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -117,13 +96,6 @@ define <4 x float> @int_sqrt_4x(ptr %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
-; DEFAULT-LABEL: define <4 x float> @int_sqrt_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]])
-; DEFAULT-NEXT:    ret <4 x float> [[TMP1]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -149,37 +121,14 @@ define <4 x float> @exp_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @expf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @expf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @expf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @expf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @exp_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @expf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @expf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @expf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @expf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -206,37 +155,14 @@ define <4 x float> @int_exp_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_exp_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.exp.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -263,37 +189,14 @@ define <4 x float> @log_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @logf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @logf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @logf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @logf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @log_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @logf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @logf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @logf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @logf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.log.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.log.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -320,37 +223,14 @@ define <4 x float> @int_log_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_log_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.log.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.log.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.log.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -377,37 +257,14 @@ define <4 x float> @sin_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @sinf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @sinf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @sinf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @sinf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @sin_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @sinf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @sinf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @sinf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @sinf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -434,37 +291,14 @@ define <4 x float> @int_sin_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_sin_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -491,37 +325,14 @@ define <4 x float> @asin_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @asinf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @asinf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @asinf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @asinf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @asin_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @asinf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @asinf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @asinf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @asinf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -548,37 +359,14 @@ define <4 x float> @int_asin_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_asin_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.asin.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -605,37 +393,14 @@ define <4 x float> @cos_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @cosf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @cosf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @cosf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @cosf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @cos_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @cosf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @cosf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @cosf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @cosf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -662,37 +427,14 @@ define <4 x float> @int_cos_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_cos_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -719,37 +461,14 @@ define <4 x float> @acos_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @acosf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @acosf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @acosf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @acosf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @acos_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @acosf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @acosf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @acosf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @acosf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -776,37 +495,14 @@ define <4 x float> @int_acos_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_acos_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.acos.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -833,37 +529,14 @@ define <4 x float> @tan_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @tanf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @tanf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @tanf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @tanf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @tan_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @tanf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @tanf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @tanf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @tanf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.tan.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.tan.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -890,37 +563,14 @@ define <4 x float> @int_tan_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_tan_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.tan.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.tan.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.tan.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -947,37 +597,14 @@ define <4 x float> @atan_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @atanf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @atanf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @atanf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @atanf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @atan_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @atanf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @atanf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @atanf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @atanf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1004,37 +631,14 @@ define <4 x float> @int_atan_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_atan_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.atan.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1061,37 +665,14 @@ define <4 x float> @sinh_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @sinhf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @sinhf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @sinhf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @sinhf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @sinh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @sinhf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @sinhf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @sinhf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @sinhf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1118,37 +699,14 @@ define <4 x float> @int_sinh_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_sinh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.sinh.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1189,24 +747,6 @@ define <4 x float> @asinh_4x(ptr %a) {
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
-; DEFAULT-LABEL: define <4 x float> @asinh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @asinhf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @asinhf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @asinhf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @asinhf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -1246,24 +786,6 @@ define <4 x float> @int_asinh_4x(ptr %a) {
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
-; DEFAULT-LABEL: define <4 x float> @int_asinh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.asinh.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.asinh.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.asinh.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.asinh.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -1289,37 +811,14 @@ define <4 x float> @cosh_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @coshf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @coshf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @coshf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @coshf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @cosh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @coshf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @coshf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @coshf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @coshf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1346,37 +845,14 @@ define <4 x float> @int_cosh_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_cosh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.cosh.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1417,24 +893,6 @@ define <4 x float> @acosh_4x(ptr %a) {
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
-; DEFAULT-LABEL: define <4 x float> @acosh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @acoshf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @acoshf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @acoshf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @acoshf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -1474,24 +932,6 @@ define <4 x float> @int_acosh_4x(ptr %a) {
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
-; DEFAULT-LABEL: define <4 x float> @int_acosh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.acosh.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.acosh.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.acosh.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.acosh.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -1517,37 +957,14 @@ define <4 x float> @tanh_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @tanhf(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @tanhf(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @tanhf(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @tanhf(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @tanh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @tanhf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @tanhf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @tanhf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @tanhf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1574,37 +991,14 @@ define <4 x float> @int_tanh_4x(ptr %a) {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
-;
-; DEFAULT-LABEL: define <4 x float> @int_tanh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.tanh.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
@@ -1645,24 +1039,6 @@ define <4 x float> @atanh_4x(ptr %a) {
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
-; DEFAULT-LABEL: define <4 x float> @atanh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @atanhf(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @atanhf(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @atanhf(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @atanhf(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -1702,24 +1078,6 @@ define <4 x float> @int_atanh_4x(ptr %a) {
 ; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
-; DEFAULT-LABEL: define <4 x float> @int_atanh_4x
-; DEFAULT-SAME: (ptr [[A:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 16
-; DEFAULT-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; DEFAULT-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.atanh.f32(float [[VECEXT]])
-; DEFAULT-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; DEFAULT-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; DEFAULT-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.atanh.f32(float [[VECEXT_1]])
-; DEFAULT-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; DEFAULT-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.atanh.f32(float [[VECEXT_2]])
-; DEFAULT-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; DEFAULT-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; DEFAULT-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.atanh.f32(float [[VECEXT_3]])
-; DEFAULT-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
-; DEFAULT-NEXT:    ret <4 x float> [[VECINS_3]]
-;
 entry:
   %0 = load <4 x float>, ptr %a, align 16
   %vecext = extractelement <4 x float> %0, i32 0
@@ -1757,26 +1115,6 @@ define void @f(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
 ; CHECK-NEXT:    store i64 [[X1]], ptr [[Q1]], align 8
 ; CHECK-NEXT:    ret void
-;
-; DEFAULT-LABEL: define void @f
-; DEFAULT-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR1]] {
-; DEFAULT-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 8
-; DEFAULT-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[P]], i64 1
-; DEFAULT-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 8
-; DEFAULT-NEXT:    br i1 [[C]], label [[FOO:%.*]], label [[BAR:%.*]]
-; DEFAULT:       foo:
-; DEFAULT-NEXT:    [[Y0:%.*]] = load float, ptr [[R]], align 4
-; DEFAULT-NEXT:    [[Y1:%.*]] = call float @fabsf(float [[Y0]])
-; DEFAULT-NEXT:    br label [[BAZ:%.*]]
-; DEFAULT:       bar:
-; DEFAULT-NEXT:    [[Z0:%.*]] = load float, ptr [[R]], align 4
-; DEFAULT-NEXT:    [[Z1:%.*]] = call float @fabsf(float [[Z0]])
-; DEFAULT-NEXT:    br label [[BAZ]]
-; DEFAULT:       baz:
-; DEFAULT-NEXT:    store i64 [[X0]], ptr [[Q]], align 8
-; DEFAULT-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
-; DEFAULT-NEXT:    store i64 [[X1]], ptr [[Q1]], align 8
-; DEFAULT-NEXT:    ret void
 ;
   %x0 = load i64, ptr %p
   %p1 =  getelementptr i64, ptr %p, i64 1

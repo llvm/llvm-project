@@ -1,4 +1,105 @@
-// RUN: mlir-opt -shard-simplify %s | FileCheck %s
+// RUN: mlir-opt %s -shard-simplify | FileCheck %s
+
+shard.grid @grid_ag(shape = 2x2)
+shard.grid @grid_ag_alt(shape = 2x2)
+
+// CHECK-LABEL: func.func @all_gather_all_slice_identity
+func.func @all_gather_all_slice_identity(
+    %arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_gather %arg0 on @grid_ag grid_axes = [1] gather_axis = 1
+    : tensor<4x4xf32> -> tensor<4x8xf32>
+  %1 = shard.all_slice %0 on @grid_ag grid_axes = [1] slice_axis = 1
+    : tensor<4x8xf32> -> tensor<4x4xf32>
+  // CHECK-NOT: shard.all_gather
+  // CHECK-NOT: shard.all_slice
+  // CHECK: return %arg0 : tensor<4x4xf32>
+  return %1 : tensor<4x4xf32>
+}
+
+// CHECK-LABEL: func.func @all_gather_all_slice_different_axis
+func.func @all_gather_all_slice_different_axis(
+    %arg0: tensor<4x4xf32>) -> tensor<2x8xf32> {
+  %0 = shard.all_gather %arg0 on @grid_ag grid_axes = [1] gather_axis = 1
+    : tensor<4x4xf32> -> tensor<4x8xf32>
+  %1 = shard.all_slice %0 on @grid_ag grid_axes = [1] slice_axis = 0
+    : tensor<4x8xf32> -> tensor<2x8xf32>
+  // CHECK: shard.all_gather
+  // CHECK: shard.all_slice
+  return %1 : tensor<2x8xf32>
+}
+
+// CHECK-LABEL: func.func @all_gather_all_slice_different_grid_axes
+func.func @all_gather_all_slice_different_grid_axes(
+    %arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_gather %arg0 on @grid_ag grid_axes = [0] gather_axis = 0
+    : tensor<4x4xf32> -> tensor<8x4xf32>
+  %1 = shard.all_slice %0 on @grid_ag grid_axes = [1] slice_axis = 0
+    : tensor<8x4xf32> -> tensor<4x4xf32>
+  // CHECK: shard.all_gather
+  // CHECK: shard.all_slice
+  return %1 : tensor<4x4xf32>
+}
+
+// CHECK-LABEL: func.func @all_gather_all_slice_different_grid
+func.func @all_gather_all_slice_different_grid(
+    %arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_gather %arg0 on @grid_ag grid_axes = [1] gather_axis = 1
+    : tensor<4x4xf32> -> tensor<4x8xf32>
+  %1 = shard.all_slice %0 on @grid_ag_alt grid_axes = [1] slice_axis = 1
+    : tensor<4x8xf32> -> tensor<4x4xf32>
+  // CHECK: shard.all_gather
+  // CHECK: shard.all_slice
+  return %1 : tensor<4x4xf32>
+}
+
+// CHECK-LABEL: func.func @all_slice_all_gather_identity
+func.func @all_slice_all_gather_identity(
+    %arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_slice %arg0 on @grid_ag grid_axes = [1] slice_axis = 1
+    : tensor<4x4xf32> -> tensor<4x2xf32>
+  %1 = shard.all_gather %0 on @grid_ag grid_axes = [1] gather_axis = 1
+    : tensor<4x2xf32> -> tensor<4x4xf32>
+  // CHECK-NOT: shard.all_slice
+  // CHECK-NOT: shard.all_gather
+  // CHECK: return %arg0 : tensor<4x4xf32>
+  return %1 : tensor<4x4xf32>
+}
+
+// CHECK-LABEL: func.func @all_slice_all_gather_different_axis
+func.func @all_slice_all_gather_different_axis(
+    %arg0: tensor<4x4xf32>) -> tensor<8x2xf32> {
+  %0 = shard.all_slice %arg0 on @grid_ag grid_axes = [1] slice_axis = 1
+    : tensor<4x4xf32> -> tensor<4x2xf32>
+  %1 = shard.all_gather %0 on @grid_ag grid_axes = [1] gather_axis = 0
+    : tensor<4x2xf32> -> tensor<8x2xf32>
+  // CHECK: shard.all_slice
+  // CHECK: shard.all_gather
+  return %1 : tensor<8x2xf32>
+}
+
+// CHECK-LABEL: func.func @all_slice_all_gather_different_grid
+func.func @all_slice_all_gather_different_grid(
+    %arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_slice %arg0 on @grid_ag grid_axes = [1] slice_axis = 1
+    : tensor<4x4xf32> -> tensor<4x2xf32>
+  %1 = shard.all_gather %0 on @grid_ag_alt grid_axes = [1] gather_axis = 1
+    : tensor<4x2xf32> -> tensor<4x4xf32>
+  // CHECK: shard.all_slice
+  // CHECK: shard.all_gather
+  return %1 : tensor<4x4xf32>
+}
+
+// CHECK-LABEL: func.func @all_slice_all_gather_different_grid_axes
+func.func @all_slice_all_gather_different_grid_axes(
+    %arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_slice %arg0 on @grid_ag grid_axes = [0] slice_axis = 0
+    : tensor<4x4xf32> -> tensor<2x4xf32>
+  %1 = shard.all_gather %0 on @grid_ag grid_axes = [1] gather_axis = 0
+    : tensor<2x4xf32> -> tensor<4x4xf32>
+  // CHECK: shard.all_slice
+  // CHECK: shard.all_gather
+  return %1 : tensor<4x4xf32>
+}
 
 shard.grid @grid0(shape = 4x2)
 shard.grid @grid1(shape = 4)
@@ -105,6 +206,24 @@ func.func @all_reduce_arith_addf_no_endomorphism_wrong_reduction_kind(
     : tensor<5xf32> -> tensor<5xf32>
   // CHECK: %[[ALL_REDUCE1:[A-Za-z0-9_]*]] = shard.all_reduce %[[ARG1]] on @grid0 grid_axes = [0]
   %1 = shard.all_reduce %arg1 on @grid0 grid_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ALL_REDUCE0]], %[[ALL_REDUCE1]]
+  %2 = arith.addf %0, %1 : tensor<5xf32>
+  // CHECK: return %[[ADD_RES]]
+  return %2 : tensor<5xf32>
+}
+
+// CHECK-LABEL: func.func @all_reduce_arith_addf_no_endomorphism_different_reduction_kind
+func.func @all_reduce_arith_addf_no_endomorphism_different_reduction_kind(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg0: tensor<5xf32>,
+    // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg1: tensor<5xf32>) -> tensor<5xf32> {
+  // CHECK: %[[ALL_REDUCE0:[A-Za-z0-9_]*]] = shard.all_reduce %[[ARG0]] on @grid0 grid_axes = [0]
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ALL_REDUCE1:[A-Za-z0-9_]*]] = shard.all_reduce %[[ARG1]] on @grid0 grid_axes = [0] reduction = max
+  %1 = shard.all_reduce %arg1 on @grid0 grid_axes = [0] reduction = max
     : tensor<5xf32> -> tensor<5xf32>
   // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ALL_REDUCE0]], %[[ALL_REDUCE1]]
   %2 = arith.addf %0, %1 : tensor<5xf32>

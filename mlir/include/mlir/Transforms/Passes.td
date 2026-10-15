@@ -100,6 +100,30 @@ def CSEPass : Pass<"cse"> {
   ];
 }
 
+def TrivialDeadCodeEliminationPass : Pass<"trivial-dce"> {
+  let summary = "Remove trivially dead operations and blocks";
+  let description = [{
+    This pass eliminates only trivially dead operations; that is,
+    side-effect-free operations with no users. By default, it also removes
+    trivially dead blocks; that is, blocks that are unreachable from their
+    region entry block. The `remove-blocks` option can be disabled to preserve
+    unreachable blocks.
+
+    This pass does not run a liveness analysis and does not remove dead
+    use-def cycles.
+
+    By default, this pass recursively visits nested regions. The `recursive`
+    option can be disabled to restrict the pass to only the immediate regions
+    nested under the current operation.
+  }];
+  let options = [
+    Option<"recursive", "recursive", "bool", /*default=*/"true",
+           "Recursively visit nested regions">,
+    Option<"removeBlocks", "remove-blocks", "bool", /*default=*/"true",
+           "Remove unreachable blocks">
+  ];
+}
+
 def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
   let summary = "Remove dead values";
   let description = [{
@@ -117,6 +141,9 @@ def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
     terminator operands of region branch ops, and,
     (D) Removes simple and region branch ops that have all non-live results and
     don't affect memory in any way.
+
+    The pass applies only to nested operations. It preserves the root
+    operation, including its operands, results, and function signature.
 
     Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
     region branch op, branch op, region branch terminator op, or return-like.
@@ -585,6 +612,18 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
       "Composite pass inner pipeline">,
     Option<"maxIter", "max-iterations", "int", /*default=*/"10",
       "Maximum number of iterations if inner pipeline">,
+    Option<"convergenceFailureAction", "on-convergence-failure",
+      "mlir::ConvergenceFailureAction",
+      /*default=*/"mlir::ConvergenceFailureAction::Warn",
+      "Action to take if the pass fails to converge within max-iterations",
+      [{::llvm::cl::values(
+        clEnumValN(mlir::ConvergenceFailureAction::Warn, "warn",
+         "Emit a warning (default)"),
+        clEnumValN(mlir::ConvergenceFailureAction::Error, "error",
+         "Emit an error and fail the pass"),
+        clEnumValN(mlir::ConvergenceFailureAction::Silent, "silent",
+         "Do nothing")
+       )}]>,
   ];
 }
 

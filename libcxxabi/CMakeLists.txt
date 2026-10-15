@@ -5,6 +5,14 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc++abi")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
@@ -89,6 +97,19 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't.  See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS OR LIBCXXABI_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY ON)
+else()
+  set(LIBCXXABI_SUPPORTS_SHARED_LIBRARY OFF)
+endif()
 set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
 set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
 
@@ -186,7 +207,7 @@ set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++abi runtime libraries should be installed.")
 
 # TODO: Use common runtimes infrastructure for output and install paths
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(LIBCXXABI_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBCXXABI_LIBDIR_SUBDIR)
     string(APPEND LIBCXXABI_TARGET_SUBDIR /${LIBCXXABI_LIBDIR_SUBDIR})
@@ -275,46 +296,7 @@ if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
-function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
-  set(SANITIZER_FLAGS)
-  set(USE_SANITIZER "${USE_SANITIZER}")
-  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
-  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
-  if (USE_SANITIZER AND NOT MSVC)
-    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
-    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
-
-    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
-            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
-      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
-    endif()
-    if (USE_SANITIZER STREQUAL "Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address")
-    elseif (USE_SANITIZER STREQUAL "HWAddress")
-      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
-    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
-      append_flags(SANITIZER_FLAGS -fsanitize=memory)
-      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
-        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
-      endif()
-    elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
-    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
-            USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
-    elseif (USE_SANITIZER STREQUAL "Thread")
-      append_flags(SANITIZER_FLAGS -fsanitize=thread)
-    elseif (USE_SANITIZER STREQUAL "DataFlow")
-      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
-    else()
-      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
-    endif()
-  elseif(USE_SANITIZER AND MSVC)
-    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
-  endif()
-  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
-endfunction()
-
+include(GetSanitizerFlags)
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 list(APPEND LIBCXXABI_COMPILE_FLAGS ${SANITIZER_FLAGS})
 

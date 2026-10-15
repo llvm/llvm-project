@@ -46,8 +46,8 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
-class LiveVariables;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 // This structure uniquely identifies a basic block section.
@@ -85,12 +85,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
   using NumberInfo = DenseMapInfo<unsigned>;
 
-  static inline MBBSectionID getEmptyKey() {
-    return MBBSectionID(NumberInfo::getEmptyKey());
-  }
-  static inline MBBSectionID getTombstoneKey() {
-    return MBBSectionID(NumberInfo::getTombstoneKey());
-  }
   static unsigned getHashValue(const MBBSectionID &SecID) {
     return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
                                     NumberInfo::getHashValue(SecID.Number));
@@ -217,8 +211,6 @@ private:
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
-
-  SmallVector<unsigned> PrefetchTargets;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -1010,38 +1002,43 @@ public:
   /// Split the critical edge from this block to the given successor block, and
   /// return the newly created block, or null if splitting is not possible.
   ///
-  /// This function updates LiveVariables, MachineDominatorTree, and
+  /// This function updates LiveIntervals, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
+  ///
+  /// If \p LiveOutSets is provided, it must hold the indexes of the virtual
+  /// registers live out of each block, indexed by block number. Only those
+  /// registers are considered when updating LiveIntervals, and the set for the
+  /// new block is added.
   struct SplitCriticalEdgeAnalyses {
     LiveIntervals *LIS;
     SlotIndexes *SI;
-    LiveVariables *LV;
     MachineLoopInfo *MLI;
+    std::vector<SparseBitVector<>> *LiveOutSets = nullptr;
   };
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr) {
-    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
+    return SplitCriticalEdge(Succ, &P, nullptr, MDTU);
   }
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     MachineFunctionAnalysisManager &MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr) {
-    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, MDTU);
   }
 
   // Helper method for new pass manager migration.
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    const SplitCriticalEdgeAnalyses &Analyses,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -1476,8 +1473,6 @@ public:
   }
   MachineBasicBlock::iterator end() { return E; }
   bool empty() { return begin() == end(); }
-
-  MachineBasicBlock::iterator getInitial() { return I; }
 };
 
 /// Increment \p It until it points to a non-debug instruction or to \p End

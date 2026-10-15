@@ -354,11 +354,11 @@ private:
 class SimpleAffineExprFlattener
     : public AffineExprVisitor<SimpleAffineExprFlattener, LogicalResult> {
 public:
-  // Flattend expression layout: [dims, symbols, locals, constant]
+  // Flattened expression layout: [dims, symbols, locals, constant]
   // Stack that holds the LHS and RHS operands while visiting a binary op expr.
-  // In future, consider adding a prepass to determine how big the SmallVector's
-  // will be, and linearize this to std::vector<int64_t> to prevent
-  // SmallVector moves on re-allocation.
+  // In the future, consider adding a prepass to determine how big the
+  // SmallVector's will be, and linearize this to std::vector<int64_t> to
+  // prevent SmallVector moves on re-allocation.
   std::vector<SmallVector<int64_t, 8>> operandExprStack;
 
   unsigned numDims;

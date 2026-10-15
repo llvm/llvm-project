@@ -35,6 +35,6 @@ const u8 &f() {
   return I;
 }
 
-// CHECK: @[[TMP:_ZGR.*]] = internal constant i8 0, align 1
+// CHECK: @[[TMP:_ZZ1fvE1I]] = internal constant i8 0, align 1
 // CHECK-LABEL: define {{.*}} @_Z1fv(
 // CHECK: ret ptr @[[TMP]]

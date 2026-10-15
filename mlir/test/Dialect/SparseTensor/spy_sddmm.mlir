@@ -26,8 +26,8 @@
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<8x8xf64> to memref<8x8xf64>
 // CHECK-DAG:     %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<8x8xf64> to memref<8x8xf64>
-// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_2]] level = 1 : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_2]] level = 1 : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // CHECK:         scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
@@ -97,8 +97,8 @@ func.func @sparse_sampled_dd(%argA: tensor<8x8xf64>,
 // CHECK-DAG:     %[[VAL_6:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<8x8xf64> to memref<8x8xf64>
 // CHECK-DAG:     %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<8x8xf64> to memref<8x8xf64>
 // CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.positions %[[VAL_2]] level = 1 : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_2]] level = 1 : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK:         scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK:             scf.for %[[VAL_13:.*]] = {{.*}} to {{.*}} step %[[VAL_5]] {

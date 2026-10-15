@@ -14,8 +14,8 @@
 func.func @save_box_in_ssa_register(%arg0: !fir.box<!fir.array<?xi64>>, %arg1: !fir.box<!fir.array<?x!fir.logical<4>>>) {
   %c2 = arith.constant 2 : index
   %c1 = arith.constant 1 : index
-  %0:2 = hlfir.declare %arg1 {uniq_name = "l"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-  %1:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+  %0:2 = hlfir.declare %arg1 uniq_name("l") : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %1:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
   hlfir.region_assign {
     hlfir.yield %0#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
   } to {
@@ -37,7 +37,7 @@ func.func @save_box_in_ssa_register(%arg0: !fir.box<!fir.array<?xi64>>, %arg1: !
 // CHECK-LABEL:   func.func @save_box_in_ssa_register(
 // CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.box<!fir.array<?xi64>>,
 // CHECK-SAME:                                        %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) {
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("x") : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
 // CHECK:           %[[VAL_18:.*]] = hlfir.designate %[[VAL_5]]#0 (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xi64>>, i64, i64, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi64>>
 // CHECK:           fir.do_loop %[[VAL_20:.*]] = {{.*}} {
 // CHECK:             %[[VAL_21:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_20]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
@@ -60,7 +60,7 @@ func.func @save_box_in_stack(%arg0: !fir.box<!fir.array<?xi32>>) {
   %c4_i64 = arith.constant 4 : i64
   %c3_i64 = arith.constant 3 : i64
   %c1_i64 = arith.constant 1 : i64
-  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %0:2 = hlfir.declare %arg0 uniq_name("x") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   hlfir.forall lb {
     hlfir.yield %c1_i64 : i64
   } ub {
@@ -91,7 +91,7 @@ func.func @save_box_in_stack(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK-SAME:                                 %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 // CHECK:           %[[VAL_2:.*]] = fir.alloca i64
-// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("x") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK:           %[[VAL_30:.*]] = fir.call @_FortranACreateDescriptorStack(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK:           fir.do_loop {{.*}} {
 // CHECK:             %[[VAL_48:.*]] = hlfir.designate %[[VAL_9]]#0 {{.*}}  : (!fir.box<!fir.array<?xi32>>, i32, i32, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
@@ -125,7 +125,7 @@ func.func @test_vector_subscript_overlap(%arg0: !fir.ref<!fir.array<?xi64>>) {
   %c11 = arith.constant 11 : index
   %0 = fir.undefined index
   %1 = fir.shape %0 : (index) -> !fir.shape<1>
-  %2:2 = hlfir.declare %arg0(%1) {uniq_name = "x"} : (!fir.ref<!fir.array<?xi64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi64>>, !fir.ref<!fir.array<?xi64>>)
+  %2:2 = hlfir.declare %arg0(%1) uniq_name("x") : (!fir.ref<!fir.array<?xi64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi64>>, !fir.ref<!fir.array<?xi64>>)
   hlfir.forall lb {
     hlfir.yield %c1 : index
   } ub {
@@ -159,7 +159,7 @@ func.func @test_vector_subscript_overlap(%arg0: !fir.ref<!fir.array<?xi64>>) {
 // CHECK:           %[[VAL_2:.*]] = fir.alloca i64
 // CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i64>>
 // CHECK:           %[[VAL_4:.*]] = fir.alloca i64
-// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) {uniq_name = "x"} : (!fir.ref<!fir.array<?xi64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi64>>, !fir.ref<!fir.array<?xi64>>)
+// CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) uniq_name("x") : (!fir.ref<!fir.array<?xi64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi64>>, !fir.ref<!fir.array<?xi64>>)
 // CHECK:           %[[VAL_30:.*]] = fir.call @_FortranACreateDescriptorStack(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK:           %[[VAL_37:.*]] = fir.call @_FortranACreateDescriptorStack(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK:           fir.do_loop {{.*}} {

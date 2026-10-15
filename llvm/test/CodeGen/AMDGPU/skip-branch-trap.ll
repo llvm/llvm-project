@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; FIXME: merge with trap.ll
 

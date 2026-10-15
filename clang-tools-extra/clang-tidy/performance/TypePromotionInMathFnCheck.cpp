@@ -49,15 +49,15 @@ void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {
   constexpr BuiltinType::Kind DoubleTy = BuiltinType::Double;
   constexpr BuiltinType::Kind LongDoubleTy = BuiltinType::LongDouble;
 
-  auto HasBuiltinTyParam = [](int Pos, BuiltinType::Kind Kind) {
+  const auto HasBuiltinTyParam = [](int Pos, BuiltinType::Kind Kind) {
     return hasParameter(Pos, hasType(isBuiltinType(Kind)));
   };
-  auto HasBuiltinTyArg = [](int Pos, BuiltinType::Kind Kind) {
+  const auto HasBuiltinTyArg = [](int Pos, BuiltinType::Kind Kind) {
     return hasArgument(Pos, hasType(isBuiltinType(Kind)));
   };
 
   // Match calls to foo(double) with a float argument.
-  auto OneDoubleArgFns = hasAnyName(
+  const auto OneDoubleArgFns = hasAnyName(
       "::acos", "::acosh", "::asin", "::asinh", "::atan", "::atanh", "::cbrt",
       "::ceil", "::cos", "::cosh", "::erf", "::erfc", "::exp", "::exp2",
       "::expm1", "::fabs", "::floor", "::ilogb", "::lgamma", "::llrint",
@@ -72,9 +72,9 @@ void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   // Match calls to foo(double, double) where both args are floats.
-  auto TwoDoubleArgFns = hasAnyName("::atan2", "::copysign", "::fdim", "::fmax",
-                                    "::fmin", "::fmod", "::hypot", "::ldexp",
-                                    "::nextafter", "::pow", "::remainder");
+  const auto TwoDoubleArgFns = hasAnyName(
+      "::atan2", "::copysign", "::fdim", "::fmax", "::fmin", "::fmod",
+      "::hypot", "::ldexp", "::nextafter", "::pow", "::remainder");
   Finder->addMatcher(
       callExpr(callee(functionDecl(TwoDoubleArgFns, parameterCountIs(2),
                                    HasBuiltinTyParam(0, DoubleTy),
@@ -177,10 +177,11 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
     NewFnName = (OldFnName + "f").str();
   }
 
-  auto Diag = diag(Call->getExprLoc(), "call to '%0' promotes float to double")
-              << OldFnName
-              << FixItHint::CreateReplacement(
-                     Call->getCallee()->getSourceRange(), NewFnName);
+  const auto Diag =
+      diag(Call->getExprLoc(), "call to '%0' promotes float to double")
+      << OldFnName
+      << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
+                                      NewFnName);
 
   // Suggest including <cmath> if the function we're suggesting is declared in
   // <cmath> and it's not already included.  We never have to suggest including

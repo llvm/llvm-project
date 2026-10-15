@@ -128,9 +128,10 @@ static const SCEV *getNarrowestLatchMaxTakenCountEstimate(ScalarEvolution &SE,
 }
 
 std::optional<LoopStructure>
-LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
+LoopStructure::parseLoopStructure(SCEVExpander &Expander, Loop &L,
                                   bool AllowUnsignedLatchCond,
                                   const char *&FailureReason) {
+  ScalarEvolution &SE = *Expander.getSE();
   if (!L.isLoopSimplifyForm()) {
     FailureReason = "loop not in LoopSimplify form";
     return std::nullopt;
@@ -403,7 +404,6 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
-  SCEVExpander Expander(SE, "loop-constrainer");
   Instruction *Ins = Preheader->getTerminator();
 
   if (FixedRightSCEV)
@@ -411,7 +411,6 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
         Expander.expandCodeFor(FixedRightSCEV, FixedRightSCEV->getType(), Ins);
 
   Value *IndVarStartV = Expander.expandCodeFor(IndVarStart, IndVarTy, Ins);
-  IndVarStartV->setName("indvar.start");
 
   LoopStructure Result;
 
@@ -444,16 +443,12 @@ static void DisableAllLoopOptsOnLoop(Loop &L) {
   MDNode *Dummy = MDNode::get(Context, {});
   MDNode *DisableUnroll = MDNode::get(
       Context, {MDString::get(Context, "llvm.loop.unroll.disable")});
-  Metadata *FalseVal =
-      ConstantAsMetadata::get(ConstantInt::get(Type::getInt1Ty(Context), 0));
   MDNode *DisableVectorize = MDNode::get(
-      Context,
-      {MDString::get(Context, "llvm.loop.vectorize.enable"), FalseVal});
+      Context, {MDString::get(Context, "llvm.loop.vectorize.disable")});
   MDNode *DisableLICMVersioning = MDNode::get(
       Context, {MDString::get(Context, "llvm.loop.licm_versioning.disable")});
   MDNode *DisableDistribution = MDNode::get(
-      Context,
-      {MDString::get(Context, "llvm.loop.distribute.enable"), FalseVal});
+      Context, {MDString::get(Context, "llvm.loop.distribute.disable")});
   MDNode *NewLoopID =
       MDNode::get(Context, {Dummy, DisableUnroll, DisableVectorize,
                             DisableLICMVersioning, DisableDistribution});
@@ -739,6 +734,7 @@ bool LoopConstrainer::run() {
   IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
   SCEVExpander Expander(SE, "loop-constrainer");
+  SCEVExpanderCleaner ExpanderCleaner(Expander);
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'
@@ -779,7 +775,6 @@ bool LoopConstrainer::run() {
     }
 
     ExitPreLoopAt = Expander.expandCodeFor(ExitPreLoopAtSCEV, IVTy, InsertPt);
-    ExitPreLoopAt->setName("exit.preloop.at");
   }
 
   if (NeedsPostLoop) {
@@ -808,6 +803,12 @@ bool LoopConstrainer::run() {
     ExitMainLoopAt = Expander.expandCodeFor(ExitMainLoopAtSCEV, IVTy, InsertPt);
     ExitMainLoopAt->setName("exit.mainloop.at");
   }
+
+  // All checks which can fail after expanding SCEVs are complete. Keep the
+  // expansions now that the loop transformation is guaranteed to proceed.
+  ExpanderCleaner.markResultUsed();
+  if (ExitPreLoopAt)
+    ExitPreLoopAt->setName("exit.preloop.at");
 
   // We clone these ahead of time so that we don't have to deal with changing
   // and temporarily invalid IR as we transform the loops.

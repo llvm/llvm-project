@@ -67,6 +67,7 @@ static bool IsExecutionDirective(const parser::CompilerDirective &dir) {
       std::holds_alternative<parser::CompilerDirective::Inline>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::IVDep>(dir.u) ||
+      std::holds_alternative<parser::CompilerDirective::InlineAlways>(dir.u) ||
       std::holds_alternative<parser::CompilerDirective::Simd>(dir.u);
 }
 

@@ -126,6 +126,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     encoding. Compiler passes that run before this sparsifier pass need to be aware
     of the semantics of tensor types with such a sparsity encoding.
 
+    This encoding can only be applied to tensors with supported primary element
+    types (e.g., `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`, `i32`, `i64`, and
+    complex variants of `f32` and `f64`).
+
     In this encoding, we use **dimension** to refer to the axes of the semantic tensor,
     and **level** to refer to the axes of the actual storage format, i.e., the
     operational representation of the sparse tensor in memory. The number of

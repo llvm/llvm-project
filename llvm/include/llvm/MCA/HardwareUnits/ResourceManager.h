@@ -217,7 +217,7 @@ class ResourceState {
 
 public:
   LLVM_ABI ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
-                         uint64_t Mask);
+                         uint64_t Mask, const MCSchedModel &SM);
 
   unsigned getProcResourceID() const { return ProcResourceDescIndex; }
   uint64_t getResourceMask() const { return ResourceMask; }

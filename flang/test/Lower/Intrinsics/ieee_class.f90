@@ -42,9 +42,9 @@ end module m
 subroutine classify(x)
   use m; use ieee_arithmetic
   real(k) :: x
-  ! CHECK-DAG: %[[R_ALLOC:.*]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}> {bindc_name = "r", uniq_name = "_QFclassifyEr"}
-  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ALLOC]] {uniq_name = "_QFclassifyEr"}
-  ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] {{.*}} {uniq_name = "_QFclassifyEx"}
+  ! CHECK-DAG: %[[R_ALLOC:.*]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}> <{bindc_name = "r", uniq_name = "_QFclassifyEr"}>
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ALLOC]] uniq_name("_QFclassifyEr")
+  ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] {{.*}} uniq_name("_QFclassifyEx")
   type(ieee_class_type) :: r
 
   ! CHECK:     %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f64>
@@ -67,7 +67,7 @@ subroutine classify(x)
   ! CHECK:     %[[V_25:.*]] = arith.ori %[[V_22]], %[[V_24]] : i64
   ! CHECK:     %[[TABLE:.*]] = fir.address_of(@_FortranAIeeeClassTable) : !fir.ref<!fir.array<32xi8>>
   ! CHECK:     %[[COORD:.*]] = fir.coordinate_of %[[TABLE]], %[[V_25]] : (!fir.ref<!fir.array<32xi8>>, i64) -> !fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
-  ! CHECK:     %[[TMP:.*]]:2 = hlfir.declare %[[COORD]] {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK:     %[[TMP:.*]]:2 = hlfir.declare %[[COORD]] uniq_name(".tmp.intrinsic_result")
   ! CHECK:     %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move {{.*}} : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, i1) -> !hlfir.expr<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
   ! CHECK:     hlfir.assign %[[EXPR]] to %[[R_DECL]]#0 : !hlfir.expr<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
   ! CHECK:     hlfir.destroy %[[EXPR]] : !hlfir.expr<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
@@ -106,7 +106,7 @@ program p
 ! x(1)  = ieee_value(x(1), ieee_signaling_nan)
 ! x(2)  = ieee_value(x(1), ieee_quiet_nan)
   ! CHECK:     %[[X_G_ALLOC:.*]] = fir.address_of(@_QFEx) : !fir.ref<!fir.array<10xf64>>
-  ! CHECK:     %[[X_G_DECL:.*]]:2 = hlfir.declare %[[X_G_ALLOC]]({{.*}}) {uniq_name = "_QFEx"}
+  ! CHECK:     %[[X_G_DECL:.*]]:2 = hlfir.declare %[[X_G_ALLOC]]({{.*}}) uniq_name("_QFEx")
   ! CHECK:     %[[VAL_TABLE:.*]] = fir.address_of(@_FortranAIeeeValueTable_8) : !fir.ref<!fir.array<12xi64>>
   ! CHECK:     %[[VAL_COORD:.*]] = fir.coordinate_of %[[VAL_TABLE]], %{{.*}} : (!fir.ref<!fir.array<12xi64>>, i8) -> !fir.ref<i64>
   ! CHECK:     %[[VAL_I64:.*]] = fir.load %[[VAL_COORD]] : !fir.ref<i64>
@@ -127,5 +127,5 @@ program p
   enddo
 end
 
-! CHECK: fir.global linkonce @_FortranAIeeeClassTable(dense<[7, 8, 8, 8, 11, 11, 11, 11, 9, 9, 9, 9, 10, 2, 1, 2, 6, 5, 5, 5, 11, 11, 11, 11, 4, 4, 4, 4, 3, 2, 1, 2]> : tensor<32xi8>) constant : !fir.array<32xi8>
-! CHECK: fir.global linkonce @_FortranAIeeeValueTable_8(dense<[0, 9219994337134247936, 9221120237041090560, -4503599627370496, -4616189618054758400, -9221120237041090560, -9223372036854775808, 0, 2251799813685248, 4607182418800017408, 9218868437227405312, 0]> : tensor<12xi64>) constant : !fir.array<12xi64>
+! CHECK: fir.global linkonce @_FortranAIeeeClassTable(dense<[7, 8, 8, 8, 11, 11, 11, 11, 9, 9, 9, 9, 10, 2, 1, 2, 6, 5, 5, 5, 11, 11, 11, 11, 4, 4, 4, 4, 3, 2, 1, 2]> : tensor<32xi8>) <{alignment = 64 : i64}> constant : !fir.array<32xi8>
+! CHECK: fir.global linkonce @_FortranAIeeeValueTable_8(dense<[0, 9219994337134247936, 9221120237041090560, -4503599627370496, -4616189618054758400, -9221120237041090560, -9223372036854775808, 0, 2251799813685248, 4607182418800017408, 9218868437227405312, 0]> : tensor<12xi64>) <{alignment = 64 : i64}> constant : !fir.array<12xi64>

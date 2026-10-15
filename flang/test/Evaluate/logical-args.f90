@@ -41,6 +41,19 @@ program main
   ! CHECK-8: CALL foo8(logical(x(1_8)>y,kind=8))
   call foog(x(1) > y)
 
+  ! Folded actual arguments with explicit non-default kinds must keep their
+  ! kind through generic resolution.
+  ! CHECK: CALL foo8(.false._8)
+  ! CHECK-8: CALL foo8(.false._8)
+  call foog(.not. .true._8)
+  ! CHECK: CALL foo8(.true._8)
+  ! CHECK-8: CALL foo8(.true._8)
+  call foog(.true._8 .and. .true._8)
+  ! A relational result is default logical regardless of its operand kinds.
+  ! CHECK: CALL foo4(.false._4)
+  ! CHECK-8: CALL foo8(.false._8)
+  call foog(1_2 == 2_2)
+
  contains
   subroutine foo(l)
     logical :: l

@@ -9,8 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include <limits>
 
@@ -18,15 +16,6 @@ using namespace llvm::jitlink;
 
 namespace llvm {
 namespace orc {
-
-const EPCGenericJITLinkMemoryManager::SymbolNames
-    EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols = {
-        "orc_rt_SimpleNativeMemoryMap_Instance",
-        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
-};
 
 class EPCGenericJITLinkMemoryManager::InFlightAlloc
     : public jitlink::JITLinkMemoryManager::InFlightAlloc {
@@ -59,45 +48,28 @@ public:
           KV.first,
           KV.second.Addr,
           alignTo(KV.second.ContentSize + KV.second.ZeroFillSize,
-                  Parent.EPC.getPageSize()),
+                  Parent.ES.getExecutorProcessControl().getPageSize()),
           {KV.second.WorkingMem, static_cast<size_t>(KV.second.ContentSize)}});
     }
 
     // Transfer allocation actions.
     std::swap(FR.Actions, G.allocActions());
 
-    Parent.EPC.callSPSWrapperAsync<
-        rt::SPSSimpleExecutorMemoryManagerInitializeSignature>(
-        Parent.SAs.Initialize,
+    Parent.B.Initialize(
         [OnFinalize = std::move(OnFinalize), AllocAddr = this->AllocAddr](
-            Error SerializationErr,
             Expected<ExecutorAddr> InitializeKey) mutable {
           // FIXME: Release abandoned alloc.
-          if (SerializationErr) {
-            cantFail(InitializeKey.takeError());
-            OnFinalize(std::move(SerializationErr));
-          } else if (!InitializeKey)
-            OnFinalize(InitializeKey.takeError());
-          else
-            OnFinalize(FinalizedAlloc(AllocAddr));
+          if (!InitializeKey)
+            return OnFinalize(InitializeKey.takeError());
+          OnFinalize(FinalizedAlloc(AllocAddr));
         },
-        Parent.SAs.Allocator, std::move(FR));
+        Parent.ES, Parent.B.Instance, FR);
   }
 
   void abandon(OnAbandonedFunction OnAbandoned) override {
     // FIXME: Return memory to pool instead.
-    Parent.EPC.callSPSWrapperAsync<
-        rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
-        Parent.SAs.Release,
-        [OnAbandoned = std::move(OnAbandoned)](Error SerializationErr,
-                                               Error DeallocateErr) mutable {
-          if (SerializationErr) {
-            cantFail(std::move(DeallocateErr));
-            OnAbandoned(std::move(SerializationErr));
-          } else
-            OnAbandoned(std::move(DeallocateErr));
-        },
-        Parent.SAs.Allocator, ArrayRef<ExecutorAddr>(AllocAddr));
+    Parent.B.Release(std::move(OnAbandoned), Parent.ES, Parent.B.Instance,
+                     ArrayRef<ExecutorAddr>(AllocAddr));
   }
 
 private:
@@ -107,67 +79,33 @@ private:
   SegInfoMap Segs;
 };
 
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
-  auto &ES = JD.getExecutionSession();
-  SymbolAddrs SAs;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {
-              {ES.intern(SNs.AllocatorName), &SAs.Allocator},
-              {ES.intern(SNs.ReserveName), &SAs.Reserve},
-              {ES.intern(SNs.InitializeName), &SAs.Initialize},
-              {ES.intern(SNs.DeinitializeName), &SAs.Deinitialize},
-              {ES.intern(SNs.ReleaseName), &SAs.Release},
-          }))
-    return Err;
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(
-      ES.getExecutorProcessControl(), SAs);
-}
-
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(ExecutionSession &ES, SymbolNames SNs) {
-  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
-}
-
 void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,
                                               LinkGraph &G,
                                               OnAllocatedFunction OnAllocated) {
   BasicLayout BL(G);
 
-  auto Pages = BL.getContiguousPageBasedLayoutSizes(EPC.getPageSize());
+  auto Pages = BL.getContiguousPageBasedLayoutSizes(
+      ES.getExecutorProcessControl().getPageSize());
   if (!Pages)
     return OnAllocated(Pages.takeError());
 
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
-      SAs.Reserve,
+  B.Reserve(
       [this, BL = std::move(BL), OnAllocated = std::move(OnAllocated)](
-          Error SerializationErr, Expected<ExecutorAddr> AllocAddr) mutable {
-        if (SerializationErr) {
-          cantFail(AllocAddr.takeError());
-          return OnAllocated(std::move(SerializationErr));
-        }
+          Expected<ExecutorAddr> AllocAddr) mutable {
         if (!AllocAddr)
           return OnAllocated(AllocAddr.takeError());
-
         completeAllocation(*AllocAddr, std::move(BL), std::move(OnAllocated));
       },
-      SAs.Allocator, Pages->total());
+      ES, B.Instance, Pages->total());
 }
 
 void EPCGenericJITLinkMemoryManager::deallocate(
     std::vector<FinalizedAlloc> Allocs, OnDeallocatedFunction OnDeallocated) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
-      SAs.Release,
-      [OnDeallocated = std::move(OnDeallocated)](Error SerErr,
-                                                 Error DeallocErr) mutable {
-        if (SerErr) {
-          cantFail(std::move(DeallocErr));
-          OnDeallocated(std::move(SerErr));
-        } else
-          OnDeallocated(std::move(DeallocErr));
-      },
-      SAs.Allocator, Allocs);
+  std::vector<ExecutorAddr> Bases;
+  Bases.reserve(Allocs.size());
+  for (auto &A : Allocs)
+    Bases.push_back(ExecutorAddr(A.getAddress()));
+  B.Release(std::move(OnDeallocated), ES, B.Instance, Bases);
   for (auto &A : Allocs)
     A.release();
 }
@@ -184,8 +122,9 @@ void EPCGenericJITLinkMemoryManager::completeAllocation(
 
     Seg.Addr = NextSegAddr;
     KV.second.WorkingMem = BL.getGraph().allocateBuffer(Seg.ContentSize).data();
-    NextSegAddr += ExecutorAddrDiff(
-        alignTo(Seg.ContentSize + Seg.ZeroFillSize, EPC.getPageSize()));
+    NextSegAddr +=
+        ExecutorAddrDiff(alignTo(Seg.ContentSize + Seg.ZeroFillSize,
+                                 ES.getExecutorProcessControl().getPageSize()));
 
     auto &SegInfo = SegInfos[AG];
     SegInfo.ContentSize = Seg.ContentSize;

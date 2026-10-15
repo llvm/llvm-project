@@ -48,7 +48,7 @@ public:
 
   /// Return the dialects that our required by this extension to be loaded
   /// before applying. If empty then the extension is invoked for every loaded
-  /// dialect indepently.
+  /// dialect independently.
   ArrayRef<StringRef> getRequiredDialects() const { return dialectNames; }
 
   /// Apply this extension to the given context and the required dialects.

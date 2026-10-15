@@ -70,7 +70,7 @@ float3 Double(float3 vec, float a, float b) {
 // CHECK-NEXT: [[TmpVec0:%.*]] = insertelement <4 x half> poison, half [[A]], i32 0
 // CHECK-NEXT: [[B:%.*]] = load half, ptr [[BAddr]], align 2
 // CHECK-NEXT: [[TmpVec1:%.*]] = insertelement <4 x half> [[TmpVec0]], half [[B]], i32 1
-// CHECK-NEXT: [[TmpVec2:%.*]] = insertelement <4 x half> %vecinit1, half 0xH4ADF, i32 2
+// CHECK-NEXT: [[TmpVec2:%.*]] = insertelement <4 x half> %vecinit1, half 1.374220e+01, i32 2
 // CHECK-NEXT: [[A:%.*]] = load half, ptr [[AAddr]], align 2
 // CHECK-NEXT: [[TmpVec3:%.*]] = insertelement <4 x half> [[TmpVec2]], half [[A]], i32 3
 

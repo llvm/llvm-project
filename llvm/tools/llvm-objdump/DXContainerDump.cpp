@@ -96,13 +96,12 @@ void DXContainerDumper::printSignature(const DirectX::Signature &S) {
   for (auto El : S) {
     LongestName = std::max(LongestName, S.getName(El.NameOffset).size());
     LongestSV = std::max(
-        LongestSV,
-        enumToStringRef(El.SystemValue, dxbc::getD3DSystemValues()).size());
+        LongestSV, dxbc::getD3DSystemValues().toString(El.SystemValue).size());
     LongestIndex = std::max(LongestIndex, digitsForNumber(El.Index));
     LongestRegister = std::max(LongestRegister, digitsForNumber(El.Register));
-    LongestFormat = std::max(
-        LongestFormat,
-        enumToStringRef(El.CompType, dxbc::getSigComponentTypes()).size());
+    LongestFormat =
+        std::max(LongestFormat,
+                 dxbc::getSigComponentTypes().toString(El.CompType).size());
   }
 
   // Print Column headers.
@@ -123,13 +122,11 @@ void DXContainerDumper::printSignature(const DirectX::Signature &S) {
     OS << right_justify(std::to_string(El.Index), LongestIndex) << " ";
     OS << right_justify(maskToString(El.Mask), MaskWidth) << " ";
     OS << right_justify(std::to_string(El.Register), LongestRegister) << " ";
-    OS << right_justify(
-              enumToStringRef(El.SystemValue, dxbc::getD3DSystemValues()),
-              LongestSV)
+    OS << right_justify(dxbc::getD3DSystemValues().toString(El.SystemValue),
+                        LongestSV)
        << " ";
-    OS << right_justify(
-        enumToStringRef(El.CompType, dxbc::getSigComponentTypes()),
-        LongestFormat);
+    OS << right_justify(dxbc::getSigComponentTypes().toString(El.CompType),
+                        LongestFormat);
     if (El.ExclusiveMask)
       OS << "  " << maskToString(El.ExclusiveMask, true);
     OS << "\n";

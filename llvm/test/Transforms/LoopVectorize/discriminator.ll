@@ -57,13 +57,15 @@ define void @_Z3foov() #0 !dbg !6 {
 ;PSEUDO_PROBE: ![[#PROBE]] = !DILocation(line: 6, column: 13, scope: ![[TOP]])
 
 !llvm.dbg.cu = !{!0}
+!23 = !{null}
+!24 = !DISubroutineType(types: !23)
 !llvm.module.flags = !{!3, !4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, debugInfoForProfiling: true)
 !1 = !DIFile(filename: "a.cc", directory: "/")
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, unit: !0)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !24, unit: !0)
 !8 = !DILocation(line: 6, column: 13, scope: !6)
 !9 = !{!10, !10, i64 0}
 !10 = !{!"any pointer", !11, i64 0}

@@ -61,7 +61,7 @@ define double @f4(double %dummy, double %val) {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzdr %f0
-; CHECK-NEXT:    wfmindb %f0, %f2, %f0, 4
+; CHECK-NEXT:    wfmindb %f0, %f2, %f0, 2
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp olt double %val, 0.0
   %ret = select i1 %cmp, double %val, double 0.0
@@ -172,7 +172,7 @@ define float @f14(float %dummy, float %val) {
 ; CHECK-LABEL: f14:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzer %f0
-; CHECK-NEXT:    wfminsb %f0, %f2, %f0, 4
+; CHECK-NEXT:    wfminsb %f0, %f2, %f0, 2
 ; CHECK-NEXT:    br %r14
   %cmp = fcmp olt float %val, 0.0
   %ret = select i1 %cmp, float %val, float 0.0
@@ -280,7 +280,7 @@ define void @f24(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
 ; CHECK-NEXT:    vzero %v1
-; CHECK-NEXT:    wfminxb %v0, %v0, %v1, 4
+; CHECK-NEXT:    wfminxb %v0, %v0, %v1, 2
 ; CHECK-NEXT:    vst %v0, 0(%r3), 3
 ; CHECK-NEXT:    br %r14
   %val = load fp128, ptr %ptr

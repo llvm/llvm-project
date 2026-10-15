@@ -13,4 +13,9 @@
 
 #pragma clang riscv intrinsic andes_vector
 
+#define __riscv_intrinsic_xandesvbfhcvt 1
+#define __riscv_intrinsic_xandesvdot 1
+#define __riscv_intrinsic_xandesvpackfph 1
+#define __riscv_intrinsic_xandesvsintload 1
+
 #endif //_ANDES_VECTOR_H_

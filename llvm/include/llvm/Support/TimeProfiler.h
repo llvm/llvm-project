@@ -138,7 +138,7 @@ LLVM_ABI void timeTraceProfilerWrite(raw_pwrite_stream &OS);
 
 /// Write profiling data to a file.
 /// The function will write to \p PreferredFileName if provided, if not
-/// then will write to \p FallbackFileName appending .time-trace.
+/// then will write to \p FallbackFileName appending .time-trace.json.
 /// Returns a StringError indicating a failure if the function is
 /// unable to open the file for writing.
 LLVM_ABI Error timeTraceProfilerWrite(StringRef PreferredFileName,
@@ -179,7 +179,7 @@ LLVM_ABI void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
 /// of the time trace profiler.  When the object is constructed, it begins
 /// the section; and when it is destroyed, it stops it. If the time profiler
 /// is not initialized, the overhead is a single branch.
-class TimeTraceScope {
+class [[nodiscard]] TimeTraceScope {
 public:
   TimeTraceScope() = delete;
   TimeTraceScope(const TimeTraceScope &) = delete;

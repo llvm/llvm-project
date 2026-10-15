@@ -21,9 +21,19 @@ namespace LIBC_NAMESPACE_DECL {
 namespace shm_common {
 
 LIBC_INLINE_VAR constexpr cpp::string_view SHM_PREFIX = "/dev/shm/";
-using SHMPath = cpp::array<char, NAME_MAX + SHM_PREFIX.size() + 1>;
 
-LIBC_INLINE ErrorOr<SHMPath> translate_name(cpp::string_view name) {
+// Fixed-size buffer for a path of the form: "<Prefix><name>", name is at
+// most NAME_MAX bytes.
+template <const cpp::string_view &Prefix>
+using TranslatedPath = cpp::array<char, NAME_MAX + Prefix.size() + 1>;
+
+using SHMPath = TranslatedPath<SHM_PREFIX>;
+
+// validate a shared-object name and translate it to a path for a
+// giving Prefix.
+template <const cpp::string_view &Prefix = SHM_PREFIX>
+LIBC_INLINE ErrorOr<TranslatedPath<Prefix>>
+translate_name(cpp::string_view name) {
   // trim leading slashes
   size_t offset = name.find_first_not_of('/');
   if (offset == cpp::string_view::npos)
@@ -37,10 +47,10 @@ LIBC_INLINE ErrorOr<SHMPath> translate_name(cpp::string_view name) {
     return Error(EINVAL);
 
   // prepend the prefix
-  SHMPath buffer;
-  inline_memcpy(buffer.data(), SHM_PREFIX.data(), SHM_PREFIX.size());
-  inline_memcpy(buffer.data() + SHM_PREFIX.size(), name.data(), name.size());
-  buffer[SHM_PREFIX.size() + name.size()] = '\0';
+  TranslatedPath<Prefix> buffer;
+  inline_memcpy(buffer.data(), Prefix.data(), Prefix.size());
+  inline_memcpy(buffer.data() + Prefix.size(), name.data(), name.size());
+  buffer[Prefix.size() + name.size()] = '\0';
   return buffer;
 }
 } // namespace shm_common

@@ -337,13 +337,13 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
   if (TheTriple.isOSDarwin() || TheTriple.isOSBinFormatMachO())
-    MAI = new ARMMCAsmInfoDarwin(TheTriple);
+    MAI = new ARMMCAsmInfoDarwin(TheTriple, Options);
   else if (TheTriple.isWindowsMSVCEnvironment())
-    MAI = new ARMCOFFMCAsmInfoMicrosoft();
+    MAI = new ARMCOFFMCAsmInfoMicrosoft(Options);
   else if (TheTriple.isOSWindows())
-    MAI = new ARMCOFFMCAsmInfoGNU();
+    MAI = new ARMCOFFMCAsmInfoGNU(Options);
   else
-    MAI = new ARMELFMCAsmInfo(TheTriple);
+    MAI = new ARMELFMCAsmInfo(TheTriple, Options);
 
   unsigned Reg = MRI.getDwarfRegNum(ARM::SP, true);
   MAI->addInitialFrameState(MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0));
@@ -355,10 +355,8 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createARMELFStreamer(
-      Ctx, std::move(MAB), std::move(OW), std::move(Emitter),
-      (T.getArch() == Triple::thumb || T.getArch() == Triple::thumbeb),
-      T.isAndroid());
+  return createARMELFStreamer(Ctx, std::move(MAB), std::move(OW),
+                              std::move(Emitter), T.isThumb(), T.isAndroid());
 }
 
 static MCStreamer *

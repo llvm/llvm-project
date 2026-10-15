@@ -19,6 +19,18 @@ add_integration_test(
 )
 
 add_integration_test(
+  invocation_name_test
+  SUITE libc-startup-tests
+  SRCS
+    invocation_name_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.errno.program_invocation_name
+    libc.src.errno.program_invocation_short_name
+    libc.src.unistd.execve
+)
+
+add_integration_test(
   startup_no_envp_test
   SUITE libc-startup-tests
   SRCS
@@ -38,6 +50,7 @@ add_integration_test(
   SRCS
     tls_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -62,4 +75,14 @@ add_integration_test(
   SUITE libc-startup-tests
   SRCS
     irelative_no_ifunc_test.cpp
+)
+
+add_integration_test(
+  startup_r_debug_test
+  SUITE libc-startup-tests
+  SRCS
+    r_debug_test.cpp
+  DEPENDS
+    libc.include.link
+    libc.src.link._r_debug
 )

@@ -39,14 +39,23 @@ public:
 
   Attributes(unsigned short alignment = 0, bool byval = false,
              bool sret = false, bool append = false,
-             IntegerExtension intExt = IntegerExtension::None)
+             IntegerExtension intExt = IntegerExtension::None,
+             bool indirect = false)
       : alignment{alignment}, byval{byval}, sret{sret}, append{append},
-        intExt{intExt} {}
+        indirect{indirect}, intExt{intExt} {}
 
   unsigned getAlignment() const { return alignment; }
   bool hasAlignment() const { return alignment != 0; }
   bool isByVal() const { return byval; }
   bool isSRet() const { return sret; }
+  /// The argument is passed indirectly: the caller materializes a copy of the
+  /// aggregate and passes the address of that copy, which the ABI assigns to a
+  /// register like any other pointer. Like `byval` this requires the caller to
+  /// make a copy, but the pointer itself is the argument, so no `llvm.byval`
+  /// attribute is attached and the target does not lower it as a by-value
+  /// aggregate. Some ABIs (e.g. AAPCS64) require this form for aggregates that
+  /// are too large to be passed in registers.
+  bool isIndirect() const { return indirect; }
   bool isAppend() const { return append; }
   bool isZeroExt() const { return intExt == IntegerExtension::Zero; }
   bool isSignExt() const { return intExt == IntegerExtension::Sign; }
@@ -57,6 +66,7 @@ private:
   bool byval : 1;
   bool sret : 1;
   bool append : 1;
+  bool indirect : 1;
   IntegerExtension intExt;
 };
 
@@ -74,30 +84,32 @@ public:
   static std::unique_ptr<CodeGenSpecifics>
   get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
       llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl);
+      llvm::StringRef targetABI, const mlir::DataLayout &dl);
 
   static std::unique_ptr<CodeGenSpecifics>
   get(mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
       llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-      const mlir::DataLayout &dl, llvm::StringRef tuneCPU);
+      llvm::StringRef targetABI, const mlir::DataLayout &dl,
+      llvm::StringRef tuneCPU);
 
   static TypeAndAttr getTypeAndAttr(mlir::Type t) { return TypeAndAttr{t, {}}; }
 
   CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
                    KindMapping &&kindMap, llvm::StringRef targetCPU,
                    mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl)
+                   llvm::StringRef targetABI, const mlir::DataLayout &dl)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
-        tuneCPU{""} {}
+        targetCPU{targetCPU}, targetFeatures{targetFeatures},
+        targetABI{targetABI}, dataLayout{&dl}, tuneCPU{""} {}
 
   CodeGenSpecifics(mlir::MLIRContext *ctx, llvm::Triple &&trp,
                    KindMapping &&kindMap, llvm::StringRef targetCPU,
                    mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                   const mlir::DataLayout &dl, llvm::StringRef tuneCPU)
+                   llvm::StringRef targetABI, const mlir::DataLayout &dl,
+                   llvm::StringRef tuneCPU)
       : context{*ctx}, triple{std::move(trp)}, kindMap{std::move(kindMap)},
-        targetCPU{targetCPU}, targetFeatures{targetFeatures}, dataLayout{&dl},
-        tuneCPU{tuneCPU} {}
+        targetCPU{targetCPU}, targetFeatures{targetFeatures},
+        targetABI{targetABI}, dataLayout{&dl}, tuneCPU{tuneCPU} {}
 
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
@@ -183,6 +195,8 @@ public:
     return targetFeatures;
   }
 
+  llvm::StringRef getTargetABI() const { return targetABI; }
+
   const mlir::DataLayout &getDataLayout() const {
     assert(dataLayout && "dataLayout must be set");
     return *dataLayout;
@@ -194,6 +208,7 @@ protected:
   KindMapping kindMap;
   llvm::StringRef targetCPU;
   mlir::LLVM::TargetFeaturesAttr targetFeatures;
+  llvm::StringRef targetABI;
   const mlir::DataLayout *dataLayout = nullptr;
   llvm::StringRef tuneCPU;
 };

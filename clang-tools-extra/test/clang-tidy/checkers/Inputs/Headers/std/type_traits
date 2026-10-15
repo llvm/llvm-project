@@ -1,6 +1,11 @@
+#ifndef _CLANG_TIDY_TEST_STD_TYPE_TRAITS_H
+#define _CLANG_TIDY_TEST_STD_TYPE_TRAITS_H
+
 #include "cstddef"
 
 namespace std {
+
+constexpr bool is_constant_evaluated() noexcept { return true; }
 
 template <typename T, T V>
 struct integral_constant {
@@ -449,3 +454,5 @@ struct in_place_t {};
 constexpr in_place_t in_place;
 
 } // namespace std
+
+#endif // _CLANG_TIDY_TEST_STD_TYPE_TRAITS_H

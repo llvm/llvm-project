@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple nvptx-nvidia-cuda -fcuda-is-device \
 // RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:     -emit-llvm -disable-llvm-passes -o - -x hip %s | FileCheck %s
 
 #include "Inputs/cuda.h"

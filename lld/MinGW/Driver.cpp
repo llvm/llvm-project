@@ -44,6 +44,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <stack>
 
 using namespace lld;
 using namespace llvm::opt;
@@ -57,44 +58,13 @@ enum {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr opt::OptTable::Info infoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES,                                                                     \
-   SUBCOMMANDIDS_OFFSET},
-#include "Options.inc"
-#undef OPTION
-};
 
 namespace {
-class MinGWOptTable : public opt::GenericOptTable {
+class MinGWOptTable : public opt::OptTable {
 public:
-  MinGWOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, infoTable,
-                             false) {}
+  MinGWOptTable() : opt::OptTable(optionTables(), false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -576,6 +546,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   StringRef prefix = "";
   bool isStatic = false;
+  struct PushPopState {
+    StringRef prefix;
+    bool isStatic;
+  };
+  std::stack<PushPopState, std::vector<PushPopState>> pushPopStates;
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
@@ -603,6 +578,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       break;
     case OPT_Bdynamic:
       isStatic = false;
+      break;
+    case OPT_push_state:
+      pushPopStates.push({prefix, isStatic});
+      break;
+    case OPT_pop_state:
+      if (pushPopStates.empty()) {
+        error("unbalanced --push-state/--pop-state");
+        break;
+      }
+      prefix = pushPopStates.top().prefix;
+      isStatic = pushPopStates.top().isStatic;
+      pushPopStates.pop();
       break;
     }
   }

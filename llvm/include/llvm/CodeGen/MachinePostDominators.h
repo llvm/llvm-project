@@ -81,14 +81,13 @@ public:
 };
 
 class MachinePostDominatorTreePrinterPass
-    : public PassInfoMixin<MachinePostDominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<MachinePostDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI MachinePostDominatorTreeWrapperPass

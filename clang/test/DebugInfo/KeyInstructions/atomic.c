@@ -32,8 +32,8 @@ void fun() {
 // CHECK-NEXT: %tobool = icmp ne i8 %6, 0,                            !dbg [[LINE30_G7R3:!.*]]
 // CHECK-NEXT: %storedv = zext i1 %tobool to i8,                      !dbg [[LINE30_G7R2:!.*]]
 // CHECK-NEXT: store i8 %storedv, ptr %atomic-temp3, align 1,         !dbg [[LINE30_G7R1:!.*]]
-// CHECK-NEXT: %7 = load i8, ptr %atomic-temp3, align 1,              !dbg [[LINE30_G6R4:!.*]]
-// CHECK-NEXT: %loadedv = trunc i8 %7 to i1,                          !dbg [[LINE30_G6R3:!.*]]
+// CHECK-NEXT: %7 = load i8, ptr %atomic-temp3, align 1,              !dbg [[LINE30]]
+// CHECK-NEXT: %loadedv = icmp ne i8 %7, 0,                           !dbg [[LINE30_G6R3:!.*]]
 // CHECK-NEXT: %conv = zext i1 %loadedv to i32,                       !dbg [[LINE30_G6R2:!.*]]
 // CHECK-NEXT: store i32 %conv, ptr %r3, align 4,                     !dbg [[LINE30_G6R1:!.*]]
 
@@ -61,8 +61,8 @@ void fun() {
 // CHECK: cmpxchg.continue:
 // CHECK-NEXT: %storedv6 = zext i1 %15 to i8,                         !dbg [[LINE51_G12R2]]
 // CHECK-NEXT: store i8 %storedv6, ptr %cmpxchg.bool, align 1,        !dbg [[LINE51_G12R1]]
-// CHECK-NEXT: %16 = load i8, ptr %cmpxchg.bool, align 1,             !dbg [[LINE51_G11R4:!.*]]
-// CHECK-NEXT: %loadedv7 = trunc i8 %16 to i1,                        !dbg [[LINE51_G11R3:!.*]]
+// CHECK-NEXT: %16 = load i8, ptr %cmpxchg.bool, align 1,             !dbg [[LINE51]]
+// CHECK-NEXT: %loadedv7 = icmp ne i8 %16, 0,                         !dbg [[LINE51_G11R3:!.*]]
 // CHECK-NEXT: %conv8 = zext i1 %loadedv7 to i32,                     !dbg [[LINE51_G11R2:!.*]]
 // CHECK-NEXT: store i32 %conv8, ptr %r5, align 4,                    !dbg [[LINE51_G11R1:!.*]]
 
@@ -80,8 +80,8 @@ void fun() {
 // CHECK: cmpxchg.continue12:
 // CHECK-NEXT: %storedv13 = zext i1 %21 to i8,                        !dbg [[LINE69_G14R2]]
 // CHECK-NEXT: store i8 %storedv13, ptr %cmpxchg.bool10, align 1,     !dbg [[LINE69_G14R1:!.*]]
-// CHECK-NEXT: %22 = load i8, ptr %cmpxchg.bool10, align 1,           !dbg [[LINE69_G13R4:!.*]]
-// CHECK-NEXT: %loadedv14 = trunc i8 %22 to i1,                       !dbg [[LINE69_G13R3:!.*]]
+// CHECK-NEXT: %22 = load i8, ptr %cmpxchg.bool10, align 1,           !dbg [[LINE69]]
+// CHECK-NEXT: %loadedv14 = icmp ne i8 %22, 0,                        !dbg [[LINE69_G13R3:!.*]]
 // CHECK-NEXT: %conv15 = zext i1 %loadedv14 to i32,                   !dbg [[LINE69_G13R2:!.*]]
 // CHECK-NEXT: store i32 %conv15, ptr %r6, align 4,                   !dbg [[LINE69_G13R1:!.*]]
 
@@ -99,8 +99,8 @@ void fun() {
 // CHECK: cmpxchg.continue19:
 // CHECK-NEXT: %storedv20 = zext i1 %27 to i8,                        !dbg [[LINE88_G16R2]]
 // CHECK-NEXT: store i8 %storedv20, ptr %cmpxchg.bool17, align 1,     !dbg [[LINE88_G16R1]]
-// CHECK-NEXT: %28 = load i8, ptr %cmpxchg.bool17, align 1,           !dbg [[LINE88_G15R4:!.*]]
-// CHECK-NEXT: %loadedv21 = trunc i8 %28 to i1,                       !dbg [[LINE88_G15R3:!.*]]
+// CHECK-NEXT: %28 = load i8, ptr %cmpxchg.bool17, align 1,           !dbg [[LINE88]]
+// CHECK-NEXT: %loadedv21 = icmp ne i8 %28, 0,                        !dbg [[LINE88_G15R3:!.*]]
 // CHECK-NEXT: %conv22 = zext i1 %loadedv21 to i32,                   !dbg [[LINE88_G15R2:!.*]]
 // CHECK-NEXT: store i32 %conv22, ptr %r7, align 4,                   !dbg [[LINE88_G15R1:!.*]]
 
@@ -125,7 +125,6 @@ void fun() {
 // CHECK: [[LINE30_G7R3]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 7, atomRank: 3)
 // CHECK: [[LINE30_G7R2]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 7, atomRank: 2)
 // CHECK: [[LINE30_G7R1]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 7, atomRank: 1)
-// CHECK: [[LINE30_G6R4]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 6, atomRank: 4)
 // CHECK: [[LINE30_G6R3]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 6, atomRank: 3)
 // CHECK: [[LINE30_G6R2]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 6, atomRank: 2)
 // CHECK: [[LINE30_G6R1]] = !DILocation(line: 30, scope: ![[#]], atomGroup: 6, atomRank: 1)
@@ -142,7 +141,6 @@ void fun() {
 // CHECK: [[LINE51_G12R2]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 12, atomRank: 2)
 // CHECK: [[LINE51_G12R3]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 12, atomRank: 3)
 // CHECK: [[LINE51_G12R1]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 12, atomRank: 1)
-// CHECK: [[LINE51_G11R4]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 11, atomRank: 4)
 // CHECK: [[LINE51_G11R3]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 11, atomRank: 3)
 // CHECK: [[LINE51_G11R2]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 11, atomRank: 2)
 // CHECK: [[LINE51_G11R1]] = !DILocation(line: 51, scope: ![[#]], atomGroup: 11, atomRank: 1)
@@ -151,7 +149,6 @@ void fun() {
 // CHECK: [[LINE69]]       = !DILocation(line: 69, scope: ![[#]])
 // CHECK: [[LINE69_G14R2]] = !DILocation(line: 69, scope: ![[#]], atomGroup: 14, atomRank: 2)
 // CHECK: [[LINE69_G14R3]] = !DILocation(line: 69, scope: ![[#]], atomGroup: 14, atomRank: 3)
-// CHECK: [[LINE69_G13R4]] = !DILocation(line: 69, scope: ![[#]], atomGroup: 13, atomRank: 4)
 // CHECK: [[LINE69_G13R3]] = !DILocation(line: 69, scope: ![[#]], atomGroup: 13, atomRank: 3)
 // CHECK: [[LINE69_G13R2]] = !DILocation(line: 69, scope: ![[#]], atomGroup: 13, atomRank: 2)
 // CHECK: [[LINE69_G13R1]] = !DILocation(line: 69, scope: ![[#]], atomGroup: 13, atomRank: 1)
@@ -160,7 +157,6 @@ void fun() {
 // CHECK: [[LINE88]]       = !DILocation(line: 88, scope: ![[#]])
 // CHECK: [[LINE88_G16R2]] = !DILocation(line: 88, scope: ![[#]], atomGroup: 16, atomRank: 2)
 // CHECK: [[LINE88_G16R3]] = !DILocation(line: 88, scope: ![[#]], atomGroup: 16, atomRank: 3)
-// CHECK: [[LINE88_G15R4]] = !DILocation(line: 88, scope: ![[#]], atomGroup: 15, atomRank: 4)
 // CHECK: [[LINE88_G15R3]] = !DILocation(line: 88, scope: ![[#]], atomGroup: 15, atomRank: 3)
 // CHECK: [[LINE88_G15R2]] = !DILocation(line: 88, scope: ![[#]], atomGroup: 15, atomRank: 2)
 // CHECK: [[LINE88_G15R1]] = !DILocation(line: 88, scope: ![[#]], atomGroup: 15, atomRank: 1)

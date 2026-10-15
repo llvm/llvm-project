@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -hlsl-entry ok -ast-dump -o - %s | FileCheck %s
 
 
 typedef float float2x1 __attribute__((matrix_type(2,1)));
@@ -8,11 +8,12 @@ typedef float float4x4 __attribute__((matrix_type(4,4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 
+[shader("compute")]
 [numthreads(1,1,1)]
 void ok() {
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} A 'float2x3':'matrix<float, 2, 3>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>' functional cast to float2x3 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -29,14 +30,14 @@ void ok() {
 
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} B 'float2x1':'matrix<float, 2, 1>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>' functional cast to float2x1 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>' implicit
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' 1.000000e+00
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' 2.000000e+00
   float2x1 B = float2x1(1.0,2.0);
 
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} C 'float2x1':'matrix<float, 2, 1>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>' functional cast to float2x1 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>' implicit
 // CHECK-NEXT: UnaryOperator 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' prefix '-'
 // CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' 1.000000e+00
 // CHECK-NEXT: UnaryOperator 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' prefix '-'
@@ -46,12 +47,12 @@ void ok() {
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} D 'float2x3':'matrix<float, 2, 3>' cinit
 // CHECK-NEXT: ExprWithCleanups 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>'
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>' functional cast to float2x3 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' xvalue
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -61,7 +62,7 @@ void ok() {
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' xvalue
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -80,12 +81,12 @@ void ok() {
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} E 'float2x3':'matrix<float, 2, 3>' cinit
 // CHECK-NEXT: ExprWithCleanups 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>'
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>' functional cast to float2x3 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x3':'matrix<float, 2, 3>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' xvalue
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -95,7 +96,7 @@ void ok() {
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' xvalue
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 1
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -105,7 +106,7 @@ void ok() {
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' xvalue
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 3
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -115,7 +116,7 @@ void ok() {
 // CHECK-NEXT: ArraySubscriptExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' xvalue
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' functional cast to float2 <NoOp>
-// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>'
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2':'vector<float, 2>' implicit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'int' 3
 // CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' <IntegralToFloating>
@@ -335,6 +336,7 @@ float2x3 G = float2x3(float2x2(1,2,3,4), 5, 6);
 
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} N 'float4x4':'matrix<float, 4, 4>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float4x4':'matrix<float, 4, 4>' functional cast to float4x4 <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'sF' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'sF' lvalue Var 0x{{[0-9a-fA-F]+}} 'f' 'sF'
 struct sF {
     float f[16];
@@ -385,6 +387,7 @@ float2x2 GettingStrange2 = float2x2(s3, s3);
 
 // CHECK: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} GettingStrange3 'float2x2':'matrix<float, 2, 2>' cinit
 // CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x2':'matrix<float, 2, 2>' functional cast to float2x2 <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'S4' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'S4' lvalue Var 0x{{[0-9a-fA-F]+}} 's4' 'S4'
 struct S4 { float4 f;};
 S4 s4;
@@ -392,3 +395,20 @@ float2x2 GettingStrange3 = float2x2(s4);
 
 }
 
+// CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+:[0-9]+}}, line:{{[0-9]+:[0-9]+}}> line:{{[0-9]+:[0-9]+}} used TplFn 'void ()' implicit_instantiation
+// CHECK-NEXT: TemplateArgument type 'int'
+// CHECK-NEXT: BuiltinType 0x{{[0-9a-fA-F]+}} 'int'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> col:{{[0-9]+}} X 'float2x1':'matrix<float, 2, 1>' cinit
+// CHECK-NEXT: CXXFunctionalCastExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>' functional cast to float2x1 <NoOp>
+// CHECK-NEXT: InitListExpr 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}, col:{{[0-9]+}}> 'float2x1':'matrix<float, 2, 1>' implicit
+// CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral 0x{{[0-9a-fA-F]+}} <col:{{[0-9]+}}> 'float' 2.000000e+00
+template <typename T>
+void TplFn() {
+  float2x1 X = float2x1(1.0,2.0);
+}
+void Fn() {
+  TplFn<int>();
+}

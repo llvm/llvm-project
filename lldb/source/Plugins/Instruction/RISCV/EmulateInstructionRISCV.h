@@ -15,7 +15,7 @@
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "lldb/Utility/Status.h"
+#include "llvm/Support/Error.h"
 #include <optional>
 
 namespace lldb_private {
@@ -27,7 +27,7 @@ public:
       std::unique_ptr<EmulateInstruction> emulator)
       : SingleStepBreakpointLocationsPredictor{std::move(emulator)} {}
 
-  BreakpointLocations GetBreakpointLocations(Status &status) override;
+  llvm::Expected<BreakpointLocations> GetBreakpointLocations() override;
 
   llvm::Expected<unsigned> GetBreakpointSize(lldb::addr_t bp_addr) override;
 
@@ -42,7 +42,7 @@ private:
            std::holds_alternative<SC_D>(inst);
   }
 
-  BreakpointLocations HandleAtomicSequence(lldb::addr_t pc, Status &error);
+  llvm::Expected<BreakpointLocations> HandleAtomicSequence(lldb::addr_t pc);
 
   static constexpr size_t s_max_atomic_sequence_length = 64;
 };

@@ -409,9 +409,48 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
 ConstantRange ConstantRange::makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
                                                    const APInt &Other,
                                                    unsigned NoWrapKind) {
-  // makeGuaranteedNoWrapRegion() is exact for single-element ranges, as
-  // "for all" and "for any" coincide in this case.
-  return makeGuaranteedNoWrapRegion(BinOp, ConstantRange(Other), NoWrapKind);
+  using OBO = OverflowingBinaryOperator;
+
+  assert(
+      (NoWrapKind == OBO::NoSignedWrap || NoWrapKind == OBO::NoUnsignedWrap) &&
+      "NoWrapKind invalid!");
+
+  bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
+  unsigned BitWidth = Other.getBitWidth();
+  switch (BinOp) {
+  case Instruction::Add: {
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth), -Other);
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal - Other, SignedMinVal)
+                              : getNonEmpty(SignedMinVal, SignedMinVal - Other);
+  }
+
+  case Instruction::Sub: {
+    if (Unsigned)
+      return getNonEmpty(Other, APInt::getZero(BitWidth));
+    APInt SignedMinVal = APInt::getSignedMinValue(BitWidth);
+    return Other.isNegative() ? getNonEmpty(SignedMinVal, SignedMinVal + Other)
+                              : getNonEmpty(SignedMinVal + Other, SignedMinVal);
+  }
+
+  case Instruction::Mul:
+    return Unsigned ? makeExactMulNUWRegion(Other)
+                    : makeExactMulNSWRegion(Other);
+
+  case Instruction::Shl:
+    // Shift amounts >= BitWidth always produce poison.
+    if (Other.uge(BitWidth))
+      return getFull(BitWidth);
+    if (Unsigned)
+      return getNonEmpty(APInt::getZero(BitWidth),
+                         APInt::getMaxValue(BitWidth).lshr(Other) + 1);
+    return getNonEmpty(APInt::getSignedMinValue(BitWidth).ashr(Other),
+                       APInt::getSignedMaxValue(BitWidth).ashr(Other) + 1);
+
+  default:
+    llvm_unreachable("Unsupported binary op");
+  }
 }
 
 ConstantRange ConstantRange::makeMaskNotEqualRange(const APInt &Mask,
@@ -1034,7 +1073,7 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
   case Instruction::Sub:
     return subWithNoWrap(Other, NoWrapKind);
   case Instruction::Mul:
-    return multiplyWithNoWrap(Other, NoWrapKind);
+    return multiply(Other, NoWrapKind);
   case Instruction::Shl:
     return shlWithNoWrap(Other, NoWrapKind);
   default:
@@ -1042,6 +1081,17 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
     // Conservatively fallback to plain binop handling.
     return binaryOp(BinOp, Other);
   }
+}
+
+ConstantRange ConstantRange::binaryOp(const BinaryOperator &BO,
+                                      const ConstantRange &Other) const {
+  if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(&BO))
+    return overflowingBinaryOp(BO.getOpcode(), Other, OBO->getNoWrapKind());
+
+  if (BO.getOpcode() == Instruction::Or)
+    return binaryOr(Other, cast<PossiblyDisjointInst>(BO).isDisjoint());
+
+  return binaryOp(BO.getOpcode(), Other);
 }
 
 bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
@@ -1206,8 +1256,8 @@ ConstantRange ConstantRange::subWithNoWrap(const ConstantRange &Other,
   return Result;
 }
 
-ConstantRange
-ConstantRange::multiply(const ConstantRange &Other) const {
+ConstantRange ConstantRange::multiply(const ConstantRange &Other,
+                                      unsigned NoWrapKind) const {
   // TODO: If either operand is a single element and the multiply is known to
   // be non-wrapping, round the result min and max value to the appropriate
   // multiple of that element. If wrapping is possible, at least adjust the
@@ -1237,20 +1287,33 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   // and the other signed, then return the smallest of these ranges.
 
   // Unsigned range first.
-  APInt this_min = getUnsignedMin().zext(getBitWidth() * 2);
-  APInt this_max = getUnsignedMax().zext(getBitWidth() * 2);
-  APInt Other_min = Other.getUnsignedMin().zext(getBitWidth() * 2);
-  APInt Other_max = Other.getUnsignedMax().zext(getBitWidth() * 2);
+  unsigned BW = getBitWidth();
+  ConstantRange UR = getEmpty();
+  if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap) {
+    bool MinOv;
+    APInt MinMul = getUnsignedMin().umul_ov(Other.getUnsignedMin(), MinOv);
+    if (MinOv)
+      return getEmpty();
 
-  ConstantRange Result_zext = ConstantRange(this_min * Other_min,
-                                            this_max * Other_max + 1);
-  ConstantRange UR = Result_zext.truncate(getBitWidth());
+    APInt MaxMul = getUnsignedMax().umul_sat(Other.getUnsignedMax());
+    UR = ConstantRange::getNonEmpty(MinMul, MaxMul + 1);
+  } else {
+    APInt this_min = getUnsignedMin().zext(BW * 2);
+    APInt this_max = getUnsignedMax().zext(BW * 2);
+    APInt Other_min = Other.getUnsignedMin().zext(BW * 2);
+    APInt Other_max = Other.getUnsignedMax().zext(BW * 2);
+
+    ConstantRange Result_zext =
+        ConstantRange(this_min * Other_min, this_max * Other_max + 1);
+    UR = Result_zext.truncate(BW);
+  }
 
   // If the unsigned range doesn't wrap, and isn't negative then it's a range
   // from one positive number to another which is as good as we can generate.
   // In this case, skip the extra work of generating signed ranges which aren't
   // going to be better than this range.
-  if (!UR.isUpperWrapped() &&
+  if (!(NoWrapKind & OverflowingBinaryOperator::NoSignedWrap) &&
+      !UR.isUpperWrapped() &&
       (UR.getUpper().isNonNegative() || UR.getUpper().isMinSignedValue()))
     return UR;
 
@@ -1260,36 +1323,23 @@ ConstantRange::multiply(const ConstantRange &Other) const {
   //   [-1,4) * [-2,3) = min(-1*-2, -1*2, 3*-2, 3*2) = -6.
   // Similarly for the upper bound, swapping min for max.
 
-  this_min = getSignedMin().sext(getBitWidth() * 2);
-  this_max = getSignedMax().sext(getBitWidth() * 2);
-  Other_min = Other.getSignedMin().sext(getBitWidth() * 2);
-  Other_max = Other.getSignedMax().sext(getBitWidth() * 2);
+  // FIXME: Avoid wide multiplications if nsw.
+  APInt this_min = getSignedMin().sext(BW * 2);
+  APInt this_max = getSignedMax().sext(BW * 2);
+  APInt Other_min = Other.getSignedMin().sext(BW * 2);
+  APInt Other_max = Other.getSignedMax().sext(BW * 2);
 
   auto L = {this_min * Other_min, this_min * Other_max,
             this_max * Other_min, this_max * Other_max};
   auto Compare = [](const APInt &A, const APInt &B) { return A.slt(B); };
   ConstantRange Result_sext(std::min(L, Compare), std::max(L, Compare) + 1);
-  ConstantRange SR = Result_sext.truncate(getBitWidth());
-
-  return UR.isSizeStrictlySmallerThan(SR) ? UR : SR;
-}
-
-ConstantRange
-ConstantRange::multiplyWithNoWrap(const ConstantRange &Other,
-                                  unsigned NoWrapKind,
-                                  PreferredRangeType RangeType) const {
-  if (isEmptySet() || Other.isEmptySet())
-    return getEmpty();
-  if (isFullSet() && Other.isFullSet())
-    return getFull();
-
-  ConstantRange Result = multiply(Other);
-
-  if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap)
-    Result = Result.intersectWith(smul_sat(Other), RangeType);
-
-  if (NoWrapKind & OverflowingBinaryOperator::NoUnsignedWrap)
-    Result = Result.intersectWith(umul_sat(Other), RangeType);
+  if (NoWrapKind & OverflowingBinaryOperator::NoSignedWrap) {
+    Result_sext = Result_sext.intersectWith(
+        ConstantRange(APInt::getSignedMinValue(BW).sext(BW * 2),
+                      APInt::getSignedMaxValue(BW).sext(BW * 2) + 1));
+  }
+  ConstantRange SR = Result_sext.truncate(BW);
+  ConstantRange Result = UR.isSizeStrictlySmallerThan(SR) ? UR : SR;
 
   // mul nsw nuw X, Y s>= 0 if X s> 1 or Y s> 1
   if ((NoWrapKind == (OverflowingBinaryOperator::NoSignedWrap |
@@ -1298,8 +1348,7 @@ ConstantRange::multiplyWithNoWrap(const ConstantRange &Other,
     if (getSignedMin().sgt(1) || Other.getSignedMin().sgt(1))
       Result = Result.intersectWith(
           getNonEmpty(APInt::getZero(getBitWidth()),
-                      APInt::getSignedMinValue(getBitWidth())),
-          RangeType);
+                      APInt::getSignedMinValue(getBitWidth())));
   }
 
   return Result;
@@ -1629,7 +1678,8 @@ ConstantRange ConstantRange::binaryAnd(const ConstantRange &Other) const {
   return KnownBitsRange.intersectWith(UMinUMaxRange);
 }
 
-ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
+ConstantRange ConstantRange::binaryOr(const ConstantRange &Other,
+                                      bool IsDisjoint) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
@@ -1646,7 +1696,16 @@ ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
   // Upper wrapped range.
   ConstantRange UMaxUMinRange = getNonEmpty(
       APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin()), UpperBound);
-  return KnownBitsRange.intersectWith(UMaxUMinRange);
+  ConstantRange Result = KnownBitsRange.intersectWith(UMaxUMinRange);
+
+  if (IsDisjoint) {
+    // Treat 'or disjoint' as both 'add nuw nsw' and binary or, picking the best
+    // from both.
+    using OBO = OverflowingBinaryOperator;
+    Result = addWithNoWrap(Other, OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+                 .intersectWith(Result);
+  }
+  return Result;
 }
 
 ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
@@ -2172,6 +2231,16 @@ ConstantRange ConstantRange::ctpop() const {
   // Handle [0, Upper)
   ConstantRange CR2 = getUnsignedPopCountRange(Zero, Upper);
   return CR1.unionWith(CR2);
+}
+
+ConstantRange ConstantRange::sqrtFloor() const {
+  if (isEmptySet())
+    return getEmpty();
+
+  // sqrtFloor is monotonic, so the output range is composed by the result of
+  // sqrtFloor of the two extremes.
+  return getNonEmpty(getUnsignedMin().sqrtFloor(),
+                     getUnsignedMax().sqrtFloor() + 1);
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(

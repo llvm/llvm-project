@@ -22,7 +22,7 @@
 
 %struct.float4 = type { float }
 
-; CHECK: error: couldn't allocate output register for constraint '{st}'
+; CHECK: error: could not allocate output register for constraint '{st}'
 define dso_local i32 @foo() {
 entry:
   %retval = alloca i32, align 4

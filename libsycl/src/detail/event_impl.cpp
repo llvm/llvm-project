@@ -6,12 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
+#include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
+#include <detail/queue_impl.hpp>
+
+#include <tuple>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
+
+EventImpl::EventImpl(PrivateTag)
+    : MPlatform(detail::getSyclObjImpl(device(default_selector_v))
+                    ->getPlatformImpl()) {}
 
 EventImpl::~EventImpl() {
   if (MOffloadEvent)
@@ -30,6 +39,11 @@ void EventImpl::wait() {
     return;
 
   callAndThrow(olSyncEvent, MOffloadEvent);
+}
+
+void EventImpl::waitAndThrow() {
+  wait();
+  flushAsyncExceptions();
 }
 
 } // namespace detail

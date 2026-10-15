@@ -131,5 +131,23 @@ void link_COFF(std::unique_ptr<LinkGraph> G,
   }
 }
 
+Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
+  if (ImageBase)
+    return *ImageBase;
+
+  auto IBN = G.intern(ImageBaseName);
+  ImageBase = G.findExternalSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+  ImageBase = G.findAbsoluteSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+  ImageBase = G.findDefinedSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+
+  return nullptr;
+}
+
 } // end namespace jitlink
 } // end namespace llvm

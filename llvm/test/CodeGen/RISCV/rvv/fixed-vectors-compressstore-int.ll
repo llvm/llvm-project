@@ -6,8 +6,8 @@ define void @compressstore_v1i8(ptr %base, <1 x i8> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -19,8 +19,8 @@ define void @compressstore_v2i8(ptr %base, <2 x i8> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -32,8 +32,8 @@ define void @compressstore_v4i8(ptr %base, <4 x i8> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -45,8 +45,8 @@ define void @compressstore_v8i8(ptr %base, <8 x i8> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -61,8 +61,8 @@ define void @compressstore_v7i8(ptr %base, <7 x i8> %v, <7 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
-; CHECK-NEXT:    vcompress.vm v10, v8, v9
 ; CHECK-NEXT:    vcpop.m a1, v9
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v10, (a0)
 ; CHECK-NEXT:    ret
@@ -74,8 +74,8 @@ define void @compressstore_v1i16(ptr %base, <1 x i16> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -87,8 +87,8 @@ define void @compressstore_v2i16(ptr %base, <2 x i16> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -100,8 +100,8 @@ define void @compressstore_v4i16(ptr %base, <4 x i16> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -113,8 +113,8 @@ define void @compressstore_v8i16(ptr %base, <8 x i16> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -126,8 +126,8 @@ define void @compressstore_v1i32(ptr %base, <1 x i32> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -139,8 +139,8 @@ define void @compressstore_v2i32(ptr %base, <2 x i32> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -152,8 +152,8 @@ define void @compressstore_v4i32(ptr %base, <4 x i32> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -178,8 +178,8 @@ define void @compressstore_v1i64(ptr %base, <1 x i64> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v9, (a0)
 ; CHECK-NEXT:    ret
@@ -191,8 +191,8 @@ define void @compressstore_v2i64(ptr %base, <2 x i64> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    vcompress.vm v9, v8, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v9, (a0)
 ; CHECK-NEXT:    ret

@@ -16,8 +16,8 @@ namespace llvm {
 class Function;
 
 struct CorrelatedValuePropagationPass
-    : PassInfoMixin<CorrelatedValuePropagationPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+    : OptionalPassInfoMixin<CorrelatedValuePropagationPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

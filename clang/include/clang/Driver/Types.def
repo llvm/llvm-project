@@ -73,6 +73,10 @@ TYPE("objective-c++-header-cpp-output", PP_ObjCXXHeader, INVALID,"mii",   phases
 TYPE("objective-c++-header",     ObjCXXHeader, PP_ObjCXXHeader, "h",      phases::Preprocess, phases::Precompile)
 TYPE("c++-module",               CXXModule,    PP_CXXModule,    "cppm",   phases::Preprocess, phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("c++-module-cpp-output",    PP_CXXModule, INVALID,         "iim",    phases::Precompile, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+// Used only in -fmodules-driver for the implicitly generated Standard library
+// module inputs.
+TYPE("c++-std-module",           CXXStdModule, PP_CXXStdModule, "cppm",   phases::Preprocess, phases::Precompile)
+TYPE("c++-std-module-output",    PP_CXXStdModule, INVALID,      "iim",    phases::Precompile)
 
 // Other languages.
 TYPE("ada",                      Ada,          INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
@@ -100,6 +104,7 @@ TYPE("lto-ir",                   LTO_IR,       INVALID,         "s",      phases
 TYPE("lto-bc",                   LTO_BC,       INVALID,         "o",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 TYPE("cir",                      CIR,          INVALID,         "cir",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("cir-bc",                   CIRBC,        INVALID,         "cirbc",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 // Misc.
 TYPE("ast",                      AST,          INVALID,         "ast",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("ifs",                      IFS,          INVALID,         "ifs",    phases::IfsMerge)
@@ -118,6 +123,7 @@ TYPE("dSYM",                     dSYM,         INVALID,         "dSYM",   phases
 TYPE("dependencies",             Dependencies, INVALID,         "d",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("cuda-fatbin",              CUDA_FATBIN,  INVALID,         "fatbin", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("hip-fatbin",               HIP_FATBIN,   INVALID,         "hipfb",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("sycl-fatbin",              SYCL_FATBIN,  INVALID,         "syclfb", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("api-information",          API_INFO,     INVALID,         "json",   phases::Precompile)
 TYPE("dx-container",             DX_CONTAINER, INVALID,         "dxo",    phases::Compile, phases::Backend)
 TYPE("none",                     Nothing,      INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)

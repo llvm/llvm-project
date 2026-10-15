@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/sys_mman_macros.h"
 #include "hdr/time_macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"

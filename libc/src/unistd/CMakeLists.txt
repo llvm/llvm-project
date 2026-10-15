@@ -1,6 +1,6 @@
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
-                 "Skip unistd targets.")
+    "Skip unistd targets.")
   return()
 endif()
 
@@ -17,6 +17,13 @@ add_entrypoint_object(
   DEPENDS
     libc.include.unistd
     libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  alarm
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.alarm
 )
 
 add_entrypoint_object(
@@ -38,6 +45,29 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.chown
+)
+
+add_entrypoint_object(
+  chroot
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.chroot
+)
+
+add_entrypoint_object(
+  confstr
+  SRCS
+    confstr.cpp
+  HDRS
+    confstr.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.unistd_macros
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -90,6 +120,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchownat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchownat
+)
+
+add_entrypoint_object(
+  fdatasync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fdatasync
+)
+
+add_entrypoint_object(
   fork
   ALIAS
   DEPENDS
@@ -101,6 +145,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
+  execl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execl
+)
+
+add_entrypoint_object(
+  execle
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execle
 )
 
 add_entrypoint_object(
@@ -139,6 +197,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getegid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getegid
+)
+
+add_entrypoint_object(
   gethostname
   ALIAS
   DEPENDS
@@ -150,6 +215,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getpagesize
+)
+
+add_entrypoint_object(
+  getpgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpgid
+)
+
+add_entrypoint_object(
+  getpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpgrp
 )
 
 add_entrypoint_object(
@@ -202,6 +281,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lchown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lchown
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS
@@ -216,10 +302,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lockf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lockf
+)
+
+add_entrypoint_object(
   lseek
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.lseek
+)
+
+add_entrypoint_object(
+  nice
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.nice
 )
 
 add_entrypoint_object(
@@ -229,6 +329,12 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.pathconf
 )
 
+add_entrypoint_object(
+  pause
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pause
+)
 
 add_entrypoint_object(
   pipe
@@ -287,10 +393,52 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setgid
+)
+
+add_entrypoint_object(
+  setpgid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setpgid
+)
+
+add_entrypoint_object(
+  setregid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setregid
+)
+
+add_entrypoint_object(
+  setreuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setreuid
+)
+
+add_entrypoint_object(
   setsid
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.setsid
+)
+
+add_entrypoint_object(
+  setuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setuid
+)
+
+add_entrypoint_object(
+  sleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sleep
 )
 
 add_entrypoint_object(
@@ -315,10 +463,38 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sync
+)
+
+add_entrypoint_object(
+  syncfs
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.syncfs
+)
+
+add_entrypoint_object(
   sysconf
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sysconf
+)
+
+add_entrypoint_object(
+  tcgetpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcgetpgrp
+)
+
+add_entrypoint_object(
+  tcsetpgrp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcsetpgrp
 )
 
 add_entrypoint_object(
@@ -343,6 +519,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  usleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.usleep
+)
+
+add_entrypoint_object(
   write
   ALIAS
   DEPENDS
@@ -355,6 +538,9 @@ add_entrypoint_object(
     environ.cpp
   HDRS
     environ.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -365,6 +551,10 @@ add_entrypoint_object(
     getopt.h
   DEPENDS
     libc.include.unistd
+    libc.hdr.unistd_macros
+    libc.hdr.types.FILE
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file

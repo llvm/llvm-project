@@ -93,7 +93,7 @@ LIBC_INLINE float16 erfcf16(float16 x) {
   }
 
   if (LIBC_UNLIKELY(x_abs == 0))
-    return 1.0f16;
+    return fputil::cast<float16>(1.0f);
 
   // Asymptotic behavior: erfc(x) rounds to 0 or 2 for |x| >= 4.0.
   if (LIBC_UNLIKELY(x_abs >= 0x4400U)) { // |x| >= 4.0
@@ -105,9 +105,11 @@ LIBC_INLINE float16 erfcf16(float16 x) {
     }
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     if (fputil::fenv_is_round_up())
       return FPBits::min_subnormal().get_val();
-    return 0.0f16;
+#endif
+    return FPBits::zero().get_val();
   }
 
   // Polynomial approximation:

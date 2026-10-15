@@ -99,7 +99,18 @@ INSTANTIATE_TEST_SUITE_P(
                 MemoryRegionInfo(make_range(0x55a4512f7000, 0x55a451b68000),
                                  eLazyBoolYes, eLazyBoolYes, eLazyBoolNo,
                                  eLazyBoolNo, eLazyBoolYes,
-                                 ConstString("[heap]")),
+                                 ConstString("[heap]"))
+                    .SetIsStackMemory(eLazyBoolNo),
+            },
+            ""),
+        std::make_tuple(
+            "7ffcad8f7000-7ffcad918000 rw-p 00000000 00:00 0    [stack]",
+            MemoryRegionInfos{
+                MemoryRegionInfo(make_range(0x7ffcad8f7000, 0x7ffcad918000),
+                                 eLazyBoolYes, eLazyBoolYes, eLazyBoolNo,
+                                 eLazyBoolNo, eLazyBoolYes,
+                                 ConstString("[stack]"))
+                    .SetIsStackMemory(eLazyBoolYes),
             },
             ""),
         // Multiple entries
@@ -268,6 +279,46 @@ INSTANTIATE_TEST_SUITE_P(
                                              ConstString(nullptr))
                                 .SetIsShadowStack(eLazyBoolYes)
                                 .SetMemoryTagged(eLazyBoolNo),
+                        },
+                        ""),
+        // 0 is the default protection key.
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "ProtectionKey:          0",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr))
+                                .SetProtectionKey(0),
+                        },
+                        ""),
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "ProtectionKey:          99",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr))
+                                .SetProtectionKey(99),
+                        },
+                        ""),
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "ProtectionKey:      not_an_integer",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr)),
+                        },
+                        ""),
+        // Should be unsigned.
+        std::make_tuple("0-0 rw-p 00000000 00:00 0\n"
+                        "ProtectionKey:      -24",
+                        MemoryRegionInfos{
+                            MemoryRegionInfo(make_range(0, 0), eLazyBoolYes,
+                                             eLazyBoolYes, eLazyBoolNo,
+                                             eLazyBoolNo, eLazyBoolYes,
+                                             ConstString(nullptr)),
                         },
                         "")));
 

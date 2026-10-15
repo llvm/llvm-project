@@ -25,8 +25,6 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    br i1 [[CMP27]], label [[FOR_BODY3_LR_PH_US_PREHEADER:%.*]], label [[FOR_END15:%.*]]
 ; CHECK:       for.body3.lr.ph.us.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[K:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US:%.*]]
 ; CHECK:       for.end.us:
 ; CHECK-NEXT:    [[ARRAYIDX9_US:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV33:%.*]]
@@ -52,19 +50,18 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    br i1 [[EXITCOND32]], label [[FOR_END_US:%.*]], label [[FOR_BODY3_US]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.body3.lr.ph.us:
 ; CHECK-NEXT:    [[INDVARS_IV33]] = phi i64 [ [[INDVARS_IV_NEXT34]], [[FOR_END_US]] ], [ 0, [[FOR_BODY3_LR_PH_US_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP1]], [[INDVARS_IV33]]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[INDVARS_IV33]] to i32
-; CHECK-NEXT:    [[ADD_US]] = add i32 [[TMP8]], [[K]]
+; CHECK-NEXT:    [[ADD_US]] = add i32 [[TMP8]], [[K:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX7_US]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV33]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], [[TMP0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[TMP9]], [[TMP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[ADD_US]], [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[TMP6]], [[ADD_US]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

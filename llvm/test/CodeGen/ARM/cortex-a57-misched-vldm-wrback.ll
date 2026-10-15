@@ -6,9 +6,9 @@
 @b = dso_local global double 0.0, align 4
 @c = dso_local global double 0.0, align 4
 
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; We need second, post-ra scheduling to have VLDM instruction combined from single-loads
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       VLDMDIA_UPD
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 6

@@ -5,15 +5,15 @@ define i32 @test(i32 %n) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[N]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw nsw <2 x i64> [[TMP3]], splat (i64 273837369)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[TMP7]], i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP8]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[RES1:%.*]] = add i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret i32 [[RES1]]
 ;

@@ -14,10 +14,11 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVBinaryReader.h"
-#include <unordered_set>
 
 namespace llvm {
 namespace logicalview {
@@ -30,7 +31,7 @@ class LVType;
 
 using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
 
-class LVDWARFReader final : public LVBinaryReader {
+class LLVM_ABI LVDWARFReader final : public LVBinaryReader {
   object::ObjectFile &Obj;
 
   // Indicates if ranges data are available; in the case of split DWARF any
@@ -62,14 +63,14 @@ class LVDWARFReader final : public LVBinaryReader {
   std::optional<LVAddress> TombstoneAddress;
 
   // Cross references (Elements).
-  using LVElementSet = std::unordered_set<LVElement *>;
+  using LVElementSet = SmallPtrSet<LVElement *, 0>;
   struct LVElementEntry {
     LVElement *Element;
     LVElementSet References;
     LVElementSet Types;
     LVElementEntry(LVElement *Element = nullptr) : Element(Element) {}
   };
-  using LVElementReference = std::unordered_map<LVOffset, LVElementEntry>;
+  using LVElementReference = DenseMap<LVOffset, LVElementEntry>;
   LVElementReference ElementTable;
 
   Error loadTargetInfo(const object::ObjectFile &Obj);

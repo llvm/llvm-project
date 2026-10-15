@@ -30,7 +30,7 @@
 ; RUN: echo foo8  >> %t.in
 ; RUN: echo foo9  >> %t.in
 ; line 23
-; RUN: echo word  >> %t.in
+; RUN: echo world >> %t.in
 ; RUN: echo foo0  >> %t.in
 ; RUN: echo foo1  >> %t.in
 ; RUN: echo foo2  >> %t.in
@@ -42,207 +42,290 @@
 ; RUN: echo foo8  >> %t.in
 ; RUN: echo foo9  >> %t.in
 ; line 34
-; RUN: echo end   >> %t.in
+; RUN: echo bye  >> %t.in
+; RUN: echo foo0 >> %t.in
+; RUN: echo foo1 >> %t.in
+; RUN: echo foo2 >> %t.in
+; RUN: echo foo3 >> %t.in
+; RUN: echo foo4 >> %t.in
+; RUN: echo foo5 >> %t.in
+; RUN: echo foo6 >> %t.in
+; RUN: echo foo7 >> %t.in
+; RUN: echo foo8 >> %t.in
+; RUN: echo foo9 >> %t.in
+; line 45
+; RUN: echo sleep  >> %t.in
+; RUN: echo foo0   >> %t.in
+; RUN: echo foo1   >> %t.in
+; RUN: echo foo2   >> %t.in
+; RUN: echo foo3   >> %t.in
+; RUN: echo foo4   >> %t.in
+; RUN: echo foo5   >> %t.in
+; RUN: echo foo6   >> %t.in
+; RUN: echo foo7   >> %t.in
+; RUN: echo foo8   >> %t.in
+; RUN: echo foo9   >> %t.in
+; RUN: echo end    >> %t.in
 
-; RUN: echo 'CHECK: start' >  %t.chk
-; RUN: echo 'CHECK: hello' >> %t.chk
-; RUN: echo 'CHECK: world' >> %t.chk
-; RUN: echo 'CHECK: end'   >> %t.chk
+; RUN: echo 'CHECK: start'                            >  %t.chk
+; RUN: echo 'CHECK: hello{{(.|[[:space:]])*}}world'   >> %t.chk
+; RUN: echo 'CHECK-NOT: bye{{(.|[[:space:]])*}}sleep' >> %t.chk
+; RUN: echo 'CHECK: end'                              >> %t.chk
 
 ;--------------------------------------------------
 ; Directives for checking the dump.
 ;--------------------------------------------------
 
-;      ALL: <<<<<<
-; ALL-NEXT:            1: start 
-; ALL-NEXT: check:1       ^~~~~
-; ALL-NEXT:            2: foo0 
-; ALL-NEXT:            3: foo1 
-; ALL-NEXT:            4: foo2 
-; ALL-NEXT:            5: foo3 
-; ALL-NEXT:            6: foo4 
-; ALL-NEXT:            7: foo5 
-; ALL-NEXT:            8: foo6 
-; ALL-NEXT:            9: foo7 
-; ALL-NEXT:           10: foo8 
-; ALL-NEXT:           11: foo9 
-; ALL-NEXT:           12: hello 
-; ALL-NEXT: check:2       ^~~~~
-; ALL-NEXT: check:3'0          X error: no match found
-; ALL-NEXT:           13: foo0 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           14: foo1 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           15: foo2 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           16: foo3 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           17: foo4 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           18: foo5 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           19: foo6 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           20: foo7 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           21: foo8 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           22: foo9 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           23: word 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT: check:3'1     ?     possible intended match
-; ALL-NEXT:           24: foo0 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           25: foo1 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           26: foo2 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           27: foo3 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           28: foo4 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           29: foo5 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           30: foo6 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           31: foo7 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           32: foo8 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           33: foo9 
-; ALL-NEXT: check:3'0     ~~~~~
-; ALL-NEXT:           34: end 
-; ALL-NEXT: check:3'0     ~~~~
-; ALL-NEXT: >>>>>>
+;      ALL:<<<<<<
+; ALL-NEXT:         1: start 
+; ALL-NEXT:check:1     ^~~~~
+; ALL-NEXT:         2: foo0 
+; ALL-NEXT:         3: foo1 
+; ALL-NEXT:         4: foo2 
+; ALL-NEXT:         5: foo3 
+; ALL-NEXT:         6: foo4 
+; ALL-NEXT:         7: foo5 
+; ALL-NEXT:         8: foo6 
+; ALL-NEXT:         9: foo7 
+; ALL-NEXT:        10: foo8 
+; ALL-NEXT:        11: foo9 
+; ALL-NEXT:        12: hello 
+; ALL-NEXT:check:2     ^~~~~~
+; ALL-NEXT:        13: foo0 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        14: foo1 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        15: foo2 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        16: foo3 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        17: foo4 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        18: foo5 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        19: foo6 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        20: foo7 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        21: foo8 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        22: foo9 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:        23: world 
+; ALL-NEXT:check:2     ~~~~~
+; ALL-NEXT:not:3'0         {   search range start (exclusive)
+; ALL-NEXT:        24: foo0 
+; ALL-NEXT:        25: foo1 
+; ALL-NEXT:        26: foo2 
+; ALL-NEXT:        27: foo3 
+; ALL-NEXT:        28: foo4 
+; ALL-NEXT:        29: foo5 
+; ALL-NEXT:        30: foo6 
+; ALL-NEXT:        31: foo7 
+; ALL-NEXT:        32: foo8 
+; ALL-NEXT:        33: foo9 
+; ALL-NEXT:        34: bye 
+; ALL-NEXT:not:3'1     !~~~  error: no match expected
+; ALL-NEXT:        35: foo0 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        36: foo1 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        37: foo2 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        38: foo3 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        39: foo4 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        40: foo5 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        41: foo6 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        42: foo7 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        43: foo8 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        44: foo9 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        45: sleep 
+; ALL-NEXT:not:3'1     ~~~~~
+; ALL-NEXT:        46: foo0 
+; ALL-NEXT:        47: foo1 
+; ALL-NEXT:        48: foo2 
+; ALL-NEXT:        49: foo3 
+; ALL-NEXT:        50: foo4 
+; ALL-NEXT:        51: foo5 
+; ALL-NEXT:        52: foo6 
+; ALL-NEXT:        53: foo7 
+; ALL-NEXT:        54: foo8 
+; ALL-NEXT:        55: foo9 
+; ALL-NEXT:not:3'2          } search range end (exclusive)
+; ALL-NEXT:        56: end 
+; ALL-NEXT:check:4     ^~~
+; ALL-NEXT:>>>>>>
 
-;      ANNOTATION-FULL: <<<<<<
-; ANNOTATION-FULL-NEXT:            1: start 
-; ANNOTATION-FULL-NEXT: check:1       ^~~~~
-; ANNOTATION-FULL-NEXT:            2: foo0 
-; ANNOTATION-FULL-NEXT:            3: foo1 
-; ANNOTATION-FULL-NEXT:            .
-; ANNOTATION-FULL-NEXT:            .
-; ANNOTATION-FULL-NEXT:            .
-; ANNOTATION-FULL-NEXT:           10: foo8 
-; ANNOTATION-FULL-NEXT:           11: foo9 
-; ANNOTATION-FULL-NEXT:           12: hello 
-; ANNOTATION-FULL-NEXT: check:2       ^~~~~
-; ANNOTATION-FULL-NEXT: check:3'0          X error: no match found
-; ANNOTATION-FULL-NEXT:           13: foo0 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           14: foo1 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           15: foo2 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           16: foo3 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           17: foo4 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           18: foo5 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           19: foo6 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           20: foo7 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           21: foo8 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           22: foo9 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           23: word 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT: check:3'1     ?     possible intended match
-; ANNOTATION-FULL-NEXT:           24: foo0 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           25: foo1 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           26: foo2 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           27: foo3 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           28: foo4 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           29: foo5 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           30: foo6 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           31: foo7 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           32: foo8 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           33: foo9 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~~
-; ANNOTATION-FULL-NEXT:           34: end 
-; ANNOTATION-FULL-NEXT: check:3'0     ~~~~
-; ANNOTATION-FULL-NEXT: >>>>>>
+;      ANNOTATION-FULL:<<<<<<
+; ANNOTATION-FULL-NEXT:         1: start 
+; ANNOTATION-FULL-NEXT:check:1     ^~~~~
+; ANNOTATION-FULL-NEXT:         2: foo0 
+; ANNOTATION-FULL-NEXT:         3: foo1 
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:        10: foo8 
+; ANNOTATION-FULL-NEXT:        11: foo9 
+; ANNOTATION-FULL-NEXT:        12: hello 
+; ANNOTATION-FULL-NEXT:check:2     ^~~~~~
+; ANNOTATION-FULL-NEXT:        13: foo0 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        14: foo1 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        15: foo2 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        16: foo3 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        17: foo4 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        18: foo5 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        19: foo6 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        20: foo7 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        21: foo8 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        22: foo9 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:        23: world 
+; ANNOTATION-FULL-NEXT:check:2     ~~~~~
+; ANNOTATION-FULL-NEXT:not:3'0         {   search range start (exclusive)
+; ANNOTATION-FULL-NEXT:        24: foo0 
+; ANNOTATION-FULL-NEXT:        25: foo1 
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:        32: foo8 
+; ANNOTATION-FULL-NEXT:        33: foo9 
+; ANNOTATION-FULL-NEXT:        34: bye 
+; ANNOTATION-FULL-NEXT:not:3'1     !~~~  error: no match expected
+; ANNOTATION-FULL-NEXT:        35: foo0 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        36: foo1 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        37: foo2 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        38: foo3 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        39: foo4 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        40: foo5 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        41: foo6 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        42: foo7 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        43: foo8 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        44: foo9 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        45: sleep 
+; ANNOTATION-FULL-NEXT:not:3'1     ~~~~~
+; ANNOTATION-FULL-NEXT:        46: foo0 
+; ANNOTATION-FULL-NEXT:        47: foo1 
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:         .
+; ANNOTATION-FULL-NEXT:        53: foo7 
+; ANNOTATION-FULL-NEXT:        54: foo8 
+; ANNOTATION-FULL-NEXT:        55: foo9 
+; ANNOTATION-FULL-NEXT:not:3'2          } search range end (exclusive)
+; ANNOTATION-FULL-NEXT:        56: end 
+; ANNOTATION-FULL-NEXT:check:4     ^~~
+; ANNOTATION-FULL-NEXT:>>>>>>
 
-;      ANNOTATION: <<<<<<
-; ANNOTATION-NEXT:            1: start 
-; ANNOTATION-NEXT: check:1       ^~~~~
-; ANNOTATION-NEXT:            2: foo0 
-; ANNOTATION-NEXT:            3: foo1 
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:           10: foo8 
-; ANNOTATION-NEXT:           11: foo9 
-; ANNOTATION-NEXT:           12: hello 
-; ANNOTATION-NEXT: check:2       ^~~~~
-; ANNOTATION-NEXT: check:3'0          X error: no match found
-; ANNOTATION-NEXT:           13: foo0 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT:           14: foo1 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:           21: foo8 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT:           22: foo9 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT:           23: word 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT: check:3'1     ?     possible intended match
-; ANNOTATION-NEXT:           24: foo0 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT:           25: foo1 
-; ANNOTATION-NEXT: check:3'0     ~~~~~
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT:            .
-; ANNOTATION-NEXT: >>>>>>
+;      ANNOTATION:<<<<<<
+; ANNOTATION-NEXT:         1: start 
+; ANNOTATION-NEXT:check:1     ^~~~~
+; ANNOTATION-NEXT:         2: foo0 
+; ANNOTATION-NEXT:         3: foo1 
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:        10: foo8 
+; ANNOTATION-NEXT:        11: foo9 
+; ANNOTATION-NEXT:        12: hello 
+; ANNOTATION-NEXT:check:2     ^~~~~~
+; ANNOTATION-NEXT:        13: foo0 
+; ANNOTATION-NEXT:check:2     ~~~~~
+; ANNOTATION-NEXT:        14: foo1 
+; ANNOTATION-NEXT:check:2     ~~~~~
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:        21: foo8 
+; ANNOTATION-NEXT:check:2     ~~~~~
+; ANNOTATION-NEXT:        22: foo9 
+; ANNOTATION-NEXT:check:2     ~~~~~
+; ANNOTATION-NEXT:        23: world 
+; ANNOTATION-NEXT:check:2     ~~~~~
+; ANNOTATION-NEXT:not:3'0         {   search range start (exclusive)
+; ANNOTATION-NEXT:        24: foo0 
+; ANNOTATION-NEXT:        25: foo1 
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:        32: foo8 
+; ANNOTATION-NEXT:        33: foo9 
+; ANNOTATION-NEXT:        34: bye 
+; ANNOTATION-NEXT:not:3'1     !~~~  error: no match expected
+; ANNOTATION-NEXT:        35: foo0 
+; ANNOTATION-NEXT:not:3'1     ~~~~~
+; ANNOTATION-NEXT:        36: foo1 
+; ANNOTATION-NEXT:not:3'1     ~~~~~
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:         .
+; ANNOTATION-NEXT:        53: foo7 
+; ANNOTATION-NEXT:        54: foo8 
+; ANNOTATION-NEXT:        55: foo9 
+; ANNOTATION-NEXT:not:3'2          } search range end (exclusive)
+; ANNOTATION-NEXT:        56: end 
+; ANNOTATION-NEXT:check:4     ^~~
+; ANNOTATION-NEXT:>>>>>>
 
-;      ERROR: <<<<<<
-; ERROR-NEXT:            .
-; ERROR-NEXT:            .
-; ERROR-NEXT:            .
-; ERROR-NEXT:           10: foo8 
-; ERROR-NEXT:           11: foo9 
-; ERROR-NEXT:           12: hello 
-; ERROR-NEXT: check:2       ^~~~~
-; ERROR-NEXT: check:3'0          X error: no match found
-; ERROR-NEXT:           13: foo0 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT:           14: foo1 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT:            .
-; ERROR-NEXT:            .
-; ERROR-NEXT:            .
-; ERROR-NEXT:           21: foo8 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT:           22: foo9 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT:           23: word 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT: check:3'1     ?     possible intended match
-; ERROR-NEXT:           24: foo0 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT:           25: foo1 
-; ERROR-NEXT: check:3'0     ~~~~~
-; ERROR-NEXT:            .
-; ERROR-NEXT:            .
-; ERROR-NEXT:            .
-; ERROR-NEXT: >>>>>>
+;      ERROR:<<<<<<
+; ERROR-NEXT:         .
+; ERROR-NEXT:         .
+; ERROR-NEXT:         .
+; ERROR-NEXT:        21: foo8 
+; ERROR-NEXT:check:2     ~~~~~
+; ERROR-NEXT:        22: foo9 
+; ERROR-NEXT:check:2     ~~~~~
+; ERROR-NEXT:        23: world 
+; ERROR-NEXT:check:2     ~~~~~
+; ERROR-NEXT:not:3'0         {   search range start (exclusive)
+; ERROR-NEXT:        24: foo0 
+; ERROR-NEXT:        25: foo1 
+; ERROR-NEXT:         .
+; ERROR-NEXT:         .
+; ERROR-NEXT:         .
+; ERROR-NEXT:        32: foo8 
+; ERROR-NEXT:        33: foo9 
+; ERROR-NEXT:        34: bye 
+; ERROR-NEXT:not:3'1     !~~~  error: no match expected
+; ERROR-NEXT:        35: foo0 
+; ERROR-NEXT:not:3'1     ~~~~~
+; ERROR-NEXT:        36: foo1 
+; ERROR-NEXT:not:3'1     ~~~~~
+; ERROR-NEXT:         .
+; ERROR-NEXT:         .
+; ERROR-NEXT:         .
+; ERROR-NEXT:        53: foo7 
+; ERROR-NEXT:        54: foo8 
+; ERROR-NEXT:        55: foo9 
+; ERROR-NEXT:not:3'2          } search range end (exclusive)
+; ERROR-NEXT:        56: end 
+; ERROR-NEXT:check:4     ^~~
+; ERROR-NEXT:>>>>>>
 
 ;--------------------------------------------------
 ; Check -dump-input-filter=<bad value>.
@@ -253,7 +336,7 @@
 ; RUN:               -dump-input-filter=foobar \
 ; RUN: | FileCheck %s -match-full-lines -check-prefix=BADVAL
 
-BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-filter option: Cannot find option named 'foobar'!
+BADVAL:{{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-filter option: Cannot find option named 'foobar'!
 
 ;--------------------------------------------------
 ; Check -dump-input-filter explicit values.
@@ -380,47 +463,123 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input-filter option: Cannot 
 ; RUN:           < %t.in 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=EMPTY
 
-;      EMPTY: <<<<<<
-; EMPTY-NEXT:          .
-; EMPTY-NEXT:          .
-; EMPTY-NEXT:          .
-; EMPTY-NEXT: >>>>>>
+;      EMPTY:<<<<<<
+; EMPTY-NEXT:         .
+; EMPTY-NEXT:         .
+; EMPTY-NEXT:         .
+; EMPTY-NEXT:>>>>>>
 
 ;--------------------------------------------------
 ; Check that other kinds of errors are included by -dump-input-filter=error.
 ;
-; "error: no match found" and "possible intended match" are checked above.
+; "error: no match expected" is checked above.
 ;--------------------------------------------------
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
-; error: no match expected.
+; error: no match found in search range.
+; possible intended match
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 
-; RUN: echo 'foo'            > %t.not-err.in
-; RUN: echo 'CHECK-NOT: foo' > %t.not-err.chk
+; RUN: echo 'start' > %t.chk-err.in
+; RUN: echo 'foo0'  >> %t.chk-err.in
+; RUN: echo 'foo1'  >> %t.chk-err.in
+; RUN: echo 'foo2'  >> %t.chk-err.in
+; RUN: echo 'foo3'  >> %t.chk-err.in
+; RUN: echo 'hello' >> %t.chk-err.in
+; RUN: echo 'foo0'  >> %t.chk-err.in
+; RUN: echo 'foo1'  >> %t.chk-err.in
+; RUN: echo 'foo2'  >> %t.chk-err.in
+; RUN: echo 'foo3'  >> %t.chk-err.in
+; RUN: echo 'end'   >> %t.chk-err.in
+
+; RUN: echo 'CHECK: jello' > %t.chk-err.chk
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input-context=0 -dump-input-filter=error \
-; RUN:               %t.not-err.chk < %t.not-err.in 2>&1 \
-; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOT-ERR
+; RUN:               %t.chk-err.chk < %t.chk-err.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=CHK-ERR
 
-;      NOT-ERR:        1: foo 
-; NOT-ERR-NEXT: not:1     !~~ error: no match expected
+;      CHK-ERR:<<<<<<
+; CHK-ERR-NEXT:           1: start 
+; CHK-ERR-NEXT:check:1'0    {        search range start (exclusive)
+; CHK-ERR-NEXT:check:1'1             error: no match found in search range
+; CHK-ERR-NEXT:           .
+; CHK-ERR-NEXT:           .
+; CHK-ERR-NEXT:           .
+; CHK-ERR-NEXT:           6: hello 
+; CHK-ERR-NEXT:check:1'2     ?       possible intended match
+; CHK-ERR-NEXT:           .
+; CHK-ERR-NEXT:           .
+; CHK-ERR-NEXT:           .
+; CHK-ERR-NEXT:          11: end 
+; CHK-ERR-NEXT:check:1'3         } search range end (exclusive)
+; CHK-ERR-NEXT:>>>>>>
 
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 ; error: match on wrong line.
 ;- - - - - - - - - - - - - - - - - - - - - - - - -
 
-; RUN: echo 'foo'             >  %t.next-err.in
-; RUN: echo 'foo'             >> %t.next-err.in
-; RUN: echo 'bar'             >> %t.next-err.in
-; RUN: echo 'CHECK: foo'      >  %t.next-err.chk
-; RUN: echo 'CHECK-NEXT: bar' >> %t.next-err.chk
+; RUN: echo 'start' >  %t.next-err.in
+; RUN: echo 'foo0'  >> %t.next-err.in
+; RUN: echo 'foo1'  >> %t.next-err.in
+; RUN: echo 'foo2'  >> %t.next-err.in
+; RUN: echo 'foo3'  >> %t.next-err.in
+; RUN: echo 'hello' >> %t.next-err.in
+; RUN: echo 'foo0'  >> %t.next-err.in
+; RUN: echo 'foo1'  >> %t.next-err.in
+; RUN: echo 'foo2'  >> %t.next-err.in
+; RUN: echo 'foo3'  >> %t.next-err.in
+; RUN: echo 'end'   >> %t.next-err.in
+
+; RUN: echo 'CHECK: start'      >  %t.next-err.chk
+; RUN: echo 'CHECK-NEXT: hello' >> %t.next-err.chk
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input-context=0 -dump-input-filter=error \
 ; RUN:               %t.next-err.chk < %t.next-err.in 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=NEXT-ERR
 
-;      NEXT-ERR:         3: bar 
-; NEXT-ERR-NEXT: next:2     !~~ error: match on wrong line
+;      NEXT-ERR:<<<<<<
+; NEXT-ERR-NEXT:          1: start 
+; NEXT-ERR-NEXT:next:2'0         {   search range start (exclusive)
+; NEXT-ERR-NEXT:          .
+; NEXT-ERR-NEXT:          .
+; NEXT-ERR-NEXT:          .
+; NEXT-ERR-NEXT:          6: hello 
+; NEXT-ERR-NEXT:next:2'1     !~~~~   error: match on wrong line
+; NEXT-ERR-NEXT:          .
+; NEXT-ERR-NEXT:          .
+; NEXT-ERR-NEXT:          .
+; NEXT-ERR-NEXT:         11: end 
+; NEXT-ERR-NEXT:next:2'2         } search range end (exclusive)
+; NEXT-ERR-NEXT:>>>>>>
+
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+; error: match failed for invalid pattern.
+;- - - - - - - - - - - - - - - - - - - - - - - - -
+
+; RUN: echo 'start' >  %t.invalid.in
+; RUN: echo 'foo0'  >> %t.invalid.in
+; RUN: echo 'foo1'  >> %t.invalid.in
+; RUN: echo 'foo2'  >> %t.invalid.in
+; RUN: echo 'foo3'  >> %t.invalid.in
+; RUN: echo 'end'   >> %t.invalid.in
+
+; RUN: echo 'CHECK: [[#0x0 - 0x1]]' > %t.invalid.chk
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -dump-input-context=0 -dump-input-filter=error \
+; RUN:               %t.invalid.chk < %t.invalid.in 2>&1 \
+; RUN: | FileCheck %s -match-full-lines -check-prefixes=INVALID -strict-whitespace
+
+;      INVALID:<<<<<<
+; INVALID-NEXT:           1: start 
+; INVALID-NEXT:check:1'0    {        search range start (exclusive)
+; INVALID-NEXT:check:1'1             error: match failed for invalid pattern
+; INVALID-NEXT:check:1'2             unable to substitute variable or numeric expression: overflow error
+; INVALID-NEXT:           .
+; INVALID-NEXT:           .
+; INVALID-NEXT:           .
+; INVALID-NEXT:           6: end 
+; INVALID-NEXT:check:1'3         } search range end (exclusive)
+; INVALID-NEXT:>>>>>>

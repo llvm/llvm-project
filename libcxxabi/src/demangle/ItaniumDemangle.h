@@ -43,6 +43,7 @@ template <class T, size_t N> class PODSmallVector {
                 "T is required to be a trivially copyable type");
   static_assert(std::is_trivially_default_constructible<T>::value,
                 "T is required to be trivially default constructible");
+  static_assert(N > 0, "PODSmallVector requires a non-zero inline capacity");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
@@ -1537,6 +1538,27 @@ public:
   }
 };
 
+class PackIndexing final : public Node {
+  const Node *Pattern;
+  const Node *Index;
+
+public:
+  PackIndexing(const Node *Pattern_, const Node *Index_)
+      : Node(KPackIndexing), Pattern(Pattern_), Index(Index_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Pattern, Index); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB.printOpen('(');
+    ParameterPackExpansion PPE(Pattern);
+    PPE.printLeft(OB);
+    OB.printClose(')');
+    OB.printOpen('[');
+    OB.printLeft(*Index);
+    OB.printClose(']');
+  }
+};
+
 class TemplateArgs final : public Node {
   NodeArray Params;
   Node *Requires;
@@ -2837,8 +2859,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     ParsingLambdaParamsAtLevel = (size_t)-1;
     TryToParseTemplateArgs = true;
     PermitForwardTemplateReferences = false;
-    for (int I = 0; I != 3; ++I)
-      NumSyntheticTemplateParameters[I] = 0;
+    for (unsigned int & NumSyntheticTemplateParameter : NumSyntheticTemplateParameters)
+      NumSyntheticTemplateParameter = 0;
     ASTAllocator.reset();
   }
 
@@ -4531,6 +4553,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       Result = make<ParameterPackExpansion>(Child);
       break;
     }
+    //           ::= Dy <type> <expression> # pack indexing (C++26)
+    case 'y': {
+      First += 2;
+      Node *Pattern = getDerived().parseType();
+      if (!Pattern)
+        return nullptr;
+      Node *Index = getDerived().parseExpr();
+      if (!Index)
+        return nullptr;
+      Result = make<PackIndexing>(Pattern, Index);
+      break;
+    }
     // Exception specifier on a function type.
     case 'o':
     case 'O':
@@ -5374,6 +5408,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     if (Child == nullptr)
       return nullptr;
     return make<ParameterPackExpansion>(Child);
+  }
+  if (consumeIf("sy")) {
+    Node *Pattern = look() == 'T' ? getDerived().parseTemplateParam()
+                                  : getDerived().parseFunctionParam();
+    if (Pattern == nullptr)
+      return nullptr;
+    Node *Index = getDerived().parseExpr();
+    if (Index == nullptr)
+      return nullptr;
+    return make<PackIndexing>(Pattern, Index);
   }
   if (consumeIf("sZ")) {
     if (look() == 'T') {

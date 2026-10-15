@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFEmitterImpl.h"
-#include "DWARFLinkerCompileUnit.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -55,8 +53,8 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              "no subtarget info for target %s",
                              TripleName.c_str());
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                         true, Swift5ReflectionSegmentName));
+  MC.reset(new MCContext(TheTriple, *MAI, *MRI, *MSTI, nullptr, true,
+                         Swift5ReflectionSegmentName));
   MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 
@@ -141,7 +139,9 @@ void DwarfEmitterImpl::emitCompileUnitHeader(DwarfUnit &Unit) {
   Asm->emitInt16(Unit.getVersion());
 
   if (Unit.getVersion() >= 5) {
-    Asm->emitInt8(dwarf::DW_UT_compile);
+    dwarf::Tag RootTag = Unit.getTag();
+    Asm->emitInt8(RootTag == dwarf::DW_TAG_partial_unit ? dwarf::DW_UT_partial
+                                                        : dwarf::DW_UT_compile);
     Asm->emitInt8(Unit.getFormParams().AddrSize);
     // Proper offset to the abbreviations table will be set later.
     Asm->emitInt32(0);

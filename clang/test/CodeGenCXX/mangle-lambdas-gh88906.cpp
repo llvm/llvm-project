@@ -21,13 +21,13 @@ void GH88906(){
 }
 
 // CHECK-LABEL: define internal void @_ZZ7GH88906vEN4TestC2Ev
-// CHECK: call void @_ZN4funcC2IN7GH889064Test1aMUlvE_ENS3_UlvE0_EEET_T0_
-// CHECK: call void @_ZN4funcC2IN7GH889064Test1bMUlvE_EEET_
-// CHECK: call void @_ZN4funcC2IN7GH889064Test1cMUlvE_EEET_
+// CHECK: call void @_ZN4funcC2IZ7GH88906vEN4Test1aMUlvE_EZ7GH88906vENS2_UlvE0_EEET_T0_
+// CHECK: call void @_ZN4funcC2IZ7GH88906vEN4Test1bMUlvE_EEET_
+// CHECK: call void @_ZN4funcC2IZ7GH88906vEN4Test1cMUlvE_EEET_
 
-// CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1aMUlvE_ENS3_UlvE0_EEET_T0_
-// CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1bMUlvE_EEET_
-// CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1cMUlvE_EEET_
+// CHECK-LABEL: define internal void @_ZN4funcC2IZ7GH88906vEN4Test1aMUlvE_EZ7GH88906vENS2_UlvE0_EEET_T0_
+// CHECK-LABEL: define internal void @_ZN4funcC2IZ7GH88906vEN4Test1bMUlvE_EEET_
+// CHECK-LABEL: define internal void @_ZN4funcC2IZ7GH88906vEN4Test1cMUlvE_EEET_
 
 // CLANG18-LABEL: define internal void @_ZZ7GH88906vEN4TestC2Ev
 // CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EZ7GH88906vENS1_UlvE0_EEET_T0_

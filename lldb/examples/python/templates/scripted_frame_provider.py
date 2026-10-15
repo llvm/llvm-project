@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Optional, Union
 
 import lldb
 
@@ -65,8 +66,14 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
         construction.
     """
 
+    input_frames: lldb.SBFrameList
+    args: lldb.SBStructuredData
+    thread: lldb.SBThread
+    target: lldb.SBTarget
+    process: lldb.SBProcess
+
     @staticmethod
-    def applies_to_thread(thread):
+    def applies_to_thread(thread: lldb.SBThread) -> bool:
         """Determine if this frame provider should be used for a given thread.
 
         This static method is called before creating an instance of the frame
@@ -94,7 +101,7 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def get_description():
+    def get_description() -> str:
         """Get a description of this frame provider.
 
         This method should return a human-readable string describing what
@@ -115,7 +122,7 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
         pass
 
     @staticmethod
-    def get_priority():
+    def get_priority() -> Optional[int]:
         """Get the priority of this frame provider.
 
         This static method is called to determine the evaluation order when
@@ -142,7 +149,7 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
         """
         return None  # Default/lowest priority
 
-    def __init__(self, input_frames, args):
+    def __init__(self, input_frames: lldb.SBFrameList, args: lldb.SBStructuredData):
         """Construct a scripted frame provider.
 
         Args:
@@ -170,7 +177,9 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
             self.args = args
 
     @abstractmethod
-    def get_frame_at_index(self, index):
+    def get_frame_at_index(
+        self, index: int
+    ) -> Union["lldb.plugins.scripted_process.ScriptedFrame", int, dict, None]:
         """Get a single stack frame at the given index.
 
         This method is called lazily when a specific frame is needed in the

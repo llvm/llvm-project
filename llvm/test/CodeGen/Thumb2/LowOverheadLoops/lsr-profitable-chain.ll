@@ -2,7 +2,7 @@
 ; RUN: llc -O3 -tail-predication=enabled -mtriple=thumbv8.1m.main -mattr=+mve,+mve.fp %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8.1m-arm-none-eabi"
+target triple = "thumbv8.1m.main-none-eabi"
 
 ; Tests that LSR will not interfere with the VCTP intrinsic,
 ; and that this loop will correctly become tail-predicated.

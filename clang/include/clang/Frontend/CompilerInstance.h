@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include <cassert>
@@ -112,6 +113,11 @@ class CompilerInstance : public ModuleLoader {
   /// The cache of PCM files.
   std::shared_ptr<ModuleCache> ModCache;
 
+  /// Directory dependencies from the instance that requested this module build.
+  /// An inferred framework is built from printed module map text rather than by
+  /// repeating the inference, so its \c Frameworks listing is only seen there.
+  std::vector<std::string> InheritedDirectoryDependencies;
+
   /// Functor for getting the dependency preprocessor directives of a file.
   std::unique_ptr<DependencyDirectivesGetter> GetDependencyDirectives;
 
@@ -141,6 +147,10 @@ class CompilerInstance : public ModuleLoader {
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
+
+  /// The -mllvm options of per-context libraries, which every LLVMContext that
+  /// compiles for this instance receives.
+  llvm::cl::LibraryOptionsContext LibraryOptions;
 
   /// The ASTReader, if one exists.
   IntrusiveRefCntPtr<ASTReader> TheASTReader;
@@ -259,6 +269,15 @@ public:
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
+  /// Parse and apply LLVM command line arguments from FrontendOptions.
+  /// This processes the LLVMArgs option that comes from -mllvm flags.
+  /// This should be called after plugins are loaded and before ExecuteAction.
+  void parseLLVMArgs();
+
+  const llvm::cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LibraryOptions;
+  }
+
   /// @}
   /// @name Compiler Invocation and Options
   /// @{
@@ -315,6 +334,11 @@ public:
   }
   const FrontendOptions &getFrontendOpts() const {
     return Invocation->getFrontendOpts();
+  }
+
+  ssaf::SSAFOptions &getSSAFOpts() { return Invocation->getSSAFOpts(); }
+  const ssaf::SSAFOptions &getSSAFOpts() const {
+    return Invocation->getSSAFOpts();
   }
 
   HeaderSearchOptions &getHeaderSearchOpts() {
@@ -553,10 +577,7 @@ public:
     return *Context;
   }
 
-  IntrusiveRefCntPtr<ASTContext> getASTContextPtr() const {
-    assert(Context && "Compiler instance has no AST context!");
-    return Context;
-  }
+  IntrusiveRefCntPtr<ASTContext> getASTContextPtr() const;
 
   void resetAndLeakASTContext() {
     llvm::BuryPointer(Context.get());
@@ -805,7 +826,7 @@ public:
   std::unique_ptr<raw_pwrite_stream> createDefaultOutputFile(
       bool Binary = true, StringRef BaseInput = "", StringRef Extension = "",
       bool RemoveFileOnSignal = true, bool CreateMissingDirectories = false,
-      bool ForceUseTemporary = false);
+      bool ForceUseTemporary = false, bool SetOnlyIfDifferent = false);
 
   /// Create a new output file, optionally deriving the output path name, and
   /// add it to the list of tracked output files.
@@ -813,7 +834,8 @@ public:
   /// \return - Null on error.
   std::unique_ptr<raw_pwrite_stream>
   createOutputFile(StringRef OutputPath, bool Binary, bool RemoveFileOnSignal,
-                   bool UseTemporary, bool CreateMissingDirectories = false);
+                   bool UseTemporary, bool CreateMissingDirectories = false,
+                   bool SetOnlyIfDifferent = false);
 
 private:
   /// Prepare the CompilerInstance for executing a frontend action.
@@ -843,7 +865,7 @@ private:
   Expected<std::unique_ptr<raw_pwrite_stream>>
   createOutputFileImpl(StringRef OutputPath, bool Binary,
                        bool RemoveFileOnSignal, bool UseTemporary,
-                       bool CreateMissingDirectories);
+                       bool CreateMissingDirectories, bool SetOnlyIfDifferent);
 
 public:
   std::unique_ptr<raw_pwrite_stream> createNullOutputFile();
@@ -929,10 +951,12 @@ private:
 
   /// Creates a \c CompilerInstance for compiling a module.
   ///
-  /// This expects a properly initialized \c FrontendInputFile.
+  /// This expects a properly initialized \c FrontendInputFile. See
+  /// \c InheritedDirectoryDependencies for \p DirectoryDependencies.
   std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
       SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
       StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+      ArrayRef<std::string> DirectoryDependencies = {},
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
 public:
@@ -997,6 +1021,14 @@ public:
 
   ModuleCache &getModuleCache() const { return *ModCache; }
   std::shared_ptr<ModuleCache> getModuleCachePtr() const { return ModCache; }
+
+  /// See \c InheritedDirectoryDependencies.
+  ArrayRef<std::string> getInheritedDirectoryDependencies() const {
+    return InheritedDirectoryDependencies;
+  }
+  void setInheritedDirectoryDependencies(ArrayRef<std::string> Dirs) {
+    InheritedDirectoryDependencies.assign(Dirs.begin(), Dirs.end());
+  }
 };
 
 } // end namespace clang

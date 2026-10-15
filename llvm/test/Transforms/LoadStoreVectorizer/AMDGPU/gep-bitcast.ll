@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn--amdhsa -passes=load-store-vectorizer < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn--amdhsa -passes='function(load-store-vectorizer)' < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu--amdhsa -passes=load-store-vectorizer < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu--amdhsa -passes='function(load-store-vectorizer)' < %s | FileCheck %s
 
 ; Check that vectorizer can find a GEP through bitcast
 ; CHECK-LABEL: @vect_zext_bitcast_f32_to_i32_idx

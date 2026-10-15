@@ -24,6 +24,7 @@ end
 
 subroutine f03
   integer :: x, y
+  !ERROR: The interop variable in an INTEROP construct must be a scalar integer variable of kind omp_interop_kind
   !ERROR: The 'depinfo-modifier' is not allowed on INTEROP construct
   !$omp interop init(mutexinoutset(x): y)
 end

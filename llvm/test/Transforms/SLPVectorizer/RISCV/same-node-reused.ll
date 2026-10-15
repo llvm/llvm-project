@@ -10,10 +10,9 @@ define void @test(ptr %dest, ptr %p) {
 ; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC0]], align 2
 ; CHECK-NEXT:    [[E3:%.*]] = load i16, ptr [[INC2]], align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr align 4 [[P]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP2]], [[TMP2]]
-; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[DEST]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[DEST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -50,7 +49,6 @@ define void @test1(ptr %dest, ptr %p) {
 ; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC0]], align 2
 ; CHECK-NEXT:    [[E3:%.*]] = load i16, ptr [[INC2]], align 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr align 4 [[P]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[DEST]], align 4

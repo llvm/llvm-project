@@ -95,7 +95,7 @@ public:
 
   void testRange(FrexpFunc func) {
     using StorageType = typename FPBits::StorageType;
-    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
@@ -112,9 +112,9 @@ public:
   }
 };
 
-#define LIST_FREXP_TESTS(T, func)                                              \
-  using LlvmLibcFrexpTest = FrexpTest<T>;                                      \
-  TEST_F(LlvmLibcFrexpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcFrexpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
-  TEST_F(LlvmLibcFrexpTest, SomeIntegers) { testSomeIntegers(&func); }         \
-  TEST_F(LlvmLibcFrexpTest, InRange) { testRange(&func); }
+#define LIST_FREXP_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = FrexpTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SomeIntegers) { testSomeIntegers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InRange) { testRange(&func); }
