@@ -559,7 +559,7 @@ def OpenACC_GPUAsyncTokenType : Type<
 def OpenACC_ComputeRegionOp
     : OpenACC_Op<"compute_region",
                  [OffloadRegionOpInterface, AffineScope,
-                  RecursiveMemoryEffects,
+                  HasParallelRegion, RecursiveMemoryEffects,
                   SingleBlockImplicitTerminator<"YieldOp">,
                   IsolatedFromAbove, AttrSizedOperandSegments]> {
   let summary = "Compute region for GPU execution";

@@ -1458,12 +1458,11 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   let summary = "Represents a scope with associated cleanup code";
   let description = [{
     `cir.cleanup.scope` contains a body region and a cleanup region. The body
-    region is executed first, and the cleanup region is executed when the body
-    region is exited, either normally or due to an exception.
+    region runs first, and the cleanup region may run when the body region is
+    exited.
 
-    The cleanup kind attribute specifies when the cleanup region should be
-    executed:
-    - `none`: No cleanup (cleanup region is empty/unused)
+    The cleanup kind attribute specifies which exits from the body region run
+    the cleanup region:
     - `normal`: Cleanup is executed only on normal exit
     - `eh`: Cleanup is executed only on exception unwinding
     - `all`: Cleanup is executed on both normal exit and exception unwinding
@@ -2920,12 +2919,12 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
 // DivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
+def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer division";
   let description = [{
     The `cir.div` operation performs division on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type.
+    or matrix-of-integer type.
 
     Example:
 
@@ -2933,6 +2932,7 @@ def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
     %0 = cir.div %a, %b : !s32i
     %1 = cir.div %a, %b : !u32i
     %2 = cir.div %va, %vb : !cir.vector<4 x !s32i>
+    %3 = cir.div %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -3064,12 +3064,12 @@ def CIR_FMulOp : CIR_FPBinaryOp<"fmul", [], CIR_AnyFloatOrVecOrMatrixOfFloatType
 // FDivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
+def CIR_FDivOp : CIR_FPBinaryOp<"fdiv", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point division";
   let description = [{
     The `cir.fdiv` operation performs floating-point division on its operands.
     Both operands and the result must have the same floating-point scalar or
-    vector-of-float type.
+    ector-of-float or matrix-of-float type.
 
     Example:
 
@@ -3077,6 +3077,7 @@ def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
     %0 = cir.fdiv %a, %b : !cir.float
     %1 = cir.fdiv %a, %b : !cir.double
     %2 = cir.fdiv %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fdiv %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
@@ -4388,7 +4389,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_FuncInfoAttr>:$func_info,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
-    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable
+    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable,
+    OptionalAttr<CIR_FramePointerKindAttr>:$frame_pointer
   );
 
   let regions = (region AnyRegion:$body);
@@ -5336,7 +5338,9 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
 
 def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
   Pure, Terminator, HasParent<"AwaitOp">,
-  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+    "getMutableSuccessorOperands"
+  ]>
 ]> {
   let summary = "Marks the point where a coroutine actually suspends";
   let description = [{
@@ -5354,11 +5358,24 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
     - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
       `cir.coroutine`'s `destroy` region when the coroutine handle is
       destroyed.
+
+    When the optional `cond` operand is present, a `false` value vetoes the
+    suspension and control branches directly to the `resume` region of the
+    enclosing `cir.await`. A `true` value indicates the coroutine actually
+    suspends.
   }];
 
+  let arguments = (ins Optional<CIR_AnyBoolType>:$cond);
+
   let assemblyFormat = [{
-    attr-dict
+    (`(` $cond^ `)`)? attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins), [{
+      /* No operands. */
+    }]>
+  ];
 
   let hasLLVMLowering = false;
 }
@@ -7281,11 +7298,16 @@ def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
 
 class CIR_ComplexFPBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_ComplexOfFloatType:$lhs, CIR_ComplexOfFloatType:$rhs);
+  let arguments = (ins
+    CIR_ComplexOfFloatType:$lhs,
+    CIR_ComplexOfFloatType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
   let results = (outs CIR_ComplexOfFloatType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+    $lhs `,` $rhs `:` qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
   }];
 }
 

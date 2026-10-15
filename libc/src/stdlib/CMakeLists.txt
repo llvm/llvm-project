@@ -1,4 +1,15 @@
 add_entrypoint_object(
+  __cxa_thread_atexit_impl
+  SRCS
+    __cxa_thread_atexit_impl.cpp
+  HDRS
+    __cxa_thread_atexit_impl.h
+  DEPENDS
+    libc.src.__support.threads.thread
+    libc.hdr.types.pthread_t
+)
+
+add_entrypoint_object(
   atoi
   SRCS
     atoi.cpp
