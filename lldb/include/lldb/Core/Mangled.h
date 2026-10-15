@@ -43,7 +43,6 @@ public:
 
   enum ManglingScheme : uint8_t {
     eManglingSchemeNone = 0,
-    eManglingSchemeD,
     eManglingSchemeSwift,
     eFirstRegisteredManglingScheme,
   };

@@ -13,8 +13,6 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataEncoder.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
@@ -22,20 +20,15 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 
 #include <mutex>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
-#include <cstdlib>
-#include <cstring>
 using namespace lldb_private;
 
 #pragma mark Mangled
@@ -193,16 +186,6 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
-  if (name.starts_with("_D")) {
-    // A dlang mangled name begins with `_D`, followed by a numeric length. One
-    // known exception is the symbol `_Dmain`.
-    // See `SymbolName` and `LName` in
-    // https://dlang.org/spec/abi.html#name_mangling
-    llvm::StringRef buf = name.drop_front(2);
-    if (!buf.empty() && (llvm::isDigit(buf.front()) || name == "_Dmain"))
-      return Mangled::eManglingSchemeD;
-  }
-
   // Swift's older style of mangling used "_T" as a mangling prefix. This can
   // lead to false positives with other symbols that just so happen to start
   // with "_T". To minimize the chance of that happening, we only return true
@@ -271,21 +254,6 @@ void Mangled::SetValue(ConstString name) {
   }
 }
 
-// Local helpers for different demangling implementations.
-static char *GetDLangDemangledStr(llvm::StringRef M) {
-  char *demangled_cstr = llvm::dlangDemangle(M);
-
-  if (Log *log = GetLog(LLDBLog::Demangle)) {
-    if (demangled_cstr && demangled_cstr[0])
-      LLDB_LOG(log, "demangled dlang: {0} -> \"{1}\"", M, demangled_cstr);
-    else
-      LLDB_LOG(log, "demangled dlang: {0} -> error: failed to demangle",
-               static_cast<std::string_view>(M));
-  }
-
-  return demangled_cstr;
-}
-
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
@@ -304,11 +272,7 @@ ConstString Mangled::GetDemangledName() const {
   // We didn't already mangle this name, demangle it and if all goes well
   // add it to our map.
   ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
-  char *demangled_name = nullptr;
   switch (scheme) {
-  case eManglingSchemeD:
-    demangled_name = GetDLangDemangledStr(m_mangled);
-    break;
   case eManglingSchemeSwift:
     // Demangling a swift name requires the swift compiler. This is
     // explicitly unsupported on llvm.org.
@@ -324,11 +288,6 @@ ConstString Mangled::GetDemangledName() const {
         m_demangled.SetStringWithMangledCounterpart(demangled.name, m_mangled);
     }
     break;
-  }
-
-  if (demangled_name) {
-    m_demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
-    free(demangled_name);
   }
 
   if (m_demangled.IsNull()) {
