@@ -10,22 +10,21 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_mov_b32 s4, 0
 ; GFX10-NEXT:    s_mov_b32 s1, 0
-; GFX10-NEXT:    ; implicit-def: $sgpr2
 ; GFX10-NEXT:    s_inst_prefetch 0x1
 ; GFX10-NEXT:    s_branch .LBB0_2
 ; GFX10-NEXT:    .p2align 6
 ; GFX10-NEXT:  .LBB0_1: ; %Flow
 ; GFX10-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
-; GFX10-NEXT:    s_and_b32 s0, exec_lo, s2
+; GFX10-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX10-NEXT:    s_or_b32 s1, s0, s1
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX10-NEXT:  .LBB0_2: ; %bb
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-NEXT:    s_or_b32 s2, s2, exec_lo
-; GFX10-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX10-NEXT:    s_mov_b32 s0, -1
+; GFX10-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB0_1
 ; GFX10-NEXT:  ; %bb.3: ; %branch2_merge
 ; GFX10-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -40,12 +39,11 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    s_mov_b32 s13, s4
 ; GFX10-NEXT:    s_mov_b32 s14, s4
 ; GFX10-NEXT:    s_mov_b32 s15, s4
-; GFX10-NEXT:    s_andn2_b32 s2, s2, exec_lo
 ; GFX10-NEXT:    image_sample_lz v1, [v2, v2, v1], s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_3D
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_fma_f32 v1, v1, v0, 0
 ; GFX10-NEXT:    v_cmp_le_f32_e64 s0, 0, v1
-; GFX10-NEXT:    s_or_b32 s2, s2, s0
+; GFX10-NEXT:    s_orn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    s_branch .LBB0_1
 ; GFX10-NEXT:  .LBB0_4: ; %loop0_merge
 ; GFX10-NEXT:    s_inst_prefetch 0x2
@@ -58,21 +56,20 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_mov_b32 s4, 0
 ; GFX12-NEXT:    s_mov_b32 s1, 0
-; GFX12-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-NEXT:    s_branch .LBB0_2
 ; GFX12-NEXT:  .LBB0_1: ; %Flow
 ; GFX12-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-NEXT:    s_and_b32 s0, exec_lo, s2
+; GFX12-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b32 s1, s0, s1
 ; GFX12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s1
 ; GFX12-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX12-NEXT:  .LBB0_2: ; %bb
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_or_b32 s2, s2, exec_lo
-; GFX12-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX12-NEXT:    s_mov_b32 s0, -1
+; GFX12-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; GFX12-NEXT:    s_cbranch_execz .LBB0_1
 ; GFX12-NEXT:  ; %bb.3: ; %branch2_merge
 ; GFX12-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -87,13 +84,12 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    s_mov_b32 s13, s4
 ; GFX12-NEXT:    s_mov_b32 s14, s4
 ; GFX12-NEXT:    s_mov_b32 s15, s4
-; GFX12-NEXT:    s_and_not1_b32 s2, s2, exec_lo
 ; GFX12-NEXT:    image_sample_lz v1, [v2, v2, v1], s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_3D
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    v_fma_f32 v1, v1, v0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cmp_le_f32_e64 s0, 0, v1
-; GFX12-NEXT:    s_or_b32 s2, s2, s0
+; GFX12-NEXT:    s_or_not1_b32 s0, s0, exec_lo
 ; GFX12-NEXT:    s_branch .LBB0_1
 ; GFX12-NEXT:  .LBB0_4: ; %loop0_merge
 ; GFX12-NEXT:    s_endpgm
