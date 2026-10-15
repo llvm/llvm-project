@@ -487,6 +487,8 @@ private:
       const parser::CharBlock &source, llvm::omp::Directive type);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  bool CheckReductionIntrinsicOperator(
+      parser::DefinedOperator::IntrinsicOperator op, parser::CharBlock source);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
       parser::CharBlock source, llvm::omp::Clause clauseId);
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,

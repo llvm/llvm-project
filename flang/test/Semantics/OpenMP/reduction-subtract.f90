@@ -4,7 +4,8 @@
 
 subroutine reduction_subtract
   integer :: x
-  !ERROR: The minus reduction operator is deprecated since OpenMP 5.2 and is not supported in the REDUCTION clause.
+  !ERROR: Invalid reduction operator in REDUCTION clause
+  !ERROR: The minus reduction operator is deprecated since OpenMP 5.2
   !$omp do reduction(-:x)
   do i=1, 100
     x = x - i
