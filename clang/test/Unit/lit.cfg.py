@@ -53,7 +53,7 @@ def find_shlibpath_var():
         yield "DYLD_LIBRARY_PATH"
     elif platform.system() == "Windows" or sys.platform == "cygwin":
         yield "PATH"
-    elif platform.system() == "AIX":
+    elif platform.system() in ["AIX", "OS/390"]:
         yield "LIBPATH"
 
 
@@ -73,6 +73,10 @@ else:
     lit_config.warning(
         "unable to inject shared library path on '{}'".format(platform.system())
     )
+
+# The unit tests on z/OS need auto-conversion turned on.
+if sys.platform == "zos":
+  config.environment['_BPXK_AUTOCVT'] = 'ON'
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
