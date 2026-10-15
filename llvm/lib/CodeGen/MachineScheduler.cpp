@@ -4444,17 +4444,10 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
       continue;
     LLVM_DEBUG(dbgs() << "  Rescheduling physreg copy ";
                DAG->dumpNode(*Dep.getSUnit()));
-    // Moving an already-scheduled copy can invalidate read-undef flags: lanes
-    // that were dead when the flags were set may now be live across the
-    // subregister defs the copy moves past (or after the copy itself). A stale
-    // read-undef makes a later DAG build drop true data dependencies, which
-    // can orphan the moved copy and crash LiveIntervals. Recompute the affected
-    // flags from LiveIntervals after the move.
-    //
-    // 1) Check whether any read-undef flags could have changed. The recompute
-    // needs live intervals to recompute from, vreg liveness, and lane-mask
-    // tracking for the flags to be meaningful. A copy mentioning no vregs
-    // cannot affect vreg subregister defs.
+    // Moving a copy past subregister defs can leave stale read-undef flags,
+    // dropping true dependencies in a later DAG build. Recompute them from
+    // LiveIntervals after the move. Only vreg copies need this, and only when
+    // lane masks are tracked.
     LiveIntervals *LIS = DAG->getLIS();
     SmallVector<Register, 8> CopyVRegs;
     if (LIS && DAG->hasVRegLiveness() && shouldTrackLaneMasks())
@@ -4463,10 +4456,7 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
           CopyVRegs.push_back(MO.getReg());
     bool FixUndef = !CopyVRegs.empty();
 
-    // 2) Cache the copy's old location. This is purely an optimization: it
-    // narrows step 3 to the instructions the copy moves past. Recomputing a
-    // wider range would be equally correct, since the recompute reproduces
-    // identical flags wherever relative order did not change.
+    // Remember the old location to limit the fixup below to the range moved.
     SlotIndex OldIdx;
     MachineBasicBlock::iterator OldNext;
     if (FixUndef) {
@@ -4478,8 +4468,7 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
     if (!FixUndef)
       continue;
 
-    // 3) Recompute the read-undef flags invalidated by the move, on the copy
-    // itself and on every instruction it moved past.
+    // Fix up the copy itself and everything it moved past.
     RegisterOperands::restoreLivenessFlags(*Copy, *TRI, DAG->MRI, *LIS,
                                            /*TrackLaneMasks=*/true, CopyVRegs);
     MachineBasicBlock::iterator NewIt = Copy->getIterator();
