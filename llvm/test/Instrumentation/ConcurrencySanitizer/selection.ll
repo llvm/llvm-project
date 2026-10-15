@@ -70,6 +70,44 @@ entry:
 ; DEFAULT: {{call|invoke}} void @capture(ptr %p)
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
 
+define void @nosanitize_acquire(ptr %p, ptr %flag) sanitize_concurrency {
+entry:
+  %before = load i32, ptr %p, align 4
+  %acquired = load atomic i32, ptr %flag acquire, align 4, !nosanitize !0
+  store i32 %before, ptr %p, align 4
+  ret void
+}
+; DEFAULT-LABEL: @nosanitize_acquire(
+; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT-NOT: __csan_
+; DEFAULT: load atomic i32, ptr %flag acquire
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+
+define void @nosanitize_acquire_fence(ptr %p) sanitize_concurrency {
+entry:
+  %v = load i32, ptr %p, align 4
+  fence acquire, !nosanitize !0
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+; DEFAULT-LABEL: @nosanitize_acquire_fence(
+; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT-NOT: __csan_
+; DEFAULT: fence acquire
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+
+define void @nosanitize_call(ptr %p) sanitize_concurrency {
+entry:
+  %v = load i32, ptr %p, align 4
+  call void @capture(ptr %p), !nosanitize !0
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+; DEFAULT-LABEL: @nosanitize_call(
+; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT: {{call|invoke}} void @capture(ptr %p)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+
 define i32 @constant_global() sanitize_concurrency {
 entry:
   %v = load i32, ptr @constant, align 4

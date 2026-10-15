@@ -449,21 +449,23 @@ void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
 
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : BB) {
-      // Skip instructions inserted by another instrumentation.
-      if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
-        continue;
-      // Prior reads ordered by an acquire need to be flushed.
+      // An acquire or a call still ends the window when marked !nosanitize.
       if (auto SSID = getAtomicSyncScopeID(&Inst);
           SSID && *SSID != SyncScope::SingleThread &&
           isAcquireOrStronger(getAtomicOrdering(&Inst)))
         FlushLocalAccesses();
+      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst))
+        FlushLocalAccesses();
+
+      // Skip instructions inserted by another instrumentation.
+      if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
+        continue;
       if (isAtomicMemoryAccess(&Inst))
         Out.AtomicAccesses.push_back(&Inst);
       else if ((isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) &&
                shouldInstrumentAccess(&Inst))
         LocalLoadsAndStores.push_back(&Inst);
       else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
-        FlushLocalAccesses();
         if (isa<AnyMemIntrinsic, MemSetPatternInst>(Inst))
           Out.MemIntrinCalls.push_back(cast<IntrinsicInst>(&Inst));
         Out.HasCalls = true;
