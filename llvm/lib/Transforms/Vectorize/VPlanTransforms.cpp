@@ -3137,11 +3137,10 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   VPValue *Uncountable = nullptr;
   VPValue *Countable = nullptr;
   VPValue *Cond = Term->getOperand(0);
-  if (!match(Cond, m_CombineOr(
-                       m_c_LogicalOr(m_Uncountable(Uncountable),
-                                     m_Countable(Countable, PSE, L)),
-                       m_c_BinaryOr(m_Uncountable(Uncountable),
-                                    m_Countable(Countable, PSE, L)))))
+  if (!match(Cond, m_CombineOr(m_c_LogicalOr(m_Uncountable(Uncountable),
+                                             m_Countable(Countable, PSE, L)),
+                               m_c_BinaryOr(m_Uncountable(Uncountable),
+                                            m_Countable(Countable, PSE, L)))))
     return true;
 
   // If the conditions are combined with a logical or (select), then we'll
