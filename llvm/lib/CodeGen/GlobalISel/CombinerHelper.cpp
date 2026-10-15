@@ -8465,12 +8465,12 @@ bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI, unsigned Opc,
   return isLegalOrBeforeLegalizer({ZeroPoisonOpc, {DstTy, SrcTy}});
 }
 
-static APInt getDemandedLHSForLogicalOp(unsigned Opcode, const APInt &Demanded,
-                                        const KnownBits &RHSKnown) {
+static APInt getDemandedBitsForLogicalOp(unsigned Opcode, const APInt &Demanded,
+                                         const KnownBits &OtherKnown) {
   assert((Opcode == TargetOpcode::G_AND || Opcode == TargetOpcode::G_OR) &&
          "Expected G_AND or G_OR");
   return Demanded &
-         ~(Opcode == TargetOpcode::G_AND ? RHSKnown.Zero : RHSKnown.One);
+         ~(Opcode == TargetOpcode::G_AND ? OtherKnown.Zero : OtherKnown.One);
 }
 
 Register CombinerHelper::simplifyMultipleUseDemandedBits(
@@ -8658,10 +8658,31 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     KnownBits RHSKnown(BW);
     bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, Demanded,
                                             RHSKnown, Depth + 1, DoRewrite);
-    APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, Demanded, RHSKnown);
+    APInt LHSDemand = getDemandedBitsForLogicalOp(Opcode, Demanded, RHSKnown);
     KnownBits LHSKnown(BW);
     Changed |= simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, LHSDemand, LHSKnown,
                                         Depth + 1, DoRewrite);
+    if (!Changed && MRI.hasOneNonDBGUse(RHS) &&
+        !getConstantOrConstantSplatVector(RHS)) {
+      // Reduced-demand LHS facts cannot justify reducing the RHS demand.
+      APInt RHSDemand =
+          LHSDemand == Demanded
+              ? getDemandedBitsForLogicalOp(Opcode, Demanded, LHSKnown)
+              : getDemandedBitsForLogicalOp(
+                    Opcode, Demanded,
+                    VT->getKnownBits(
+                        LHS,
+                        OpTy.isFixedVector()
+                            ? APInt::getAllOnes(OpTy.getNumElements())
+                            : APInt(1, 1),
+                        Depth + 1));
+      if (RHSDemand != Demanded) {
+        // Keep full-demand RHS facts if the reduced-demand retry fails.
+        KnownBits RetryKnown(BW);
+        Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, RHSDemand,
+                                           RetryKnown, Depth + 1, DoRewrite);
+      }
+    }
     if (Changed) {
       DropPoisonFlags();
       InvalidateDebugUses(Demanded);
@@ -8726,10 +8747,24 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
     if (Probe(/*OpNo=*/2, RootDemand, RHSKnown))
       return true;
 
-    APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, RootDemand, RHSKnown);
+    APInt LHSDemand = getDemandedBitsForLogicalOp(Opcode, RootDemand, RHSKnown);
 
     KnownBits LHSKnown(RootDemand.getBitWidth());
-    return Probe(/*OpNo=*/1, LHSDemand, LHSKnown);
+    if (Probe(/*OpNo=*/1, LHSDemand, LHSKnown))
+      return true;
+
+    Register RHS = MI.getOperand(2).getReg();
+    if (!MRI.hasOneNonDBGUse(RHS) || getConstantOrConstantSplatVector(RHS))
+      return false;
+
+    APInt RHSDemand =
+        LHSDemand == RootDemand
+            ? getDemandedBitsForLogicalOp(Opcode, RootDemand, LHSKnown)
+            : getDemandedBitsForLogicalOp(
+                  Opcode, RootDemand,
+                  VT->getKnownBits(MI.getOperand(1).getReg()));
+    KnownBits RetryKnown(RootDemand.getBitWidth());
+    return RHSDemand != RootDemand && Probe(/*OpNo=*/2, RHSDemand, RetryKnown);
   }
   }
 }

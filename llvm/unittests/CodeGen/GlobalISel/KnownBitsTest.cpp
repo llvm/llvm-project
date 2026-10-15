@@ -2543,6 +2543,232 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrConstantExplainsDemand) {
   EXPECT_TRUE(APInt(32, 0x0F).isSubsetOf(Known.One));
 }
 
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAndCommuted) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %y:_(i32) = G_TRUNC %1
+    %low:_(i32) = G_CONSTANT i32 255
+    %high:_(i32) = G_CONSTANT i32 65280
+    %bounded:_(i32) = G_AND %y, %low
+    %inner:_(i32) = G_OR %x, %high
+    %root:_(i32) = G_AND %bounded, %inner
+    %use:_(i32) = G_ADD %root, %x
+    %out:_(i32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_OR);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_ADD);
+  ASSERT_NE(Inner, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Use, nullptr);
+  Register InnerReg = Inner->getOperand(0).getReg();
+  Register X = Inner->getOperand(1).getReg();
+
+  KnownBits Known =
+      simplifyDemandedBitsOperand(*MF, B, *Use, APInt::getAllOnes(32));
+  EXPECT_EQ(Root->getOperand(2).getReg(), X);
+  EXPECT_TRUE(MRI->use_nodbg_empty(InnerReg));
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFFFFFF00));
+  EXPECT_TRUE(Known.One.isZero());
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrCommuted) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %y:_(i32) = G_TRUNC %1
+    %high:_(i32) = G_CONSTANT i32 65280
+    %mask:_(i32) = G_CONSTANT i32 -65281
+    %bounded:_(i32) = G_OR %y, %high
+    %inner:_(i32) = G_AND %x, %mask
+    %root:_(i32) = disjoint G_OR %bounded, %inner
+    %use:_(i32) = G_ADD %root, %x
+    %out:_(i32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_OR, /*Index=*/1);
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_ADD);
+  ASSERT_NE(Inner, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Use, nullptr);
+  Register InnerReg = Inner->getOperand(0).getReg();
+  Register X = Inner->getOperand(1).getReg();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  BuildFnTy Apply;
+  ASSERT_TRUE(Helper.matchSimplifyDemandedBits(*Root, Apply));
+  EXPECT_EQ(Root->getOperand(2).getReg(), InnerReg);
+  EXPECT_TRUE(Root->getFlag(MachineInstr::Disjoint));
+
+  KnownBits Known =
+      simplifyDemandedBitsOperand(*MF, B, *Use, APInt::getAllOnes(32));
+  EXPECT_EQ(Root->getOperand(2).getReg(), X);
+  EXPECT_TRUE(MRI->use_nodbg_empty(InnerReg));
+  EXPECT_FALSE(Root->getFlag(MachineInstr::Disjoint));
+  EXPECT_TRUE(Known.Zero.isZero());
+  EXPECT_EQ(Known.One, APInt(32, 0xFF00));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAndReducedLHSDemand) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %y:_(i32) = G_TRUNC %1
+    %lhs_mask:_(i32) = G_CONSTANT i32 255
+    %rhs_mask:_(i32) = G_CONSTANT i32 65535
+    %lhs:_(i32) = G_AND %x, %lhs_mask
+    %rhs:_(i32) = G_AND %y, %rhs_mask
+    %root:_(i32) = G_AND %lhs, %rhs
+    %use:_(i32) = G_ADD %root, %x
+    %out:_(i32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *LHS = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *RHS = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/2);
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_ADD);
+  ASSERT_NE(LHS, nullptr);
+  ASSERT_NE(RHS, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Use, nullptr);
+  Register LHSReg = LHS->getOperand(0).getReg();
+  Register RHSReg = RHS->getOperand(0).getReg();
+  Register Y = RHS->getOperand(1).getReg();
+
+  KnownBits Known =
+      simplifyDemandedBitsOperand(*MF, B, *Use, APInt::getAllOnes(32));
+  // The LHS mask is still needed after the RHS mask is removed.
+  EXPECT_EQ(Root->getOperand(1).getReg(), LHSReg);
+  EXPECT_EQ(Root->getOperand(2).getReg(), Y);
+  EXPECT_TRUE(MRI->use_nodbg_empty(RHSReg));
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFFFFFF00));
+  EXPECT_TRUE(Known.One.isZero());
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrReducedLHSDemand) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %y:_(i32) = G_TRUNC %1
+    %lhs_mask:_(i32) = G_CONSTANT i32 -256
+    %rhs_mask:_(i32) = G_CONSTANT i32 -65536
+    %lhs:_(i32) = G_OR %x, %lhs_mask
+    %rhs:_(i32) = G_OR %y, %rhs_mask
+    %root:_(i32) = G_OR %lhs, %rhs
+    %use:_(i32) = G_ADD %root, %x
+    %out:_(i32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *LHS = findOpcode(*MF, TargetOpcode::G_OR);
+  MachineInstr *RHS = findOpcode(*MF, TargetOpcode::G_OR, /*Index=*/1);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_OR, /*Index=*/2);
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_ADD);
+  ASSERT_NE(LHS, nullptr);
+  ASSERT_NE(RHS, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Use, nullptr);
+  Register LHSReg = LHS->getOperand(0).getReg();
+  Register RHSReg = RHS->getOperand(0).getReg();
+  Register Y = RHS->getOperand(1).getReg();
+
+  KnownBits Known =
+      simplifyDemandedBitsOperand(*MF, B, *Use, APInt::getAllOnes(32));
+  // The LHS must still set the bits no longer supplied by the RHS.
+  EXPECT_EQ(Root->getOperand(1).getReg(), LHSReg);
+  EXPECT_EQ(Root->getOperand(2).getReg(), Y);
+  EXPECT_TRUE(MRI->use_nodbg_empty(RHSReg));
+  EXPECT_TRUE(Known.Zero.isZero());
+  EXPECT_EQ(Known.One, APInt(32, 0xFFFFFF00));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAndPreservesKnownZeroBits) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %y:_(i32) = G_TRUNC %1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %lhs:_(i32) = G_AND %x, %mask
+    %rhs:_(i32) = G_AND %y, %mask
+    %root:_(i32) = G_AND %lhs, %rhs
+    %use:_(i32) = G_ADD %root, %x
+    %out:_(i32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *LHS = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *RHS = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/2);
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_ADD);
+  ASSERT_NE(LHS, nullptr);
+  ASSERT_NE(RHS, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Use, nullptr);
+  Register LHSReg = LHS->getOperand(0).getReg();
+  Register RHSReg = RHS->getOperand(0).getReg();
+  Register X = LHS->getOperand(1).getReg();
+
+  KnownBits Known =
+      simplifyDemandedBitsOperand(*MF, B, *Use, APInt::getAllOnes(32));
+  EXPECT_EQ(Root->getOperand(1).getReg(), X);
+  EXPECT_TRUE(MRI->use_nodbg_empty(LHSReg));
+  // Once the LHS mask is removed, the RHS must still clear the high bits.
+  EXPECT_EQ(Root->getOperand(2).getReg(), RHSReg);
+  EXPECT_EQ(MRI->getVRegDef(RHSReg), RHS);
+  EXPECT_EQ(Known.Zero, APInt(32, 0xFFFFFF00));
+  EXPECT_TRUE(Known.One.isZero());
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrPreservesKnownOneBits) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %y:_(i32) = G_TRUNC %1
+    %mask:_(i32) = G_CONSTANT i32 65280
+    %lhs:_(i32) = G_OR %x, %mask
+    %rhs:_(i32) = G_OR %y, %mask
+    %root:_(i32) = G_OR %lhs, %rhs
+    %use:_(i32) = G_ADD %root, %x
+    %out:_(i32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *LHS = findOpcode(*MF, TargetOpcode::G_OR);
+  MachineInstr *RHS = findOpcode(*MF, TargetOpcode::G_OR, /*Index=*/1);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_OR, /*Index=*/2);
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_ADD);
+  ASSERT_NE(LHS, nullptr);
+  ASSERT_NE(RHS, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Use, nullptr);
+  Register LHSReg = LHS->getOperand(0).getReg();
+  Register RHSReg = RHS->getOperand(0).getReg();
+  Register X = LHS->getOperand(1).getReg();
+
+  KnownBits Known =
+      simplifyDemandedBitsOperand(*MF, B, *Use, APInt::getAllOnes(32));
+  EXPECT_EQ(Root->getOperand(1).getReg(), X);
+  EXPECT_TRUE(MRI->use_nodbg_empty(LHSReg));
+  // Once the LHS mask is removed, the RHS must still set these bits.
+  EXPECT_EQ(Root->getOperand(2).getReg(), RHSReg);
+  EXPECT_EQ(MRI->getVRegDef(RHSReg), RHS);
+  EXPECT_TRUE(Known.Zero.isZero());
+  EXPECT_EQ(Known.One, APInt(32, 0xFF00));
+}
+
 TEST_F(AArch64GISelMITest, SimplifyDemandedBitsDropsPoisonFlagsAfterProbe) {
   StringRef MIRString = R"(
     %x:_(i32) = G_TRUNC %0
