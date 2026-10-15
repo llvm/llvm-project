@@ -368,7 +368,7 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
     break;
   }
   case SHCC::COND_Z: {
-    Res = CurDAG->getMachineNode(SH::TST, DL, MVT::Glue, LHS, LHS);
+    Res = CurDAG->getMachineNode(SH::TST, DL, MVT::Glue, RHS, RHS);
     break;
   }
   }
