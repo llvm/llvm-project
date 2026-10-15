@@ -125,7 +125,7 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   clang::CodeGenOptions codeGenOpts;
 
   if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
-        module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
+          module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }

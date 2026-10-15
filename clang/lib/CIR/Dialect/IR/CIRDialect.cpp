@@ -431,7 +431,7 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
 
 std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
   auto tripleAttr =
-    mod->getAttrOfType<mlir::StringAttr>(CIRDialect::getTripleAttrName());
+      mod->getAttrOfType<mlir::StringAttr>(CIRDialect::getTripleAttrName());
   if (!tripleAttr)
     return std::nullopt;
 
