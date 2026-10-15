@@ -331,6 +331,7 @@ def Vector_MultiDimReductionOp :
      AllTypesMatch<["dest", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
@@ -338,7 +339,10 @@ def Vector_MultiDimReductionOp :
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyType:$acc,
-                   DenseI64ArrayAttr:$reduction_dims)>,
+                   DenseI64ArrayAttr:$reduction_dims,
+                   DefaultValuedAttr<
+                     Arith_FastMathAttr,
+                     "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
@@ -348,6 +352,10 @@ def Vector_MultiDimReductionOp :
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
+    The optional `fastmath` flags apply to every combining operation of the
+    reduction, including the one with the accumulator. They have the same
+    meaning as on `vector.reduction`.
+
     Example:
 
     ```mlir
@@ -355,11 +363,15 @@ def Vector_MultiDimReductionOp :
       vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
       vector<4x16xf32> to f32
+    %3 = vector.multi_reduction <maximumf>, %0, %acc0 fastmath<nnan,nsz> [1, 3] :
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     ```
   }];
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$acc,
-                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>
+                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind,
+                   CArg<"::mlir::arith::FastMathFlags",
+                        "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
@@ -390,7 +402,8 @@ def Vector_MultiDimReductionOp :
     }
   }];
   let assemblyFormat =
-    "$kind `,` $source `,` $acc attr-dict $reduction_dims `:` type($source) `to` type($dest)";
+    "$kind `,` $source `,` $acc (`fastmath` `` $fastmath^)? attr-dict "
+    "$reduction_dims `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
