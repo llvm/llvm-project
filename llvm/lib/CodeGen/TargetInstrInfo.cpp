@@ -876,7 +876,35 @@ static void transferImplicitOperands(MachineInstr *MI,
   --CopyMI;
 
   Register DstReg = MI->getOperand(0).getReg();
+  bool DefinesDst = CopyMI->definesRegister(DstReg, TRI);
   for (const MachineOperand &MO : MI->implicit_operands()) {
+    // If the last instruction does not define the whole copy result, the copy
+    // was split and other instructions must have defined parts of the copy
+    // result. Adding an implicit def overlapping the copy result to the last
+    // instruction would redefine the parts defined by the other instructions,
+    // so we only define the parts outside the copy result.
+    if (!DefinesDst && MO.isDef() && TRI->regsOverlap(DstReg, MO.getReg())) {
+      Register Reg = MO.getReg();
+      if (TRI->isSubRegisterEq(DstReg, Reg))
+        continue;
+
+      unsigned SubIdx = TRI->getSubRegIndex(Reg, DstReg);
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      SmallVector<unsigned, 4> Indexes;
+      if (SubIdx && RC &&
+          TRI->getCoveringSubRegIndexes(
+              RC, RC->getLaneMask() & ~TRI->getSubRegIndexLaneMask(SubIdx),
+              Indexes)) {
+        for (unsigned Idx : Indexes)
+          CopyMI->addOperand(MachineOperand::CreateReg(
+              TRI->getSubReg(Reg, Idx), /*isDef=*/true, /*isImp=*/true,
+              /*isKill=*/false, MO.isDead()));
+        continue;
+      }
+      // Fall back to adding the implicit def as is if the parts outside the
+      // copy result cannot be represented as subregisters.
+    }
+
     CopyMI->addOperand(MO);
 
     // Be conservative about preserving kills when subregister defs are
