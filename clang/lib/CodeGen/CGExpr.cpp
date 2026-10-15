@@ -1157,10 +1157,13 @@ public:
     return IsExpectedRecordDecl(E) ? E : nullptr;
   }
   const Expr *VisitMemberExpr(const MemberExpr *E) {
-    if (IsExpectedRecordDecl(E) && E->isArrow())
+    // Stop at the innermost member whose struct contains the count, even when
+    // an outer base's struct does too. With 'struct outer { struct inner a, b;
+    // } o', the count for 'o.b.buf' is 'o.b.count', but navigating from 'o'
+    // would find 'o.a.count' first.
+    if (IsExpectedRecordDecl(E))
       return E;
-    const Expr *Res = Visit(E->getBase());
-    return !Res && IsExpectedRecordDecl(E) ? E : Res;
+    return Visit(E->getBase());
   }
   const Expr *VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     return IsExpectedRecordDecl(E) ? E : nullptr;
