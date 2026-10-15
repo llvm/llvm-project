@@ -2282,6 +2282,8 @@ public:
   /// the backend. Atomic operations greater than this size (as well
   /// as ones that are not naturally aligned), will be expanded by
   /// AtomicExpandPass into an __atomic_* library call.
+  /// For elementwise RMWs, the limit applies to each lane. Whole-vector
+  /// cmpxchg/LL-SC expansions must also satisfy it for their full access size.
   unsigned getMaxAtomicSizeInBitsSupported() const {
     return MaxAtomicSizeInBitsSupported;
   }
@@ -2543,6 +2545,8 @@ public:
   /// Returns how the IR-level AtomicExpand pass should expand the given
   /// AtomicRMW, if at all. By default, elementwise operations are expanded and
   /// floating-point operations use are expanded to a compare-exchange loop.
+  /// For native elementwise RMWs (None), the target must check the vector type,
+  /// width and alignment; generic size checks only validate the lane size.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     if (RMW->isElementwise())

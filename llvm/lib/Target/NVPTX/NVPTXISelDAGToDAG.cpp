@@ -78,7 +78,13 @@ struct NVPTXMemCacheHintAccess {
   NVPTX::AddressSpace AddrSpace;
   unsigned NumElts;
   unsigned EltWidth;
-  bool IsVolatile;
+  // Ordering of the selected PTX instruction, which may drop IR volatility.
+  NVPTX::Ordering Ordering;
+
+  bool isVolatileOrMMIO() const {
+    return Ordering == NVPTX::Ordering::Volatile ||
+           Ordering == NVPTX::Ordering::RelaxedMMIO;
+  }
 };
 
 struct NVPTXMemCacheHintOperands {
@@ -135,6 +141,7 @@ private:
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
   void selectAtomicSwap128(SDNode *N);
+  void selectVectorAtomicRMW(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
@@ -317,6 +324,11 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::ATOMIC_CMP_SWAP_B128:
   case NVPTXISD::ATOMIC_SWAP_B128:
     selectAtomicSwap128(N);
+    return;
+  case NVPTXISD::ATOM_VEC_V1:
+  case NVPTXISD::ATOM_VEC_V2:
+  case NVPTXISD::ATOM_VEC_V4:
+    selectVectorAtomicRMW(N);
     return;
   case ISD::FADD:
   case ISD::FMUL:
@@ -1233,13 +1245,17 @@ static bool isL1EvictionSupported(const NVPTXSubtarget &Subtarget,
   if (Eviction == NVPTX::L1Eviction::Normal)
     return true;
 
-  return isLdOrSt(Access) && !Access.IsVolatile &&
+  return isLdOrSt(Access) && !Access.isVolatileOrMMIO() &&
          Subtarget.hasL1EvictionHint();
 }
 
 static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
                                   NVPTX::L2Prefetch Prefetch,
                                   NVPTXMemCacheHintAccess Access) {
+  if (Prefetch != NVPTX::L2Prefetch::None &&
+      Access.Ordering == NVPTX::Ordering::RelaxedMMIO)
+    return false;
+
   switch (Prefetch) {
   case NVPTX::L2Prefetch::None:
     return true;
@@ -1262,7 +1278,7 @@ static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
   if (Eviction == NVPTX::L2Eviction::Normal)
     return true;
 
-  return isLdOrSt(Access) && !Access.IsVolatile &&
+  return isLdOrSt(Access) && !Access.isVolatileOrMMIO() &&
          Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) &&
          ((Access.NumElts == 8 && Access.EltWidth == 32) ||
           (Access.NumElts == 4 && Access.EltWidth == 64));
@@ -1270,7 +1286,7 @@ static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
 
 static bool isCachePolicySupported(const NVPTXSubtarget &Subtarget,
                                    NVPTXMemCacheHintAccess Access) {
-  return !Access.IsVolatile && isGlobalOrGeneric(Access.AddrSpace) &&
+  return !Access.isVolatileOrMMIO() && isGlobalOrGeneric(Access.AddrSpace) &&
          Subtarget.hasL2CacheHint();
 }
 
@@ -1397,7 +1413,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       LD,
       {NVPTXMemCacheHintInstruction::Ld, CodeAddrSpace,
-       /*NumElts=*/1, /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
+       /*NumElts=*/1, /*EltWidth=*/FromTypeWidth, Ordering},
       DL);
 
   // Create the machine instruction DAG
@@ -1478,7 +1494,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
       getMemCacheHintOperands(LD,
                               {NVPTXMemCacheHintInstruction::Ld, CodeAddrSpace,
                                /*NumElts=*/LD->getNumValues() - 1,
-                               /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
+                               /*EltWidth=*/FromTypeWidth, Ordering},
                               DL);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
@@ -1547,7 +1563,7 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       LD,
       {NVPTXMemCacheHintInstruction::Ld, NVPTX::AddressSpace::Global,
-       LD->getNumValues() - 1, FromTypeWidth, LD->isVolatile()},
+       LD->getNumValues() - 1, FromTypeWidth, NVPTX::Ordering::NotAtomic},
       DL);
   SDValue Ops[] = {getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
@@ -1669,7 +1685,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       ST,
       {NVPTXMemCacheHintInstruction::St, CodeAddrSpace,
-       /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
+       /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, Ordering},
       DL);
 
   SDValue Ops[] = {selectPossiblyImm(Value),
@@ -1730,7 +1746,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       ST,
       {NVPTXMemCacheHintInstruction::St, CodeAddrSpace,
-       /*NumElts=*/NumElts, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
+       /*NumElts=*/NumElts, /*EltWidth=*/ToTypeWidth, Ordering},
       DL);
 
   const auto [Base, Offset] = selectADDR(Addr, CurDAG);
@@ -2352,6 +2368,122 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   }
 }
 
+void NVPTXDAGToDAGISel::selectVectorAtomicRMW(SDNode *N) {
+  MemSDNode *MN = cast<MemSDNode>(N);
+  SDLoc DL(N);
+
+  unsigned NumRegs;
+  switch (N->getOpcode()) {
+  case NVPTXISD::ATOM_VEC_V1:
+    NumRegs = 1;
+    break;
+  case NVPTXISD::ATOM_VEC_V2:
+    NumRegs = 2;
+    break;
+  case NVPTXISD::ATOM_VEC_V4:
+    NumRegs = 4;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
+  // Node layout: chain, ptr, val0..valN-1, op_code
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  unsigned OpCode =
+      cast<ConstantSDNode>(N->getOperand(2 + NumRegs))->getZExtValue();
+  MVT RegVT = N->getSimpleValueType(0);
+
+  // Opcode table indexed by [op][register_type][register_count].
+  // op: 0=fadd, 1=fmin, 2=fmax
+  // register_type: 0=f32, 1=f16, 2=bf16, 3=f16x2, 4=bf16x2
+  // register_count: 0=1, 1=2, 2=4
+  // clang-format off
+  static const unsigned OpcTable[3][5][3] = {
+    // fadd
+    {{0, NVPTX::ATOM_ADD_V2_F32, NVPTX::ATOM_ADD_V4_F32},
+     {0, 0, 0},
+     {0, 0, 0},
+     {NVPTX::INT_PTX_ATOM_ADD_F16X2_r, NVPTX::ATOM_ADD_V2_F16X2, NVPTX::ATOM_ADD_V4_F16X2},
+     {NVPTX::INT_PTX_ATOM_ADD_BF16X2_r, NVPTX::ATOM_ADD_V2_BF16X2, NVPTX::ATOM_ADD_V4_BF16X2}},
+    // fmin
+    {{0, 0, 0},
+     {0, NVPTX::ATOM_MIN_V2_F16, 0},
+     {0, NVPTX::ATOM_MIN_V2_BF16, 0},
+     {0, NVPTX::ATOM_MIN_V2_F16X2, NVPTX::ATOM_MIN_V4_F16X2},
+     {0, NVPTX::ATOM_MIN_V2_BF16X2, NVPTX::ATOM_MIN_V4_BF16X2}},
+    // fmax
+    {{0, 0, 0},
+     {0, NVPTX::ATOM_MAX_V2_F16, 0},
+     {0, NVPTX::ATOM_MAX_V2_BF16, 0},
+     {0, NVPTX::ATOM_MAX_V2_F16X2, NVPTX::ATOM_MAX_V4_F16X2},
+     {0, NVPTX::ATOM_MAX_V2_BF16X2, NVPTX::ATOM_MAX_V4_BF16X2}},
+  };
+  // clang-format on
+
+  unsigned TypeIdx;
+  switch (RegVT.SimpleTy) {
+  case MVT::f32:
+    TypeIdx = 0;
+    break;
+  case MVT::f16:
+    TypeIdx = 1;
+    break;
+  case MVT::bf16:
+    TypeIdx = 2;
+    break;
+  case MVT::v2f16:
+    TypeIdx = 3;
+    break;
+  case MVT::v2bf16:
+    TypeIdx = 4;
+    break;
+  default:
+    report_fatal_error("Unsupported register type for vector atom");
+  }
+
+  unsigned WidthIdx;
+  switch (NumRegs) {
+  case 1:
+    WidthIdx = 0;
+    break;
+  case 2:
+    WidthIdx = 1;
+    break;
+  case 4:
+    WidthIdx = 2;
+    break;
+  default:
+    report_fatal_error("Unsupported vector width for vector atom");
+  }
+
+  assert(OpCode < std::size(OpcTable) && "Unexpected atomic operation");
+  unsigned Opc = OpcTable[OpCode][TypeIdx][WidthIdx];
+  if (!Opc)
+    report_fatal_error("Unsupported vector atom combination");
+
+  if (RegVT == MVT::f32 && Subtarget->hasFeature(NVPTX::PTX94) && !useF32FTZ())
+    Opc = NumRegs == 2 ? NVPTX::ATOM_ADD_NOFTZ_V2_F32
+                       : NVPTX::ATOM_ADD_NOFTZ_V4_F32;
+
+  SmallVector<SDValue, 12> Ops{Base, Offset};
+  for (unsigned I = 0; I < NumRegs; ++I)
+    Ops.push_back(N->getOperand(2 + I));
+  Ops.push_back(getI32Imm(getMemOrder(MN), DL));
+  Ops.push_back(getI32Imm(getAtomicScope(MN), DL));
+  Ops.push_back(getI32Imm(getAddrSpace(MN), DL));
+  NVPTXMemCacheHintAccess Access{
+      NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN), NumRegs,
+      unsigned(RegVT.getFixedSizeInBits()), getMemOrder(MN)};
+  const auto [EvictionAndPrefetchHint, CachePolicyReg] =
+      getMemCacheHintOperands(MN, Access, DL);
+  Ops.append(
+      {EvictionAndPrefetchHint, CachePolicyReg, N->getOperand(0)}); // chain
+
+  auto *ATOM = CurDAG->getMachineNode(Opc, DL, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(ATOM, MN->getMemOperand());
+  ReplaceNode(N, ATOM);
+}
+
 void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   MemSDNode *AN = cast<MemSDNode>(N);
   SDLoc dl(N);
@@ -2367,7 +2499,7 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
     unsigned EltWidth = AN->getMemoryVT().getFixedSizeInBits();
     NVPTXMemCacheHintAccess Access{NVPTXMemCacheHintInstruction::Atom,
                                    getAddrSpace(AN),
-                                   /*NumElts=*/1, EltWidth, AN->isVolatile()};
+                                   /*NumElts=*/1, EltWidth, getMemOrder(AN)};
     const auto [EvictionAndPrefetchHint, CachePolicyReg] =
         getMemCacheHintOperands(AN, Access, dl);
     Ops.push_back(EvictionAndPrefetchHint);

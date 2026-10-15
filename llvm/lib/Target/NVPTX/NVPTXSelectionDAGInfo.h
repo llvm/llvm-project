@@ -42,7 +42,14 @@ enum NodeType : unsigned {
   StoreV2,
   StoreV4,
   StoreV8,
-  LAST_MEMORY_OPCODE = StoreV8,
+
+  /// Native vector atomicrmw nodes. Each takes (chain, ptr, val0..valN-1,
+  /// op_code) and produces (res0..resN-1, chain), with one value per PTX
+  /// register. op_code is 0=fadd, 1=fmin, or 2=fmax.
+  ATOM_VEC_V1,
+  ATOM_VEC_V2,
+  ATOM_VEC_V4,
+  LAST_MEMORY_OPCODE = ATOM_VEC_V4,
 };
 
 } // namespace NVPTXISD
