@@ -462,6 +462,14 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     cgm.errorNYI(bodyBeginLoc, "naked function decl");
   }
 
+  // If this is an implicit-return-zero function, initialize the return value.
+  if (fd && fd->hasImplicitReturnZero()) {
+    mlir::Type retTy = convertType(fd->getReturnType().getUnqualifiedType());
+    mlir::Location loc = getLoc(bodyBeginLoc);
+    mlir::Value zero = builder.getNullValue(retTy, loc);
+    builder.CIRBaseBuilderTy::createStore(loc, zero, returnValue.getPointer());
+  }
+
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
     const VarDecl *paramVar = std::get<0>(nameValue);
@@ -548,29 +556,11 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
 
-  // Wrap the rest of the function in a filter try when this declaration has
-  // a dynamic exception specification. Parameter cleanups are pushed after
-  // this so they nest inside the specification, matching classic codegen.
-  emitStartEHSpec(d);
-  prologueCleanupDepth = ehStack.stable_begin();
-
-  // Determine the function body begin location for the prolog.
-  // If fd is null or has no body, use startLoc as fallback.
-  SourceLocation bodyBeginLoc = startLoc;
-  if (fd) {
-    if (Stmt *body = fd->getBody())
-      bodyBeginLoc = body->getBeginLoc();
-    else
-      bodyBeginLoc = fd->getLocation();
-  }
-
-  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
-
   // When the current function is not void, create an address to store the
   // result value.
   if (!returnType->isVoidType()) {
-    // Determine the function body end location.
-    // If fd is null or has no body, use loc as fallback.
+    // Determine the function body end location.  A function without a body
+    // uses its declaration's location, and a null fd uses loc.
     SourceLocation bodyEndLoc = loc;
     if (fd) {
       if (Stmt *body = fd->getBody())
@@ -580,22 +570,26 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
-
-    // If this is an implicit-return-zero function, initialize the return
-    // value. This mirrors the implicit-return-zero handling in classic
-    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
-    // emitAndUpdateRetAlloca, because in CIR the return slot is created
-    // after the prolog (the opposite of classic codegen, where ReturnValue
-    // is set up before EmitFunctionProlog runs).
-    // TODO(cir): Align prolog handling with classic codegen.
-    if (fd && fd->hasImplicitReturnZero()) {
-      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
-      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
-      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
-      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
-                                            returnValue.getPointer());
-    }
   }
+
+  // Wrap the rest of the function in a filter try when this declaration has
+  // a dynamic exception specification. Parameter cleanups are pushed after
+  // this so they nest inside the specification, matching classic codegen.
+  emitStartEHSpec(d);
+  prologueCleanupDepth = ehStack.stable_begin();
+
+  // Determine the function body begin location for the prolog.  A function
+  // without a body uses its declaration's location, and a null fd uses
+  // startLoc.
+  SourceLocation bodyBeginLoc = startLoc;
+  if (fd) {
+    if (Stmt *body = fd->getBody())
+      bodyBeginLoc = body->getBeginLoc();
+    else
+      bodyBeginLoc = fd->getLocation();
+  }
+
+  emitFunctionProlog(args, entryBB, fd, bodyBeginLoc);
 
   if (const auto *md = dyn_cast_if_present<CXXMethodDecl>(d);
       md && !md->isStatic()) {
