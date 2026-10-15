@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
@@ -218,6 +219,10 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
       &M, Intrinsic::type_checked_load_relative);
 
+  // Keep track of which (function, type id, offset) triples we've already
+  // scanned, to prevent repeated work.
+  DenseSet<std::tuple<Function *, Metadata *, uint64_t>> ScannedLoads;
+
   auto scan = [&](Function *CheckedLoadFunc) {
     if (!CheckedLoadFunc)
       return;
@@ -232,7 +237,10 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
       auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
 
       if (Offset) {
-        ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
+        if (ScannedLoads
+                .insert({CI->getFunction(), TypeId, Offset->getZExtValue()})
+                .second)
+          ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
       } else {
         // type.checked.load with a non-constant offset, so assume every entry
         // in every matching vtable is used.
