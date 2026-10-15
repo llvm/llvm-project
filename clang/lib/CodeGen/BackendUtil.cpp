@@ -597,6 +597,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   llvm::TargetOptions Options;
   if (!initTargetOptions(CI, Diags, Options))
     return;
+  Options.MCOptions.LibraryOptions =
+      &TheModule->getContext().getLibraryOptions();
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
   if (TM)

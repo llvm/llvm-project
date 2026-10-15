@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def SparcOptions : OptionsStruct<prefix = "sparc-">;
+def SparcOptions : OptionsStruct<prefix = "sparc-", perContext = false>;
 
 defm : BoolField<"disable-sparc-delay-filler", "false",
   "Disable the Sparc delay slot filler">;

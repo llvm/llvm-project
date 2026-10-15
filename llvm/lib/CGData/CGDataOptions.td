@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def CGDataOptions : OptionsStruct;
+def CGDataOptions : OptionsStruct<perContext = false>;
 
 defm : BoolField<"codegen-data-generate", "false",
   "Emit CodeGen Data into custom sections">;

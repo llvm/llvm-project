@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def ScalarOptions : OptionsStruct;
+def ScalarOptions : OptionsStruct<perContext = false>;
 
 // ADCE.cpp
 // This is a temporary option until we change the interface to this pass based

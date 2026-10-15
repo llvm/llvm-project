@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def MCCLOptions : OptionsStruct;
+def MCCLOptions : OptionsStruct<perContext = false>;
 
 defm : DefaultOnOffField<"dwarf-extended-loc",
   "Disable emission of the extended flags in .loc directives">;
