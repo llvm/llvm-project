@@ -14,9 +14,9 @@
 ! CHECK-LABEL: omp.declare_mapper @_QQFfm :
 ! CHECK-SAME:    [[TY:!fir\.type<_QFfTs\{a:!fir\.array<10xi32>\}>]] {
 ! CHECK:       ^bb0(%[[ARG0:.*]]: !fir.ref<[[TY]]>):
-! CHECK:         %[[V:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFfEv"} : (!fir.ref<[[TY]]>) -> (!fir.ref<[[TY]]>, !fir.ref<[[TY]]>)
+! CHECK:         %[[V:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_QFfEv") : (!fir.ref<[[TY]]>) -> (!fir.ref<[[TY]]>, !fir.ref<[[TY]]>)
 ! CHECK:         %[[FIELD:.*]] = fir.coordinate_of %[[V]]#0, a : (!fir.ref<[[TY]]>) -> !fir.ref<!fir.array<10xi32>>
-! CHECK:         %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+! CHECK:         %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%{{.*}} to %{{.*}} step %{{.*}}) {
 ! CHECK:           %[[COOR:.*]] = fir.array_coor %[[FIELD]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:           %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
 ! CHECK:           omp.yield(%[[MAPINFO]] : !fir.ref<i32>)
@@ -44,8 +44,8 @@ subroutine f00(a)
   a(1) = 1
   !$omp end target
 end
-! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{.*}} arg 1 {uniq_name = "_QFf00Ea"}
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{.*}} arg 1 uniq_name("_QFf00Ea")
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%{{.*}} to %{{.*}} step %{{.*}}) {
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A_DECL]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
 ! CHECK:   omp.yield(%[[MAPINFO]] : !fir.ref<i32>)
