@@ -428,7 +428,7 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
   const Type *AlignTy = nullptr;
-  if (const Type *EltType = isSingleElementStruct(Ty, getContext())) {
+  if (const Type *EltType = isSingleElementRecord(Ty, getContext())) {
     const BuiltinType *BT = EltType->getAs<BuiltinType>();
     if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
         (BT && BT->isFloatingPoint()))
@@ -688,7 +688,7 @@ public:
       // We rely on the default argument classification for the most part.
       // One exception:  An aggregate containing a single floating-point
       // or vector item must be passed in a register if one is available.
-      const Type *T = isSingleElementStruct(I.type, getContext());
+      const Type *T = isSingleElementRecord(I.type, getContext());
       if (T) {
         const BuiltinType *BT = T->getAs<BuiltinType>();
         if ((T->isVectorType() && getContext().getTypeSize(T) == 128) ||
@@ -797,7 +797,7 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
   const Type *AlignAsType = nullptr;
-  const Type *EltType = isSingleElementStruct(Ty, getContext());
+  const Type *EltType = isSingleElementRecord(Ty, getContext());
   if (EltType) {
     const BuiltinType *BT = EltType->getAs<BuiltinType>();
     if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
