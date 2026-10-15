@@ -69,7 +69,7 @@ static bool isIntegerComponent(ElementType Type) {
          Type == ElementType::U32;
 }
 
-static Error validateSemanticType(const SemanticSignatureElement &E) {
+static Error diagnoseSemanticType(const SemanticSignatureElement &E) {
   switch (E.SemanticKind) {
   case dxbc::PSV::SemanticKind::Position:
     if (E.Rows != 1 || E.Cols != 4 ||
@@ -102,7 +102,7 @@ static Error validateSemanticType(const SemanticSignatureElement &E) {
   return Error::success();
 }
 
-static Error validateSemanticIndex(const SemanticSignatureElement &E) {
+static Error diagnoseSemanticIndex(const SemanticSignatureElement &E) {
   switch (E.SemanticKind) {
   case dxbc::PSV::SemanticKind::Target:
     if (E.Rows != 1 || E.SemanticIndices.front() >= 8)
@@ -185,9 +185,9 @@ static Error parseSignature(Metadata *MD,
     for (uint32_t Index : E.SemanticIndices)
       if (!Semantics.emplace(E.SemanticName.upper(), Index).second)
         return signatureError("duplicate semantic name and index");
-    if (Error Err = validateSemanticType(E))
+    if (Error Err = diagnoseSemanticType(E))
       return Err;
-    if (Error Err = validateSemanticIndex(E))
+    if (Error Err = diagnoseSemanticIndex(E))
       return Err;
 
     if (Stage == Triple::Vertex && IO == IOType::In &&
