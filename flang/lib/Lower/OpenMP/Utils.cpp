@@ -1454,6 +1454,16 @@ IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object) {
   analysis.isDerivedTypeMember =
       component || (arrayRef && arrayRef->base().UnwrapComponent());
 
+  // A ranked part before the last one, as in v%p(1:1)%a(i) or x(1:2)%c, can be
+  // neither kept in an array base nor described by map bounds.
+  const evaluate::Component *lastComponent =
+      component ? component
+                : (arrayRef ? arrayRef->base().UnwrapComponent() : nullptr);
+  if (lastComponent && lastComponent->base().Rank() > 0) {
+    analysis.hasArrayValuedParent = true;
+    return analysis;
+  }
+
   if (!arrayRef || arrayRef->subscript().empty() ||
       evaluate::ExtractCoarrayRef(*dataRef))
     return analysis;

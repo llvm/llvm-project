@@ -12,6 +12,16 @@
 ! RUN:   -J %t %t/consumer.f90 -o - | FileCheck %t/consumer.f90
 
 !--- maps.f90
+subroutine declare_mapper_scalar_parent()
+  type :: inner_t
+    integer :: a(2)
+  end type
+  type :: outer_t
+    type(inner_t) :: p(3)
+  end type
+  !$omp declare mapper(m: outer_t :: v) map(iterator(i = 1:2): v%p(2)%a(i))
+end
+
 subroutine declare_mapper_nondefault_lb()
   type :: t
     integer :: a(-2:7)
@@ -234,6 +244,24 @@ end
 ! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
 ! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
 ! CHECK:   } inclusive -> !omp.iterated<!llvm.ptr>
+! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+
+! A scalar parent element keeps a single ranked part in the array base.
+! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_scalar_parentm
+! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdeclare_mapper_scalar_parentEv")
+! CHECK:   %[[IT:.*]] = omp.iterator(%{{.*}}: i32) =
+! CHECK:     fir.store %{{.*}} to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:     %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:     %[[P_IDX:.*]] = arith.constant 2 : index
+! CHECK:     %[[P:.*]] = hlfir.designate %[[DECL]]#0{"p"} <%{{.*}}> (%[[P_IDX]])
+! CHECK:     %[[A:.*]] = hlfir.designate %[[P]]{"a"} {{.*}} -> !fir.ref<!fir.array<2xi32>>
+! CHECK:     %[[IV:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:     %[[IV_I64:.*]] = fir.convert %[[IV]] : (i32) -> i64
+! CHECK:     %[[IV_IDX:.*]] = fir.convert %[[IV_I64]] : (i64) -> index
+! CHECK:     %[[LB:.*]] = arith.subi %[[IV_IDX]], %{{.*}} : index
+! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB]] : index) upper_bound(%[[LB]] : index)
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<2xi32>>, !fir.array<2xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]])
+! CHECK:     omp.yield(%[[MAP]] : !llvm.ptr)
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
 !--- ranges.f90

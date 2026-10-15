@@ -1953,6 +1953,35 @@ void ClauseProcessor::processMapObjects(
   }
 }
 
+// Ordinary map bounds report these sections as errors without failing, and
+// then map the whole base.
+static bool hasUnsupportedMapSection(const omp::SomeExpr &ref) {
+  if (evaluate::HasVectorSubscript(ref))
+    return true;
+  std::optional<evaluate::DataRef> dataRef = evaluate::ExtractDataRef(ref);
+  const auto *arrayRef =
+      dataRef ? std::get_if<evaluate::ArrayRef>(&dataRef->u) : nullptr;
+  if (!arrayRef)
+    return false;
+  for (const evaluate::Subscript &subscript : arrayRef->subscript()) {
+    const auto *triplet = std::get_if<evaluate::Triplet>(&subscript.u);
+    if (!triplet)
+      continue;
+    std::optional<std::int64_t> stride =
+        evaluate::ToInt64(triplet->GetStride());
+    if (!stride || *stride != 1)
+      return true;
+    std::optional<std::int64_t> lower, upper;
+    if (const auto &expr = triplet->lower())
+      lower = evaluate::ToInt64(*expr);
+    if (const auto &expr = triplet->upper())
+      upper = evaluate::ToInt64(*expr);
+    if (lower && upper && *upper < *lower)
+      return true;
+  }
+  return false;
+}
+
 // Lower iterator-dependent locators to mapIterated and other locators to
 // mapVars.
 void ClauseProcessor::processMapObjectsWithIterator(
@@ -2008,17 +2037,19 @@ void ClauseProcessor::processMapObjectsWithIterator(
   for (const omp::Object &object : objects) {
     llvm::SmallVector<IteratorRange> objectRanges =
         getIteratorRangesForObject(object, iteratorRanges);
+    IteratorMapObjectAnalysis analysis = analyzeIteratorMapObject(object);
     if (!objectRanges.empty()) {
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,
              "iterator modifier with reference or attach modifier");
-      IteratorMapObjectAnalysis analysis = analyzeIteratorMapObject(object);
       bool isMapperVariable = isDeclareMapperVariable(analysis);
       if (analysis.isDerivedTypeMember && !isMapperVariable)
         TODO(clauseLocation, "iterator modifier with derived type member map");
       if (declareMapper && analysis.rootSym && !isMapperVariable)
         TODO(clauseLocation,
              "iterator modifier with locator outside declare mapper variable");
+      if (analysis.hasArrayValuedParent)
+        TODO(clauseLocation, "iterator modifier with array-valued parent");
       if (!analysis.arrayRef)
         TODO(clauseLocation, "object type not supported by iterator modifier");
       if (const auto *symbol{object.sym()};
@@ -2030,6 +2061,14 @@ void ClauseProcessor::processMapObjectsWithIterator(
       continue;
     }
 
+    // Ordinary map lowering cannot lower these locators either.
+    if (analysis.hasArrayValuedParent)
+      TODO(clauseLocation, "iterator modifier with array-valued parent");
+    if (object.ref() && (!evaluate::ExtractDataRef(*object.ref()) ||
+                         evaluate::ExtractCoarrayRef(*object.ref())))
+      TODO(clauseLocation, "object type not supported by iterator modifier");
+    if (object.ref() && hasUnsupportedMapSection(*object.ref()))
+      TODO(clauseLocation, "iterator modifier with unsupported array section");
     omp::ObjectList singleObj{object};
     processMapObjects(stmtCtx, clauseLocation, singleObj, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapObjects,

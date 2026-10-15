@@ -14,6 +14,30 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -fopenmp-version=52 -o - %t/motion-optional.f90 2>&1 | \
 ! RUN:   FileCheck %t/motion-optional.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-parent.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-parent.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-section-member.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-section-member.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-substring.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-substring.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-complex-part.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-complex-part.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fcoarray \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-coindexed.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-coindexed.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-vector.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-vector.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-stride.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-stride.f90
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp \
+! RUN:   -fopenmp-version=52 -o - %t/unreferenced-empty.f90 2>&1 | \
+! RUN:   FileCheck %t/unreferenced-empty.f90
 
 ! Unsupported iterator locators in map and motion clauses.
 
@@ -74,4 +98,75 @@ subroutine target_update_optional_iterator(a, n)
 
   ! CHECK: not yet implemented: iterator modifier with optional locator
   !$omp target update to(iterator(i = 1:n): a(i))
+end subroutine
+
+!--- unreferenced-parent.f90
+subroutine target_update_unreferenced_array_parent()
+  type :: s
+    integer :: a(2)
+  end type
+  type(s) :: x(2)
+
+  ! CHECK: not yet implemented: iterator modifier with array-valued parent
+  !$omp target update to(iterator(i = 1:1): x(1:2)%a(1))
+end subroutine
+
+!--- unreferenced-section-member.f90
+subroutine target_exit_data_unreferenced_section_member()
+  type :: s
+    integer :: c
+  end type
+  type(s) :: x(4)
+
+  ! CHECK: not yet implemented: iterator modifier with array-valued parent
+  !$omp target exit data map(iterator(i = 1:1), from: x(1:2)%c)
+end subroutine
+
+!--- unreferenced-substring.f90
+subroutine target_enter_data_unreferenced_substring()
+  character(len=4) :: s
+
+  ! CHECK: not yet implemented: object type not supported by iterator modifier
+  !$omp target enter data map(iterator(i = 1:1), to: s(1:2))
+end subroutine
+
+!--- unreferenced-complex-part.f90
+subroutine target_enter_data_unreferenced_complex_part()
+  complex :: z
+
+  ! CHECK: not yet implemented: object type not supported by iterator modifier
+  !$omp target enter data map(iterator(i = 1:1), to: z%re)
+end subroutine
+
+!--- unreferenced-coindexed.f90
+subroutine target_update_unreferenced_coindexed(a)
+  integer :: a(2)
+  integer, save :: ca(2)[*]
+
+  ! CHECK: not yet implemented: object type not supported by iterator modifier
+  !$omp target update to(iterator(i = 1:2): a(i), ca(1)[1])
+end subroutine
+
+!--- unreferenced-vector.f90
+subroutine target_exit_data_unreferenced_vector(a)
+  integer :: a(4)
+
+  ! CHECK: not yet implemented: iterator modifier with unsupported array section
+  !$omp target exit data map(iterator(i = 1:1), from: a([1, 3]))
+end subroutine
+
+!--- unreferenced-stride.f90
+subroutine target_update_unreferenced_stride(a)
+  integer :: a(4)
+
+  ! CHECK: not yet implemented: iterator modifier with unsupported array section
+  !$omp target update from(iterator(i = 1:1): a(1:4:2))
+end subroutine
+
+!--- unreferenced-empty.f90
+subroutine target_exit_data_unreferenced_empty(a)
+  integer :: a(4)
+
+  ! CHECK: not yet implemented: iterator modifier with unsupported array section
+  !$omp target exit data map(iterator(i = 1:1), from: a(1:0))
 end subroutine

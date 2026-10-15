@@ -262,6 +262,7 @@ struct IteratorMapInfo {
 struct IteratorMapObjectAnalysis {
   const semantics::Symbol *rootSym = nullptr;
   bool isDerivedTypeMember = false;
+  bool hasArrayValuedParent = false;
   // Own the validated reference so lowering can reuse it after analysis.
   std::optional<evaluate::ArrayRef> arrayRef;
 };
