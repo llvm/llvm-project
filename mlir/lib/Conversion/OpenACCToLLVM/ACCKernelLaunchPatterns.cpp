@@ -272,8 +272,10 @@ static void declareLibc(SymbolTable &symbolTable, Region &globalSymbolRegion,
       LLVM::LLVMFuncOp::create(builder, loc, name, functionType));
 }
 
-/// When the kernel entry point reports that the kernel did not launch, report
-/// the failure and stop.
+/// The kernel entry point reports a status other than success when the kernel
+/// could not run on the device. The program is then meant to run the region on
+/// the host, which is not implemented, so the failure is reported and the
+/// program stops.
 static void emitHostFallbackNotImplemented(Location loc, Value status,
                                            ConversionPatternRewriter &rewriter,
                                            Region &globalSymbolRegion,
