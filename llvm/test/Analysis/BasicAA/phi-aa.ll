@@ -315,7 +315,7 @@ exit:
 
 ; %ptr.outer has two arguments and a recursive LCSSA phi as incoming values.
 ; CHECK-LABEL: recursive_lcssa_phi_and_two_args
-; CHECK: MayAlias: i8* %buf, i8* %ptr.outer
+; CHECK: NoAlias: i8* %buf, i8* %ptr.outer
 define void @recursive_lcssa_phi_and_two_args(ptr %a, ptr %b, i1 %c) {
 entry:
   %buf = alloca [16 x i8]
@@ -346,7 +346,7 @@ exit:
 
 ; %ptr.outer has a recursive LCSSA phi and another loop's LCSSA phi as inputs.
 ; CHECK-LABEL: recursive_lcssa_phi_and_phi
-; CHECK: MayAlias: i8* %buf, i8* %ptr.outer
+; CHECK: NoAlias: i8* %buf, i8* %ptr.outer
 define void @recursive_lcssa_phi_and_phi(ptr %a, i1 %c) {
 entry:
   %buf = alloca [16 x i8]
@@ -414,7 +414,7 @@ exit:
 
 ; %ptr.outer has two recursive LCSSA phis and %small as incoming values.
 ; CHECK-LABEL: recursive_lcssa_phis_and_small_alloca
-; CHECK: MayAlias: i8* %ptr.outer, i32* %q
+; CHECK: NoAlias: i8* %ptr.outer, i32* %q
 define void @recursive_lcssa_phis_and_small_alloca(ptr %pp, i1 %c) {
 entry:
   %small = alloca i8
