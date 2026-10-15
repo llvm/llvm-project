@@ -1167,6 +1167,9 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA Support
 
+- Fixed a CUDA miscompile caused by lambdas in reopened namespaces receiving
+  the same mangled name. (#GH231096)
+
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
