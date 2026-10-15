@@ -19,6 +19,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -103,16 +104,19 @@ public:
       if (!func)
         return op->emitOpError(Twine(attribute.getName()) +
                                " is only supported on `llvm.func` operations");
-      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      if (!value)
-        return op->emitOpError(Twine(attribute.getName()) +
-                               " must be an integer");
 
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
       llvm::SmallString<8> llvmAttrValue;
-      llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
-      attrValueStream << value.getInt();
+      if (auto strValue = dyn_cast<StringAttr>(attribute.getValue())) {
+        llvmAttrValue.append(strValue.getValue());
+      } else if (auto intValue = dyn_cast<IntegerAttr>(attribute.getValue())) {
+        llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
+        attrValueStream << intValue.getInt();
+      } else {
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a string or an integer");
+      }
       llvmFunc->addFnAttr("amdgpu-waves-per-eu", llvmAttrValue);
     }
     if (dialect->getFlatWorkGroupSizeAttrHelper().getName() ==
@@ -259,7 +263,7 @@ public:
     if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
         attribute.getName()) {
       for (llvm::Instruction *i : instructions)
-        i->setMetadata("amdgpu.ignore.denormal.mode",
+        i->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
                        llvm::MDNode::get(llvmContext, {}));
     }
 

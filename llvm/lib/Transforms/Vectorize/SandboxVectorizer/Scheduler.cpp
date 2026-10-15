@@ -451,7 +451,7 @@ void Scheduler::assertSameDirection(ArrayRef<Instruction *> Instrs) const {
 }
 #endif // NDEBUG
 
-bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
+bool Scheduler::trySchedule(BndlRef<Instruction *> Instrs) {
   assert(all_of(drop_begin(Instrs),
                 [Instrs](Instruction *I) {
                   return I->getParent() == (*Instrs.begin())->getParent();

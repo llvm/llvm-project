@@ -22,7 +22,7 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_typeof_integer(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32>
-! CHECK: %[[B:.*]] = fir.alloca i32 {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca i32 <{bindc_name = "b"
 ! CHECK: hlfir.declare %[[B]]
 
   subroutine test_typeof_real8(a)
@@ -32,7 +32,7 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_typeof_real8(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64>
-! CHECK: %[[B:.*]] = fir.alloca f64 {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca f64 <{bindc_name = "b"
 
   subroutine test_typeof_logical(a)
     logical :: a
@@ -41,7 +41,7 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_typeof_logical(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
-! CHECK: %[[B:.*]] = fir.alloca !fir.logical<4> {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "b"
 
 ! Test TYPEOF with derived types
   subroutine test_typeof_derived(a)
@@ -51,7 +51,7 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_typeof_derived(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>
-! CHECK: %[[B:.*]] = fir.alloca !fir.type<_QMtypeof_classof_typesTbase_t{x:i32}> {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca !fir.type<_QMtypeof_classof_typesTbase_t{x:i32}> <{bindc_name = "b"
 
   subroutine test_typeof_child(a)
     type(child_t) :: a
@@ -60,7 +60,7 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_typeof_child(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMtypeof_classof_typesTchild_t{base_t:!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>,y:i32}>>
-! CHECK: %[[B:.*]] = fir.alloca !fir.type<_QMtypeof_classof_typesTchild_t{base_t:!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>,y:i32}> {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca !fir.type<_QMtypeof_classof_typesTchild_t{base_t:!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>,y:i32}> <{bindc_name = "b"
 
 ! Test CLASSOF with allocatable (polymorphic)
   subroutine test_classof_allocatable(a)
@@ -70,7 +70,7 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_classof_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>
-! CHECK: %[[B:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>> {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>> <{bindc_name = "b"
 
 ! Test CLASSOF with pointer (polymorphic)
   subroutine test_classof_pointer(a)
@@ -80,6 +80,6 @@ contains
   end subroutine
 ! CHECK-LABEL: func.func @_QMtypeof_classof_typesPtest_classof_pointer(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>
-! CHECK: %[[B:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>> {bindc_name = "b"
+! CHECK: %[[B:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMtypeof_classof_typesTbase_t{x:i32}>>> <{bindc_name = "b"
 
 end module

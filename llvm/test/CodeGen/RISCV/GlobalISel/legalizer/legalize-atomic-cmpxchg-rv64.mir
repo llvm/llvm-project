@@ -154,7 +154,7 @@ body:             |
     ; RV32IA-ZABHA-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[ATOMIC_CMPXCHG]](s64)
     ; RV32IA-ZABHA-NEXT: $x11 = COPY [[ICMP]](s64)
-    ; RV32IA-ZABHA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; RV32IA-ZABHA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV32IA-ZABHA-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-ZABHA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[COPY1]](s64)
@@ -172,7 +172,7 @@ body:             |
     ; RV32IA-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-NEXT: $x10 = COPY [[ATOMIC_CMPXCHG]](s64)
     ; RV32IA-NEXT: $x11 = COPY [[ICMP]](s64)
-    ; RV32IA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; RV32IA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV32IA-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
     ; RV32IA-NEXT: $x10 = COPY [[COPY1]](s64)
@@ -206,7 +206,7 @@ body:             |
     ; RV32IA-ZABHA-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[COPY1]](s64)
     ; RV32IA-ZABHA-NEXT: $x11 = COPY [[ICMP]](s64)
-    ; RV32IA-ZABHA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; RV32IA-ZABHA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV32IA-ZABHA-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-ZABHA-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
     ; RV32IA-ZABHA-NEXT: $x10 = COPY [[COPY2]](s64)
@@ -224,7 +224,7 @@ body:             |
     ; RV32IA-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-NEXT: $x10 = COPY [[COPY1]](s64)
     ; RV32IA-NEXT: $x11 = COPY [[ICMP]](s64)
-    ; RV32IA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; RV32IA-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV32IA-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV32IA-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
     ; RV32IA-NEXT: $x10 = COPY [[COPY2]](s64)

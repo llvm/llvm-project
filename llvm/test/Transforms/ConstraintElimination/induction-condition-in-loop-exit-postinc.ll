@@ -657,9 +657,11 @@ exit:
   ret i1 false
 }
 
-; Adjusted lower bound `StartValue + StepOffset` overflows unsigned.
-define i1 @postinc_start_plus_step_overflow_not_folded(i1 %c) {
-; CHECK-LABEL: define i1 @postinc_start_plus_step_overflow_not_folded(
+; Adjusted lower bound `StartValue + StepOffset` overflows unsigned, so no
+; unsigned bounds are added. The query is still proven using the signed
+; bounds, as %iv.next is known to be non-negative.
+define i1 @postinc_start_plus_step_overflow_unsigned(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_start_plus_step_overflow_unsigned(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -671,8 +673,7 @@ define i1 @postinc_start_plus_step_overflow_not_folded(i1 %c) {
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -1487,3 +1488,43 @@ declare void @use(i1)
 declare void @launch(i32)
 declare void @execute()
 declare i64 @llvm.umin.i64(i64, i64)
+
+; Adjusted lower bound `StartValue + StepOffset` overflows both signed and
+; unsigned, so neither set of bounds is added.
+define i1 @postinc_start_plus_step_overflow_signed_not_folded(i1 %c) {
+; CHECK-LABEL: define i1 @postinc_start_plus_step_overflow_signed_not_folded(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT_0]]:
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 9223372036854775807, %entry ], [ %iv.next, %loop.latch ]
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 100
+  br i1 %done, label %exit, label %loop.latch
+
+loop.latch:
+  br i1 %c, label %exit.0, label %loop.header
+
+exit.0:
+  %res = icmp ule i64 %iv.next, 100
+  ret i1 %res
+
+exit:
+  ret i1 false
+}

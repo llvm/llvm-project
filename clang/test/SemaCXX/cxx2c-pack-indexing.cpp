@@ -370,7 +370,7 @@ void foo(auto...x){
     //expected-error@-1 {{invalid index 4294967296 for pack 'x' of size 1}}
 
     using T1 = T...[(__int128)18446744073709551615U+1];
-    // expected-warning@-1 3{{implicit conversion from '__int128' to '__size_t'}}
+    // expected-warning@-1 2{{implicit conversion from '__int128' to '__size_t'}}
     // expected-error@-2   2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
 }
 int test(){

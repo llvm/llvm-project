@@ -80,12 +80,12 @@ public:
   }
 };
 
-#define LIST_FMIN_TESTS(T, func)                                               \
-  using LlvmLibcFMinTest = FMinTest<T>;                                        \
-  TEST_F(LlvmLibcFMinTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMinTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMinTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMinTest, BothZero) { testBothZero(&func); }                  \
-  TEST_F(LlvmLibcFMinTest, Range) { testRange(&func); }
+#define LIST_FMIN_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FMinTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINTEST_H

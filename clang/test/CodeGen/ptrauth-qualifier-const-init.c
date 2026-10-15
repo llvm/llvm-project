@@ -19,8 +19,8 @@ int * __ptrauth(1,1,1902) g4 = (int*) 1230;
 
 // CHECK: @ga = global [3 x ptr] [
 // CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 712, ptr @ga),
-// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 712, ptr getelementptr inbounds ([3 x ptr], ptr @ga, i32 0, i32 1)),
-// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 712, ptr getelementptr inbounds ([3 x ptr], ptr @ga, i32 0, i32 2))]
+// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 712, ptr getelementptr inbounds (i8, ptr @ga, i64 8)),
+// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 712, ptr getelementptr inbounds (i8, ptr @ga, i64 16))]
 int * __ptrauth(1,1,712) ga[3] = { &external_int, &external_int, &external_int };
 
 struct A {
@@ -43,8 +43,8 @@ struct B {
 
 // CHECK: @gs2 = global %struct.B {
 // CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 1276, ptr @gs2),
-// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 23674, ptr getelementptr inbounds (%struct.B, ptr @gs2, i32 0, i32 1)),
-// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 163, ptr getelementptr inbounds (%struct.B, ptr @gs2, i32 0, i32 2)) }
+// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 23674, ptr getelementptr inbounds (i8, ptr @gs2, i64 8)),
+// CHECK-SAME: ptr ptrauth (ptr @external_int, i32 1, i64 163, ptr getelementptr inbounds (i8, ptr @gs2, i64 16)) }
 struct B gs2 = { &external_int, &external_int, &external_int };
 
 // Constant initializers for function pointers.
@@ -59,8 +59,8 @@ fpt __ptrauth(1,1,1272) f2 = &external_function;
 
 // CHECK: @fa = global [3 x ptr] [
 // CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 712, ptr @fa),
-// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 712, ptr getelementptr inbounds ([3 x ptr], ptr @fa, i32 0, i32 1)),
-// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 712, ptr getelementptr inbounds ([3 x ptr], ptr @fa, i32 0, i32 2))]
+// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 712, ptr getelementptr inbounds (i8, ptr @fa, i64 8)),
+// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 712, ptr getelementptr inbounds (i8, ptr @fa, i64 16))]
 fpt __ptrauth(1,1,712) fa[3] = { &external_function, &external_function, &external_function };
 
 struct C {
@@ -81,6 +81,6 @@ struct D {
 };
 // CHECK: @fs2 = global %struct.D {
 // CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 1276, ptr @fs2),
-// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 23674, ptr getelementptr inbounds (%struct.D, ptr @fs2, i32 0, i32 1)),
-// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 163, ptr getelementptr inbounds (%struct.D, ptr @fs2, i32 0, i32 2)) }
+// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 23674, ptr getelementptr inbounds (i8, ptr @fs2, i64 8)),
+// CHECK-SAME: ptr ptrauth (ptr @external_function, i32 1, i64 163, ptr getelementptr inbounds (i8, ptr @fs2, i64 16)) }
 struct D fs2 = { &external_function, &external_function, &external_function };

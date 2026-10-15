@@ -14,6 +14,8 @@ def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::mlir::ModuleOp"> {
   let summary = "Lower High-Level FIR to FIR";
   let dependentDialects = [
     "mlir::func::FuncDialect",
+    "mlir::DLTIDialect",
+    "mlir::LLVM::LLVMDialect",
   ];
 }
 

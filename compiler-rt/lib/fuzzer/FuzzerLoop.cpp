@@ -352,6 +352,8 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
 
   Printf(" exec/s: %zd", ExecPerSec);
   Printf(" rss: %zdMB", GetPeakRSSMb());
+  if (Options.StaleCorpusTimeoutSec > 0)
+    Printf(" stale: %zd", secondsSinceLastNewCorpus());
   Printf("%s", End);
 }
 
@@ -535,6 +537,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
+    LastNewCorpusTime = UnitStopTime;
     auto NewII =
         Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
                            TPC.ObservedFocusFunction(), ForceAddToCorpus,
@@ -874,7 +877,8 @@ void Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
   DFT.Clear();  // No need for DFT any more.
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
-  system_clock::time_point LastCorpusReload = system_clock::now();
+  system_clock::time_point LastCorpusReload = LastNewCorpusTime =
+      system_clock::now();
 
   TmpMaxMutationLen =
       Min(MaxMutationLen, Max(size_t(4), Corpus.MaxInputSize()));
@@ -921,14 +925,16 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
     return;
   while (!TimedOut() && TotalNumberOfRuns < Options.MaxNumberOfRuns) {
     MD.StartMutationSequence();
-    memcpy(CurrentUnitData, U.data(), U.size());
+    size_t Size = U.size();
+    memcpy(CurrentUnitData, U.data(), Size);
     for (int i = 0; i < Options.MutateDepth; i++) {
-      size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
+      size_t NewSize = MD.Mutate(CurrentUnitData, Size, MaxMutationLen);
       assert(NewSize > 0 && NewSize <= MaxMutationLen);
       ExecuteCallback(CurrentUnitData, NewSize);
       PrintPulseAndReportSlowInput(CurrentUnitData, NewSize);
       TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
                               /*DuringInitialCorpusExecution*/ false);
+      Size = NewSize;
     }
   }
 }

@@ -16,6 +16,7 @@
 #include "EHScopeStack.h"
 
 #include "Address.h"
+#include "clang/CodeGenUtils/EHPersonality.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -101,6 +102,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsSEHFinallyCleanup : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsStackRestore : 1;
 
     /// The amount of extra storage needed by the Cleanup.
     /// Always a multiple of the scope-stack alignment.
@@ -361,6 +365,7 @@ public:
     CleanupBits.IsLifetimeMarker = false;
     CleanupBits.IsFakeUse = false;
     CleanupBits.IsSEHFinallyCleanup = false;
+    CleanupBits.IsStackRestore = false;
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
     CleanupBits.CleanupSize = cleanupSize;
@@ -392,6 +397,13 @@ public:
 
   bool isLifetimeMarker() const { return CleanupBits.IsLifetimeMarker; }
   void setLifetimeMarker() { CleanupBits.IsLifetimeMarker = true; }
+
+  bool isStackRestore() const { return CleanupBits.IsStackRestore; }
+  void setStackRestore() { CleanupBits.IsStackRestore = true; }
+
+  bool isRedundantBeforeReturn() const {
+    return isLifetimeMarker() || isStackRestore();
+  }
 
   bool isFakeUse() const { return CleanupBits.IsFakeUse; }
   void setFakeUse() { CleanupBits.IsFakeUse = true; }
@@ -663,52 +675,16 @@ EHScopeStack::stabilize(iterator ir) const {
   return stable_iterator(EndOfBuffer - ir.Ptr);
 }
 
-/// The exceptions personality for a function.
-struct EHPersonality {
-  const char *PersonalityFn;
+using CodeGenUtils::EHPersonality;
 
-  // If this is non-null, this personality requires a non-standard
-  // function for rethrowing an exception after a catchall cleanup.
-  // This function must have prototype void(void*).
-  const char *CatchallRethrowFn;
+/// Selects the personality function to use for \p FD, or for the translation
+/// unit as a whole when \p FD is null.
+const EHPersonality &getEHPersonality(CodeGenModule &CGM,
+                                      const FunctionDecl *FD);
 
-  static const EHPersonality &get(CodeGenModule &CGM, const FunctionDecl *FD);
-  static const EHPersonality &get(CodeGenFunction &CGF);
-
-  static const EHPersonality GNU_C;
-  static const EHPersonality GNU_C_SJLJ;
-  static const EHPersonality GNU_C_SEH;
-  static const EHPersonality GNU_ObjC;
-  static const EHPersonality GNU_ObjC_SJLJ;
-  static const EHPersonality GNU_ObjC_SEH;
-  static const EHPersonality GNUstep_ObjC;
-  static const EHPersonality GNU_ObjCXX;
-  static const EHPersonality NeXT_ObjC;
-  static const EHPersonality GNU_CPlusPlus;
-  static const EHPersonality GNU_CPlusPlus_SJLJ;
-  static const EHPersonality GNU_CPlusPlus_SEH;
-  static const EHPersonality MSVC_except_handler;
-  static const EHPersonality MSVC_C_specific_handler;
-  static const EHPersonality MSVC_CxxFrameHandler3;
-  static const EHPersonality GNU_Wasm_CPlusPlus;
-  static const EHPersonality XL_CPlusPlus;
-  static const EHPersonality ZOS_CPlusPlus;
-
-  /// Does this personality use landingpads or the family of pad instructions
-  /// designed to form funclets?
-  bool usesFuncletPads() const {
-    return isMSVCPersonality() || isWasmPersonality();
-  }
-
-  bool isMSVCPersonality() const {
-    return this == &MSVC_except_handler || this == &MSVC_C_specific_handler ||
-           this == &MSVC_CxxFrameHandler3;
-  }
-
-  bool isWasmPersonality() const { return this == &GNU_Wasm_CPlusPlus; }
-
-  bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
-};
+/// Selects the personality function to use for the function currently being
+/// emitted.
+const EHPersonality &getEHPersonality(CodeGenFunction &CGF);
 }
 }
 

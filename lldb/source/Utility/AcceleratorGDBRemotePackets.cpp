@@ -124,6 +124,22 @@ json::Value toJSON(const AcceleratorActions &data) {
   return obj;
 }
 
+bool fromJSON(const Value &value, LLDBSettings &data, Path path) {
+  ObjectMapper o(value, path);
+  return o && o.mapOptional("dyld_plugin_name", data.dyld_plugin_name) &&
+         o.mapOptional("accelerator_plugin_name",
+                       data.accelerator_plugin_name) &&
+         o.mapOptional("send_dyld_packet_to_accelerator",
+                       data.send_dyld_packet_to_accelerator);
+}
+
+json::Value toJSON(const LLDBSettings &data) {
+  return Object{{"dyld_plugin_name", data.dyld_plugin_name},
+                {"accelerator_plugin_name", data.accelerator_plugin_name},
+                {"send_dyld_packet_to_accelerator",
+                 data.send_dyld_packet_to_accelerator}};
+}
+
 bool fromJSON(const Value &value, AcceleratorBreakpointHitResponse &data,
               Path path) {
   ObjectMapper o(value, path);
