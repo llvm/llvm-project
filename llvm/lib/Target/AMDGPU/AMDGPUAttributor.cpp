@@ -233,6 +233,9 @@ private:
 
   /// Get the constant access bitmap for \p C.
   uint8_t getConstantAccess(const Constant *C) {
+    if (isa<ConstantData>(C))
+      return NONE;
+
     const auto &It = ConstantStatus.find(C);
     if (It != ConstantStatus.end())
       return It->second.value();
