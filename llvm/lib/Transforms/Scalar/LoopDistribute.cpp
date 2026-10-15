@@ -138,7 +138,7 @@ public:
       // Insert instructions from the loop that we depend on.
       for (Value *V : I->operand_values()) {
         auto *I = dyn_cast<Instruction>(V);
-        if (I && OrigLoop->contains(I->getParent()) && Set.insert(I))
+        if (I && OrigLoop->contains(I->getParent()) && Set.insert(I).second)
           Worklist.push_back(I);
       }
     }

@@ -273,7 +273,7 @@ bool PointerReplacer::collectUsers() {
 
   auto TryPushInstOperand = [&](Instruction *InstOp) {
     if (!UsersToReplace.contains(InstOp)) {
-      if (!ValuesToRevisit.insert(InstOp))
+      if (!ValuesToRevisit.insert(InstOp).second)
         return false;
       Worklist.emplace_back(InstOp);
     }
@@ -304,7 +304,7 @@ bool PointerReplacer::collectUsers() {
       // Either an incoming value is not an instruction or not all
       // incoming values are available. If this PHI was already
       // visited prior to this iteration, return false.
-      if (!IsReplaceable || !ValuesToRevisit.insert(PHI))
+      if (!IsReplaceable || !ValuesToRevisit.insert(PHI).second)
         return false;
 
       // Push PHI back into the stack, followed by unavailable

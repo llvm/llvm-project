@@ -499,7 +499,7 @@ AArch64FrameLowering::getFixedObjectSize(const MachineFunction &MF,
         for (const WinEHHandlerType &H : TBME.HandlerArray) {
           int FrameIndex = H.CatchObj.FrameIndex;
           if ((FrameIndex != INT_MAX) &&
-              CatchObjFrameIndices.insert(FrameIndex)) {
+              CatchObjFrameIndices.insert(FrameIndex).second) {
             FixedObjectSize = alignTo(FixedObjectSize,
                                       MFI.getObjectAlign(FrameIndex).value()) +
                               MFI.getObjectSize(FrameIndex);

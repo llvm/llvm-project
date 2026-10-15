@@ -1154,7 +1154,7 @@ void ScopedAliasMetadataDeepCloner::addRecursiveMetadataUses() {
     const MDNode *M = cast<MDNode>(Queue.pop_back_val());
     for (const Metadata *Op : M->operands())
       if (const MDNode *OpMD = dyn_cast<MDNode>(Op))
-        if (MD.insert(OpMD))
+        if (MD.insert(OpMD).second)
           Queue.push_back(OpMD);
   }
 }

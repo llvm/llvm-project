@@ -16864,7 +16864,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   SmallSetVector<Value *, 16> UniqueValues;
   SmallVector<unsigned, 16> UniqueIndexes;
   for (auto [Idx, V] : enumerate(VL))
-    if (UniqueValues.insert(V))
+    if (UniqueValues.insert(V).second)
       UniqueIndexes.push_back(Idx);
   const unsigned Sz = UniqueValues.size();
   SmallBitVector UsedScalars(Sz, false);

@@ -450,7 +450,7 @@ std::string ScopDetection::regionIsInvalidBecause(const Region *R) const {
 bool ScopDetection::addOverApproximatedRegion(Region *AR,
                                               DetectionContext &Context) const {
   // If we already know about Ar we can exit.
-  if (!Context.NonAffineSubRegionSet.insert(AR))
+  if (!Context.NonAffineSubRegionSet.insert(AR).second)
     return true;
 
   // All loops in the region have to be overapproximated too if there

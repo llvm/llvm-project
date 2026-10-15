@@ -7806,7 +7806,8 @@ void ASTWriter::AddedVisibleDecl(const DeclContext *DC, const Decl *D) {
   assert(DC == DC->getPrimaryContext() && "added to non-primary context");
   assert(!getDefinitiveDeclContext(DC) && "DeclContext not definitive!");
   assert(!WritingAST && "Already writing the AST!");
-  if (UpdatedDeclContexts.insert(DC) && !cast<Decl>(DC)->isFromASTFile()) {
+  if (UpdatedDeclContexts.insert(DC).second &&
+      !cast<Decl>(DC)->isFromASTFile()) {
     // We're adding a visible declaration to a predefined decl context. Ensure
     // that we write out all of its lookup results so we don't get a nasty
     // surprise when we try to emit its lookup table.

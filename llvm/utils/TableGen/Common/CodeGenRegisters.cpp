@@ -591,7 +591,7 @@ void CodeGenRegister::addSubRegsPreOrder(
     SetVector<const CodeGenRegister *> &OSet, CodeGenRegBank &RegBank) const {
   assert(SuperRegsComplete && "Must precompute super-registers");
   for (CodeGenRegister *SR : ExplicitSubRegs) {
-    if (OSet.insert(SR))
+    if (OSet.insert(SR).second)
       SR->addSubRegsPreOrder(OSet, RegBank);
   }
   // Add any secondary sub-registers that weren't part of the explicit tree.
@@ -2945,7 +2945,7 @@ CodeGenRegBank::computeCoveredRegisters(ArrayRef<const Record *> Regs) {
   // First add Regs with all sub-registers.
   for (const Record *RegDef : Regs) {
     CodeGenRegister *Reg = getReg(RegDef);
-    if (Set.insert(Reg))
+    if (Set.insert(Reg).second)
       // Reg is new, add all sub-registers.
       // The pre-ordering is not important here.
       Reg->addSubRegsPreOrder(Set, *this);

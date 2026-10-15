@@ -133,7 +133,7 @@ static void collectLocationsFromLoc(Location loc,
   SetVector<Location> visitedLocs;
   loc->walk([&](Location nestedLoc) {
     FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
-    if (!fileLoc || !visitedLocs.insert(nestedLoc))
+    if (!fileLoc || !visitedLocs.insert(nestedLoc).second)
       return WalkResult::advance();
 
     std::optional<lsp::Location> sourceLoc =

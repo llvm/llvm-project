@@ -42,7 +42,7 @@ public:
   /// Instructions will be visited in the order they are added.
   /// You likely want to use this method.
   void add(Instruction *I) {
-    if (Deferred.insert(I))
+    if (Deferred.insert(I).second)
       LLVM_DEBUG(dbgs() << "ADD DEFERRED: " << *I << '\n');
   }
 

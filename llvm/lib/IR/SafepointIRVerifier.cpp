@@ -174,7 +174,7 @@ protected:
   }
 
   void addDeadEdge(const Use &DeadEdge) {
-    if (!DeadEdges.insert(&DeadEdge))
+    if (!DeadEdges.insert(&DeadEdge).second)
       return;
 
     BasicBlock *BB = cast_or_null<BasicBlock>(DeadEdge.get());

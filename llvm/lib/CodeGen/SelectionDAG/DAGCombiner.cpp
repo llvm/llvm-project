@@ -28573,7 +28573,7 @@ static SDValue foldExtractSubvectorFromShuffleVector(EVT NarrowVT, SDValue Src,
     const std::pair<SDValue, int> DemandedSubvector =
         std::make_pair(Op, OpSubvecIdx);
 
-    if (DemandedSubvectors.insert(DemandedSubvector)) {
+    if (DemandedSubvectors.insert(DemandedSubvector).second) {
       if (DemandedSubvectors.size() > 2)
         return SDValue(); // We can't handle more than two subvectors.
       // How many elements into the WideVT does this subvector start?

@@ -483,7 +483,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     if (maxLinearMapping && comparator(maxLinearMapping, attr))
       continue;
     // Try to insert. If element was already present, just continue.
-    if (!forallMappingAttrs.insert(attr))
+    if (!forallMappingAttrs.insert(attr).second)
       continue;
     // Otherwise, we have a new insertion without a size -> use size 1.
     tmpMappingSizes.push_back(1);

@@ -534,7 +534,7 @@ public:
     Latency = SUnitToDistance[Nodes.front()];
   }
 
-  bool insert(SUnit *SU) { return Nodes.insert(SU); }
+  bool insert(SUnit *SU) { return Nodes.insert(SU).second; }
 
   void insert(iterator S, iterator E) { Nodes.insert(S, E); }
 

@@ -212,7 +212,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
     if (DT && !DT->isReachableFromEntry(BB))
       continue;
 
-    if (!Result.insert(BB))
+    if (!Result.insert(BB).second)
       llvm_unreachable("Repeated basic blocks in extraction input");
   }
 

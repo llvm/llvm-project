@@ -863,6 +863,9 @@ public:
   struct VFuncId {
     GlobalValue::GUID GUID;
     uint64_t Offset;
+    bool operator==(const VFuncId &Other) const {
+      return GUID == Other.GUID && Offset == Other.Offset;
+    }
   };
 
   /// A specification for a virtual function call with all constant integer
@@ -871,6 +874,9 @@ public:
   struct ConstVCall {
     VFuncId VFunc;
     std::vector<uint64_t> Args;
+    bool operator==(const ConstVCall &Other) const {
+      return VFunc == Other.VFunc && Args == Other.Args;
+    }
   };
 
   /// All type identifier related information. Because these fields are

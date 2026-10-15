@@ -1212,7 +1212,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
     if (SrcBehaviorValue == Module::Require) {
       // If the destination module does not already have this requirement, add
       // it.
-      if (Requirements.insert(cast<MDNode>(SrcOp->getOperand(2)))) {
+      if (Requirements.insert(cast<MDNode>(SrcOp->getOperand(2))).second) {
         DstModFlags->addOperand(SrcOp);
       }
       continue;

@@ -337,7 +337,7 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
 }
 
 void GotSection::addEntry(Symbol *sym) {
-  if (entries.insert(sym)) {
+  if (entries.insert(sym).second) {
     // Every symbol has at most one non-lazy pointer slot.
     assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
@@ -746,7 +746,7 @@ static void addBindingsForStub(Symbol *sym) {
 }
 
 void StubsSection::addEntry(Symbol *sym) {
-  bool inserted = entries.insert(sym);
+  bool inserted = entries.insert(sym).second;
   if (inserted) {
     sym->stubsIndex = entries.size() - 1;
 
@@ -1011,7 +1011,7 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
 
 void LazyBindingSection::addEntry(Symbol *sym) {
   assert(!config->emitChainedFixups && "Chained fixups always bind eagerly");
-  if (entries.insert(sym)) {
+  if (entries.insert(sym).second) {
     sym->stubsHelperIndex = entries.size() - 1;
     in.rebase->addEntry(in.lazyPointers->isec,
                         sym->stubsIndex * target->wordSize);

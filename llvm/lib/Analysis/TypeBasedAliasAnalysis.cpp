@@ -455,7 +455,7 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   SmallSetVector<const MDNode *, 4> PathA;
   TBAANode TA(A);
   while (TA.getNode()) {
-    [[maybe_unused]] bool Inserted = PathA.insert(TA.getNode());
+    [[maybe_unused]] bool Inserted = PathA.insert(TA.getNode()).second;
     assert(Inserted && "Cycle found in TBAA metadata.");
     TA = TA.getParent();
   }
@@ -463,7 +463,7 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   SmallSetVector<const MDNode *, 4> PathB;
   TBAANode TB(B);
   while (TB.getNode()) {
-    [[maybe_unused]] bool Inserted = PathB.insert(TB.getNode());
+    [[maybe_unused]] bool Inserted = PathB.insert(TB.getNode()).second;
     assert(Inserted && "Cycle found in TBAA metadata.");
     TB = TB.getParent();
   }

@@ -171,7 +171,7 @@ static bool tryInterleave(Instruction *Start,
     // Truncs
     case Instruction::Trunc:
     case Instruction::FPTrunc:
-      if (!Truncs.insert(I))
+      if (!Truncs.insert(I).second)
         continue;
       Visited.insert(I);
       break;
@@ -193,7 +193,7 @@ static bool tryInterleave(Instruction *Start,
         return false;
 
       if (II->getIntrinsicID() == Intrinsic::vector_reduce_add) {
-        if (!Reducts.insert(I))
+        if (!Reducts.insert(I).second)
           continue;
         Visited.insert(I);
         break;
@@ -236,7 +236,7 @@ static bool tryInterleave(Instruction *Start,
     case Instruction::FAdd:
     case Instruction::FMul:
     case Instruction::Select:
-      if (!Ops.insert(I))
+      if (!Ops.insert(I).second)
         continue;
 
       for (Use &Op : I->operands()) {

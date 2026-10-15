@@ -728,7 +728,7 @@ struct BooleanStateWithSetVector : public BooleanState {
   bool insert(const Ty &Elem) {
     if (InsertInvalidates)
       BooleanState::indicatePessimisticFixpoint();
-    return Set.insert(Elem);
+    return Set.insert(Elem).second;
   }
 
   const Ty &operator[](int Idx) const { return Set[Idx]; }
@@ -2925,7 +2925,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
         SmallSetVector<CallBase *, 16> Visited;
         while (!Worklist.empty()) {
           CallBase *LastCB = Worklist.pop_back_val();
-          if (!Visited.insert(LastCB))
+          if (!Visited.insert(LastCB).second)
             continue;
           if (LastCB->getFunction() != getAnchorScope())
             continue;
@@ -3243,7 +3243,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   // traversal. \p CB is the aligned barrier, \p ED is the execution domain when
   // it was encountered.
   auto HandleAlignedBarrier = [&](CallBase &CB, ExecutionDomainTy &ED) {
-    Changed |= AlignedBarriers.insert(&CB);
+    Changed |= AlignedBarriers.insert(&CB).second;
     // First, update the barrier ED kept in the separate CEDMap.
     auto &CallInED = CEDMap[{&CB, PRE}];
     Changed |= mergeInPredecessor(A, CallInED, ED);
@@ -3517,7 +3517,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     for (auto *PredBB : predecessors(SyncBB)) {
       if (LivenessAA && LivenessAA->isEdgeDead(PredBB, SyncBB))
         continue;
-      if (!Visited.insert(PredBB))
+      if (!Visited.insert(PredBB).second)
         continue;
       auto &PredED = BEDMap[PredBB];
       if (setAndRecord(PredED.IsReachingAlignedBarrierOnly, false)) {

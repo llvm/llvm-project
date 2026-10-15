@@ -546,8 +546,7 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
   // ending at those successors, we also want to perform a traversal.
   // IncludeSuccessorsMark is the index after which we include successors.
   const auto IncludeSuccessorsMark = Reinclude.size();
-  bool CSInsertion = Reinclude.insert(&CallSiteBB);
-  (void)CSInsertion;
+  [[maybe_unused]] bool CSInsertion = Reinclude.insert(&CallSiteBB).second;
   assert(CSInsertion);
   for (size_t I = 0; I < Reinclude.size(); ++I) {
     const auto *BB = Reinclude[I];

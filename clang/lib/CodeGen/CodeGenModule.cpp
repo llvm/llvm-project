@@ -8222,7 +8222,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     auto *Import = cast<ImportDecl>(D);
 
     // If we've already imported this module, we're done.
-    if (!ImportedModules.insert(Import->getImportedModule()))
+    if (!ImportedModules.insert(Import->getImportedModule()).second)
       break;
 
     // Emit debug information for direct imports.
