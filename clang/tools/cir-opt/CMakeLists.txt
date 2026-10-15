@@ -20,11 +20,11 @@ clang_target_link_libraries(cir-opt
   CIRRegisterAllDialects
   MLIRCIR
   MLIRCIRTransforms
-  ${cir_opt_test_libs}
 )
 
 target_link_libraries(cir-opt
   PRIVATE
+  ${cir_opt_test_libs}
   MLIRAnalysis
   MLIRDialect
   MLIRIR
