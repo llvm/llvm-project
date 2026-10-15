@@ -15,6 +15,7 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
@@ -164,9 +165,17 @@ bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
       return false;
   }
 
-  // Folding changes the value represented by Lo's result, so its debug users
-  // can no longer describe the same address.
-  MRI->markUsesInDebugValueAsUndef(Lo.getOperand(0).getReg());
+  // Salvage the debug users of Lo's result by subtracting the offset again.
+  SmallVector<uint64_t, 3> UndoOffset;
+  DIExpression::appendOffset(UndoOffset, -Offset);
+  for (MachineOperand &MO : MRI->use_operands(Lo.getOperand(0).getReg())) {
+    MachineInstr &DbgMI = *MO.getParent();
+    if (!DbgMI.isDebugValue())
+      continue;
+    DbgMI.getDebugExpressionOp().setMetadata(
+        DIExpression::appendOpsToArg(DbgMI.getDebugExpression(), UndoOffset,
+                                     DbgMI.getDebugOperandIndex(&MO)));
+  }
 
   // Put the offset back in Hi and the Lo
   Hi.getOperand(1).setOffset(Offset);

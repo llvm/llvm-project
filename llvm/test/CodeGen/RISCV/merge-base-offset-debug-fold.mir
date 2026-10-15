@@ -2,7 +2,8 @@
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s
 
 # Debug uses do not stop an offset from being folded into the address of a
-# global. Those that described a value the fold changes become undef.
+# global. Those of a register whose value the fold changes subtract the offset
+# again.
 
 --- |
   @values = external hidden global [2 x i64]
@@ -23,15 +24,18 @@
   !8 = distinct !DISubprogram(name: "debug_use_of_offset", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
   !9 = !DILocalVariable(name: "off", scope: !8, file: !2)
   !10 = !DILocation(line: 2, scope: !8)
+  !11 = !DILocalVariable(name: "list", scope: !4, file: !2)
 ...
 
 # The register that held the base now holds the address with the offset, so
-# the debug use of the base becomes undef, while that of the sum moves to it.
+# the debug uses of the base subtract it again, while that of the sum moves to
+# it.
 # CHECK-LABEL: name: debug_use_of_base
 # CHECK:       %hi:gpr = LUI target-flags(riscv-hi) @values + 8
 # CHECK-NEXT:  %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values + 8
-# CHECK-NEXT:  DBG_VALUE $noreg, $noreg
-# CHECK-NEXT:  DBG_VALUE %lo, $noreg
+# CHECK-NEXT:  DBG_VALUE %lo, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value)
+# CHECK-NEXT:  DBG_VALUE_LIST !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value), %lo
+# CHECK-NEXT:  DBG_VALUE %lo, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_stack_value)
 # CHECK-NEXT:  $x10 = COPY %lo
 ---
 name:            debug_use_of_base
@@ -41,6 +45,7 @@ body:             |
     %hi:gpr = LUI target-flags(riscv-hi) @values
     %lo:gpr = ADDI %hi, target-flags(riscv-lo) @values
     DBG_VALUE %lo, $noreg, !5, !DIExpression(DW_OP_stack_value), debug-location !7
+    DBG_VALUE_LIST !11, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), %lo, debug-location !7
     %sum:gpr = ADDI %lo, 8
     DBG_VALUE %sum, $noreg, !6, !DIExpression(DW_OP_stack_value), debug-location !7
     $x10 = COPY %sum
