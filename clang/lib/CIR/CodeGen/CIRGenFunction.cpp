@@ -560,7 +560,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   // result value.
   if (!returnType->isVoidType()) {
     // Determine the function body end location.  A function without a body
-    // uses its declaration's location, as classic codegen does, and a null fd
+    // uses its declaration's location, and a null fd
     // uses loc.
     SourceLocation bodyEndLoc = loc;
     if (fd) {
