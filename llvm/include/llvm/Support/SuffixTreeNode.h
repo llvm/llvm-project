@@ -19,8 +19,7 @@
 //
 // Each internal node contains a pointer to the internal node representing
 // the same string, but with the first character chopped off. This is stored
-// in \p Link. Each leaf node stores the start index of its respective
-// suffix in \p SuffixIdx.
+// in \p Link. Leaf edges store their start indices instead of nodes.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_SUFFIXTREE_NODE_H
@@ -46,7 +45,7 @@ struct SuffixTreeNode {
 public:
   /// Represents an undefined index in the suffix tree.
   static const unsigned EmptyIdx = -1;
-  enum class NodeKind { ST_Leaf, ST_Internal };
+  enum class NodeKind { ST_Internal };
 
 private:
   const NodeKind Kind;
@@ -109,11 +108,7 @@ public:
 struct LLVM_ABI SuffixTreeInternalNode : SuffixTreeNode {
 private:
   /// The end index of this node's substring in the main string.
-  ///
-  /// Every leaf node must have its \p EndIdx incremented at the end of every
-  /// step in the construction algorithm. To avoid having to update O(N)
-  /// nodes individually at the end of every step, the end index is stored
-  /// as a pointer.
+  /// Fixed for internal edges; leaf edges use SuffixTree::LeafEndIdx.
   unsigned EndIdx = EmptyIdx;
 
   /// A pointer to the internal node representing the same sequence with the
@@ -171,38 +166,5 @@ public:
   ~SuffixTreeInternalNode() override = default;
 };
 
-// A node representing a suffix.
-struct LLVM_ABI SuffixTreeLeafNode : SuffixTreeNode {
-private:
-  /// The start index of the suffix represented by this leaf.
-  unsigned SuffixIdx = EmptyIdx;
-
-  /// The end index of this node's substring in the main string.
-  ///
-  /// Every leaf node must have its \p EndIdx incremented at the end of every
-  /// step in the construction algorithm. To avoid having to update O(N)
-  /// nodes individually at the end of every step, the end index is stored
-  /// as a pointer.
-  unsigned *EndIdx = nullptr;
-
-public:
-  // LLVM RTTI boilerplate.
-  static bool classof(const SuffixTreeNode *N) {
-    return N->getKind() == NodeKind::ST_Leaf;
-  }
-
-  /// \returns the end index of this node's substring in the entire string.
-  unsigned getEndIdx() const override;
-
-  /// \returns the start index of the suffix represented by this leaf.
-  unsigned getSuffixIdx() const;
-
-  /// Sets the start index of the suffix represented by this leaf to \p Idx.
-  void setSuffixIdx(unsigned Idx);
-  SuffixTreeLeafNode(unsigned StartIdx, unsigned *EndIdx)
-      : SuffixTreeNode(NodeKind::ST_Leaf, StartIdx), EndIdx(EndIdx) {}
-
-  ~SuffixTreeLeafNode() override = default;
-};
 } // namespace llvm
 #endif // LLVM_SUPPORT_SUFFIXTREE_NODE_H
