@@ -2100,9 +2100,10 @@ public:
     if (Body)
       this->Visit(Body);
 
-    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Definition))
+    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Definition)) {
       for (auto *Init : Ctor->inits())
         this->Visit(Init->getInit());
+    }
 
     if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
       asImpl().VisitCalledDestructors(Dtor);
