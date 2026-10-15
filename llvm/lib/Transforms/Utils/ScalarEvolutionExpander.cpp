@@ -1344,55 +1344,24 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S) {
   return Builder.CreateAdd(BaseV, DiffV);
 }
 
-/// Try to re-use an existing AddRec when expanding S, if
-/// AddRec * Scale + Offset == S for constant Scale and Offset.
-Value *SCEVExpander::tryToReuseScaledAddRec(const SCEVAddRecExpr *S) {
+/// Normalize AR with a constant step S to Quotient * S + Remainder,
+/// where Quotient is an AddRec with unit step and Remainder is a constant.
+/// Returns {Quotient, |S|, Remainder}, or std::nullopt if AR cannot be
+/// normalized.
+static std::optional<std::tuple<const SCEV *, const SCEV *, const SCEV *>>
+normalizeToUnitStep(const SCEVAddRecExpr *AR, ScalarEvolution &SE) {
   const APInt *Step;
-  if (!S->getType()->isIntegerTy() ||
-      !match(S->getStepRecurrence(SE), m_scev_APInt(Step)))
-    return nullptr;
+  if (!AR->getType()->isIntegerTy() ||
+      !match(AR->getStepRecurrence(SE), m_scev_APInt(Step)) ||
+      Step->abs().ule(1))
+    return std::nullopt;
 
-  APInt Factor = Step->abs();
-  if (Factor.ule(1))
-    return nullptr;
-
-  const SCEV *FactorS = SE.getConstant(Factor);
-
-  // Split S into Divided * FactorS + Offset, with a constant Offset, and check
-  // if there is an existing Divided that can be scaled back to S.
-  const SCEV *Divided, *Offset;
-  SCEVDivision::divide(SE, S, FactorS, &Divided, &Offset);
-  if (!isa<SCEVConstant>(Offset))
-    return nullptr;
-  const SCEV *Scaled = SE.getMulExpr(Divided, FactorS);
-  if (SE.getAddExpr(Scaled, Offset) != S)
-    return nullptr;
-
-  // First check if we have an existing expansion for Scaled directly. Otherwise
-  // look for Divided and scale manually.
-  const Instruction *InsertPt = &*Builder.GetInsertPoint();
-  Value *V = nullptr;
-  if (!Offset->isZero())
-    V = findExistingExpansionAndDropPoisonFlags(Scaled, InsertPt);
-
-  if (!V) {
-    Value *Base = findExistingExpansionAndDropPoisonFlags(Divided, InsertPt);
-    if (!Base)
-      return nullptr;
-    // Carry over the no-wrap facts that hold for the scaling, otherwise the new
-    // expansion may miss flags the original one had.
-    SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
-    if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, Divided,
-                           FactorS))
-      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
-    if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, Divided, FactorS))
-      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
-    V = expand(SCEVUse(SE.getMulExpr(SE.getUnknown(Base), FactorS), Flags));
-  }
-
-  if (Offset->isZero())
-    return V;
-  return expand(SE.getAddExpr(SE.getUnknown(V), Offset));
+  const SCEV *Factor = SE.getConstant(Step->abs());
+  const SCEV *Quotient, *Remainder;
+  SCEVDivision::divide(SE, AR, Factor, &Quotient, &Remainder);
+  if (!isa<SCEVConstant>(Remainder))
+    return std::nullopt;
+  return std::make_tuple(Quotient, Factor, Remainder);
 }
 
 Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
@@ -1408,9 +1377,6 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   if (!CanonicalMode || (S->getNumOperands() > 2))
     return expandAddRecExprLiterally(S);
 
-  if (Value *V = tryToReuseScaledAddRec(S))
-    return V;
-
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   const Loop *L = S->getLoop();
 
@@ -1419,6 +1385,33 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
   if (PHINode *PN = L->getCanonicalInductionVariable())
     if (SE.getTypeSizeInBits(PN->getType()) >= SE.getTypeSizeInBits(Ty))
       CanonicalIV = PN;
+
+  // Also check for an existing unit-step IV Quotient, or Quotient * Factor,
+  // with S = Quotient * Factor + Remainder.
+  if (auto Normalized = normalizeToUnitStep(S, SE)) {
+    auto [Quotient, Factor, Remainder] = *Normalized;
+    const Instruction *InsertPt = &*Builder.GetInsertPoint();
+    Value *V = findExistingExpansionAndDropPoisonFlags(
+        SE.getMulExpr(Quotient, Factor), InsertPt);
+    if (!V) {
+      if (Value *IV =
+              findExistingExpansionAndDropPoisonFlags(Quotient, InsertPt)) {
+        // Carry over the no-wrap facts that hold for the scaling, otherwise the
+        // new expansion may miss flags the original one had.
+        SCEVFlags Flags = SCEVFlags::FlagNone;
+        if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, Quotient,
+                               Factor))
+          Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+        if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, Quotient,
+                               Factor))
+          Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
+        V = expand(SE.getMulExpr(SE.getUnknown(IV), Factor,
+                                 {SCEVFlags::FlagNone, Flags}));
+      }
+    }
+    if (V)
+      return expand(SE.getAddExpr(SE.getUnknown(V), Remainder));
+  }
 
   // Rewrite an AddRec in terms of the canonical induction variable, if
   // its type is more narrow.
