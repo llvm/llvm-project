@@ -54,7 +54,7 @@ EmptyLow varargs_empty_low(int count, ...) {
 // CIR:     %[[YIELDED:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_EmptyLow> -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[YIELDED]] : !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_EmptyLow>
-// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_EmptyLow>, !rec_EmptyLow
+// CIR:   cir.copy %[[RESULT_P]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_EmptyLow>
 
 // LLVM-LABEL: define dso_local i64 @_Z17varargs_empty_lowiz(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 0
@@ -82,8 +82,7 @@ EmptyLow varargs_empty_low(int count, ...) {
 
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[OVERFLOW]], %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %[[OVERFLOW]], %{{.+}} ]
-// LLVMCIR: load %struct.EmptyLow, ptr %[[ADDR]], align 8
-// OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
 
 double varargs_empty_low_sse(int count, ...) {
   __builtin_va_list args;
@@ -118,7 +117,7 @@ double varargs_empty_low_sse(int count, ...) {
 // CIR:     cir.yield %[[YIELDED]] : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_EmptyLowSse>
-// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_EmptyLowSse>, !rec_EmptyLowSse
+// CIR:   cir.copy %[[RESULT_P]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_EmptyLowSse>
 
 // LLVM-LABEL: define dso_local noundef double @_Z21varargs_empty_low_sseiz(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[FP_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 1
@@ -131,8 +130,7 @@ double varargs_empty_low_sse(int count, ...) {
 // LLVM:   store i32 %[[BUMPED]], ptr %[[FP_P]], align 4
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %{{.+}}, %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %{{.+}}, %{{.+}} ]
-// LLVMCIR: load %struct.EmptyLowSse, ptr %[[ADDR]], align 8
-// OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
 
 long varargs_tail_pad(int count, ...) {
   __builtin_va_list args;
@@ -157,7 +155,7 @@ long varargs_tail_pad(int count, ...) {
 // CIR:     %[[YIELDED:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_TailPad> -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[YIELDED]] : !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_TailPad>
-// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_TailPad>, !rec_TailPad
+// CIR:   cir.copy %[[RESULT_P]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_TailPad>
 
 // LLVM-LABEL: define dso_local noundef i64 @_Z16varargs_tail_padiz(i32 noundef %{{.*}}, ...)
 // LLVMCIR: %[[GP:.+]] = load i32, ptr %{{.+}}, align 4
@@ -172,5 +170,4 @@ long varargs_tail_pad(int count, ...) {
 // OGCG:    store i64 %[[VAL]], ptr %[[DST]], align 8
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %{{.+}}, %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %{{.+}}, %{{.+}} ]
-// LLVMCIR: load %struct.TailPad, ptr %[[ADDR]], align 8
-// OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %[[ADDR]], i64 16, i1 false)

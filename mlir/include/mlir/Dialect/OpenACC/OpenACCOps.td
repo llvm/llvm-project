@@ -1783,7 +1783,7 @@ def OpenACC_ReductionRecipeOp
 def OpenACC_ParallelOp
     : OpenACC_Op<"parallel",
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
-                  RecursiveMemoryEffects,
+                  HasParallelRegion, RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getSuccessorInputs"]>,
@@ -2665,7 +2665,7 @@ def OpenACC_HostDataOp
 def OpenACC_LoopOp
     : OpenACC_Op<
           "loop", [AttrSizedOperandSegments, AutomaticAllocationScope,
-                   RecursiveMemoryEffects,
+                   HasParallelRegion, RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
                    DeclareOpInterfaceMethods<RegionBranchOpInterface,

@@ -34,7 +34,52 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
       DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
       DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
-  let assemblyFormat = "oilist(`reassociate_fp_reductions` `=` $reassociate_fp_reductions | `force_32bit_vector_indices` `=` $force_32bit_vector_indices | `use_vector_alignment` `=` $use_vector_alignment) attr-dict";
+  let assemblyFormat = [{
+    oilist (`reassociate_fp_reductions` `=` $reassociate_fp_reductions
+          | `force_32bit_vector_indices` `=` $force_32bit_vector_indices
+          | `use_vector_alignment` `=` $use_vector_alignment)
+    attr-dict
+  }];
+}
+
+def ApplyVectorLinearizeConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.linearize",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["populateConversionTargetRules",
+                                "verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns for ND vector (n >= 2) vector linearization.
+    
+    These patterns require the type converter built by the corresponding
+    linearize type converter op.
+
+    The patterns can be customized as follows:
+    - `shuffle_like_ops`: Linearizes ND vector ops into 1D vector shuffles.
+    - `target_vector_bitwidth`: If set, ops whose inner-most vector dimension
+      is at least this many bits wide are not linearized.
+  }];
+
+  let arguments = (ins
+      DefaultValuedAttr<BoolAttr, "false">:$shuffle_like_ops,
+      OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$target_vector_bitwidth);
+  let assemblyFormat = [{
+    oilist (`shuffle_like_ops` `=` $shuffle_like_ops
+          | `target_vector_bitwidth` `=` $target_vector_bitwidth)
+    attr-dict
+  }];
+}
+
+def VectorLinearizeTypeConverterOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.vector.linearize_type_converter",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["getTypeConverter",
+                                "getTypeConverterType"]>]> {
+  let description = [{
+    Builds a type converter that controls which ND (n >= 2) vector types are
+    linearized into 1D forms, and materializes conversions.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 
