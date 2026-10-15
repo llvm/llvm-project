@@ -3218,9 +3218,4 @@ const Symbol *FindOperatorUserReductionSymbol(
   return FindUserReductionSymbol(
       scope, MangleDefinedOperator(operatorSym.name()), type);
 }
-
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
-  return MakeNameFromOperator(op, context);
-}
 } // namespace Fortran::semantics::omp

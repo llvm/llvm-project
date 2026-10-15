@@ -145,13 +145,6 @@ const Symbol *FindUserReductionSymbol(const Scope &scope,
 const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
     const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
 
-// Mangled reduction name ("op.+", "op.*", "op.AND", ...) that semantics stores
-// an intrinsic-operator user reduction under, produced by the same
-// MakeNameFromOperator the reduction-declaration semantics use so a clause-side
-// lookup matches byte-for-byte.
-parser::CharBlock MangledIntrinsicOperatorReductionName(
-    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context);
-
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 

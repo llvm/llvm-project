@@ -1205,9 +1205,8 @@ bool ReductionProcessor::processReductionArguments(
         if (semaCtx) {
           const semantics::DeclTypeSpec *opVarType =
               reductionSymbols[idx]->GetUltimate().GetType();
-          parser::CharBlock mangledOpName =
-              semantics::omp::MangledIntrinsicOperatorReductionName(
-                  toParserIntrinsicOperator(intrinsicOp), *semaCtx);
+          parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
+              toParserIntrinsicOperator(intrinsicOp), *semaCtx);
           if (const semantics::Symbol *userSym =
                   semantics::omp::FindUserReductionSymbol(
                       converter.getCurrentScope(), mangledOpName, opVarType)) {
