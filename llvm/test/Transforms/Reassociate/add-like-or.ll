@@ -74,3 +74,52 @@ define i32 @test4(i32 %a, i32 %b) {
 declare i32 @llvm.ctlz.i32(i32, i1 immarg) #2
 
 !0 = !{i32 0, i32 33}
+
+; A fact about an operand doesn't stop the conversion.
+define i32 @shl_or_add_assume(i32 %x, i32 %y, i32 %z, i32 %n) {
+; CHECK-LABEL: @shl_or_add_assume(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SHL]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[YLO:%.*]] = and i32 [[Y:%.*]], 255
+; CHECK-NEXT:    [[OR:%.*]] = add nuw nsw i32 [[YLO]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[OR]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[OR]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl nuw nsw i32 %x, 8
+  %c = icmp ult i32 %shl, %n
+  call void @llvm.assume(i1 %c)
+  %ylo = and i32 %y, 255
+  %or = or disjoint i32 %shl, %ylo
+  %r = add i32 %or, %z
+  call void @use(i32 %or)
+  ret i32 %r
+}
+
+define i32 @shl_or_add_assume_and_use(i32 %x, i32 %y, i32 %z, i32 %n) {
+; CHECK-LABEL: @shl_or_add_assume_and_use(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[SHL]], [[N:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    call void @use.i1(i1 [[C]])
+; CHECK-NEXT:    [[YLO:%.*]] = and i32 [[Y:%.*]], 255
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[YLO]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[OR]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[OR]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl nuw nsw i32 %x, 8
+  %c = icmp ult i32 %shl, %n
+  call void @llvm.assume(i1 %c)
+  call void @use.i1(i1 %c)
+  %ylo = and i32 %y, 255
+  %or = or disjoint i32 %shl, %ylo
+  %r = add i32 %or, %z
+  call void @use(i32 %or)
+  ret i32 %r
+}
+
+declare void @llvm.assume(i1)
+declare void @use(i32)
+declare void @use.i1(i1)
