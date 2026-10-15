@@ -2273,7 +2273,8 @@ def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
   [AMDGPUBufferRsrcTy, // rsrc(SGPR)
    llvm_i32_ty,        // offset (imm)
    llvm_i32_ty],       // len (SGPR/imm)
-  [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<1>>], "", [SDNPMemOperand]>,
+  [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
+   NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>,
   ClangBuiltin<"__builtin_amdgcn_s_buffer_prefetch_data">;
 
@@ -3381,21 +3382,21 @@ def int_amdgcn_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_s_prefetch_data :
-  Intrinsic<[],
+  DefaultAttrsIntrinsic<[],
     [llvm_anyptr_ty, // Pointer to a constant/global memory
-     llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
-    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     IntrNoCallback, IntrNoFree],
+     llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<0>>],
     "",
     [SDNPMemOperand]
   >;
 
 def int_amdgcn_s_prefetch_inst :
-  Intrinsic<[],
+  DefaultAttrsIntrinsic<[],
     [llvm_anyptr_ty, // Pointer to instruction memory
      llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chunks, units of 128 bytes)
-    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     IntrNoCallback, IntrNoFree],
+    [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<0>>],
     "",
     [SDNPMemOperand]
   >;
@@ -3407,21 +3408,21 @@ def int_amdgcn_ds_bpermute_fi_b32 :
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
-  Intrinsic<[],
+  DefaultAttrsIntrinsic<[],
     [llvm_ptr_ty,  // Pointer
      llvm_i32_ty], // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
-    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
+    [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
     "",
     [SDNPMemOperand]
   >;
 
 def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch">,
-  Intrinsic<[],
+  DefaultAttrsIntrinsic<[],
     [LLVMQualPointerType<1>, // Pointer
      llvm_i32_ty],           // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
-    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
+    [IntrInaccessibleMemOrArgMemOnly, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>],
     "",
     [SDNPMemOperand]
   >;
