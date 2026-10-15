@@ -79,6 +79,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAllocSizeAttrName() { return "allocsize"; }
     static llvm::StringRef getOptimizeForSizeAttrName() { return "optsize"; }
     static llvm::StringRef getMinSizeAttrName() { return "minsize"; }
+    static llvm::StringRef getOptNoneAttrName() { return "optnone"; }
+    static llvm::StringRef getNakedAttrName() { return "naked"; }
     // Note: we have to name this with the underscore instead of the dash like
     // traditional LLVM-IR does, because the LLVM-IR-Dialect doesn't have a way
     // of forming names with a dash instead of underscore in its auto-generated
@@ -109,6 +111,10 @@ def CIR_Dialect : Dialect {
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // The initializer functions of the C++20 named modules this translation
+    // unit imports, as #cir.cxx_module_init attributes in the order the global
+    // init function calls them, precomputed by CIRGen for the same reason.
+    static llvm::StringRef getCXXModuleImportedInitsAttrName() { return "cir.cxx_module_imported_inits"; }
     // LangOptions facts that post-CIRGen lowering consumes, serialized by
     // CIRGen so a reloaded .cir module is self-describing without a live
     // clang::LangOptions. See #cir.lowering_lang_options.
