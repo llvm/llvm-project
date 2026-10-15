@@ -311,7 +311,7 @@ define void @shared_gep(ptr addrspace(3) %bar, i64 %index, i32 %count) {
   ret void
 }
 
-@barrier = internal addrspace(3) global i64 undef, align 8
+@barrier = internal addrspace(3) global i64 0, align 8
 
 define void @shared_constant(i32 %count) {
 ; CHECK-LABEL: define void @shared_constant(
