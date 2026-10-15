@@ -39,3 +39,9 @@ def report_summaries(summaries, link_unit, summary_path):
 
 def report_analysis_result(wpa_result_path):
     report_info("analysis-result", wpa_result_path)
+
+
+def report_transformation(merged, conflicts_paths):
+    report_info("source-edits", merged)
+    for conflicts_path in conflicts_paths:
+        report_info("edit-conflicts", conflicts_path)

@@ -87,8 +87,8 @@ class Main(unittest.TestCase):
         self.assertIn("--ssaf-clang", message)
         self.assertEqual([], self.run_calls)
 
-    def test_a_configured_run_is_handed_its_two_configurations(self):
-        configured = ("workflow", "analysis")
+    def test_a_configured_run_is_handed_its_three_configurations(self):
+        configured = ("workflow", "analysis", "transformation")
         with mock.patch.object(
             config_orchestrator, "configure", return_value=(configured, None)
         ):
@@ -125,20 +125,36 @@ class PassConfigFile(unittest.TestCase):
         )
         self.analysis_config = config.SSAFAnalysisPassConfig(
             ssaf_clang="/bin/clang",
+            ssaf_extra_clang_args=["-DX"],
             extractors="PointerFlow",
             ssaf_linker="/bin/clang-ssaf-linker",
+            analyses=["A"],
         )
+        self.transformation_config = config.SSAFTransformationPassConfig(
+            ssaf_clang="/bin/clang",
+            ssaf_extra_clang_args=["-DX"],
+            ssaf_src_edit_merge="/bin/clang-ssaf-src-edit-merge",
+            transformation="x",
+        )
+        self.transformation_config.name_link_unit("build/prg")
 
-    def test_a_pass_is_written_under_the_output_directory(self):
-        path = orchestrator.write_pass_config(
-            self.workflow_config, self.analysis_config
-        )
-        self.assertEqual(os.path.join(self.tmp, self.analysis_config.file_name), path)
-        self.assertTrue(os.path.isfile(path))
+    def test_each_pass_is_written_under_the_output_directory(self):
+        for pass_config in (self.analysis_config, self.transformation_config):
+            path = orchestrator.write_pass_config(self.workflow_config, pass_config)
+            self.assertEqual(os.path.join(self.tmp, pass_config.file_name), path)
+            self.assertTrue(os.path.isfile(path))
 
     def test_nothing_is_left_behind_by_the_write(self):
         orchestrator.write_pass_config(self.workflow_config, self.analysis_config)
         self.assertEqual(["config-analysis.json"], os.listdir(self.tmp))
+
+    def test_both_passes_can_be_written_and_coexist(self):
+        for pass_config in (self.analysis_config, self.transformation_config):
+            orchestrator.write_pass_config(self.workflow_config, pass_config)
+        self.assertEqual(
+            ["config-analysis.json", "config-transformation.json"],
+            sorted(os.listdir(self.tmp)),
+        )
 
     def test_the_document_does_not_carry_its_own_path(self):
         path = orchestrator.write_pass_config(
@@ -156,16 +172,15 @@ class PassConfigFile(unittest.TestCase):
         with self.assertRaises(OSError):
             orchestrator.write_pass_config(workflow_config, self.analysis_config)
 
-    def test_a_shim_reads_back_the_run_and_its_own_pass(self):
-        path = orchestrator.write_pass_config(
-            self.workflow_config, self.analysis_config
-        )
-        workflow_config, pass_config = config_shims.bootstrap_from_env(
-            {config.SSAF_CONFIG_ENV_VAR: path}
-        )
-        self.assertEqual(self.workflow_config.to_json(), workflow_config.to_json())
-        self.assertIsInstance(pass_config, config.SSAFAnalysisPassConfig)
-        self.assertEqual("PointerFlow", pass_config.extractors)
+    def test_a_shim_reads_back_the_run_and_its_own_pass_whole(self):
+        for written in (self.analysis_config, self.transformation_config):
+            path = orchestrator.write_pass_config(self.workflow_config, written)
+            workflow_config, pass_config = config_shims.bootstrap_from_env(
+                {config.SSAF_CONFIG_ENV_VAR: path}
+            )
+            self.assertEqual(self.workflow_config.to_json(), workflow_config.to_json())
+            self.assertIs(type(written), type(pass_config))
+            self.assertEqual(written.to_json(), pass_config.to_json())
 
 
 class RunBuild(unittest.TestCase):
@@ -296,7 +311,7 @@ class TopMostLinkUnit(unittest.TestCase):
             inputs,
         )
 
-    def _summary(self, build_artifact_path):
+    def _summary(self, build_artifact_path, document=None):
         path = utils.make_parents(
             self.ssaf_artifact_repo.get_path_for_artifact(
                 repository.get_ssaf_artifact_id(
@@ -305,16 +320,17 @@ class TopMostLinkUnit(unittest.TestCase):
                 )
             )
         )
-        document = {
-            "lu_namespace": [
-                {"kind": "LinkUnit", "name": os.path.basename(build_artifact_path)}
-            ]
-        }
+        if document is None:
+            document = {
+                "lu_namespace": [
+                    {"kind": "LinkUnit", "name": os.path.basename(build_artifact_path)}
+                ]
+            }
         with open(path, "w") as handle:
             json.dump(document, handle)
 
     def test_no_link_unit_at_all(self):
-        link_unit, _, problem = orchestrator.get_topmost_link_unit(
+        link_unit, _, _, problem = orchestrator.get_topmost_link_unit(
             self.ssaf_artifact_repo, self.tmp
         )
         self.assertIsNone(link_unit)
@@ -323,7 +339,7 @@ class TopMostLinkUnit(unittest.TestCase):
     def test_several_that_consume_none_of_each_other(self):
         self._record("/p/one", ["a.o"])
         self._record("/p/two", ["b.o"])
-        link_unit, _, problem = orchestrator.get_topmost_link_unit(
+        link_unit, _, _, problem = orchestrator.get_topmost_link_unit(
             self.ssaf_artifact_repo, self.tmp
         )
         self.assertIsNone(link_unit)
@@ -333,21 +349,34 @@ class TopMostLinkUnit(unittest.TestCase):
 
     def test_one_whose_summary_was_never_written(self):
         self._record("/p/prg", ["a.o"])
-        link_unit, _, problem = orchestrator.get_topmost_link_unit(
+        link_unit, _, _, problem = orchestrator.get_topmost_link_unit(
             self.ssaf_artifact_repo, self.tmp
         )
         self.assertIsNone(link_unit)
         self.assertIn("no summary", problem.message)
         self.assertIn("p/prg", problem.message)
 
+    def test_one_whose_summary_names_no_link_unit(self):
+        self._record("/p/libx.a", ["a.o"])
+        self._summary(
+            "/p/libx.a", {"namespace": {"kind": "StaticLibrary", "name": "libx.a"}}
+        )
+        link_unit, _, _, problem = orchestrator.get_topmost_link_unit(
+            self.ssaf_artifact_repo, self.tmp
+        )
+        self.assertIsNone(link_unit)
+        self.assertIn("is not a link unit", problem.message)
+        self.assertIn("p/libx.a", problem.message)
+
     def test_one_with_its_summary_is_the_answer(self):
         self._record("/p/prg", ["a.o"])
         self._summary("/p/prg")
-        link_unit, _, problem = orchestrator.get_topmost_link_unit(
+        link_unit, _, unit_id, problem = orchestrator.get_topmost_link_unit(
             self.ssaf_artifact_repo, self.tmp
         )
         self.assertIsNone(problem)
         self.assertEqual("/p/prg", link_unit.get_path())
+        self.assertEqual("prg", unit_id)
 
 
 if __name__ == "__main__":

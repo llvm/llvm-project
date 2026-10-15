@@ -89,7 +89,7 @@ def clear_output_dir(output_dir):
 
 
 def _no_link_unit(message):
-    return None, None, options.Problem(1, message)
+    return None, None, None, options.Problem(1, message)
 
 
 def get_topmost_link_unit(ssaf_artifact_repo, output_dir):
@@ -115,7 +115,13 @@ def get_topmost_link_unit(ssaf_artifact_repo, output_dir):
             "or failed" % build_artifact_id.get_path()
         )
     summary = ssaf_artifact_repo.get_path_for_artifact(ssaf_artifact_id)
-    return build_artifact_id, summary, None
+    unit_id = ssaf_artifact_repo.get_link_unit_name(summary)
+    if unit_id is None:
+        return _no_link_unit(
+            "'%s' is not a link unit; whole-program analysis needs one, so "
+            "build a target that links" % build_artifact_id.get_path()
+        )
+    return build_artifact_id, summary, unit_id, None
 
 
 def run_ssaf_analysis_pass(
@@ -132,7 +138,7 @@ def run_ssaf_analysis_pass(
     if summaries == 0:
         return options.Problem(1, "no summaries were extracted")
 
-    link_unit, summary, problem = get_topmost_link_unit(
+    link_unit, summary, _, problem = get_topmost_link_unit(
         ssaf_artifact_repo, workflow_config.output_dir
     )
     if problem is not None:
@@ -162,7 +168,39 @@ def run_ssaf_analysis_pass(
     return None
 
 
-def run_ssaf_workflow(workflow_config, analysis_config):
+def run_ssaf_transformation_pass(
+    workflow_config, transformation_config, ssaf_artifact_repo, shim_link_dir_path
+):
+    link_unit, _, unit_id, problem = get_topmost_link_unit(
+        ssaf_artifact_repo, workflow_config.output_dir
+    )
+    if problem is not None:
+        return problem
+
+    transformation_config.name_link_unit(unit_id)
+    serialized_config_path = write_pass_config(workflow_config, transformation_config)
+    problem = run_build_with_toolchain_interposition(
+        workflow_config,
+        serialized_config_path,
+        shim_link_dir_path,
+        "rebuild for the transformation pass",
+    )
+    if problem is not None:
+        return problem
+
+    edits = get_ssaf_artifact_id(link_unit, SSAFArtifactKind.EDITS)
+    if not ssaf_artifact_repo.has_artifact(edits):
+        return options.Problem(
+            1, "no merged source edits for '%s'" % link_unit.get_path()
+        )
+    logging_diagnostics.report_transformation(
+        ssaf_artifact_repo.get_path_for_artifact(edits),
+        ssaf_artifact_repo.get_conflicts(),
+    )
+    return None
+
+
+def run_ssaf_workflow(workflow_config, analysis_config, transformation_config):
     warn_if_not_make(workflow_config.build_command)
 
     ssaf_artifact_repo = SSAFArtifactRepository(
@@ -185,6 +223,16 @@ def run_ssaf_workflow(workflow_config, analysis_config):
     )
     if problem is not None:
         return problem
+
+    if transformation_config is not None:
+        problem = run_ssaf_transformation_pass(
+            workflow_config,
+            transformation_config,
+            ssaf_artifact_repo,
+            shim_link_dir_path,
+        )
+        if problem is not None:
+            return problem
 
     logging_diagnostics.report_output_dir(workflow_config.output_dir)
 
