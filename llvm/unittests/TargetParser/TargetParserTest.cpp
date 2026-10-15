@@ -1509,7 +1509,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
       AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
-      AArch64::AEK_SVE_RCPC,
+      AArch64::AEK_SVE_LRCPC,
   };
 
   std::vector<StringRef> Features;
@@ -1636,7 +1636,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
   EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+sve-rcpc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-lrcpc"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1820,7 +1820,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"hinte", "nohinte", "+hinte", "-hinte"},
       {"cflt", "nocflt", "+cflt", "-cflt"},
       {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
-      {"sve-rcpc", "nosve-rcpc", "+sve-rcpc", "-sve-rcpc"},
+      {"sve-lrcpc", "nosve-lrcpc", "+sve-lrcpc", "-sve-lrcpc"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2128,7 +2128,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve-aes", "noaes"}, {}, {"aes", "sve-aes"}},
 
         // sve2 ->
-        // {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes, sve-rcpc}
+        // {sve2p1, sve2-bitperm, sve2-sha3, sve2-sm4, sve2-aes, sve-lrcpc}
         {AArch64::ARMV8A, {"nosve2", "sve2p1"}, {"sve2", "sve2p1"}, {}},
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
@@ -2154,8 +2154,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nosve2", "sve2-aes"}, {"sve2", "sve2-aes"}, {}},
         {AArch64::ARMV8A, {"sve2-aes", "nosve2"}, {}, {"sve2", "sve2-aes"}},
 
-        {AArch64::ARMV8A, {"nosve2", "sve-rcpc"}, {"sve2", "sve-rcpc"}, {}},
-        {AArch64::ARMV8A, {"sve-rcpc", "nosve2"}, {}, {"sve2", "sve-rcpc"}},
+        {AArch64::ARMV8A, {"nosve2", "sve-lrcpc"}, {"sve2", "sve-lrcpc"}, {}},
+        {AArch64::ARMV8A, {"sve-lrcpc", "nosve2"}, {}, {"sve2", "sve-lrcpc"}},
 
         // sve-b16b16 -> {sme-b16b16}
         {AArch64::ARMV9_4A,
@@ -2294,9 +2294,9 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"norcpc", "rcpc3"}, {"rcpc", "rcpc3"}, {}},
         {AArch64::ARMV8A, {"rcpc3", "norcpc"}, {}, {"rcpc", "rcpc3"}},
 
-        // rcpc3 -> sve-rcpc
-        {AArch64::ARMV8A, {"norcpc3", "sve-rcpc"}, {"rcpc3", "sve-rcpc"}, {}},
-        {AArch64::ARMV8A, {"sve-rcpc", "norcpc3"}, {}, {"rcpc3", "sve-rcpc"}},
+        // rcpc3 -> sve-lrcpc
+        {AArch64::ARMV8A, {"norcpc3", "sve-lrcpc"}, {"rcpc3", "sve-lrcpc"}, {}},
+        {AArch64::ARMV8A, {"sve-lrcpc", "norcpc3"}, {}, {"rcpc3", "sve-lrcpc"}},
 
         // sve-aes -> {ssve-aes, sve2-aes}
         {AArch64::ARMV9_6A,
