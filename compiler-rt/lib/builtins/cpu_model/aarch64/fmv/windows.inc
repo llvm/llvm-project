@@ -79,6 +79,7 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   uint64_t features = 0;
 
   setCPUFeature(FEAT_INIT);
+  // Presupposed by the Windows ARM64 ABI
   setCPUFeature(FEAT_FP);
   setCPUFeature(FEAT_SIMD);
 
