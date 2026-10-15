@@ -248,19 +248,24 @@ bool AArch64TTIImpl::hasPossibleIncompatibleOps(const Function *F,
             return true;
           break;
         case Intrinsic::vscale:
-          return !AssumeVScaleIsEquivalent;
+          if (!AssumeVScaleIsEquivalent)
+            return true;
+          break;
         }
       }
 
       // Determine if the operation is vscale dependent by looking at it's
       // operand/result types.
-      if (I.getType()->isScalableTy() ||
-          any_of(I.operand_values(),
-                 [](const Value *V) { return V->getType()->isScalableTy(); }) ||
-          (isa<GetElementPtrInst>(I) &&
-           cast<GetElementPtrInst>(I).getSourceElementType()->isScalableTy()) ||
-          (isa<AllocaInst>(I) && cast<AllocaInst>(I).isScalable()))
-        return !AssumeVScaleIsEquivalent;
+      if (!AssumeVScaleIsEquivalent &&
+          (I.getType()->isScalableTy() ||
+           any_of(
+               I.operand_values(),
+               [](const Value *V) { return V->getType()->isScalableTy(); }) ||
+           (isa<GetElementPtrInst>(I) && cast<GetElementPtrInst>(I)
+                                             .getSourceElementType()
+                                             ->isScalableTy()) ||
+           (isa<AllocaInst>(I) && cast<AllocaInst>(I).isScalable())))
+        return true;
     }
   }
 
