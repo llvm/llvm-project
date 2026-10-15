@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements target lowering for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #include "PISAISelLowering.h"
 #include "PISA.h"

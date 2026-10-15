@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file declares register bank information for the PISA target.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_PISA_PISAREGISTERBANKINFO_H
 #define LLVM_LIB_TARGET_PISA_PISAREGISTERBANKINFO_H
