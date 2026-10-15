@@ -129,6 +129,15 @@ Expected<bool> displaceSourceImageHalf(RaiseContext &Ctx, const DecodedInst &Di,
     return false;
   std::optional<int64_t> Displacement =
       evalOperandAsConst(Di.Inst, Op.srcIdx(1));
+  if (!Displacement && !IsHighHalf && !IsSignedAdd) {
+    Displacement = Ctx.sourceImageRegisterDisplacement(Di.Offset);
+    if (Displacement) {
+      // Keep provenance checks even when the addend is known.
+      Expected<Value *> Source = Op.src(1);
+      if (!Source)
+        return Source.takeError();
+    }
+  }
   if (!Displacement)
     return false;
   Expected<std::optional<ParsedReg>> Src0 = Op.srcReg(0);

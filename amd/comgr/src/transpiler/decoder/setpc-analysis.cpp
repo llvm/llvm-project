@@ -401,6 +401,7 @@ Expected<SetPcAnalysis> classifyAgainstBlockStarts(
       continue;
     }
 
+    case CanonicalOp::S_ADD_I32:
     case CanonicalOp::S_ADD_U32: {
       // A displacement added to the offset that a pair already carries, or a
       // plain constant fold that a later add can use as its addend.
@@ -420,6 +421,9 @@ Expected<SetPcAnalysis> classifyAgainstBlockStarts(
         State.Regs[*Dst].Constant = *Src0Imm + *Src1Imm;
         continue;
       }
+      // Signed overflow cannot carry a displacement into the high half.
+      if (Di.CanonOp == CanonicalOp::S_ADD_I32)
+        break;
       std::optional<unsigned> Src0Idx;
       if (Di.isReg(Src0))
         Src0Idx = sgprIndex(MRI, Di.getReg(Src0));
@@ -473,6 +477,21 @@ Expected<SetPcAnalysis> classifyAgainstBlockStarts(
       if (!Addend)
         break;
       RegState::AddressKind Kind = State.Regs.lookup(Low).PairAddressKind;
+      assert(I != 0 && "carry comes from a preceding low-half add");
+      const DecodedInst &LowAdd = Insts[I - 1];
+      unsigned LowSource = LowAdd.FirstSrcIdx + 1;
+      // Applying the current carry cannot recover an earlier lost carry.
+      if (Kind == RegState::PendingCarry &&
+          LowAdd.CanonOp == CanonicalOp::S_ADD_U32 &&
+          LowAdd.Offset + LowAdd.sizeInBytes() == Di.Offset &&
+          LowAdd.isReg(LowSource)) {
+        std::optional<unsigned> Index =
+            sgprIndex(MRI, LowAdd.getReg(LowSource));
+        if (Index)
+          if (std::optional<uint32_t> Constant =
+                  State.Regs.lookup(*Index).Constant)
+            Result.RegisterDisplacements[LowAdd.Offset] = *Constant;
+      }
       State.writeReg(*Dst);
       State.Regs[Low].PairOffset =
           *Target + (static_cast<uint64_t>(*Addend) << 32);

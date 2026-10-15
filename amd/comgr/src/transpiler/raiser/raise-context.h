@@ -70,6 +70,16 @@ public:
     return It == SetPc.Sites.end() ? nullptr : &It->second;
   }
 
+  // Constant register addend of a complete address's low-half add with an
+  // adjacent matching carry add.
+  std::optional<uint32_t>
+  sourceImageRegisterDisplacement(uint64_t Offset) const {
+    auto It = SetPc.RegisterDisplacements.find(Offset);
+    if (It == SetPc.RegisterDisplacements.end())
+      return std::nullopt;
+    return It->second;
+  }
+
   // Whether the split barrier at Offset is one half of a pair that together
   // stands for one whole barrier. A half that is not raises nothing it can
   // state on its own and is refused.
