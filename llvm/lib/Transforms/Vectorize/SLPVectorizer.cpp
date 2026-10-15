@@ -13683,8 +13683,7 @@ bool BoUpSLP::collectGatherUserOps(
     Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
     if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
       IntrinsicID = II->getIntrinsicID();
-    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID, OpIdx,
-                         UserTE->State == TreeEntry::CombinedVectorize);
+    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID, OpIdx);
   }
   return !UserOps.empty();
 }
