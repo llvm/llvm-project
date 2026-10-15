@@ -7,11 +7,11 @@ import time
 
 
 class DelayingHandler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        # The test sets DEBUGINFOD_TIMEOUT=1
-        time.sleep(5)
-        self.send_response(501)
+    can_respond = threading.Event()
 
+    def do_GET(self):
+        # Wait until the client has finished running.
+        self.can_respond.wait()
 
 httpd = http.server.HTTPServer(("localhost", 0), DelayingHandler)
 port = httpd.socket.getsockname()[1]
@@ -22,5 +22,6 @@ try:
     result = subprocess.run(sys.argv[1:], capture_output=True)
     # e.g. Build ID 00: curl_easy_perform() failed: Timeout was reached
     print(result.stderr.decode())
+    DelayingHandler.can_respond.set()
 finally:
     httpd.shutdown()
