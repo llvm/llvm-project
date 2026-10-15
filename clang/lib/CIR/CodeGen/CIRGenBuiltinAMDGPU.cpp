@@ -145,7 +145,7 @@ static mlir::Value emitAMDGPUPredicate(CIRGenFunction &cgf, const CallExpr *e,
                                        const llvm::Twine &name) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
-  mlir::Value result = cir::AMDGCNFeaturePredicateOp::create(
+  mlir::Value result = cir::AMDGPUFeaturePredicateOp::create(
       builder, loc, builder.getBoolTy(), builder.getStringAttr(name));
   // Sema retypes the call to the logical operation type, which is int in C.
   return builder.createBoolToInt(result, cgf.convertType(e->getType()));

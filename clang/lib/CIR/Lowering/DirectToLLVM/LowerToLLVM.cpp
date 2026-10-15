@@ -2452,8 +2452,8 @@ mlir::LogicalResult CIRToLLVMAddrOfReturnAddrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMAMDGCNFeaturePredicateOpLowering::matchAndRewrite(
-    cir::AMDGCNFeaturePredicateOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMAMDGPUFeaturePredicateOpLowering::matchAndRewrite(
+    cir::AMDGPUFeaturePredicateOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Location loc = op.getLoc();
   mlir::MLIRContext *ctx = rewriter.getContext();

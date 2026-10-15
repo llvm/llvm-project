@@ -12,7 +12,7 @@ void test_processor_is(void) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @test_processor_is
-// CIR: cir.amdgcn_feature_predicate "is.gfx900"
+// CIR: cir.amdgpu_feature_predicate "is.gfx900"
 
 // LLVM-LABEL: define {{.*}} @test_processor_is
 // LLVM: call{{.*}} i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata ![[IS_GFX900:[0-9]+]])
@@ -26,7 +26,7 @@ void test_is_invocable(void) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @test_is_invocable
-// CIR: cir.amdgcn_feature_predicate "has.gfx10-insts"
+// CIR: cir.amdgpu_feature_predicate "has.gfx10-insts"
 
 // LLVM-LABEL: define {{.*}} @test_is_invocable
 // LLVM: call{{.*}} i1 @llvm.spv.named.boolean.spec.constant(i32 -1, i1 false, metadata ![[HAS_GFX10:[0-9]+]])

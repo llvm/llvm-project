@@ -5623,11 +5623,11 @@ def CIR_AddrOfReturnAddrOp : CIR_Op<"address_of_return_address"> {
 }
 
 //===----------------------------------------------------------------------===//
-// AMDGCNFeaturePredicateOp
+// AMDGPUFeaturePredicateOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AMDGCNFeaturePredicateOp : CIR_Op<"amdgcn_feature_predicate"> {
-  let summary = "AMDGCN feature predicate resolved at JIT time";
+def CIR_AMDGPUFeaturePredicateOp : CIR_Op<"amdgpu_feature_predicate"> {
+  let summary = "AMDGPU feature predicate resolved at JIT time";
 
   let description = [{
     Represents `__builtin_amdgcn_processor_is` and
@@ -5640,7 +5640,7 @@ def CIR_AMDGCNFeaturePredicateOp : CIR_Op<"amdgcn_feature_predicate"> {
     Example:
 
     ```mlir
-    %0 = cir.amdgcn_feature_predicate "is.gfx900"
+    %0 = cir.amdgpu_feature_predicate "is.gfx900"
     ```
   }];
 
