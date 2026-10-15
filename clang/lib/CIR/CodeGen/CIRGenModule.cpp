@@ -3286,7 +3286,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
-    const clang::FunctionDecl *decl, cir::FuncOp f) {
+    const clang::Decl *decl, cir::FuncOp f) {
 
   if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables)
     f.setUwtable(static_cast<cir::UnwindTableKind>(codeGenOpts.UnwindTables));
@@ -3318,14 +3318,44 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
 
   assert(!cir::MissingFeatures::opFuncArmStreamingAttr());
   assert(!cir::MissingFeatures::opFuncArmNewAttr());
-  assert(!cir::MissingFeatures::opFuncOptNoneAttr());
-  assert(!cir::MissingFeatures::opFuncMinSizeAttr());
-  assert(!cir::MissingFeatures::opFuncNakedAttr());
-  assert(!cir::MissingFeatures::opFuncNoDuplicateAttr());
   assert(!cir::MissingFeatures::hlsl());
 
+  // Track whether we need to add the optnone attribute, starting with the
+  // default for this optimization level.
+  bool shouldAddOptNone =
+      !codeGenOpts.DisableO0ImplyOptNone && codeGenOpts.OptimizationLevel == 0;
+  // optnone is incompatible with minsize and alwaysinline.
+  shouldAddOptNone &= !decl->hasAttr<MinSizeAttr>();
+  shouldAddOptNone &= !decl->hasAttr<AlwaysInlineAttr>();
+
   // Handle inline attributes
-  if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
+  if ((shouldAddOptNone || decl->hasAttr<OptimizeNoneAttr>()) &&
+      !isAlwaysInline) {
+    // Add optnone, but do so only if the function isn't always_inline.
+    f->setAttr(cir::CIRDialect::getOptNoneAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
+
+    // OptimizeNone implies noinline; we should not be inlining such functions.
+    f.setInlineKind(cir::InlineKind::NoInline);
+
+    // We still need to handle naked functions even though optnone subsumes
+    // much of their semantics.
+    if (decl->hasAttr<NakedAttr>())
+      f->setAttr(cir::CIRDialect::getNakedAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+
+    // OptimizeNone wins over OptimizeForSize and MinSize.
+    f->removeAttr(cir::CIRDialect::getOptimizeForSizeAttrName());
+    f->removeAttr(cir::CIRDialect::getMinSizeAttrName());
+  } else if (decl->hasAttr<NakedAttr>()) {
+    // Naked implies noinline: we should not be inlining such functions.
+    f->setAttr(cir::CIRDialect::getNakedAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
+    f.setInlineKind(cir::InlineKind::NoInline);
+  } else if (decl->hasAttr<NoDuplicateAttr>()) {
+    f->setAttr(cir::CIRDialect::getNoDuplicatesAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
+  } else if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
     // Add noinline if the function isn't always_inline.
     f.setInlineKind(cir::InlineKind::NoInline);
   } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
@@ -3366,7 +3396,26 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     }
   }
 
-  assert(!cir::MissingFeatures::opFuncColdHotAttr());
+  // Add other optimization related attributes if we are optimizing this
+  // function.
+  if (!decl->hasAttr<OptimizeNoneAttr>()) {
+    if (decl->hasAttr<ColdAttr>()) {
+      if (!shouldAddOptNone)
+        f->setAttr(cir::CIRDialect::getOptimizeForSizeAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
+
+      f->setAttr(cir::CIRDialect::getColdAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
+    if (decl->hasAttr<HotAttr>())
+      f->setAttr(cir::CIRDialect::getHotAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+
+    if (decl->hasAttr<MinSizeAttr>())
+      f->setAttr(cir::CIRDialect::getMinSizeAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+  }
 
   std::optional<uint64_t> explicitAlignment;
   if (unsigned alignment =
