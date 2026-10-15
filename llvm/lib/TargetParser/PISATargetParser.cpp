@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements parsing support for PISA and target features.
+///
+//===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/PISATargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
