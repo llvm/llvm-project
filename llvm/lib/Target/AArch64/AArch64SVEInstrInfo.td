@@ -3164,15 +3164,17 @@ let Predicates = [HasSVE_or_SME] in {
 
   // Add more complex addressing modes here as required
   multiclass pred_load<ValueType Ty, ValueType PredTy, SDPatternOperator Load,
-                       Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP> {
-    let AddedComplexity = 1 in {
+                       Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP,
+                       int ExtraComplexity = 0> {
+    let AddedComplexity = !add(1, ExtraComplexity) in {
       def _reg_reg_z : Pat<(Ty (Load (AddrCP GPR64:$base, GPR64:$offset), (PredTy PPR:$gp), (SVEDup0Undef))),
                            (RegRegInst PPR:$gp, GPR64:$base, GPR64:$offset)>;
     }
-    let AddedComplexity = 2 in {
+    let AddedComplexity = !add(2, ExtraComplexity) in {
       def _reg_imm_z : Pat<(Ty (Load (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), (PredTy PPR:$gp), (SVEDup0Undef))),
                            (RegImmInst PPR:$gp, GPR64:$base, simm4s1:$offset)>;
     }
+    let AddedComplexity = ExtraComplexity in
     def _default_z : Pat<(Ty (Load  GPR64:$base, (PredTy PPR:$gp), (SVEDup0Undef))),
                          (RegImmInst PPR:$gp, GPR64:$base, (i64 0))>;
   }
@@ -3211,15 +3213,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm : pred_load<nxv16i8, nxv16i1, nonext_masked_load, LD1B, LD1B_IMM, am_sve_regreg_lsl0>;
 
   multiclass pred_store<ValueType Ty, ValueType PredTy, SDPatternOperator Store,
-                        Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP> {
-    let AddedComplexity = 1 in {
+                        Instruction RegRegInst, Instruction RegImmInst, ComplexPattern AddrCP,
+                        int ExtraComplexity = 0> {
+    let AddedComplexity = !add(1, ExtraComplexity) in {
       def _reg_reg : Pat<(Store Ty:$vec, (AddrCP GPR64:$base, GPR64:$offset), PredTy:$gp),
                          (RegRegInst ZPR:$vec, PPR:$gp, GPR64:$base, GPR64:$offset)>;
     }
-    let AddedComplexity = 2 in {
+    let AddedComplexity = !add(2, ExtraComplexity) in {
       def _reg_imm : Pat<(Store Ty:$vec, (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset), PredTy:$gp),
                          (RegImmInst ZPR:$vec, PPR:$gp, GPR64:$base, simm4s1:$offset)>;
     }
+    let AddedComplexity = ExtraComplexity in
     def _default : Pat<(Store Ty:$vec, GPR64:$base, PredTy:$gp),
                        (RegImmInst ZPR:$vec, PPR:$gp, GPR64:$base, (i64 0))>;
   }
@@ -3251,15 +3255,25 @@ let Predicates = [HasSVE_or_SME] in {
   // 16-element contiguous stores
   defm : pred_store<nxv16i8, nxv16i1, nontrunc_masked_store, ST1B, ST1B_IMM, am_sve_regreg_lsl0>;
 
-  defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRR, LDNT1B_ZRI, am_sve_regreg_lsl0>;
-  defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
-  defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2>;
-  defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3>;
+  // Non-temporal loads/stores. Set high priority for these patterns that can also be matched in above
+  // nonext_masked_load and nontrunc_masked_store
+  defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRR, LDNT1B_ZRI, am_sve_regreg_lsl0, 3>;
+  defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1, 3>;
+  defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2, 3>;
+  defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3, 3>;
+  defm : pred_load<nxv8f16,  nxv8i1, non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1, 3>;
+  defm : pred_load<nxv8bf16, nxv8i1, non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1, 3>;
+  defm : pred_load<nxv4f32,  nxv4i1, non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2, 3>;
+  defm : pred_load<nxv2f64,  nxv2i1, non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3, 3>;
 
-  defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRR, STNT1B_ZRI, am_sve_regreg_lsl0>;
-  defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
-  defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
-  defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
+  defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRR, STNT1B_ZRI, am_sve_regreg_lsl0, 3>;
+  defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1, 3>;
+  defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2, 3>;
+  defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3, 3>;
+  defm : pred_store<nxv8f16,  nxv8i1, non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1, 3>;
+  defm : pred_store<nxv8bf16, nxv8i1, non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1, 3>;
+  defm : pred_store<nxv4f32,  nxv4i1, non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2, 3>;
+  defm : pred_store<nxv2f64,  nxv2i1, non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3, 3>;
 
   multiclass unpred_store<PatFrag Store, ValueType Ty, Instruction RegRegInst,
                           Instruction RegImmInst, Instruction PTrue,
