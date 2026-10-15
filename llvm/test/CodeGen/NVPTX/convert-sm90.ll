@@ -67,14 +67,32 @@ define i32 @cvt_rz_relu_tf32_f32(float %f1) {
 
 define i16 @cvt_rn_f16_bf16(bfloat %in) {
 ; CHECK-LABEL: cvt_rn_f16_bf16(
-; CHECK:       cvt.rn.f16.bf16
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_rn_f16_bf16_param_0];
+; CHECK-NEXT:    cvt.rn.f16.bf16 %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %val = call i16 @llvm.nvvm.bf2h.rn(bfloat %in)
   ret i16 %val
 }
 
 define i16 @cvt_rn_ftz_f16_bf16(bfloat %in) {
 ; CHECK-LABEL: cvt_rn_ftz_f16_bf16(
-; CHECK:       cvt.rn.f16.bf16
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [cvt_rn_ftz_f16_bf16_param_0];
+; CHECK-NEXT:    cvt.rn.f16.bf16 %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
   %val = call i16 @llvm.nvvm.bf2h.rn.ftz(bfloat %in)
   ret i16 %val
 }
