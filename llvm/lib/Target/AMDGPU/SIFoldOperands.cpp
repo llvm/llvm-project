@@ -220,8 +220,8 @@ public:
   bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
                         MachineInstr *MI, unsigned OpNo,
                         const FoldableDef &OpToFold) const;
-  bool isUseSafeToFold(const MachineInstr &MI,
-                       const MachineOperand &UseMO) const;
+  bool isUseSafeToFold(const MachineInstr &MI, const MachineOperand &UseMO,
+                       const FoldableDef &OpToFold) const;
   bool isTemporallyDivergentUse(const FoldableDef &OpToFold,
                                 const MachineInstr &UseMI) const;
 
@@ -1033,9 +1033,14 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
 }
 
 bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
-                                         const MachineOperand &UseMO) const {
-  // Operands of SDWA instructions must be registers.
-  return !TII->isSDWA(MI);
+                                         const MachineOperand &UseMO,
+                                         const FoldableDef &OpToFold) const {
+  if (!TII->isSDWA(MI))
+    return true;
+  // Operands of SDWA instructions must be registers. Since GFX9 these may be
+  // SGPRs as well as VGPRs; whether a particular register is legal (register
+  // class, constant bus) is checked by isOperandLegal when the fold is added.
+  return OpToFold.isReg() && ST->hasSDWAScalar();
 }
 
 // Returns true if any instruction in \p L modifies EXEC.
@@ -1303,7 +1308,7 @@ bool SIFoldOperandsImpl::foldOperand(
   bool Changed = false;
   const MachineOperand *UseOp = &UseMI->getOperand(UseOpIdx);
 
-  if (!isUseSafeToFold(*UseMI, *UseOp))
+  if (!isUseSafeToFold(*UseMI, *UseOp, OpToFold))
     return Changed;
 
   if (isTemporallyDivergentUse(OpToFold, *UseMI))
