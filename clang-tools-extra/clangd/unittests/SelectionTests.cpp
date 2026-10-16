@@ -515,13 +515,15 @@ TEST(SelectionTest, CommonAncestor) {
       )cpp",
        "BuiltinTypeLoc"},
 
-      // This case used to crash - AST has a null Attr
+      // This case used to crash - the AST had a null Attr. The unrecognized
+      // [[...]] attribute is now retained as an UnknownAttr, so selecting it
+      // lands on that node.
       {R"cpp(
         @interface I
-        [[@property(retain, nonnull) <:[My^Object2]:> *x]]; // error-ok
+        @property(retain, nonnull) <:[ [[My^Object2]] ]:> *x; // error-ok
         @end
       )cpp",
-       "ObjCPropertyDecl"},
+       "UnknownAttr"},
 
       {R"cpp(
         typedef int Foo;

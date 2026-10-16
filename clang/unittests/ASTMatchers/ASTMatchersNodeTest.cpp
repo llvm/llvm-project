@@ -2100,10 +2100,9 @@ TEST_P(ASTMatchersTest, Attr) {
   if (GetParam().isCXX11OrLater()) {
     EXPECT_TRUE(matches("struct [[clang::warn_unused_result]] F{};", attr()));
 
-    // Unknown attributes are not parsed into an AST node.
-    if (!AutomaticAttributes) {
-      EXPECT_TRUE(notMatches("int x [[unknownattr]];", attr()));
-    }
+    // An unrecognized C++ attribute is retained in the AST as an UnknownAttr
+    // instead of being dropped, so it now matches attr().
+    EXPECT_TRUE(matches("int x [[unknownattr]];", attr()));
   }
   if (GetParam().isCXX17OrLater()) {
     EXPECT_TRUE(matches("struct [[nodiscard]] F{};", attr()));
