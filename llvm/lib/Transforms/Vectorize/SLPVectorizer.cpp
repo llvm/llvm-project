@@ -18945,7 +18945,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (Budget > BudgetLimit)
         break;
       if (!isa<CatchSwitchInst>(BB->getTerminator()) &&
-          !CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrDbgOrAlloca(),
+          !CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrAlloca(),
                                           BB->getTerminator()))
         continue;
       Worklist.append(pred_begin(BB), pred_end(BB));
@@ -19121,8 +19121,8 @@ InstructionCost BoUpSLP::getSpillCost() {
       // Check for call instruction in between blocks.
       // 1. Check entry's block to the head.
       if (Entry->getOpcode() != Instruction::PHI &&
-          !CheckForNonVecCallsInSameBlock(
-              &*Parent->getFirstNonPHIOrDbgOrAlloca(), LastInst)) {
+          !CheckForNonVecCallsInSameBlock(&*Parent->getFirstNonPHIOrAlloca(),
+                                          LastInst)) {
         AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
@@ -25902,7 +25902,7 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
     return false;
   // Only static allocas at the start of the entry block can stay in the header
   // block, any other alloca would have to be duplicated with the body.
-  if (any_of(make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end()),
+  if (any_of(make_range(BB->getFirstNonPHIOrAlloca(), BB->end()),
              IsaPred<AllocaInst>))
     return false;
   return true;
@@ -26768,7 +26768,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                       IVec->getParent()->getLandingPadInst()->getIterator()));
                 else
                   Builder.SetInsertPoint(
-                      IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
+                      IVec->getParent()->getFirstNonPHIOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
                 Builder.SetInsertPoint(IVec->getNextNode());
               }
