@@ -19,6 +19,7 @@ constexpr TwoIntsVecSize c[3] = {{0,1}, {2,3}, {4,5}};
 static_assert(c[0][0] == 0);
 static_assert(c[1][1] == 3);
 static_assert(c[2][3]); // expected-error {{not an integral constant expression}} expected-note {{cannot refer to element 3 of array of 2 elements}}
+static_assert(c[3][0]); // expected-error {{not an integral constant expression}} expected-note {{cannot access vector element of pointer past the end of object}}
 
 // make sure clang rejects taking address of a vector element
 static_assert(&a[0]); // expected-error {{address of vector element requested}}
@@ -35,6 +36,13 @@ static_assert(b.s0 == 1 && b.s1 == 2 && b.s2 == 3 && b.s3 == 4);
 static_assert(b.x == 1 && b.y == 2 && b.z == 3 && b.w == 4);
 static_assert(b.r == 1 && b.g == 2 && b.b == 3 && b.a == 4);
 static_assert(b[5]); // expected-error {{not an integral constant expression}} expected-note {{cannot refer to element 5 of array of 4 elements}}
+
+// GH220256: element access through a past-the-end or null pointer.
+constexpr FourIntsExtVec arr[2] = {{1,2,3,4}, {5,6,7,8}};
+static_assert(arr[2][0]); // expected-error {{not an integral constant expression}} expected-note {{cannot access vector element of pointer past the end of object}}
+constexpr FourIntsExtVec *np = nullptr;
+static_assert(np[0][0]); // expected-error {{not an integral constant expression}} expected-note {{cannot access vector element of null pointer}}
+static_assert(np->x); // expected-error {{not an integral constant expression}} expected-note {{cannot access vector element of null pointer}}
 
 // FIXME: support selecting multiple elements
 static_assert(b.lo.lo == 1); // expected-error {{not an integral constant expression}}
