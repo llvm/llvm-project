@@ -1577,11 +1577,17 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     assert(Stage == llvm::Triple::Pixel &&
            "SV_IsFrontFace is in an unavailable stage and should have been "
            "diagnosed by Sema");
-    if (CGM.getTarget().getTriple().isSPIRV())
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // The FrontFacing BuiltIn is always a bool in SPIR-V, whatever type the
+      // entry point declares. Load it as bool, then convert below.
+      llvm::Type *BoolTy = B.getInt1Ty();
       // Non-float pixel inputs cannot be interpolated and must be Flat.
-      return createSPIRVBuiltinLoad(
-          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
-          /* BuiltIn::FrontFacing */ 17, inputRequiresFlatDecoration(Type));
+      llvm::Value *FF = createSPIRVBuiltinLoad(
+          B, CGM.getModule(), BoolTy, Semantic->getAttrName()->getName(),
+          /* BuiltIn::FrontFacing */ 17, /* NeedsFlat= */ true);
+      // Convert to the declared parameter type (eg uint).
+      return Type == BoolTy ? FF : B.CreateZExt(FF, Type);
+    }
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);

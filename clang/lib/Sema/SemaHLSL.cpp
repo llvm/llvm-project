@@ -1384,10 +1384,13 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           (IsSPIRV ? 4 : 3) << DeclaredTy;
     return;
   case SemanticKind::IsFrontFace:
-    if (!T->isBooleanType())
+    // DXC accepts bool and uint. The SPIR-V FrontFacing variable is always
+    // bool, so CodeGen converts it to the declared type.
+    if (!T->isBooleanType() &&
+        !(T->isUnsignedIntegerType() && isIntElementOfWidth(Ctx, T, 32)))
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
-          << A->getAttrName() << /* scalar */ 0 << 1 << /* bool */ 5
-          << DeclaredTy;
+          << A->getAttrName() << /* scalar */ 0 << 1
+          << /* bool or 32 bit unsigned integer */ 5 << DeclaredTy;
     return;
   default:
     // Other semantics only have the general signature type restrictions.
