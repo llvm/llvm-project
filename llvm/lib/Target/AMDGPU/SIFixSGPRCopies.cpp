@@ -606,27 +606,28 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
       if (!TII->isBasicBlockPrologue(*B))
         B++;
 
-      auto R = std::next(MI->getReverseIterator());
-      const unsigned Threshold = 50;
-      MachineBasicBlock::iterator MIIt(MI);
-      MachineBasicBlock::iterator InsertPt = MIIt;
-      // Search until B or Threshold for a place to insert the initialization.
-      for (unsigned I = 0; R != B && I < Threshold; ++R) {
-        if (R->isDebugInstr())
-          continue;
-        ++I;
+      unsigned Remaining = 50;
+      auto InsertPt = MI->getIterator();
+      // Search for a place to insert the initialization, examining at most 50
+      // non-debug instructions before reaching B.
+      for (MachineInstr &ScanMI : instructionsWithoutDebug(
+               std::next(MI->getReverseIterator()), B.getInstrIterator())) {
+        if (!Remaining)
+          break;
+        --Remaining;
 
-        if (R->readsRegister(Reg, TRI) || R->modifiesRegister(Reg, TRI) ||
-            TII->isSchedulingBoundary(*R, MBB, *MBB->getParent()))
+        if (ScanMI.readsRegister(Reg, TRI) ||
+            ScanMI.modifiesRegister(Reg, TRI) ||
+            TII->isSchedulingBoundary(ScanMI, MBB, *MBB->getParent()))
           break;
 
-        InsertPt = R->getIterator();
+        InsertPt = ScanMI.getIterator();
       }
 
-      if (InsertPt != MIIt) {
+      if (InsertPt != MI->getIterator()) {
         // A DBG_VALUE of Reg crossed by MI would describe the new value too
         // early. Mark only those crossed locations as unavailable.
-        for (MachineInstr &DbgMI : make_range(InsertPt, MIIt))
+        for (MachineInstr &DbgMI : make_range(InsertPt, MI->getIterator()))
           if (DbgMI.isDebugValue() && DbgMI.readsRegister(Reg, TRI))
             DbgMI.setDebugValueUndef();
         // Move MI before the earliest crossed non-debug instruction.
