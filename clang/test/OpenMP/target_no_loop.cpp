@@ -65,6 +65,38 @@ void promotable_no_loop(int *array, int n) {
     for (int i = 0; i < 1024; ++i)
       set(i);
   }
+
+  {
+    int i;
+#pragma omp target teams distribute parallel for lastprivate(i)
+    for (i = 0; i < 1024; ++i)
+      array[i] = i + 1;
+  }
+
+  {
+    int last = 0;
+#pragma omp target teams distribute parallel for lastprivate(last)
+    for (int i = 0; i < 1024; ++i) {
+      array[i] = i + 1;
+      last = i;
+    }
+  }
+
+  {
+    int last = 0;
+#pragma omp target teams distribute parallel for lastprivate(last) nowait
+    for (int i = 0; i < 1024; ++i) {
+      array[i] = i + 1;
+      last = i;
+    }
+  }
+
+  {
+    int i;
+#pragma omp target teams distribute parallel for simd linear(i)
+    for (i = 0; i < 1024; ++i)
+      array[i] = i + 1;
+  }
 }
 
 void non_promotable(int *array) {
@@ -90,29 +122,13 @@ void non_promotable(int *array) {
     array[i] = i + 1;
 #pragma omp cancel for
   }
-
-  {
-    int last = 0;
-#pragma omp target teams distribute parallel for lastprivate(last)
-    for (int i = 0; i < 1024; ++i) {
-      array[i] = i + 1;
-      last = i;
-    }
-  }
-
-  {
-    int i;
-#pragma omp target teams distribute parallel for simd linear(i)
-    for (i = 0; i < 1024; ++i)
-      array[i] = i + 1;
-  }
 }
 
-// NOLOOP-COUNT-6: promotable_no_loop{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 6
-// NOLOOP-COUNT-7: non_promotable{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 2
+// NOLOOP-COUNT-10: promotable_no_loop{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 6
+// NOLOOP-COUNT-5: non_promotable{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 2
 
-// SPMD-COUNT-6: promotable_no_loop{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 2
-// SPMD-COUNT-7: non_promotable{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 2
+// SPMD-COUNT-10: promotable_no_loop{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 2
+// SPMD-COUNT-5: non_promotable{{.*}}_kernel_environment {{.*}} i8 0, i8 1, i8 2
 
 // no clause
 // NOLOOP-LABEL: @__kmpc_parallel_60({{.*}}promotable_no_loop{{.*}}_l37_{{.*}})
@@ -169,5 +185,45 @@ void non_promotable(int *array) {
 // NOLOOP-NEXT: [[FIELD:%.*]] = getelementptr inbounds nuw %class.anon, ptr [[SET]], i32 0, i32 0
 // NOLOOP-NEXT: store ptr %array.addr.ascast, ptr [[FIELD]]
 // NOLOOP: @__kmpc_distribute_for_static_loop_4u({{.*}}_l64_{{.*}}, i32 0, i32 0, i8 1)
+// NOLOOP: omp_loop.after:
+// NOLOOP-NEXT: ret void
+
+// lastprivate loop counter
+// NOLOOP-LABEL: @__kmpc_parallel_60({{.*}}promotable_no_loop{{.*}}_l71_{{.*}})
+// NOLOOP: omp.loop.exit:
+// NOLOOP-NEXT: store i32 1024, ptr %i
+// NOLOOP-NEXT: @__kmpc_free_shared(ptr %i{{.*}})
+// NOLOOP-NEXT: ret void
+// NOLOOP: @__kmpc_distribute_for_static_loop_4u({{.*}}_l71_{{.*}}, i32 0, i32 0, i8 1)
+// NOLOOP: @__kmpc_barrier
+// NOLOOP: omp_loop.after:
+// NOLOOP-NEXT: ret void
+
+// lastprivate scalar
+// NOLOOP-LABEL: @__kmpc_parallel_60({{.*}}promotable_no_loop{{.*}}_l78_{{.*}})
+// NOLOOP: omp.loop.exit:
+// NOLOOP-NEXT: @__kmpc_free_shared(ptr %last{{.*}})
+// NOLOOP-NEXT: ret void
+// NOLOOP: @__kmpc_distribute_for_static_loop_4u({{.*}}_l78_{{.*}}, i32 0, i32 0, i8 1)
+// NOLOOP: @__kmpc_barrier
+// NOLOOP: store {{.*}}, ptr %last.
+// NOLOOP-NEXT: %.omp.lastprivate.done
+
+// lastprivate scalar, nowait
+// NOLOOP-LABEL: @__kmpc_parallel_60({{.*}}promotable_no_loop{{.*}}_l87_{{.*}})
+// NOLOOP: omp.loop.exit:
+// NOLOOP-NEXT: @__kmpc_free_shared(ptr %last{{.*}})
+// NOLOOP-NEXT: ret void
+// NOLOOP: @__kmpc_distribute_for_static_loop_4u({{.*}}_l87_{{.*}}, i32 0, i32 0, i8 1)
+// NOLOOP: @__kmpc_barrier
+// NOLOOP: store {{.*}}, ptr %last.
+// NOLOOP-NEXT: %.omp.lastprivate.done
+
+// simd linear loop counter
+// NOLOOP-LABEL: @__kmpc_parallel_60({{.*}}promotable_no_loop{{.*}}_l96_{{.*}})
+// NOLOOP: omp.loop.exit:
+// NOLOOP-NEXT: store i32 1024, ptr %i
+// NOLOOP-NEXT: ret void
+// NOLOOP: @__kmpc_distribute_for_static_loop_4u({{.*}}_l96_{{.*}}, i32 0, i32 0, i8 1)
 // NOLOOP: omp_loop.after:
 // NOLOOP-NEXT: ret void
