@@ -22,6 +22,7 @@ define i32 @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %
 ; CHECK-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0 # [1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8]
 ; CHECK-NEXT:    addl (%rsi), %eax
 ; CHECK-NEXT:    vmovntdq %ymm0, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v0 = load i32, i32* %loadptr, align 1
