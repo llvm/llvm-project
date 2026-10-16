@@ -77,7 +77,7 @@ protected:
       return false;
 
     Mod = MIR->parseIRModule();
-    Mod->setDataLayout(TM->createDataLayout());
+    Mod->setDataLayout(TM->getTargetTriple().computeDataLayout());
     if (MIR->parseMachineFunctions(*Mod, MAM)) {
       Mod.reset();
       return false;

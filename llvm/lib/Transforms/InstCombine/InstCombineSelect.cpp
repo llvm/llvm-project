@@ -404,8 +404,12 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           FMF &= cast<FPMathOperator>(FII)->getFastMathFlags();
           FMF |= SelectFPOp->getFastMathFlags();
 
-          Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
-          Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
+          Value *SelectVal = Builder.CreateSelect(
+              Cond, LdexpVal0, LdexpVal1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+          Value *SelectExp = Builder.CreateSelect(
+              Cond, LdexpExp0, LdexpExp1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
 
           Value *NewLdexp = Builder.CreateIntrinsic(
               TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
@@ -503,6 +507,47 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// select C, f(..., X, ...), f(..., Y, ...) --> f(..., select C, X, Y, ...)
+static Instruction *
+foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
+                           IntrinsicInst *FII,
+                           InstCombiner::BuilderTy &Builder) {
+  if (TII->getCalledFunction() != FII->getCalledFunction())
+    return nullptr;
+
+  std::optional<unsigned> DiffArgNo;
+  for (unsigned I = 0, E = TII->arg_size(); I != E; ++I) {
+    if (TII->getArgOperand(I) == FII->getArgOperand(I))
+      continue;
+    if (DiffArgNo)
+      return nullptr;
+    DiffArgNo = I;
+  }
+  if (!DiffArgNo)
+    return nullptr;
+
+  if (!canReplaceOperandWithVariable(TII, *DiffArgNo))
+    return nullptr;
+
+  Value *TV = TII->getArgOperand(*DiffArgNo);
+  Value *FV = FII->getArgOperand(*DiffArgNo);
+  // powi keeps a scalar exponent even in its vector form.
+  if (SI.getCondition()->getType()->isVectorTy() &&
+      !TV->getType()->isVectorTy())
+    return nullptr;
+  // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
+  if (isa<Constant>(TV) || isa<Constant>(FV))
+    return nullptr;
+
+  SmallVector<Value *> Args(TII->args());
+  Args[*DiffArgNo] =
+      Builder.CreateSelect(SI.getCondition(), TV, FV, SI.getName() + ".v", &SI);
+  auto *NewCall = CallInst::Create(TII->getCalledFunction(), Args);
+  NewCall->copyIRFlags(TII);
+  NewCall->andIRFlags(FII);
+  return NewCall;
+}
+
 /// This transforms patterns of the form:
 ///   select cond, intrinsic(x, ...), intrinsic(y, ...)
 /// into:
@@ -534,16 +579,10 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
 
     return replaceInstUsesWith(SI, NewCall);
   }
-  case Intrinsic::ctpop: {
-    Value *TV = LHSIntrinsic->getArgOperand(0);
-    Value *FV = RHSIntrinsic->getArgOperand(0);
-
-    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
-    Value *NewCall = Builder.CreateUnaryIntrinsic(IID, NewSel);
-
-    return replaceInstUsesWith(SI, NewCall);
-  }
   default:
+    if (isTriviallyVectorizable(IID))
+      return foldSelectIntoIntrinsicArg(SI, LHSIntrinsic, RHSIntrinsic,
+                                        Builder);
     return nullptr;
   }
 }
@@ -673,7 +712,7 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? (X - Y) : 0
   if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
       match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CtxI, SQ.DT)) {
     Value *SMin =
         Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
     return Builder.CreateNSWSub(CmpLHS, SMin);
@@ -1886,7 +1925,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
 
-  if (!isa<SelectInst>(Sel1)) {
+  if (!match(Sel1, m_SelectLike(m_Value(), m_Value(), m_Value()))) {
     Pred0 = ICmpInst::getInversePredicate(Pred0);
     std::swap(X, Sel1);
   }
@@ -1944,8 +1983,8 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   CmpPredicate Pred1;
   Constant *C2;
   Value *ReplacementLow, *ReplacementHigh;
-  if (!match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
-                            m_Value(ReplacementHigh))) ||
+  if (!match(Sel1, m_SelectLike(m_Value(Cmp1), m_Value(ReplacementLow),
+                                m_Value(ReplacementHigh))) ||
       !match(Cmp1,
              m_ICmp(Pred1, m_Specific(X),
                     m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C2)))))
@@ -2026,16 +2065,22 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
            "Constant folding of ImmConstant cannot fail");
   }
 
+  // We mark the select instructions below as having an unknown profile as it is
+  // not possible to recover profile information from the original selects in
+  // the general case. From them we can only know the probability that we clamp
+  // whereas we need the probabilities for clamping specific to the low end/high
+  // end.
+
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
-  Value *MaybeReplacedLow =
-      Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+  Value *MaybeReplacedLow = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceLow, ReplacementLow, X, DEBUG_TYPE);
 
   // Create the final select. If we looked through a truncate above, we will
   // need to retruncate the result.
-  Value *MaybeReplacedHigh = Builder.CreateSelect(
-      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  Value *MaybeReplacedHigh = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow, DEBUG_TYPE);
   return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
@@ -2462,7 +2507,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
-  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder,
+                                      SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
@@ -3209,7 +3255,7 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
         return nullptr;
   }
 
-  Builder.SetInsertPoint(BB, BB->begin());
+  Builder.SetInsertPoint(BB->begin());
   auto *PN = Builder.CreatePHI(Sel.getType(), Inputs.size());
   for (auto *Pred : predecessors(BB))
     PN->addIncoming(Inputs[Pred], Pred);
@@ -3518,7 +3564,35 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   Value *NewCmp =
       IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
-  return IC.replaceInstUsesWith(SI, NewSel);
+
+  Instruction *NewSelUsesReplaced = IC.replaceInstUsesWith(SI, NewSel);
+
+  uint64_t WeightNotNaN, WeightNaN, WeightComparisonTrue,
+      WeightComparisonFalse = 0;
+  bool HasProfile = extractBranchWeights(*cast<SelectInst>(InnerSel),
+                                         WeightNotNaN, WeightNaN);
+  HasProfile &=
+      extractBranchWeights(SI, WeightComparisonTrue, WeightComparisonFalse);
+  if (!HasProfile || !isa<SelectInst>(NewSel))
+    return NewSelUsesReplaced;
+  // The branch weights for the new select will be the same as before, except
+  // they will additionally account for the probability of NaN values which was
+  // previously handled with the inner select. For the true arm the new
+  // probability is P(not Nan) * P(fcmp true). For the false arm, the new
+  // probability is P(NaN) + (P(not NaN) * P(fcmp false)). We can assume the
+  // probabilities are independent given the first select only checks for NaNs
+  // and the second select's condition will never see NaNs because of the first
+  // select. The code below uses some algebraic simplifications on top of those
+  // formulas.
+  uint64_t WeightNewSelTrue = WeightNotNaN * WeightComparisonTrue;
+  uint64_t WeightNewSelFalse =
+      WeightNaN * (WeightComparisonTrue + WeightComparisonFalse) +
+      WeightNotNaN * WeightComparisonFalse;
+  if (!ProfcheckDisableMetadataFixes)
+    setFittedBranchWeights(*cast<SelectInst>(NewSel),
+                           {WeightNewSelTrue, WeightNewSelFalse},
+                           /*IsExpected*/ false);
+  return NewSelUsesReplaced;
 }
 
 // Match the following IR pattern:
@@ -3626,7 +3700,13 @@ foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
     return nullptr;
 
   Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
-  return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  SelectInst *SI = SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
+  // We cannot construct branch weights without assuming that the distributions
+  // of the two conditions are independent, so mark the branch weights as
+  // unknown.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              OuterSelVal.getFunction());
+  return SI;
 }
 
 /// Look for patterns like
@@ -3669,8 +3749,11 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     return nullptr;
 
   // Canonicalize inversion of the innermost `select`'s condition.
-  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond))))
+  bool SwapInnerSelCond = false;
+  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond)))) {
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
+    SwapInnerSelCond = !SwapInnerSelCond;
+  }
 
   Value *AltCond = nullptr;
   auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
@@ -3695,16 +3778,25 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     // Done!
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
     InnerSel.Cond = NotInnerCond;
+    SwapInnerSelCond = !SwapInnerSelCond;
   } else // Not the pattern we were looking for.
     return nullptr;
 
-  Value *SelInner = Builder.CreateSelect(
+  // We mark the select with AltCond as having an unknown profile given the
+  // condition is derived from an and/or. We might have profile information on
+  // the operands of the and/or, but there is no guarantee that they are
+  // independent.
+  Value *SelInner = Builder.CreateSelectWithUnknownProfile(
       AltCond, IsAndVariant ? OuterSel.TrueVal : InnerSel.FalseVal,
-      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal);
+      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal, DEBUG_TYPE);
   SelInner->takeName(InnerSelVal);
-  return SelectInst::Create(InnerSel.Cond,
-                            IsAndVariant ? SelInner : InnerSel.TrueVal,
-                            !IsAndVariant ? SelInner : InnerSel.FalseVal);
+  SelectInst *SI = SelectInst::Create(
+      InnerSel.Cond, IsAndVariant ? SelInner : InnerSel.TrueVal,
+      !IsAndVariant ? SelInner : InnerSel.FalseVal, "", nullptr,
+      ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(InnerSelVal));
+  if (SwapInnerSelCond)
+    SI->swapProfMetadata();
+  return SI;
 }
 
 /// Return true if V is poison or \p Expected given that ValAssumedPoison is
@@ -4712,8 +4804,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           FMF.setNoNaNs(true);
         if (FCmp->hasNoInfs())
           FMF.setNoInfs(true);
-        Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
+        Value *NewSel = Builder.CreateSelectFMF(
+            NewCond, FalseVal, TrueVal, FMF, "",
+            ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        if (auto *NewSI = dyn_cast<SelectInst>(NewSel))
+          NewSI->swapProfMetadata();
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -5264,29 +5359,34 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // TODO: preserve FMF flags
   auto FoldSelectWithAndOrCond = [&](bool IsAnd, Value *A,
                                      Value *B) -> Instruction * {
+    Instruction *MDFrom = nullptr;
+    // If the and/or is logical, we can propagate branch weights from that
+    // select. Otherwise, we cannot infer the branch weights in the
+    // general case.
+    if (auto *NestedSI = dyn_cast<SelectInst>(SI.getCondition()))
+      if (NestedSI->getCondition() == A)
+        MDFrom = NestedSI;
+
     if (Value *V = simplifySelectInst(B, TrueVal, FalseVal, FMF,
                                       SQ.getWithInstruction(&SI))) {
-      Value *NewTrueVal = IsAnd ? V : TrueVal;
-      Value *NewFalseVal = IsAnd ? FalseVal : V;
-
-      // If the True and False values don't change, then preserve the branch
-      // metadata of the original select as the net effect of this change is to
-      // simplify the conditional.
-      Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal) {
-        MDFrom = &SI;
-      }
-      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
-                                MDFrom);
+      SelectInst *NewSI = SelectInst::Create(
+          A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+      if (!MDFrom)
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+      return NewSI;
     }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
-          return SelectInst::Create(
+          SelectInst *NewSI = SelectInst::Create(
               A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
-              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+              ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+          if (!MDFrom)
+            setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+          return NewSI;
         }
     }
 

@@ -814,10 +814,11 @@ static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
           Idxs.push_back(C);
         else
           break;
-      if (Idxs.size() == GEPI->getNumOperands()-1)
-        Changed |= OptimizeAwayTrappingUsesOfValue(
-            GEPI, ConstantExpr::getGetElementPtr(GEPI->getSourceElementType(),
-                                                 NewV, Idxs));
+      if (Idxs.size() == GEPI->getNumOperands() - 1) {
+        if (Constant *NewGEP = ConstantExpr::getGetElementPtr(
+                V->getDataLayout(), GEPI->getSourceElementType(), NewV, Idxs))
+          Changed |= OptimizeAwayTrappingUsesOfValue(GEPI, NewGEP);
+      }
       if (GEPI->use_empty()) {
         Changed = true;
         GEPI->eraseFromParent();
@@ -1839,15 +1840,11 @@ static void RemovePreallocated(Function *F) {
 
   auto *M = F->getParent();
 
-  IRBuilder<> Builder(M->getContext());
+  IRBuilder<> Builder(*M);
 
   // Cannot modify users() while iterating over it, so make a copy.
   SmallVector<User *, 4> PreallocatedCalls(F->users());
-  for (User *U : PreallocatedCalls) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB)
-      continue;
-
+  for (CallBase *CB : make_isa_range<CallBase>(PreallocatedCalls)) {
     assert(
         !CB->isMustTailCall() &&
         "Shouldn't call RemotePreallocated() on a musttail preallocated call");
@@ -2376,7 +2373,7 @@ static bool IsEmptyAtExitFunction(const Function &Fn) {
     return false;
 
   for (const auto &I : Fn.getEntryBlock()) {
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
     if (isa<ReturnInst>(I))
       return true;

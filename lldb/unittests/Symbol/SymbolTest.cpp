@@ -52,7 +52,7 @@ TEST(SymbolTest, EncodeDecodeSymbol) {
       /*module_sp=*/ModuleSP(),
       /*obj_file=*/nullptr,
       /*sect_id=*/1,
-      /*name=*/ConstString(".text"),
+      /*name=*/".text",
       /*sect_type=*/eSectionTypeCode,
       /*file_vm_addr=*/0x1000,
       /*vm_size=*/0x1000,

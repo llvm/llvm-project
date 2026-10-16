@@ -5,23 +5,23 @@
 ; COM: Comments for each kernel
 ; CHECK: kernel_32_agprs
 ; GFX908:   ; NumVgprs: 9
-; GFX908    ; NumAgprs: 32
-; GFX908    ; TotalNumVgprs: 32
+; GFX908:   ; NumAgprs: 32
+; GFX908:   ; TotalNumVgprs: 32
 
 ; GFX90A:   ; NumVgprs: 9
-; GFX90A    ; NumAgprs: 32
-; GFX90A    ; TotalNumVgprs: 44
+; GFX90A:   ; NumAgprs: 32
+; GFX90A:   ; TotalNumVgprs: 44
 
 ; GFX801:   ; NumVgprs: 9
 
 ; CHECK: kernel_40_vgprs
 ; GFX908:   ; NumVgprs: 40
-; GFX908    ; NumAgprs: 16
-; GFX908    ; TotalNumVgprs: 40
+; GFX908:   ; NumAgprs: 16
+; GFX908:   ; TotalNumVgprs: 40
 
 ; GFX90A:   ; NumVgprs: 40
-; GFX90A    ; NumAgprs: 16
-; GFX90A    ; TotalNumVgprs: 56
+; GFX90A:   ; NumAgprs: 16
+; GFX90A:   ; TotalNumVgprs: 56
 
 ; GFX801:   ; NumVgprs: 40
 

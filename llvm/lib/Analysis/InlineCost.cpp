@@ -2535,7 +2535,6 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
       InitsVargArgs = true;
       return false;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       if (auto *SROAArg = getSROAArgForValueOrNull(II->getOperand(0)))
         SROAArgValues[II] = SROAArg;
       return true;
@@ -2749,12 +2748,11 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // FIXME: Currently, the number of instructions in a function regardless of
     // our ability to simplify them during inline to constants or dead code,
     // are actually used by the vector bonus heuristic. As long as that's true,
-    // we have to special case debug intrinsics here to prevent differences in
-    // inlining due to debug symbols. Eventually, the number of unsimplified
+    // we have to special case pseudo-probes here to prevent differences in
+    // inlining due to sample profiling. Eventually, the number of unsimplified
     // instructions shouldn't factor into the cost computation, but until then,
     // hack around it here.
-    // Similarly, skip pseudo-probes.
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
 
     // Skip ephemeral values.

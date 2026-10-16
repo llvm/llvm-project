@@ -44,7 +44,11 @@ std::pair<Value *, Value *> llvm::buildCmpXchgValue(IRBuilderBase &Builder,
   LoadInst *Orig =
       Builder.CreateAlignedLoad(Val->getType(), Ptr, Alignment, IsVolatile);
   Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
-  Value *Res = Builder.CreateSelect(Equal, Val, Orig);
+  // We have no idea what the probability of the value in memory being equal to
+  // the comparison value is without additional VP metadata, so explicitly mark
+  // it unknown.
+  Value *Res =
+      Builder.CreateSelectWithUnknownProfile(Equal, Val, Orig, DEBUG_TYPE);
   Builder.CreateAlignedStore(Res, Ptr, Alignment, IsVolatile);
 
   return {Orig, Equal};

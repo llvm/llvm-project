@@ -45,8 +45,7 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = shl i64 [[OFF]], 3
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[DST_1]], i64 [[TMP18]]
-; CHECK-NEXT:    [[SMAX7:%.*]] = call i32 @llvm.smax.i32(i32 [[N_SUB]], i32 4)
-; CHECK-NEXT:    [[TMP19:%.*]] = zext nneg i32 [[SMAX7]] to i64
+; CHECK-NEXT:    [[TMP19:%.*]] = zext nneg i32 [[SMAX16]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = add nsw i64 [[TMP19]], -1
 ; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw nsw i64 [[TMP21]], 9
@@ -117,7 +116,7 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    store i64 [[TMP50]], ptr [[TMP45]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE21]]
 ; CHECK:       [[PRED_STORE_CONTINUE21]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX_NEXT]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP48:%.*]] = xor i1 [[TMP47]], true
@@ -520,7 +519,7 @@ exit:
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}

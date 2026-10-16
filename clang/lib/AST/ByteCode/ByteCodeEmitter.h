@@ -31,7 +31,7 @@ protected:
 public:
   using LabelTy = uint32_t;
   /// Compiles the function into the module.
-  void compileFunc(const FunctionDecl *FuncDecl, Function *Func = nullptr);
+  void compileFunc(const FunctionDecl *FuncDecl, Function *Func);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}
@@ -68,6 +68,7 @@ protected:
   /// We're always emitting bytecode.
   bool isActive() const { return true; }
   bool checkingForUndefinedBehavior() const { return false; }
+  bool constantFolding() const { return false; }
 
   /// Callback for local registration.
   Local createLocal(const Descriptor *D);

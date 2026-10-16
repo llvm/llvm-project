@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -Wvector-conversion
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wvector-conversion -fexperimental-new-constant-interpreter
 typedef unsigned int v2u __attribute__ ((vector_size (8)));
 typedef signed int v2s __attribute__ ((vector_size (8)));
 typedef signed int v1s __attribute__ ((vector_size (4)));
@@ -50,4 +51,16 @@ longlongvec;
 void test3a(longlongvec *); // expected-note{{passing argument to parameter here}}
 void test3(const unsigned *src) {
   test3a(src);  // expected-error {{incompatible pointer types passing 'const unsigned int *' to parameter of type 'longlongvec *'}}
+}
+
+// #225039: assignment to an _Atomic vector
+typedef unsigned gh225039_vec __attribute__((vector_size(16)));
+typedef signed int gh225039_vec_i32 __attribute__((vector_size(16)));
+void test4(void) {
+  gh225039_vec c;
+  _Atomic gh225039_vec d;
+  d = c;
+  d += c;
+  _Atomic gh225039_vec_i32 e, f;
+  e = f;
 }
