@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=x86_64 -emit-call-site-info -passes=reset-machine-function %s -o - | FileCheck %s
+
+# Resetting the function deletes its instructions, so their call site info and
+# called globals have to go too.
+
+# CHECK:     callSites: []
+# CHECK-NOT: calledGlobals:
+
+--- |
+  declare void @g()
+  define void @f() { ret void }
+...
+---
+name: f
+failedISel: true
+callSites:
+  - { bb: 0, offset: 0, fwdArgRegs: [] }
+calledGlobals:
+  - { bb: 0, offset: 0, callee: g, flags: 0 }
+body: |
+  bb.0:
+    CALL64pcrel32 @g, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+...
