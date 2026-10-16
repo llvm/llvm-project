@@ -2337,11 +2337,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // equality or hashing.
     auto C = vputils::getOpcodeOrIntrinsicID(Def);
 
-    // The issue with InsertValue is that the index of the insert is not a
-    // proper operand in LLVM IR, and hence also not in VPlan. Allocas must not
-    // be merged, as each creates a distinct allocation.
-    if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::Alloca)))
+    // Allocas must not be merged, as each creates a distinct allocation.
+    if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
 
     // Widened loads (including the EVL variant) are handled, as cse() only
@@ -3142,11 +3139,10 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   VPValue *Uncountable = nullptr;
   VPValue *Countable = nullptr;
   VPValue *Cond = Term->getOperand(0);
-  if (!match(Cond, m_OneUse(m_CombineOr(
-                       m_c_LogicalOr(m_Uncountable(Uncountable),
-                                     m_Countable(Countable, PSE, L)),
-                       m_c_BinaryOr(m_Uncountable(Uncountable),
-                                    m_Countable(Countable, PSE, L))))))
+  if (!match(Cond, m_CombineOr(m_c_LogicalOr(m_Uncountable(Uncountable),
+                                             m_Countable(Countable, PSE, L)),
+                               m_c_BinaryOr(m_Uncountable(Uncountable),
+                                            m_Countable(Countable, PSE, L)))))
     return true;
 
   // If the conditions are combined with a logical or (select), then we'll
@@ -3191,9 +3187,6 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
     Countable = NewLatchBuilder.createFreeze(Countable);
   }
   Term->setOperand(0, Countable);
-
-  // Remove the combining or.
-  cast<VPInstruction>(Cond)->eraseFromParent();
 
   return true;
 }
@@ -3271,12 +3264,6 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
     // Any value defined outside the loop does not need to be copied.
     if (V->isDefinedOutsideLoopRegions())
       continue;
-
-    // FIXME: Remove the single user restriction; it's here because we're
-    //        starting with the simplest set of loops we can, and multiple
-    //        users means needing to add PHI nodes in the transform.
-    if (V->getNumUsers() > 1)
-      return nullptr;
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
@@ -3366,9 +3353,7 @@ static bool handleUncountableExitsWithSideEffects(
     OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
 
-  // Disconnect early exiting blocks from successors, remove branches. We
-  // currently don't support multiple uses for recipes involved in creating
-  // the uncountable exit condition.
+  // Disconnect early exiting blocks from successors, remove branches.
   for (auto &Exit : Exits) {
     if (Exit.EarlyExitingVPBB == LatchVPBB)
       continue;
@@ -3536,6 +3521,17 @@ static bool handleUncountableExitsWithSideEffects(
   return true;
 }
 
+// Returns true if any non-branch recipe in the loop may have side effects.
+// For now this relies on LoopVectorizationLegality::isVectorizableEarlyExitLoop
+// rejecting loops with side effects other than stores.
+static bool loopMayHaveSideEffects(VPBasicBlock *HeaderVPBB) {
+  return any_of(vp_rpo_plain_cfg_loop_body(HeaderVPBB), [](VPBasicBlock *VPBB) {
+    return any_of(*VPBB, [](VPRecipeBase &R) {
+      return match(&R, m_VPInstruction<Instruction::Store>());
+    });
+  });
+}
+
 bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
@@ -3546,6 +3542,9 @@ bool VPlanTransforms::handleUncountableEarlyExits(
 
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+
+  if (loopMayHaveSideEffects(HeaderVPBB))
+    Style = UncountableExitStyle::MaskedHandleExitInScalarLoop;
 
   // Dereferenceability is checked separately for uncountable exit loops with
   // stores, as only the loads contributing to the exit condition need to
@@ -3843,9 +3842,15 @@ static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
 }
 
 /// Returns true if the narrow \p Mul in ext(mul(ext(A), ext(B))) or
-/// ext(mul(ext(A), C)) cannot wrap.
-static bool canFoldOuterExtendIntoMul(ExtendKind ExtKind, VPWidenRecipe *Mul,
-                                      Type *LHSSrcTy, Type *RHSSrcTy) {
+/// ext(mul(ext(A), C)) cannot wrap. The kind of the inner extends selects
+/// whether nuw (zext) or nsw (sext) is required on \p Mul.
+static bool canFoldOuterExtendIntoMul(VPWidenRecipe *Mul) {
+  auto *LHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
+  auto *RHS = dyn_cast<VPWidenCastRecipe>(Mul->getOperand(1));
+  Type *LHSSrcTy = LHS->getOperand(0)->getScalarType();
+  // A constant RHS must fit in the source type of the LHS.
+  Type *RHSSrcTy = RHS ? RHS->getOperand(0)->getScalarType() : LHSSrcTy;
+  ExtendKind ExtKind = getPartialReductionExtendKind(LHS);
   if (Mul->getScalarType()->getScalarSizeInBits() >=
       LHSSrcTy->getScalarSizeInBits() + RHSSrcTy->getScalarSizeInBits())
     return true;
@@ -5217,9 +5222,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
     assert(Mul->hasOneUse() && Ext->getOpcode() == MulLHS->getOpcode() &&
            MulLHS->getOpcode() == MulRHS->getOpcode() &&
-           canFoldOuterExtendIntoMul(getPartialReductionExtendKind(Ext), Mul,
-                                     MulLHS->getOperand(0)->getScalarType(),
-                                     MulRHS->getOperand(0)->getScalarType()) &&
+           canFoldOuterExtendIntoMul(Mul) &&
            "Expected the outer extend to be foldable");
     VPBuilder Builder(Mul);
     auto *NewLHS = Builder.createWidenCast(
@@ -5551,8 +5554,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // The outer extend can only be treated as extending the operands of the mul
   // if the narrow mul cannot wrap.
   if (OuterExtKind && MulOp->getOpcode() == Instruction::Mul &&
-      !canFoldOuterExtendIntoMul(*OuterExtKind, MulOp, LHSInputType,
-                                 RHSInputType))
+      !canFoldOuterExtendIntoMul(MulOp))
     return std::nullopt;
 
   return ExtendedReductionOperand{

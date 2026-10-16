@@ -571,6 +571,9 @@ public:
     return ST->enableAggressiveInterleaving();
   }
   /// @}
+
+  bool hasPossibleIncompatibleOps(const Function *F, bool ConsiderZA,
+                                  bool ConsiderZT, bool ConsiderSM) const;
 };
 
 } // end namespace llvm
