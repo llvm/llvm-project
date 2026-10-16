@@ -273,6 +273,13 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{0.5}, Int<4>{-1}), Real<4>{2});
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-3}, Int<4>{3}), Real<4>{-27});
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-2}, Int<4>{-3}), Real<4>{-0.125});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{3}, Int<4>{-2}), Real<4>{1} / Real<4>{9});
+  EXPECT_EQ(
+      RTNAME(FPow4i)(Real<4>{7}, Int<4>{-5}), Real<4>{1} / Real<4>{16807});
+  EXPECT_EQ(
+      RTNAME(FPow4i)(Real<4>{2}, Int<4>{-133}), std::ldexp(Real<4>{1}, -133));
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{2}, std::numeric_limits<Int<4>>::min()),
+      Real<4>{0});
 
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0}, Int<8>{0}), Real<4>{1});
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0.3}, Int<8>{0}), Real<4>{1});
@@ -280,6 +287,8 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{0.5}, Int<8>{-1}), Real<4>{2});
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{-3}, Int<8>{3}), Real<4>{-27});
   EXPECT_EQ(RTNAME(FPow4k)(Real<4>{-2}, Int<8>{-3}), Real<4>{-0.125});
+  EXPECT_EQ(
+      RTNAME(FPow4k)(Real<4>{2}, Int<8>{-133}), std::ldexp(Real<4>{1}, -133));
 
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0}, Int<4>{0}), Real<8>{1});
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0.3}, Int<4>{0}), Real<8>{1});
@@ -287,6 +296,8 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{0.5}, Int<4>{-1}), Real<8>{2});
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-3}, Int<4>{3}), Real<8>{-27});
   EXPECT_EQ(RTNAME(FPow8i)(Real<8>{-2}, Int<4>{-3}), Real<8>{-0.125});
+  EXPECT_EQ(
+      RTNAME(FPow8i)(Real<8>{2}, Int<4>{-1070}), std::ldexp(Real<8>{1}, -1070));
 
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0}, Int<8>{0}), Real<8>{1});
   EXPECT_EQ(RTNAME(FPow8k)(Real<8>{0.3}, Int<8>{0}), Real<8>{1});
