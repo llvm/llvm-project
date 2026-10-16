@@ -2375,8 +2375,10 @@ const DefInit *VarDefInit::instantiate() {
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
-  for (const RecordVal &Val : Class->getValues())
+  for (const RecordVal &Val : Class->getValues()) {
     NewRec->addValue(Val);
+    NewRec->appendValueReferenceLocs(*Class, Val.getNameInit());
+  }
 
   // Copy assertions from class to instance.
   NewRec->appendAssertions(Class);
@@ -2420,6 +2422,13 @@ const DefInit *VarDefInit::instantiate() {
 }
 
 const Init *VarDefInit::resolveReferences(Resolver &R) const {
+  bool CachedUnresolved = false;
+  if (const Init *Cached = R.getCachedResult(this, CachedUnresolved)) {
+    if (CachedUnresolved)
+      R.noteUnresolved();
+    return Cached;
+  }
+
   TrackUnresolvedResolver UR(&R);
   bool Changed = false;
   SmallVector<const ArgumentInit *, 8> NewArgs;
@@ -2431,13 +2440,16 @@ const Init *VarDefInit::resolveReferences(Resolver &R) const {
     Changed |= NewArg != Arg;
   }
 
+  const Init *Result = this;
   if (Changed) {
     auto *New = VarDefInit::get(Loc, Class, NewArgs);
-    if (!UR.foundUnresolved())
-      return const_cast<VarDefInit *>(New)->instantiate();
-    return New;
+    if (UR.foundUnresolved())
+      Result = New;
+    else
+      Result = const_cast<VarDefInit *>(New)->instantiate();
   }
-  return this;
+  R.cacheResult(this, Result, UR.foundUnresolved());
+  return Result;
 }
 
 const Init *VarDefInit::Fold() const {
@@ -2720,7 +2732,7 @@ std::string DagInit::getAsString() const {
 //===----------------------------------------------------------------------===//
 
 RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
-    : Name(N), TyAndKind(T, K) {
+    : Name(N), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2728,7 +2740,7 @@ RecordVal::RecordVal(const Init *N, const RecTy *T, FieldKind K)
 // This constructor accepts the same arguments as the above, but also
 // a source location.
 RecordVal::RecordVal(const Init *N, SMLoc Loc, const RecTy *T, FieldKind K)
-    : Name(N), Loc(Loc), TyAndKind(T, K) {
+    : Name(N), Loc(Loc), TyAndFlags(T, K) {
   setValue(UnsetInit::get(N->getRecordKeeper()));
   assert(Value && "Cannot create unset value for current type!");
 }
@@ -2748,7 +2760,7 @@ std::string RecordVal::getPrintType() const {
       return "string";
     }
   } else {
-    return TyAndKind.getPointer()->getAsString();
+    return getType()->getAsString();
   }
 }
 
@@ -3153,11 +3165,11 @@ LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";
-  for (const auto &[_, C] : RK.getClasses())
+  for (const Record *C : RK.getClasses())
     OS << "class " << *C;
 
   OS << "------------- Defs -----------------\n";
-  for (const auto &[_, D] : RK.getDefs())
+  for (const Record *D : RK.getDefs())
     OS << "def " << *D;
   return OS;
 }
@@ -3178,10 +3190,35 @@ RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   return Iter->second;
 }
 
+// Return the records in Map sorted by name. Records are never removed, so
+// Sorted is out of date if its size differs.
+static ArrayRef<const Record *>
+getSortedRecords(const StringMap<std::unique_ptr<Record>> &Map,
+                 std::vector<const Record *> &Sorted) {
+  if (Sorted.size() != Map.size()) {
+    Sorted.clear();
+    Sorted.reserve(Map.size());
+    for (const auto &Entry : Map)
+      Sorted.push_back(Entry.second.get());
+    llvm::sort(Sorted, [](const Record *LHS, const Record *RHS) {
+      return LHS->getName() < RHS->getName();
+    });
+  }
+  return Sorted;
+}
+
+ArrayRef<const Record *> RecordKeeper::getClasses() const {
+  return getSortedRecords(Classes, SortedClasses);
+}
+
+ArrayRef<const Record *> RecordKeeper::getDefs() const {
+  return getSortedRecords(Defs, SortedDefs);
+}
+
 std::vector<const Record *>
 RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
   SmallVector<const Record *, 2> ClassRecs;
-  std::vector<const Record *> Defs;
+  std::vector<const Record *> Derived;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (StringRef ClassName : ClassNames) {
@@ -3191,14 +3228,15 @@ RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
     ClassRecs.push_back(Class);
   }
 
-  for (const auto &OneDef : getDefs()) {
-    if (all_of(ClassRecs, [&OneDef](const Record *Class) {
-          return OneDef.second->isSubClassOf(Class);
-        }))
-      Defs.push_back(OneDef.second.get());
+  // The iteration order of Defs doesn't matter since the result is sorted.
+  for (const auto &OneDef : Defs) {
+    const Record *Def = OneDef.second.get();
+    if (all_of(ClassRecs,
+               [Def](const Record *Class) { return Def->isSubClassOf(Class); }))
+      Derived.push_back(Def);
   }
-  llvm::sort(Defs, LessRecord());
-  return Defs;
+  llvm::sort(Derived, LessRecord());
+  return Derived;
 }
 
 ArrayRef<const Record *>
@@ -3223,7 +3261,9 @@ const Init *MapResolver::resolve(const Init *VarName) {
     // Resolve mutual references among the mapped variables, but prevent
     // infinite recursion.
     Map.erase(It);
+    ++NumInProgress;
     I = I->resolveReferences(*this);
+    --NumInProgress;
     Map[VarName] = {I, true};
   }
 

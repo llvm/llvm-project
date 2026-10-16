@@ -35,7 +35,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,11 +49,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
-
-static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
-                                   cl::desc("Expand double precision loads and "
-                                            "stores to their single precision "
-                                            "counterparts"));
 
 // Widen the v2 vectors to the register width, i.e. v2i16 -> v8i16,
 // v2i32 -> v4i32, etc, to ensure the correct rail size is used, i.e.
@@ -251,7 +245,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i64, Custom);
   }
 
-  if (NoDPLoadStore || (Subtarget.hasMips1() && !Subtarget.hasMips2())) {
+  if (Subtarget.getCLOpts().mno_ldc1_sdc1 ||
+      (Subtarget.hasMips1() && !Subtarget.hasMips2())) {
     setOperationAction(ISD::LOAD, MVT::f64, Custom);
     setOperationAction(ISD::STORE, MVT::f64, Custom);
   }
@@ -1344,7 +1339,8 @@ void MipsSETargetLowering::getOpndList(
 SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   LoadSDNode &Nd = *cast<LoadSDNode>(Op);
 
-  if (Nd.getMemoryVT() != MVT::f64 || (!NoDPLoadStore && Subtarget.hasMips2()))
+  if (Nd.getMemoryVT() != MVT::f64 ||
+      (!Subtarget.getCLOpts().mno_ldc1_sdc1 && Subtarget.hasMips2()))
     return MipsTargetLowering::lowerLOAD(Op, DAG);
 
   // Replace a double precision load with two i32 loads and a buildpair64.
@@ -1379,7 +1375,8 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsSETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode &Nd = *cast<StoreSDNode>(Op);
 
-  if (Nd.getMemoryVT() != MVT::f64 || (!NoDPLoadStore && Subtarget.hasMips2()))
+  if (Nd.getMemoryVT() != MVT::f64 ||
+      (!Subtarget.getCLOpts().mno_ldc1_sdc1 && Subtarget.hasMips2()))
     return MipsTargetLowering::lowerSTORE(Op, DAG);
 
   // Replace a double precision store with two extractelement64s and i32 stores.
@@ -3269,13 +3266,15 @@ MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
   // Fill $FBB.
   Register VR2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), VR2)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register VR1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), VR1)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3338,13 +3337,15 @@ MachineBasicBlock *MipsSETargetLowering::emitMSACBranchPseudo(
   // Fill $FBB.
   Register RD1 = RegInfo.createVirtualRegister(RC);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::ADDiu), RD1)
-    .addReg(Mips::ZERO).addImm(0);
+      .addReg(Mips::R0)
+      .addImm(0);
   BuildMI(*FBB, FBB->end(), DL, TII->get(Mips::B)).addMBB(Sink);
 
   // Fill $TBB.
   Register RD2 = RegInfo.createVirtualRegister(RC);
   BuildMI(*TBB, TBB->end(), DL, TII->get(Mips::ADDiu), RD2)
-    .addReg(Mips::ZERO).addImm(1);
+      .addReg(Mips::R0)
+      .addImm(1);
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
@@ -3618,7 +3619,7 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   Register LaneTmp2 = RegInfo.createVirtualRegister(GPRRC);
   BuildMI(*BB, MI, DL, TII->get(Subtarget.isABI_N64() ? Mips::DSUB : Mips::SUB),
           LaneTmp2)
-      .addReg(Subtarget.isABI_N64() ? Mips::ZERO_64 : Mips::ZERO)
+      .addReg(Subtarget.isABI_N64() ? Mips::R0_64 : Mips::R0)
       .addReg(LaneReg);
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)
