@@ -10,7 +10,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -24,11 +26,30 @@ using namespace llvm;
 
 std::string LineEditor::getDefaultHistoryPath(StringRef ProgName) {
   SmallString<32> Path;
-  if (sys::path::home_directory(Path)) {
-    sys::path::append(Path, "." + ProgName + "-history");
-    return std::string(Path);
+  if (!sys::path::home_directory(Path))
+    return std::string();
+
+#ifdef __linux__
+  SmallString<32> LegacyPath(Path);
+  sys::path::append(LegacyPath, "." + ProgName + "-history");
+
+  if (sys::fs::exists(LegacyPath))
+    return std::string(LegacyPath);
+
+  if (auto StateHome = sys::Process::GetEnv("XDG_STATE_HOME")) {
+    Path = *StateHome;
+  } else {
+    sys::path::append(Path, ".local", "state");
   }
-  return std::string();
+
+  (void)sys::fs::create_directories(Path);
+
+  sys::path::append(Path, ProgName + "-history");
+  return std::string(Path);
+#else
+  sys::path::append(Path, "." + ProgName + "-history");
+  return std::string(Path);
+#endif
 }
 
 LineEditor::CompleterConcept::~CompleterConcept() = default;
