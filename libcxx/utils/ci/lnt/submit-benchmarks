@@ -8,23 +8,43 @@
 # ===----------------------------------------------------------------------===##
 
 import argparse
+import common
+import json
 import logging
+import os
 import pathlib
-import subprocess
 import sys
+import time
+import urllib.error
+
+
+# How many times to send a submission again after a transient failure, and how long to wait
+# in between.
+RETRIES = 5
+RETRY_DELAY_SECONDS = 10
+
+
+def error_details(error):
+    """Return the (code, message) of an error returned by LNT, as described by its API."""
+    try:
+        body = json.loads(error.read().decode())
+        return (body['error']['code'], body['error']['message'])
+    except (ValueError, KeyError, TypeError):
+        return (None, error.reason)
 
 
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='submit-benchmarks',
-        description='Submit a LNT JSON report to a LNT server.',
-        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
+        description='Submit a LNT JSON report to a LNT v5 instance.')
     parser.add_argument('report', type=pathlib.Path,
         help='Path to the LNT JSON report to submit.')
     parser.add_argument('--lnt-url', type=str, required=True,
         help='The URL of the LNT instance to submit results to.')
     parser.add_argument('--test-suite', type=str, required=True,
         help='The name of the test suite for reporting LNT results.')
+    parser.add_argument('--token', type=str, required=False, # no default to avoid printing the token in --help
+        help='A LNT API key with the `submit` scope. Defaults to the LNT_TOKEN environment variable.')
     parser.add_argument('--dry-run', action='store_true',
         help='Do not actually perform any action. Use with -vv to see what would be executed.')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -36,29 +56,39 @@ def main(argv):
     elif args.verbose >= 1:
         logging.basicConfig(level=logging.DEBUG)
 
-    def run(command, **kwargs):
-        command = [str(c) for c in command]
-        logging.debug(f'$ {" ".join(command)}')
-        if args.dry_run:
-            return
-        try:
-            if not args.verbose:
-                if 'stdout' not in kwargs:
-                    kwargs['stdout'] = subprocess.PIPE
-                if 'stderr' not in kwargs:
-                    kwargs['stderr'] = subprocess.PIPE
-            subprocess.run(command, check=True, **kwargs)
-        except subprocess.CalledProcessError as e:
-            if e.stdout:
-                sys.stdout.write(e.stdout.decode())
-            if e.stderr:
-                sys.stderr.write(e.stderr.decode())
-            raise
+    url = f'{common.lnt_suite_url(args.lnt_url, args.test_suite)}/runs'
+    if args.dry_run:
+        logging.info(f'Dry run: not submitting {args.report} to {url}')
+        return 0
 
-    logging.info(f'Submitting results to {args.lnt_url}')
-    submission_url = f'{args.lnt_url}/db_default/v4/{args.test_suite}/submitRun'
-    run(['lnt', 'submit', '--ignore-regressions', '--merge', 'append', submission_url, args.report.resolve()])
+    token = args.token or os.environ.get('LNT_TOKEN')
+    if not token:
+        raise ValueError('no LNT token was provided: pass --token or set the LNT_TOKEN environment variable.')
+
+    body = args.report.read_bytes()
+    logging.info(f'Submitting {args.report} to {url}')
+    for attempt in range(RETRIES + 1):
+        try:
+            run = common.lnt_request(url, body=body, token=token)
+            logging.info(f'Submitted run {run.get("uuid")}')
+            return 0
+        except urllib.error.HTTPError as error:
+            (code, message) = error_details(error)
+            # LNT asks us to retry when a concurrent change to the suite got in the way. Errors from
+            # the server or the infrastructure in front of it are worth retrying too.
+            transient = code == 'retry' or error.code >= 500
+            failure = f'HTTP {error.code} ({code}): {message}'
+        except (urllib.error.URLError, TimeoutError) as error:
+            transient = True
+            failure = str(getattr(error, 'reason', error))
+        if not transient or attempt == RETRIES:
+            raise common.LNTError(f'submitting {args.report} failed: {failure}')
+        logging.warning(f'Submitting {args.report} failed, retrying: {failure}')
+        time.sleep(RETRY_DELAY_SECONDS)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError, common.LNTError) as error:
+        sys.exit(f'error: {error}')
