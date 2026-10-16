@@ -2112,7 +2112,8 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
       StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
   FunctionType *FuncTy =
       FunctionType::get(SizedPtrT, {Num->getType(), B.getInt8Ty()}, false);
-  FunctionCallee Func = getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, FuncTy);
+  FunctionCallee Func =
+      getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, FuncTy);
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, "sized_ptr");
 
@@ -2136,9 +2137,8 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
   // __sized_ptr_t struct return type { void*, size_t }
   StructType *SizedPtrT =
       StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
-  FunctionType *FuncTy =
-      FunctionType::get(SizedPtrT, {Num->getType(), Align->getType(),
-                                    B.getInt8Ty()}, false);
+  FunctionType *FuncTy = FunctionType::get(
+      SizedPtrT, {Num->getType(), Align->getType(), B.getInt8Ty()}, false);
   FunctionCallee Func =
       getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, FuncTy);
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
@@ -2222,10 +2222,10 @@ Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionType *FuncTy =
-      FunctionType::get(B.getPtrTy(), {Num->getType(), Align->getType(),
-                                       NoThrow->getType(), B.getInt8Ty()},
-                        false);
+  FunctionType *FuncTy = FunctionType::get(
+      B.getPtrTy(),
+      {Num->getType(), Align->getType(), NoThrow->getType(), B.getInt8Ty()},
+      false);
   FunctionCallee Func = getOrInsertLibFunc(M, *TLI, NewFunc, FuncTy);
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, NoThrow, HotCold}, Name);
