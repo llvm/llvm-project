@@ -293,13 +293,13 @@ for.end:                                          ; preds = %for.body
 define hidden void @testNeon(ptr %ref_data, i32 %ref_stride, i32 %limit, ptr nocapture %data) nounwind optsize {
 ; A9-LABEL: testNeon:
 ; A9:       @ %bb.0:
-; A9-NEXT:    .save {r4, r5, r7, lr}
-; A9-NEXT:    push {r4, r5, r7, lr}
-; A9-NEXT:    vmov.i32 q8, #0x0
 ; A9-NEXT:    cmp r2, #1
 ; A9-NEXT:    blt .LBB4_4
 ; A9-NEXT:  @ %bb.1: @ %.lr.ph
+; A9-NEXT:    .save {r4, r5, r7, lr}
+; A9-NEXT:    push {r4, r5, r7, lr}
 ; A9-NEXT:    movs r5, #0
+; A9-NEXT:    vmov.i32 q8, #0x0
 ; A9-NEXT:    movw r4, #64464
 ; A9-NEXT:    sub.w r12, r5, r2, lsl #6
 ; A9-NEXT:    sub.w lr, r1, r1, lsl #4
@@ -326,9 +326,13 @@ define hidden void @testNeon(ptr %ref_data, i32 %ref_stride, i32 %limit, ptr noc
 ; A9-NEXT:    bne .LBB4_2
 ; A9-NEXT:  @ %bb.3: @ %._crit_edge
 ; A9-NEXT:    add.w r3, r3, r12, lsl #4
+; A9-NEXT:    pop.w {r4, r5, r7, lr}
+; A9-NEXT:    b .LBB4_5
 ; A9-NEXT:  .LBB4_4:
+; A9-NEXT:    vmov.i32 q8, #0x0
+; A9-NEXT:  .LBB4_5:
 ; A9-NEXT:    vst1.32 {d16, d17}, [r3]
-; A9-NEXT:    pop {r4, r5, r7, pc}
+; A9-NEXT:    bx lr
   %1 = icmp sgt i32 %limit, 0
   br i1 %1, label %.lr.ph, label %45
 
