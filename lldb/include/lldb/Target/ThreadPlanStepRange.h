@@ -40,6 +40,10 @@ public:
 
   void AddRange(const AddressRange &new_range);
 
+  /// A stop at a site that holds one of \p break_ids is not explained by this
+  /// plan. They must be IDs of internal breakpoints.
+  void SetBreakpointsToYieldTo(llvm::ArrayRef<lldb::break_id_t> break_ids);
+
 protected:
   bool InRange();
   lldb::FrameComparison CompareCurrentFrameToStartFrame();
@@ -92,6 +96,7 @@ protected:
 
 private:
   std::vector<lldb::DisassemblerSP> m_instruction_ranges;
+  std::vector<lldb::break_id_t> m_breakpoints_to_yield_to;
 
   ThreadPlanStepRange(const ThreadPlanStepRange &) = delete;
   const ThreadPlanStepRange &operator=(const ThreadPlanStepRange &) = delete;
