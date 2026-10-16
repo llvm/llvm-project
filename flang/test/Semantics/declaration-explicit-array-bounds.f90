@@ -283,4 +283,16 @@ program declaration_array_bounds
   !ERROR: DECLARATION rank-1 integer array bound(s) imply rank 2147483648, which is greater than the maximum supported rank 15
   integer :: too_big(n)
 
+  ! A rank-1 bound base gives the array its rank; an intrinsic inquiry on that
+  ! array (ubound/lbound/size) -- the form such a bound takes when serialized to
+  ! a module file -- is validated by the ordinary DIM-range check.  A DIM beyond
+  ! the rank, including one that overflows signed 32-bit (2^31), is rejected
+  ! without wrapping, so a consumer cannot be handed an out-of-range dimension.
+  integer, parameter :: twodims(2) = [3, 4]
+  integer :: a_dim(twodims) ! rank-2
+  !ERROR: DIM=9 dimension is out of range for rank-2 array
+  integer :: bad_dim(ubound(a_dim, 9))
+  !ERROR: DIM=2147483648 dimension is out of range for rank-2 array
+  integer :: bad_dim_ovf(ubound(a_dim, 2147483648_8))
+
 end program
