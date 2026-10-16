@@ -614,7 +614,7 @@ public:
     // Open source files without requiring a NUL terminator. The concurrent
     // modification may nullify the NUL terminator condition.
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-        MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/false,
+        MemoryBuffer::getFileOrSTDIN(Filename, /*Flags=*/sys::fs::OF_None,
                                      /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BufferOrErr.getError()) {
       errs() << Filename << ": " << EC.message() << "\n";

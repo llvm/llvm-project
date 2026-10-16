@@ -73,7 +73,7 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
   auto GetFile = [this, RequiresNullTerminator](StringRef Path) {
     return FS ? FS->getBufferForFile(Path, /*FileSize=*/-1,
                                      RequiresNullTerminator)
-              : MemoryBuffer::getFile(Path, /*IsText=*/false,
+              : MemoryBuffer::getFile(Path, sys::fs::OF_None,
                                       RequiresNullTerminator);
   };
 
