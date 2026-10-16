@@ -3531,21 +3531,13 @@ static bool handleUncountableExitsWithSideEffects(
   return true;
 }
 
-/// Returns true if any non-branch recipe in the loop may have side effects.
+// Returns true if any non-branch recipe in the loop may have side effects.
+// For now this relies on LoopVectorizationLegality::isVectorizableEarlyExitLoop
+// rejecting loops with side effects other than stores.
 static bool loopMayHaveSideEffects(VPBasicBlock *HeaderVPBB) {
   return any_of(vp_rpo_plain_cfg_loop_body(HeaderVPBB), [](VPBasicBlock *VPBB) {
-    return any_of(*VPBB, [VPBB](VPRecipeBase &R) {
-      if (&R == VPBB->getTerminator() || !R.mayHaveSideEffects())
-        return false;
-      // Match LoopVectorizationLegality::isVectorizableEarlyExitLoop and check
-      // mayWriteToMemory
-      // // TODO: Remove reliance on underlying value once memory
-      // attrs are modeled in VPlan.
-      if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-        if (auto *I =
-                dyn_cast_if_present<Instruction>(Def->getUnderlyingValue()))
-          return I->mayWriteToMemory();
-      return true;
+    return any_of(*VPBB, [](VPRecipeBase &R) {
+      return match(&R, m_VPInstruction<Instruction::Store>());
     });
   });
 }
