@@ -117,6 +117,14 @@ void scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
     case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+      // These relocations are resolved relative to this module's own
+      // `__tls_base` and can only be used with DSO-local symbols.
+      if (sym->isShared()) {
+        error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
+              " cannot be used against a shared library symbol `" +
+              toString(*sym) + "`");
+        break;
+      }
       if (!sym->isDefined()) {
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
               " cannot be used against an undefined symbol `" + toString(*sym) +
