@@ -138,3 +138,7 @@ void test_W(int i) {
   // Codegen error
   __asm__("" : : "Ws"(i));
 }
+
+void test_nested_variants(long num) {
+  __asm__("{{movq $42, %0|}" : "=r"(num)); // expected-error{{nested variants found in inline assembly string}}
+}
