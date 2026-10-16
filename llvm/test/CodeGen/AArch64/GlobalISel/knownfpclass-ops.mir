@@ -101,8 +101,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @CstZeroFPTrunc
   ; CHECK-NEXT: %c0:_ FPClasses:(pzero) SignBitKnown:0
-  ; CHECK-NEXT: %trunc:_ FPClasses:(zero psub pnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %trunc:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %c0:_(f64) = G_FCONSTANT double 0.0
     %trunc:_(f32) = nnan ninf G_FPTRUNC %c0
     %copy:_(f32) = COPY %trunc
@@ -115,8 +115,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @CstPosNormalFPTruncRound
   ; CHECK-NEXT: %src:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %trunc:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %trunc:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
     %src:_(f32) = G_FCONSTANT float f0x35800000
     %trunc:_(f16) = G_INTRINSIC_FPTRUNC_ROUND %src, 1
     %copy:_(f16) = COPY %trunc
@@ -130,8 +130,8 @@ body:             |
   ; CHECK-NEXT: %c1:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %c2:_ FPClasses:(pzero) SignBitKnown:0
   ; CHECK-NEXT: %vector:_ FPClasses:(pzero) SignBitKnown:0
-  ; CHECK-NEXT: %trunc:_ FPClasses:(zero psub pnorm) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %trunc:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %c0:_(f64) = G_FCONSTANT double 0.0
     %c1:_(f64) = G_FCONSTANT double 0.0
     %c2:_(f64) = G_FCONSTANT double 0.0
