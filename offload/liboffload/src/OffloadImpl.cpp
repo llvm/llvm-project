@@ -269,9 +269,11 @@ struct ol_context_impl_t {
     llvm::Error Result = Plugin::success();
     for (auto &Bucket : OutstandingQueues) {
       auto *Device = Bucket.first;
-      for (auto *AI : Bucket.second)
+      for (auto *AI : Bucket.second) {
         if (auto Err = Device->Device->synchronize(AI, /*Release=*/true))
           Result = llvm::joinErrors(std::move(Result), std::move(Err));
+        delete AI;
+      }
     }
     OutstandingQueues.clear();
     return Result;
