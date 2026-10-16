@@ -1345,7 +1345,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-
 add_fp_unittest(
   expf16_test
   NEED_MPFR
@@ -1377,8 +1376,12 @@ add_fp_unittest(
   SRCS
     exp2_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.exp2
+    libc.src.__support.math.exp2_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
@@ -1396,6 +1399,18 @@ add_fp_unittest(
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2bf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp2bf16_test.cpp
+  DEPENDS
+    libc.src.math.exp2bf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

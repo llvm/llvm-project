@@ -83,6 +83,15 @@ void warn_mysccanf(void) {
   mysscanf("", "%10s", buf); // expected-warning{{'sscanf' may overflow; destination buffer in argument 3 has size 10, but the corresponding specifier may require size 11}}
 }
 
+int my_vsprintf(const char *format, char *str, __builtin_va_list ap) __attribute__((diagnose_as_builtin(__builtin_vsprintf, 2, 1, 3)));
+
+void warn_my_vsprintf(void) {
+  char buf[6];
+  __builtin_va_list list;
+  my_vsprintf("hello", buf, list);
+  my_vsprintf("hello!", buf, list); // expected-warning{{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+}
+
 #ifdef __cplusplus
 
 template <class T>

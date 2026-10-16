@@ -1669,7 +1669,7 @@ static StoreInst *getPHIStoreToRewrite(PHINode &PN, bool PreserveCFG,
 
   BasicBlock *BB = PN.getParent();
   // TODO: Allow a harmless prefix between the PHIs and the store.
-  if (&*BB->getFirstNonPHIOrDbg() != SI)
+  if (&*BB->getFirstNonPHIOrPseudoProbe() != SI)
     return nullptr;
 
   Value *StoredValue = SI->getValueOperand();
@@ -5552,14 +5552,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
     if (S.isDead())
       return true;
     auto *U = S.getUse();
-    if (!U)
-      return true;
-
-    User *Usr = U->getUser();
-    if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      return true;
-
-    return isa<MemIntrinsic>(Usr);
+    return !U || isa<LifetimeIntrinsic, MemIntrinsic>(U->getUser());
   };
 
   for (const Slice &S : P)

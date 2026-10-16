@@ -517,7 +517,7 @@ public:
     // block to spare deduplicating it later.
     auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
     if (Inserted) {
-      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
       It->second = Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {});

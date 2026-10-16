@@ -1199,6 +1199,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // P extension scalar bitmanip
+  case RISCV::BI__builtin_riscv_rev16_64:
+    ID = Intrinsic::riscv_rev16_64;
+    break;
+
   // Packed Widening Shifts
   case RISCV::BI__builtin_riscv_pwsll_s_u16x4:
   case RISCV::BI__builtin_riscv_pwsll_s_u32x2:
@@ -1225,6 +1230,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pnsrar_s_i8x4:
   case RISCV::BI__builtin_riscv_pnsrar_s_i16x2:
     ID = Intrinsic::riscv_pnsrar;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+
+  // Packed Narrowing Clip
+  case RISCV::BI__builtin_riscv_pnclipu_s_u8x4:
+  case RISCV::BI__builtin_riscv_pnclipu_s_u16x2:
+    ID = Intrinsic::riscv_pnclipu;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnclipru_s_u8x4:
+  case RISCV::BI__builtin_riscv_pnclipru_s_u16x2:
+    ID = Intrinsic::riscv_pnclipru;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnclip_s_i8x4:
+  case RISCV::BI__builtin_riscv_pnclip_s_i16x2:
+    ID = Intrinsic::riscv_pnclip;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnclipr_s_i8x4:
+  case RISCV::BI__builtin_riscv_pnclipr_s_i16x2:
+    ID = Intrinsic::riscv_pnclipr;
     IntrinsicTypes = {ResultType, Ops[0]->getType()};
     break;
 
@@ -1654,6 +1681,20 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Scalar Averaging Addition and Subtraction
+  case RISCV::BI__builtin_riscv_aadd_i32:
+    ID = Intrinsic::riscv_aadd_i32;
+    break;
+  case RISCV::BI__builtin_riscv_aaddu_u32:
+    ID = Intrinsic::riscv_aaddu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_asub_i32:
+    ID = Intrinsic::riscv_asub_i32;
+    break;
+  case RISCV::BI__builtin_riscv_asubu_u32:
+    ID = Intrinsic::riscv_asubu_u32;
+    break;
+
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
   case RISCV::BI__builtin_riscv_mulhru_u32:
@@ -1677,6 +1718,34 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     }
     break;
   }
+
+  // Scalar Multiply High Accumulate
+  case RISCV::BI__builtin_riscv_mhacc_i32:
+    ID = Intrinsic::riscv_mhacc_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mhracc_i32:
+    ID = Intrinsic::riscv_mhracc_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mhaccu_u32:
+    ID = Intrinsic::riscv_mhaccu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_mhraccu_u32:
+    ID = Intrinsic::riscv_mhraccu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_mhaccsu_i32:
+    ID = Intrinsic::riscv_mhaccsu_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mhraccsu_i32:
+    ID = Intrinsic::riscv_mhraccsu_i32;
+    break;
+
+  // Scalar "Q-format" Multiplication
+  case RISCV::BI__builtin_riscv_mulq_i32:
+    ID = Intrinsic::riscv_mulq_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mulqr_i32:
+    ID = Intrinsic::riscv_mulqr_i32;
+    break;
 
   // Packed "Q-format" Multiply with Widening Accumulate
   case RISCV::BI__builtin_riscv_pmqwacc_i32x2:
