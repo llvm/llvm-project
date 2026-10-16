@@ -1405,7 +1405,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   for (const auto &[V, Users] : NeedsPhi) {
-    if (isa<VPIRValue>(V))
+    auto *DefR = V->getDefiningRecipe();
+    if (!DefR || DefR->getParent()->getEnclosingLoopRegion() != LoopRegion ||
+        is_contained({Header, Latch}, DefR->getParent()))
       continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
     std::optional<VPIRFlags> Flags;
