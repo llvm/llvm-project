@@ -4988,24 +4988,28 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   default: break;
   case ISD::AssertSext:
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getSizeInBits();
-    return VTBits-Tmp+1;
+    FirstAnswer = VTBits - Tmp + 1;
+    break;
   case ISD::AssertZext:
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getSizeInBits();
-    return VTBits-Tmp;
+    FirstAnswer = VTBits - Tmp;
+    break;
   case ISD::FREEZE:
     if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
                                          UndefPoisonKind::UndefOrPoison))
-      return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      FirstAnswer =
+          ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     break;
   case ISD::MERGE_VALUES:
-    return ComputeNumSignBits(Op.getOperand(Op.getResNo()), DemandedElts,
-                              Depth + 1);
+    FirstAnswer = ComputeNumSignBits(Op.getOperand(Op.getResNo()), DemandedElts,
+                                     Depth + 1);
+    break;
   case ISD::SPLAT_VECTOR: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getValueSizeInBits();
     unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
-      return NumSrcSignBits - (NumSrcBits - VTBits);
+      FirstAnswer = NumSrcSignBits - (NumSrcBits - VTBits);
     break;
   }
   case ISD::BUILD_VECTOR:
@@ -5059,17 +5063,19 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       }
       Tmp = std::min(Tmp, Tmp2);
     }
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
 
   case ISD::VECTOR_COMPRESS: {
     SDValue Vec = Op.getOperand(0);
     SDValue PassThru = Op.getOperand(2);
     Tmp = ComputeNumSignBits(PassThru, DemandedElts, Depth + 1);
     if (Tmp == 1)
-      return 1;
+      break;
     Tmp2 = ComputeNumSignBits(Vec, Depth + 1);
     Tmp = std::min(Tmp, Tmp2);
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
   }
 
   case ISD::VECTOR_SHUFFLE: {
@@ -5093,7 +5099,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (Tmp == 1)
       break;
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
   }
 
   case ISD::BITCAST: {
@@ -5108,8 +5115,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       break;
 
     // Fast handling of 'identity' bitcasts.
-    if (VTBits == SrcBits)
-      return ComputeNumSignBits(N0, DemandedElts, Depth + 1);
+    if (VTBits == SrcBits) {
+      FirstAnswer = ComputeNumSignBits(N0, DemandedElts, Depth + 1);
+      break;
+    }
 
     bool IsLE = getDataLayout().isLittleEndian();
 
@@ -5133,11 +5142,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
           unsigned SubOffset = i % Scale;
           SubOffset = (IsLE ? ((Scale - 1) - SubOffset) : SubOffset);
           SubOffset = SubOffset * VTBits;
-          if (Tmp <= SubOffset)
-            return 1;
+          if (Tmp <= SubOffset) {
+            Tmp2 = 1;
+            break;
+          }
           Tmp2 = std::min(Tmp2, Tmp - SubOffset);
         }
-      return Tmp2;
+      FirstAnswer = Tmp2;
     }
     break;
   }
@@ -5145,16 +5156,20 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::FP_TO_SINT_SAT:
     // FP_TO_SINT_SAT produces a signed value that fits in the saturating VT.
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getScalarSizeInBits();
-    return VTBits - Tmp + 1;
+    FirstAnswer = VTBits - Tmp + 1;
+    break;
   case ISD::SIGN_EXTEND:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
-    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1) + Tmp;
+    FirstAnswer =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) + Tmp;
+    break;
   case ISD::SIGN_EXTEND_INREG:
     // Max of the input and what this extends.
     Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getScalarSizeInBits();
     Tmp = VTBits-Tmp+1;
     Tmp2 = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1);
-    return std::max(Tmp, Tmp2);
+    FirstAnswer = std::max(Tmp, Tmp2);
+    break;
   case ISD::SIGN_EXTEND_VECTOR_INREG: {
     if (VT.isScalableVector())
       break;
@@ -5162,7 +5177,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     EVT SrcVT = Src.getValueType();
     APInt DemandedSrcElts = DemandedElts.zext(SrcVT.getVectorNumElements());
     Tmp = VTBits - SrcVT.getScalarSizeInBits();
-    return ComputeNumSignBits(Src, DemandedSrcElts, Depth+1) + Tmp;
+    FirstAnswer = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1) + Tmp;
+    break;
   }
   case ISD::SRA:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
@@ -5170,7 +5186,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (std::optional<unsigned> ShAmt =
             getValidMinimumShiftAmount(Op, DemandedElts, Depth + 1))
       Tmp = std::min(Tmp + *ShAmt, VTBits);
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
   case ISD::SHL:
     if (std::optional<ConstantRange> ShAmtRange =
             getValidShiftAmountRange(Op, DemandedElts, Depth + 1)) {
@@ -5191,14 +5208,16 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         if (SizeDifference <= MinShAmt) {
           Tmp = SizeDifference +
                 ComputeNumSignBits(Extendee, DemandedElts, Depth + 1);
-          if (MaxShAmt < Tmp)
-            return Tmp - MaxShAmt;
+          if (MaxShAmt < Tmp) {
+            FirstAnswer = Tmp - MaxShAmt;
+            break;
+          }
         }
       }
       // shl destroys sign bits, ensure it doesn't shift out all sign bits.
       Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
       if (MaxShAmt < Tmp)
-        return Tmp - MaxShAmt;
+        FirstAnswer = Tmp - MaxShAmt;
     }
     break;
   case ISD::AND:
@@ -5218,14 +5237,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SELECT:
   case ISD::VSELECT:
     Tmp = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth+1);
-    if (Tmp == 1) return 1;  // Early out.
+    if (Tmp == 1)
+      break;
     Tmp2 = ComputeNumSignBits(Op.getOperand(2), DemandedElts, Depth+1);
-    return std::min(Tmp, Tmp2);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
   case ISD::SELECT_CC:
     Tmp = ComputeNumSignBits(Op.getOperand(2), DemandedElts, Depth+1);
-    if (Tmp == 1) return 1;  // Early out.
+    if (Tmp == 1)
+      break;
     Tmp2 = ComputeNumSignBits(Op.getOperand(3), DemandedElts, Depth+1);
-    return std::min(Tmp, Tmp2);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
 
   case ISD::SMIN:
   case ISD::SMAX: {
@@ -5243,24 +5266,27 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       if (CstLow->getAPIntValue().sle(CstHigh->getAPIntValue())) {
         Tmp = CstLow->getAPIntValue().getNumSignBits();
         Tmp2 = CstHigh->getAPIntValue().getNumSignBits();
-        return std::min(Tmp, Tmp2);
+        FirstAnswer = std::min(Tmp, Tmp2);
+        break;
       }
     }
 
     // Fallback - just get the minimum number of sign bits of the operands.
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
-      return 1;  // Early out.
+      break; // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    return std::min(Tmp, Tmp2);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
   }
   case ISD::UMIN:
   case ISD::UMAX:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
-      return 1;  // Early out.
+      break; // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    return std::min(Tmp, Tmp2);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
   case ISD::SSUBO_CARRY:
   case ISD::USUBO_CARRY:
     // sub_carry(x,x,c) -> 0/-1 (sext carry)
@@ -5315,7 +5341,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ADDC:
     // TODO: Move Operand 1 check before Operand 0 check
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    if (Tmp == 1) return 1; // Early out.
+    if (Tmp == 1)
+      break;
 
     // Special case decrementing a value (ADD X, -1):
     if (ConstantSDNode *CRHS =
@@ -5331,19 +5358,24 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
         // If we are subtracting one from a positive number, there is no carry
         // out of the result.
-        if (Known.isNonNegative())
-          return Tmp;
+        if (Known.isNonNegative()) {
+          FirstAnswer = Tmp;
+          break;
+        }
       }
 
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    if (Tmp2 == 1) return 1; // Early out.
+    if (Tmp2 == 1)
+      break;
 
     // Add can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
-    return std::min(Tmp, Tmp2) - 1;
+    FirstAnswer = std::min(Tmp, Tmp2) - 1;
+    break;
   case ISD::SUB:
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    if (Tmp2 == 1) return 1; // Early out.
+    if (Tmp2 == 1)
+      break;
 
     // Handle NEG.
     if (ConstantSDNode *CLHS =
@@ -5358,8 +5390,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
         // If the input is known to be positive (the sign bit is known clear),
         // the output of the NEG has the same number of sign bits as the input.
-        if (Known.isNonNegative())
-          return Tmp2;
+        if (Known.isNonNegative()) {
+          FirstAnswer = Tmp2;
+          break;
+        }
 
         // Otherwise, we treat this like a SUB.
       }
@@ -5367,8 +5401,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     // Sub can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    if (Tmp == 1) return 1; // Early out.
-    return std::min(Tmp, Tmp2) - 1;
+    if (Tmp == 1)
+      break;
+    FirstAnswer = std::min(Tmp, Tmp2) - 1;
+    break;
   case ISD::MUL: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
     unsigned SignBitsOp0 =
@@ -5381,29 +5417,33 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       break;
     unsigned OutValidBits =
         (VTBits - SignBitsOp0 + 1) + (VTBits - SignBitsOp1 + 1);
-    return OutValidBits > VTBits ? 1 : VTBits - OutValidBits + 1;
+    if (OutValidBits <= VTBits)
+      FirstAnswer = VTBits - OutValidBits + 1;
+    break;
   }
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
   case ISD::AVGSUBFLOORS:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
-      return 1; // Early out.
+      break; // Early out.
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    return std::min(Tmp, Tmp2);
+    FirstAnswer = std::min(Tmp, Tmp2);
+    break;
   case ISD::SREM:
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero. The magnitude of the result should be less than or
     // equal to the magnitude of the LHS. Therefore, the result should have
     // at least as many sign bits as the left hand side.
-    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    FirstAnswer = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    break;
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
     unsigned NumSrcSignBits =
         ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
-      return NumSrcSignBits - (NumSrcBits - VTBits);
+      FirstAnswer = NumSrcSignBits - (NumSrcBits - VTBits);
     break;
   }
   case ISD::EXTRACT_ELEMENT: {
@@ -5419,7 +5459,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
     // If the sign portion ends in our element the subtraction gives correct
     // result. Otherwise it gives either negative or > bitwidth result
-    return std::clamp(KnownSign - rIndex * BitWidth, 1, BitWidth);
+    FirstAnswer = std::clamp(KnownSign - rIndex * BitWidth, 1, BitWidth);
+    break;
   }
   case ISD::INSERT_VECTOR_ELT: {
     if (VT.isScalableVector())
@@ -5451,7 +5492,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       Tmp = std::min(Tmp, Tmp2);
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
     SDValue InVec = Op.getOperand(0);
@@ -5478,7 +5520,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       DemandedSrcElts =
           APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
 
-    return ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+    FirstAnswer = ComputeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+    break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
@@ -5492,7 +5535,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
       DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
     }
-    return ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
+    FirstAnswer = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
+    break;
   }
   case ISD::CONCAT_VECTORS: {
     if (VT.isScalableVector())
@@ -5512,7 +5556,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       Tmp = std::min(Tmp, Tmp2);
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
   }
   case ISD::INSERT_SUBVECTOR: {
     SDValue Src = Op.getOperand(0);
@@ -5520,7 +5565,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (VT.isScalableVector()) {
       Tmp = ComputeNumSignBits(Sub, Depth + 1);
       Tmp = std::min(Tmp, ComputeNumSignBits(Src, Depth + 1));
-      return Tmp;
+      FirstAnswer = Tmp;
+      break;
     }
     // Demand any elements from the subvector and the remainder from the src its
     // inserted into.
@@ -5534,14 +5580,15 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (!!DemandedSubElts) {
       Tmp = ComputeNumSignBits(Sub, DemandedSubElts, Depth + 1);
       if (Tmp == 1)
-        return 1; // early-out
+        break;
     }
     if (!!DemandedSrcElts) {
       Tmp2 = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
       Tmp = std::min(Tmp, Tmp2);
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
-    return Tmp;
+    FirstAnswer = Tmp;
+    break;
   }
   case ISD::LOAD: {
     // If we are looking at the loaded value of the SDNode.
@@ -5569,8 +5616,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
       if (VTBits != CR.getBitWidth())
         break;
-      return std::min(CR.getSignedMin().getNumSignBits(),
-                      CR.getSignedMax().getNumSignBits());
+      FirstAnswer = std::min(CR.getSignedMin().getNumSignBits(),
+                             CR.getSignedMax().getNumSignBits());
+      break;
     }
 
     unsigned ExtType = LD->getExtensionType();
@@ -5579,10 +5627,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       break;
     case ISD::SEXTLOAD: // e.g. i16->i32 = '17' bits known.
       Tmp = LD->getMemoryVT().getScalarSizeInBits();
-      return VTBits - Tmp + 1;
+      FirstAnswer = VTBits - Tmp + 1;
+      break;
     case ISD::ZEXTLOAD: // e.g. i16->i32 = '16' bits known.
       Tmp = LD->getMemoryVT().getScalarSizeInBits();
-      return VTBits - Tmp;
+      FirstAnswer = VTBits - Tmp;
+      break;
     case ISD::NON_EXTLOAD:
       if (const Constant *Cst = TLI->getTargetConstantFromLoad(LD)) {
         // We only need to handle vectors - computeKnownBits should handle
@@ -5638,24 +5688,24 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getResNo() == 0) {
       Tmp = AT->getMemoryVT().getScalarSizeInBits();
       if (Tmp == VTBits)
-        return 1; // early-out
+        break;
 
       // For atomic_load, prefer to use the extension type.
       if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
-        switch (AT->getExtensionType()) {
-        default:
+        if (AT->getExtensionType() == ISD::SEXTLOAD) {
+          FirstAnswer = VTBits - Tmp + 1;
           break;
-        case ISD::SEXTLOAD:
-          return VTBits - Tmp + 1;
-        case ISD::ZEXTLOAD:
-          return VTBits - Tmp;
+        }
+        if (AT->getExtensionType() == ISD::ZEXTLOAD) {
+          FirstAnswer = VTBits - Tmp;
+          break;
         }
       }
 
       if (TLI->getExtendForAtomicOps() == ISD::SIGN_EXTEND)
-        return VTBits - Tmp + 1;
+        FirstAnswer = VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-        return VTBits - Tmp;
+        FirstAnswer = VTBits - Tmp;
     }
     break;
   }
@@ -5678,6 +5728,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
+  if (FirstAnswer == VTBits)
+    return FirstAnswer;
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
   return std::max(FirstAnswer, Known.countMinSignBits());
 }

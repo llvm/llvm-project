@@ -276,3 +276,14 @@ body:             |
     %3:_(<4 x i16>) = G_BUILD_VECTOR %1, %2, %2, %1
     %4:_(<4 x i16>) = G_ADD %0, %3
 ...
+---
+name: knownbits_wrap
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: @knownbits_wrap
+    %lhs:_(s8) = G_CONSTANT i8 64
+    ; CHECK: %{{.+}}:_ KnownBits:11000000 SignBits:2 IsKnownNeverZero:1
+    %rhs:_(s8) = G_CONSTANT i8 -64
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
+    %sum:_(s8) = G_ADD %lhs, %rhs
+...

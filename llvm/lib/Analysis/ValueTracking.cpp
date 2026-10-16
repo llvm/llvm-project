@@ -4511,8 +4511,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     }
     case Instruction::SExt:
       Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
-      return ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1) +
-             Tmp;
+      FirstAnswer =
+          ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1) +
+          Tmp;
+      break;
 
     case Instruction::SDiv: {
       const APInt *Denominator;
@@ -4528,7 +4530,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
             ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
 
         // Add floor(log(C)) bits to the numerator bits.
-        return std::min(TyBits, NumBits + Denominator->logBase2());
+        FirstAnswer = std::min(TyBits, NumBits + Denominator->logBase2());
       }
       break;
     }
@@ -4561,7 +4563,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
           Tmp = std::max(Tmp, ResBits);
         }
       }
-      return Tmp;
+      FirstAnswer = Tmp;
+      break;
     }
 
     case Instruction::AShr: {
@@ -4575,7 +4578,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         Tmp += ShAmtLimited;
         if (Tmp > TyBits) Tmp = TyBits;
       }
-      return Tmp;
+      FirstAnswer = Tmp;
+      break;
     }
     case Instruction::Shl: {
       const APInt *ShAmt;
@@ -4596,7 +4600,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         if (ShAmt->uge(Tmp))
           break; // Shifted all sign bits out.
         Tmp2 = ShAmt->getZExtValue();
-        return Tmp - Tmp2;
+        FirstAnswer = Tmp - Tmp2;
       }
       break;
     }
@@ -4619,14 +4623,17 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // be the minimum of the clamp min/max range.
       const Value *X;
       const APInt *CLow, *CHigh;
-      if (isSignedMinMaxClamp(U, X, CLow, CHigh))
-        return std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
+      if (isSignedMinMaxClamp(U, X, CLow, CHigh)) {
+        FirstAnswer = std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
+        break;
+      }
 
       Tmp = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
       if (Tmp == 1)
         break;
       Tmp2 = ComputeNumSignBits(U->getOperand(2), DemandedElts, Q, Depth + 1);
-      return std::min(Tmp, Tmp2);
+      FirstAnswer = std::min(Tmp, Tmp2);
+      break;
     }
 
     case Instruction::Add:
@@ -4648,14 +4655,17 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
           // If we are subtracting one from a positive number, there is no carry
           // out of the result.
-          if (Known.isNonNegative())
-            return Tmp;
+          if (Known.isNonNegative()) {
+            FirstAnswer = Tmp;
+            break;
+          }
         }
 
       Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
       if (Tmp2 == 1)
         break;
-      return std::min(Tmp, Tmp2) - 1;
+      FirstAnswer = std::min(Tmp, Tmp2) - 1;
+      break;
 
     case Instruction::Sub:
       Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
@@ -4675,8 +4685,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
           // If the input is known to be positive (the sign bit is known clear),
           // the output of the NEG has the same number of sign bits as the
           // input.
-          if (Known.isNonNegative())
-            return Tmp2;
+          if (Known.isNonNegative()) {
+            FirstAnswer = Tmp2;
+            break;
+          }
 
           // Otherwise, we treat this like a SUB.
         }
@@ -4686,7 +4698,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1)
         break;
-      return std::min(Tmp, Tmp2) - 1;
+      FirstAnswer = std::min(Tmp, Tmp2) - 1;
+      break;
 
     case Instruction::Mul: {
       // The output of the Mul can be at most twice the valid bits in the
@@ -4701,7 +4714,9 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         break;
       unsigned OutValidBits =
           (TyBits - SignBitsOp0 + 1) + (TyBits - SignBitsOp1 + 1);
-      return OutValidBits > TyBits ? 1 : TyBits - OutValidBits + 1;
+      if (OutValidBits <= TyBits)
+        FirstAnswer = TyBits - OutValidBits + 1;
+      break;
     }
 
     case Instruction::PHI: {
@@ -4717,12 +4732,14 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       SimplifyQuery RecQ = Q.getWithoutCondContext();
       Tmp = TyBits;
       for (unsigned i = 0, e = NumIncomingValues; i != e; ++i) {
-        if (Tmp == 1) return Tmp;
+        if (Tmp == 1)
+          break;
         RecQ.CtxI = PN->getIncomingBlock(i)->getTerminator();
         Tmp = std::min(Tmp, ComputeNumSignBits(PN->getIncomingValue(i),
                                                DemandedElts, RecQ, Depth + 1));
       }
-      return Tmp;
+      FirstAnswer = Tmp;
+      break;
     }
 
     case Instruction::Trunc: {
@@ -4732,9 +4749,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
       unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
       if (Tmp > (OperandTyBits - TyBits))
-        return Tmp - (OperandTyBits - TyBits);
-
-      return 1;
+        FirstAnswer = Tmp - (OperandTyBits - TyBits);
+      break;
     }
 
     case Instruction::ExtractElement:
@@ -4742,7 +4758,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // skip tracking the specific element. But at least we might find
       // information valid for all elements of the vector (for example if vector
       // is sign extended, shifted, etc).
-      return ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      FirstAnswer = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      break;
 
     case Instruction::ShuffleVector: {
       // Collect the minimum number of sign bits that are shared by every vector
@@ -4776,7 +4793,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (Tmp == 1)
         break;
       assert(Tmp <= TyBits && "Failed to determine minimum sign bits");
-      return Tmp;
+      FirstAnswer = Tmp;
+      break;
     }
     case Instruction::Call: {
       if (const auto *II = dyn_cast<IntrinsicInst>(U)) {
@@ -4790,12 +4808,15 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
             break;
 
           // Absolute value reduces number of sign bits by at most 1.
-          return Tmp - 1;
+          FirstAnswer = Tmp - 1;
+          break;
         case Intrinsic::smin:
         case Intrinsic::smax: {
           const APInt *CLow, *CHigh;
           if (isSignedMinMaxIntrinsicClamp(II, CLow, CHigh))
-            return std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
+            FirstAnswer =
+                std::min(CLow->getNumSignBits(), CHigh->getNumSignBits());
+          break;
         }
         }
       }
@@ -4805,6 +4826,9 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
+
+  if (FirstAnswer == TyBits)
+    return FirstAnswer;
 
   // If we can examine all elements of a vector constant successfully, we're
   // done (we can't do any better than that). If not, keep trying.
