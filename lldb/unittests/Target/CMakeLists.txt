@@ -3,6 +3,7 @@ add_lldb_unittest(TargetTests
   DynamicRegisterInfoTest.cpp
   ExecutableModuleTest.cpp
   ExecutionContextTest.cpp
+  InstrumentationRuntimeTest.cpp
   LanguageTest.cpp
   LocateModuleCallbackTest.cpp
   MemoryRegionInfoTest.cpp
@@ -27,6 +28,7 @@ add_lldb_unittest(TargetTests
   LINK_LIBS
       lldbCore
       lldbHost
+      lldbPluginInstrumentationRuntimeBoundsSafety
       lldbPluginObjectFileBreakpad
       lldbPluginObjectFileELF
       lldbPluginObjectFileMachO

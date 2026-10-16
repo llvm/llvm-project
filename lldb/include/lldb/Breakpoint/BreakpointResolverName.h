@@ -58,6 +58,14 @@ public:
 
   ~BreakpointResolverName() override = default;
 
+  /// Match exact symbol-table linkage names without building demangled-name
+  /// indexes. DWARF lookup and pruning retain their source-name behavior.
+  /// This option applies only to exact-name resolvers.
+  void SetMatchLinkageNames(bool match) {
+    assert(!match || m_match_type == Breakpoint::Exact);
+    m_match_linkage_names = match;
+  }
+
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                           SymbolContext &context,
                                           Address *addr) override;
@@ -85,6 +93,7 @@ protected:
   Breakpoint::MatchType m_match_type;
   lldb::LanguageType m_language;
   bool m_skip_prologue;
+  bool m_match_linkage_names = false;
 
   void AddNameLookup(llvm::StringRef name,
                      lldb::FunctionNameType name_type_mask);

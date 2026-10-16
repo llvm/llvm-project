@@ -69,6 +69,9 @@ struct ModuleFunctionSearchOptions {
   bool include_symbols = false;
   /// Include inlined functions.
   bool include_inlines = false;
+  /// Match exact symbol-table linkage spellings without demangling unrelated
+  /// symbols. DWARF function lookup retains its source-name behavior.
+  bool match_linkage_names = false;
 };
 
 /// \class Module Module.h "lldb/Core/Module.h"
@@ -262,9 +265,12 @@ public:
   const Symbol *FindFirstSymbolWithNameAndType(
       ConstString name, lldb::SymbolType symbol_type = lldb::eSymbolTypeAny);
 
+  /// When match_linkage_names is true, match exact linkage spellings and linker
+  /// annotation aliases without building the demangled name indexes.
   void FindSymbolsWithNameAndType(ConstString name,
                                   lldb::SymbolType symbol_type,
-                                  SymbolContextList &sc_list);
+                                  SymbolContextList &sc_list,
+                                  bool match_linkage_names = false);
 
   void FindSymbolsMatchingRegExAndType(
       const RegularExpression &regex, lldb::SymbolType symbol_type,

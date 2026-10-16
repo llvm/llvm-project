@@ -560,10 +560,12 @@ void ModuleList::FindGlobalVariables(const RegularExpression &regex,
 
 void ModuleList::FindSymbolsWithNameAndType(ConstString name,
                                             SymbolType symbol_type,
-                                            SymbolContextList &sc_list) const {
+                                            SymbolContextList &sc_list,
+                                            bool match_linkage_names) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const ModuleSP &module_sp : m_modules)
-    module_sp->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+    module_sp->FindSymbolsWithNameAndType(name, symbol_type, sc_list,
+                                          match_linkage_names);
 }
 
 void ModuleList::FindSymbolsMatchingRegExAndType(
