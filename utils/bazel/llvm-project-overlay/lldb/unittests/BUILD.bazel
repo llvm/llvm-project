@@ -946,6 +946,22 @@ cc_test(
 )
 
 cc_test(
+    name = "TypeSystemClikeUnitTests",
+    srcs = glob(["TypeSystem/Clike/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginTypeSystemClike",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "UnwindAssemblyx86Tests",
     srcs = glob(["UnwindAssembly/x86/*.cpp"]),
     deps = [
