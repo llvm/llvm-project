@@ -3876,6 +3876,9 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     auto tyAttr = convertType(global.getType());
     if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(global.getType()))
       tyAttr = this->lowerTy().convertBoxTypeAsStruct(boxType);
+    if (!tyAttr)
+      return rewriter.notifyMatchFailure(
+          global, "global type cannot be converted to an LLVM type");
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
