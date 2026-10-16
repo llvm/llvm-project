@@ -290,6 +290,37 @@ struct AnonUnionEscapesOnlyWrittenField {
   }
 };
 
+// FIXME: Union members alias one storage, but each keeps an independent
+// FieldDecl-keyed origin, so writing both members reports both.
+struct AnonUnionAliasingWarnsPerMember {
+  union {
+    const char *p; // expected-note {{this field dangles}}
+    const char *q; // expected-note {{this field dangles}}
+  };
+
+  void foo() {
+    std::string s;
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    q = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'q' which will dangle}}
+  }
+};
+
+// FIXME: false positive: writing a non-dangling pointer through `q` overwrites
+// the shared union storage, but `p`'s origin is tracked independently so `p` is
+// still reported. Union aliasing is not modeled.
+struct AnonUnionSafeOverwriteStillWarns {
+  union {
+    const char *p; // expected-note {{this field dangles}}
+    const char *q;
+  };
+
+  void foo() {
+    std::string s;
+    p = s.data();       // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    q = kGlobal.data(); // safe overwrite of the shared storage; `p` is still (wrongly) reported
+  }
+};
+
 namespace DanglingPointerFieldInBaseClass {
 struct BaseWithPointer {
   std::string_view view; // expected-note {{this field dangles}}
