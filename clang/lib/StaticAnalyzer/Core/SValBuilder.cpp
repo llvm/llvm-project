@@ -311,6 +311,8 @@ SValBuilder::getCastedMemRegionVal(const MemRegion *R, QualType Ty) {
 /// Return a memory region for the 'this' object reference.
 loc::MemRegionVal SValBuilder::getCXXThis(const CXXMethodDecl *D,
                                           const StackFrame *SF) {
+  assert(D->isImplicitObjectMemberFunction() &&
+         "D must be an implicit object member function");
   return loc::MemRegionVal(
       getRegionManager().getCXXThisRegion(D->getThisType(), SF));
 }
