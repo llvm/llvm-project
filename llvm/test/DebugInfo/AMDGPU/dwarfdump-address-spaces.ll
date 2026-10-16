@@ -1,5 +1,6 @@
+; REQUIRES: x86-registered-target
 ; RUN: llc -mtriple=x86_64--gnu -filetype=obj --verify-machineinstrs < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,X86
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -filetype=obj --verify-machineinstrs < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,AMDGPU
+; RUN: llc -mtriple=amdgpu9.00--amdhsa -filetype=obj < %s | llvm-dwarfdump - 2>&1 | FileCheck %s --check-prefixes=COMMON,AMDGPU
 
 ; Check that the address spaces are correctly printed for AMDGPU.
 ; The interpretation of the address space is dependent on the target.
@@ -28,7 +29,7 @@
 ;COMMON: [[PTR_NONE]]: DW_TAG_pointer_type
 ;COMMON:   DW_AT_type ([[INT:0x[0-9a-f]+]] "int")
 ;AMDGPU:   DW_AT_LLVM_address_space (0x00000000 "DW_ASPACE_LLVM_none")
-;X86:      DW_AT_LLVM_address_space (0x00000000 "DW_ASPACE_LLVM_none")
+;X86:      DW_AT_address_class (0x00000000)
 
 ;COMMON: [[INT]]: DW_TAG_base_type
 ;COMMON:   DW_AT_name ("int")
@@ -36,27 +37,27 @@
 ;COMMON: [[PTR_FLAT]]: DW_TAG_pointer_type
 ;COMMON:   DW_AT_type ([[INT]] "int")
 ;AMDGPU:   DW_AT_LLVM_address_space (0x00000001 "DW_ASPACE_LLVM_AMDGPU_generic")
-;X86:      DW_AT_LLVM_address_space (0x00000001)
+;X86:      DW_AT_address_class (0x00000001)
 
 ;COMMON: [[PTR_REGION]]: DW_TAG_pointer_type
 ;COMMON:   DW_AT_type ([[INT]] "int")
 ;AMDGPU:   DW_AT_LLVM_address_space (0x00000002 "DW_ASPACE_LLVM_AMDGPU_region")
-;X86:      DW_AT_LLVM_address_space (0x00000002)
+;X86:      DW_AT_address_class (0x00000002)
 
 ;COMMON: [[PTR_LOCAL]]: DW_TAG_pointer_type
 ;COMMON:   DW_AT_type ([[INT]] "int")
 ;AMDGPU:   DW_AT_LLVM_address_space (0x00000003 "DW_ASPACE_LLVM_AMDGPU_local")
-;X86:      DW_AT_LLVM_address_space (0x00000003)
+;X86:      DW_AT_address_class (0x00000003)
 
 ;COMMON: [[PTR_PRIVATE_LANE]]: DW_TAG_pointer_type
 ;COMMON:   DW_AT_type ([[INT]] "int")
 ;AMDGPU:   DW_AT_LLVM_address_space (0x00000005 "DW_ASPACE_LLVM_AMDGPU_private_lane")
-;X86:      DW_AT_LLVM_address_space (0x00000005)
+;X86:      DW_AT_address_class (0x00000005)
 
 ;COMMON: [[PTR_PRIVATE_WAVE]]: DW_TAG_pointer_type
 ;COMMON:   DW_AT_type ([[INT]] "int")
 ;AMDGPU:   DW_AT_LLVM_address_space (0x00000006 "DW_ASPACE_LLVM_AMDGPU_private_wave")
-;X86:      DW_AT_LLVM_address_space (0x00000006)
+;X86:      DW_AT_address_class (0x00000006)
 
 define void @kernel() !dbg !7 {
 entry:

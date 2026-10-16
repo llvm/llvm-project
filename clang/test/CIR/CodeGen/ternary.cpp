@@ -10,7 +10,7 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow, optnone} {
 // CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: [[Y:%.+]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
@@ -52,8 +52,7 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
-// CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow, optnone} {
 // CIR: [[A:%.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: [[B:%.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>

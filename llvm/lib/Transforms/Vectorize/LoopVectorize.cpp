@@ -5322,8 +5322,14 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
+  // Only charge legacy scalarization costs for instructions VPlan replicates.
+  SmallPtrSet<Instruction *, 8> Replicated;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
+      Replicated.insert(RepR.getUnderlyingInstr());
   for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
-    if (UseVPlanCostModel(Scalarized) ||
+    if (!Replicated.contains(Scalarized) || UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(Scalarized);

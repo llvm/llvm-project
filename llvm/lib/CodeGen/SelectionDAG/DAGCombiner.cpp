@@ -24946,14 +24946,26 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       Value.getValueType().isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
-    // Convert a truncating store of a extension into a standard store.
-    if ((Value.getOpcode() == ISD::ZERO_EXTEND ||
-         Value.getOpcode() == ISD::SIGN_EXTEND ||
-         Value.getOpcode() == ISD::ANY_EXTEND) &&
-        Value.getOperand(0).getValueType() == ST->getMemoryVT() &&
-        TLI.isOperationLegalOrCustom(ISD::STORE, ST->getMemoryVT()))
-      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                          ST->getMemOperand());
+    // Convert a truncating store of a extension into a standard store or a
+    // smaller truncating store.
+    if (Value.getOpcode() == ISD::ZERO_EXTEND ||
+        Value.getOpcode() == ISD::SIGN_EXTEND ||
+        Value.getOpcode() == ISD::ANY_EXTEND) {
+      SDValue PreExtendVal = Value.getOperand(0);
+      EVT PreExtendTy = PreExtendVal.getValueType();
+      EVT StoreMemTy = ST->getMemoryVT();
+
+      if (PreExtendTy == StoreMemTy &&
+          TLI.isOperationLegalOrCustom(ISD::STORE, StoreMemTy))
+        return DAG.getStore(Chain, SDLoc(N), PreExtendVal, Ptr,
+                            ST->getMemOperand());
+      if (PreExtendTy.getScalarSizeInBits() >
+              StoreMemTy.getScalarSizeInBits() &&
+          TLI.canCombineTruncStore(PreExtendTy, StoreMemTy, ST->getAlign(),
+                                   ST->getAddressSpace(), LegalOperations))
+        return DAG.getTruncStore(Chain, SDLoc(N), PreExtendVal, Ptr, StoreMemTy,
+                                 ST->getMemOperand());
+    }
 
     APInt TruncDemandedBits =
         APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),
