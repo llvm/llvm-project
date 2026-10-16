@@ -14,7 +14,7 @@ define amdgpu_kernel void @combine_scalar_selects_v16i8(
 ; CHECK-OPT-LABEL: define amdgpu_kernel void @combine_scalar_selects_v16i8(
 ; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> [[BUFFER_RESOURCE:%.*]], i32 [[OFFSET:%.*]], i1 [[VALID:%.*]]) {
 ; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    [[LOADED:%.*]] = call <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32(<4 x i32> [[BUFFER_RESOURCE]], i32 [[OFFSET]], i32 0, i32 0)
+; CHECK-OPT-NEXT:    [[LOADED:%.*]] = call <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32.v4i32(<4 x i32> [[BUFFER_RESOURCE]], i32 [[OFFSET]], i32 0, i32 0)
 ; CHECK-OPT-NEXT:    [[COMBINED_SEL:%.*]] = select i1 [[VALID]], <4 x i32> [[LOADED]], <4 x i32> zeroinitializer
 ; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <4 x i32> [[COMBINED_SEL]] to <16 x i8>
 ; CHECK-OPT-NEXT:    [[TMP0:%.*]] = extractelement <16 x i8> [[COMBINED_BC]], i64 0
@@ -69,7 +69,7 @@ define amdgpu_kernel void @combine_scalar_selects_v16i8(
 ; CHECK-NOOPT-LABEL: define amdgpu_kernel void @combine_scalar_selects_v16i8(
 ; CHECK-NOOPT-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> [[BUFFER_RESOURCE:%.*]], i32 [[OFFSET:%.*]], i1 [[VALID:%.*]]) {
 ; CHECK-NOOPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOOPT-NEXT:    [[LOADED:%.*]] = call <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32(<4 x i32> [[BUFFER_RESOURCE]], i32 [[OFFSET]], i32 0, i32 0)
+; CHECK-NOOPT-NEXT:    [[LOADED:%.*]] = call <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32.v4i32(<4 x i32> [[BUFFER_RESOURCE]], i32 [[OFFSET]], i32 0, i32 0)
 ; CHECK-NOOPT-NEXT:    [[BYTES:%.*]] = bitcast <4 x i32> [[LOADED]] to <16 x i8>
 ; CHECK-NOOPT-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[BYTES]], i64 0
 ; CHECK-NOOPT-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[BYTES]], i64 1
@@ -463,7 +463,7 @@ define amdgpu_kernel void @no_combine_non_zero_false(
 ; CHECK-LABEL: define amdgpu_kernel void @no_combine_non_zero_false(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x i32> [[BUFFER_RESOURCE:%.*]], i32 [[OFFSET:%.*]], i1 [[VALID:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[LOADED:%.*]] = call <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32(<4 x i32> [[BUFFER_RESOURCE]], i32 [[OFFSET]], i32 0, i32 0)
+; CHECK-NEXT:    [[LOADED:%.*]] = call <4 x i32> @llvm.amdgcn.raw.buffer.load.v4i32.v4i32(<4 x i32> [[BUFFER_RESOURCE]], i32 [[OFFSET]], i32 0, i32 0)
 ; CHECK-NEXT:    [[BYTES:%.*]] = bitcast <4 x i32> [[LOADED]] to <16 x i8>
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[BYTES]], i64 0
 ; CHECK-NEXT:    [[S0:%.*]] = select i1 [[VALID]], i8 [[E0]], i8 1
