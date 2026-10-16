@@ -52,5 +52,10 @@ from the [LLVM releases web site](https://llvm.org/releases/).
   into .bss.common in executable/shared module links, or merging them with max
   size/alignment in relocatable -r links). See
   https://github.com/WebAssembly/tool-conventions/pull/267
+* `__wasm_apply_data_relocs` (and `__wasm_apply_tls_relocs`) are now split into
+  several functions when the body
+  would otherwise exceed the JS API's limit of 7,654,321 bytes per function
+  body, so that very large `-shared`/`-pie` modules can be instantiated.
+  (https://github.com/llvm/llvm-project/pull/129007)
 
 #### Fixes

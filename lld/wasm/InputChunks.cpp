@@ -12,6 +12,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
@@ -437,12 +438,11 @@ bool isValidRuntimeRelocation(WasmRelocType type) {
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
-bool InputChunk::generateRelocationCode(raw_ostream &os) const {
+void InputChunk::generateRelocationCode(std::vector<std::string> &funcs) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << name
                     << " count=" << relocations.size() << "\n");
 
   bool is64 = ctx.arg.is64.value_or(false);
-  bool generated = false;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
   uint64_t tombstone = getTombstone();
@@ -463,6 +463,12 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     }
 
     uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
+
+    // Generate the code for this relocation on its own, so that the check
+    // against the maximum function body size below is exact.
+    SmallString<32> code;
+    raw_svector_ostream os(code);
+
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
                       << " output offset=" << offset << "\n");
@@ -513,9 +519,21 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     writeU8(os, opcode_reloc_store, "I32_STORE");
     writeUleb128(os, 2, "align");
     writeUleb128(os, 0, "offset");
-    generated = true;
+
+    // The writer wraps each entry of `funcs` into a function body, adding a
+    // one-byte locals declaration in front and END behind (hence the 2), and
+    // a body may not exceed ctx.arg.maxFunctionBodySize bytes, so start a
+    // new entry when this relocation would push the current one over.  A
+    // relocation whose code is itself larger than the limit (only possible
+    // with an artificially small limit) gets an entry of its own, over it.
+    //
+    // Splitting keeps the unrolled code within the limit; the TODO above (a
+    // relocation table applied by a loop) is what would shrink it.
+    if (funcs.empty() ||
+        funcs.back().size() + code.size() + 2 > ctx.arg.maxFunctionBodySize)
+      funcs.emplace_back();
+    funcs.back().append(code.data(), code.size());
   }
-  return generated;
 }
 
 // Split WASM_SEG_FLAG_STRINGS section. Such a section is a sequence of
