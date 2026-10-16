@@ -1,6 +1,4 @@
-# RUN: llc -mtriple=amdgpu6.00 -amdgpu-enable-merge-m0 \
-# RUN:   -verify-machineinstrs -run-pass=si-fix-sgpr-copies %s -o - \
-# RUN:   | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass=si-fix-sgpr-copies %s -o - | FileCheck %s
 
 --- |
   define void @hoist_m0_past_dbg_value_undef() !dbg !4 { ret void }
