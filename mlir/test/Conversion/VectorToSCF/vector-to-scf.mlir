@@ -879,18 +879,14 @@ func.func @scalable_transpose_store_unmasked(%vec: vector<4x[4]xf32>, %dest: mem
 // FULL-UNROLL-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // FULL-UNROLL-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // FULL-UNROLL-DAG:       %[[C4:.*]] = arith.constant 4 : index
-// FULL-UNROLL:           %[[SLICE_0:.*]] = vector.extract %[[VEC]][0] : vector<[4]xf32> from vector<4x[4]xf32>
-// FULL-UNROLL:           %[[SLICE_1:.*]] = vector.extract %[[VEC]][1] : vector<[4]xf32> from vector<4x[4]xf32>
-// FULL-UNROLL:           %[[SLICE_2:.*]] = vector.extract %[[VEC]][2] : vector<[4]xf32> from vector<4x[4]xf32>
-// FULL-UNROLL:           %[[SLICE_3:.*]] = vector.extract %[[VEC]][3] : vector<[4]xf32> from vector<4x[4]xf32>
 // FULL-UNROLL:           %[[VSCALE:.*]] = vector.vscale
 // FULL-UNROLL:           %[[C4_VSCALE:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 // FULL-UNROLL:           scf.for %[[VAL_13:.*]] = %[[C0]] to %[[C4_VSCALE]] step %[[C1]] {
 // FULL-UNROLL:             %[[SLICE_I:.*]] = affine.apply #[[$SLICE_MAP]](%[[VAL_13]]){{\[}}%[[I]]]
-// FULL-UNROLL:             %[[ELEM_0:.*]] = vector.extract %[[SLICE_0]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
-// FULL-UNROLL:             %[[ELEM_1:.*]] = vector.extract %[[SLICE_1]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
-// FULL-UNROLL:             %[[ELEM_2:.*]] = vector.extract %[[SLICE_2]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
-// FULL-UNROLL:             %[[ELEM_3:.*]] = vector.extract %[[SLICE_3]]{{\[}}%[[VAL_13]]] : f32 from vector<[4]xf32>
+// FULL-UNROLL:             %[[ELEM_0:.*]] = vector.extract %[[VEC]][0, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
+// FULL-UNROLL:             %[[ELEM_1:.*]] = vector.extract %[[VEC]][1, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
+// FULL-UNROLL:             %[[ELEM_2:.*]] = vector.extract %[[VEC]][2, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
+// FULL-UNROLL:             %[[ELEM_3:.*]] = vector.extract %[[VEC]][3, %[[VAL_13]]] : f32 from vector<4x[4]xf32>
 // FULL-UNROLL:             %[[TRANSPOSE_SLICE:.*]] = vector.from_elements %[[ELEM_0]], %[[ELEM_1]], %[[ELEM_2]], %[[ELEM_3]] : vector<4xf32>
 // FULL-UNROLL:             vector.transfer_write %[[TRANSPOSE_SLICE]], %[[DEST]]{{\[}}%[[SLICE_I]], %[[J]]] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
 
