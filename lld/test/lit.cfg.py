@@ -88,6 +88,7 @@ llvm_config.feature_config(
                 "SystemZ": "systemz",
                 "WebAssembly": "wasm",
                 "X86": "x86",
+                "Xtensa": "xtensa",
             },
         ),
         ("--assertion-mode", {"ON": "asserts"}),
