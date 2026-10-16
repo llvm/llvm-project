@@ -3571,6 +3571,7 @@ static bool isNonDerived(const semantics::Symbol &sym) {
 
 static bool isNonDerivedItem(const semantics::Symbol *sym) {
   const auto &ultimate = sym->GetUltimate();
+  // May be a common block
   if (const auto *common =
           ultimate.detailsIf<semantics::CommonBlockDetails>()) {
     return llvm::all_of(common->objects(), [](const auto &member) {
@@ -3679,7 +3680,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // SECTIONS construct.
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
-  // Becuase Flang uses eager privatisation clausOps.privateVars is empty.
+  // Because Flang uses eager privatisation clausOps.privateVars is empty.
   bool allPrivateVarsEligible =
       llvm::all_of(dsp.getAllSymbolsToPrivatize(), isNonDerivedItem);
 
