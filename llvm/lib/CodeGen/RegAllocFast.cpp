@@ -1978,6 +1978,10 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
 /// further down the block (a read in another block reloads it from its stack
 /// slot), and when the value can't simply move into the def's register. Kill
 /// flags are optional here, so a missing one doesn't mean the value lives on.
+///
+/// MI's other reads of the value don't give it a register first: tied uses
+/// are allocated before untied ones, and a value that moved into one tied
+/// def's register is copied from there into another's.
 bool RegAllocFastImpl::tiedUseNeedsOwnReg(const MachineInstr &MI,
                                           unsigned UseIdx) const {
   const MachineOperand &MO = MI.getOperand(UseIdx);
@@ -1987,8 +1991,10 @@ bool RegAllocFastImpl::tiedUseNeedsOwnReg(const MachineInstr &MI,
       !MRI->getRegClass(Reg)->hasSubClassEq(MRI->getRegClass(DefMO.getReg())))
     return true;
 
-  // Another read of the value by MI may get it a register first.
-  if (any_of(MI.all_uses(), [&](const MachineOperand &O) {
+  // An early-clobber def overwrites its register before MI's other reads of
+  // the value, so they need it in a register of its own.
+  if (DefMO.isEarlyClobber() &&
+      any_of(MI.all_uses(), [&](const MachineOperand &O) {
         return &O != &MO && O.getReg() == Reg;
       }))
     return true;
@@ -2026,6 +2032,12 @@ bool RegAllocFastImpl::tiedUseNeedsOwnReg(const MachineInstr &MI,
 /// get distinct registers, avoiding physreg uses and early-clobber physreg
 /// defs. Folding a register removes it from both.
 ///
+/// The input of a tied def usually moves into the def's register, and the
+/// asm's untied reads of it follow, so it needs no register of its own while
+/// that def isn't folded. Otherwise (see tiedUseNeedsOwnReg()) it keeps one
+/// register, both to copy from and for its untied reads, until it and its
+/// tied defs are all folded.
+///
 /// A register counts against another register class as many times as one of
 /// its registers overlaps registers of that class, e.g. once for GR64 against
 /// GR32. That, and keeping physreg uses out of the defs' registers, errs
@@ -2040,9 +2052,12 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
     bool InDefs = false;
     // Needs a register while the uses are read.
     bool InUses = false;
-    // Inputs tied to this def that keep registers of their own, to be copied
-    // from (see lowerTiedUse()). Folding the def folds them too.
-    unsigned TiedInputs = 0;
+    // The virtual defs this register is the tied input of. Folding such a def
+    // folds the tied use too.
+    SmallVector<Register, 1> TiedDefs = {};
+    // As a tied input, keeps a register of its own instead of moving into a
+    // tied def's register (see tiedUseNeedsOwnReg()).
+    bool TiedNeedsOwnReg = false;
     // Read by an operand that isn't tied to its def.
     bool HasUntiedUse = false;
     // Every untied operand of the register can be folded.
@@ -2090,8 +2105,10 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
         continue;
 
       if (DefReg.isVirtual()) {
-        if (tiedUseNeedsOwnReg(MI, I))
-          ++getAsmReg(DefReg).TiedInputs;
+        bool NeedsOwnReg = tiedUseNeedsOwnReg(MI, I);
+        AsmReg &R = getAsmReg(Reg);
+        R.TiedDefs.push_back(DefReg);
+        R.TiedNeedsOwnReg |= NeedsOwnReg;
       } else {
         AsmReg &R = getAsmReg(Reg);
         R.InUses = true;
@@ -2115,8 +2132,13 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
   // The asm's own read of a register it also writes can't share the def's
   // stack slot unless that's how the two are tied, so only fold a register
   // the asm either reads or writes.
-  for (AsmReg &R : Regs)
-    R.Foldable &= !(R.InDefs && R.HasUntiedUse);
+  // Folding a register only folds its untied operands, so a register the asm
+  // only reads through tied uses frees nothing.
+  for (AsmReg &R : Regs) {
+    R.Foldable &= !(R.InDefs && R.HasUntiedUse) && (R.InDefs || R.HasUntiedUse);
+    // A tied input the asm also writes isn't modeled; give it a register.
+    R.TiedNeedsOwnReg |= R.InDefs;
+  }
 
   // Fold within one register class at a time, in operand order. Registers
   // folded for one class no longer count against the next.
@@ -2155,32 +2177,60 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
       Weight.push_back(Max);
     }
 
-    while (true) {
-      unsigned DefsNeeded = 0;
-      unsigned UsesNeeded = 0;
+    // Count the registers of RC needed while the defs, and while the uses, are
+    // assigned, given which registers are folded so far.
+    auto countNeeded = [&](unsigned &DefsNeeded, unsigned &UsesNeeded) {
+      DefsNeeded = UsesNeeded = 0;
       for (auto [R, W] : zip(Regs, Weight)) {
-        if (R.Folded)
-          continue;
+        DefsNeeded += (!R.Folded && R.InDefs) * W;
+        bool NeedsReg = !R.Folded && R.InUses;
+        if (!R.TiedDefs.empty()) {
+          // While a tied def is in a register, the input is read from there,
+          // possibly copied from a register of its own.
+          bool InDefReg = any_of(R.TiedDefs, [&](Register Def) {
+            return !find_if(Regs, [&](const AsmReg &D) {
+                      return D.Reg == Def;
+                    })->Folded;
+          });
+          NeedsReg = R.TiedNeedsOwnReg ? NeedsReg || InDefReg
+                                       : NeedsReg && !InDefReg;
+        }
 
-        DefsNeeded += R.InDefs * W;
-        UsesNeeded += (R.InUses + R.TiedInputs) * W;
+        UsesNeeded += NeedsReg * W;
       }
+    };
 
+    while (true) {
+      unsigned DefsNeeded, UsesNeeded;
+      countNeeded(DefsNeeded, UsesNeeded);
       bool DefsShort = DefsNeeded > DefsFree;
       bool UsesShort = UsesNeeded > UsesFree;
       if (!DefsShort && !UsesShort)
         break;
 
       // Fold the first register that relieves the most phases that are short.
+      // Folding a tied def can give its input a register back, so count again
+      // rather than just dropping the register's own needs.
       AsmReg *Best = nullptr;
       unsigned BestRelief = 0;
       for (auto [R, W] : zip(Regs, Weight)) {
         if (R.Folded || !R.Foldable || !W)
           continue;
 
-        unsigned Relief =
-            (DefsShort && R.InDefs) + (UsesShort && (R.InUses || R.TiedInputs));
-        if (Relief > BestRelief) {
+        unsigned DefsAfter, UsesAfter;
+        R.Folded = true;
+        countNeeded(DefsAfter, UsesAfter);
+        R.Folded = false;
+        unsigned Relief = (DefsShort && DefsAfter < DefsNeeded) +
+                          (UsesShort && UsesAfter < UsesNeeded);
+        // Folding only one of a tied def and an input that shares its register
+        // relieves nothing; folding both does. So, failing any relief, fold
+        // the first register that lowers the total without making a short
+        // phase worse.
+        bool Worse = (DefsShort && DefsAfter > DefsNeeded) ||
+                     (UsesShort && UsesAfter > UsesNeeded);
+        bool Lowers = DefsAfter + UsesAfter < DefsNeeded + UsesNeeded;
+        if (Relief > BestRelief || (!Best && !Worse && Lowers)) {
           Best = &R;
           BestRelief = Relief;
         }
