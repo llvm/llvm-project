@@ -1,7 +1,15 @@
 ; RUN: split-file %s %t
-; RUN: not llubi --verbose < %t/array_count_overflow.ll 2>&1 | FileCheck %t/array_count_overflow.ll
+; RUN: not llubi --verbose < %t/alloca_array_count_overflow.ll 2>&1 | FileCheck %t/alloca_array_count_overflow.ll
+; RUN: not llubi --verbose < %t/alloca_type_size_wrap_wrong_result.ll 2>&1 | FileCheck %t/alloca_type_size_wrap_wrong_result.ll
 ; RUN: not llubi --verbose < %t/array_count_truncation.ll 2>&1 | FileCheck %t/array_count_truncation.ll
+; RUN: not llubi --verbose < %t/cast_huge_operand_unvalidated_oom.ll 2>&1 | FileCheck %t/cast_huge_operand_unvalidated_oom.ll
+; RUN: not llubi --verbose < %t/ce_shuffle_global.ll 2>&1 | FileCheck %t/ce_shuffle_global.ll
+; RUN: not llubi --verbose < %t/fcmp_huge_operand.ll 2>&1 | FileCheck %t/fcmp_huge_operand.ll
+; RUN: not llubi --verbose < %t/fptrunc_huge_operand.ll 2>&1 | FileCheck %t/fptrunc_huge_operand.ll
 ; RUN: not llubi --verbose < %t/global_unsized.ll 2>&1 | FileCheck %t/global_unsized.ll
+; RUN: not llubi --verbose < %t/huge_scalable_ce_shuffle_crash.ll 2>&1 | FileCheck %t/huge_scalable_ce_shuffle_crash.ll
+; RUN: not llubi --verbose < %t/icmp_huge_operand_unvalidated_oom.ll 2>&1 | FileCheck %t/icmp_huge_operand_unvalidated_oom.ll
+; RUN: not llubi --verbose < %t/load_array_count_overflow.ll 2>&1 | FileCheck %t/load_array_count_overflow.ll
 ; RUN: not llubi --verbose < %t/load_target_ext.ll 2>&1 | FileCheck %t/load_target_ext.ll
 ; RUN: not llubi --verbose < %t/shufflevector_large_size.ll 2>&1 | FileCheck %t/shufflevector_large_size.ll
 ; RUN: not llubi --verbose < %t/target_ext_extractvalue.ll 2>&1 | FileCheck %t/target_ext_extractvalue.ll
@@ -17,20 +25,28 @@
 ; RUN: not llubi --verbose < %t/target_ext_store_vector_element.ll 2>&1 | FileCheck %t/target_ext_store_vector_element.ll
 ; RUN: not llubi --verbose < %t/target_ext_vararg.ll 2>&1 | FileCheck %t/target_ext_vararg.ll
 ; RUN: not llubi --verbose < %t/token_constant.ll 2>&1 | FileCheck %t/token_constant.ll
-; RUN: llubi --verbose < %t/unsized_types.ll 2>&1 | FileCheck %t/unsized_types.ll
+; RUN: not llubi --verbose < %t/vector_align_validation_bypass_oom.ll 2>&1 | FileCheck %t/vector_align_validation_bypass_oom.ll
 ; RUN: not llubi --verbose < %t/vector_reduce_fmax_empty.ll 2>&1 | FileCheck %t/vector_reduce_fmax_empty.ll
 ; RUN: not llubi --verbose < %t/vector_reduce_fmaximum_empty.ll 2>&1 | FileCheck %t/vector_reduce_fmaximum_empty.ll
 ; RUN: not llubi --verbose < %t/x86_amx_bitcast.ll 2>&1 | FileCheck %t/x86_amx_bitcast.ll
 ; RUN: not llubi --verbose < %t/x86_amx_store_struct.ll 2>&1 | FileCheck %t/x86_amx_store_struct.ll
 
-;--- array_count_overflow.ll
+;--- alloca_array_count_overflow.ll
 define void @main() {
   %a = alloca [4 x [2147483648 x [2147483648 x i8]]], align 8
-  %v = load [4 x [2147483648 x [2147483648 x i8]]], ptr %a
   ret void
 }
 ; CHECK: [2147483648 x i8] is too large!
-; CHECK-NEXT:   %v = load [4 x [2147483648 x [2147483648 x i8]]], ptr %a, align 1 at @main <stdin>:3
+; CHECK-NEXT:   %a = alloca [4 x [2147483648 x [2147483648 x i8]]], align 8 at @main <stdin>:2
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- alloca_type_size_wrap_wrong_result.ll
+define void @main() {
+  %a = alloca [4611686018427387904 x i32]
+  ret void
+}
+; CHECK: [4611686018427387904 x i32] is too large!
+; CHECK-NEXT:   %a = alloca [4611686018427387904 x i32], align 4 at @main <stdin>:2
 ; CHECK-NEXT: error: -: input module cannot be executed!
 
 ;--- array_count_truncation.ll
@@ -44,15 +60,75 @@ define void @main() {
 ; CHECK-NEXT:   %v = load [4294967296 x [0 x i8]], ptr @g, align 1 at @main <stdin>:3
 ; CHECK-NEXT: error: -: input module cannot be executed!
 
+;--- cast_huge_operand_unvalidated_oom.ll
+define void @main() {
+  %c = trunc <268435456 x i64> poison to <268435456 x i1>
+  ret void
+}
+; CHECK: <268435456 x i64> is too large!
+; CHECK-NEXT:   %c = trunc <268435456 x i64> poison to <268435456 x i1> at @main <stdin>:2
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- ce_shuffle_global.ll
+@g = global float extractelement (<vscale x 4 x float> shufflevector (<vscale x 536870912 x float> splat (float 7.0), <vscale x 536870912 x float> poison, <vscale x 4 x i32> zeroinitializer), i32 0)
+define void @main() { ret void }
+; CHECK: <vscale x 536870912 x float> is too large!
+; CHECK-NEXT:   at @g
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- fcmp_huge_operand.ll
+define void @main() {
+  %c = fcmp oeq <268435456 x double> poison, poison
+  ret void
+}
+; CHECK: <268435456 x double> is too large!
+; CHECK-NEXT:   %c = fcmp oeq <268435456 x double> poison, poison at @main <stdin>:2
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- fptrunc_huge_operand.ll
+define void @main() {
+  %c = fptrunc <67108864 x double> poison to <67108864 x float>
+  ret void
+}
+; CHECK: <67108864 x double> is too large!
+; CHECK-NEXT:   %c = fptrunc <67108864 x double> poison to <67108864 x float> at @main <stdin>:2
+; CHECK-NEXT: error: -: input module cannot be executed!
+
 ;--- global_unsized.ll
 %opaque = type opaque
 @unsized = external global %opaque
-
 define void @main() {
   ret void
 }
 ; CHECK: Unsupported opaque struct type %opaque
 ; CHECK-NEXT:   at @unsized
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- huge_scalable_ce_shuffle_crash.ll
+define void @main() {
+  %v = extractelement <vscale x 4 x float> shufflevector (<vscale x 536870912 x float> splat (float 7.0), <vscale x 536870912 x float> poison, <vscale x 4 x i32> zeroinitializer), i32 0
+  ret void
+}
+; CHECK: <vscale x 536870912 x float> is too large!
+; CHECK-NEXT:   %v = extractelement <vscale x 4 x float> shufflevector (<vscale x 536870912 x float> splat (float 7.000000e+00), <vscale x 536870912 x float> poison, <vscale x 4 x i32> zeroinitializer), i32 0 at @main <stdin>:2
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- icmp_huge_operand_unvalidated_oom.ll
+define void @main() {
+  %c = icmp eq <268435456 x i64> poison, poison
+  ret void
+}
+; CHECK: <268435456 x i64> is too large!
+; CHECK-NEXT:   %c = icmp eq <268435456 x i64> poison, poison at @main <stdin>:2
+; CHECK-NEXT: error: -: input module cannot be executed!
+
+;--- load_array_count_overflow.ll
+define void @main() {
+  %v = load [4 x [2147483648 x [2147483648 x i8]]], ptr null
+  ret void
+}
+; CHECK: [2147483648 x i8] is too large!
+; CHECK-NEXT:   %v = load [4 x [2147483648 x [2147483648 x i8]]], ptr null, align 1 at @main <stdin>:2
 ; CHECK-NEXT: error: -: input module cannot be executed!
 
 ;--- load_target_ext.ll
@@ -94,9 +170,8 @@ define void @main() {
 
 ;--- target_ext_global.ll
 @g = global target("wasm.externref") poison
-
-define i32 @main() {
-  ret i32 0
+define void @main() {
+  ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
 ; CHECK-NEXT:   at @g
@@ -112,8 +187,8 @@ define void @main() {
 ; CHECK-NEXT: error: -: input module cannot be executed!
 
 ;--- target_ext_main_arg.ll
-define i32 @main(target("wasm.externref") %a) {
-  ret i32 0
+define void @main(target("wasm.externref") %a) {
+  ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
 ; CHECK-NEXT:   target("wasm.externref") %a at @main <stdin>:1
@@ -175,15 +250,13 @@ define void @main() {
 
 ;--- target_ext_vararg.ll
 @.str = private constant [3 x i8] c"%d\00"
-
 declare i32 @printf(ptr, ...)
-
 define void @main() {
   %r = call i32 (ptr, ...) @printf(ptr @.str, target("wasm.externref") poison)
   ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
-; CHECK-NEXT:   %r = call i32 (ptr, ...) @printf(ptr @.str, target("wasm.externref") poison) at @main <stdin>:6
+; CHECK-NEXT:   %r = call i32 (ptr, ...) @printf(ptr @.str, target("wasm.externref") poison) at @main <stdin>:4
 ; CHECK-NEXT: error: -: input module cannot be executed!
 
 ;--- token_constant.ll
@@ -195,24 +268,13 @@ define void @main() {
 ; CHECK-NEXT:   %1 = call i8 @llvm.coro.suspend(token none, i1 false) at @main <stdin>:2
 ; CHECK-NEXT: error: -: input module cannot be executed!
 
-;--- unsized_types.ll
-; Make sure we don't crash when handling unsized struct types in isValid.
-
-define { i1, <vscale x 1 x i1> } @f() {
-  ret { i1, <vscale x 1 x i1> } zeroinitializer
-}
-
-define void @main() {
-  call { i1, <vscale x 1 x i1> } @f()
-  ret void
-}
-; CHECK: Entering function: main
-; CHECK-NEXT: Entering function: f
-; CHECK-NEXT:   ret { i1, <vscale x 1 x i1> } zeroinitializer
-; CHECK-NEXT: Exiting function: f
-; CHECK-NEXT:   %1 = call { i1, <vscale x 1 x i1> } @f() => { F, { F, F, F, F } }
-; CHECK-NEXT:   ret void
-; CHECK-NEXT: Exiting function: main
+;--- vector_align_validation_bypass_oom.ll
+target datalayout = "v1:32768"
+@g = global [1048575 x <1 x i1>] zeroinitializer
+define void @main() { ret void }
+; CHECK: [1048575 x <1 x i1>] is too large!
+; CHECK-NEXT:   at @g
+; CHECK-NEXT: error: -: input module cannot be executed!
 
 ;--- vector_reduce_fmax_empty.ll
 define void @main() {

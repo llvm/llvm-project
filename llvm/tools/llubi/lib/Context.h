@@ -231,6 +231,9 @@ class Context {
   std::optional<uint64_t>
   isSupportedType(raw_ostream &OS, DenseMap<Type *, uint64_t> &ValidAggTys,
                   Type *Ty) const;
+  bool isSupportedConstantExpression(raw_ostream &OS,
+                                     DenseMap<Type *, uint64_t> &ValidAggTys,
+                                     ConstantExpr *CE) const;
 
   // Configuration
   uint64_t MaxMem = 0;

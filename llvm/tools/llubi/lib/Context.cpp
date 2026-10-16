@@ -1302,7 +1302,8 @@ std::optional<uint64_t> Context::isSupportedType(
       return std::nullopt;
     }
     // Now the multiplication never overflows.
-    return alignTo(*ElementBits * getEVL(EC), DL.getABITypeAlign(Ty).value());
+    return alignTo(*ElementBits * getEVL(EC),
+                   DL.getABITypeAlign(Ty).value() * 8);
   }
   case Type::ArrayTyID: {
     if (uint64_t Size = ValidAggTys.lookup(Ty))
@@ -1362,6 +1363,32 @@ std::optional<uint64_t> Context::isSupportedType(
       return DL.getTypeAllocSizeInBits(Ty);
     // void/metadata/label/function types are always supported.
     return 0;
+  }
+}
+
+bool Context::isSupportedConstantExpression(
+    raw_ostream &OS, DenseMap<Type *, uint64_t> &ValidAggTys,
+    ConstantExpr *CE) const {
+  switch (CE->getOpcode()) {
+  case Instruction::ExtractElement:
+  case Instruction::BitCast:
+  case Instruction::ShuffleVector:
+  case Instruction::Trunc:
+  case Instruction::PtrToAddr:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::AddrSpaceCast:
+    if (!isSupportedType(OS, ValidAggTys, CE->getOperand(0)->getType()))
+      return false;
+    [[fallthrough]];
+  default:
+    // Now we know all types in the expression is valid. Check operands
+    // recursively.
+    return all_of(CE->operands(), [&](Use &U) {
+      if (auto *OpCE = dyn_cast<ConstantExpr>(U))
+        return isSupportedConstantExpression(OS, ValidAggTys, OpCE);
+      return true;
+    });
   }
 }
 
@@ -1425,6 +1452,9 @@ bool Context::isValid(raw_ostream &OS) const {
       for (auto &I : BB) {
         CHECK(I.getType(), DumpInst(&I));
         switch (I.getOpcode()) {
+        case Instruction::Alloca:
+          CHECK(cast<AllocaInst>(I).getAllocatedType(), DumpInst(&I));
+          break;
         case Instruction::Call:
         case Instruction::Invoke:
           for (auto &Op : I.operands())
@@ -1435,16 +1465,34 @@ bool Context::isValid(raw_ostream &OS) const {
         case Instruction::ExtractValue:
         case Instruction::BitCast:
         case Instruction::ShuffleVector:
+        case Instruction::Trunc:
+        case Instruction::ICmp:
+        case Instruction::FCmp:
+        case Instruction::PtrToAddr:
+        case Instruction::PtrToInt:
+        case Instruction::IntToPtr:
+        case Instruction::FPTrunc:
+        case Instruction::AddrSpaceCast:
           CHECK(I.getOperand(0)->getType(), DumpInst(&I));
           break;
         default:
           break;
         }
+        for (auto &Op : I.operands())
+          if (auto *CE = dyn_cast<ConstantExpr>(Op))
+            if (!isSupportedConstantExpression(OS, ValidAggTys, CE))
+              return DumpInst(&I);
       }
   }
 
-  for (auto &G : M.globals())
+  for (auto &G : M.globals()) {
     CHECK(G.getValueType(), DumpGlobal(&G));
+    if (G.hasInitializer()) {
+      if (auto *CE = dyn_cast_or_null<ConstantExpr>(G.getInitializer()))
+        if (!isSupportedConstantExpression(OS, ValidAggTys, CE))
+          return DumpGlobal(&G);
+    }
+  }
 
 #undef CHECK
 
