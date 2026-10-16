@@ -309,6 +309,42 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArtificialLoc
+//===----------------------------------------------------------------------===//
+
+def ArtificialLoc : Builtin_LocationAttr<"ArtificialLoc"> {
+  let summary = "A location for compiler-generated instructions with no source correspondence";
+  let description = [{
+    Syntax:
+
+    ```
+    artificial-location ::= `artificial`
+    ```
+
+    Represents an instruction that is compiler-generated and cannot be
+    attributed to any position in the original source code.  The DWARF
+    specification allows the compiler to use the special line number 0 to
+    indicate code that cannot be attributed to any source location.  When
+    translated to LLVM IR this produces a `DILocation` with `line=0, column=0`
+    and the enclosing scope.  If no scope is available the instruction carries
+    no debug location.
+
+    `ArtificialLoc` expresses intentional absence of source attribution, in
+    contrast to `UnknownLoc` which expresses that the source location is
+    ambiguous or has not yet been determined.
+
+    Example:
+    ```mlir
+    loc(artificial)
+    ```
+  }];
+  let extraClassDeclaration = [{
+    static ArtificialLoc get(MLIRContext *context);
+  }];
+  let attrName = "builtin.artificial_loc";
+}
+
+//===----------------------------------------------------------------------===//
 // UnknownLoc
 //===----------------------------------------------------------------------===//
 
