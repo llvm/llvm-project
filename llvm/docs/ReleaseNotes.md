@@ -271,6 +271,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.
 
+* Added support for the `aarch64-unknown-uefi` target. It follows the Windows
+  ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
+  unwind information) and produces PE/COFF objects.
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
