@@ -1805,6 +1805,12 @@ def ElementwiseSubSat : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseSaturatingCast : Builtin {
+  let Spellings = ["__builtin_elementwise_saturating_cast"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseFshl : Builtin {
   let Spellings = ["__builtin_elementwise_fshl"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];

@@ -443,6 +443,8 @@ public:
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitConvertVectorExpr(const ConvertVectorExpr *S);
+  void
+  VisitElementwiseSaturatingCastExpr(const ElementwiseSaturatingCastExpr *S);
 };
 
 } // namespace clang
