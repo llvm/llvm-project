@@ -13,6 +13,34 @@ define i32 @load_out_ptr_after_store(ptr addrspace(5) %out) {
   ret i32 %load
 }
 
+define i32 @callee_with_aliasing_args(ptr addrspace(5) %val, ptr addrspace(5) %other) {
+; CHECK-LABEL: define i32 @callee_with_aliasing_args(
+; CHECK-SAME: ptr addrspace(5) [[VAL:%.*]], ptr addrspace(5) [[OTHER:%.*]]) {
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[VAL]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[OTHER]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  store i32 0, ptr addrspace(5) %val
+  %load = load i32, ptr addrspace(5) %other
+  ret i32 %load
+}
+
+define amdgpu_kernel void @caller_with_aliasing_args(ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @caller_with_aliasing_args(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:    [[SLOT:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    store i32 1, ptr addrspace(5) [[SLOT]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @callee_with_aliasing_args(ptr addrspace(5) [[SLOT]], ptr addrspace(5) [[SLOT]])
+; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %slot = alloca i32, addrspace(5)
+  store i32 1, ptr addrspace(5) %slot
+  %result = call i32 @callee_with_aliasing_args(ptr addrspace(5) %slot, ptr addrspace(5) %slot)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
 define i32 @load_out_ptr_before_store(ptr addrspace(5) %out) {
 ; CHECK-LABEL: define i32 @load_out_ptr_before_store(
 ; CHECK-SAME: ptr addrspace(5) [[OUT:%.*]]) {
@@ -83,12 +111,10 @@ define void @atomic_store_out_ptr_after_store(ptr addrspace(5) %out) {
 
 define i32 @load_ptr_after_store(ptr addrspace(5) %out, ptr addrspace(5) %ptr) {
 ; CHECK-LABEL: define i32 @load_ptr_after_store(
-; CHECK-SAME: ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = call [[LOAD_PTR_AFTER_STORE:%.*]] @[[LOAD_PTR_AFTER_STORE_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison, ptr addrspace(5) [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [[LOAD_PTR_AFTER_STORE]] [[TMP3]], 1
-; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(5) [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[LOAD_PTR_AFTER_STORE]] [[TMP3]], 0
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-SAME: ptr addrspace(5) [[OUT:%.*]], ptr addrspace(5) [[PTR:%.*]]) {
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[OUT]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   store i32 0, ptr addrspace(5) %out
   %load = load i32, ptr addrspace(5) %ptr
@@ -97,12 +123,10 @@ define i32 @load_ptr_after_store(ptr addrspace(5) %out, ptr addrspace(5) %ptr) {
 
 define i32 @volatile_load_ptr_after_store(ptr addrspace(5) %out, ptr addrspace(5) %ptr) {
 ; CHECK-LABEL: define i32 @volatile_load_ptr_after_store(
-; CHECK-SAME: ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP3:%.*]] = call [[VOLATILE_LOAD_PTR_AFTER_STORE:%.*]] @[[VOLATILE_LOAD_PTR_AFTER_STORE_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison, ptr addrspace(5) [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [[VOLATILE_LOAD_PTR_AFTER_STORE]] [[TMP3]], 1
-; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(5) [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[VOLATILE_LOAD_PTR_AFTER_STORE]] [[TMP3]], 0
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-SAME: ptr addrspace(5) [[OUT:%.*]], ptr addrspace(5) [[PTR:%.*]]) {
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[OUT]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr addrspace(5) [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
   store i32 0, ptr addrspace(5) %out
   %load = load volatile i32, ptr addrspace(5) %ptr
@@ -123,7 +147,7 @@ define i32 @atomic_load_acquire_ptr_after_store(ptr addrspace(5) %out, ptr addrs
 
 define i32 @atomic_load_monotonic_ptr_after_store(ptr addrspace(5) %out, ptr addrspace(5) %ptr) {
 ; CHECK-LABEL: define i32 @atomic_load_monotonic_ptr_after_store(
-; CHECK-SAME: ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call [[ATOMIC_LOAD_MONOTONIC_PTR_AFTER_STORE:%.*]] @[[ATOMIC_LOAD_MONOTONIC_PTR_AFTER_STORE_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison, ptr addrspace(5) [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [[ATOMIC_LOAD_MONOTONIC_PTR_AFTER_STORE]] [[TMP3]], 1
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(5) [[TMP0]], align 4
@@ -173,10 +197,9 @@ define void @atomic_store_unordered_ptr_after_store(ptr addrspace(5) %out, ptr a
 
 define void @opaque_read_call_after_store(ptr addrspace(5) %out) {
 ; CHECK-LABEL: define void @opaque_read_call_after_store(
-; CHECK-SAME: ptr addrspace(5) [[TMP0:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = call [[OPAQUE_READ_CALL_AFTER_STORE:%.*]] @[[OPAQUE_READ_CALL_AFTER_STORE_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue [[OPAQUE_READ_CALL_AFTER_STORE]] [[TMP2]], 0
-; CHECK-NEXT:    store i32 [[TMP3]], ptr addrspace(5) [[TMP0]], align 4
+; CHECK-SAME: ptr addrspace(5) [[OUT:%.*]]) {
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[OUT]], align 4
+; CHECK-NEXT:    call void @opaque_read()
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(5) %out
@@ -210,10 +233,9 @@ define void @opaque_call_after_store(ptr addrspace(5) %out) {
 
 define void @memcpy_after_store(ptr addrspace(5) %out, ptr addrspace(5) %src, ptr addrspace(5) noalias %dst) {
 ; CHECK-LABEL: define void @memcpy_after_store(
-; CHECK-SAME: ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]], ptr addrspace(5) noalias [[TMP2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP4:%.*]] = call [[MEMCPY_AFTER_STORE:%.*]] @[[MEMCPY_AFTER_STORE_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison, ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[MEMCPY_AFTER_STORE]] [[TMP4]], 0
-; CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[TMP0]], align 4
+; CHECK-SAME: ptr addrspace(5) [[OUT:%.*]], ptr addrspace(5) [[SRC:%.*]], ptr addrspace(5) noalias [[DST:%.*]]) {
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[OUT]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) [[DST]], ptr addrspace(5) [[SRC]], i32 4, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(5) %out

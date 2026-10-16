@@ -5,6 +5,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("defs.bzl", "clang_tidy_library")
 
@@ -72,12 +73,15 @@ cc_binary(
     deps = ["//llvm:Support"],
 )
 
-genrule(
+run_binary(
     name = "confusables_inc",
     srcs = ["misc/ConfusableTable/confusables.txt"],
     outs = ["Confusables.inc"],
-    cmd = "$(location :confusable_table_builder) $(SRCS) $(OUTS)",
-    tools = [":confusable_table_builder"],
+    args = [
+        "$(execpath misc/ConfusableTable/confusables.txt)",
+        "$(execpath Confusables.inc)",
+    ],
+    tool = ":confusable_table_builder",
     visibility = ["//visibility:private"],
 )
 
@@ -290,15 +294,6 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
-    name = "zircon",
-    deps = [
-        ":fuchsia",
-        ":lib",
-        ":utils",
-    ],
-)
-
-clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
         ":bugprone",
@@ -376,7 +371,6 @@ CHECKS = [
     ":performance",
     ":portability",
     ":readability",
-    ":zircon",
 ] + select({
     ":static_analyzer_enabled": [":mpi"],
     "//conditions:default": [],

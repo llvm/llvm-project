@@ -38,4 +38,3 @@ add_entrypoint_object(
     libc.include.sys_statvfs
     .statfs_utils
 )
-

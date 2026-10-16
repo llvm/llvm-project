@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/RegisterInfo.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
@@ -39,7 +39,7 @@ public:
     std::vector<uint32_t> invalidate_regs;
     uint32_t value_reg_offset = 0;
     // Non-null if there is an XML provided type.
-    const RegisterFlags *flags_type = nullptr;
+    const RegisterType *register_type = nullptr;
   };
 
   DynamicRegisterInfo() = default;
@@ -98,8 +98,41 @@ public:
   void ConfigureOffsets();
 
 protected:
+  struct RegisterSetWithStorage {
+    RegisterSetWithStorage(std::string name, std::string short_name,
+                           size_t num_registers, const uint32_t *registers)
+        : m_name(std::move(name)), m_short_name(std::move(short_name)) {
+      m_set.name = m_name.c_str();
+      m_set.short_name = m_short_name.c_str();
+      m_set.num_registers = num_registers;
+      m_set.registers = registers;
+    }
+
+    RegisterSetWithStorage(const RegisterSetWithStorage &rhs)
+        : m_name(rhs.m_name), m_short_name(rhs.m_short_name) {
+      m_set = rhs.m_set;
+      // m_set's strings must be re-set, otherwise they will still point to
+      // strings in rhs.
+      m_set.name = m_name.c_str();
+      m_set.short_name = m_short_name.c_str();
+    }
+
+    RegisterSetWithStorage(RegisterSetWithStorage &&rhs)
+        : m_set(rhs.m_set), m_name(std::move(rhs.m_name)),
+          m_short_name(std::move(rhs.m_short_name)) {
+      // m_set's strings must be re-set, otherwise they will still point to
+      // strings in rhs.
+      m_set.name = m_name.c_str();
+      m_set.short_name = m_short_name.c_str();
+    }
+
+    lldb_private::RegisterSet m_set;
+    std::string m_name;
+    std::string m_short_name;
+  };
+
   // Classes that inherit from DynamicRegisterInfo can see and modify these
-  typedef std::vector<lldb_private::RegisterSet> set_collection;
+  typedef std::vector<RegisterSetWithStorage> set_collection;
   typedef std::vector<uint32_t> reg_num_collection;
   typedef std::vector<reg_num_collection> set_reg_num_collection;
   typedef std::map<uint32_t, reg_num_collection> reg_to_regs_map;

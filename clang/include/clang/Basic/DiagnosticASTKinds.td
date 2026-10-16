@@ -16,6 +16,11 @@ def note_constexpr_invalid_cast : Note<
   "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_cast_ptrtoint : Note<
+  "%select{reinterpret_cast||"
+  "%select{this conversion|cast that performs the conversions of a reinterpret_cast}1|"
+  "}0 is not allowed in a constant expression">;
+def note_constexpr_has_lvalue : Note<"converting the address of an object to an integer is not allowed">;
 def note_constexpr_invalid_void_star_cast : Note<
   "cast from %0 is not allowed in a constant expression "
   "%select{in C++ standards before C++2c|because the pointed object "
@@ -24,6 +29,8 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_builtin_arg_out_of_range : Note<
+  "argument value %0 is outside the valid range [%1, %2]">;
 def note_constexpr_offsetof_overflow : Note<
   "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;
@@ -217,6 +224,9 @@ def note_constexpr_ltor_non_integral : Note<
   "is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_for_range_var : Note<
+  "read of implicit variable %0 of range-based 'for' loop is not allowed in a "
+  "constant expression">;
 def note_constexpr_ltor_incomplete_type : Note<
   "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<
@@ -407,8 +417,8 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode
-    : Note<"stateful alloc token mode not supported in constexpr">;
+def note_constexpr_infer_alloc_token_unsupported_mode
+    : Note<"alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
@@ -1033,6 +1043,15 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def warn_relaxed_constant_fold_cast : Extension<
+  "folding constant expression involving "
+  "cast that performs the conversions of a reinterpret_cast "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
+def warn_relaxed_constant_fold_null : Extension<
+  "folding constant expression that takes field address of null pointer "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
 
 def err_itanium_layout_unimplemented : Error<
   "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
@@ -1053,6 +1072,7 @@ def err_unsupported_itanium_mangling : Error<
     "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
     "|%RequiresExprWithSubstitutionFailure{requires-expression "
     "containing a substitution failure}"
+    "|%PackIndexTemplateName{pack indexing template name}"
     "}0">;
 
 def err_unsupported_itanium_expr_mangling : Error<

@@ -263,8 +263,8 @@ private:
 //
 // X is left external, so its address is provided by whatever resolves the
 // JITDylib's externals (an import library, a DynamicLibrarySearchGenerator,
-// AutoImportGenerator, ...). If X is unresolvable the link fails, exactly as a
-// static link against the corresponding import library would.
+// COFFAutoImportGenerator, ...). If X is unresolvable the link fails, exactly
+// as a static link against the corresponding import library would.
 //
 // This is the COFF analog of the ELF/Mach-O GOT builder, but deliberately NOT
 // written as a TableManager/visitEdge pass like x86_64::GOTTableManager. ELF's
@@ -279,7 +279,7 @@ private:
 //
 // Direct (non-dllimport) references such as `callq foo` are intentionally not
 // handled here: those are either kept in range by the slab allocator or thunked
-// by the opt-in AutoImportGenerator -- both outside this pass.
+// by the opt-in COFFAutoImportGenerator -- both outside this pass.
 Error synthesizeIATEntries_COFF_x86_64(LinkGraph &G) {
   static constexpr StringRef ImpPrefix = "__imp_";
 

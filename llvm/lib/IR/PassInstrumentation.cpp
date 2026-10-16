@@ -13,13 +13,8 @@
 
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/PassManager.h"
 
 using namespace llvm;
-
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Module *>;
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Function *>;
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Loop *>;
 
 void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
                                                       StringRef PassName) {

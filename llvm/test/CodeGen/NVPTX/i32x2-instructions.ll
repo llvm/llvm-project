@@ -16,12 +16,19 @@ target triple = "nvptx64-nvidia-cuda"
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 define <2 x i32> @test_ret_const() #0 {
-; CHECK-LABEL: test_ret_const(
-; CHECK:       {
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {-1, 2};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_ret_const(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {-1, 2};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_ret_const(
+; CHECK-I32X2:       {
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {-1, 2};
+; CHECK-I32X2-NEXT:    ret;
   ret <2 x i32> <i32 -1, i32 2>
 }
 
@@ -38,12 +45,10 @@ define i32 @test_extract_0(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_extract_0(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_extract_0_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, _}, %rd1;
-; CHECK-I32X2-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_extract_0_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-I32X2-NEXT:    ret;
   %e = extractelement <2 x i32> %a, i32 0
   ret i32 %e
@@ -62,12 +67,10 @@ define i32 @test_extract_1(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_extract_1(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_extract_1_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {_, %r1}, %rd1;
-; CHECK-I32X2-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_extract_1_param_0+4];
+; CHECK-I32X2-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-I32X2-NEXT:    ret;
   %e = extractelement <2 x i32> %a, i32 1
   ret i32 %e
@@ -76,39 +79,34 @@ define i32 @test_extract_1(<2 x i32> %a) #0 {
 define i32 @test_extract_i(<2 x i32> %a, i64 %idx) #0 {
 ; CHECK-NOI32X2-LABEL: test_extract_i(
 ; CHECK-NOI32X2:       {
-; CHECK-NOI32X2-NEXT:    .local .align 8 .b8 __local_depot3[8];
-; CHECK-NOI32X2-NEXT:    .reg .b64 %SP;
-; CHECK-NOI32X2-NEXT:    .reg .b64 %SPL;
-; CHECK-NOI32X2-NEXT:    .reg .b32 %r<4>;
-; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    mov.b64 %SPL, __local_depot3;
-; CHECK-NOI32X2-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_extract_i_param_0];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_1];
-; CHECK-NOI32X2-NEXT:    st.v2.b32 [%SP], {%r1, %r2};
-; CHECK-NOI32X2-NEXT:    and.b64 %rd2, %rd1, 1;
-; CHECK-NOI32X2-NEXT:    shl.b64 %rd3, %rd2, 2;
-; CHECK-NOI32X2-NEXT:    add.u64 %rd4, %SP, 0;
-; CHECK-NOI32X2-NEXT:    or.b64 %rd5, %rd4, %rd3;
-; CHECK-NOI32X2-NEXT:    ld.b32 %r3, [%rd5];
-; CHECK-NOI32X2-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NOI32X2-NEXT:    mov.b64 %rd2, %rd1;
+; CHECK-NOI32X2-NEXT:    and.b64 %rd3, %rd2, 1;
+; CHECK-NOI32X2-NEXT:    shl.b64 %rd4, %rd3, 2;
+; CHECK-NOI32X2-NEXT:    mov.b64 %rd5, test_extract_i_param_0;
+; CHECK-NOI32X2-NEXT:    add.s64 %rd6, %rd5, %rd4;
+; CHECK-NOI32X2-NEXT:    ld.param.b32 %r1, [%rd6];
+; CHECK-NOI32X2-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_extract_i(
 ; CHECK-I32X2:       {
-; CHECK-I32X2-NEXT:    .reg .pred %p<2>;
-; CHECK-I32X2-NEXT:    .reg .b32 %r<4>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_extract_i_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_0];
-; CHECK-I32X2-NEXT:    setp.eq.b64 %p1, %rd2, 0;
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-I32X2-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
-; CHECK-I32X2-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_extract_i_param_1];
+; CHECK-I32X2-NEXT:    mov.b64 %rd2, %rd1;
+; CHECK-I32X2-NEXT:    and.b64 %rd3, %rd2, 1;
+; CHECK-I32X2-NEXT:    shl.b64 %rd4, %rd3, 2;
+; CHECK-I32X2-NEXT:    mov.b64 %rd5, test_extract_i_param_0;
+; CHECK-I32X2-NEXT:    add.s64 %rd6, %rd5, %rd4;
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [%rd6];
+; CHECK-I32X2-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-I32X2-NEXT:    ret;
   %e = extractelement <2 x i32> %a, i64 %idx
   ret i32 %e
@@ -120,8 +118,8 @@ define <2 x i32> @test_add(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_add_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_add_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_add_param_1];
 ; CHECK-NOI32X2-NEXT:    add.s32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    add.s32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -130,16 +128,13 @@ define <2 x i32> @test_add(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_add(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_add_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_add_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    add.s32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    add.s32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_add_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_add_param_1];
+; CHECK-I32X2-NEXT:    add.s32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    add.s32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %r = add <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -160,14 +155,12 @@ define <2 x i32> @test_add_imm_0(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_add_imm_0(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_add_imm_0_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_add_imm_0_param_0];
 ; CHECK-I32X2-NEXT:    add.s32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    add.s32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = add <2 x i32> <i32 1, i32 2>, %a
   ret <2 x i32> %r
@@ -188,14 +181,12 @@ define <2 x i32> @test_add_imm_1(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_add_imm_1(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_add_imm_1_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_add_imm_1_param_0];
 ; CHECK-I32X2-NEXT:    add.s32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    add.s32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = add <2 x i32> %a, <i32 1, i32 2>
   ret <2 x i32> %r
@@ -207,8 +198,8 @@ define <2 x i32> @test_sub(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_sub_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_sub_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_sub_param_1];
 ; CHECK-NOI32X2-NEXT:    sub.s32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    sub.s32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -217,16 +208,13 @@ define <2 x i32> @test_sub(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_sub(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_sub_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_sub_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    sub.s32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    sub.s32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_sub_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_sub_param_1];
+; CHECK-I32X2-NEXT:    sub.s32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    sub.s32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %r = sub <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -238,8 +226,8 @@ define <2 x i32> @test_smax(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_smax_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_smax_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_smax_param_1];
 ; CHECK-NOI32X2-NEXT:    max.s32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    max.s32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -248,16 +236,13 @@ define <2 x i32> @test_smax(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_smax(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_smax_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_smax_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    max.s32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    max.s32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_smax_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_smax_param_1];
+; CHECK-I32X2-NEXT:    max.s32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    max.s32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %cmp = icmp sgt <2 x i32> %a, %b
   %r = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %b
@@ -270,8 +255,8 @@ define <2 x i32> @test_umax(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_umax_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_umax_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_umax_param_1];
 ; CHECK-NOI32X2-NEXT:    max.u32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    max.u32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -280,16 +265,13 @@ define <2 x i32> @test_umax(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_umax(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_umax_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_umax_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    max.u32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    max.u32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_umax_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_umax_param_1];
+; CHECK-I32X2-NEXT:    max.u32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    max.u32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %cmp = icmp ugt <2 x i32> %a, %b
   %r = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %b
@@ -302,8 +284,8 @@ define <2 x i32> @test_smin(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_smin_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_smin_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_smin_param_1];
 ; CHECK-NOI32X2-NEXT:    min.s32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    min.s32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -312,16 +294,13 @@ define <2 x i32> @test_smin(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_smin(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_smin_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_smin_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    min.s32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    min.s32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_smin_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_smin_param_1];
+; CHECK-I32X2-NEXT:    min.s32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    min.s32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %cmp = icmp sle <2 x i32> %a, %b
   %r = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %b
@@ -334,8 +313,8 @@ define <2 x i32> @test_umin(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_umin_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_umin_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_umin_param_1];
 ; CHECK-NOI32X2-NEXT:    min.u32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    min.u32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -344,16 +323,13 @@ define <2 x i32> @test_umin(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_umin(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_umin_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_umin_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    min.u32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    min.u32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_umin_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_umin_param_1];
+; CHECK-I32X2-NEXT:    min.u32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    min.u32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %cmp = icmp ule <2 x i32> %a, %b
   %r = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %b
@@ -367,11 +343,11 @@ define <2 x i32> @test_eq(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_eq_param_2];
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_eq_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_eq_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_eq_param_1];
 ; CHECK-NOI32X2-NEXT:    setp.eq.b32 %p1, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    setp.eq.b32 %p2, %r2, %r4;
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_eq_param_2];
 ; CHECK-NOI32X2-NEXT:    selp.b32 %r7, %r2, %r6, %p2;
 ; CHECK-NOI32X2-NEXT:    selp.b32 %r8, %r1, %r5, %p1;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
@@ -381,20 +357,16 @@ define <2 x i32> @test_eq(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #0 {
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .pred %p<3>;
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<9>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [test_eq_param_2];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_eq_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_eq_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    setp.eq.b32 %p1, %r3, %r1;
-; CHECK-I32X2-NEXT:    setp.eq.b32 %p2, %r4, %r2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r5, %r6}, %rd3;
-; CHECK-I32X2-NEXT:    selp.b32 %r7, %r4, %r6, %p2;
-; CHECK-I32X2-NEXT:    selp.b32 %r8, %r3, %r5, %p1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_eq_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_eq_param_1];
+; CHECK-I32X2-NEXT:    setp.eq.b32 %p1, %r1, %r3;
+; CHECK-I32X2-NEXT:    setp.eq.b32 %p2, %r2, %r4;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r5, %r6}, [test_eq_param_2];
+; CHECK-I32X2-NEXT:    selp.b32 %r7, %r2, %r6, %p2;
+; CHECK-I32X2-NEXT:    selp.b32 %r8, %r1, %r5, %p1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r8, %r7};
 ; CHECK-I32X2-NEXT:    ret;
   %cmp = icmp eq <2 x i32> %a, %b
   %r = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %c
@@ -408,11 +380,11 @@ define <2 x i32> @test_ne(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_ne_param_2];
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_ne_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_ne_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_ne_param_1];
 ; CHECK-NOI32X2-NEXT:    setp.ne.b32 %p1, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    setp.ne.b32 %p2, %r2, %r4;
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_ne_param_2];
 ; CHECK-NOI32X2-NEXT:    selp.b32 %r7, %r2, %r6, %p2;
 ; CHECK-NOI32X2-NEXT:    selp.b32 %r8, %r1, %r5, %p1;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
@@ -422,20 +394,16 @@ define <2 x i32> @test_ne(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #0 {
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .pred %p<3>;
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<9>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [test_ne_param_2];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_ne_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_ne_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    setp.ne.b32 %p1, %r3, %r1;
-; CHECK-I32X2-NEXT:    setp.ne.b32 %p2, %r4, %r2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r5, %r6}, %rd3;
-; CHECK-I32X2-NEXT:    selp.b32 %r7, %r4, %r6, %p2;
-; CHECK-I32X2-NEXT:    selp.b32 %r8, %r3, %r5, %p1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_ne_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_ne_param_1];
+; CHECK-I32X2-NEXT:    setp.ne.b32 %p1, %r1, %r3;
+; CHECK-I32X2-NEXT:    setp.ne.b32 %p2, %r2, %r4;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r5, %r6}, [test_ne_param_2];
+; CHECK-I32X2-NEXT:    selp.b32 %r7, %r2, %r6, %p2;
+; CHECK-I32X2-NEXT:    selp.b32 %r8, %r1, %r5, %p1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r8, %r7};
 ; CHECK-I32X2-NEXT:    ret;
   %cmp = icmp ne <2 x i32> %a, %b
   %r = select <2 x i1> %cmp, <2 x i32> %a, <2 x i32> %c
@@ -448,8 +416,8 @@ define <2 x i32> @test_mul(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_mul_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_mul_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_mul_param_1];
 ; CHECK-NOI32X2-NEXT:    mul.lo.s32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    mul.lo.s32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -458,16 +426,13 @@ define <2 x i32> @test_mul(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_mul(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_mul_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_mul_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    mul.lo.s32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    mul.lo.s32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_mul_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_mul_param_1];
+; CHECK-I32X2-NEXT:    mul.lo.s32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    mul.lo.s32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %r = mul <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -479,8 +444,8 @@ define <2 x i32> @test_or(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_or_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_or_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_or_param_1];
 ; CHECK-NOI32X2-NEXT:    or.b32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    or.b32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -489,30 +454,36 @@ define <2 x i32> @test_or(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_or(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_or_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_or_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    or.b32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    or.b32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_or_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_or_param_1];
+; CHECK-I32X2-NEXT:    or.b32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    or.b32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %r = or <2 x i32> %a, %b
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_or_computed(i32 %a) {
-; CHECK-LABEL: test_or_computed(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_or_computed_param_0];
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, 5};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_or_computed(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b32 %r1, [test_or_computed_param_0];
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r1, 5};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_or_computed(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_or_computed_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r1, 5};
+; CHECK-I32X2-NEXT:    ret;
   %ins.0 = insertelement <2 x i32> zeroinitializer, i32 %a, i32 0
   %ins.1 = insertelement <2 x i32> %ins.0, i32 5, i32 1
   %r = or <2 x i32> %ins.1, %ins.0
@@ -534,14 +505,12 @@ define <2 x i32> @test_or_imm_0(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_or_imm_0(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_or_imm_0_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_or_imm_0_param_0];
 ; CHECK-I32X2-NEXT:    or.b32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    or.b32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = or <2 x i32> <i32 1, i32 2>, %a
   ret <2 x i32> %r
@@ -562,14 +531,12 @@ define <2 x i32> @test_or_imm_1(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_or_imm_1(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_or_imm_1_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_or_imm_1_param_0];
 ; CHECK-I32X2-NEXT:    or.b32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    or.b32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = or <2 x i32> %a, <i32 1, i32 2>
   ret <2 x i32> %r
@@ -581,8 +548,8 @@ define <2 x i32> @test_xor(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_xor_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_xor_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_xor_param_1];
 ; CHECK-NOI32X2-NEXT:    xor.b32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    xor.b32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -591,30 +558,32 @@ define <2 x i32> @test_xor(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_xor(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_xor_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_xor_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    xor.b32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    xor.b32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_xor_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_xor_param_1];
+; CHECK-I32X2-NEXT:    xor.b32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    xor.b32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %r = xor <2 x i32> %a, %b
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_xor_computed(i32 %a) {
-; CHECK-LABEL: test_xor_computed(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_xor_computed_param_0];
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 5};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_xor_computed(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {0, 5};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_xor_computed(
+; CHECK-I32X2:       {
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {0, 5};
+; CHECK-I32X2-NEXT:    ret;
   %ins.0 = insertelement <2 x i32> zeroinitializer, i32 %a, i32 0
   %ins.1 = insertelement <2 x i32> %ins.0, i32 5, i32 1
   %r = xor <2 x i32> %ins.1, %ins.0
@@ -636,14 +605,12 @@ define <2 x i32> @test_xor_imm_0(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_xor_imm_0(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_xor_imm_0_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_xor_imm_0_param_0];
 ; CHECK-I32X2-NEXT:    xor.b32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    xor.b32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = xor <2 x i32> <i32 1, i32 2>, %a
   ret <2 x i32> %r
@@ -664,14 +631,12 @@ define <2 x i32> @test_xor_imm_1(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_xor_imm_1(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_xor_imm_1_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_xor_imm_1_param_0];
 ; CHECK-I32X2-NEXT:    xor.b32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    xor.b32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = xor <2 x i32> %a, <i32 1, i32 2>
   ret <2 x i32> %r
@@ -683,8 +648,8 @@ define <2 x i32> @test_and(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_and_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_and_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_and_param_1];
 ; CHECK-NOI32X2-NEXT:    and.b32 %r5, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    and.b32 %r6, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
@@ -693,30 +658,36 @@ define <2 x i32> @test_and(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-LABEL: test_and(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_and_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_and_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
-; CHECK-I32X2-NEXT:    and.b32 %r5, %r4, %r2;
-; CHECK-I32X2-NEXT:    and.b32 %r6, %r3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_and_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_and_param_1];
+; CHECK-I32X2-NEXT:    and.b32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    and.b32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
 ; CHECK-I32X2-NEXT:    ret;
   %r = and <2 x i32> %a, %b
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_and_computed(i32 %a) {
-; CHECK-LABEL: test_and_computed(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_and_computed_param_0];
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, 0};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_and_computed(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b32 %r1, [test_and_computed_param_0];
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r1, 0};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_and_computed(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_and_computed_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r1, 0};
+; CHECK-I32X2-NEXT:    ret;
   %ins.0 = insertelement <2 x i32> zeroinitializer, i32 %a, i32 0
   %ins.1 = insertelement <2 x i32> %ins.0, i32 5, i32 1
   %r = and <2 x i32> %ins.1, %ins.0
@@ -738,14 +709,12 @@ define <2 x i32> @test_and_imm_0(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_and_imm_0(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_and_imm_0_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_and_imm_0_param_0];
 ; CHECK-I32X2-NEXT:    and.b32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    and.b32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = and <2 x i32> <i32 1, i32 2>, %a
   ret <2 x i32> %r
@@ -766,14 +735,12 @@ define <2 x i32> @test_and_imm_1(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_and_imm_1(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_and_imm_1_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_and_imm_1_param_0];
 ; CHECK-I32X2-NEXT:    and.b32 %r3, %r2, 2;
 ; CHECK-I32X2-NEXT:    and.b32 %r4, %r1, 1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = and <2 x i32> %a, <i32 1, i32 2>
   ret <2 x i32> %r
@@ -786,9 +753,9 @@ define void @test_ldst_v2i32(ptr %a, ptr %b) {
 ; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i32_param_0];
 ; CHECK-NOI32X2-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_param_1];
 ; CHECK-NOI32X2-NEXT:    st.v2.b32 [%rd2], {%r1, %r2};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
@@ -797,10 +764,10 @@ define void @test_ldst_v2i32(ptr %a, ptr %b) {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i32_param_0];
-; CHECK-I32X2-NEXT:    ld.b64 %rd3, [%rd1];
-; CHECK-I32X2-NEXT:    st.b64 [%rd2], %rd3;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v2i32_param_0];
+; CHECK-I32X2-NEXT:    ld.b64 %rd2, [%rd1];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [test_ldst_v2i32_param_1];
+; CHECK-I32X2-NEXT:    st.b64 [%rd3], %rd2;
 ; CHECK-I32X2-NEXT:    ret;
   %t1 = load <2 x i32>, ptr %a
   store <2 x i32> %t1, ptr %b, align 16
@@ -808,19 +775,33 @@ define void @test_ldst_v2i32(ptr %a, ptr %b) {
 }
 
 define void @test_ldst_v3i32(ptr %a, ptr %b) {
-; CHECK-LABEL: test_ldst_v3i32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v3i32_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v3i32_param_0];
-; CHECK-NEXT:    ld.b64 %rd3, [%rd1];
-; CHECK-NEXT:    ld.b32 %r1, [%rd1+8];
-; CHECK-NEXT:    st.b32 [%rd2+8], %r1;
-; CHECK-NEXT:    st.b64 [%rd2], %rd3;
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_ldst_v3i32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v3i32_param_0];
+; CHECK-NOI32X2-NEXT:    ld.b64 %rd2, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.b32 %r1, [%rd1+8];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd3, [test_ldst_v3i32_param_1];
+; CHECK-NOI32X2-NEXT:    st.b32 [%rd3+8], %r1;
+; CHECK-NOI32X2-NEXT:    st.b64 [%rd3], %rd2;
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_ldst_v3i32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v3i32_param_0];
+; CHECK-I32X2-NEXT:    ld.b64 %rd2, [%rd1];
+; CHECK-I32X2-NEXT:    ld.b32 %r1, [%rd1+8];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [test_ldst_v3i32_param_1];
+; CHECK-I32X2-NEXT:    st.b32 [%rd3+8], %r1;
+; CHECK-I32X2-NEXT:    st.b64 [%rd3], %rd2;
+; CHECK-I32X2-NEXT:    ret;
   %t1 = load <3 x i32>, ptr %a
   store <3 x i32> %t1, ptr %b, align 16
   ret void
@@ -833,9 +814,9 @@ define void @test_ldst_v4i32(ptr %a, ptr %b) {
 ; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i32_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i32_param_0];
 ; CHECK-NOI32X2-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i32_param_1];
 ; CHECK-NOI32X2-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
@@ -844,10 +825,10 @@ define void @test_ldst_v4i32(ptr %a, ptr %b) {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i32_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i32_param_0];
-; CHECK-I32X2-NEXT:    ld.v2.b64 {%rd3, %rd4}, [%rd1];
-; CHECK-I32X2-NEXT:    st.v2.b64 [%rd2], {%rd3, %rd4};
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v4i32_param_0];
+; CHECK-I32X2-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd4, [test_ldst_v4i32_param_1];
+; CHECK-I32X2-NEXT:    st.v2.b64 [%rd4], {%rd2, %rd3};
 ; CHECK-I32X2-NEXT:    ret;
   %t1 = load <4 x i32>, ptr %a
   store <4 x i32> %t1, ptr %b, align 16
@@ -861,7 +842,6 @@ define void @test_ldst_v2i32_unaligned(ptr %a, ptr %b) {
 ; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_unaligned_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i32_unaligned_param_0];
 ; CHECK-NOI32X2-NEXT:    ld.b8 %r1, [%rd1+2];
 ; CHECK-NOI32X2-NEXT:    shl.b32 %r2, %r1, 16;
@@ -874,6 +854,7 @@ define void @test_ldst_v2i32_unaligned(ptr %a, ptr %b) {
 ; CHECK-NOI32X2-NEXT:    ld.b8 %r9, [%rd1+5];
 ; CHECK-NOI32X2-NEXT:    ld.b8 %r10, [%rd1+6];
 ; CHECK-NOI32X2-NEXT:    ld.b8 %r11, [%rd1+7];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_unaligned_param_1];
 ; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+7], %r11;
 ; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+6], %r10;
 ; CHECK-NOI32X2-NEXT:    st.b8 [%rd2+5], %r9;
@@ -890,41 +871,41 @@ define void @test_ldst_v2i32_unaligned(ptr %a, ptr %b) {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<28>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i32_unaligned_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i32_unaligned_param_0];
-; CHECK-I32X2-NEXT:    ld.b8 %rd3, [%rd1];
-; CHECK-I32X2-NEXT:    ld.b8 %rd4, [%rd1+1];
-; CHECK-I32X2-NEXT:    shl.b64 %rd5, %rd4, 8;
-; CHECK-I32X2-NEXT:    or.b64 %rd6, %rd5, %rd3;
-; CHECK-I32X2-NEXT:    ld.b8 %rd7, [%rd1+2];
-; CHECK-I32X2-NEXT:    shl.b64 %rd8, %rd7, 16;
-; CHECK-I32X2-NEXT:    ld.b8 %rd9, [%rd1+3];
-; CHECK-I32X2-NEXT:    shl.b64 %rd10, %rd9, 24;
-; CHECK-I32X2-NEXT:    or.b64 %rd11, %rd10, %rd8;
-; CHECK-I32X2-NEXT:    or.b64 %rd12, %rd11, %rd6;
-; CHECK-I32X2-NEXT:    ld.b8 %rd13, [%rd1+4];
-; CHECK-I32X2-NEXT:    ld.b8 %rd14, [%rd1+5];
-; CHECK-I32X2-NEXT:    shl.b64 %rd15, %rd14, 8;
-; CHECK-I32X2-NEXT:    or.b64 %rd16, %rd15, %rd13;
-; CHECK-I32X2-NEXT:    ld.b8 %rd17, [%rd1+6];
-; CHECK-I32X2-NEXT:    shl.b64 %rd18, %rd17, 16;
-; CHECK-I32X2-NEXT:    ld.b8 %rd19, [%rd1+7];
-; CHECK-I32X2-NEXT:    shl.b64 %rd20, %rd19, 24;
-; CHECK-I32X2-NEXT:    or.b64 %rd21, %rd20, %rd18;
-; CHECK-I32X2-NEXT:    or.b64 %rd22, %rd21, %rd16;
-; CHECK-I32X2-NEXT:    shl.b64 %rd23, %rd22, 32;
-; CHECK-I32X2-NEXT:    or.b64 %rd24, %rd23, %rd12;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+6], %rd17;
-; CHECK-I32X2-NEXT:    shr.u64 %rd25, %rd24, 56;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+7], %rd25;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+4], %rd13;
-; CHECK-I32X2-NEXT:    shr.u64 %rd26, %rd24, 40;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+5], %rd26;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+1], %rd4;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2], %rd3;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+3], %rd9;
-; CHECK-I32X2-NEXT:    shr.u64 %rd27, %rd24, 16;
-; CHECK-I32X2-NEXT:    st.b8 [%rd2+2], %rd27;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_ldst_v2i32_unaligned_param_0];
+; CHECK-I32X2-NEXT:    ld.b8 %rd2, [%rd1];
+; CHECK-I32X2-NEXT:    ld.b8 %rd3, [%rd1+1];
+; CHECK-I32X2-NEXT:    shl.b64 %rd4, %rd3, 8;
+; CHECK-I32X2-NEXT:    or.b64 %rd5, %rd4, %rd2;
+; CHECK-I32X2-NEXT:    ld.b8 %rd6, [%rd1+2];
+; CHECK-I32X2-NEXT:    shl.b64 %rd7, %rd6, 16;
+; CHECK-I32X2-NEXT:    ld.b8 %rd8, [%rd1+3];
+; CHECK-I32X2-NEXT:    shl.b64 %rd9, %rd8, 24;
+; CHECK-I32X2-NEXT:    or.b64 %rd10, %rd9, %rd7;
+; CHECK-I32X2-NEXT:    or.b64 %rd11, %rd10, %rd5;
+; CHECK-I32X2-NEXT:    ld.b8 %rd12, [%rd1+4];
+; CHECK-I32X2-NEXT:    ld.b8 %rd13, [%rd1+5];
+; CHECK-I32X2-NEXT:    shl.b64 %rd14, %rd13, 8;
+; CHECK-I32X2-NEXT:    or.b64 %rd15, %rd14, %rd12;
+; CHECK-I32X2-NEXT:    ld.b8 %rd16, [%rd1+6];
+; CHECK-I32X2-NEXT:    shl.b64 %rd17, %rd16, 16;
+; CHECK-I32X2-NEXT:    ld.b8 %rd18, [%rd1+7];
+; CHECK-I32X2-NEXT:    shl.b64 %rd19, %rd18, 24;
+; CHECK-I32X2-NEXT:    or.b64 %rd20, %rd19, %rd17;
+; CHECK-I32X2-NEXT:    or.b64 %rd21, %rd20, %rd15;
+; CHECK-I32X2-NEXT:    shl.b64 %rd22, %rd21, 32;
+; CHECK-I32X2-NEXT:    or.b64 %rd23, %rd22, %rd11;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd24, [test_ldst_v2i32_unaligned_param_1];
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+6], %rd16;
+; CHECK-I32X2-NEXT:    shr.u64 %rd25, %rd23, 56;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+7], %rd25;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+4], %rd12;
+; CHECK-I32X2-NEXT:    shr.u64 %rd26, %rd23, 40;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+5], %rd26;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+1], %rd3;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24], %rd2;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+3], %rd8;
+; CHECK-I32X2-NEXT:    shr.u64 %rd27, %rd23, 16;
+; CHECK-I32X2-NEXT:    st.b8 [%rd24+2], %rd27;
 ; CHECK-I32X2-NEXT:    ret;
   %t1 = load <2 x i32>, ptr %a, align 1
   store <2 x i32> %t1, ptr %b, align 1
@@ -939,12 +920,12 @@ define <2 x i32> @test_call(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_call_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_call_param_0];
 ; CHECK-NOI32X2-NEXT:    { // callseq 0, 0
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 retval0[8];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_call_param_1];
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [param1], {%r3, %r4};
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NOI32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
@@ -958,18 +939,18 @@ define <2 x i32> @test_call(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_call_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_call_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_call_param_0];
 ; CHECK-I32X2-NEXT:    { // callseq 0, 0
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-I32X2-NEXT:    st.param.b64 [param1], %rd2;
-; CHECK-I32X2-NEXT:    st.param.b64 [param0], %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd2, [test_call_param_1];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [param1], %rd2;
+; CHECK-I32X2-NEXT:    st.param::func.b64 [param0], %rd1;
 ; CHECK-I32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [retval0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [retval0];
 ; CHECK-I32X2-NEXT:    } // callseq 0
-; CHECK-I32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-I32X2-NEXT:    ret;
   %r = call <2 x i32> @test_callee(<2 x i32> %a, <2 x i32> %b)
   ret <2 x i32> %r
@@ -981,13 +962,13 @@ define <2 x i32> @test_call_flipped(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_call_flipped_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_call_flipped_param_0];
 ; CHECK-NOI32X2-NEXT:    { // callseq 1, 0
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 retval0[8];
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [param1], {%r1, %r2};
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_call_flipped_param_1];
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [param0], {%r3, %r4};
 ; CHECK-NOI32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [retval0];
@@ -1000,18 +981,18 @@ define <2 x i32> @test_call_flipped(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_call_flipped_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_call_flipped_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_call_flipped_param_0];
 ; CHECK-I32X2-NEXT:    { // callseq 1, 0
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-I32X2-NEXT:    st.param.b64 [param1], %rd1;
-; CHECK-I32X2-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-I32X2-NEXT:    st.param::func.b64 [param1], %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd2, [test_call_flipped_param_1];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [param0], %rd2;
 ; CHECK-I32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [retval0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [retval0];
 ; CHECK-I32X2-NEXT:    } // callseq 1
-; CHECK-I32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-I32X2-NEXT:    ret;
   %r = call <2 x i32> @test_callee(<2 x i32> %b, <2 x i32> %a)
   ret <2 x i32> %r
@@ -1023,13 +1004,13 @@ define <2 x i32> @test_tailcall_flipped(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_tailcall_flipped_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_tailcall_flipped_param_0];
 ; CHECK-NOI32X2-NEXT:    { // callseq 2, 0
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-NOI32X2-NEXT:    .param .align 8 .b8 retval0[8];
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [param1], {%r1, %r2};
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_tailcall_flipped_param_1];
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [param0], {%r3, %r4};
 ; CHECK-NOI32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [retval0];
@@ -1042,18 +1023,18 @@ define <2 x i32> @test_tailcall_flipped(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_tailcall_flipped_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_tailcall_flipped_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_tailcall_flipped_param_0];
 ; CHECK-I32X2-NEXT:    { // callseq 2, 0
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 param1[8];
 ; CHECK-I32X2-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-I32X2-NEXT:    st.param.b64 [param1], %rd1;
-; CHECK-I32X2-NEXT:    st.param.b64 [param0], %rd2;
+; CHECK-I32X2-NEXT:    st.param::func.b64 [param1], %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd2, [test_tailcall_flipped_param_1];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [param0], %rd2;
 ; CHECK-I32X2-NEXT:    call.uni (retval0), test_callee, (param0, param1);
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [retval0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [retval0];
 ; CHECK-I32X2-NEXT:    } // callseq 2
-; CHECK-I32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-I32X2-NEXT:    ret;
   %r = tail call <2 x i32> @test_callee(<2 x i32> %b, <2 x i32> %a)
   ret <2 x i32> %r
@@ -1063,34 +1044,38 @@ define <2 x i32> @test_select(<2 x i32> %a, <2 x i32> %b, i1 zeroext %c) #0 {
 ; CHECK-NOI32X2-LABEL: test_select(
 ; CHECK-NOI32X2:       {
 ; CHECK-NOI32X2-NEXT:    .reg .pred %p<2>;
-; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
 ; CHECK-NOI32X2-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
-; CHECK-NOI32X2-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NOI32X2-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_select_param_1];
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_select_param_0];
-; CHECK-NOI32X2-NEXT:    selp.b32 %r5, %r2, %r4, %p1;
-; CHECK-NOI32X2-NEXT:    selp.b32 %r6, %r1, %r3, %p1;
-; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-NOI32X2-NEXT:    mov.b16 %rs2, %rs1;
+; CHECK-NOI32X2-NEXT:    and.b16 %rs3, %rs2, 1;
+; CHECK-NOI32X2-NEXT:    setp.ne.b16 %p1, %rs3, 0;
+; CHECK-NOI32X2-NEXT:    mov.b64 %rd1, test_select_param_1;
+; CHECK-NOI32X2-NEXT:    mov.b64 %rd2, test_select_param_0;
+; CHECK-NOI32X2-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [%rd3];
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_select(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .pred %p<2>;
-; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<4>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
-; CHECK-I32X2-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-I32X2-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_select_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_select_param_0];
-; CHECK-I32X2-NEXT:    selp.b64 %rd3, %rd1, %rd2, %p1;
-; CHECK-I32X2-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-I32X2-NEXT:    ld.param::func.b8 %rs1, [test_select_param_2];
+; CHECK-I32X2-NEXT:    mov.b16 %rs2, %rs1;
+; CHECK-I32X2-NEXT:    and.b16 %rs3, %rs2, 1;
+; CHECK-I32X2-NEXT:    setp.ne.b16 %p1, %rs3, 0;
+; CHECK-I32X2-NEXT:    mov.b64 %rd1, test_select_param_1;
+; CHECK-I32X2-NEXT:    mov.b64 %rd2, test_select_param_0;
+; CHECK-I32X2-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd4, [%rd3];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-I32X2-NEXT:    ret;
   %r = select i1 %c, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %r
@@ -1103,14 +1088,14 @@ define <2 x i32> @test_select_cc(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<11>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r7, %r8}, [test_select_cc_param_3];
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_select_cc_param_2];
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_select_cc_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_select_cc_param_0];
-; CHECK-NOI32X2-NEXT:    setp.ne.b32 %p1, %r5, %r7;
-; CHECK-NOI32X2-NEXT:    setp.ne.b32 %p2, %r6, %r8;
-; CHECK-NOI32X2-NEXT:    selp.b32 %r9, %r2, %r4, %p2;
-; CHECK-NOI32X2-NEXT:    selp.b32 %r10, %r1, %r3, %p1;
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_select_cc_param_2];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_select_cc_param_3];
+; CHECK-NOI32X2-NEXT:    setp.ne.b32 %p1, %r3, %r5;
+; CHECK-NOI32X2-NEXT:    setp.ne.b32 %p2, %r4, %r6;
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r7, %r8}, [test_select_cc_param_1];
+; CHECK-NOI32X2-NEXT:    selp.b32 %r9, %r2, %r8, %p2;
+; CHECK-NOI32X2-NEXT:    selp.b32 %r10, %r1, %r7, %p1;
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r9};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
@@ -1118,22 +1103,17 @@ define <2 x i32> @test_select_cc(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .pred %p<3>;
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<11>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd4, [test_select_cc_param_3];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [test_select_cc_param_2];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_select_cc_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_select_cc_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd4;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd3;
-; CHECK-I32X2-NEXT:    setp.ne.b32 %p1, %r3, %r1;
-; CHECK-I32X2-NEXT:    setp.ne.b32 %p2, %r4, %r2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r5, %r6}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {%r7, %r8}, %rd1;
-; CHECK-I32X2-NEXT:    selp.b32 %r9, %r8, %r6, %p2;
-; CHECK-I32X2-NEXT:    selp.b32 %r10, %r7, %r5, %p1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r9};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_select_cc_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r3, %r4}, [test_select_cc_param_2];
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r5, %r6}, [test_select_cc_param_3];
+; CHECK-I32X2-NEXT:    setp.ne.b32 %p1, %r3, %r5;
+; CHECK-I32X2-NEXT:    setp.ne.b32 %p2, %r4, %r6;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r7, %r8}, [test_select_cc_param_1];
+; CHECK-I32X2-NEXT:    selp.b32 %r9, %r2, %r8, %p2;
+; CHECK-I32X2-NEXT:    selp.b32 %r10, %r1, %r7, %p1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r10, %r9};
 ; CHECK-I32X2-NEXT:    ret;
   %cc = icmp ne <2 x i32> %c, %d
   %r = select <2 x i1> %cc, <2 x i32> %a, <2 x i32> %b
@@ -1154,13 +1134,11 @@ define <2 x i16> @test_trunc_2xi32_to_2xi16(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_trunc_2xi32_to_2xi16(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<4>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_to_2xi16_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_trunc_2xi32_to_2xi16_param_0];
 ; CHECK-I32X2-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
-; CHECK-I32X2-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-I32X2-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-I32X2-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i16>
   ret <2 x i16> %r
@@ -1183,14 +1161,12 @@ define <2 x i8> @test_trunc_2xi32_to_2xi8(<2 x i32> %a) #0 {
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_to_2xi8_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_trunc_2xi32_to_2xi8_param_0];
 ; CHECK-I32X2-NEXT:    cvt.u16.u32 %rs1, %r2;
 ; CHECK-I32X2-NEXT:    cvt.u16.u32 %rs2, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b8 [func_retval0], {%rs2, %rs1};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b8 [func_retval0], {%rs2, %rs1};
 ; CHECK-I32X2-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i8>
   ret <2 x i8> %r
@@ -1210,88 +1186,124 @@ define <2 x i1> @test_trunc_2xi32_to_2xi1(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_trunc_2xi32_to_2xi1(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_to_2xi1_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-I32X2-NEXT:    st.param.b8 [func_retval0], %r1;
-; CHECK-I32X2-NEXT:    st.param.b8 [func_retval0+1], %r2;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_trunc_2xi32_to_2xi1_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.b8 [func_retval0], %r1;
+; CHECK-I32X2-NEXT:    st.param::func.b8 [func_retval0+1], %r2;
 ; CHECK-I32X2-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i1>
   ret <2 x i1> %r
 }
 
 define <2 x i32> @test_trunc_2xi64(<2 x i64> %a) #0 {
-; CHECK-LABEL: test_trunc_2xi64(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
-; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
-; CHECK-NEXT:    cvt.u32.u64 %r2, %rd1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_trunc_2xi64(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NOI32X2-NEXT:    cvt.u32.u64 %r2, %rd1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_trunc_2xi64(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
+; CHECK-I32X2-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-I32X2-NEXT:    cvt.u32.u64 %r2, %rd1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ret;
   %r = trunc <2 x i64> %a to <2 x i32>
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_zext_2xi16_to_2xi32(<2 x i16> %a) #0 {
-; CHECK-LABEL: test_zext_2xi16_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_zext_2xi16_to_2xi32_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_zext_2xi16_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_zext_2xi16_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_zext_2xi16_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [test_zext_2xi16_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ret;
   %r = zext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_zext_2xi8_to_2xi32(<2 x i8> %a) #0 {
-; CHECK-LABEL: test_zext_2xi8_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_zext_2xi8_to_2xi32_param_0];
-; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r3, %rs1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_zext_2xi8_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_zext_2xi8_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_zext_2xi8_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b8 {%rs1, %rs2}, [test_zext_2xi8_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ret;
   %r = zext <2 x i8> %a to <2 x i32>
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_zext_2xi1_to_2xi32(<2 x i1> %a) #0 {
-; CHECK-LABEL: test_zext_2xi1_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [test_zext_2xi1_to_2xi32_param_0+1];
-; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.ne.b16 %p2, %rs2, 0;
-; CHECK-NEXT:    ld.param.b8 %rs3, [test_zext_2xi1_to_2xi32_param_0];
-; CHECK-NEXT:    and.b16 %rs4, %rs3, 1;
-; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    and.b32 %r2, %r1, 1;
-; CHECK-NEXT:    cvt.u32.u16 %r3, %rs3;
-; CHECK-NEXT:    and.b32 %r4, %r3, 1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r2};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_zext_2xi1_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b8 %r1, [test_zext_2xi1_to_2xi32_param_0+1];
+; CHECK-NOI32X2-NEXT:    and.b32 %r2, %r1, 1;
+; CHECK-NOI32X2-NEXT:    ld.param.b8 %r3, [test_zext_2xi1_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    and.b32 %r4, %r3, 1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_zext_2xi1_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b8 %r1, [test_zext_2xi1_to_2xi32_param_0+1];
+; CHECK-I32X2-NEXT:    and.b32 %r2, %r1, 1;
+; CHECK-I32X2-NEXT:    ld.param::func.b8 %r3, [test_zext_2xi1_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    and.b32 %r4, %r3, 1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-I32X2-NEXT:    ret;
   %r = zext <2 x i1> %a to <2 x i32>
   ret <2 x i32> %r
 }
@@ -1312,41 +1324,58 @@ define <2 x i64> @test_zext_2xi64(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_zext_2xi64(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_zext_2xi64_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-I32X2-NEXT:    cvt.u64.u32 %rd2, %r2;
-; CHECK-I32X2-NEXT:    cvt.u64.u32 %rd3, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd2};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_zext_2xi64_param_0];
+; CHECK-I32X2-NEXT:    cvt.u64.u32 %rd1, %r2;
+; CHECK-I32X2-NEXT:    cvt.u64.u32 %rd2, %r1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd1};
 ; CHECK-I32X2-NEXT:    ret;
   %r = zext <2 x i32> %a to <2 x i64>
   ret <2 x i64> %r
 }
 
 define <2 x i32> @test_bitcast_i64_to_2xi32(i64 %a) #0 {
-; CHECK-LABEL: test_bitcast_i64_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_bitcast_i64_to_2xi32_param_0];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_bitcast_i64_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_i64_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_bitcast_i64_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_i64_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
+; CHECK-I32X2-NEXT:    ret;
   %r = bitcast i64 %a to <2 x i32>
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_bitcast_double_to_2xi32(double %a) #0 {
-; CHECK-LABEL: test_bitcast_double_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_bitcast_double_to_2xi32_param_0];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_bitcast_double_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_double_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_bitcast_double_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_double_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
+; CHECK-I32X2-NEXT:    ret;
   %r = bitcast double %a to <2 x i32>
   ret <2 x i32> %r
 }
@@ -1366,8 +1395,8 @@ define i64 @test_bitcast_2xi32_to_i64(<2 x i32> %a) #0 {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_2xi32_to_i64_param_0];
-; CHECK-I32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_2xi32_to_i64_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
 ; CHECK-I32X2-NEXT:    ret;
   %r = bitcast <2 x i32> %a to i64
   ret i64 %r
@@ -1388,8 +1417,8 @@ define double @test_bitcast_2xi32_to_double(<2 x i32> %a) #0 {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_bitcast_2xi32_to_double_param_0];
-; CHECK-I32X2-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_bitcast_2xi32_to_double_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.b64 [func_retval0], %rd1;
 ; CHECK-I32X2-NEXT:    ret;
   %r = bitcast <2 x i32> %a to double
   ret double %r
@@ -1397,14 +1426,23 @@ define double @test_bitcast_2xi32_to_double(<2 x i32> %a) #0 {
 
 
 define <4 x half> @test_bitcast_2xi32_to_4xhalf(i32 %a) #0 {
-; CHECK-LABEL: test_bitcast_2xi32_to_4xhalf(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_2xi32_to_4xhalf_param_0];
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, 5};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_bitcast_2xi32_to_4xhalf(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.b32 %r1, [test_bitcast_2xi32_to_4xhalf_param_0];
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r1, 5};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_bitcast_2xi32_to_4xhalf(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<2>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_bitcast_2xi32_to_4xhalf_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r1, 5};
+; CHECK-I32X2-NEXT:    ret;
   %ins.0 = insertelement <2 x i32> poison, i32 %a, i32 0
   %ins.1 = insertelement <2 x i32> %ins.0, i32 5, i32 1
   %r = bitcast <2 x i32> %ins.1 to <4 x half>
@@ -1425,12 +1463,10 @@ define <2 x i32> @test_shufflevector(<2 x i32> %a) #0 {
 ; CHECK-I32X2-LABEL: test_shufflevector(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_shufflevector_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_shufflevector_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-I32X2-NEXT:    ret;
   %s = shufflevector <2 x i32> %a, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i32> %s
@@ -1442,22 +1478,19 @@ define <2 x i32> @test_shufflevector_2(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NOI32X2-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_shufflevector_2_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_shufflevector_2_param_0];
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_shufflevector_2_param_1];
 ; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r4};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_shufflevector_2(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_shufflevector_2_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_shufflevector_2_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {_, %r1}, %rd2;
-; CHECK-I32X2-NEXT:    mov.b64 {_, %r2}, %rd1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_shufflevector_2_param_1+4];
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r2, [test_shufflevector_2_param_0+4];
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-I32X2-NEXT:    ret;
   %s = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i32> %s
@@ -1478,68 +1511,104 @@ define <2 x i32> @test_insertelement(<2 x i32> %a, i32 %x) #0 {
 ; CHECK-I32X2-LABEL: test_insertelement(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b32 %r1, [test_insertelement_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_insertelement_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r2, _}, %rd1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r1, [test_insertelement_param_1];
+; CHECK-I32X2-NEXT:    ld.param::func.b32 %r2, [test_insertelement_param_0];
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-I32X2-NEXT:    ret;
   %i = insertelement <2 x i32> %a, i32 %x, i64 1
   ret <2 x i32> %i
 }
 
 define <2 x i32> @test_fptosi_2xhalf_to_2xi32(<2 x half> %a) #0 {
-; CHECK-LABEL: test_fptosi_2xhalf_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fptosi_2xhalf_to_2xi32_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.rzi.s32.f16 %r2, %rs2;
-; CHECK-NEXT:    cvt.rzi.s32.f16 %r3, %rs1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_fptosi_2xhalf_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fptosi_2xhalf_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.rzi.s32.f16 %r1, %rs2;
+; CHECK-NOI32X2-NEXT:    cvt.rzi.s32.f16 %r2, %rs1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_fptosi_2xhalf_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [test_fptosi_2xhalf_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    cvt.rzi.s32.f16 %r1, %rs2;
+; CHECK-I32X2-NEXT:    cvt.rzi.s32.f16 %r2, %rs1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ret;
   %r = fptosi <2 x half> %a to <2 x i32>
   ret <2 x i32> %r
 }
 
 define <2 x i32> @test_fptoui_2xhalf_to_2xi32(<2 x half> %a) #0 {
-; CHECK-LABEL: test_fptoui_2xhalf_to_2xi32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fptoui_2xhalf_to_2xi32_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.rzi.u32.f16 %r2, %rs2;
-; CHECK-NEXT:    cvt.rzi.u32.f16 %r3, %rs1;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_fptoui_2xhalf_to_2xi32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fptoui_2xhalf_to_2xi32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.rzi.u32.f16 %r1, %rs2;
+; CHECK-NOI32X2-NEXT:    cvt.rzi.u32.f16 %r2, %rs1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_fptoui_2xhalf_to_2xi32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [test_fptoui_2xhalf_to_2xi32_param_0];
+; CHECK-I32X2-NEXT:    cvt.rzi.u32.f16 %r1, %rs2;
+; CHECK-I32X2-NEXT:    cvt.rzi.u32.f16 %r2, %rs1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-I32X2-NEXT:    ret;
   %r = fptoui <2 x half> %a to <2 x i32>
   ret <2 x i32> %r
 }
 
 define void @test_srem_v2i32(ptr %a, ptr %b, ptr %c) {
-; CHECK-LABEL: test_srem_v2i32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<7>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_srem_v2i32_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_srem_v2i32_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_srem_v2i32_param_0];
-; CHECK-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
-; CHECK-NEXT:    ld.v2.b32 {%r3, %r4}, [%rd2];
-; CHECK-NEXT:    rem.s32 %r5, %r2, %r4;
-; CHECK-NEXT:    rem.s32 %r6, %r1, %r3;
-; CHECK-NEXT:    st.v2.b32 [%rd3], {%r6, %r5};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_srem_v2i32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0: // %entry
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_srem_v2i32_param_0];
+; CHECK-NOI32X2-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_srem_v2i32_param_1];
+; CHECK-NOI32X2-NEXT:    ld.v2.b32 {%r3, %r4}, [%rd2];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd3, [test_srem_v2i32_param_2];
+; CHECK-NOI32X2-NEXT:    rem.s32 %r5, %r2, %r4;
+; CHECK-NOI32X2-NEXT:    rem.s32 %r6, %r1, %r3;
+; CHECK-NOI32X2-NEXT:    st.v2.b32 [%rd3], {%r6, %r5};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_srem_v2i32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0: // %entry
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_srem_v2i32_param_0];
+; CHECK-I32X2-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd2, [test_srem_v2i32_param_1];
+; CHECK-I32X2-NEXT:    ld.v2.b32 {%r3, %r4}, [%rd2];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [test_srem_v2i32_param_2];
+; CHECK-I32X2-NEXT:    rem.s32 %r5, %r2, %r4;
+; CHECK-I32X2-NEXT:    rem.s32 %r6, %r1, %r3;
+; CHECK-I32X2-NEXT:    st.v2.b32 [%rd3], {%r6, %r5};
+; CHECK-I32X2-NEXT:    ret;
 entry:
   %t57 = load <2 x i32>, ptr %a, align 8
   %t59 = load <2 x i32>, ptr %b, align 8
@@ -1555,17 +1624,17 @@ define void @test_srem_v3i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0: // %entry
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd3, [test_srem_v3i32_param_2];
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_srem_v3i32_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_srem_v3i32_param_0];
 ; CHECK-NOI32X2-NEXT:    ld.b32 %r1, [%rd1+8];
-; CHECK-NOI32X2-NEXT:    ld.b64 %rd4, [%rd1];
-; CHECK-NOI32X2-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r2}, %rd4; }
-; CHECK-NOI32X2-NEXT:    cvt.u32.u64 %r3, %rd4;
-; CHECK-NOI32X2-NEXT:    ld.b32 %r4, [%rd2+8];
-; CHECK-NOI32X2-NEXT:    ld.b64 %rd5, [%rd2];
-; CHECK-NOI32X2-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r5}, %rd5; }
-; CHECK-NOI32X2-NEXT:    cvt.u32.u64 %r6, %rd5;
+; CHECK-NOI32X2-NEXT:    ld.b64 %rd2, [%rd1];
+; CHECK-NOI32X2-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r2}, %rd2; }
+; CHECK-NOI32X2-NEXT:    cvt.u32.u64 %r3, %rd2;
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd3, [test_srem_v3i32_param_1];
+; CHECK-NOI32X2-NEXT:    ld.b32 %r4, [%rd3+8];
+; CHECK-NOI32X2-NEXT:    ld.b64 %rd4, [%rd3];
+; CHECK-NOI32X2-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r5}, %rd4; }
+; CHECK-NOI32X2-NEXT:    cvt.u32.u64 %r6, %rd4;
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd5, [test_srem_v3i32_param_2];
 ; CHECK-NOI32X2-NEXT:    rem.s32 %r7, %r3, %r6;
 ; CHECK-NOI32X2-NEXT:    cvt.u64.u32 %rd6, %r7;
 ; CHECK-NOI32X2-NEXT:    rem.s32 %r8, %r2, %r5;
@@ -1573,8 +1642,8 @@ define void @test_srem_v3i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NOI32X2-NEXT:    shl.b64 %rd8, %rd7, 32;
 ; CHECK-NOI32X2-NEXT:    or.b64 %rd9, %rd6, %rd8;
 ; CHECK-NOI32X2-NEXT:    rem.s32 %r9, %r1, %r4;
-; CHECK-NOI32X2-NEXT:    st.b32 [%rd3+8], %r9;
-; CHECK-NOI32X2-NEXT:    st.b64 [%rd3], %rd9;
+; CHECK-NOI32X2-NEXT:    st.b32 [%rd5+8], %r9;
+; CHECK-NOI32X2-NEXT:    st.b64 [%rd5], %rd9;
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_srem_v3i32(
@@ -1583,13 +1652,13 @@ define void @test_srem_v3i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0: // %entry
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [test_srem_v3i32_param_2];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_srem_v3i32_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_srem_v3i32_param_0];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_srem_v3i32_param_0];
 ; CHECK-I32X2-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
 ; CHECK-I32X2-NEXT:    ld.b32 %r3, [%rd1+8];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd2, [test_srem_v3i32_param_1];
 ; CHECK-I32X2-NEXT:    ld.v2.b32 {%r4, %r5}, [%rd2];
 ; CHECK-I32X2-NEXT:    ld.b32 %r6, [%rd2+8];
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd3, [test_srem_v3i32_param_2];
 ; CHECK-I32X2-NEXT:    rem.s32 %r7, %r3, %r6;
 ; CHECK-I32X2-NEXT:    rem.s32 %r8, %r2, %r5;
 ; CHECK-I32X2-NEXT:    rem.s32 %r9, %r1, %r4;
@@ -1612,13 +1681,13 @@ define void @test_sext_v2i1_to_v2i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NOI32X2-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0: // %entry
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd3, [test_sext_v2i1_to_v2i32_param_2];
-; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_sext_v2i1_to_v2i32_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd1, [test_sext_v2i1_to_v2i32_param_0];
 ; CHECK-NOI32X2-NEXT:    ld.b32 %r1, [%rd1];
 ; CHECK-NOI32X2-NEXT:    ld.b32 %r2, [%rd1+4];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd2, [test_sext_v2i1_to_v2i32_param_1];
 ; CHECK-NOI32X2-NEXT:    ld.b32 %r3, [%rd2];
 ; CHECK-NOI32X2-NEXT:    ld.b32 %r4, [%rd2+4];
+; CHECK-NOI32X2-NEXT:    ld.param.b64 %rd3, [test_sext_v2i1_to_v2i32_param_2];
 ; CHECK-NOI32X2-NEXT:    setp.gt.u32 %p1, %r2, %r4;
 ; CHECK-NOI32X2-NEXT:    setp.gt.u32 %p2, %r1, %r3;
 ; CHECK-NOI32X2-NEXT:    selp.b32 %r5, -1, 0, %p2;
@@ -1634,26 +1703,26 @@ define void @test_sext_v2i1_to_v2i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-I32X2-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0: // %entry
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd3, [test_sext_v2i1_to_v2i32_param_2];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd2, [test_sext_v2i1_to_v2i32_param_1];
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_sext_v2i1_to_v2i32_param_0];
-; CHECK-I32X2-NEXT:    ld.b32 %rd4, [%rd1];
-; CHECK-I32X2-NEXT:    ld.b32 %rd5, [%rd1+4];
-; CHECK-I32X2-NEXT:    shl.b64 %rd6, %rd5, 32;
-; CHECK-I32X2-NEXT:    or.b64 %rd7, %rd6, %rd4;
-; CHECK-I32X2-NEXT:    ld.b32 %rd8, [%rd2];
-; CHECK-I32X2-NEXT:    ld.b32 %rd9, [%rd2+4];
-; CHECK-I32X2-NEXT:    shl.b64 %rd10, %rd9, 32;
-; CHECK-I32X2-NEXT:    or.b64 %rd11, %rd10, %rd8;
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd11;
-; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd7;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd1, [test_sext_v2i1_to_v2i32_param_0];
+; CHECK-I32X2-NEXT:    ld.b32 %rd2, [%rd1];
+; CHECK-I32X2-NEXT:    ld.b32 %rd3, [%rd1+4];
+; CHECK-I32X2-NEXT:    shl.b64 %rd4, %rd3, 32;
+; CHECK-I32X2-NEXT:    or.b64 %rd5, %rd4, %rd2;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd6, [test_sext_v2i1_to_v2i32_param_1];
+; CHECK-I32X2-NEXT:    ld.b32 %rd7, [%rd6];
+; CHECK-I32X2-NEXT:    ld.b32 %rd8, [%rd6+4];
+; CHECK-I32X2-NEXT:    shl.b64 %rd9, %rd8, 32;
+; CHECK-I32X2-NEXT:    or.b64 %rd10, %rd9, %rd7;
+; CHECK-I32X2-NEXT:    ld.param::func.b64 %rd11, [test_sext_v2i1_to_v2i32_param_2];
+; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd10;
+; CHECK-I32X2-NEXT:    mov.b64 {%r3, %r4}, %rd5;
 ; CHECK-I32X2-NEXT:    setp.gt.u32 %p1, %r3, %r1;
 ; CHECK-I32X2-NEXT:    setp.gt.u32 %p2, %r4, %r2;
 ; CHECK-I32X2-NEXT:    selp.b32 %r5, -1, 0, %p2;
 ; CHECK-I32X2-NEXT:    selp.b32 %r6, -1, 0, %p1;
 ; CHECK-I32X2-NEXT:    mov.b64 %rd12, {%r6, %r5};
-; CHECK-I32X2-NEXT:    st.b32 [%rd3+4], %r5;
-; CHECK-I32X2-NEXT:    st.b32 [%rd3], %rd12;
+; CHECK-I32X2-NEXT:    st.b32 [%rd11+4], %r5;
+; CHECK-I32X2-NEXT:    st.b32 [%rd11], %rd12;
 ; CHECK-I32X2-NEXT:    ret;
 entry:
   %t1 = load <2 x i32>, ptr %a, align 4
@@ -1665,20 +1734,33 @@ entry:
 }
 
 define <2 x i32> @test_sext_v2i8_to_v2i32 (<2 x i8> %a) {
-; CHECK-LABEL: test_sext_v2i8_to_v2i32(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_sext_v2i8_to_v2i32_param_0];
-; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
-; CHECK-NEXT:    cvt.s32.s8 %r3, %r2;
-; CHECK-NEXT:    cvt.u32.u16 %r4, %rs1;
-; CHECK-NEXT:    cvt.s32.s8 %r5, %r4;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r3};
-; CHECK-NEXT:    ret;
+; CHECK-NOI32X2-LABEL: test_sext_v2i8_to_v2i32(
+; CHECK-NOI32X2:       {
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-NOI32X2-EMPTY:
+; CHECK-NOI32X2-NEXT:  // %bb.0:
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_sext_v2i8_to_v2i32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NOI32X2-NEXT:    cvt.s32.s8 %r2, %r1;
+; CHECK-NOI32X2-NEXT:    cvt.u32.u16 %r3, %rs1;
+; CHECK-NOI32X2-NEXT:    cvt.s32.s8 %r4, %r3;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-NOI32X2-NEXT:    ret;
+;
+; CHECK-I32X2-LABEL: test_sext_v2i8_to_v2i32(
+; CHECK-I32X2:       {
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
+; CHECK-I32X2-EMPTY:
+; CHECK-I32X2-NEXT:  // %bb.0:
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b8 {%rs1, %rs2}, [test_sext_v2i8_to_v2i32_param_0];
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-I32X2-NEXT:    cvt.s32.s8 %r2, %r1;
+; CHECK-I32X2-NEXT:    cvt.u32.u16 %r3, %rs1;
+; CHECK-I32X2-NEXT:    cvt.s32.s8 %r4, %r3;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r2};
+; CHECK-I32X2-NEXT:    ret;
   %r = sext <2 x i8> %a to <2 x i32>
   ret <2 x i32> %r
 }
@@ -1686,28 +1768,26 @@ define <2 x i32> @test_sext_v2i8_to_v2i32 (<2 x i8> %a) {
 define <2 x i32> @test_sext_v2i16_to_v2i32 (<2 x i16> %a) {
 ; CHECK-NOI32X2-LABEL: test_sext_v2i16_to_v2i32(
 ; CHECK-NOI32X2:       {
-; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NOI32X2-NEXT:    .reg .b32 %r<4>;
+; CHECK-NOI32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOI32X2-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NOI32X2-EMPTY:
 ; CHECK-NOI32X2-NEXT:  // %bb.0:
-; CHECK-NOI32X2-NEXT:    ld.param.b32 %r1, [test_sext_v2i16_to_v2i32_param_0];
-; CHECK-NOI32X2-NEXT:    cvt.s32.s16 %r2, %r1;
-; CHECK-NOI32X2-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
-; CHECK-NOI32X2-NEXT:    cvt.s32.s16 %r3, %rs1;
-; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r3};
+; CHECK-NOI32X2-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_sext_v2i16_to_v2i32_param_0];
+; CHECK-NOI32X2-NEXT:    cvt.s32.s16 %r1, %rs2;
+; CHECK-NOI32X2-NEXT:    cvt.s32.s16 %r2, %rs1;
+; CHECK-NOI32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-NOI32X2-NEXT:    ret;
 ;
 ; CHECK-I32X2-LABEL: test_sext_v2i16_to_v2i32(
 ; CHECK-I32X2:       {
-; CHECK-I32X2-NEXT:    .reg .b16 %rs<2>;
-; CHECK-I32X2-NEXT:    .reg .b32 %r<4>;
+; CHECK-I32X2-NEXT:    .reg .b16 %rs<3>;
+; CHECK-I32X2-NEXT:    .reg .b32 %r<3>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b32 %r1, [test_sext_v2i16_to_v2i32_param_0];
-; CHECK-I32X2-NEXT:    cvt.s32.s16 %r2, %r1;
-; CHECK-I32X2-NEXT:    mov.b32 {_, %rs1}, %r1;
-; CHECK-I32X2-NEXT:    cvt.s32.s16 %r3, %rs1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r3};
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b16 {%rs1, %rs2}, [test_sext_v2i16_to_v2i32_param_0];
+; CHECK-I32X2-NEXT:    cvt.s32.s16 %r1, %rs2;
+; CHECK-I32X2-NEXT:    cvt.s32.s16 %r2, %rs1;
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r1};
 ; CHECK-I32X2-NEXT:    ret;
   %r = sext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %r
@@ -1728,14 +1808,12 @@ define <2 x float> @test_uitofp_v2i32(<2 x i32> %a) {
 ; CHECK-I32X2-LABEL: test_uitofp_v2i32(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_uitofp_v2i32_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_uitofp_v2i32_param_0];
 ; CHECK-I32X2-NEXT:    cvt.rn.f32.u32 %r3, %r2;
 ; CHECK-I32X2-NEXT:    cvt.rn.f32.u32 %r4, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = uitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
@@ -1756,17 +1834,17 @@ define <2 x float> @test_sitofp_v2i32(<2 x i32> %a) {
 ; CHECK-I32X2-LABEL: test_sitofp_v2i32(
 ; CHECK-I32X2:       {
 ; CHECK-I32X2-NEXT:    .reg .b32 %r<5>;
-; CHECK-I32X2-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-I32X2-EMPTY:
 ; CHECK-I32X2-NEXT:  // %bb.0:
-; CHECK-I32X2-NEXT:    ld.param.b64 %rd1, [test_sitofp_v2i32_param_0];
-; CHECK-I32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-I32X2-NEXT:    ld.param::func.v2.b32 {%r1, %r2}, [test_sitofp_v2i32_param_0];
 ; CHECK-I32X2-NEXT:    cvt.rn.f32.s32 %r3, %r2;
 ; CHECK-I32X2-NEXT:    cvt.rn.f32.s32 %r4, %r1;
-; CHECK-I32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-I32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-I32X2-NEXT:    ret;
   %r = sitofp <2 x i32> %a to <2 x float>
   ret <2 x float> %r
 }
 
 attributes #0 = { nounwind }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

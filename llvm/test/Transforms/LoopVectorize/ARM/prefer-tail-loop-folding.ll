@@ -422,10 +422,10 @@ for.body:
 attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+mve.fp" }
 
 !5 = distinct !{!5, !6}
-!6 = !{!"llvm.loop.vectorize.enable", i1 true}
+!6 = !{!"llvm.loop.vectorize.enable"}
 
 !7 = distinct !{!7, !8}
-!8 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
+!8 = !{!"llvm.loop.vectorize.predicate.disable"}
 
 !10 = distinct !{!10, !11}
 !11 = !{!"llvm.loop.vectorize.width", i32 4}

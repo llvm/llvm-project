@@ -27,7 +27,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     omp.yield(%0 : f64) loc(#loc2)
   } loc(#loc2)
   llvm.func @k_(%arg0: !llvm.ptr) {
-    %1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, f64) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "s"} loc(#loc2)
+    %1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, f64) map_clauses(from) capture(ByRef) name("s") -> !llvm.ptr loc(#loc2)
     omp.target kernel_type(spmd) map_entries(%1 -> %arg1 : !llvm.ptr) {
       %c1 = llvm.mlir.constant(1 : i32) : i32 loc(#loc2)
       %cn = llvm.mlir.constant(1024 : i32) : i32 loc(#loc2)

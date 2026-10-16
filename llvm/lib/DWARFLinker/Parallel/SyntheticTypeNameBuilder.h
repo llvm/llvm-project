@@ -72,14 +72,20 @@ protected:
       CompileUnit &CU,
       SmallVector<const DWARFDebugInfoEntry *, 10> &TemplateParameters);
 
-  /// Add ordered name to the built name.
-  void addOrderedName(CompileUnit &CU, const DWARFDebugInfoEntry *DieEntry);
-
   /// Analyze \p InputUnitEntryPair's ODR attributes and put names
   /// of the referenced type dies to the built name.
   Error addReferencedODRDies(UnitEntryPairTy InputUnitEntryPair,
                              bool AssignNameToTypeDescriptor,
                              ArrayRef<dwarf::Attribute> ODRAttrs);
+
+  /// Resolve the DIE that \p Attr of \p InputUnitEntryPair refers to.
+  /// \returns std::nullopt if there is nothing to follow.
+  Expected<std::optional<UnitEntryPairTy>>
+  resolveReference(UnitEntryPairTy InputUnitEntryPair, dwarf::Attribute Attr);
+
+  /// Count a referenced DIE toward the recursion limit. Callers decrement
+  /// RecursionDepth once they are done with it.
+  Error incrementRecursionDepth();
 
   /// Add names of parent dies to the built name.
   Error addParentName(UnitEntryPairTy &InputUnitEntryPair);
@@ -90,8 +96,15 @@ protected:
   void addDieNameFromDeclFileAndDeclLine(UnitEntryPairTy &InputUnitEntryPair,
                                          bool &HasDeclFileName);
 
+  /// Add contents of the unnamed type \p InputUnitEntryPair.
+  Error addUnnamedTypeContents(UnitEntryPairTy InputUnitEntryPair);
+
+  /// Add the type \p InputUnitEntryPair refers to, without parent scopes. A
+  /// type nested in an unnamed type would need the name being built.
+  Error addUnqualifiedTypeName(UnitEntryPairTy InputUnitEntryPair);
+
   /// Add type prefix to the built name.
-  void addTypePrefix(const DWARFDebugInfoEntry *DieEntry);
+  void addTypePrefix(CompileUnit &CU, const DWARFDebugInfoEntry *DieEntry);
 
   /// Add type name to the built name.
   Error addTypeName(UnitEntryPairTy InputUnitEntryPair, bool AddParentNames);
@@ -120,6 +133,9 @@ protected:
 
   /// Recursion counter
   size_t RecursionDepth = 0;
+
+  /// Bounds RecursionDepth, which malformed input can make unbounded.
+  static constexpr size_t MaxRecursionDepth = 1000;
 
   /// Type pool
   TypePool &TypePoolRef;

@@ -9,6 +9,7 @@
 #include "hdr/limits_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -142,3 +143,25 @@ TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
   ASSERT_EQ(static_cast<unsigned>(Float128(2147483648.0)), 2147483648U);
   EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+TEST(LlvmLibcFloat128Test, NativeFloat128Conversion) {
+  // native to emulated float128
+  ASSERT_TRUE(Float128(static_cast<float128>(0.0)) == Float128(0.0));
+  ASSERT_TRUE(Float128(static_cast<float128>(1.5)) == Float128(1.5));
+  ASSERT_TRUE(Float128(static_cast<float128>(-1.5)) == Float128(-1.5));
+  ASSERT_TRUE(Float128(static_cast<float128>(1e300)) == Float128(1e300));
+
+  // emulated to native float128
+  ASSERT_TRUE(static_cast<float128>(Float128(0.0)) ==
+              static_cast<float128>(0.0));
+  ASSERT_TRUE(static_cast<float128>(Float128(3.14)) ==
+              static_cast<float128>(3.14));
+  ASSERT_TRUE(static_cast<float128>(Float128(-3.14)) ==
+              static_cast<float128>(-3.14));
+  ASSERT_TRUE(static_cast<float128>(FPBits::inf(Sign::POS).get_val()) ==
+              static_cast<float128>(FPBits::inf(Sign::POS).get_val()));
+  ASSERT_TRUE(static_cast<float128>(Float128(1e-300)) ==
+              static_cast<float128>(1e-300));
+}
+#endif // LIBC_TYPES_HAS_FLOAT128

@@ -1,4 +1,4 @@
-# RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | \
+# RUN: llc -start-before=live-debug-values -filetype=obj -o - %s | \
 # RUN:     llvm-dwarfdump -debug-info - | FileCheck %s
 #
 # In this test the first DBG_VALUE is 32 bits large and sits in 128-bit register Q8,

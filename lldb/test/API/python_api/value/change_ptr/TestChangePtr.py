@@ -5,6 +5,8 @@ from lldbsuite.test import lldbutil
 
 
 class ChangePtrTest(TestBase):
+    @skipIfWasm  # the test checks the address of a persistent expression result
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 

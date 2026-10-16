@@ -286,7 +286,7 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
     Status plan_status;
     SBThreadPlan plan =
         SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepInRange(
-            false, range, sc, nullptr, eAllThreads, plan_status));
+            false, range, sc, llvm::StringRef(), eAllThreads, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());

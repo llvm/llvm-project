@@ -81,7 +81,7 @@ Owner *template_value(T t [[clang::lifetimebound]]) {
 
 void instantiate_template() {
   Owner o;
-  (void)template_value(o);
+  use(template_value(o));
 }
 
 struct S {

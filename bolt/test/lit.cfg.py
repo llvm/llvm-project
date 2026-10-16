@@ -96,9 +96,11 @@ llvm_bolt_args = []
 
 if config.libbolt_rt_instr:
     llvm_bolt_args.append(f"--runtime-instrumentation-lib={config.libbolt_rt_instr}")
+    config.substitutions.append(("%libbolt_rt_instr", config.libbolt_rt_instr))
 
 if config.libbolt_rt_hugify:
     llvm_bolt_args.append(f"--runtime-hugify-lib={config.libbolt_rt_hugify}")
+    config.substitutions.append(("%libbolt_rt_hugify", config.libbolt_rt_hugify))
 
 tools = [
     ToolSubst("llc", unresolved="fatal"),
@@ -114,6 +116,7 @@ tools = [
     ToolSubst("llvm-bat-dump", unresolved="fatal"),
     ToolSubst("perf2bolt", unresolved="fatal"),
     ToolSubst("yaml2obj", unresolved="fatal"),
+    ToolSubst("llvm-ar", unresolved="fatal"),
     ToolSubst("llvm-mc", unresolved="fatal"),
     ToolSubst("llvm-nm", unresolved="fatal"),
     ToolSubst("llvm-objdump", unresolved="fatal"),
@@ -129,6 +132,7 @@ tools = [
     ),
     ToolSubst("process-debug-line", unresolved="fatal"),
     ToolSubst("merge-fdata", unresolved="fatal"),
+    ToolSubst("merge-fdata-for-test", unresolved="fatal"),
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),
     ToolSubst("split-file", unresolved="fatal"),

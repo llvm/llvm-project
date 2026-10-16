@@ -2550,8 +2550,8 @@ void transform::NamedSequenceOp::build(OpBuilder &builder,
                                        SequenceBodyBuilderFn bodyBuilder,
                                        ArrayRef<NamedAttribute> attrs,
                                        ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(symName));
+  state.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(symName);
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(FunctionType::get(builder.getContext(),
                                                      rootType, resultTypes)));

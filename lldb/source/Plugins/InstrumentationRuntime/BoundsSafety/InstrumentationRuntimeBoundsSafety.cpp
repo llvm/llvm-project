@@ -464,7 +464,6 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
     return LogBeforeReturn<void>("failed to create breakpoint");
 
   if (!breakpoint->HasResolvedLocations()) {
-    assert(0 && "breakpoint has no resolved locations");
     process_sp->GetTarget().RemoveBreakpointByID(breakpoint->GetID());
     return LogBeforeReturn<void>(
         "breakpoint {0} for BoundsSafety soft traps did not resolve to "

@@ -501,6 +501,34 @@ struct doublecomplex_s f_doublecomplex_s(struct doublecomplex_s x) {
   return x;
 }
 
+/// A complex integer, or a structure containing just one complex integer
+/// (a GNU extension), is not eligible to be passed in floating-point
+/// registers; it is passed as though it were an aggregate of the same
+/// size, i.e. packed into a single GAR when its size does not exceed
+/// GRLen.
+
+// CHECK-LABEL: define{{.*}} i64 @f_ucharcomplex(i64 %x.coerce)
+unsigned char __complex__ f_ucharcomplex(unsigned char __complex__ x) { return x; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_ushortcomplex(i64 %x.coerce)
+unsigned short __complex__ f_ushortcomplex(unsigned short __complex__ x) { return x; }
+
+struct ucharcomplex_s {
+  unsigned char __complex__ c;
+};
+// CHECK-LABEL: define{{.*}} i64 @f_ucharcomplex_s(i64 %x.coerce)
+struct ucharcomplex_s f_ucharcomplex_s(struct ucharcomplex_s x) {
+  return x;
+}
+
+struct ushortcomplex_s {
+  unsigned short __complex__ c;
+};
+// CHECK-LABEL: define{{.*}} i64 @f_ushortcomplex_s(i64 %x.coerce)
+struct ushortcomplex_s f_ushortcomplex_s(struct ushortcomplex_s x) {
+  return x;
+}
+
 /// Part 5: Variadic arguments.
 
 /// Variadic arguments are passed in GARs in the same manner as named arguments.

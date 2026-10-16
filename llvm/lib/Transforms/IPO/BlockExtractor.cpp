@@ -58,7 +58,7 @@ private:
       BlocksByName;
 
   void loadFile();
-  void splitLandingPadPreds(Function &F);
+  bool splitLandingPadPreds(Function &F);
 };
 
 } // end anonymous namespace
@@ -94,7 +94,8 @@ void BlockExtractor::loadFile() {
 
 /// Extracts the landing pads to make sure all of them have only one
 /// predecessor.
-void BlockExtractor::splitLandingPadPreds(Function &F) {
+bool BlockExtractor::splitLandingPadPreds(Function &F) {
+  bool Changed = false;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (!isa<InvokeInst>(&I))
@@ -119,8 +120,10 @@ void BlockExtractor::splitLandingPadPreds(Function &F) {
 
       SmallVector<BasicBlock *, 2> NewBBs;
       SplitLandingPadPredecessors(LPad, Parent, ".1", ".2", NewBBs);
+      Changed = true;
     }
   }
+  return Changed;
 }
 
 bool BlockExtractor::runOnModule(Module &M) {
@@ -129,7 +132,7 @@ bool BlockExtractor::runOnModule(Module &M) {
   // Get all the functions.
   SmallVector<Function *, 4> Functions;
   for (Function &F : M) {
-    splitLandingPadPreds(F);
+    Changed |= splitLandingPadPreds(F);
     Functions.push_back(&F);
   }
 

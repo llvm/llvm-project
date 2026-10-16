@@ -20,7 +20,7 @@
 
 // CHECK: ![[LOOP_ATTR]] = distinct !{![[LOOP_ATTR]], ![[LPAR:.*]], ![[LVEC:.*]]}
 // CHECK: ![[LPAR]] = !{!"llvm.loop.parallel_accesses", ![[PAR_ACC:.*]]}
-// CHECK: ![[LVEC]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: ![[LVEC]] = !{!"llvm.loop.vectorize.enable"}
 
 omp.private {type = private} @_QFEi_private_i32 : i32
 llvm.func @test_teams_distribute_parallel_do_simd() {

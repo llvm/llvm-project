@@ -906,8 +906,13 @@ AffineExpr AffineExpr::operator-() const {
 }
 
 // Delegate to operator+.
-AffineExpr AffineExpr::operator-(int64_t v) const { return *this + (-v); }
+AffineExpr AffineExpr::operator-(int64_t v) const {
+  // Use unsigned negation to avoid signed integer overflow for INT64_MIN.
+  return *this + static_cast<int64_t>(-static_cast<uint64_t>(v));
+}
 AffineExpr AffineExpr::operator-(AffineExpr other) const {
+  if (auto constOther = dyn_cast<AffineConstantExpr>(other))
+    return *this - constOther.getValue();
   return *this + (-other);
 }
 
@@ -1351,8 +1356,12 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
 
   // Get the RHS constant.
   int64_t rhsConst = rhs[getConstantIndex()];
-  for (int64_t &lhsElt : lhs)
-    lhsElt *= rhsConst;
+  for (int64_t &lhsElt : lhs) {
+    auto [prod, overflow] = llvm::MulOverflow(lhsElt, rhsConst);
+    if (overflow)
+      return failure();
+    lhsElt = prod;
+  }
 
   return success();
 }
@@ -1364,7 +1373,10 @@ LogicalResult SimpleAffineExprFlattener::visitAddExpr(AffineBinaryOpExpr expr) {
   assert(lhs.size() == rhs.size());
   // Update the LHS in place.
   for (unsigned i = 0, e = rhs.size(); i < e; i++) {
-    lhs[i] += rhs[i];
+    auto [sum, overflow] = llvm::AddOverflow(lhs[i], rhs[i]);
+    if (overflow)
+      return failure();
+    lhs[i] = sum;
   }
   // Pop off the RHS.
   operandExprStack.pop_back();

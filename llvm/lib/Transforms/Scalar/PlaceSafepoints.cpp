@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/PlaceSafepoints.h"
+#include "ScalarOptions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -62,7 +63,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Statepoint.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -81,23 +81,6 @@ STATISTIC(CallInLoop,
 STATISTIC(FiniteExecution,
           "Number of loops without safepoints finite execution");
 
-// Ignore opportunities to avoid placing safepoints on backedges, useful for
-// validation
-static cl::opt<bool> AllBackedges("spp-all-backedges", cl::Hidden,
-                                  cl::init(false));
-
-/// How narrow does the trip count of a loop have to be to have to be considered
-/// "counted"?  Counted loops do not get safepoints at backedges.
-static cl::opt<int> CountedLoopTripWidth("spp-counted-loop-trip-width",
-                                         cl::Hidden, cl::init(32));
-
-// If true, split the backedge of a loop when placing the safepoint, otherwise
-// split the latch block itself.  Both are useful to support for
-// experimentation, but in practice, it looks like splitting the backedge
-// optimizes better.
-static cl::opt<bool> SplitBackedge("spp-split-backedge", cl::Hidden,
-                                   cl::init(false));
-
 namespace {
 /// An analysis pass whose purpose is to identify each of the backedges in
 /// the function which require a safepoint poll to be inserted.
@@ -114,7 +97,8 @@ public:
   bool CallSafepointsEnabled;
 
   PlaceBackedgeSafepointsLegacyPass(bool CallSafepoints = false)
-      : FunctionPass(ID), CallSafepointsEnabled(CallSafepoints) {
+      : FunctionPass(ID), CallSafepointsEnabled(CallSafepoints),
+        Opts(ScalarOptions::Global) {
     initializePlaceBackedgeSafepointsLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -150,16 +134,13 @@ public:
   }
 
 private:
+  const ScalarOptions &Opts;
   ScalarEvolution *SE = nullptr;
   DominatorTree *DT = nullptr;
   LoopInfo *LI = nullptr;
   TargetLibraryInfo *TLI = nullptr;
 };
 } // namespace
-
-static cl::opt<bool> NoEntry("spp-no-entry", cl::Hidden, cl::init(false));
-static cl::opt<bool> NoCall("spp-no-call", cl::Hidden, cl::init(false));
-static cl::opt<bool> NoBackedge("spp-no-backedge", cl::Hidden, cl::init(false));
 
 char PlaceBackedgeSafepointsLegacyPass::ID = 0;
 
@@ -178,17 +159,17 @@ static bool containsUnconditionalCallSafepoint(Loop *L, BasicBlock *Header,
                                                DominatorTree &DT,
                                                const TargetLibraryInfo &TLI);
 
-static bool mustBeFiniteCountedLoop(Loop *L, ScalarEvolution *SE,
-                                    BasicBlock *Pred);
+static bool mustBeFiniteCountedLoop(const ScalarOptions &Opts, Loop *L,
+                                    ScalarEvolution *SE, BasicBlock *Pred);
 
 static Instruction *findLocationForEntrySafepoint(Function &F,
                                                   DominatorTree &DT);
 
 static bool isGCSafepointPoll(Function &F);
 static bool shouldRewriteFunction(Function &F);
-static bool enableEntrySafepoints(Function &F);
-static bool enableBackedgeSafepoints(Function &F);
-static bool enableCallSafepoints(Function &F);
+static bool enableEntrySafepoints(const ScalarOptions &Opts, Function &F);
+static bool enableBackedgeSafepoints(const ScalarOptions &Opts, Function &F);
+static bool enableCallSafepoints(const ScalarOptions &Opts, Function &F);
 
 static void
 InsertSafepointPoll(BasicBlock::iterator InsertBefore,
@@ -210,8 +191,8 @@ bool PlaceBackedgeSafepointsLegacyPass::runOnLoop(Loop *L) {
     // Make a policy decision about whether this loop needs a safepoint or
     // not.  Note that this is about unburdening the optimizer in loops, not
     // avoiding the runtime cost of the actual safepoint.
-    if (!AllBackedges) {
-      if (mustBeFiniteCountedLoop(L, SE, Pred)) {
+    if (!Opts.spp_all_backedges) {
+      if (mustBeFiniteCountedLoop(Opts, L, SE, Pred)) {
         LLVM_DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
         FiniteExecution++;
         continue;
@@ -264,6 +245,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
   if (!shouldRewriteFunction(F))
     return false;
 
+  const ScalarOptions &Opts = ScalarOptions::Global;
   bool Modified = false;
 
   // In various bits below, we rely on the fact that uses are reachable from
@@ -282,13 +264,13 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
   SmallVector<Instruction *, 16> PollsNeeded;
   std::vector<CallBase *> ParsePointNeeded;
 
-  if (enableBackedgeSafepoints(F)) {
+  if (enableBackedgeSafepoints(Opts, F)) {
     // Construct a pass manager to run the LoopPass backedge logic.  We
     // need the pass manager to handle scheduling all the loop passes
     // appropriately.  Doing this by hand is painful and just not worth messing
     // with for the moment.
     legacy::FunctionPassManager FPM(F.getParent());
-    bool CanAssumeCallSafepoints = enableCallSafepoints(F);
+    bool CanAssumeCallSafepoints = enableCallSafepoints(Opts, F);
 
     FPM.add(new TargetLibraryInfoWrapperPass(TLI));
     auto *PBS = new PlaceBackedgeSafepointsLegacyPass(CanAssumeCallSafepoints);
@@ -319,7 +301,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
       // We are inserting a poll, the function is modified
       Modified = true;
 
-      if (SplitBackedge) {
+      if (Opts.spp_split_backedge) {
         // Split the backedge of the loop and insert the poll within that new
         // basic block.  This creates a loop with two latches per original
         // latch (which is non-ideal), but this appears to be easier to
@@ -352,7 +334,7 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     }
   }
 
-  if (enableEntrySafepoints(F)) {
+  if (enableEntrySafepoints(Opts, F)) {
     if (Instruction *Location = findLocationForEntrySafepoint(F, DT)) {
       PollsNeeded.push_back(Location);
       Modified = true;
@@ -442,13 +424,13 @@ static bool containsUnconditionalCallSafepoint(Loop *L, BasicBlock *Header,
 /// iterations.  Note that this function may return false for a loop which
 /// does actual terminate in a finite constant number of iterations due to
 /// conservatism in the analysis.
-static bool mustBeFiniteCountedLoop(Loop *L, ScalarEvolution *SE,
-                                    BasicBlock *Pred) {
+static bool mustBeFiniteCountedLoop(const ScalarOptions &Opts, Loop *L,
+                                    ScalarEvolution *SE, BasicBlock *Pred) {
   // A conservative bound on the loop as a whole.
   const SCEV *MaxTrips = SE->getConstantMaxBackedgeTakenCount(L);
   if (!isa<SCEVCouldNotCompute>(MaxTrips) &&
       SE->getUnsignedRange(MaxTrips).getUnsignedMax().isIntN(
-          CountedLoopTripWidth))
+          Opts.spp_counted_loop_trip_width))
     return true;
 
   // If this is a conditional branch to the header with the alternate path
@@ -460,8 +442,8 @@ static bool mustBeFiniteCountedLoop(Loop *L, ScalarEvolution *SE,
     const SCEV *MaxExec = SE->getExitCount(L, Pred);
     if (!isa<SCEVCouldNotCompute>(MaxExec) &&
         SE->getUnsignedRange(MaxExec).getUnsignedMax().isIntN(
-            CountedLoopTripWidth))
-        return true;
+            Opts.spp_counted_loop_trip_width))
+      return true;
   }
 
   return /* not finite */ false;
@@ -609,9 +591,15 @@ static bool shouldRewriteFunction(Function &F) {
 
 // TODO: These should become properties of the GCStrategy, possibly with
 // command line overrides.
-static bool enableEntrySafepoints(Function &F) { return !NoEntry; }
-static bool enableBackedgeSafepoints(Function &F) { return !NoBackedge; }
-static bool enableCallSafepoints(Function &F) { return !NoCall; }
+static bool enableEntrySafepoints(const ScalarOptions &Opts, Function &F) {
+  return !Opts.spp_no_entry;
+}
+static bool enableBackedgeSafepoints(const ScalarOptions &Opts, Function &F) {
+  return !Opts.spp_no_backedge;
+}
+static bool enableCallSafepoints(const ScalarOptions &Opts, Function &F) {
+  return !Opts.spp_no_call;
+}
 
 // Insert a safepoint poll immediately before the given instruction.  Does
 // not handle the parsability of state at the runtime call, that's the
@@ -664,7 +652,7 @@ InsertSafepointPoll(BasicBlock::iterator InsertBefore,
   BasicBlock::iterator Start = IsBegin ? OrigBB->begin() : std::next(Before);
 
   // If your poll function includes an unreachable at the end, that's not
-  // valid.  Bugpoint likes to create this, so check for it.
+  // valid. Fuzzers/test case reducers can create this, so check for it.
   assert(isPotentiallyReachable(&*Start, &*After) &&
          "malformed poll function");
 

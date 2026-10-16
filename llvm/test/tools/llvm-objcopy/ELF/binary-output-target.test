@@ -57,6 +57,9 @@
 # RUN: llvm-objcopy -I binary -O elf64-s390 %t.txt %t.s390x.o
 # RUN: llvm-readobj --file-headers %t.s390x.o | FileCheck %s --check-prefixes=CHECK,BE,S390X,64
 
+# RUN: llvm-objcopy -I binary -O elf64-amdgpu %t.txt %t.amdgpu.o
+# RUN: llvm-readobj --file-headers %t.amdgpu.o | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64
+
 # CHECK: Format:
 # 32-SAME:      elf32-
 # 64-SAME:      elf64-
@@ -75,6 +78,7 @@
 # SPARCEL-SAME: sparc
 # S390X-SAME:   s390
 # X86-64-SAME:  x86-64
+# AMDGPU-SAME:  amdgpu
 
 # AARCH64-NEXT: Arch: aarch64
 # ARM-NEXT:     Arch: arm
@@ -93,6 +97,9 @@
 # SPARCEL-NEXT: Arch: sparcel
 # S390X-NEXT:   Arch: s390x
 # X86-64-NEXT:  Arch: x86_64
+## When converting from binary, e_flags is 0 (no EF_AMDGPU_MACH value set),
+## so llvm-readobj reports Arch: unknown. This is intentional.
+# AMDGPU-NEXT:  Arch: unknown
 
 # 32-NEXT:      AddressSize: 32bit
 # 64-NEXT:      AddressSize: 64bit
@@ -129,6 +136,7 @@
 # SPARCEL-NEXT:   Machine: EM_SPARC (0x2)
 # S390X-NEXT:     Machine: EM_S390 (0x16)
 # X86-64-NEXT:    Machine: EM_X86_64 (0x3E)
+# AMDGPU-NEXT:    Machine: EM_AMDGPU (0xE0)
 
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Entry: 0x0

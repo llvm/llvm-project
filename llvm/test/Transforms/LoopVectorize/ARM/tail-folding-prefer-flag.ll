@@ -101,8 +101,8 @@ for.body:
 }
 
 !10 = distinct !{!10, !11, !12}
-!11 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
-!12 = !{!"llvm.loop.vectorize.enable", i1 true}
+!11 = !{!"llvm.loop.vectorize.predicate.disable"}
+!12 = !{!"llvm.loop.vectorize.enable"}
 
 !14 = distinct !{!14, !15}
 !15 = !{!"llvm.loop.interleave.count", i32 4}

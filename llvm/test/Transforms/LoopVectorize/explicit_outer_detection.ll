@@ -219,7 +219,7 @@ for.end15:
 ; Case 1
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 4}
-!8 = !{!"llvm.loop.vectorize.enable", i1 true}
+!8 = !{!"llvm.loop.vectorize.enable"}
 ; Case 2
 !9 = distinct !{!9, !8}
 ; Case 3

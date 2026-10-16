@@ -31,7 +31,6 @@ add_llvm_component_library(LLVMipo
   InstrumentorConfigFile.cpp
   InstrumentorStubPrinter.cpp
   Internalize.cpp
-  LoopExtractor.cpp
   LowerTypeTests.cpp
   MemProfContextDisambiguation.cpp
   MergeFunctions.cpp
@@ -62,6 +61,7 @@ add_llvm_component_library(LLVMipo
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
+  AsmParser
   BitReader
   BitWriter
   Core

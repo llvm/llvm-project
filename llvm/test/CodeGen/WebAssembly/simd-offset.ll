@@ -3254,9 +3254,7 @@ define <2 x double> @load_promote_v2f64_with_folded_offset(ptr %p) {
 ; CHECK:         .functype load_promote_v2f64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
@@ -3298,9 +3296,7 @@ define <2 x double> @load_promote_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK:         .functype load_promote_v2f64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 8
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <2 x float>, ptr %p, i32 1
@@ -3483,8 +3479,8 @@ define <2 x double> @load_promote_v2f64_from_numeric_address() {
 ; CHECK-LABEL: load_promote_v2f64_from_numeric_address:
 ; CHECK:         .functype load_promote_v2f64_from_numeric_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero 32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 32 to ptr
@@ -3524,8 +3520,8 @@ define <2 x double> @load_promote_v2f64_from_global_address() {
 ; CHECK-LABEL: load_promote_v2f64_from_global_address:
 ; CHECK:         .functype load_promote_v2f64_from_global_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_v2f32
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero gv_v2f32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %e = load <2 x float>, ptr @gv_v2f32

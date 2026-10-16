@@ -6,6 +6,8 @@
 // RUN: %env_tool_opts=handle_segv=1:print_stacktrace=1 not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK1,CHECK %s
 // RUN: %env_tool_opts=handle_segv=1:print_stacktrace=1 not %run %t 2 2>&1 | FileCheck --check-prefixes=CHECK2,CHECK %s
 
+// UNSUPPORTED: rtsan
+
 #include <cstdio>
 #include <cstdlib>
 #include <string>

@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wexperimental-lifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
@@ -278,27 +278,27 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 void test_get_on_temporary_pointer() {
   const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{temporary object does not live long enough}}.
                                                    // expected-note@-1 {{temporary object is destroyed here}}
-                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object}}
-  (void)s_ref;                                     // expected-note {{later used here}}
+                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+  use(s_ref);                                      // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
   const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{temporary object does not live long enough}}.
                                                    // expected-note@-1 {{temporary object is destroyed here}}
-                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object}}
-  (void)s_ref;                                     // expected-note {{later used here}}
+                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+  use(s_ref);                                      // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
   View sv = ViewProvider{1}.getView();      // expected-warning {{temporary object does not live long enough}}.
                                             // expected-note@-1 {{temporary object is destroyed here}}
-                                            // expected-note@-2 {{result of call to 'getView' aliases the storage of temporary object}}
-  (void)sv;                                 // expected-note {{later used here}}
+                                            // expected-note@-2 {{result of call to 'getView' aliases the storage of temporary object because the implicit object parameter is inferred as lifetimebound}}
+  use(sv);                                  // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_copy() {
   ReturnsSelf copy = ReturnsSelf().get();                                               
-  (void)copy;                                     
+  use(copy);
 }
 
 struct MemberReturn {
@@ -550,7 +550,7 @@ struct CaptureViewToView {
 CaptureViewToView test_view_to_view() {
   MyObj obj;
   View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  CaptureViewToView x(v);
+  CaptureViewToView x(v); // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return x; // expected-note {{returned here}}
 }
 
@@ -603,9 +603,9 @@ void uaf_via_inferred_lifetimebound() {
   {
     int local;
     f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                                              // expected-note {{result of call to 'return_lambda_capturing_param' aliases the storage of local variable 'local'}}
+                                              // expected-note {{result of call to 'return_lambda_capturing_param' aliases the storage of local variable 'local' because parameter 'x' is inferred as lifetimebound}}
   } // expected-note {{local variable 'local' is destroyed here}}
-  (void)f; // expected-note {{later used here}}
+  use(f);  // expected-note {{later used here}}
 }
 
 } // namespace callable_wrappers
@@ -627,9 +627,9 @@ void test_inference() {
   {
     MyObj obj;
     ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                              // expected-note {{result of call to 'create_target' aliases the storage of local variable 'obj'}}
+                              // expected-note {{result of call to 'create_target' aliases the storage of local variable 'obj' because parameter 'obj' is inferred as lifetimebound}}
   } // expected-note {{local variable 'obj' is destroyed here}}
-  (void)ptr; // expected-note {{later used here}}
+  use(ptr);  // expected-note {{later used here}}
 }
 } // namespace make_unique_suggestion
 
@@ -642,8 +642,8 @@ View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU fu
 void test_new_allocation() {
   View* v = MakeView(MyObj{}); // expected-warning {{temporary object does not live long enough}} \
                                // expected-note {{temporary object is destroyed here}} \
-                               // expected-note {{result of call to 'MakeView' aliases the storage of temporary object}}
-  (void)v;                     // expected-note {{later used here}}
+                               // expected-note {{result of call to 'MakeView' aliases the storage of temporary object because parameter 'in' is inferred as lifetimebound}}
+  use(v);                      // expected-note {{later used here}}
 }
 
 struct LifetimeBoundCtor {
@@ -700,3 +700,147 @@ S foo() {
   return S(create_up());
 }
 } // namespace GH193747
+
+namespace field_origin_escape {
+
+class Context {
+public:
+  // This method should be annotated with lifetimebound.
+  std::string_view method() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return method_;                 // expected-note {{param returned here}}
+  }
+
+private:
+  std::string method_ = "42";
+};
+
+class ContextAnnotated {
+public:
+  std::string_view method() const [[clang::lifetimebound]] {
+    return method_;
+  }
+
+private:
+  std::string method_ = "42";
+};
+
+class ContextWrapper {
+public:
+  explicit ContextWrapper(Context &inner,          // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+                          ContextAnnotated &annot) // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+      : inner_(inner), annot_(annot) {}
+
+  Context &inner() const { // expected-warning {{return value depends on the object referenced by field 'inner_', not on '*this'}}
+    return inner_;         // expected-note {{returned here}}
+  }
+
+  // This method should NOT be annotated with lifetimebound.
+  std::string_view method() const { // expected-warning {{return value depends on the object referenced by field 'inner_', not on '*this'}}
+    return inner_.method();         // expected-note {{returned here}}
+  }
+
+  std::string_view annot_method() const { // expected-warning {{return value depends on the object referenced by field 'annot_', not on '*this'}}
+    return annot_.method();               // expected-note {{returned here}}
+  }
+
+private:
+  Context &inner_;          // expected-note {{escapes to this field}}
+  ContextAnnotated &annot_; // expected-note {{escapes to this field}}
+};
+
+struct FieldTypes {
+  int val_;
+  int *ptr_; // expected-note 2 {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  int &ref_;
+  std::string str_;
+  std::string &str_ref_;
+  std::string *str_ptr_; // expected-note 2 {{if field 'str_ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  std::string_view view_;
+
+  // Loans to fields (depend on enclosing object, not field origin).
+  int &get_val_ref() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return val_;       // expected-note {{param returned here}}
+  }
+  int *get_val_ptr() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return &val_;      // expected-note {{param returned here}}
+  }
+  std::string_view get_str_view() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return str_;                          // expected-note {{param returned here}}
+  }
+  const char *get_str_data() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return str_.data();              // expected-note {{param returned here}}
+  }
+  const char *get_str_c_str() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return str_.c_str();              // expected-note {{param returned here}}
+  }
+  const std::string &get_str_ref() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return str_;                           // expected-note {{param returned here}}
+  }
+  int *&get_ptr_ref() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return ptr_;        // expected-note {{param returned here}}
+  }
+
+  // Owned pointer field annotated with [[clang::lifetimebound]] -> no warning.
+  int *get_owned_ptr() const [[clang::lifetimebound]] {
+    return ptr_;
+  }
+
+  // Origins of fields -> field-origin-escape warning, no lifetimebound suggestion on 'this'.
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+  int &get_ptr_deref() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return *ptr_;              // expected-note {{returned here}}
+  }
+  int &get_ref() const { // expected-warning {{return value depends on the object referenced by field 'ref_', not on '*this'}}
+    return ref_;         // expected-note {{returned here}}
+  }
+  int *get_ref_addr() const { // expected-warning {{return value depends on the object referenced by field 'ref_', not on '*this'}}
+    return &ref_;             // expected-note {{returned here}}
+  }
+  std::string_view get_view() const { // expected-warning {{return value depends on the object referenced by field 'view_', not on '*this'}}
+    return view_;                     // expected-note {{returned here}}
+  }
+  const char *get_view_data() const { // expected-warning {{return value depends on the object referenced by field 'view_', not on '*this'}}
+    return view_.data();              // expected-note {{returned here}}
+  }
+  const char *get_str_ref_data() const { // expected-warning {{return value depends on the object referenced by field 'str_ref_', not on '*this'}}
+    return str_ref_.data();              // expected-note {{returned here}}
+  }
+  std::string_view get_str_ref_view() const { // expected-warning {{return value depends on the object referenced by field 'str_ref_', not on '*this'}}
+    return str_ref_;                          // expected-note {{returned here}}
+  }
+  const char *get_str_ptr_data() const { // expected-warning {{return value depends on the object referenced by field 'str_ptr_', not on '*this'}}
+    return str_ptr_->data();             // expected-note {{returned here}}
+  }
+  std::string_view get_str_ptr_view() const { // expected-warning {{return value depends on the object referenced by field 'str_ptr_', not on '*this'}}
+    return *str_ptr_;                         // expected-note {{returned here}}
+  }
+};
+
+struct Base {
+  int *pub_ptr_; // expected-note {{if field 'pub_ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  int *get_priv() const { // expected-warning {{return value depends on the object referenced by field 'priv_ptr_', not on '*this'}}
+    return priv_ptr_;     // expected-note {{returned here}}
+  }
+
+protected:
+  std::string_view prot_view_;
+
+private:
+  int *priv_ptr_; // expected-note {{if field 'priv_ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+};
+
+struct Mid : virtual Base {};
+struct Derived : Mid, virtual Base {
+  int *get_pub() const { // expected-warning {{return value depends on the object referenced by field 'pub_ptr_', not on '*this'}}
+    return pub_ptr_;     // expected-note {{returned here}}
+  }
+  std::string_view get_prot() const { // expected-warning {{return value depends on the object referenced by field 'prot_view_', not on '*this'}}
+    return prot_view_;                // expected-note {{returned here}}
+  }
+  // Private base field reached via a call: no field-origin-escape warning.
+  int *get_priv_via_base() const { return get_priv(); }
+};
+
+} // namespace field_origin_escape

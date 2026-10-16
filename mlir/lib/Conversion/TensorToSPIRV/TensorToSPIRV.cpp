@@ -81,8 +81,13 @@ public:
     auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto indexType = typeConverter.getIndexType();
 
+    spirv::LinearizedIndexNoWrapFlags noWrapFlags =
+        spirv::getLinearizedIndexNoWrapFlags(typeConverter.getTargetEnv(),
+                                             tensorType.getShape(), strides,
+                                             /*offset=*/0, indexType);
     Value index = spirv::linearizeIndex(adaptor.getIndices(), strides,
-                                        /*offset=*/0, indexType, loc, rewriter);
+                                        /*offset=*/0, indexType, loc, rewriter,
+                                        noWrapFlags);
     auto acOp = spirv::AccessChainOp::create(rewriter, loc, varOp, index);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(extractOp, acOp);
