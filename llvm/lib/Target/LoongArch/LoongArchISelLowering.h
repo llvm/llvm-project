@@ -79,6 +79,8 @@ public:
                                           Value *AlignedAddr, Value *CmpVal,
                                           Value *NewVal, Value *Mask,
                                           AtomicOrdering Ord) const override;
+  Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                  Value *SizeInBytes) const override;
 
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                           const CallBase &I, MachineFunction &MF,
