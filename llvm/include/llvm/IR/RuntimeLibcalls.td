@@ -4821,3 +4821,31 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
   def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }
+
+//===----------------------------------------------------------------------===//
+// Vector math libraries
+//===----------------------------------------------------------------------===//
+
+def SLEEFGNUABILibrary : LibcallLibrary<"sleefgnuabi",
+  (add _ZGVnN2vv_fmod, _ZGVnN4vv_fmodf, _ZGVsMxvv_fmod, _ZGVsMxvv_fmodf,
+       _ZGVnN2vl8_modf, _ZGVnN4vl4_modff, _ZGVsNxvl8_modf, _ZGVsNxvl4_modff,
+       _ZGVnN2vl8l8_sincos, _ZGVnN4vl4l4_sincosf, _ZGVsNxvl8l8_sincos,
+       _ZGVsNxvl4l4_sincosf, _ZGVnN4vl4l4_sincospif, _ZGVnN2vl8l8_sincospi,
+       _ZGVsNxvl4l4_sincospif, _ZGVsNxvl8l8_sincospi)>;
+
+def ArmPLLibrary : LibcallLibrary<"armpl",
+  (add armpl_svfmod_f32_x, armpl_svfmod_f64_x, armpl_svmodf_f64_x,
+       armpl_svmodf_f32_x, armpl_svsincos_f64_x, armpl_svsincos_f32_x,
+       armpl_svsincospi_f32_x, armpl_svsincospi_f64_x, armpl_svpow_f32_x,
+       armpl_svpow_f64_x, armpl_svcbrt_f32_x, armpl_svcbrt_f64_x,
+       armpl_vmodfq_f64, armpl_vmodfq_f32, armpl_vsincospiq_f32,
+       armpl_vsincospiq_f64,
+       LibcallsWithCC<(add armpl_vfmodq_f32, armpl_vfmodq_f64,
+                           armpl_vsincosq_f64, armpl_vsincosq_f32,
+                           armpl_vpowq_f32, armpl_vpowq_f64,
+                           armpl_vcbrtq_f32, armpl_vcbrtq_f64),
+                      AARCH64_VECTORCALL>)>;
+
+def AMDLIBMLibrary : LibcallLibrary<"amdlibm",
+  (add amd_vrd2_sincos, amd_vrd4_sincos, amd_vrd8_sincos, amd_vrs4_sincosf,
+       amd_vrs8_sincosf, amd_vrs16_sincosf)>;
