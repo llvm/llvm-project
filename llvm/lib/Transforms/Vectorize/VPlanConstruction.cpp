@@ -292,6 +292,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
           MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
 
+      assert(!isa<InsertValueInst>(Inst) &&
+             "legality must reject aggregate-producing insertvalue");
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
       SmallVector<VPValue *, 4> VPOperands;
@@ -1405,7 +1407,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   for (const auto &[V, Users] : NeedsPhi) {
-    if (isa<VPIRValue>(V))
+    auto *DefR = V->getDefiningRecipe();
+    if (!DefR || DefR->getParent()->getEnclosingLoopRegion() != LoopRegion ||
+        is_contained({Header, Latch}, DefR->getParent()))
       continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
     std::optional<VPIRFlags> Flags;

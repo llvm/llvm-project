@@ -564,8 +564,10 @@ bool InferAddressSpacesImpl::rewriteIntrinsicOperands(IntrinsicInst *II,
     Value *Rewrite = TTI->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
     if (!Rewrite)
       return false;
-    if (Rewrite != II)
+    if (Rewrite != II) {
       II->replaceAllUsesWith(Rewrite);
+      II->eraseFromParent();
+    }
     return true;
   }
   }

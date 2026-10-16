@@ -7069,7 +7069,7 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());

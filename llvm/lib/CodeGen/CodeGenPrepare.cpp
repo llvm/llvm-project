@@ -868,7 +868,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
                  isa<IndirectBrInst>(Pred->getTerminator())))
     return true;
 
-  if (BB->getTerminator() != &*BB->getFirstNonPHIOrDbg())
+  if (BB->getTerminator() != &*BB->getFirstNonPHIOrPseudoProbe())
     return true;
 
   // We use a simple cost heuristic which determine skipping merging is
@@ -2874,9 +2874,6 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
 /// @endcode
 bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
                                                 ModifyDT &ModifiedDT) {
-  if (!BB->getTerminator())
-    return false;
-
   ReturnInst *RetI = dyn_cast<ReturnInst>(BB->getTerminator());
   if (!RetI)
     return false;
