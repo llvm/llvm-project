@@ -33,6 +33,9 @@ int main(int, char**) {
     test_sequence_insert_range<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
+    test_sequence_insert_range_decay<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
+      LIBCPP_ASSERT(c.__invariants());
+    });
   });
   test_sequence_insert_range_move_only<std::deque>();
 
