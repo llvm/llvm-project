@@ -9,6 +9,7 @@
 #include "IncrementalAction.h"
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -69,7 +70,10 @@ IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
     return std::make_unique<MultiplexConsumer>(std::move(Cs));
   }
 
-  return std::make_unique<InProcessPrintingASTConsumer>(std::move(C), Interp);
+  auto PC =
+      std::make_unique<InProcessPrintingASTConsumer>(std::move(C), Interp);
+  PrintingConsumer = PC.get();
+  return PC;
 }
 
 void IncrementalAction::ExecuteAction() {
@@ -122,6 +126,11 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
   return nullptr;
 }
 
+void IncrementalAction::ForgetDroppedInstantiations() {
+  if (PrintingConsumer)
+    PrintingConsumer->ForgetDroppedInstantiations();
+}
+
 CodeGenerator *IncrementalAction::getCodeGen() const {
   FrontendAction *WrappedAct = getWrapped();
   if (!WrappedAct || !WrappedAct->hasIRSupport())
@@ -139,8 +148,13 @@ bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
 
   CompilerInstance *CI = Interp.getCompilerInstance();
   DiagnosticsEngine &Diags = CI->getDiagnostics();
-  if (Diags.hasErrorOccurred())
+  if (Diags.hasErrorOccurred()) {
+    for (Decl *D : DGR)
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
+        if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+          DroppedInstantiations.push_back(FD);
     return true;
+  }
 
   for (Decl *D : DGR)
     if (auto *TLSD = llvm::dyn_cast<TopLevelStmtDecl>(D))
@@ -155,6 +169,25 @@ bool InProcessPrintingASTConsumer::HandleTopLevelDecl(DeclGroupRef DGR) {
       }
 
   return MultiplexConsumer::HandleTopLevelDecl(DGR);
+}
+
+void InProcessPrintingASTConsumer::ForgetDroppedInstantiations() {
+  Sema &S = Interp.getCompilerInstance()->getSema();
+  for (FunctionDecl *FD : DroppedInstantiations) {
+    // An invalid instantiation is not instantiated again either way.
+    if (FD->isInvalidDecl() || !FD->doesThisDeclarationHaveABody())
+      continue;
+    FD->setBody(nullptr);
+    FD->setInstantiationIsPending(false);
+    if (auto *FTSI = FD->getTemplateSpecializationInfo())
+      FTSI->setPointOfInstantiation(SourceLocation());
+    else if (auto *MSI = FD->getMemberSpecializationInfo())
+      MSI->setPointOfInstantiation(SourceLocation());
+    // The use in the failed input must not be diagnosed as the use of an
+    // undefined inline function before a later input instantiates it.
+    S.UndefinedButUsed.erase(FD->getCanonicalDecl());
+  }
+  DroppedInstantiations.clear();
 }
 
 } // namespace clang
