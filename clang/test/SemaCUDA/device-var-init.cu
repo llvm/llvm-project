@@ -3,7 +3,8 @@
 // Make sure we don't allow dynamic initialization for device
 // variables, but accept empty constructors allowed by CUDA.
 
-// RUN: %clang_cc1 -verify %s -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11 %s
+// RUN: %clang_cc1 -verify=expected,dev %s -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11
+// RUN: %clang_cc1 -verify=expected %s -std=c++11
 
 #ifdef __clang__
 #include "Inputs/cuda.h"
@@ -429,16 +430,42 @@ __device__ void df_sema() {
   // expected-error@-1 {{initialization is not supported for __shared__ variables}}
   static __constant__ T_FA_NED c_t_fa_ned;
   // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
+  static T l_t;
+  static EC l_ec;
+  static ECD l_ecd;
+  static EC_I_EC l_ec_i_ec;
+  static CEEC l_ceec;
+  static CGTC l_cgtc;
+  static NCFS l_ncfs;
+
+  static EC l_ec_i(3);
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static ECI l_eci;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static NEC l_nec;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static NED l_ned;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static VD l_vd;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static EC_I_EC1 l_ec_i_ec1;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static T_B_NEC l_t_b_nec;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static T_FA_NED l_t_fa_ned;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
 }
 
 __host__ __device__ void hd_sema() {
   static int x = 42;
 }
 
-inline __host__ __device__ void hd_emitted_host_only() {
-  static int x = 42; // no error on device because this is never codegen'ed there.
+inline __host__ __device__ void hd_const_init() {
+  static int x = 42; // no error on device because this is constant initialized.
 }
-void call_hd_emitted_host_only() { hd_emitted_host_only(); }
+void call_hd_const_init_from_host() { hd_const_init(); }
+__device__ void call_hd_const_init_from_device() { hd_const_init(); }
 
 // Verify that we also check field initializers in instantiated structs.
 struct NontrivialInitializer {
@@ -491,6 +518,48 @@ __device__ void *ptr2 = ptr1;
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
 
 __device__ [[gnu::constructor(101)]] void ctor() {}
-// expected-error@-1 {{CUDA does not support global constructors for __device__ functions}}
+// dev-error@-1 {{CUDA does not support global constructors for __device__ functions}}
 __device__ [[gnu::destructor(101)]] void dtor() {}
-// expected-error@-1 {{CUDA does not support global destructors for __device__ functions}}
+// dev-error@-1 {{CUDA does not support global destructors for __device__ functions}}
+
+__global__ void gf_local_static() {
+  static HD_NEC nec;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __global__ function}}
+  static HD_EC ec;
+  static int i = 42;
+}
+
+__host__ __device__ void hd_local_static() {
+  static HD_NEC nec;
+  // dev-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __host__ __device__ function}}
+  static int i = 42;
+}
+
+inline __host__ __device__ void hd_local_static_host_only() {
+  static HD_NEC nec;
+}
+
+void call_hd_local_static_host_only() { hd_local_static_host_only(); }
+
+__host__ void h_local_static() { static HD_NEC nec; }
+void plain_local_static() { static HD_NEC nec; }
+
+__device__ int df_lambda_called_from_device() {
+  auto l = []() {
+    static HD_NEC nec;
+    // dev-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __host__ __device__ function}}
+    return nec.hd_nec;
+  };
+  return l();
+  // dev-note@-1 {{called by 'df_lambda_called_from_device'}}
+}
+
+int h_lambda_called_from_host() {
+  auto l = []() {
+    static HD_NEC nec;
+    return nec.hd_nec;
+  };
+  return l();
+}
+
+
