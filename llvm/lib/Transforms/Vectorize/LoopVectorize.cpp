@@ -5530,8 +5530,8 @@ LoopVectorizationPlanner::LoopVectorizationPlanner(
     PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
     std::function<const BranchProbabilityInfo &()> GetBPI)
     : Opts(Config.getOpts()), OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
-      Legal(Legal), CM(std::move(CM)), Config(Config), PSE(PSE),
-      ORE(ORE), GetBPI(GetBPI) {}
+      Legal(Legal), CM(std::move(CM)), Config(Config), PSE(PSE), ORE(ORE),
+      GetBPI(GetBPI) {}
 
 LoopVectorizationPlanner::~LoopVectorizationPlanner() = default;
 
