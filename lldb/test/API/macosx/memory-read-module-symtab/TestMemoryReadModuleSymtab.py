@@ -115,7 +115,7 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         self.dbg.MemoryPressureDetected()
 
         # Enable logging of gdb-remote packets, to look for any
-        # reads of a.out's __LINKEDIT in this second attach.
+        # reads of a.out's __TEXT or __LINKEDIT in this second attach.
         logfile = self.packet_log("packets")
 
         # Second attach:  Read the DataFileCache for the MemoryModule.
@@ -127,9 +127,14 @@ class MemoryReadModuleSymtabTestCase(TestBase):
 
         exe_filespec = lldb.SBFileSpec("a.out")
         exe_module = target.FindModule(exe_filespec)
-        print(exe_module)
+        exe_text = exe_module.FindSection("__TEXT")
+        self.assertTrue(exe_text.IsValid())
+        exe_text_text = exe_text.FindSubSection("__text")
+        self.assertTrue(exe_text_text.IsValid())
+        exe_header_start = exe_text.GetLoadAddress(target)
+        exe_header_end = exe_text_text.GetLoadAddress(target)
+
         exe_linkedit = exe_module.FindSection("__LINKEDIT")
-        print(exe_linkedit)
         self.assertTrue(exe_linkedit.IsValid())
         linkedit_startaddr = exe_linkedit.GetLoadAddress(target)
         linkedit_endaddr = linkedit_startaddr + exe_linkedit.GetByteSize()
@@ -139,10 +144,29 @@ class MemoryReadModuleSymtabTestCase(TestBase):
 
         # Iterate through the start & end address of every memory
         # read packet, and confirm that none of them are within
-        # the VM range of a.out's __LINKEDIT.  The SymbolTable for
-        # a.out should be gotten from the DataFileCache, not memory.
+        #   1. the VM range of a.out's Mach-O header and load commands
+        #      (the bytes between the start of __TEXT and the start of __text)
+        #   2. the VM range of __LINKEDIT.
+        #
+        # The Mach-O header and load commands should have been read from
+        # the 'headerbytes' DataCacheFile, and the SymbolTable aka LINKEDIT
+        # should have been read from the 'symtab' DataCacheFile.
         for addrs in memory_read_addrs:
             for addr in addrs:
+                # Check that the address isn't in the range of the
+                # mach-o header and load commands.
+                if addr >= exe_header_start and addr < exe_header_end:
+                    print(
+                        "Address 0x%x was read from a.out's Mach-O header and load commands.  It should have been retrieved from the 'headerbytes' DataFileCache file."
+                        % addr
+                    )
+                    if self.TraceOn():
+                        self.runCmd("target modules dump sections a.out")
+                        print("Read of address 0x%x is within Mach-O header" % addr)
+                self.assertFalse(addr >= exe_header_start and addr < exe_header_end)
+
+                # Check that the address isn't in the range of the
+                # LINKEDIT segment.
                 if addr >= linkedit_startaddr and addr < linkedit_endaddr:
                     print(
                         "Address 0x%x was read from a.out's __LINKEDIT; all symbol table information should have been retrieved from DataFileCache of it."

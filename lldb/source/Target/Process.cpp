@@ -18,6 +18,7 @@
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -70,6 +71,7 @@
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/AddressableBits.h"
+#include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -2831,6 +2833,83 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
     return module_sp;
 
   return error.takeError();
+}
+
+// Unlike the Symtab.cpp naming convention which encodes the
+// triple, filename, and filepath into hashes in the name
+// and puts the UUID in the file contents (which allows for
+// incremental rebuilding of a file without keeping old versions
+// of the file in the DataFileCache), for memory-read modules we
+// have less information at this point -- a filename and UUID only,
+// so we construct our key based on them.
+// If a developer is reading a binary under active development and
+// rebuilding, this means that the cache will keep all previous
+// caches of the header bytes in the DataFileCache, relying on the
+// DFC expiration policies to remove the previous versions.
+static std::string get_memory_binary_cache_key(const FileSpec &file_spec,
+                                               UUID uuid) {
+  std::string key;
+  llvm::raw_string_ostream strm(key);
+  strm << file_spec.GetFilename().str() << '-';
+  strm << uuid.GetAsString();
+  strm << "-headerbytes";
+  return key;
+}
+
+bool Process::LoadHeaderBytesFromCache(const FileSpec &file_spec, UUID uuid,
+                                       lldb::addr_t header_addr,
+                                       size_t size_to_read,
+                                       DataFileCache *cache) {
+  std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
+      cache->GetCachedData(get_memory_binary_cache_key(file_spec, uuid));
+  if (!mem_buffer_up)
+    return false;
+
+  // Stuff the header bytes into the Process memory cache.
+  // The ObjectFile will read the bytes from there at this
+  // same stop.
+  WritableDataBufferSP databuf_sp = std::make_shared<DataBufferHeap>(
+      mem_buffer_up->getBufferStart(), mem_buffer_up->getBufferSize());
+  AddCacheData(header_addr, databuf_sp);
+  return true;
+}
+
+void Process::SaveHeaderBytesToCache(const FileSpec &file_spec, UUID uuid,
+                                     lldb::addr_t header_addr,
+                                     size_t size_to_read,
+                                     DataFileCache *cache) {
+  ProcessAddress header_address(header_addr);
+  std::vector<uint8_t> data(size_to_read);
+  Status error;
+  if (ReadMemory(header_address, data.data(), size_to_read, error) !=
+          size_to_read ||
+      !error.Success())
+    return;
+
+  const auto byte_order = endian::InlHostByteOrder();
+  DataEncoder file(byte_order, /*addr_size=*/8);
+  llvm::ArrayRef<uint8_t> data_ref(data.data(), size_to_read);
+  file.AppendData(data_ref);
+
+  cache->SetCachedData(get_memory_binary_cache_key(file_spec, uuid),
+                       file.GetData());
+}
+
+llvm::Expected<ModuleSP> Process::ReadModuleFromMemoryWithCachedHeader(
+    const FileSpec &file_spec, UUID uuid, lldb::addr_t header_addr,
+    size_t size_to_read) {
+  DataFileCache *cache = Module::GetIndexCache(/* memory_module= */ true);
+  if (!cache)
+    return ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+
+  bool cache_was_used = LoadHeaderBytesFromCache(file_spec, uuid, header_addr,
+                                                 size_to_read, cache);
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      ReadModuleFromMemory(file_spec, header_addr, size_to_read);
+  if (module_sp_or_err && *module_sp_or_err)
+    if (!cache_was_used)
+      SaveHeaderBytesToCache(file_spec, uuid, header_addr, size_to_read, cache);
+  return module_sp_or_err;
 }
 
 bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,

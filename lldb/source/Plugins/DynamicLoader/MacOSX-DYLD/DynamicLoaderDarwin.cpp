@@ -179,9 +179,10 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // We'll call Target::ModulesDidLoad after all the modules have been
   // added to the target, don't let it be called for every one.
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
-    llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-        image_info.file_spec, image_info.address,
-        image_info.mh_and_load_cmd_size);
+    llvm::Expected<ModuleSP> module_sp_or_err =
+        m_process->ReadModuleFromMemoryWithCachedHeader(
+            image_info.file_spec, image_info.uuid, image_info.address,
+            image_info.mh_and_load_cmd_size);
     if (auto err = module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                      "Failed to load module from memory: {0}");
