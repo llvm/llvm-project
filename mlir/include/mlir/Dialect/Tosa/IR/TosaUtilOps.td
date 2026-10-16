@@ -52,7 +52,7 @@ def Tosa_ApplyScaleOp :
   );
 
   let extraClassDeclaration = [{
-    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getIterationShapeToUnroll();
   }];
 
   let assemblyFormat =
