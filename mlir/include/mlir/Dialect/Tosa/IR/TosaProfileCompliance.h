@@ -9,12 +9,16 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 #define MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 
-#include <unordered_map>
+#include <cstdint>
+#include <optional>
+#include <utility>
 
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-
-#include "mlir/Support/TypeID.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -23,20 +27,40 @@ using namespace mlir::tosa;
 // Type Compilance Definition
 //===----------------------------------------------------------------------===//
 
+enum class ComplianceTypeKind : uint8_t {
+  None = 0,
+  Integer,
+  BFloat16,
+  Float16,
+  Float32,
+  Float8E4M3FN,
+  Float8E5M2,
+  Float6E2M3FN,
+  Float6E3M2FN,
+  Float4E2M1FN,
+  Float8E8M0FNU,
+  MxInt8,
+  BlockScaled,
+  Unknown,
+};
+
 struct TypeInfo {
-  TypeInfo(mlir::TypeID typeID, uint32_t bitWidth)
-      : typeID(typeID), bitWidth(bitWidth), valueTypeID(mlir::TypeID()),
-        scaleTypeID(mlir::TypeID()), blockShape(std::nullopt) {}
+  constexpr TypeInfo(ComplianceTypeKind typeKind, uint32_t bitWidth)
+      : typeKind(typeKind), bitWidth(bitWidth),
+        valueTypeKind(ComplianceTypeKind::None),
+        scaleTypeKind(ComplianceTypeKind::None), blockShape(std::nullopt) {}
 
-  TypeInfo(mlir::TypeID typeID, uint32_t bitWidth, mlir::TypeID valueTypeID,
-           mlir::TypeID scaleTypeID, tosa::BlockShape blockShape)
-      : typeID(typeID), bitWidth(bitWidth), valueTypeID(valueTypeID),
-        scaleTypeID(scaleTypeID), blockShape(blockShape) {}
+  constexpr TypeInfo(ComplianceTypeKind typeKind, uint32_t bitWidth,
+                     ComplianceTypeKind valueTypeKind,
+                     ComplianceTypeKind scaleTypeKind,
+                     tosa::BlockShape blockShape)
+      : typeKind(typeKind), bitWidth(bitWidth), valueTypeKind(valueTypeKind),
+        scaleTypeKind(scaleTypeKind), blockShape(blockShape) {}
 
-  mlir::TypeID typeID;
+  ComplianceTypeKind typeKind;
   uint32_t bitWidth;
-  mlir::TypeID valueTypeID;
-  mlir::TypeID scaleTypeID;
+  ComplianceTypeKind valueTypeKind;
+  ComplianceTypeKind scaleTypeKind;
   std::optional<tosa::BlockShape> blockShape;
 };
 
@@ -49,21 +73,22 @@ enum CheckCondition {
 };
 
 using VersionedTypeInfo =
-    std::pair<SmallVector<TypeInfo>, SpecificationVersion>;
+    std::pair<ArrayRef<TypeInfo>, SpecificationVersion>;
 
 template <typename T>
 struct OpComplianceInfo {
   // Certain operations require multiple modes enabled.
   // e.g. cast bf16 to fp8e4m3 requires EXT-BF16 and EXT-FP8E4M3.
-  SmallVector<T> mode;
-  SmallVector<VersionedTypeInfo> operandTypeInfoSet;
+  ArrayRef<T> mode;
+  ArrayRef<VersionedTypeInfo> operandTypeInfoSet;
   CheckCondition condition = CheckCondition::anyOf;
 };
 
-using OperationProfileComplianceMap =
-    std::unordered_map<std::string, SmallVector<OpComplianceInfo<Profile>>>;
-using OperationExtensionComplianceMap =
-    std::unordered_map<std::string, SmallVector<OpComplianceInfo<Extension>>>;
+template <typename T>
+struct OpComplianceEntry {
+  llvm::StringLiteral opName;
+  ArrayRef<OpComplianceInfo<T>> infos;
+};
 
 //===----------------------------------------------------------------------===//
 // Tosa Profile And Extension Information Depot
@@ -81,14 +106,43 @@ public:
   SmallVector<TypeInfo> getInfo() { return tyInfo; }
 
 private:
+  static ComplianceTypeKind getComplianceTypeKind(Type type) {
+    if (isa<IntegerType>(type))
+      return ComplianceTypeKind::Integer;
+    if (isa<BFloat16Type>(type))
+      return ComplianceTypeKind::BFloat16;
+    if (isa<Float16Type>(type))
+      return ComplianceTypeKind::Float16;
+    if (isa<Float32Type>(type))
+      return ComplianceTypeKind::Float32;
+    if (isa<Float8E4M3FNType>(type))
+      return ComplianceTypeKind::Float8E4M3FN;
+    if (isa<Float8E5M2Type>(type))
+      return ComplianceTypeKind::Float8E5M2;
+    if (isa<Float6E2M3FNType>(type))
+      return ComplianceTypeKind::Float6E2M3FN;
+    if (isa<Float6E3M2FNType>(type))
+      return ComplianceTypeKind::Float6E3M2FN;
+    if (isa<Float4E2M1FNType>(type))
+      return ComplianceTypeKind::Float4E2M1FN;
+    if (isa<Float8E8M0FNUType>(type))
+      return ComplianceTypeKind::Float8E8M0FNU;
+    if (isa<tosa::mxint8Type>(type))
+      return ComplianceTypeKind::MxInt8;
+    if (isa<tosa::BlockScaledType>(type))
+      return ComplianceTypeKind::BlockScaled;
+    return ComplianceTypeKind::Unknown;
+  }
+
   TypeInfo convertTypeToInfo(Type type) {
     if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type)) {
       Type valueTy = blockScaledTy.getValueType();
       Type scaleTy = blockScaledTy.getScaleType();
-      return {type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
-              scaleTy.getTypeID(), blockScaledTy.getBlockShape()};
+      return {ComplianceTypeKind::BlockScaled, tosa::getBitWidth(valueTy),
+              getComplianceTypeKind(valueTy), getComplianceTypeKind(scaleTy),
+              blockScaledTy.getBlockShape()};
     }
-    return {type.getTypeID(), tosa::getBitWidth(type)};
+    return {getComplianceTypeKind(type), tosa::getBitWidth(type)};
   }
 
   TypeInfo convertValueToInfo(Value value) {
@@ -126,10 +180,9 @@ class TosaProfileCompliance {
 public:
   explicit TosaProfileCompliance();
 
-  // Accessor of the compliance info map.
+  // Accessor of the compliance info for an operation.
   template <typename T>
-  std::unordered_map<std::string, SmallVector<OpComplianceInfo<T>>>
-  getProfileComplianceMap() {
+  ArrayRef<OpComplianceInfo<T>> getProfileComplianceInfos(StringRef opName) {
     // Only profile and extension compliance info are provided.
     return {};
   }
@@ -145,16 +198,19 @@ public:
                                         const tosa::TargetEnv &targetEnv);
 
   bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
-    return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
-           a.valueTypeID == b.valueTypeID && a.scaleTypeID == b.scaleTypeID &&
-           a.blockShape == b.blockShape;
+    if (a.typeKind == ComplianceTypeKind::Unknown ||
+        b.typeKind == ComplianceTypeKind::Unknown)
+      return false;
+    return a.typeKind == b.typeKind && a.bitWidth == b.bitWidth &&
+           a.valueTypeKind == b.valueTypeKind &&
+           a.scaleTypeKind == b.scaleTypeKind && a.blockShape == b.blockShape;
   }
 
   // Find the required profiles or extensions from the compliance info according
   // to the operand type combination.
   template <typename T>
   SmallVector<OpComplianceInfo<T>>
-  findMatchedEntries(Operation *op, SmallVector<OpComplianceInfo<T>> compInfo);
+  findMatchedEntries(Operation *op, ArrayRef<OpComplianceInfo<T>> compInfo);
 
   // Debug utilites.
   template <typename T>
@@ -170,9 +226,6 @@ private:
   template <typename T>
   FailureOr<SmallVector<OpComplianceInfo<T>>>
   getOperatorMatchedEntries(Operation *op);
-
-  OperationProfileComplianceMap profileComplianceMap;
-  OperationExtensionComplianceMap extensionComplianceMap;
 };
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
