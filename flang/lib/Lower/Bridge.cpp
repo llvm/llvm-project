@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
@@ -65,6 +66,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
+#include "flang/Support/PluginDirectives.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -691,52 +693,145 @@ public:
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 
-  /// Attach the directives defined by plugins to the operations of their
-  /// subjects in this module (a func.func for a procedure, a fir.global for a
-  /// variable), as a `fir.directives` array of dictionaries:
+  /// What semantics lets a plugin directive refer to: a subprogram or an
+  /// external procedure, a variable, or a COMMON block. Nothing else has an
+  /// operation (or even a mangled name).
+  static bool
+  isPluginDirectiveReferable(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::semantics::IsProcedure(sym)) {
+      return !sym.has<Fortran::semantics::GenericDetails>() &&
+             !Fortran::semantics::IsDummy(sym) &&
+             !Fortran::semantics::IsProcedurePointer(sym) &&
+             !Fortran::semantics::IsStmtFunction(sym) &&
+             !sym.attrs().test(Fortran::semantics::Attr::INTRINSIC);
+    }
+    return sym.has<Fortran::semantics::ObjectEntityDetails>() ||
+           sym.has<Fortran::semantics::CommonBlockDetails>();
+  }
+
+  /// The operation of a procedure or variable that a plugin directive names,
+  /// declared if need be (as a reference to it would): procedures, and
+  /// variables of modules, which may be another module's.
+  mlir::Operation *
+  getOrDeclarePluginDirectiveSymbol(const Fortran::semantics::Symbol &sym) {
+    if (!isPluginDirectiveReferable(sym)) {
+      return nullptr;
+    }
+    mlir::ModuleOp module{getModuleOp()};
+    if (mlir::Operation *op = module.lookupSymbol(mangleName(sym)))
+      return op;
+    if (Fortran::semantics::IsProcedure(sym)) {
+      mlir::func::FuncOp func = Fortran::lower::getOrDeclareFunction(
+          Fortran::evaluate::ProcedureDesignator{sym}, *this);
+      return func.getOperation();
+    }
+    if (sym.has<Fortran::semantics::ObjectEntityDetails>() &&
+        sym.owner().IsModule()) {
+      return Fortran::lower::declareModuleVariable(*this, sym).getOperation();
+    }
+    return nullptr;
+  }
+
+  /// A real literal argument of a plugin directive, as a float attribute of
+  /// its kind.
+  mlir::Attribute genPluginDirectiveRealAttr(
+      const Fortran::parser::SignedRealLiteralConstant &x) {
+    Fortran::evaluate::ExpressionAnalyzer ea{bridge.getSemanticsContext()};
+    Fortran::semantics::MaybeExpr expr{ea.Analyze(x)};
+    if (!expr)
+      return {};
+    *expr = Fortran::evaluate::Fold(
+        bridge.getSemanticsContext().foldingContext(), std::move(*expr));
+    const auto *real{
+        std::get_if<Fortran::evaluate::Expr<Fortran::evaluate::SomeReal>>(
+            &expr->u)};
+    if (!real)
+      return {};
+    return Fortran::common::visit(
+        [&](const auto &kindExpr) -> mlir::Attribute {
+          using T = typename std::decay_t<decltype(kindExpr)>::Result;
+          std::optional<Fortran::evaluate::Scalar<T>> value{
+              Fortran::evaluate::GetScalarConstantValue<T>(kindExpr)};
+          if (!value)
+            return {};
+          llvm::APFloat f{builder->getKindMap().getFloatSemantics(T::kind),
+                          value->DumpHexadecimal()};
+          return mlir::FloatAttr::get(builder->getRealType(T::kind), f);
+        },
+        real->u);
+  }
+
+  /// A directive defined by a plugin as a dictionary attribute:
   ///   {prefix = "enzyme", keyword = "custom_rule",
   ///    args = {reverse = @_QMmPrev, ...}}
-  /// Procedure and variable arguments are symbol references, declaring the
-  /// procedure or module variable if this module does not yet; the plugin's
-  /// passes give them a meaning.
-  void lowerPluginDirectives() {
+  /// The arguments are its keyword arguments. Procedure and variable
+  /// arguments are symbol references, declaring the procedure or module
+  /// variable if this module does not yet; the plugin's passes give them a
+  /// meaning.
+  mlir::DictionaryAttr
+  genPluginDirectiveAttr(const Fortran::parser::CompilerDirective &directive) {
     mlir::ModuleOp module{getModuleOp()};
     mlir::MLIRContext *ctx{module.getContext()};
-    // What semantics lets a directive refer to: a subprogram or an external
-    // procedure, a variable, or a COMMON block. Nothing else has an operation
-    // (or even a mangled name).
-    auto isReferable{[](const Fortran::semantics::Symbol &sym) {
-      if (Fortran::semantics::IsProcedure(sym)) {
-        return !sym.has<Fortran::semantics::GenericDetails>() &&
-               !Fortran::semantics::IsDummy(sym) &&
-               !Fortran::semantics::IsProcedurePointer(sym) &&
-               !Fortran::semantics::IsStmtFunction(sym) &&
-               !sym.attrs().test(Fortran::semantics::Attr::INTRINSIC);
+    const auto &[prefix, keyword, args]{
+        std::get<Fortran::parser::CompilerDirective::Plugin>(directive.u).t};
+    llvm::SmallVector<mlir::NamedAttribute> argAttrs;
+    for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg : args) {
+      const auto &argKeyword{std::get<0>(arg.t)};
+      if (!argKeyword) {
+        continue; // the subject, or the variables of a loop directive
       }
-      return sym.has<Fortran::semantics::ObjectEntityDetails>() ||
-             sym.has<Fortran::semantics::CommonBlockDetails>();
-    }};
-    // The operation of a procedure or variable, declared if need be (as a
-    // reference to it would): procedures, and variables of modules, which
-    // may be another module's.
-    auto getOrDeclare{[&](const Fortran::semantics::Symbol &sym)
-                          -> mlir::Operation * {
-      if (!isReferable(sym)) {
-        return nullptr;
-      }
-      if (mlir::Operation *op = module.lookupSymbol(mangleName(sym)))
-        return op;
-      if (Fortran::semantics::IsProcedure(sym)) {
-        mlir::func::FuncOp func = Fortran::lower::getOrDeclareFunction(
-            Fortran::evaluate::ProcedureDesignator{sym}, *this);
-        return func.getOperation();
-      }
-      if (sym.has<Fortran::semantics::ObjectEntityDetails>() &&
-          sym.owner().IsModule()) {
-        return Fortran::lower::declareModuleVariable(*this, sym).getOperation();
-      }
-      return nullptr;
-    }};
+      mlir::Attribute value{Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::parser::Name &n) -> mlir::Attribute {
+                if (!n.symbol) {
+                  return mlir::StringAttr::get(ctx, n.ToString());
+                }
+                mlir::Operation *op{
+                    getOrDeclarePluginDirectiveSymbol(n.symbol->GetUltimate())};
+                if (!op) {
+                  return mlir::StringAttr::get(ctx, n.ToString());
+                }
+                return mlir::FlatSymbolRefAttr::get(
+                    mlir::SymbolTable::getSymbolName(op));
+              },
+              [&](const Fortran::parser::CompilerDirective::Plugin::CommonBlock
+                      &c) -> mlir::Attribute {
+                std::string name{c.v.symbol ? mangleName(*c.v.symbol)
+                                            : c.v.ToString()};
+                if (!module.lookupSymbol(name)) {
+                  return mlir::StringAttr::get(ctx, c.v.ToString());
+                }
+                return mlir::FlatSymbolRefAttr::get(ctx, name);
+              },
+              [&](std::uint64_t n) -> mlir::Attribute {
+                return builder->getI64IntegerAttr(n);
+              },
+              [&](const Fortran::parser::SignedRealLiteralConstant &r)
+                  -> mlir::Attribute { return genPluginDirectiveRealAttr(r); },
+              [&](const std::string &str) -> mlir::Attribute {
+                return mlir::StringAttr::get(ctx, str);
+              },
+          },
+          std::get<1>(arg.t))};
+      if (value)
+        argAttrs.push_back(
+            builder->getNamedAttr(argKeyword->ToString(), value));
+    }
+    return builder->getDictionaryAttr({
+        builder->getNamedAttr("prefix",
+                              builder->getStringAttr(prefix.ToString())),
+        builder->getNamedAttr("keyword",
+                              builder->getStringAttr(keyword.ToString())),
+        builder->getNamedAttr("args", builder->getDictionaryAttr(argAttrs)),
+    });
+  }
+
+  /// Attach the directives defined by plugins to the operations of their
+  /// subjects in this module (a func.func for a procedure, a fir.global for a
+  /// variable), as a `fir.directives` array of the dictionaries of
+  /// genPluginDirectiveAttr.
+  void lowerPluginDirectives() {
+    mlir::ModuleOp module{getModuleOp()};
     for (const auto &[subject, directive, fromModFile] :
          bridge.getSemanticsContext().GetPluginDirectives()) {
       const Fortran::semantics::Symbol &ultimate{subject->GetUltimate()};
@@ -746,67 +841,97 @@ public:
       // those it uses.
       mlir::Operation *target{nullptr};
       if (!fromModFile)
-        target = getOrDeclare(ultimate);
-      else if (isReferable(ultimate))
+        target = getOrDeclarePluginDirectiveSymbol(ultimate);
+      else if (isPluginDirectiveReferable(ultimate))
         target = module.lookupSymbol(mangleName(ultimate));
       if (!target) {
         continue; // neither defined nor referenced here
       }
-      const auto &[prefix, keyword, args]{
-          std::get<Fortran::parser::CompilerDirective::Plugin>(directive->u).t};
-      llvm::SmallVector<mlir::NamedAttribute> argAttrs;
-      for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg : args) {
-        const auto &argKeyword{std::get<0>(arg.t)};
-        if (!argKeyword) {
-          continue; // the subject
-        }
-        mlir::Attribute value{Fortran::common::visit(
-            Fortran::common::visitors{
-                [&](const Fortran::parser::Name &n) -> mlir::Attribute {
-                  if (!n.symbol) {
-                    return mlir::StringAttr::get(ctx, n.ToString());
-                  }
-                  mlir::Operation *op{getOrDeclare(n.symbol->GetUltimate())};
-                  if (!op) {
-                    return mlir::StringAttr::get(ctx, n.ToString());
-                  }
-                  return mlir::FlatSymbolRefAttr::get(
-                      mlir::SymbolTable::getSymbolName(op));
-                },
-                [&](const Fortran::parser::CompilerDirective::Plugin::
-                        CommonBlock &c) -> mlir::Attribute {
-                  std::string name{c.v.symbol ? mangleName(*c.v.symbol)
-                                              : c.v.ToString()};
-                  if (!module.lookupSymbol(name)) {
-                    return mlir::StringAttr::get(ctx, c.v.ToString());
-                  }
-                  return mlir::FlatSymbolRefAttr::get(ctx, name);
-                },
-                [&](std::uint64_t n) -> mlir::Attribute {
-                  return builder->getI64IntegerAttr(n);
-                },
-                [&](const std::string &str) -> mlir::Attribute {
-                  return mlir::StringAttr::get(ctx, str);
-                },
-            },
-            std::get<1>(arg.t))};
-        argAttrs.push_back(
-            builder->getNamedAttr(argKeyword->ToString(), value));
-      }
-      mlir::Attribute entry{builder->getDictionaryAttr({
-          builder->getNamedAttr("prefix",
-                                builder->getStringAttr(prefix.ToString())),
-          builder->getNamedAttr("keyword",
-                                builder->getStringAttr(keyword.ToString())),
-          builder->getNamedAttr("args", builder->getDictionaryAttr(argAttrs)),
-      })};
       llvm::SmallVector<mlir::Attribute> entries;
       if (auto existing{
               target->getAttrOfType<mlir::ArrayAttr>("fir.directives")})
         entries.append(existing.begin(), existing.end());
-      entries.push_back(entry);
+      entries.push_back(genPluginDirectiveAttr(*directive));
       target->setAttr("fir.directives", builder->getArrayAttr(entries));
     }
+  }
+
+  static bool
+  isPluginLoopDirective(const Fortran::parser::CompilerDirective &dir) {
+    const auto *plugin{
+        std::get_if<Fortran::parser::CompilerDirective::Plugin>(&dir.u)};
+    if (!plugin)
+      return false;
+    const auto &[prefix, keyword, args]{plugin->t};
+    const Fortran::common::PluginDirectiveSpec *spec{
+        Fortran::common::lookupPluginDirective(prefix.ToString(),
+                                               keyword.ToString())};
+    return spec &&
+           spec->subject == Fortran::common::PluginDirectiveSubject::Loop;
+  }
+
+  /// The plugin directives among the directives of a loop, as entries of the
+  /// `fir.directives` attribute of the loop: the dictionaries of
+  /// genPluginDirectiveAttr, with the variables of the directive as
+  /// `variables`. A variable of a module and a COMMON block are references to
+  /// their global (declared if need be); another variable is the unique name
+  /// of its declaration (`uniq_name` of its hlfir.declare). The plugin's
+  /// passes evaluate them where they need them.
+  llvm::SmallVector<mlir::Attribute> genPluginLoopDirectivesAttrs(
+      llvm::ArrayRef<const Fortran::parser::CompilerDirective *> dirs) {
+    llvm::SmallVector<mlir::Attribute> entries;
+    mlir::MLIRContext *ctx{builder->getContext()};
+    for (const Fortran::parser::CompilerDirective *dir : dirs) {
+      if (!isPluginLoopDirective(*dir))
+        continue;
+      llvm::SmallVector<mlir::Attribute> variables;
+      for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg :
+           std::get<2>(
+               std::get<Fortran::parser::CompilerDirective::Plugin>(dir->u)
+                   .t)) {
+        if (std::get<0>(arg.t))
+          continue; // a keyword argument
+        const auto &value{std::get<1>(arg.t)};
+        if (const auto *name{std::get_if<Fortran::parser::Name>(&value)}) {
+          const Fortran::semantics::Symbol &sym{name->symbol->GetUltimate()};
+          if (sym.owner().IsModule() &&
+              !Fortran::semantics::FindCommonBlockContaining(sym)) {
+            if (mlir::Operation *op = getOrDeclarePluginDirectiveSymbol(sym)) {
+              variables.push_back(mlir::FlatSymbolRefAttr::get(
+                  mlir::SymbolTable::getSymbolName(op)));
+              continue;
+            }
+          }
+          variables.push_back(mlir::StringAttr::get(ctx, mangleName(sym)));
+        } else if (const auto *common{std::get_if<
+                       Fortran::parser::CompilerDirective::Plugin::CommonBlock>(
+                       &value)}) {
+          variables.push_back(
+              mlir::FlatSymbolRefAttr::get(ctx, mangleName(*common->v.symbol)));
+        }
+      }
+      mlir::DictionaryAttr entry{genPluginDirectiveAttr(*dir)};
+      llvm::SmallVector<mlir::NamedAttribute> fields{entry.getValue()};
+      fields.push_back(
+          builder->getNamedAttr("variables", builder->getArrayAttr(variables)));
+      entries.push_back(builder->getDictionaryAttr(fields));
+    }
+    return entries;
+  }
+
+  /// Attach the plugin directives among the directives of a loop to \p op,
+  /// which stands for the loop: its fir.do_loop or scf.while, or the branch
+  /// back to its header if it is unstructured.
+  void attachPluginLoopDirectives(
+      mlir::Operation *op,
+      llvm::ArrayRef<const Fortran::parser::CompilerDirective *> dirs) {
+    llvm::SmallVector<mlir::Attribute> entries{
+        genPluginLoopDirectivesAttrs(dirs)};
+    if (entries.empty() || !op)
+      return;
+    if (auto existing{op->getAttrOfType<mlir::ArrayAttr>("fir.directives")})
+      entries.insert(entries.begin(), existing.begin(), existing.end());
+    op->setAttr("fir.directives", builder->getArrayAttr(entries));
   }
 
   /// Declare a function.
@@ -1927,6 +2052,7 @@ private:
         mlir::scf::WhileOp::create(*builder, loc,
                                    /*resultTypes=*/mlir::TypeRange{},
                                    /*inits=*/mlir::ValueRange{});
+    attachPluginLoopDirectives(scfWhile, doStmtEval.dirs);
 
     // Fill the "before" region: compute condition.
     mlir::Block *beforeBlock =
@@ -3142,6 +3268,19 @@ private:
     else
       genFIRIncrementLoopEnd(incrementLoopNestInfo);
 
+    // The plugin directives of the loop go on its op, or, for an unstructured
+    // loop, which has none, on the branch back to its header.
+    if (unstructuredContext) {
+      mlir::Block *latch{builder->getBlock()};
+      if (latch && !latch->empty())
+        if (auto backEdge{mlir::dyn_cast<mlir::cf::BranchOp>(latch->back())};
+            backEdge && backEdge.getDest() == headerBlock)
+          attachPluginLoopDirectives(backEdge, doStmtEval.dirs);
+    } else if (!incrementLoopNestInfo.empty()) {
+      attachPluginLoopDirectives(incrementLoopNestInfo.front().loopOp,
+                                 doStmtEval.dirs);
+    }
+
     // This call may generate a branch in some contexts.
     genFIR(endDoEval, unstructuredContext);
 
@@ -3931,6 +4070,10 @@ private:
             },
             [&](const Fortran::parser::CompilerDirective::Simd &) {
               attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::Plugin &) {
+              if (isPluginLoopDirective(dir))
+                attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
         dir.u);
