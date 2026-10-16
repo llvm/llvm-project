@@ -329,6 +329,9 @@ public:
     return {};
   }
 
+  /// Return the access location with program order index \p Idx.
+  MemAccessInfo getAccess(unsigned Idx) const { return AccessLocs[Idx]; }
+
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
   PredicatedScalarEvolution &getPSE() const { return PSE; }
@@ -371,6 +374,9 @@ private:
 
   /// Memory access instructions in program order.
   SmallVector<Instruction *, 16> InstMap;
+
+  /// Access locations in program order.
+  SmallVector<MemAccessInfo> AccessLocs;
 
   /// The program order index to be used for the next instruction.
   unsigned AccessIdx = 0;
