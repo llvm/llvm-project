@@ -229,10 +229,12 @@ LLVM_ABI bool promoteLoopAccessesToScalars(
     MemorySSAUpdater &, ICFLoopSafetyInfo *, OptimizationRemarkEmitter *,
     bool AllowSpeculation, bool HasReadsOutsideSet);
 
-/// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of basic blocks includes the starting point.
+/// Does a DFS from a given node to all of its children inside a given loop.
+/// The returned vector of basic blocks includes only blocks contained in
+/// \p CurLoop and not contained in any subloops.
 LLVM_ABI SmallVector<BasicBlock *, 16>
-collectChildrenInLoop(DominatorTree *DT, DomTreeNode *N, const Loop *CurLoop);
+collectDirectChildrenInLoop(DominatorTree *DT, DomTreeNode *N,
+                            const LoopInfo *LI, const Loop *CurLoop);
 
 /// Returns the instructions that use values defined in the loop.
 LLVM_ABI SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
