@@ -646,7 +646,7 @@ public:
 class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
 public:
   UnborrowedLocalVarsChecker()
-      : RawPtrRefLocalVarsChecker("Unborrowed raw poinetr or reference not "
+      : RawPtrRefLocalVarsChecker("Unborrowed raw pointer or reference not "
                                   "provably backed by a Borrow",
                                   makeBorrowSafetyModel()) {}
 };
