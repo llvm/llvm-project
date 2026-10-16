@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
-# RUN: llc -mtriple=amdgpu8.03 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
+# RUN: llc -mtriple=amdgpu9.00 -mattr=+enable-flat-scratch -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgpu8.03 -mattr=+enable-flat-scratch -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
 
 # GCN-LABEL: name: diffoporder_add
 # GFX9: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, -2048, 0
@@ -465,4 +465,27 @@ body:             |
     %8:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %6, %subreg.sub1
     %9:vgpr_32 = FLAT_LOAD_UBYTE %8, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0, implicit %9
+...
+---
+
+# GCN-LABEL: name: diffoporder_add_scratch_vgpr
+# GFX9: SCRATCH_LOAD_DWORD %{{[0-9]+}}, 1000, 0,
+# GFX9: SCRATCH_LOAD_DWORD %{{[0-9]+}}, 0, 0,
+
+# GFX8: SCRATCH_LOAD_DWORD %{{[0-9]+}}, 0, 0,
+# GFX8: SCRATCH_LOAD_DWORD %{{[0-9]+}}, 0, 0,
+
+name: diffoporder_add_scratch_vgpr
+body:             |
+  bb.0.entry:
+
+    %0:vgpr_32 = COPY $vgpr0
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32 = V_ADD_U32_e64 %1, %0, 0, implicit $exec
+    %3:vgpr_32 = SCRATCH_LOAD_DWORD %2, 0, 0, implicit $exec, implicit $flat_scr
+
+    %4:sgpr_32 = S_MOV_B32 3000
+    %5:vgpr_32 = V_ADD_U32_e64 %4, %0, 0, implicit $exec
+    %6:vgpr_32 = SCRATCH_LOAD_DWORD %5, 0, 0, implicit $exec, implicit $flat_scr
 ...
