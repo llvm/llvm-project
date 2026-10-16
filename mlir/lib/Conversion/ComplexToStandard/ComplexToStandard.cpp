@@ -361,6 +361,24 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
         arith::SelectOp::create(b, expIsInf, imagOverflow, imagNormal);
     Value resultImag = arith::SelectOp::create(b, yIsZero, zero, imagNonZero);
 
+    // When x is +-inf and y is +-inf or NaN, exp(x) * cos(y) is inf * NaN or
+    // 0 * NaN. C99 Annex G gives exp(-inf + I*y) = +-0 +- 0*I and
+    // exp(+inf + I*y) = +-inf + NaN*I for these y.
+    Value absX = math::AbsFOp::create(b, x);
+    Value absY = math::AbsFOp::create(b, y);
+    Value negInf = arith::ConstantOp::create(
+        b, ET, b.getFloatAttr(ET, APFloat::getInf(floatSemantics, true)));
+    Value yIsNotFinite =
+        arith::CmpFOp::create(b, arith::CmpFPredicate::UGE, absY, inf);
+    Value xIsInf =
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absX, inf);
+    Value xIsNegInf =
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, x, negInf);
+    Value useExpX = arith::AndIOp::create(b, xIsInf, yIsNotFinite);
+    Value useZeroImag = arith::AndIOp::create(b, xIsNegInf, yIsNotFinite);
+    resultReal = arith::SelectOp::create(b, useExpX, exp, resultReal);
+    resultImag = arith::SelectOp::create(b, useZeroImag, zero, resultImag);
+
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();

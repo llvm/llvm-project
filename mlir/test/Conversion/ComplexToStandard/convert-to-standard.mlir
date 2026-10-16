@@ -230,7 +230,17 @@ func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[IMAG_OVERFLOW:.*]] = arith.mulf %[[EXP_HALF_SIN]], %[[EXP_HALF]] : f32
 // CHECK-DAG: %[[IMAG_NONZERO:.*]] = arith.select %[[IS_INF]], %[[IMAG_OVERFLOW]], %[[IMAG_NORMAL]] : f32
 // CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[IS_IMAG_ZERO]], %[[ZERO]], %[[IMAG_NONZERO]] : f32
-// CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
+// CHECK-DAG: %[[ABS_REAL:.*]] = math.absf %[[REAL]] : f32
+// CHECK-DAG: %[[ABS_IMAG:.*]] = math.absf %[[IMAG]] : f32
+// CHECK-DAG: %[[NEG_INF:.*]] = arith.constant 0xFF800000 : f32
+// CHECK-DAG: %[[IMAG_NOT_FINITE:.*]] = arith.cmpf uge, %[[ABS_IMAG]], %[[INF]] : f32
+// CHECK-DAG: %[[REAL_IS_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] : f32
+// CHECK-DAG: %[[REAL_IS_NEG_INF:.*]] = arith.cmpf oeq, %[[REAL]], %[[NEG_INF]] : f32
+// CHECK-DAG: %[[USE_EXP_REAL:.*]] = arith.andi %[[REAL_IS_INF]], %[[IMAG_NOT_FINITE]] : i1
+// CHECK-DAG: %[[USE_ZERO_IMAG:.*]] = arith.andi %[[REAL_IS_NEG_INF]], %[[IMAG_NOT_FINITE]] : i1
+// CHECK: %[[SPECIAL_REAL:.*]] = arith.select %[[USE_EXP_REAL]], %[[EXP_REAL]], %[[RESULT_REAL]] : f32
+// CHECK: %[[SPECIAL_IMAG:.*]] = arith.select %[[USE_ZERO_IMAG]], %[[ZERO]], %[[RESULT_IMAG]] : f32
+// CHECK: %[[RESULT:.*]] = complex.create %[[SPECIAL_REAL]], %[[SPECIAL_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
 // -----
@@ -866,7 +876,17 @@ func.func @complex_exp_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[IMAG_OVERFLOW:.*]] = arith.mulf %[[EXP_HALF_SIN]], %[[EXP_HALF]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[IMAG_NONZERO:.*]] = arith.select %[[IS_INF]], %[[IMAG_OVERFLOW]], %[[IMAG_NORMAL]] : f32
 // CHECK: %[[RESULT_IMAG:.*]] = arith.select %[[IS_IMAG_ZERO]], %[[ZERO]], %[[IMAG_NONZERO]] : f32
-// CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
+// CHECK-DAG: %[[ABS_REAL:.*]] = math.absf %[[REAL]] : f32
+// CHECK-DAG: %[[ABS_IMAG:.*]] = math.absf %[[IMAG]] : f32
+// CHECK-DAG: %[[NEG_INF:.*]] = arith.constant 0xFF800000 : f32
+// CHECK-DAG: %[[IMAG_NOT_FINITE:.*]] = arith.cmpf uge, %[[ABS_IMAG]], %[[INF]] : f32
+// CHECK-DAG: %[[REAL_IS_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] : f32
+// CHECK-DAG: %[[REAL_IS_NEG_INF:.*]] = arith.cmpf oeq, %[[REAL]], %[[NEG_INF]] : f32
+// CHECK-DAG: %[[USE_EXP_REAL:.*]] = arith.andi %[[REAL_IS_INF]], %[[IMAG_NOT_FINITE]] : i1
+// CHECK-DAG: %[[USE_ZERO_IMAG:.*]] = arith.andi %[[REAL_IS_NEG_INF]], %[[IMAG_NOT_FINITE]] : i1
+// CHECK: %[[SPECIAL_REAL:.*]] = arith.select %[[USE_EXP_REAL]], %[[EXP_REAL]], %[[RESULT_REAL]] : f32
+// CHECK: %[[SPECIAL_IMAG:.*]] = arith.select %[[USE_ZERO_IMAG]], %[[ZERO]], %[[RESULT_IMAG]] : f32
+// CHECK: %[[RESULT:.*]] = complex.create %[[SPECIAL_REAL]], %[[SPECIAL_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
 // -----
