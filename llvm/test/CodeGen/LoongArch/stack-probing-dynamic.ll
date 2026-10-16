@@ -434,7 +434,6 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; LA64-NEXT:    .cfi_def_cfa_offset 6128
 ; LA64-NEXT:    addi.d $sp, $sp, -48
 ; LA64-NEXT:    .cfi_def_cfa_offset 6176
-; LA64-NEXT:    lu12i.w $a0, 1
 ; LA64-NEXT:    add.d $a0, $sp, $a0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee_stack_args)
 ; LA64-NEXT:    jirl $ra, $ra, 0
@@ -457,7 +456,6 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; LA32-NEXT:    .cfi_def_cfa_offset 6128
 ; LA32-NEXT:    addi.w $sp, $sp, -80
 ; LA32-NEXT:    .cfi_def_cfa_offset 6208
-; LA32-NEXT:    lu12i.w $a0, 1
 ; LA32-NEXT:    ori $a0, $a0, 36
 ; LA32-NEXT:    add.w $a0, $sp, $a0
 ; LA32-NEXT:    bl callee_stack_args

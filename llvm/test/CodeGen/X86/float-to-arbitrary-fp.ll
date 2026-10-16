@@ -1112,7 +1112,6 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    cmpl $31, %eax
 ; CHECK-NEXT:    cmovael %ebp, %eax
-; CHECK-NEXT:    movl $31, %ebp
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    adcl $-1, %ecx
@@ -1465,7 +1464,6 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    cmpl $31, %eax
 ; CHECK-NEXT:    cmovael %ebp, %eax
-; CHECK-NEXT:    movl $31, %ebp
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    adcl $-1, %ecx

@@ -138,7 +138,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    .cfi_def_cfa_offset 32768
-; LA64-NEXT:    lu12i.w $a0, 8
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    .cfi_def_cfa_offset 65536
@@ -158,7 +157,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    .cfi_def_cfa_offset 32768
-; LA32-NEXT:    lu12i.w $a0, 8
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    .cfi_def_cfa_offset 65536

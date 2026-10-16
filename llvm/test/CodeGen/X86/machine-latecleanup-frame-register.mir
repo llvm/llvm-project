@@ -13,9 +13,8 @@ body: |
     ; CHECK: liveins: $rdi, $rsp
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $r8d = MOV32ri 42
-    ; CHECK-NEXT: MOV32mr $rdi, 1, $noreg, 0, $noreg, killed $r8d
+    ; CHECK-NEXT: MOV32mr $rdi, 1, $noreg, 0, $noreg, $r8d
     ; CHECK-NEXT: $rsp = LEA64r $rsp, 1, $noreg, -16, $noreg
-    ; CHECK-NEXT: $r8d = MOV32ri 42
     ; CHECK-NEXT: MOV32mr $rdi, 1, $noreg, 4, $noreg, killed $r8d
     ; CHECK-NEXT: $rsp = LEA64r $rsp, 1, $noreg, 16, $noreg
     ; CHECK-NEXT: RET 0

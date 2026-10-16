@@ -188,7 +188,6 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    stw 3, 80(1)
 ; CHECK-NEXT:    fneg 28, 30
 ; CHECK-NEXT:    lwz 3, 52(1)
-; CHECK-NEXT:    li 29, 0
 ; CHECK-NEXT:    stfd 28, 40(1)
 ; CHECK-NEXT:    stw 3, 68(1)
 ; CHECK-NEXT:    lwz 3, 48(1)

@@ -142,7 +142,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32768
-; RV64I-NEXT:    lui a0, 8
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    .cfi_def_cfa_offset 65536
@@ -163,7 +162,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" {
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    .cfi_def_cfa_offset 32768
-; RV32I-NEXT:    lui a0, 8
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    .cfi_def_cfa_offset 65536

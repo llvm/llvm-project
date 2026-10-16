@@ -222,16 +222,12 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   Register FrameReg = TRI->getFrameRegister(*MF);
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
-    // If FrameReg is modified, no previous load-address instructions (using
-    // it) are valid.
-    if (MI.modifiesRegister(FrameReg, TRI)) {
-      MBBDefs.clear();
-      MBBKills.clear();
-      continue;
-    }
+    bool ModifiesFrameReg = MI.modifiesRegister(FrameReg, TRI);
 
     Register DefedReg;
-    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg);
+    // Do not reuse or track frame-register definitions.
+    bool IsCandidate =
+        !ModifiesFrameReg && isCandidate(&MI, DefedReg, FrameReg);
 
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
@@ -242,10 +238,12 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
       continue;
     }
 
-    // Clear any entries in map that MI clobbers.
+    // Invalidate overwritten registers and computations whose frame-register
+    // input changed. Independent constants remain available.
     MBBDefs.remove_if([&](const auto &Entry) {
       Register Reg = Entry.first;
-      if (MI.modifiesRegister(Reg, TRI)) {
+      if (MI.modifiesRegister(Reg, TRI) ||
+          (ModifiesFrameReg && Entry.second->readsRegister(FrameReg, TRI))) {
         MBBKills.erase(Reg);
         return true;
       }

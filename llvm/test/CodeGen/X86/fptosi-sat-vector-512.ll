@@ -1295,7 +1295,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1314,7 +1313,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1331,7 +1329,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1348,7 +1345,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1367,7 +1363,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1384,7 +1379,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1401,7 +1395,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1420,7 +1413,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1437,7 +1429,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1454,7 +1445,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r12
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r13, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1655,7 +1645,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1675,7 +1664,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1692,7 +1680,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1709,7 +1696,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1729,7 +1715,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1746,7 +1731,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1763,7 +1747,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1783,7 +1766,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1800,7 +1782,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1817,7 +1798,6 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r12
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r13, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2535,7 +2515,6 @@ define <8 x i128> @test_signed_v8i128_v8f64(<8 x double> %f) nounwind {
 ; AVX512F-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomisd %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r12, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2555,7 +2534,6 @@ define <8 x i128> @test_signed_v8i128_v8f64(<8 x double> %f) nounwind {
 ; AVX512F-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r15, %rdx
 ; AVX512F-NEXT:    cmovaq %r14, %rax
-; AVX512F-NEXT:    movq $-1, %r14
 ; AVX512F-NEXT:    vucomisd %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r12, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2730,7 +2708,6 @@ define <8 x i128> @test_signed_v8i128_v8f64(<8 x double> %f) nounwind {
 ; AVX512-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomisd %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r12, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2751,7 +2728,6 @@ define <8 x i128> @test_signed_v8i128_v8f64(<8 x double> %f) nounwind {
 ; AVX512-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomisd %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r12, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -5929,7 +5905,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -5947,7 +5922,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -5965,7 +5939,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -5983,7 +5956,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6001,7 +5973,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6021,7 +5992,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6039,7 +6009,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6057,7 +6026,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6075,7 +6043,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6093,7 +6060,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6111,7 +6077,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6129,7 +6094,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6149,7 +6113,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6167,7 +6130,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6185,7 +6147,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6203,7 +6164,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6221,7 +6181,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6239,7 +6198,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6257,7 +6215,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6277,7 +6234,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6295,7 +6251,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6313,7 +6268,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6331,7 +6285,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6349,7 +6302,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6367,7 +6319,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512F-NEXT:    cmovaq %r12, %rdx
 ; AVX512F-NEXT:    cmovaq %r15, %rax
-; AVX512F-NEXT:    movq $-1, %r15
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512F-NEXT:    cmovpq %r14, %rax
 ; AVX512F-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6655,7 +6606,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6673,7 +6623,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6691,7 +6640,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6709,7 +6657,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6727,7 +6674,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6748,7 +6694,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6766,7 +6711,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6783,7 +6727,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6801,7 +6744,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6819,7 +6761,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6837,7 +6778,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6855,7 +6795,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6876,7 +6815,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6894,7 +6832,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6911,7 +6848,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6929,7 +6865,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6947,7 +6882,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6965,7 +6899,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -6983,7 +6916,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -7004,7 +6936,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -7022,7 +6953,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -7039,7 +6969,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -7057,7 +6986,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -7075,7 +7003,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -7093,7 +7020,6 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r12, %rdx
 ; AVX512-NEXT:    cmovaq %r15, %rax
-; AVX512-NEXT:    movq $-1, %r15
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r14, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill

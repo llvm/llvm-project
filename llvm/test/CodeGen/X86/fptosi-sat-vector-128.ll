@@ -3648,7 +3648,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    cmovaq %r15, %rdx
 ; SSE2-NEXT:    cmovaq %r14, %rax
-; SSE2-NEXT:    movq $-1, %r14
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm0
 ; SSE2-NEXT:    cmovpq %r12, %rax
 ; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -3668,7 +3667,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    cmovaq %r15, %rdx
 ; SSE2-NEXT:    cmovaq %r14, %rax
-; SSE2-NEXT:    movq $-1, %r14
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm0
 ; SSE2-NEXT:    cmovpq %r12, %rax
 ; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -3855,7 +3853,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    cmovaq %r15, %rdx
 ; SSE42-NEXT:    cmovaq %r14, %rax
-; SSE42-NEXT:    movq $-1, %r14
 ; SSE42-NEXT:    ucomiss %xmm0, %xmm0
 ; SSE42-NEXT:    cmovpq %r12, %rax
 ; SSE42-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -3875,7 +3872,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    cmovaq %r15, %rdx
 ; SSE42-NEXT:    cmovaq %r14, %rax
-; SSE42-NEXT:    movq $-1, %r14
 ; SSE42-NEXT:    ucomiss %xmm0, %xmm0
 ; SSE42-NEXT:    cmovpq %r12, %rax
 ; SSE42-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -4059,7 +4055,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX2-NEXT:    cmovaq %r15, %rdx
 ; AVX2-NEXT:    cmovaq %r14, %rax
-; AVX2-NEXT:    movq $-1, %r14
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX2-NEXT:    cmovpq %r12, %rax
 ; AVX2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -4078,7 +4073,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX2-NEXT:    cmovaq %r15, %rdx
 ; AVX2-NEXT:    cmovaq %r14, %rax
-; AVX2-NEXT:    movq $-1, %r14
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX2-NEXT:    cmovpq %r12, %rax
 ; AVX2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -4256,7 +4250,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r12, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -4275,7 +4268,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
-; AVX512-NEXT:    movq $-1, %r14
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm0
 ; AVX512-NEXT:    cmovpq %r12, %rax
 ; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
