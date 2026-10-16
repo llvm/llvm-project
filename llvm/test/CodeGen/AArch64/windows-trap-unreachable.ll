@@ -35,8 +35,6 @@ define void @f() {
 ; The first call is followed by more of the function, so it needs no trap.
 ; SEH-LABEL:      g:
 ; SEH:            bl abort
-; SEH-TRAP-NEXT:  brk #0x1
-; SEH-TRAP-NEXT:  .LBB1_2:
 ; SEH:            bl exit
 ; SEH-NEXT:       brk #0x1
 ; SEH-NEXT:       .seh_endfunclet
