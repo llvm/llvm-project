@@ -7667,12 +7667,12 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     // constant context.
     auto CheckElement = [&](Expr *Init) -> Expr * {
       if (Init->isTypeDependent() || Init->isValueDependent())
-        return Init;
+        return ConstantExpr::Create(Context, Init);
       if (DeferImmediate) {
         ImmediateCallVisitor V(Context);
         V.TraverseStmt(Init);
         if (V.HasImmediateCalls)
-          return Init;
+          return ConstantExpr::Create(Context, Init);
       }
       Expr::EvalResult Eval;
       if (!Init->EvaluateAsConstantExpr(Eval, Context,
@@ -7681,8 +7681,10 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
             << Init->getSourceBitField();
         return nullptr;
       }
-
-      return Init;
+      // An immediate invocation already is a ConstantExpr.
+      if (!getLangOpts().CPlusPlus || isa<ConstantExpr>(Init))
+        return Init;
+      return ConstantExpr::Create(Context, Init, Eval.Val);
     };
     if (auto *ILE = dyn_cast<InitListExpr>(LiteralExpr)) {
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
