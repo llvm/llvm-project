@@ -40,6 +40,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageExporterLcov.h"
+#include "CoverageExclusions.h"
 #include "CoverageReport.h"
 
 using namespace llvm;
@@ -74,13 +75,21 @@ void renderFunctionSummary(raw_ostream &OS,
 
 void renderFunctions(
     raw_ostream &OS,
-    const iterator_range<coverage::FunctionRecordIterator> &Functions) {
+    const iterator_range<coverage::FunctionRecordIterator> &Functions,
+    StringRef Filename, const CoverageViewOptions &Options) {
   for (const auto &F : Functions) {
+    if (Options.SourceExclusions &&
+        Options.SourceExclusions->isFunctionExcluded(F, Filename))
+      continue;
     auto StartLine = F.CountedRegions.front().LineStart;
     OS << "FN:" << StartLine << ',' << F.Name << '\n';
   }
-  for (const auto &F : Functions)
+  for (const auto &F : Functions) {
+    if (Options.SourceExclusions &&
+        Options.SourceExclusions->isFunctionExcluded(F, Filename))
+      continue;
     OS << "FNDA:" << F.ExecutionCount << ',' << F.Name << '\n';
+  }
 }
 
 void renderLineExecutionCounts(raw_ostream &OS,
@@ -99,18 +108,20 @@ std::vector<NestedCountedRegion>
 collectNestedBranches(const coverage::CoverageMapping &Coverage,
                       ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
                       std::vector<LineColPair> &NestedPath,
-                      unsigned &PositionCounter) {
+                      unsigned &PositionCounter,
+                      const CoverageViewOptions &Options) {
   std::vector<NestedCountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
-    auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
+    auto ExpansionCoverage = applyCoverageExclusions(
+        Options.SourceExclusions, Coverage.getCoverageForExpansion(Expansion));
 
     // Track the path to the nested expansions.
     NestedPath.push_back(Expansion.Region.startLoc());
 
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
-    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
-                                                  NestedPath, PositionCounter);
+    auto NestedExBranches = collectNestedBranches(
+        Coverage, NestedExpansions, NestedPath, PositionCounter, Options);
     append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
@@ -181,7 +192,8 @@ void combineInstanceCounts(std::vector<NestedCountedRegion> &Branches) {
 void renderBranchExecutionCounts(raw_ostream &OS,
                                  const coverage::CoverageMapping &Coverage,
                                  const coverage::CoverageData &FileCoverage,
-                                 bool UnifyInstances) {
+                                 bool UnifyInstances,
+                                 const CoverageViewOptions &Options) {
 
   std::vector<NestedCountedRegion> Branches;
 
@@ -190,8 +202,9 @@ void renderBranchExecutionCounts(raw_ostream &OS,
   // Recursively collect branches for all file expansions.
   std::vector<LineColPair> NestedPath;
   unsigned PositionCounter = 0;
-  std::vector<NestedCountedRegion> ExBranches = collectNestedBranches(
-      Coverage, FileCoverage.getExpansions(), NestedPath, PositionCounter);
+  std::vector<NestedCountedRegion> ExBranches =
+      collectNestedBranches(Coverage, FileCoverage.getExpansions(), NestedPath,
+                            PositionCounter, Options);
 
   // Append Expansion Branches to Source Branches.
   appendNestedCountedRegions(ExBranches, Branches);
@@ -250,20 +263,24 @@ void renderBranchSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
 void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                 const std::string &Filename,
                 const FileCoverageSummary &FileReport, bool ExportSummaryOnly,
-                bool SkipFunctions, bool SkipBranches, bool UnifyInstances) {
+                bool SkipFunctions, bool SkipBranches, bool UnifyInstances,
+                const CoverageViewOptions &Options) {
   OS << "SF:" << Filename << '\n';
 
   if (!ExportSummaryOnly && !SkipFunctions) {
-    renderFunctions(OS, Coverage.getCoveredFunctions(Filename));
+    renderFunctions(OS, Coverage.getCoveredFunctions(Filename), Filename,
+                    Options);
   }
   renderFunctionSummary(OS, FileReport);
 
   if (!ExportSummaryOnly) {
     // Calculate and render detailed coverage information for given file.
-    auto FileCoverage = Coverage.getCoverageForFile(Filename);
+    auto FileCoverage = applyCoverageExclusions(
+        Options.SourceExclusions, Coverage.getCoverageForFile(Filename));
     renderLineExecutionCounts(OS, FileCoverage);
     if (!SkipBranches)
-      renderBranchExecutionCounts(OS, Coverage, FileCoverage, UnifyInstances);
+      renderBranchExecutionCounts(OS, Coverage, FileCoverage, UnifyInstances,
+                                  Options);
   }
   if (!SkipBranches)
     renderBranchSummary(OS, FileReport);
@@ -276,10 +293,10 @@ void renderFiles(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
                  ArrayRef<std::string> SourceFiles,
                  ArrayRef<FileCoverageSummary> FileReports,
                  bool ExportSummaryOnly, bool SkipFunctions, bool SkipBranches,
-                 bool UnifyInstances) {
+                 bool UnifyInstances, const CoverageViewOptions &Options) {
   for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I)
     renderFile(OS, Coverage, SourceFiles[I], FileReports[I], ExportSummaryOnly,
-               SkipFunctions, SkipBranches, UnifyInstances);
+               SkipFunctions, SkipBranches, UnifyInstances, Options);
 }
 
 } // end anonymous namespace
@@ -299,5 +316,5 @@ void CoverageExporterLcov::renderRoot(ArrayRef<std::string> SourceFiles) {
                                                         SourceFiles, Options);
   renderFiles(OS, Coverage, SourceFiles, FileReports, Options.ExportSummaryOnly,
               Options.SkipFunctions, Options.SkipBranches,
-              Options.UnifyFunctionInstantiations);
+              Options.UnifyFunctionInstantiations, Options);
 }
