@@ -86,15 +86,18 @@ private:
     bool savedIsFPConstrained;
     LangOptions::FPExceptionModeKind savedExcept;
     llvm::RoundingMode savedRounding;
+    cir::FastMathFlags savedFastMathFlags;
 
     explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
         : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
           savedExcept(builder.getDefaultConstrainedExcept()),
-          savedRounding(builder.getDefaultConstrainedRounding()) {}
+          savedRounding(builder.getDefaultConstrainedRounding()),
+          savedFastMathFlags(builder.getFastMathFlags()) {}
     ~ConstrainedFPRAII() {
       builder.setIsFPConstrained(savedIsFPConstrained);
       builder.setDefaultConstrainedExcept(savedExcept);
       builder.setDefaultConstrainedRounding(savedRounding);
+      builder.setFastMathFlags(savedFastMathFlags);
     }
   } constrainedFPState{builder};
 
@@ -349,8 +352,11 @@ public:
     clang::FPOptions oldFPFeatures;
     LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
+    std::optional<cir::FastMathFlags> oldFastMathFlags;
   };
   clang::FPOptions curFPFeatures;
+
+  void setFastMathFlags(FPOptions fpFeatures);
 
   /// Convert the active Clang floating-point options to CIR fast-math flags.
   cir::FastMathFlags getCurrentFastMathFlags() const;
