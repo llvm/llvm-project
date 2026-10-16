@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
 
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/APInt.h"
 
 namespace llvm {
 
@@ -32,6 +33,14 @@ bool isUniformMMO(const MachineMemOperand *MMO);
 /// they are not actual instances of GIntrinsics, so we cannot use
 /// GIntrinsic::getIntrinsicID() on them.
 Intrinsic::ID getIntrinsicID(const MachineInstr &I);
+
+/// Return true for packed FP32 to FP8/BF8 conversions that preserve one half
+/// of their old destination operand.
+bool isPackedF8ConversionIntrinsic(unsigned IntrinsicID);
+
+/// Return the result bits copied from the old destination by a packed FP8/BF8
+/// conversion. \p WritesHigh corresponds to the conversion's word selector.
+APInt getPackedF8PreservedOldBits(bool WritesHigh);
 
 struct RsrcIntrinsic {
   unsigned Intr;
