@@ -1329,6 +1329,9 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
   if (PTO.SLPVectorization) {
+    // Canonicalize loops before SLP so that the loop-aware cost model observes
+    // loops in Loop Simplify Form.
+    FPM.addPass(LoopSimplifyPass());
     FPM.addPass(SLPVectorizerPass());
     if (Level >= OptimizationLevel::O2 && Opts.extra_vectorizer_passes) {
       FPM.addPass(EarlyCSEPass());
