@@ -40,6 +40,15 @@ enum MemorySemanticsMask : std::int32_t {
   ImageMemory = 0x800,
 };
 
+// SPIRV 3.2.6. Storage Class
+// Specification declares more storage classes, but only a SYCL-used subset is
+// included here.
+enum class StorageClass : std::int32_t {
+  Workgroup = 4,
+  CrossWorkgroup = 5,
+  Function = 7
+};
+
 } // namespace __spirv
 
 #endif // _LIBSYCL___SPIRV_TYPES_HPP
