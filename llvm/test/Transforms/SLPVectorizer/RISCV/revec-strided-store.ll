@@ -5,8 +5,8 @@
 define void @strided_load_and_store(ptr %in, ptr %out) {
 ; CHECK-LABEL: @strided_load_and_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 2 [[IN:%.*]], i64 16, <2 x i1> splat (i1 true), i32 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <24 x i8> @llvm.masked.load.v24i8.p0(ptr align 2 [[IN:%.*]], <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <24 x i8> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <24 x i8> [[TMP0]], <24 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v2i64.p0.i64(<2 x i64> [[TMP2]], ptr align 2 [[OUT:%.*]], i64 16, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    ret void

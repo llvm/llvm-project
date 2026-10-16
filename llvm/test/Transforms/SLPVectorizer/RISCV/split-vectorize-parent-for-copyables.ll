@@ -13,8 +13,7 @@ define i1 @test(i32 %0, i32 %add21.i, i32 %1) #0 {
 ; CHECK-NEXT:    [[DIFF_CHECK138:%.*]] = icmp ult i32 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[DIFF_CHECK142:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[ADD21_I]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[ADD21_I]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <4 x i32> [[TMP8]], [[TMP4]]
 ; CHECK-NEXT:    [[DIFF_CHECK149:%.*]] = icmp ult i32 [[TMP3]], [[ADD21_I]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
