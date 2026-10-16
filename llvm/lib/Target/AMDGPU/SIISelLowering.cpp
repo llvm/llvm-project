@@ -5185,7 +5185,7 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
 MachineBasicBlock *
 SITargetLowering::splitKillBlock(MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
-  MachineBasicBlock *SplitBB = BB->splitAt(MI, /*UpdateLiveIns=*/true);
+  MachineBasicBlock *SplitBB = BB->splitAt(MI, /*UpdateLiveIns=*/false);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
   return SplitBB;
