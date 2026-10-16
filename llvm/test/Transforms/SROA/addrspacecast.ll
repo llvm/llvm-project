@@ -3,6 +3,7 @@
 ; RUN: opt < %s -passes='sroa<modify-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 
 target datalayout = "e-p:64:64:64-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
+target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.memcpy.p0.p1.i32(ptr nocapture writeonly, ptr addrspace(1) nocapture readonly, i32, i1 immarg) #0
 declare void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) nocapture writeonly, ptr nocapture readonly, i32, i1 immarg) #0
