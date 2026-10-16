@@ -946,3 +946,19 @@ body: |
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %70(s32)
     S_ENDPGM 0
 ...
+
+---
+name: trunc_s64_to_s16
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: trunc_s64_to_s16
+    ; CHECK: [[SRC:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[SRC]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16)
+    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %1:sgpr(s16) = G_TRUNC %0
+    S_ENDPGM 0, implicit %1
+...
