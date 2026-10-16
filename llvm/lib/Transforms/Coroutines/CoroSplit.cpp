@@ -572,7 +572,7 @@ void coro::BaseCloner::replaceRetconOrAsyncSuspendUses() {
 }
 
 void coro::BaseCloner::replaceCoroSuspends() {
-  Value *SuspendResult;
+  Value *SuspendResult = nullptr;
 
   switch (Shape.ABI) {
   // In switch lowering, replace coro.suspend with the appropriate value
