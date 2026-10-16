@@ -28,46 +28,45 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void TypeFilterImpl::AddExpressionPath(const std::string &path) {
-  bool need_add_dot = true;
-  if (path[0] == '.' || (path[0] == '-' && path[1] == '>') || path[0] == '[')
-    need_add_dot = false;
-  // add a '.' symbol to help forgetful users
-  if (!need_add_dot)
-    m_expression_paths.push_back(path);
-  else
-    m_expression_paths.push_back(std::string(".") + path);
+static std::string NormalizeExpressionPath(llvm::StringRef path) {
+  if (!path.starts_with('.') && !path.starts_with("->") &&
+      !path.starts_with('['))
+    return std::string(".") + path.str();
+
+  return path.str();
 }
 
-bool TypeFilterImpl::SetExpressionPathAtIndex(size_t i,
-                                              const std::string &path) {
+llvm::StringRef TypeFilterImpl::GetExpressionPathAtIndex(size_t i) const {
+  if (i >= GetCount())
+    return llvm::StringRef();
+
+  return m_expression_paths[i];
+}
+
+void TypeFilterImpl::AddExpressionPath(llvm::StringRef path) {
+  m_expression_paths.push_back(NormalizeExpressionPath(path));
+}
+
+bool TypeFilterImpl::SetExpressionPathAtIndex(size_t i, llvm::StringRef path) {
   if (i >= GetCount())
     return false;
-  bool need_add_dot = true;
-  if (path[0] == '.' || (path[0] == '-' && path[1] == '>') || path[0] == '[')
-    need_add_dot = false;
-  // add a '.' symbol to help forgetful users
-  if (!need_add_dot)
-    m_expression_paths[i] = path;
-  else
-    m_expression_paths[i] = std::string(".") + path;
+
+  m_expression_paths[i] = NormalizeExpressionPath(path);
   return true;
 }
 
 llvm::Expected<size_t>
 TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(ConstString name) {
-  const char *name_cstr = name.GetCString();
-  if (name_cstr) {
+  if (name) {
     for (size_t i = 0; i < filter->GetCount(); i++) {
-      const char *expr_cstr = filter->GetExpressionPathAtIndex(i);
-      if (expr_cstr) {
-        if (*expr_cstr == '.')
-          expr_cstr++;
-        else if (*expr_cstr == '-' && *(expr_cstr + 1) == '>')
-          expr_cstr += 2;
-      }
-      if (expr_cstr) {
-        if (!::strcmp(name_cstr, expr_cstr))
+      llvm::StringRef expr_path = filter->GetExpressionPathAtIndex(i);
+      if (!expr_path.empty()) {
+        if (expr_path.starts_with('.'))
+          expr_path = expr_path.drop_front();
+        else if (expr_path.starts_with("->"))
+          expr_path = expr_path.drop_front(2);
+
+        if (name == expr_path)
           return i;
       }
     }
@@ -82,7 +81,7 @@ std::string TypeFilterImpl::GetDescription() {
               SkipsReferences() ? " (skip references)" : "");
 
   for (size_t i = 0; i < GetCount(); i++) {
-    sstr.Printf("    %s\n", GetExpressionPathAtIndex(i));
+    sstr.Format("    {0}\n", GetExpressionPathAtIndex(i));
   }
 
   sstr.PutCString("}");
