@@ -395,13 +395,13 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
     QualType ArgTy = ArgExp->getType();
 
-    // A pointer to member expression of the form  &MyClass::mu is treated
-    // specially -- we need to look at the type of the member.
+    // A pointer to member expression of the form &MyClass::mu is treated
+    // specially -- we need to look at the type of the member. The analysis
+    // reads it as that member of any object.
     if (const auto *UOp = dyn_cast<UnaryOperator>(ArgExp))
       if (UOp->getOpcode() == UO_AddrOf)
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(UOp->getSubExpr()))
-          if (DRE->getDecl()->isCXXInstanceMember())
-            ArgTy = DRE->getDecl()->getType();
+        if (const auto *MPT = ArgTy->getAs<MemberPointerType>())
+          ArgTy = MPT->getPointeeType();
 
     // First see if we can just cast to record type, or pointer to record type.
     const auto *RD = getRecordDecl(ArgTy);
