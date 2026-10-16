@@ -2802,6 +2802,20 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<Register, DenseSet<MachineOperand *>> ReplaceMap;
   // The map of reaching defs for a given register -- to avoid duplicate copies.
   DenseMap<Register, SmallPtrSet<MachineInstr *, 8>> ReachingDefCopyMap;
+
+  // Return (creating it on first use) the VGPR-class "mapped" register that
+  // carries \p Reg's AGPR-form value; records the original->mapped RedefMap
+  // entry.
+  auto getOrCreateMappedReg = [&](Register Reg) -> Register {
+    auto [It, Inserted] = RedefMap.try_emplace(Reg);
+    if (Inserted) {
+      assert(!ReachingDefCopyMap.contains(Reg));
+      const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
+      It->second =
+          DAG.MRI.createVirtualRegister(SRI->getEquivalentVGPRClass(RC));
+    }
+    return It->second;
+  };
   // The map of reaching uses for a given register by basic block -- to avoid
   // duplicate copies and to calculate per MBB insert pts.
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
@@ -2853,19 +2867,7 @@ bool RewriteMFMAFormStage::rewrite(
       }
 
       if (!Src2DefsReplace.empty()) {
-        auto RI = RedefMap.find(Src2Reg);
-        if (RI != RedefMap.end()) {
-          MappedReg = RI->second;
-        } else {
-          assert(!ReachingDefCopyMap.contains(Src2Reg));
-          const TargetRegisterClass *Src2RC = DAG.MRI.getRegClass(Src2Reg);
-          const TargetRegisterClass *VGPRRC =
-              SRI->getEquivalentVGPRClass(Src2RC);
-
-          // Track the mapping of the original register to the new register.
-          MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-          RedefMap[Src2Reg] = MappedReg;
-        }
+        MappedReg = getOrCreateMappedReg(Src2Reg);
 
         // If none exists, create a copy from this reaching def.
         // We may have inserted a copy already in an earlier iteration.
@@ -2962,13 +2964,16 @@ bool RewriteMFMAFormStage::rewrite(
     if (DstReachingUses.empty() && !DstRecolorSafe) {
       // Exclusion must already have dropped any dst that was bridged as an
       // earlier MFMA's src2, so it cannot be pre-mapped when we reach here.
-      assert(
-          !RedefMap.contains(DstReg) &&
-          "empty-use dst unexpectedly already mapped -- exclusion missed it");
+      // Enforce this in release builds too: a silent overwrite of an existing
+      // mapping would miscompile.
+      auto [It, Inserted] = RedefMap.try_emplace(DstReg);
+      if (!Inserted)
+        llvm_unreachable(
+            "empty-use dst unexpectedly already mapped -- exclusion missed it");
       const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
       const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
       MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-      RedefMap[DstReg] = MappedReg;
+      It->second = MappedReg;
 
       // The candidate MFMA's def operand is redirected to MappedReg (which is
       // reclassified to AGPR form), so the original dst reg loses its full-lane
@@ -2987,32 +2992,10 @@ bool RewriteMFMAFormStage::rewrite(
     // mapped so reclassification recolors the mapped reg instead of illegally
     // recoloring the original VGPR dst to AGPR.
     if (DstUseDefsReplace.empty() && !DstRecolorSafe) {
-      auto RI = RedefMap.find(DstReg);
-      if (RI != RedefMap.end()) {
-        MappedReg = RI->second;
-      } else {
-        assert(!ReachingDefCopyMap.contains(DstReg));
-        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-
-        // Track the mapping of the original register to the new register.
-        MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-        RedefMap[DstReg] = MappedReg;
-      }
+      MappedReg = getOrCreateMappedReg(DstReg);
     }
     if (!DstUseDefsReplace.empty()) {
-      auto RI = RedefMap.find(DstReg);
-      if (RI != RedefMap.end()) {
-        MappedReg = RI->second;
-      } else {
-        assert(!ReachingDefCopyMap.contains(DstReg));
-        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-
-        // Track the mapping of the original register to the new register.
-        MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
-        RedefMap[DstReg] = MappedReg;
-      }
+      MappedReg = getOrCreateMappedReg(DstReg);
 
       // If none exists, create a copy from this reaching def.
       // We may have inserted a copy already in an earlier iteration.
