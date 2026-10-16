@@ -47,32 +47,40 @@ static SDValue stripBitcast(SDValue Val) {
 }
 
 // Figure out if this is really an extract of the high 16-bits of a dword.
-static bool isExtractHiElt(SDValue In, SDValue &Out) {
+// Out is narrowed to the low register(s) holding the element pair.
+static bool isExtractHiElt(SelectionDAG &DAG, SDValue In, SDValue &Out) {
   In = stripBitcast(In);
 
+  SDValue Src;
+  unsigned PairSize = 32;
   if (In.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    if (ConstantSDNode *Idx = dyn_cast<ConstantSDNode>(In.getOperand(1))) {
-      if (!Idx->isOne())
-        return false;
-      Out = In.getOperand(0);
-      return true;
-    }
-  }
-
-  if (In.getOpcode() != ISD::TRUNCATE)
+    ConstantSDNode *Idx = dyn_cast<ConstantSDNode>(In.getOperand(1));
+    if (!Idx || !Idx->isOne())
+      return false;
+    Src = In.getOperand(0);
+    PairSize = 2 * Src.getScalarValueSizeInBits();
+  } else if (In.getOpcode() == ISD::TRUNCATE) {
+    SDValue Srl = In.getOperand(0);
+    ConstantSDNode *ShiftAmt = Srl.getOpcode() == ISD::SRL
+                                   ? dyn_cast<ConstantSDNode>(Srl.getOperand(1))
+                                   : nullptr;
+    if (!ShiftAmt || ShiftAmt->getZExtValue() != 16)
+      return false;
+    Src = stripBitcast(Srl.getOperand(0));
+  } else {
     return false;
-
-  SDValue Srl = In.getOperand(0);
-  if (Srl.getOpcode() == ISD::SRL) {
-    if (ConstantSDNode *ShiftAmt = dyn_cast<ConstantSDNode>(Srl.getOperand(1))) {
-      if (ShiftAmt->getZExtValue() == 16) {
-        Out = stripBitcast(Srl.getOperand(0));
-        return true;
-      }
-    }
   }
 
-  return false;
+  if (Src.getValueSizeInBits() > PairSize) {
+    if (PairSize != 32 && PairSize != 64)
+      return false;
+    Src = DAG.getTargetExtractSubreg(
+        PairSize == 32 ? AMDGPU::sub0 : AMDGPU::sub0_sub1, SDLoc(In),
+        MVT::getIntegerVT(PairSize), Src);
+  }
+
+  Out = Src;
+  return true;
 }
 
 static SDValue createVOP3PSrc32FromLo16(SDValue Lo, SDValue Src,
@@ -3017,7 +3025,7 @@ void AMDGPUDAGToDAGISel::SelectFP_EXTEND(SDNode *N) {
       !N->isDivergent()) {
     SDValue Src = N->getOperand(0);
     if (Src.getValueType() == MVT::f16) {
-      if (isExtractHiElt(Src, Src)) {
+      if (isExtractHiElt(*CurDAG, Src, Src)) {
         CurDAG->SelectNodeTo(N, AMDGPU::S_CVT_HI_F32_F16, N->getVTList(),
                              {Src});
         return;
@@ -3728,10 +3736,10 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     }
 
     if (HasOpSel) {
-      if (isExtractHiElt(Lo, Lo))
+      if (isExtractHiElt(*CurDAG, Lo, Lo))
         Mods |= SISrcMods::OP_SEL_0;
 
-      if (isExtractHiElt(Hi, Hi))
+      if (isExtractHiElt(*CurDAG, Hi, Hi))
         Mods |= SISrcMods::OP_SEL_1;
     }
 
@@ -3940,8 +3948,10 @@ AMDGPUDAGToDAGISel::buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
   // unpacked from 32-bit source use it, otherwise pack them using v_perm.
   for (unsigned i = 0; i < Elts.size(); i += 2) {
     SDValue LoSrc = stripExtractLoElt(stripBitcast(Elts[i]));
+    if (LoSrc.getValueSizeInBits() > 32)
+      LoSrc = CurDAG->getTargetExtractSubreg(AMDGPU::sub0, DL, MVT::i32, LoSrc);
     SDValue HiSrc;
-    if (isExtractHiElt(Elts[i + 1], HiSrc) && LoSrc == HiSrc) {
+    if (isExtractHiElt(*CurDAG, Elts[i + 1], HiSrc) && LoSrc == HiSrc) {
       PackedElts.push_back(HiSrc);
     } else {
       if (Subtarget->useRealTrue16Insts()) {
@@ -4309,7 +4319,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
   unsigned Mods = SISrcMods::NONE;
   Src = In;
   if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
-      isExtractHiElt(Src, Src))
+      isExtractHiElt(*CurDAG, Src, Src))
     Mods |= SISrcMods::OP_SEL_0;
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
@@ -4323,7 +4333,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
     return false;
 
   if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
-      isExtractHiElt(Src, Src))
+      isExtractHiElt(*CurDAG, Src, Src))
     Mods |= SISrcMods::OP_SEL_0;
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
@@ -4421,7 +4431,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 
   Mods |= SISrcMods::OP_SEL_1;
   if (Src.getValueSizeInBits() == 16) {
-    if (isExtractHiElt(Src, Src)) {
+    if (isExtractHiElt(*CurDAG, Src, Src)) {
       Mods |= SISrcMods::OP_SEL_0;
 
       // TODO: Should we try to look for neg/abs here?
@@ -4795,7 +4805,7 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
   }
 
   SDValue Src;
-  if (isExtractHiElt(In, Src))
+  if (isExtractHiElt(*CurDAG, In, Src))
     return Src;
 
   return SDValue();
