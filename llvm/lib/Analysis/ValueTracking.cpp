@@ -6155,18 +6155,16 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (!WantNan && !WantNegative && !WantPositive)
       break;
 
-    KnownFPClass KnownLHS, KnownRHS;
+    KnownFPClass KnownRHS;
     computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
                         Q, Depth + 1);
 
-    bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
-        KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
-        KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+    if (KnownRHS.isUnknown())
+      break;
 
-    if (KnowSomethingUseful)
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+    KnownFPClass KnownLHS;
+    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
+                        Q, Depth + 1);
 
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;

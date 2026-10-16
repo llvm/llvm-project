@@ -2032,16 +2032,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     if (!WantNan && !WantNegative && !WantPositive)
       break;
 
-    KnownFPClass KnownLHS, KnownRHS;
+    KnownFPClass KnownRHS;
     computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
 
-    bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
-        KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
-        KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+    if (KnownRHS.isUnknown())
+      break;
 
-    if (KnowSomethingUseful)
-      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
+    KnownFPClass KnownLHS;
+    computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
 
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
