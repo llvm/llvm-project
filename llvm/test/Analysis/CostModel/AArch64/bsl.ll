@@ -4,10 +4,9 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-; TODO: The Not is folded into BSL and should be free.
 define <8 x i8> @bsl(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
 ; COST-LABEL: 'bsl'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %x = and <8 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %x, %y
@@ -24,10 +23,9 @@ define <8 x i8> @bsl(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
   ret <8 x i8> %r
 }
 
-; TODO: The Not should be free here as well
 define void @bsl_shared_mask(<16 x i8> %m, <16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, ptr %p, ptr %q) {
 ; COST-LABEL: 'bsl_shared_mask'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <16 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <16 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %x0 = and <16 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %y0 = and <16 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r0 = or <16 x i8> %x0, %y0
@@ -83,7 +81,7 @@ define <8 x i8> @bsl_not_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr %p)
 
 define <8 x i8> @bic(<8 x i8> %a, <8 x i8> %m) {
 ; COST-LABEL: 'bic'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = and <8 x i8> %a, %n
 ; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
 ;
@@ -98,7 +96,7 @@ define <8 x i8> @bic(<8 x i8> %a, <8 x i8> %m) {
 
 define <8 x i8> @orn(<8 x i8> %a, <8 x i8> %m) {
 ; COST-LABEL: 'orn'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %a, %n
 ; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
 ;
@@ -164,10 +162,10 @@ define <8 x i8> @neg_not_bic_and_add(<8 x i8> %a, <8 x i8> %m) {
   ret <8 x i8> %s
 }
 
-; TODO: BIT is still formed, so %y and the Not should be free.
+; TODO: BIT is still formed, so %y should be free.
 define <8 x i8> @neg_bsl_and_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr %p) {
 ; COST-LABEL: 'neg_bsl_and_multiuse'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %x = and <8 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %x, %y
@@ -191,7 +189,7 @@ define <8 x i8> @neg_bsl_and_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr
 
 define <8 x i8> @neg_bsl_other_block(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, i1 %f, ptr %p) {
 ; COST-LABEL: 'neg_bsl_other_block'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %x = and <8 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: br i1 %f, label %t, label %e
