@@ -1158,7 +1158,7 @@ public:
     return (getArch() == Triple::ppc64 &&
             ((getOS() == Triple::FreeBSD &&
               (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::OpenBSD || isMusl()));
+             getOS() == Triple::OpenBSD || getOS() == Triple::Linux));
   }
 
   /// Tests whether the target 32-bit PowerPC uses Secure PLT.
