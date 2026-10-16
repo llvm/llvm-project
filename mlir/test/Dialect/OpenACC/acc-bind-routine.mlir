@@ -210,3 +210,25 @@ module {
 // CHECK-COUNT-2: func.call @second_target() : () -> ()
 // CHECK: func.func private @second_target()
 // CHECK-NOT: func.func private @second_target
+
+// -----
+
+// Existing string-bound targets are reused, not renamed or redeclared.
+module {
+  acc.routine @r_existing func(@wrapped_existing) seq bind("existing_target")
+  func.func private @wrapped_existing()
+      attributes {acc.routine_info = #acc.routine_info<[@r_existing]>}
+  func.func private @existing_target()
+  func.func @reuse_existing() {
+    acc.serial {
+      func.call @wrapped_existing() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK: func.func private @existing_target()
+// CHECK-LABEL: func.func @reuse_existing()
+// CHECK: func.call @existing_target() : () -> ()
+// CHECK-NOT: func.func private @existing_target
