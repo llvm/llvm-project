@@ -3,7 +3,7 @@
 
 // REQUIRES: system-linux
 // RUN: %clangxx %cxxflags -O3 -no-pie -c %s -o %t.o
-// RUN: %clangxx %cxxflags -O3 -no-pie -fuse-ld=lld %t.o -o %t
+// RUN: %clangxx %cxxflags -O3 -no-pie -fuse-ld=lld %t.o -o %t -Wl,-q
 // RUN: llvm-objcopy --rename-section \
 // RUN: .gcc_except_table=.gcc_except_table.main %t
 // RUN: llvm-readelf -SW %t | FileCheck %s

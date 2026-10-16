@@ -13,7 +13,7 @@
 # RUN:   --icf=all 2>&1 | FileCheck %s --check-prefix=ICF-ALL
 # RUN: llvm-bolt %t2.so -o %t.bolt --no-threads --debug-only=bolt-icf \
 # RUN:   --icf=all 2>&1 | FileCheck %s --check-prefix=ICF-ALL
-# RUN: llvm-bolt %t3.so -o %t.bolt --no-threads --debug-only=bolt-icf \
+# RUN: llvm-bolt --compact-code-model --relax-with-clusters=false %t3.so -o %t.bolt --no-threads --debug-only=bolt-icf \
 # RUN:   --icf=all 2>&1 | FileCheck %s --check-prefix=ICF-ALL
 
 # RUN: llvm-bolt %t1.so -o %t.bolt --no-threads --debug-only=bolt-icf \
