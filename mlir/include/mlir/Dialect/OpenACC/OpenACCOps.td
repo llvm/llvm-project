@@ -3482,6 +3482,10 @@ def OpenACC_RoutineOp
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
 
+    /// Return the effective bind name for the given device type, preferring an
+    /// exact match, then device_type(*), then the default bind name.
+    std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getEffectiveBindName(mlir::acc::DeviceType deviceType);
+
     // Add an entry to the 'seq' attribute for each additional device types.
     void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
     // Add an entry to the 'vector' attribute for each additional device types.

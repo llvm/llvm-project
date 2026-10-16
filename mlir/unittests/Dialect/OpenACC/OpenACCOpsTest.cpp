@@ -571,6 +571,45 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
   op->removeBindStrNameAttr();
 }
 
+TEST_F(OpenACCOpsTest, routineOpGetEffectiveBindName) {
+  OwningOpRef<RoutineOp> op = createEmptyOp<RoutineOp>(b, loc);
+  auto defaultName = b.getStringAttr("impl_default");
+  auto radeonName = b.getStringAttr("impl_radeon");
+  auto nvidiaName = b.getStringAttr("impl_nvidia");
+  auto starName = b.getStringAttr("impl_star");
+  auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
+  auto dtypeRadeon = DeviceTypeAttr::get(&context, DeviceType::Radeon);
+  auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);
+  auto dtypeStar = DeviceTypeAttr::get(&context, DeviceType::Star);
+
+  // Radeon and NVIDIA use their specific binds; other devices use the default.
+  op->setBindStrNameDeviceTypeAttr(
+      b.getArrayAttr({dtypeNone, dtypeRadeon, dtypeNvidia}));
+  op->setBindStrNameAttr(b.getArrayAttr({defaultName, radeonName, nvidiaName}));
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Radeon)),
+            radeonName);
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Nvidia)),
+            nvidiaName);
+  for (DeviceType deviceType : dtypes)
+    if (deviceType != DeviceType::Radeon && deviceType != DeviceType::Nvidia)
+      EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(deviceType)),
+                defaultName);
+
+  // If device_type(*) is present, it takes precedence over the default
+  op->setBindStrNameDeviceTypeAttr(
+      b.getArrayAttr({dtypeNone, dtypeRadeon, dtypeNvidia, dtypeStar}));
+  op->setBindStrNameAttr(
+      b.getArrayAttr({defaultName, radeonName, nvidiaName, starName}));
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Radeon)),
+            radeonName);
+  EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(DeviceType::Nvidia)),
+            nvidiaName);
+  for (DeviceType deviceType : dtypes)
+    if (deviceType != DeviceType::Radeon && deviceType != DeviceType::Nvidia)
+      EXPECT_EQ(std::get<StringAttr>(*op->getEffectiveBindName(deviceType)),
+                starName);
+}
+
 TEST_F(OpenACCOpsTest, routineOpGetBindNameValueOnlyBindStrOrOnlyBindId) {
   // getBindNameValue(DeviceType) must not dereference when only one of bind(id)
   // or bind(name) is set (the other has no device-type array).

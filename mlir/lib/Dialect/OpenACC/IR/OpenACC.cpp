@@ -5048,6 +5048,14 @@ RoutineOp::getBindNameValue(mlir::acc::DeviceType deviceType) {
   return std::nullopt;
 }
 
+std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
+RoutineOp::getEffectiveBindName(mlir::acc::DeviceType deviceType) {
+  for (DeviceType candidate : getDeviceTypesByPrecedence(deviceType))
+    if (auto bindName = getBindNameValue(candidate))
+      return bindName;
+  return std::nullopt;
+}
+
 bool RoutineOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
 
 bool RoutineOp::hasGang(mlir::acc::DeviceType deviceType) {
