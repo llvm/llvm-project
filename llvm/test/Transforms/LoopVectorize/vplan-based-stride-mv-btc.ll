@@ -1152,8 +1152,8 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[PRED_STORE_CONTINUE2]]:
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[PRED_STORE_IF3:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[PRED_STORE_IF3]]:
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[P]], <4 x i1> splat (i1 true), <4 x i64> poison)
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_LOAD]], ptr align 8 [[P_OUT]], <4 x i1> splat (i1 true))
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[P]], align 8
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[P_OUT]], align 8
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[PRED_STORE_CONTINUE4:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[PRED_STORE_CONTINUE4]]:
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[HEADER:.*]]
@@ -1361,15 +1361,16 @@ define void @stride_btc_memdep_triple_check(ptr %p, i64 %stride, i64 %out.offset
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[VECTOR_BODY]]:
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[P]], <4 x i1> splat (i1 true), <4 x i64> poison)
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_LOAD]], ptr align 8 [[P_OUT]], <4 x i1> splat (i1 true))
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[P]], align 8
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[P_OUT]], align 8
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[MIDDLE_BLOCK]]:
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[EXIT:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[SCALAR_PH]]:
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[HEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[HEADER1:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[HEADER1]]:
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[HEADER1]] ]
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[HEADER1]] ]
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[GEP_LD:%.*]] = getelementptr i64, ptr [[P]], i64 [[IDX]]
@@ -1615,17 +1616,18 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[PRED_LOAD_IF5]]:
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[PRED_LOAD_CONTINUE6:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[PRED_LOAD_CONTINUE6]]:
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[TMP29:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[P]], <4 x i1> splat (i1 true), <4 x i64> poison)
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[TMP30:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[P2]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[TMP29:%.*]] = load <4 x i64>, ptr [[P]], align 8
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[TMP30:%.*]] = load <4 x i64>, ptr [[P2]], align 8
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[TMP31:%.*]] = add <4 x i64> [[TMP29]], [[TMP30]]
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP31]], ptr align 8 [[P_OUT]], <4 x i1> splat (i1 true))
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    store <4 x i64> [[TMP31]], ptr [[P_OUT]], align 8
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[MIDDLE_BLOCK]]:
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[EXIT:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[PRED_LOAD_IF3]]:
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[PRED_LOAD_CONTINUE2]] ], [ 0, %[[PRED_LOAD_CONTINUE4]] ]
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-LAA-MV-FOLD_TAIL:       [[HEADER]]:
-; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PRED_LOAD_IF3]] ], [ [[IV_NEXT:%.*]], %[[HEADER]] ]
+; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[PRED_LOAD_IF3]] ], [ [[IV_NEXT:%.*]], %[[HEADER]] ]
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
 ; COMPARE-LAA-MV-FOLD_TAIL-NEXT:    [[GEP_LD:%.*]] = getelementptr i64, ptr [[P]], i64 [[IDX]]

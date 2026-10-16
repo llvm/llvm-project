@@ -776,8 +776,8 @@ exit:
 define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) !dbg !60 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_constant_nonunit_stride'
 ; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
-; CHECK-DEBUG:       LV: Not vectorizing: unable to calculate the loop count due to complex control flow.
-; CHECK-REMARK:      foo.c:260:3: loop not vectorized: unable to calculate the loop count due to complex control flow
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition with an unsupported memory access pattern.
+; CHECK-REMARK:      foo.c:260:3: loop not vectorized: Early exit loop with side effects contains load used by the exit condition with an unsupported memory access pattern
 entry:
   br label %for.body, !dbg !61
 
