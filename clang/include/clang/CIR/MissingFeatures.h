@@ -126,6 +126,7 @@ struct MissingFeatures {
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
   static bool checkAliases() { return false; }
+  static bool emitModuleLinkOptions() { return false; }
   static bool shouldSkipAliasEmission() { return false; }
 
   // CXXABI
@@ -298,7 +299,6 @@ struct MissingFeatures {
   static bool targetCIRGenInfoOS() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool thunks() { return false; }
-  static bool tryEmitAsConstant() { return false; }
   static bool typeAwareAllocation() { return false; }
   static bool typeChecks() { return false; }
   static bool useEHCleanupForArray() { return false; }
