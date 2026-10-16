@@ -58,6 +58,7 @@ def LLVMUseDefaultVisibilityPass
       [Option<"useVisibility", "visibility", "::mlir::LLVM::Visibility",
               /*default=*/"::mlir::LLVM::Visibility::Default",
               "Visibility to use in place of default.", [{::llvm::cl::values(
+	     clEnumValN(::mlir::LLVM::Visibility::Default, "default", "Default"),
 	     clEnumValN(::mlir::LLVM::Visibility::Hidden, "hidden", "Hidden"),
 	     clEnumValN(::mlir::LLVM::Visibility::Protected, "protected", "Protected")
 	   )}]>,
