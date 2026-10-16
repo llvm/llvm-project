@@ -107,6 +107,10 @@ private:
   /// Tracks cycles until next VALU after multi-cycle VALU (CVT hazard).
   unsigned CyclesUntilVALU = 0;
 
+  /// Cycles until a safe follower must follow a just-emitted V_PERM_PK16.
+  /// Only the immediately following pick observes it (as 1).
+  unsigned CyclesUntilPermPk16Safety = 0;
+
   /// Debug: log of what was scheduled at each stage of the co-exec window.
   /// '.' = not yet reached, '-' = stall, else CoExecMask short char.
   std::array<char, AMDGPU::MaxCoExecStages> CoExecWindowLog;
@@ -133,6 +137,10 @@ private:
   /// instructions, return the number of stall cycles until one shadow clears.
   unsigned checkMultiShadowHazard(const MachineInstr &MI) const;
 
+  /// Check the V_PERM_PK16 hazard. Nonzero if a V_PERM_PK16 was just emitted
+  /// and \p MI is not a safe follower (soft pre-RA, hard post-RA).
+  unsigned checkVPermPk16Hazard(const MachineInstr &MI) const;
+
   /// Update WMMA window state when a WMMA instruction is emitted.
   void updateWMMAWindowState(const MachineInstr &MI);
 
@@ -141,6 +149,9 @@ private:
 
   /// Update multi-cycle VALU state when an instruction is emitted.
   void updateMultiCycleVALUState(const MachineInstr &MI);
+
+  /// Update V_PERM_PK16 hazard state when an instruction is emitted.
+  void updateVPermPk16State(const MachineInstr &MI);
 
   /// Scheduler-mode part of EmitInstruction().
   void schedulerEmitInstruction(MachineInstr *MI);
