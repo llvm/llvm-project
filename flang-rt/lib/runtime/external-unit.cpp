@@ -203,7 +203,7 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
     if (access != Access::Stream) {
       if (!endfileRecordNumber) {
         // Fake it so that we can backspace relative from the end
-        endfileRecordNumber = std::numeric_limits<std::int64_t>::max() - 2;
+        endfileRecordNumber = common::numeric_limits<std::int64_t>::max() - 2;
       }
       currentRecordNumber = *endfileRecordNumber;
     }

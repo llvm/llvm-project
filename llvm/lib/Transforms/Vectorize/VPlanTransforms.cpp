@@ -49,20 +49,24 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  if (VectorizeOptions::Global.vplan_verify_each && !verifyVPlanIsValid(Plan))
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
-bool VPlanTransforms::isPrintingRequested() {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
@@ -1676,10 +1680,11 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   // This is useful for fmax/fmin without fast-math flags, where we need to
   // check if any operand is NaN.
   if (CanCreateNewRecipe &&
-      match(Def,
-            m_BinaryOr(
-                m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X), m_Deferred(X)),
-                m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y), m_Deferred(Y)))))
+      match(Def, m_BinaryOr(m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+                                          m_Deferred(X)),
+                            m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y),
+                                          m_Deferred(Y)))) &&
+      X->getScalarType() == Y->getScalarType())
     return Builder.createFCmp(CmpInst::FCMP_UNO, X, Y);
 
   if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
@@ -4432,7 +4437,7 @@ isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
   }
 
   auto IG = InterleaveR->getInterleaveGroup();
-  if (IG->getFactor() != IG->getNumMembers())
+  if (IG->getFactor() != IG->getNumMembers() || IG->isReverse())
     return std::nullopt;
 
   auto GetVectorBitWidthForVF = [&TTI](ElementCount VF) {

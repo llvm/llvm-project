@@ -737,10 +737,15 @@ public:
   /// '1'; and so on and so forth. This provides a way for the handler to
   /// deterministically order the diagnostics that it receives given the thread
   /// that it is receiving on.
+  ///
+  /// Each set must be paired with an erase on the same thread before the
+  /// handler is destroyed. Nesting distinct handlers on one thread is
+  /// supported; reentrant use of one handler on one thread is not.
   void setOrderIDForThread(size_t orderID);
 
   /// Remove the order id for the current thread. This removes the thread from
-  /// diagnostics tracking.
+  /// diagnostics tracking. Must be called on the same thread that set it,
+  /// before the handler is destroyed.
   void eraseOrderIDForThread();
 
 private:

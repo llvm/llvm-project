@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/type-code.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/numeric-limits.h"
 #include <vector>
 
 using namespace Fortran::runtime;
@@ -175,11 +176,12 @@ static void testBesselYnX0(
   using T = CppTypeFor<TypeCategory::Real, KIND>;
   for (int j{0}; j < (n2 - n1 + 1); ++j) {
     T value{*result.ZeroBasedIndexedElement<T>(j)};
-    // Avoid std::numeric_limits<T>, which may not be specialized for the
-    // REAL(16) type: only -Inf is negative and unchanged by doubling.
+    // Avoid numeric_limits<T>, which may not be specialized for the REAL(16)
+    // type: only -Inf is negative and unchanged by doubling.
     EXPECT_TRUE(value < T{0});
     EXPECT_TRUE(value + value == value);
-    EXPECT_EQ(value, static_cast<T>(-std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(value,
+        static_cast<T>(-Fortran::common::numeric_limits<double>::infinity()));
   }
 }
 
