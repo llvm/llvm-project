@@ -4090,13 +4090,15 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   }
 
   // A vector compare already produces a lane mask (CMxx/FCMxx), so sign
-  // extending it to the compare width is free.
+  // extending it to the compare width is free. That only holds while the
+  // result stays a vector; scalarized lanes still need a CSETM each.
   const Instruction *Cmp;
   const Value *CmpOp;
   if (I && useNeonVector(Dst) &&
       match(I, m_SExt(m_Instruction(Cmp, m_Cmp(m_Value(CmpOp), m_Value())))) &&
       Cmp->getParent() == I->getParent() &&
-      CmpOp->getType()->getScalarSizeInBits() == Dst->getScalarSizeInBits())
+      CmpOp->getType()->getScalarSizeInBits() == Dst->getScalarSizeInBits() &&
+      getTypeLegalizationCost(Dst).second.isVector())
     return 0;
 
   EVT SrcTy = TLI->getValueType(DL, Src);

@@ -713,7 +713,7 @@ define <4 x i16> @fcmp_v4f16(<4 x half> %a, <4 x half> %b) {
 
 ; COST-LABEL: icmp_v2i128
 ; COST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %c = icmp sgt <2 x i128> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <2 x i1> %c to <2 x i128>
+; COST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %s = sext <2 x i1> %c to <2 x i128>
 ; CODE-LABEL: icmp_v2i128
 ; CODE:       cmp x4, x0
 ; CODE-NEXT:  sbcs xzr, x5, x1
@@ -732,7 +732,7 @@ define <2 x i128> @icmp_v2i128(<2 x i128> %a, <2 x i128> %b) {
 
 ; COST-LABEL: fcmp_v2f128
 ; COST-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %c = fcmp olt <2 x fp128> %a, %b
-; COST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %s = sext <2 x i1> %c to <2 x i128>
+; COST-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %s = sext <2 x i1> %c to <2 x i128>
 ; CODE-LABEL: fcmp_v2f128
 ; CODE:       bl __lttf2
 ; CODE:       csetm x19, mi
