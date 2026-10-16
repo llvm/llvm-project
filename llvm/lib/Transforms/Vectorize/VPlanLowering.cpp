@@ -175,7 +175,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
     IncrementValue = TopRegion->getCanonicalIV();
     VPValue &VFxUF = Plan.getVFxUF();
     TC = Builder.createScalarIntrinsic(Intrinsic::usub_sat, {TC, &VFxUF},
-                                       TC->getScalarType(), DL);
+                                       TC->getScalarType(), DL,
+                                       "trip.count.minus.vf");
   }
 
   // Create the active lane mask for the next iteration of the loop before the
