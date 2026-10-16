@@ -732,7 +732,7 @@ TEST(Local, SalvageDbgAssignAddress) {
 
   Function &Fun = *cast<Function>(M->getNamedValue("fun"));
   Value *Arg = Fun.getArg(0);
-  Instruction &GEP = *Fun.getEntryBlock().getFirstNonPHIOrDbg();
+  Instruction &GEP = *Fun.getEntryBlock().getFirstNonPHIOrPseudoProbe();
 
   SmallVector<DbgVariableRecord *> Records;
   findDbgUsers(&GEP, Records);

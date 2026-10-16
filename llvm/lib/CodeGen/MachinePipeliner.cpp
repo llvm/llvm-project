@@ -565,9 +565,6 @@ void MachinePipelinerImpl::setPragmaPipelineOptions(MachineLoop &L) {
     return;
 
   const Instruction *TI = BBLK->getTerminator();
-  if (TI == nullptr)
-    return;
-
   MDNode *LoopID = TI->getMetadata(LLVMContext::MD_loop);
   if (LoopID == nullptr)
     return;

@@ -19,3 +19,25 @@ add_object_library(
     libc.src.__support.macros.config
     libc.src.string.memory_utils.inline_memset
 )
+
+add_header_library(
+  regex_internal
+  HDRS
+    regex_internal.h
+  DEPENDS
+    .regex_expr_pool
+    libc.src.__support.macros.config
+    libc.src.__support.threads.spin_lock
+)
+
+add_object_library(
+  regex_matcher
+  SRCS
+    regex_matcher.cpp
+  HDRS
+    regex_matcher.h
+  DEPENDS
+    .regex_expr_pool
+    libc.src.__support.CPP.string_view
+    libc.src.__support.error_or
+)

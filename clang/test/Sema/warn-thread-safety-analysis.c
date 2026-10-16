@@ -315,8 +315,34 @@ void test_fp_ops(struct FPOps *ops) {
 }
 
 void test_fp_ops_fail(struct FPOps *ops) {
-  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex '&FPOps::mu' exclusively}}
-  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex '&FPOps::mu' exclusively}}
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}}
+}
+
+// '&mu' names the mutex of the same object, as 'mu' does; C has no
+// pointer-to-member syntax, so it is not the wildcard '&FPOps::mu' is in C++.
+void test_fp_ops_other(struct FPOps *ops, struct FPOps *other) {
+  other->lock();
+  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}} \
+               // expected-note {{found near match 'other->mu'}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}} \
+                      // expected-note {{found near match 'other->mu'}}
+  other->unlock();
+}
+
+// The object may be reached without a pointer, and the field may be called
+// through an explicit dereference.
+void test_fp_ops_value(struct FPOps foo, struct FPOps *ops) {
+  foo.lock();
+  foo.a = 42;
+  (*ops->lock)();
+  ops->a = 42;
+  (*foo.unlock)();
+  foo.a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'foo.mu' exclusively}} \
+              // expected-note {{found near match 'ops->mu'}}
+  foo.requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'foo.mu' exclusively}} \
+                     // expected-note {{found near match 'ops->mu'}}
+  ops->unlock();
 }
 
 // Function pointer parameters. The attributes constrain the function reached
@@ -401,6 +427,41 @@ void test_lock_of_param(struct BDev *bdev,
   mutex_exclusive_lock(lock_of(bdev));
   bdev->a = 42;
   mutex_exclusive_unlock(&bdev->lock);
+}
+
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct BDevSelf {
+  struct Mutex lock;
+  int a GUARDED_BY(lock);
+  struct Mutex *(*lock_of)(void) LOCK_RETURNED(lock);
+  void (*unlock)(void) UNLOCK_FUNCTION(lock);
+};
+
+void test_bdev_self(struct BDevSelf *bdev) {
+  mutex_exclusive_lock(bdev->lock_of());
+  bdev->a = 42;
+  bdev->unlock();
+}
+
+void test_bdev_self_fail(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock(other->lock_of());
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock(bdev->lock_of()); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  other->unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void test_bdev_self_deref(struct BDevSelf *bdev, struct BDevSelf *other) {
+  mutex_exclusive_lock((*bdev->lock_of)());
+  bdev->a = 42;
+  (*bdev->unlock)();
+  mutex_exclusive_lock((**other->lock_of)());
+  other->a = 42;
+  bdev->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'bdev->lock' exclusively}} \
+                // expected-note {{found near match 'other->lock'}}
+  mutex_exclusive_unlock((*other->lock_of)());
 }
 
 // A pointee parameter shadows a member of the same name, in both modes: the

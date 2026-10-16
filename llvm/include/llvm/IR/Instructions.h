@@ -3506,7 +3506,8 @@ public:
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
   bool defaultDestUnreachable() const {
-    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
+    return isa<UnreachableInst>(
+        getDefaultDest()->getFirstNonPHIOrPseudoProbe());
   }
 
   void setDefaultDest(BasicBlock *DefaultCase) {
