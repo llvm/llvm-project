@@ -1244,20 +1244,31 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
                 (BGEUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
 }
 
-let isCall = 1, isTerminator = 0, isReturn = 0, isBarrier = 0,
-    hasDelaySlot = 0, isCTI = 1, Defs = [RA] in {
-  class JumpLinkR6<Instruction JumpInst, DAGOperand Opnd> :
-    PseudoSE<(outs), (ins calltarget:$target), []>,
-    PseudoInstExpansion<(JumpInst Opnd:$target)>;
+class JumpLinkR6<Instruction JumpInst, DAGOperand Opnd> :
+  PseudoSE<(outs), (ins calltarget:$target), []>,
+  PseudoInstExpansion<(JumpInst Opnd:$target)> {
+  let isCall = 1;
+  let isTerminator = 0;
+  let isReturn = 0;
+  let isBarrier = 0;
+  let hasDelaySlot = 0;
+  let isCTI = 1;
+  let Defs = [RA];
 }
-def JAL_R6 : JumpLinkR6<BALC, brtarget26>, ISA_MIPS32R6;
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    hasDelaySlot = 0, isCTI = 1, Defs = [AT] in {
-  class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
-    PseudoSE<(outs), (ins calltarget:$target), []>,
-    PseudoInstExpansion<(JumpInst Opnd:$target)>;
+class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
+  PseudoSE<(outs), (ins calltarget:$target), []>,
+  PseudoInstExpansion<(JumpInst Opnd:$target)> {
+  let isCall = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let isBarrier = 1;
+  let hasDelaySlot = 0;
+  let isCTI = 1;
+  let Defs = [AT];
 }
+
+def JAL_R6 : JumpLinkR6<BALC, brtarget26>, ISA_MIPS32R6;
 def TAILCALL_R6 : TailCallR6<BC, brtarget26>, ISA_MIPS32R6;
 
 let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
