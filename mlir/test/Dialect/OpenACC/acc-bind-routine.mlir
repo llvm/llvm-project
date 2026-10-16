@@ -172,3 +172,41 @@ module {
 // CHECK-COUNT-3: func.call @new_target() : () -> ()
 // CHECK: func.func private @new_target()
 // CHECK-NOT: func.func private @new_target
+
+// -----
+
+// Identical routine and wrapper names in separate GPU symbol tables must
+// resolve independently, including after inserting each string-bound target.
+module {
+  gpu.module @first_scope {
+    acc.routine @r func(@wrapped) seq bind("first_target")
+    func.func private @wrapped()
+        attributes {acc.routine_info = #acc.routine_info<[@r]>}
+    gpu.func @caller() {
+      func.call @wrapped() : () -> ()
+      func.call @wrapped() : () -> ()
+      gpu.return
+    }
+  }
+  gpu.module @second_scope {
+    acc.routine @r func(@wrapped) seq bind("second_target")
+    func.func private @wrapped()
+        attributes {acc.routine_info = #acc.routine_info<[@r]>}
+    gpu.func @caller() {
+      func.call @wrapped() : () -> ()
+      func.call @wrapped() : () -> ()
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: gpu.module @first_scope
+// CHECK-LABEL: gpu.func @caller
+// CHECK-COUNT-2: func.call @first_target() : () -> ()
+// CHECK: func.func private @first_target()
+// CHECK-NOT: func.func private @first_target
+// CHECK-LABEL: gpu.module @second_scope
+// CHECK-LABEL: gpu.func @caller
+// CHECK-COUNT-2: func.call @second_target() : () -> ()
+// CHECK: func.func private @second_target()
+// CHECK-NOT: func.func private @second_target
