@@ -78,6 +78,19 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
+#if defined(__GNUC__)
+#if defined(__i386__) || defined(__x86_64__)
+#include <x86intrin.h>
+#elif defined(__powerpc64__) || defined(__PPC64__)
+// PowerPC compatibility shim for x86 intrinsics
+#define NO_WARN_X86_INTRINSICS
+#include <x86intrin.h>
+#endif
+#endif
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#include "intrin.h"
+#endif
+
 using namespace llvm::offload::debug;
 using namespace error;
 
@@ -99,6 +112,44 @@ struct AMDGPUMemoryManagerTy;
 struct AMDGPUMemoryPoolTy;
 
 namespace hsa_utils {
+
+/// Copied from HSA-runtime.
+static void storeFence() {
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) ||           \
+    defined(__powerpc64__)
+  _mm_sfence();
+#elif __has_builtin(__builtin_arm_dmb)
+  __builtin_arm_dmb(0x2); // oshst
+#elif defined(__riscv)
+  __asm__ __volatile__("fence ow, ow" ::: "memory");
+#else
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
+}
+
+/// Copied from HSA-runtime.
+static void memoryFence() {
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) ||           \
+    defined(__powerpc64__)
+  _mm_mfence();
+#elif __has_builtin(__builtin_arm_dsb)
+  __builtin_arm_dsb(0xf); // sy
+#elif defined(__riscv)
+  __asm__ __volatile__("fence iorw, iorw" ::: "memory");
+#else
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
+}
+
+/// Copied from HSA-runtime.
+/// Force a WC flush on PCIe devices by doing a write and then read-back
+static void flushPcieWc(void *Ptr, size_t Size) {
+  storeFence();
+  *((uint8_t *)Ptr + Size - 1) = *((uint8_t *)Ptr + Size - 1);
+  memoryFence();
+  auto Readback = *(reinterpret_cast<volatile uint8_t *>(Ptr) + Size - 1);
+  (void)Readback;
+}
 
 /// Iterate elements using an HSA iterate function. Do not use this function
 /// directly but the specialized ones below instead.
@@ -238,6 +289,23 @@ static std::optional<llvm::VersionTuple> getAMDExtensionVersion() {
           HSA_STATUS_SUCCESS)
     return std::nullopt;
   return llvm::VersionTuple(Major, Minor);
+}
+
+/// Whether the host can write \p Size bytes at \p Ptr directly: they must lie
+/// within an ordinary allocation of this device. On a large BAR system ROCr
+/// maps all of those for the host, which HIP relies on as well. Memory mapped
+/// through hsa_amd_vmem_* (such as the record-replay slab) is an example for
+/// something the host cannot write to directly.
+static bool isHostWritable(hsa_agent_t Agent, const void *Ptr, int64_t Size) {
+  hsa_amd_pointer_info_t Info;
+  Info.size = sizeof(hsa_amd_pointer_info_t);
+  if (hsa_amd_pointer_info(Ptr, &Info, nullptr, nullptr, nullptr) !=
+      HSA_STATUS_SUCCESS)
+    return false;
+  return Info.type == HSA_EXT_POINTER_TYPE_HSA &&
+         Info.agentOwner.handle == Agent.handle &&
+         utils::getPtrDiff(Ptr, Info.agentBaseAddress) + Size <=
+             int64_t(Info.sizeInBytes);
 }
 } // namespace hsa_utils
 
@@ -557,23 +625,14 @@ static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
 /// Copy \p Size bytes from \p Src to the device memory at \p Dst.
 /// \p OverXGMI tells whether the host reaches that memory over XGMI.
 ///
-/// The host writes device memory through a write-combining mapping, which the
-/// release store on the doorbell does not order, so the fence drains it. Over
-/// PCIe the stores are posted and may still be in flight after that; reading
-/// back the last byte, written again after the fence, waits for them to land.
-/// XGMI needs no read-back. HSA exposes no call for this: it is the sequence of
-/// ROCr's internal GpuAgent::PcieWcFlush and of HIP for kernel arguments in
-/// device memory.
+/// Without XGMI, this needs a WC flush. With XGMI, this isn't necessary
+/// (according to the code in HSA-runtime).
 static void publishToDeviceMemory(void *Dst, const void *Src, size_t Size,
                                   bool OverXGMI) {
-  auto *Last = reinterpret_cast<volatile char *>(Dst) + Size - 1;
   std::memcpy(Dst, Src, Size);
-  std::atomic_thread_fence(std::memory_order_seq_cst);
   if (OverXGMI)
     return;
-  *Last = reinterpret_cast<const char *>(Src)[Size - 1];
-  std::atomic_thread_fence(std::memory_order_seq_cst);
-  (void)*Last;
+  hsa_utils::flushPcieWc(Dst, Size);
 }
 
 /// Class implementing the AMDGPU device images' properties.
@@ -2800,11 +2859,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
         return Err;
 
-    if (MemoryPool == CoarseGrainedMemoryPools[0] && HostWritesDeviceMemory) {
-      std::lock_guard<std::mutex> Lock(HostMappedAllocsMutex);
-      HostMappedAllocs.erase(TgtPtr);
-    }
-
     if (auto Err = MemoryPool->deallocate(TgtPtr))
       return Err;
 
@@ -2912,20 +2966,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Whether a transfer of \p Size bytes should be done via direct H2D
   /// transfer.
-  bool allowsDirectWrite(int64_t Size) const {
-    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize;
-  }
-
-  /// Whether the host can write \p Size bytes of device memory at \p Ptr,
-  /// i.e., whether they lie within an allocation that allocate() mapped for
-  /// the host.
-  bool isHostWritable(const void *Ptr, int64_t Size) const {
-    std::lock_guard<std::mutex> Lock(HostMappedAllocsMutex);
-    auto It = HostMappedAllocs.upper_bound(Ptr);
-    if (It == HostMappedAllocs.begin())
-      return false;
-    --It;
-    return utils::getPtrDiff(Ptr, It->first) + Size <= int64_t(It->second);
+  bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
+    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
+           hsa_utils::isHostWritable(Agent, Ptr, Size);
   }
 
   /// Submit data to the device (host to device transfer).
@@ -2937,8 +2980,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // The direct H2D write is independent of any queueing, so the caller has
     // to allow it.
-    if (Flags.DirectWrite && allowsDirectWrite(Size) &&
-        isHostWritable(TgtPtr, Size)) {
+    if (Flags.DirectWrite && allowsDirectWrite(TgtPtr, Size)) {
       publishToDeviceMemory(TgtPtr, HstPtr, Size, HostLinkIsXGMI);
       return Plugin::success();
     }
@@ -3827,11 +3869,6 @@ private:
   /// Whether the host reaches this device's memory over XGMI rather than PCIe.
   bool HostLinkIsXGMI = false;
 
-  /// The allocations mapped for the host, by base address, with their sizes.
-  /// Ordered, so that a pointer into one of them finds it.
-  std::map<const void *, size_t> HostMappedAllocs;
-  mutable std::mutex HostMappedAllocsMutex;
-
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
   uint64_t StackSize = 16 * 1024 /* 16 KB */;
@@ -4719,38 +4756,9 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
                     return MemoryPool->canAccess(Agent);
                   });
 
-    // Map small device allocations for the host too, so that it can write
-    // transfers into them directly (see dataSubmitImpl).
-    bool MapForHost =
-        MemoryPool == CoarseGrainedMemoryPools[0] && allowsDirectWrite(Size);
-    if (MapForHost)
-      Agents.push_back(HostDevice.getAgent());
-
     // Enable all valid kernel agents to access the buffer.
-    Error Err = MemoryPool->enableAccess(Alloc, Size, Agents);
-
-    // The host mapping is only an optimization. If it fails, e.g., because the
-    // host-visible window of device memory is exhausted, fall back to the
-    // device agents alone.
-    if (Err && MapForHost) {
-      std::string Msg = toString(std::move(Err));
-      ODBG(OLDT_Alloc) << "Failed to map device allocation " << Alloc
-                       << " for the host: " << Msg;
-      MapForHost = false;
-      Agents.pop_back();
-      Err = MemoryPool->enableAccess(Alloc, Size, Agents);
-    }
-
-    if (Err) {
-      if (auto FreeErr = MemoryPool->deallocate(Alloc))
-        return joinErrors(std::move(Err), std::move(FreeErr));
+    if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents))
       return std::move(Err);
-    }
-
-    if (MapForHost) {
-      std::lock_guard<std::mutex> Lock(HostMappedAllocsMutex);
-      HostMappedAllocs.insert_or_assign(Alloc, Size);
-    }
 
     // Register host / shared memory as pinned memory, so that transfers reading
     // from it can take a device-accessible path.
