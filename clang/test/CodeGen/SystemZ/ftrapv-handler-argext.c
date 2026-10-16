@@ -4,7 +4,7 @@
 // Check that the two i8 arguments of the -ftrapv-handler function (operation
 // code and operand bit-width) carry zeroext.
 //
-// CHECK: declare i64 @myhandler(i64, i64, i8 zeroext, i8 zeroext, ...)
+// CHECK: declare i64 @myhandler(i64 noundef, i64 noundef, i8 noundef zeroext, i8 noundef zeroext)
 
 void test(int a, int b) {
   (void)(a + b);
