@@ -47,6 +47,7 @@ add_flang_library(FortranSupport
   FPMaxminBehavior.cpp
   Flags.cpp
   Fortran.cpp
+  PluginDirectives.cpp
   Fortran-features.cpp
   idioms.cpp
   LangOptions.cpp

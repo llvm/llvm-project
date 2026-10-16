@@ -38,6 +38,7 @@
 #include "type-parser-implementation.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/user-state.h"
+#include "flang/Support/PluginDirectives.h"
 
 namespace Fortran::parser {
 
@@ -1395,8 +1396,76 @@ constexpr auto inlinealwaysDir{
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
 constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
+// The prefix of a directive defined by a plugin: a name that a plugin
+// registered (flang/Support/PluginDirectives.h).
+struct PluginDirectivePrefix {
+  using resultType = Name;
+  constexpr PluginDirectivePrefix() {}
+  std::optional<Name> Parse(ParseState &state) const {
+    ParseState start{state};
+    if (std::optional<Name> n{name.Parse(state)}) {
+      std::string text{n->ToString()};
+      if (common::isPluginDirectivePrefix(text)) {
+        return n;
+      }
+      // Fixed form directives lose their blanks, so that the prefix runs
+      // into the keyword ("enzymeinactive"): take the longest registered
+      // prefix of the name.
+      if (state.inFixedForm()) {
+        for (std::size_t len{text.size() - 1}; len > 0; --len) {
+          if (common::isPluginDirectivePrefix(
+                  std::string_view{text}.substr(0, len))) {
+            state = std::move(start);
+            space.Parse(state);
+            const char *begin{state.GetLocation()};
+            state.UncheckedAdvance(len);
+            return Name{CharBlock{begin, len}};
+          }
+        }
+      }
+    }
+    return std::nullopt;
+  }
+};
+constexpr auto pluginDirectiveValue{
+    construct<std::variant<Name, CompilerDirective::Plugin::CommonBlock,
+        std::uint64_t, std::string>>(
+        construct<CompilerDirective::Plugin::CommonBlock>("/" >> name / "/")) ||
+    construct<std::variant<Name, CompilerDirective::Plugin::CommonBlock,
+        std::uint64_t, std::string>>(name) ||
+    construct<std::variant<Name, CompilerDirective::Plugin::CommonBlock,
+        std::uint64_t, std::string>>(digitString64) ||
+    construct<std::variant<Name, CompilerDirective::Plugin::CommonBlock,
+        std::uint64_t, std::string>>(space >> charLiteralConstantWithoutKind)};
+constexpr auto pluginDirectiveArg{construct<CompilerDirective::Plugin::Arg>(
+    maybe(name / "="_tok), pluginDirectiveValue)};
+// The arguments of a directive defined by a plugin. Once its prefix is
+// recognized, the directive is the plugin's: arguments that do not parse are
+// an error, not an unrecognized directive to ignore.
+struct PluginDirectiveArgs {
+  using resultType = std::list<CompilerDirective::Plugin::Arg>;
+  constexpr PluginDirectiveArgs() {}
+  std::optional<resultType> Parse(ParseState &state) const {
+    static constexpr auto args{
+        defaulted(parenthesized(optionalList(pluginDirectiveArg))) /
+        lookAhead(endOfStmt)};
+    const char *start{state.GetLocation()};
+    ParseState backtrack{state};
+    if (std::optional<resultType> result{args.Parse(state)}) {
+      return result;
+    }
+    state = std::move(backtrack);
+    SkipTo<'\n'>{}.Parse(state);
+    state.Say(CharBlock{start, state.GetLocation()},
+        "malformed argument list of a directive defined by a plugin"_err_en_US);
+    return resultType{};
+  }
+};
+constexpr auto pluginDirective{construct<CompilerDirective::Plugin>(
+    PluginDirectivePrefix{}, name, PluginDirectiveArgs{})};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
-    sourced((construct<CompilerDirective>(ignore_tkr) ||
+    sourced((construct<CompilerDirective>(pluginDirective) ||
+                construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
                 construct<CompilerDirective>(vectorAlways) ||

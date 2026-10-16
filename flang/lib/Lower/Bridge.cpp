@@ -686,7 +686,127 @@ public:
           *this, bridge.getSemanticsContext());
     });
 
+    createBuilderOutsideOfFuncOpAndDo([&]() { lowerPluginDirectives(); });
+
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
+  }
+
+  /// Attach the directives defined by plugins to the operations of their
+  /// subjects in this module (a func.func for a procedure, a fir.global for a
+  /// variable), as a `fir.directives` array of dictionaries:
+  ///   {prefix = "enzyme", keyword = "custom_rule",
+  ///    args = {reverse = @_QMmPrev, ...}}
+  /// Procedure and variable arguments are symbol references, declaring the
+  /// procedure or module variable if this module does not yet; the plugin's
+  /// passes give them a meaning.
+  void lowerPluginDirectives() {
+    mlir::ModuleOp module{getModuleOp()};
+    mlir::MLIRContext *ctx{module.getContext()};
+    // What semantics lets a directive refer to: a subprogram or an external
+    // procedure, a variable, or a COMMON block. Nothing else has an operation
+    // (or even a mangled name).
+    auto isReferable{[](const Fortran::semantics::Symbol &sym) {
+      if (Fortran::semantics::IsProcedure(sym)) {
+        return !sym.has<Fortran::semantics::GenericDetails>() &&
+               !Fortran::semantics::IsDummy(sym) &&
+               !Fortran::semantics::IsProcedurePointer(sym) &&
+               !Fortran::semantics::IsStmtFunction(sym) &&
+               !sym.attrs().test(Fortran::semantics::Attr::INTRINSIC);
+      }
+      return sym.has<Fortran::semantics::ObjectEntityDetails>() ||
+             sym.has<Fortran::semantics::CommonBlockDetails>();
+    }};
+    // The operation of a procedure or variable, declared if need be (as a
+    // reference to it would): procedures, and variables of modules, which
+    // may be another module's.
+    auto getOrDeclare{[&](const Fortran::semantics::Symbol &sym)
+                          -> mlir::Operation * {
+      if (!isReferable(sym)) {
+        return nullptr;
+      }
+      if (mlir::Operation *op = module.lookupSymbol(mangleName(sym)))
+        return op;
+      if (Fortran::semantics::IsProcedure(sym)) {
+        mlir::func::FuncOp func = Fortran::lower::getOrDeclareFunction(
+            Fortran::evaluate::ProcedureDesignator{sym}, *this);
+        return func.getOperation();
+      }
+      if (sym.has<Fortran::semantics::ObjectEntityDetails>() &&
+          sym.owner().IsModule()) {
+        return Fortran::lower::declareModuleVariable(*this, sym).getOperation();
+      }
+      return nullptr;
+    }};
+    for (const auto &[subject, directive, fromModFile] :
+         bridge.getSemanticsContext().GetPluginDirectives()) {
+      const Fortran::semantics::Symbol &ultimate{subject->GetUltimate()};
+      // The unit with the directive keeps it even for a procedure or variable
+      // it does not use otherwise (e.g. an external procedure with an
+      // interface body); a unit that sees it through a module file only for
+      // those it uses.
+      mlir::Operation *target{nullptr};
+      if (!fromModFile)
+        target = getOrDeclare(ultimate);
+      else if (isReferable(ultimate))
+        target = module.lookupSymbol(mangleName(ultimate));
+      if (!target) {
+        continue; // neither defined nor referenced here
+      }
+      const auto &[prefix, keyword, args]{
+          std::get<Fortran::parser::CompilerDirective::Plugin>(directive->u).t};
+      llvm::SmallVector<mlir::NamedAttribute> argAttrs;
+      for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg : args) {
+        const auto &argKeyword{std::get<0>(arg.t)};
+        if (!argKeyword) {
+          continue; // the subject
+        }
+        mlir::Attribute value{Fortran::common::visit(
+            Fortran::common::visitors{
+                [&](const Fortran::parser::Name &n) -> mlir::Attribute {
+                  if (!n.symbol) {
+                    return mlir::StringAttr::get(ctx, n.ToString());
+                  }
+                  mlir::Operation *op{getOrDeclare(n.symbol->GetUltimate())};
+                  if (!op) {
+                    return mlir::StringAttr::get(ctx, n.ToString());
+                  }
+                  return mlir::FlatSymbolRefAttr::get(
+                      mlir::SymbolTable::getSymbolName(op));
+                },
+                [&](const Fortran::parser::CompilerDirective::Plugin::
+                        CommonBlock &c) -> mlir::Attribute {
+                  std::string name{c.v.symbol ? mangleName(*c.v.symbol)
+                                              : c.v.ToString()};
+                  if (!module.lookupSymbol(name)) {
+                    return mlir::StringAttr::get(ctx, c.v.ToString());
+                  }
+                  return mlir::FlatSymbolRefAttr::get(ctx, name);
+                },
+                [&](std::uint64_t n) -> mlir::Attribute {
+                  return builder->getI64IntegerAttr(n);
+                },
+                [&](const std::string &str) -> mlir::Attribute {
+                  return mlir::StringAttr::get(ctx, str);
+                },
+            },
+            std::get<1>(arg.t))};
+        argAttrs.push_back(
+            builder->getNamedAttr(argKeyword->ToString(), value));
+      }
+      mlir::Attribute entry{builder->getDictionaryAttr({
+          builder->getNamedAttr("prefix",
+                                builder->getStringAttr(prefix.ToString())),
+          builder->getNamedAttr("keyword",
+                                builder->getStringAttr(keyword.ToString())),
+          builder->getNamedAttr("args", builder->getDictionaryAttr(argAttrs)),
+      })};
+      llvm::SmallVector<mlir::Attribute> entries;
+      if (auto existing{
+              target->getAttrOfType<mlir::ArrayAttr>("fir.directives")})
+        entries.append(existing.begin(), existing.end());
+      entries.push_back(entry);
+      target->setAttr("fir.directives", builder->getArrayAttr(entries));
+    }
   }
 
   /// Declare a function.
