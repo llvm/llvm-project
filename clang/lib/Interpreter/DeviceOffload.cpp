@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements offloading to CUDA devices.
+
+// This file implements offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,17 +22,56 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 
-IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
+IncrementalDeviceParser::IncrementalDeviceParser(
     CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
     IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
     : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
-      TargetOpts(DeviceInstance.getTargetOpts()) {
+      TargetOpts(DeviceInstance.getTargetOpts()) {}
+
+IncrementalDeviceParser::~IncrementalDeviceParser() {}
+
+IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
+  if (Err)
+    return;
+  if (!llvm::Triple(TargetOpts.Triple).isAMDGCN()) {
+    Err = llvm::joinErrors(
+        std::move(Err),
+        llvm::make_error<llvm::StringError>(
+            "Invalid HIP architecture for target '" + TargetOpts.Triple + "'",
+            llvm::inconvertibleErrorCode()));
+    return;
+  }
+}
+
+llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
+  // FIXME: Generate the HSACO and bundle it for the host compilation.
+  return llvm::make_error<llvm::StringError>(
+      "HIP offload binary generation is not supported yet.",
+      llvm::inconvertibleErrorCode());
+}
+
+IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}
+
+IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
   if (Err)
     return;
   StringRef Arch = TargetOpts.CPU;
@@ -154,6 +194,14 @@ llvm::Error IncrementalCUDADeviceParser::GenerateFatbinary() {
   FatbinContent.clear();
 
   return llvm::Error::success();
+}
+
+llvm::Error IncrementalCUDADeviceParser::GenerateOffloadBinary() {
+  llvm::Expected<llvm::StringRef> PTX = GeneratePTX();
+  if (!PTX)
+    return PTX.takeError();
+
+  return GenerateFatbinary();
 }
 
 IncrementalCUDADeviceParser::~IncrementalCUDADeviceParser() {}

@@ -644,7 +644,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -795,6 +795,32 @@ void coro::BaseCloner::replaceEntryBlock() {
   }
 }
 
+/// Returns the location of the first instruction after \p ActiveSuspend with a
+/// non-zero line, or an empty location if there is none.
+static DebugLoc getFirstNonZeroLocAfterSuspend(Instruction *ActiveSuspend) {
+  if (!ActiveSuspend->getNextNode())
+    return {};
+
+  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
+  // Corosplit splits the BB around ActiveSuspend, so the meaningful
+  // instructions are not in the same BB.
+  // FIXME: remove this hardcoded number of tries.
+  for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
+    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
+    if (!Branch)
+      break;
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrPseudoProbe();
+  }
+
+  BasicBlock *PBB = Successor->getParent();
+  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
+    auto DL = Successor->getDebugLoc();
+    if (DL && DL.getLine() != 0)
+      return DL;
+  }
+  return {};
+}
+
 /// Derive the value of the new frame pointer.
 Value *coro::BaseCloner::deriveNewFramePointer() {
   // Builder should be inserting to the front of the new entry block.
@@ -814,8 +840,14 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
-    auto DbgLoc =
-        cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
+    auto *NewSuspend = cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend]);
+    DebugLoc DbgLoc = NewSuspend->getDebugLoc();
+    // The projection may update the async context slot of the frame. With a
+    // line 0 location, prologue_end is placed after that update, but debuggers
+    // expect the slot to be unchanged at prologue_end.
+    if (DbgLoc && DbgLoc.getLine() == 0)
+      if (DebugLoc NonZeroLoc = getFirstNonZeroLocAfterSuspend(NewSuspend))
+        DbgLoc = NonZeroLoc;
     // Calling i8* (i8*)
     auto *CallerContext = Builder.CreateCall(ProjectionFunc->getFunctionType(),
                                              ProjectionFunc, CalleeContext);
@@ -863,46 +895,11 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   if (!ActiveSuspend)
     return;
 
-  // No subsequent instruction -> fallback to the location of ActiveSuspend.
-  if (!ActiveSuspend->getNextNode()) {
-    if (auto DL = ActiveSuspend->getDebugLoc())
-      if (SPToUpdate.getFile() == DL->getFile())
-        SPToUpdate.setScopeLine(DL->getLine());
-    return;
-  }
-
-  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
-  // Corosplit splits the BB around ActiveSuspend, so the meaningful
-  // instructions are not in the same BB.
-  // FIXME: remove this hardcoded number of tries.
-  for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
-    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
-    if (!Branch)
-      break;
-    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
-  }
-
-  // Find the first successor of ActiveSuspend with a non-zero line location.
-  // If that matches the file of ActiveSuspend, use it.
-  BasicBlock *PBB = Successor->getParent();
-  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
-    Successor = skipDebugIntrinsics(Successor);
-    auto DL = Successor->getDebugLoc();
-    if (!DL || DL.getLine() == 0)
-      continue;
-
-    if (SPToUpdate.getFile() == DL->getFile()) {
-      SPToUpdate.setScopeLine(DL.getLine());
-      return;
-    }
-
-    break;
-  }
-
-  // If the search above failed, fallback to the location of ActiveSuspend.
-  if (auto DL = ActiveSuspend->getDebugLoc())
-    if (SPToUpdate.getFile() == DL->getFile())
-      SPToUpdate.setScopeLine(DL->getLine());
+  DebugLoc DL = getFirstNonZeroLocAfterSuspend(ActiveSuspend);
+  if (!DL || SPToUpdate.getFile() != DL->getFile())
+    DL = ActiveSuspend->getDebugLoc();
+  if (DL && SPToUpdate.getFile() == DL->getFile())
+    SPToUpdate.setScopeLine(DL.getLine());
 }
 
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,

@@ -146,6 +146,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`modernize-use-if-consteval
+  <clang-tidy/checks/modernize/use-if-consteval>` check.
+
+  Replaces direct `std::is_constant_evaluated()` checks in `if` statements
+  with C++23's `if consteval` syntax.
+
 - New {doc}`modernize-use-to-underlying
   <clang-tidy/checks/modernize/use-to-underlying>` check.
 
@@ -314,6 +320,11 @@ infrastructure are described first, followed by tool-specific sections.
   {option}`ForRangeLoopClasses` to configure container classes that can be used
   as sources in range-based `for` loops.
 
+- Improved {doc}`performance-no-automatic-move
+  <clang-tidy/checks/performance/no-automatic-move>` check by no longer
+  warning when returning a variable captured by a lambda or a block, which is
+  never implicitly moved from.
+
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
   avoid offering fix-its for string literals originating from macro
@@ -415,6 +426,10 @@ infrastructure are described first, followed by tool-specific sections.
   {doc}`fuchsia-temporary-objects <clang-tidy/checks/fuchsia/temporary-objects>`.
 
 #### Miscellaneous
+
+- Fixed {program}`clang-tidy` adding an unwanted blank line when automatically
+  inserting a missing `#include`, which stopped {program}`clang-format` and
+  the `llvm-include-order` check from being able to sort it correctly afterwards.
 
 ### Improvements to include-fixer
 

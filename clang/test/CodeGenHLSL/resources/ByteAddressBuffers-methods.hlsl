@@ -67,9 +67,9 @@ export float TestLoadWithStatus() {
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
 // CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: call {{.*}} i32 @hlsl::ByteAddressBuffer::Load(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 0, ptr {{.*}} %tmp) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 4, ptr {{.*}} %tmp2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
-// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 20, ptr {{.*}} %tmp5) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
-// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 24, ptr {{.*}} %tmp8) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWByteAddressBuffer::Load4(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 4, ptr {{.*}} %tmp1) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} float @float hlsl::ByteAddressBuffer::Load<float>(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 20, ptr {{.*}} %tmp4) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <4 x float> @float vector[4] hlsl::RWByteAddressBuffer::Load<float vector[4]>(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 24, ptr {{.*}} %tmp7) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret float
 

@@ -1440,9 +1440,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   // Prefer likely predicted branches to selects on out-of-order cores.
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
-  setPrefLoopAlignment(Align(1ULL << Subtarget->getPreferBranchLogAlignment()));
+  setPrefLoopAlignment(
+      Align::fromLog2(Subtarget->getPreferBranchLogAlignment()));
   setPrefFunctionAlignment(
-      Align(1ULL << Subtarget->getPreferBranchLogAlignment()));
+      Align::fromLog2(Subtarget->getPreferBranchLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
 
@@ -12671,10 +12672,10 @@ static SDValue AddCombineTo64BitSMLAL16(SDNode *AddcNode, SDNode *AddeNode,
 
   DAG.ReplaceAllUsesOfValueWith(SDValue(AddcNode, 0), LoMLALResult);
   DAG.ReplaceAllUsesOfValueWith(SDValue(AddeNode, 0), HiMLALResult);
+  DCI.recursivelyDeleteUnusedNodes(AddeNode);
 
   // Return original node to notify the driver to stop replacing.
-  SDValue resNode(AddcNode, 0);
-  return resNode;
+  return SDValue(AddeNode, 0);
 }
 
 static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,

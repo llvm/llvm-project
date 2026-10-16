@@ -965,6 +965,12 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   }
 }
 
+multiclass DSReadPat_True16<DS_Pseudo inst, ValueType vt, string frag> {
+  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+}
+
 multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
 
   let OtherPredicates = [LDSRequiresM0Init] in {
@@ -974,9 +980,7 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
     def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
-  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
-    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-  }
+  defm : DSReadPat_True16<inst, vt, frag>;
   let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
     def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
@@ -1012,13 +1016,14 @@ foreach vt = VReg_64.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B64, vt, "atomic_load_local">;
 }
 
-defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_aext_8_local">;
+defm : DSReadPat_True16 <DS_READ_U8, i16, "atomic_load_aext_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_aext_8_local">;
-defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_zext_8_local">;
+defm : DSReadPat_True16 <DS_READ_U8, i16, "atomic_load_zext_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_zext_8_local">;
-defm : DSReadPat_t16 <DS_READ_I8, i16, "atomic_load_sext_8_local">;
+defm : DSReadPat_True16 <DS_READ_I8, i16, "atomic_load_sext_8_local">;
 defm : DSReadPat_mc <DS_READ_I8, i32, "atomic_load_sext_8_local">;
-defm : DSReadPat_t16 <DS_READ_U16, i16, "atomic_load_nonext_16_local">;
+foreach vt = Reg16Types.types in
+defm : DSReadPat_True16 <DS_READ_U16, vt, "atomic_load_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_aext_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
@@ -1047,7 +1052,7 @@ class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPa
 
 class DSWritePat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (inst $ptr, (REG_SEQUENCE VGPR_32, $value, lo16, (i16 (IMPLICIT_DEF)), hi16),
+  (inst $ptr, (lo16_to_vgpr32 $value),
         Offset:$offset, (i1 gds))
 >;
 
@@ -1066,29 +1071,32 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
   }
 }
 
+multiclass DSWritePat_True16 <DS_Pseudo inst, ValueType vt, string frag> {
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseRealTrue16Insts in {
+    def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+
+  defvar region_frag = !cast<PatFrag>(!subst("_local", "_region", frag)#"_m0");
+  let OtherPredicates = [HasGDS], True16Predicate = UseRealTrue16Insts in {
+    def : DSWritePat_t16<inst, vt, region_frag, /*gds=*/1>;
+  }
+}
+
 multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
     def : DSWritePat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    let True16Predicate = NotUseRealTrue16Insts in {
-      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-    }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-    }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 
   defvar region_frag = !cast<PatFrag>(!subst("_local", "_region", frag)#"_m0");
-  let OtherPredicates = [HasGDS] in {
-    let True16Predicate = NotUseRealTrue16Insts in {
-      def : DSWritePat<inst, vt, region_frag, /*gds=*/1>;
-    }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSWritePat_t16<inst, vt, region_frag, /*gds=*/1>;
-    }
+  let OtherPredicates = [HasGDS], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSWritePat<inst, vt, region_frag, /*gds=*/1>;
   }
+
+  defm : DSWritePat_True16<inst, vt, frag>;
 }
 
 defm : DSWritePat_mc <DS_WRITE_B8, i32, "truncstorei8_local">;
@@ -1105,9 +1113,10 @@ foreach vt = VReg_64.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B64, vt, "atomic_store_local">;
 }
 
-defm : DSWritePat_t16 <DS_WRITE_B8, i16, "atomic_store_8_local">;
+defm : DSWritePat_True16 <DS_WRITE_B8, i16, "atomic_store_8_local">;
 defm : DSWritePat_mc <DS_WRITE_B8, i32, "atomic_store_8_local">;
-defm : DSWritePat_t16 <DS_WRITE_B16, i16, "atomic_store_16_local">;
+foreach vt = Reg16Types.types in
+defm : DSWritePat_True16 <DS_WRITE_B16, vt, "atomic_store_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "atomic_store_16_local">;
 
 let OtherPredicates = [HasD16LoadStore] in {
@@ -1550,10 +1559,8 @@ defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
 
-let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
 defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
-}
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {

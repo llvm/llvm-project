@@ -19,10 +19,21 @@ namespace llvm {
 namespace sys {
 namespace unicode {
 
+extern const UnicodeCharSet::CharRanges GeneratedCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedPrintableRanges;
+extern const UnicodeCharSet::CharRanges GeneratedControlCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedFormatCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedCombiningCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedDoubleWidthCharacterRanges;
+
+/// Unicode code points that are considered characters. This function
+/// returns true for any code point defined by Unicode as a character, false for
+/// any code point defined as a non-character, as reserved, as a surrogate code
+/// point, or not defined at all.
+bool isCharacter(int UCS) {
+  static const UnicodeCharSet Character(GeneratedCharacterRanges);
+  return Character.contains(UCS);
+}
 
 /// Unicode code points of the categories L, M, N, P, S and Zs are considered
 /// printable.
@@ -34,6 +45,13 @@ bool isPrintable(int UCS) {
   // Clang special cases 0x00AD (SOFT HYPHEN) which is rendered as an actual
   // hyphen in most terminals.
   return UCS == 0x00AD || Printables.contains(UCS);
+}
+
+/// Unicode code points of the Cc category are considered
+/// control characters.
+bool isControl(int UCS) {
+  static const UnicodeCharSet Control(GeneratedControlCharacterRanges);
+  return Control.contains(UCS);
 }
 
 /// Unicode code points of the Cf category are considered

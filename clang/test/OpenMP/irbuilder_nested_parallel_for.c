@@ -235,7 +235,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z14parallel_for_1Pfid..omp_par.4
-// CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  omp.par.entry:
 // CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META3]]
@@ -273,7 +273,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z14parallel_for_1Pfid..omp_par
-// CHECK-SAME: (ptr noalias [[TID_ADDR1:%.*]], ptr noalias [[ZERO_ADDR2:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noalias [[TID_ADDR1:%.*]], ptr noalias [[ZERO_ADDR2:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  omp.par.entry3:
 // CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META3]]
@@ -493,7 +493,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par.23
-// CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  omp.par.entry:
 // CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META3]]
@@ -641,7 +641,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par.22
-// CHECK-SAME: (ptr noalias [[TID_ADDR4:%.*]], ptr noalias [[ZERO_ADDR5:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noalias [[TID_ADDR4:%.*]], ptr noalias [[ZERO_ADDR5:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  omp.par.entry6:
 // CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META3]]
@@ -856,7 +856,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par.21
-// CHECK-SAME: (ptr noalias [[TID_ADDR96:%.*]], ptr noalias [[ZERO_ADDR97:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noalias [[TID_ADDR96:%.*]], ptr noalias [[ZERO_ADDR97:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  omp.par.entry98:
 // CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META3]]
@@ -937,7 +937,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par
-// CHECK-SAME: (ptr noalias [[TID_ADDR38:%.*]], ptr noalias [[ZERO_ADDR39:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noalias [[TID_ADDR38:%.*]], ptr noalias [[ZERO_ADDR39:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  omp.par.entry40:
 // CHECK-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META3]]
@@ -1673,7 +1673,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-DEBUG-LABEL: define {{[^@]+}}@_Z14parallel_for_1Pfid..omp_par.4
-// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG86:![0-9]+]] {
+// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG86:![0-9]+]] {
 // CHECK-DEBUG-NEXT:  omp.par.entry:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META45]]
@@ -1714,7 +1714,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-DEBUG-LABEL: define {{[^@]+}}@_Z14parallel_for_1Pfid..omp_par
-// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR1:%.*]], ptr noalias [[ZERO_ADDR2:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG100:![0-9]+]] {
+// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR1:%.*]], ptr noalias [[ZERO_ADDR2:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG100:![0-9]+]] {
 // CHECK-DEBUG-NEXT:  omp.par.entry3:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META45]]
@@ -1950,7 +1950,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-DEBUG-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par.23
-// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG168:![0-9]+]] {
+// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR:%.*]], ptr noalias [[ZERO_ADDR:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG168:![0-9]+]] {
 // CHECK-DEBUG-NEXT:  omp.par.entry:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META45]]
@@ -2103,7 +2103,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-DEBUG-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par.22
-// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR4:%.*]], ptr noalias [[ZERO_ADDR5:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG203:![0-9]+]] {
+// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR4:%.*]], ptr noalias [[ZERO_ADDR5:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG203:![0-9]+]] {
 // CHECK-DEBUG-NEXT:  omp.par.entry6:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META45]]
@@ -2324,7 +2324,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-DEBUG-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par.21
-// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR96:%.*]], ptr noalias [[ZERO_ADDR97:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG254:![0-9]+]] {
+// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR96:%.*]], ptr noalias [[ZERO_ADDR97:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG254:![0-9]+]] {
 // CHECK-DEBUG-NEXT:  omp.par.entry98:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META45]]
@@ -2409,7 +2409,7 @@ void parallel_for_2(float *r, int a, double b) {
 //
 //
 // CHECK-DEBUG-LABEL: define {{[^@]+}}@_Z14parallel_for_2Pfid..omp_par
-// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR38:%.*]], ptr noalias [[ZERO_ADDR39:%.*]], ptr [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG276:![0-9]+]] {
+// CHECK-DEBUG-SAME: (ptr noalias [[TID_ADDR38:%.*]], ptr noalias [[ZERO_ADDR39:%.*]], ptr noalias nofreeobj [[TMP0:%.*]]) #[[ATTR1]] !dbg [[DBG276:![0-9]+]] {
 // CHECK-DEBUG-NEXT:  omp.par.entry40:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[TMP0]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    [[LOADGEP_A_ADDR:%.*]] = load ptr, ptr [[GEP_A_ADDR]], align 8, !align [[META45]]
