@@ -149,3 +149,26 @@ module {
 // CHECK-LABEL: gpu.func @caller
 // CHECK: func.call @actual_local() : () -> ()
 // CHECK: func.func private @actual_local()
+
+// -----
+
+// Repeated lookups must see declarations inserted into the cached table.
+module {
+  acc.routine @r_repeated func(@wrapped_repeated) seq bind("new_target")
+  func.func private @wrapped_repeated()
+      attributes {acc.routine_info = #acc.routine_info<[@r_repeated]>}
+  func.func @repeat() {
+    acc.serial {
+      func.call @wrapped_repeated() : () -> ()
+      func.call @wrapped_repeated() : () -> ()
+      func.call @wrapped_repeated() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK-LABEL: func.func @repeat()
+// CHECK-COUNT-3: func.call @new_target() : () -> ()
+// CHECK: func.func private @new_target()
+// CHECK-NOT: func.func private @new_target
