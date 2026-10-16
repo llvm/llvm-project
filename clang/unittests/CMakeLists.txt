@@ -97,9 +97,7 @@ add_subdirectory(CodeGen)
 if(HAVE_CLANG_REPL_SUPPORT)
   add_subdirectory(Interpreter)
 endif()
-# FIXME: libclang unit tests are disabled on Windows due
-# to failures, mostly in libclang.VirtualFileOverlay_*.
-if(NOT WIN32 AND CLANG_TOOL_LIBCLANG_BUILD) 
+if(CLANG_TOOL_LIBCLANG_BUILD)
   add_subdirectory(libclang)
 endif()
 add_subdirectory(DirectoryWatcher)
