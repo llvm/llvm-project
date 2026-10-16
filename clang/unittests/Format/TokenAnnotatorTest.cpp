@@ -2910,7 +2910,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // joined operators, we don't have a separate type, so we only test for their
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
-      {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Equality, "->"},     {prec::Equality, "<->"},
       {prec::Comma, "#-#"},       {prec::Comma, "#=#"},
       {prec::Assignment, "+="},   {prec::Assignment, "-="},
       {prec::Assignment, "*="},   {prec::Assignment, "/="},
