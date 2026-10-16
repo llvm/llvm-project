@@ -62,7 +62,7 @@ static MCSubtargetInfo *createM68kMCSubtargetInfo(const Triple &TT,
   std::string ArchFS = ParseM68kTriple(TT, CPU);
   if (!FS.empty()) {
     if (!ArchFS.empty()) {
-      ArchFS = (ArchFS + "," + FS).str();
+      ArchFS = (Twine(ArchFS) + "," + FS).str();
     } else {
       ArchFS = FS.str();
     }
