@@ -10,7 +10,7 @@ define void @single_constant_stride_int_scaled(ptr %p) vscale_range(2, 1024) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP5]]
@@ -24,6 +24,18 @@ define void @single_constant_stride_int_scaled(ptr %p) vscale_range(2, 1024) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1024, %[[EXIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul nuw nsw i32 [[IV]], 8
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[P]], i32 [[OFFSET]]
+; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = add i64 [[X]], 1
+; CHECK-NEXT:    store i64 [[Y]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1024
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT1:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

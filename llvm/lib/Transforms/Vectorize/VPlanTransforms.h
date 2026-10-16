@@ -351,12 +351,13 @@ struct VPlanTransforms {
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
-  // insertion point.
+  // insertion point. \p ScalarEpilogueGuaranteed indicates whether a scalar
+  // epilogue is guaranteed to execute.
   static void createInterleaveGroups(
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      const bool &EpilogueAllowed);
+      bool ScalarEpilogueGuaranteed);
 
   /// Transform widen memory recipes into strided access recipes when legal
   /// and profitable. Clamps \p Range to maintain consistency with widen
@@ -483,6 +484,8 @@ struct VPlanTransforms {
                                      PredicatedScalarEvolution &PSE);
 
   /// Materialize vector trip count computations to a set of VPInstructions.
+  /// \p RequiresScalarEpilogue indicates whether an iteration must be reserved
+  /// from the plan's trip count, excluding any already peeled iteration.
   /// \p Step is used as the step value for the trip count computation.
   /// \p MaxRuntimeStep is the maximum possible runtime value of Step, used to
   /// prove the trip count is divisible by the step for scalable VFs.
@@ -543,7 +546,8 @@ struct VPlanTransforms {
   /// This effectively is a very simple form of loop-aware SLP, where we use
   /// interleave groups to identify candidates.
   static std::unique_ptr<VPlan>
-  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
+  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI,
+                        PredicatedScalarEvolution &PSE, const Loop *OrigLoop);
 
   /// Adapts the vector loop region for tail folding by introducing a header
   /// mask and conditionally executing the content of the region:
@@ -578,7 +582,15 @@ struct VPlanTransforms {
   ///
   /// Any VPInstruction::ExtractLastLanes are also updated to extract from the
   /// last active lane of the header mask.
-  static void foldTailByMasking(VPlan &Plan);
+  static void foldTailByMasking(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                              const Loop *OrigLoop);
+
+  /// Reserve the original final iteration for the scalar loop by reducing the
+  /// plan's iteration budget by one, without changing program uses of TC.
+  /// Must run before foldTailByMasking and before materializing trip counts,
+  /// masks, and iteration checks.
+  static void peelLastIteration(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                               const Loop *OrigLoop);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan.

@@ -346,37 +346,27 @@ exit:
 define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @load_factor_4_with_tail_gap(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    [[PEELED:%.*]] = add i64 [[N:%.*]], -1
+; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[PEELED]], 1
+; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.ph
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[A:%.*]], i64 4
-; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[A]], i64 8
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; IF-EVL-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[INDEX]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP3]]
-; IF-EVL-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP4]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[VEC_PHI]], [[TMP5]]
-; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr nuw i8, ptr [[TMP0]], i64 [[TMP3]]
-; IF-EVL-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP7]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[TMP6]], [[TMP8]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 [[TMP3]]
-; IF-EVL-NEXT:    [[TMP11:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP10]], i64 16, <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i32> [[TMP9]], [[TMP11]]
-; IF-EVL-NEXT:    [[TMP13]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP2]] to i64
-; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP14]], [[INDEX]]
-; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[PEELED]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL:       call <vscale x 16 x i32> @llvm.vp.load.nxv16i32
+; IF-EVL:       call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP13]])
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
+; IF-EVL:       call i32 @llvm.vector.reduce.add.nxv4i32
+; IF-EVL-NEXT:    br label %scalar.ph
+; IF-EVL:       scalar.ph:
+; IF-EVL:       [[BC_RESUME_VAL:%.*]] = phi i64 [ [[PEELED]], %[[MIDDLE_BLOCK:.*]] ], [ 0, %{{.*}} ]
+; IF-EVL:       for.body:
+; IF-EVL:       [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %scalar.ph ], [ [[IV_NEXT:%.*]], %for.body ]
+; IF-EVL:       load i32
 ; IF-EVL:       exit:
-; IF-EVL-NEXT:    ret i32 [[TMP16]]
+; IF-EVL:       ret i32
 ;
 ; NO-VP-LABEL: @load_factor_4_with_tail_gap(
 ; NO-VP-NEXT:  entry:

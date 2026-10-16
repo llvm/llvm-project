@@ -1068,8 +1068,9 @@ private:
   VPlanPtr tryToBuildVPlan1();
 
   /// Compute feasible VF bounds and select tail folding using the initial plan.
+  /// Replace it with a peeled plan when last-iteration peeling is selected.
   /// Return no factors if vectorization fails.
-  FixedScalableVFPair computeMaxVFAndTailFolding(VPlan &Plan,
+  FixedScalableVFPair computeMaxVFAndTailFolding(VPlanPtr &Plan,
                                                ElementCount UserVF,
                                                unsigned UserIC);
 

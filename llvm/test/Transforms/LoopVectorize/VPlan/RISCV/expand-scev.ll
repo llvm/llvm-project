@@ -6,35 +6,48 @@
 define void @scev_ptradd_strided(ptr noalias %a, ptr noalias %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_ptradd_strided'
 ; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%n>, ir<-1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = ptradd nuw ir<%a>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = ptradd nuw ir<%a>, ir<4>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ vp<[[VP2]]>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl nuw vp<%index>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = ptradd nuw vp<[[VP2]]>, vp<[[VP3]]>
-; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP5:%[0-9]+]]> = call llvm.experimental.vp.strided.load(vp<[[VP4]]>, ir<16>, ir<true>, vp<%evl>)
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = shl nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = ptradd nuw vp<[[VP4]]>, vp<[[VP5]]>
+; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.experimental.vp.strided.load(vp<[[VP6]]>, ir<16>, ir<true>, vp<%evl>)
 ; CHECK-NEXT:    CLONE ir<%gd> = getelementptr inbounds ir<%dst>, vp<%index>
-; CHECK-NEXT:    WIDEN vp.store ir<%gd>, vp<[[VP5]]>, vp<%evl>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = zext vp<%evl> to i64
-; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP6]]>, vp<%index>
-; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP7]]>
+; CHECK-NEXT:    WIDEN vp.store ir<%gd>, vp<[[VP7]]>, vp<%evl>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = zext vp<%evl> to i64
+; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP8]]>, vp<%index>
+; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP9]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:  Successor(s): ir-bb<exit>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  ir-bb<scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %gep = getelementptr inbounds [4 x i32], ptr %a, i64 %iv, i32 1
+; CHECK-NEXT:    IR   %l = load i32, ptr %gep, align 4
+; CHECK-NEXT:    IR   %gd = getelementptr inbounds i32, ptr %dst, i64 %iv
+; CHECK-NEXT:    IR   store i32 %l, ptr %gd, align 4
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;
@@ -58,37 +71,51 @@ exit:
 define void @scev_ptradd_strided_var_offset(ptr noalias %a, ptr noalias %dst, i64 %n, i64 %m) {
 ; CHECK-LABEL: VPlan for loop in 'scev_ptradd_strided_var_offset'
 ; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%n>, ir<-1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl ir<%m>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = ptradd ir<%a>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = shl ir<%m>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = add nuw nsw vp<[[VP4]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = ptradd ir<%a>, vp<[[VP5]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%current.iteration.next>, vector.body ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%avl> = phi [ vp<[[VP2]]>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = shl vp<%index>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = ptradd vp<[[VP4]]>, vp<[[VP5]]>
-; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.experimental.vp.strided.load(vp<[[VP6]]>, ir<16>, ir<true>, vp<%evl>)
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = shl vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = ptradd vp<[[VP6]]>, vp<[[VP7]]>
+; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP9:%[0-9]+]]> = call llvm.experimental.vp.strided.load(vp<[[VP8]]>, ir<16>, ir<true>, vp<%evl>)
 ; CHECK-NEXT:    CLONE ir<%gd> = getelementptr inbounds ir<%dst>, vp<%index>
-; CHECK-NEXT:    WIDEN vp.store ir<%gd>, vp<[[VP7]]>, vp<%evl>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = zext vp<%evl> to i64
-; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP8]]>, vp<%index>
-; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP8]]>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP9]]>
+; CHECK-NEXT:    WIDEN vp.store ir<%gd>, vp<[[VP9]]>, vp<%evl>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = zext vp<%evl> to i64
+; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP10]]>, vp<%index>
+; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP11]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:  Successor(s): ir-bb<exit>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  ir-bb<scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR   %idx = add i64 %iv, %m
+; CHECK-NEXT:    IR   %gep = getelementptr inbounds [4 x i32], ptr %a, i64 %idx, i32 1
+; CHECK-NEXT:    IR   %l = load i32, ptr %gep, align 4
+; CHECK-NEXT:    IR   %gd = getelementptr inbounds i32, ptr %dst, i64 %iv
+; CHECK-NEXT:    IR   store i32 %l, ptr %gd, align 4
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;

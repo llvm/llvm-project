@@ -32,6 +32,16 @@ using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 using namespace llvm::SCEVPatternMatch;
 
+bool vputils::isTripCountMinusOne(const VPlan &Plan,
+                                PredicatedScalarEvolution &PSE, const Loop *L) {
+  VPValue *TC = Plan.getTripCount();
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *OriginalTC = SE.getTripCountFromExitCount(
+      PSE.getSymbolicMaxBackedgeTakenCount(), TC->getScalarType(), L);
+  return getSCEVExprForVPValue(TC, PSE) ==
+         SE.getMinusSCEV(OriginalTC, SE.getOne(OriginalTC->getType()));
+}
+
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
                 [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });

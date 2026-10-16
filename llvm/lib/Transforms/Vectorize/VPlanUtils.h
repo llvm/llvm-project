@@ -48,6 +48,12 @@ LLVM_ABI_FOR_TEST const SCEV *
 getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
                       const Loop *L = nullptr);
 
+/// Return true if the plan's trip count is the original trip count minus one,
+/// reserving the last iteration for the scalar epilogue. Must be called before
+/// expanding trip-count SCEVs.
+bool isTripCountMinusOne(const VPlan &Plan, PredicatedScalarEvolution &PSE,
+                        const Loop *L);
+
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
 /// \p AccessTy. Otherwise return std::nullopt.

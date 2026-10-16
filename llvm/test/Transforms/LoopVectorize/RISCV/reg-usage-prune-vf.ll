@@ -13,11 +13,15 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) vscale_range(2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP2]], i64 2, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[P0]], i64 [[TMP14]]
+; CHECK-NEXT:    [[INTERLEAVE_EVL1:%.*]] = mul nuw nsw i32 [[TMP6]], 2
+; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 32 x i8> @llvm.vp.load.nxv32i8.p0(ptr align 1 [[TMP15]], <vscale x 32 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL1]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_VP_LOAD]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP7]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP5]], i64 3, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
@@ -38,6 +42,36 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) vscale_range(2
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1024, %[[EXIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[WIDE_IV_0:%.*]] = phi i64 [ 2048, %[[EXIT]] ], [ [[WIDE_IV_0_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[WIDE_IV_1:%.*]] = phi i64 [ 3072, %[[EXIT]] ], [ [[WIDE_IV_1_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[WIDE_IV_2:%.*]] = phi i64 [ 4096, %[[EXIT]] ], [ [[WIDE_IV_2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[WIDE_IV_0_SUB:%.*]] = sub i64 [[WIDE_IV_0]], 1
+; CHECK-NEXT:    [[A_GEP0:%.*]] = getelementptr i8, ptr [[P0]], i64 [[WIDE_IV_0_SUB]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[A_GEP0]], align 1
+; CHECK-NEXT:    [[WIDE_IV_1_SUB:%.*]] = sub i64 [[WIDE_IV_1]], 1
+; CHECK-NEXT:    [[B_GEP0:%.*]] = getelementptr i8, ptr [[P0]], i64 [[WIDE_IV_1_SUB]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[B_GEP0]], align 1
+; CHECK-NEXT:    [[WIDE_IV_2_SUB:%.*]] = sub i64 [[WIDE_IV_2]], 1
+; CHECK-NEXT:    [[C_GEP0:%.*]] = getelementptr i8, ptr [[P0]], i64 [[WIDE_IV_2_SUB]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[C_GEP0]], align 1
+; CHECK-NEXT:    [[IV_MUL:%.*]] = mul i64 [[IV]], 3
+; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i8, ptr [[P1]], i64 [[IV_MUL]]
+; CHECK-NEXT:    [[A_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i8 0
+; CHECK-NEXT:    store i8 [[A]], ptr [[A_GEP1]], align 1
+; CHECK-NEXT:    [[B_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i8 1
+; CHECK-NEXT:    store i8 [[B]], ptr [[B_GEP1]], align 1
+; CHECK-NEXT:    [[C_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i8 2
+; CHECK-NEXT:    store i8 [[C]], ptr [[C_GEP1]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[WIDE_IV_0_NEXT]] = add i64 [[WIDE_IV_0]], 2
+; CHECK-NEXT:    [[WIDE_IV_1_NEXT]] = add i64 [[WIDE_IV_1]], 3
+; CHECK-NEXT:    [[WIDE_IV_2_NEXT]] = add i64 [[WIDE_IV_2]], 4
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 1024
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT1:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 ; NO-REG-PRESSURE-CHECK-LABEL: define void @f(
@@ -49,11 +83,15 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) vscale_range(2
 ; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-REG-PRESSURE-CHECK:       [[VECTOR_BODY]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NO-REG-PRESSURE-CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 1
-; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP8]]
-; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP2]], i64 2, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
+; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP8]], 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[P0]], i64 [[TMP14]]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[INTERLEAVE_EVL1:%.*]] = mul nuw nsw i32 [[TMP6]], 2
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = call <vscale x 32 x i8> @llvm.vp.load.nxv32i8.p0(ptr align 1 [[TMP15]], <vscale x 32 x i1> splat (i1 true), i32 [[INTERLEAVE_EVL1]])
+; NO-REG-PRESSURE-CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_VP_LOAD]])
+; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP7]], 3
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP4]]
 ; NO-REG-PRESSURE-CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP5]], i64 3, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
@@ -74,6 +112,36 @@ define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) vscale_range(2
 ; NO-REG-PRESSURE-CHECK:       [[MIDDLE_BLOCK]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[EXIT:.*]]
 ; NO-REG-PRESSURE-CHECK:       [[EXIT]]:
+; NO-REG-PRESSURE-CHECK-NEXT:    br label %[[LOOP:.*]]
+; NO-REG-PRESSURE-CHECK:       [[LOOP]]:
+; NO-REG-PRESSURE-CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1024, %[[EXIT]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_0:%.*]] = phi i64 [ 2048, %[[EXIT]] ], [ [[WIDE_IV_0_NEXT:%.*]], %[[LOOP]] ]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_1:%.*]] = phi i64 [ 3072, %[[EXIT]] ], [ [[WIDE_IV_1_NEXT:%.*]], %[[LOOP]] ]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_2:%.*]] = phi i64 [ 4096, %[[EXIT]] ], [ [[WIDE_IV_2_NEXT:%.*]], %[[LOOP]] ]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_0_SUB:%.*]] = sub i64 [[WIDE_IV_0]], 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[A_GEP0:%.*]] = getelementptr i8, ptr [[P0]], i64 [[WIDE_IV_0_SUB]]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[A_GEP0]], align 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_1_SUB:%.*]] = sub i64 [[WIDE_IV_1]], 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[B_GEP0:%.*]] = getelementptr i8, ptr [[P0]], i64 [[WIDE_IV_1_SUB]]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[B_GEP0]], align 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_2_SUB:%.*]] = sub i64 [[WIDE_IV_2]], 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[C_GEP0:%.*]] = getelementptr i8, ptr [[P0]], i64 [[WIDE_IV_2_SUB]]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[C_GEP0]], align 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[IV_MUL:%.*]] = mul i64 [[IV]], 3
+; NO-REG-PRESSURE-CHECK-NEXT:    [[BASE:%.*]] = getelementptr i8, ptr [[P1]], i64 [[IV_MUL]]
+; NO-REG-PRESSURE-CHECK-NEXT:    [[A_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i8 0
+; NO-REG-PRESSURE-CHECK-NEXT:    store i8 [[A]], ptr [[A_GEP1]], align 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[B_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i8 1
+; NO-REG-PRESSURE-CHECK-NEXT:    store i8 [[B]], ptr [[B_GEP1]], align 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[C_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i8 2
+; NO-REG-PRESSURE-CHECK-NEXT:    store i8 [[C]], ptr [[C_GEP1]], align 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_0_NEXT]] = add i64 [[WIDE_IV_0]], 2
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_1_NEXT]] = add i64 [[WIDE_IV_1]], 3
+; NO-REG-PRESSURE-CHECK-NEXT:    [[WIDE_IV_2_NEXT]] = add i64 [[WIDE_IV_2]], 4
+; NO-REG-PRESSURE-CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 1024
+; NO-REG-PRESSURE-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT1:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; NO-REG-PRESSURE-CHECK:       [[EXIT1]]:
 ; NO-REG-PRESSURE-CHECK-NEXT:    ret void
 ;
 entry:

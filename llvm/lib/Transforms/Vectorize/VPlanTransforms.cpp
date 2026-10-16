@@ -2957,7 +2957,7 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    const bool &EpilogueAllowed) {
+    bool ScalarEpilogueGuaranteed) {
   if (InterleaveGroups.empty())
     return;
 
@@ -3003,7 +3003,7 @@ void VPlanTransforms::createInterleaveGroups(
     }
 
     bool NeedsMaskForGaps =
-        (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
+        (IG->requiresScalarEpilogue() && !ScalarEpilogueGuaranteed) ||
         (!StoredValues.empty() && !IG->isFull());
 
     Instruction *IRInsertPos = IG->getInsertPos();
@@ -4542,7 +4542,9 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
 
 std::unique_ptr<VPlan>
 VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
-                                        const TargetTransformInfo &TTI) {
+                                        const TargetTransformInfo &TTI,
+                                        PredicatedScalarEvolution &PSE,
+                                        const Loop *OrigLoop) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
 
   if (!VectorLoop)
@@ -4703,7 +4705,10 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   }
   // Materialize vector trip count with the narrowed step.
   materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,
-                             RequiresScalarEpilogue, Step);
+                             RequiresScalarEpilogue &&
+                                 !vputils::isTripCountMinusOne(Plan, PSE,
+                                                             OrigLoop),
+                             Step);
 
   CanIVInc->setOperand(1, Step);
   Plan.getVFxUF().replaceAllUsesWith(Step);
