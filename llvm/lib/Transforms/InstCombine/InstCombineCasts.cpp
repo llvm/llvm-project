@@ -237,6 +237,16 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
       auto *Res = CastInst::Create(NewOpc, CSrc->getOperand(0), Ty);
+      // Preserve no-wrap flags when combining two truncations. The combined
+      // truncation is no-wrap only when both original truncations are.
+      if (auto *NewTrunc = dyn_cast<TruncInst>(Res))
+        if (auto *FirstTrunc = dyn_cast<TruncInst>(CSrc))
+          if (auto *SecondTrunc = dyn_cast<TruncInst>(&CI)) {
+            NewTrunc->setHasNoSignedWrap(FirstTrunc->hasNoSignedWrap() &&
+                                         SecondTrunc->hasNoSignedWrap());
+            NewTrunc->setHasNoUnsignedWrap(FirstTrunc->hasNoUnsignedWrap() &&
+                                           SecondTrunc->hasNoUnsignedWrap());
+          }
       // Point debug users of the dying cast to the new one.
       if (CSrc->hasOneUse())
         replaceAllDbgUsesWith(*CSrc, *Res, CI, DT);
