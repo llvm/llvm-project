@@ -1281,18 +1281,16 @@ class VPIRAttributes {
 public:
   VPIRAttributes() = default;
 
-  /// Stores the per-arg/return attributes from \p CI that are valid to
-  /// propagate to a widened call to \p Variant.
-  VPIRAttributes(CallInst &CI, const Function &Variant);
+  /// Stores the return and per-arg attributes of \p CI that are valid for a
+  /// widened call with type \p WideTy. If \p IsMaskedCall is true, the scalar
+  /// call only executes for some lanes, so argument attributes are only kept
+  /// for widened arguments passed to a masked variant.
+  VPIRAttributes(const CallInst &CI, FunctionType *WideTy, bool IsMaskedCall);
 
-  /// Drop all argument attributes.
-  void dropArgAttrs(LLVMContext &Ctx);
-
-  VPIRAttributes(const VPIRAttributes &Other) = default;
-  VPIRAttributes &operator=(const VPIRAttributes &Other) = default;
-
-  /// Apply the stored per-arg/return attributes to widened call \p V.
-  void applyAttrs(CallInst &V) const;
+  /// Apply the stored attributes to the widened call \p WideCall.
+  void applyAttrs(CallInst &WideCall) const {
+    WideCall.setAttributes(CallAttrs);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print return-value attributes carried with this object.

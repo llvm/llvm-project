@@ -7,7 +7,7 @@ declare double @acos(double)
 declare <2 x double> @vec_acos(<2 x double>)
 
 declare i64 @bar(i64)
-declare range(i64 0, 60) <2 x i64> @vec_bar(<2 x i64> range(i64 0, 50))
+declare <2 x i64> @vec_bar(<2 x i64>)
 
 define void @wide_call_attrs(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-LABEL: VPlan for loop in 'wide_call_attrs'
@@ -75,8 +75,8 @@ exit:
 ; The call site carries a propagatable (range) and a non-propagatable
 ; (noundef) attribute on both the argument and return. Make sure only the valid
 ; attributes are printed.
-define void @wide_call_attrs_filtered_and_combined(ptr noalias %in.ptr, ptr noalias %out.ptr) {
-; CHECK-LABEL: VPlan for loop in 'wide_call_attrs_filtered_and_combined'
+define void @wide_call_attrs_filtered(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; CHECK-LABEL: VPlan for loop in 'wide_call_attrs_filtered'
 ; CHECK:  VPlan ' for UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -97,7 +97,7 @@ define void @wide_call_attrs_filtered_and_combined(ptr noalias %in.ptr, ptr noal
 ; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i64, ir<%in.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
-; CHECK-NEXT:      WIDEN-CALL ir<%call> = call range(i64 0, 60) @bar(range(i64 0, 50) ir<%in>) (using library function: vec_bar)
+; CHECK-NEXT:      WIDEN-CALL ir<%call> = call range(i64 0, 100) @bar(range(i64 0, 80) ir<%in>) (using library function: vec_bar)
 ; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%out.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>

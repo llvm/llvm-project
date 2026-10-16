@@ -305,14 +305,15 @@ exit:
 ; available variant is unmasked, so the widened call executes unconditionally
 ; on every lane. nonnull must not be propagated to the widened call's
 ; argument in that case: doing so would assert nonnull for lanes whose
-; scalar call never ran.
+; scalar call never ran. The return attribute is kept, as the results for
+; those lanes are not used.
 define void @nonnull_dropped_for_if_converted_call(ptr noalias %p, ptr noalias %src, ptr noalias %out) {
 ; CHECK-LABEL: define void @nonnull_dropped_for_if_converted_call(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @vec_fn_uniform_ptr(ptr [[P]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 10) <2 x i32> @vec_fn_uniform_ptr(ptr [[P]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -341,7 +342,7 @@ loop:
   br i1 %c, label %then, label %latch
 
 then:
-  %r = call i32 @scalar_fn_uniform_ptr(ptr nonnull %p)
+  %r = call range(i32 0, 10) i32 @scalar_fn_uniform_ptr(ptr nonnull %p)
   br label %latch
 
 latch:
@@ -396,7 +397,8 @@ exit:
 
 
 ; The variant declaration carries range(i32 0, 50) on its parameter; the
-; scalar call site's range(i32 0, 100). Should keep the stricter range.
+; scalar call site's range(i32 0, 100). Only the call site's attribute is
+; propagated; the declaration's already applies to the widened call.
 define void @range_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out) {
 ; CHECK-LABEL: define void @range_arg_variant_decl_wins(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[OUT:%.*]]) {
@@ -408,7 +410,7 @@ define void @range_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int_variant_attrs(<2 x i32> range(i32 0, 50) [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int_variant_attrs(<2 x i32> range(i32 0, 100) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -438,15 +440,15 @@ exit:
 }
 
 ; The variant declaration carries align 32 on its parameter; the scalar
-; call site's align 16. Should keep the stricter alignment.
-; should keep the variant's align 32.
+; call site's align 16. Only the call site's attribute is propagated; the
+; declaration's already applies to the widened call.
 define void @align_uniform_ptr_variant_decl_wins(ptr noalias %p, ptr noalias %out) {
 ; CHECK-LABEL: define void @align_uniform_ptr_variant_decl_wins(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr_variant_attrs(ptr align 32 [[P]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr_variant_attrs(ptr align 16 [[P]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -477,7 +479,8 @@ exit:
 }
 
 ; The variant declaration carries nofpclass(nan inf) on its parameter; the
-; scalar call site's weaker nofpclass(nan).
+; scalar call site's weaker nofpclass(nan). Only the call site's attribute is
+; propagated; the declaration's already applies to the widened call.
 define void @nofpclass_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out) {
 ; CHECK-LABEL: define void @nofpclass_arg_variant_decl_wins(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[OUT:%.*]]) {

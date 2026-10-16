@@ -6212,15 +6212,13 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       case CallWideningDecision::KindTy::VectorVariant: {
         // Masked variants take the mask as a trailing parameter, so they have
         // one more parameter than the original call's arguments.
-        bool IsMaskedVariant = Decision.Variant->arg_size() > Ops.size();
-        if (IsMaskedVariant) {
+        if (Decision.Variant->arg_size() > Ops.size()) {
           VPValue *Mask = VPI.isMasked() ? VPI.getMask() : Plan.getTrue();
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
-        VPIRAttributes Attrs(*CI, *Decision.Variant);
-        if (VPI.isMasked() && !IsMaskedVariant)
-          Attrs.dropArgAttrs(CI->getContext());
+        VPIRAttributes Attrs(*CI, Decision.Variant->getFunctionType(),
+                             VPI.isMasked());
         Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
                                             Attrs, VPI.getDebugLoc());
         Widened = true;

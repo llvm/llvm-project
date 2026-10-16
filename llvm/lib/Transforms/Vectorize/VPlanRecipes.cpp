@@ -28,7 +28,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/AttributeMask.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -2256,92 +2255,50 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 }
 #endif
 
-VPIRAttributes::VPIRAttributes(CallInst &CI, const Function &Variant) {
+VPIRAttributes::VPIRAttributes(const CallInst &CI, FunctionType *WideTy,
+                               bool IsMaskedCall) {
+  assert(CI.arg_size() <= WideTy->getNumParams() &&
+         "widened call must take all scalar arguments");
   LLVMContext &Ctx = CI.getContext();
   AttributeList ScalarAttrs = CI.getAttributes();
-  AttributeList VariantAttrs = Variant.getAttributes();
-  FunctionType *VariantTy = Variant.getFunctionType();
 
   // Limit initial supported set of attributes to subset of poison-generating
-  // ones that can be transferred from scalar to wide arguments.
+  // ones that can be transferred to the widened return value and arguments.
   // TODO: Support additional attributes.
-  static constexpr Attribute::AttrKind Allowed[] = {
+  static constexpr Attribute::AttrKind PropagatableAttrKinds[] = {
       Attribute::Alignment, Attribute::NonNull, Attribute::NoFPClass,
       Attribute::Range};
 
-  // Combine attributes from the Variant declaration and the call site, picking
-  // the stricter one.
-  auto CombineAttrs = [&](Attribute CallAttr,
-                          Attribute VariantAttr) -> Attribute {
-    if (!VariantAttr.isValid())
-      return CallAttr;
-    switch (CallAttr.getKindAsEnum()) {
-    case Attribute::Alignment:
-      return Attribute::getWithAlignment(
-          Ctx, std::max(CallAttr.getAlignment().valueOrOne(),
-                        VariantAttr.getAlignment().valueOrOne()));
-    case Attribute::Range:
-      return Attribute::get(
-          Ctx, Attribute::Range,
-          CallAttr.getRange().intersectWith(VariantAttr.getRange()));
-    case Attribute::NonNull:
-    case Attribute::NoFPClass:
-      return CallAttr;
-    default:
-      llvm_unreachable("unknown attribute with custom combine rule");
-    }
-  };
-
   // Only keep allowed attributes (which do not trigger UB) and ones that are
-  // compatible with the widened type of Variant.
-  auto Filter = [&](Type *Ty, AttributeSet CallAS, AttributeSet VariantAS) {
-    AttributeMask Incompatible =
-        AttributeFuncs::typeIncompatible(Ty, CallAS, AttributeFuncs::ASK_ALL);
+  // compatible with the widened type Ty.
+  auto Filter = [&](Type *Ty, AttributeSet AS) {
+    AttributeMask Incompatible = AttributeFuncs::typeIncompatible(Ty, AS);
     AttrBuilder AB(Ctx);
-    for (Attribute::AttrKind K : Allowed) {
-      if (CallAS.hasAttribute(K) && !Incompatible.contains(K))
-        AB.addAttribute(
-            CombineAttrs(CallAS.getAttribute(K), VariantAS.getAttribute(K)));
-    }
+    for (Attribute::AttrKind K : PropagatableAttrKinds)
+      if (AS.hasAttribute(K) && !Incompatible.contains(K))
+        AB.addAttribute(AS.getAttribute(K));
     return AttributeSet::get(Ctx, AB);
   };
 
-  AttributeSet RetAttrs;
-  if (!Variant.getReturnType()->isVoidTy())
-    RetAttrs = Filter(Variant.getReturnType(), ScalarAttrs.getRetAttrs(),
-                      VariantAttrs.getRetAttrs());
+  AttributeSet RetAttrs =
+      Filter(WideTy->getReturnType(), ScalarAttrs.getRetAttrs());
 
-  SmallVector<AttributeSet> ArgAttrs(VariantTy->getNumParams());
-  for (unsigned I = 0, E = std::min<unsigned>(CI.arg_size(),
-                                              VariantTy->getNumParams());
-       I != E; ++I) {
-    AttributeSet PA = ScalarAttrs.getParamAttrs(I);
-    if (!PA.hasAttributes())
+  // For masked calls, the widened call also executes for lanes the scalar call
+  // did not execute for. Masked variants ignore the inactive lanes of widened
+  // arguments, but scalar (uniform or linear) arguments are shared by all
+  // lanes, e.g. linear arguments pass the value of the first lane, which may
+  // be inactive. Unmasked variants process all lanes.
+  bool IsMaskedVariant = WideTy->getNumParams() > CI.arg_size();
+  SmallVector<AttributeSet> ArgAttrs(WideTy->getNumParams());
+  for (unsigned I = 0, E = CI.arg_size(); I != E; ++I) {
+    Type *WideArgTy = WideTy->getParamType(I);
+    bool IsWidenedArg = WideArgTy != CI.getArgOperand(I)->getType();
+    if (IsMaskedCall && (!IsMaskedVariant || !IsWidenedArg))
       continue;
-    ArgAttrs[I] =
-        Filter(VariantTy->getParamType(I), PA, VariantAttrs.getParamAttrs(I));
+    ArgAttrs[I] = Filter(WideArgTy, ScalarAttrs.getParamAttrs(I));
   }
 
   CallAttrs = AttributeList::get(Ctx, AttributeSet(), RetAttrs, ArgAttrs);
-}
-
-void VPIRAttributes::dropArgAttrs(LLVMContext &Ctx) {
-  CallAttrs =
-      AttributeList::get(Ctx, AttributeSet(), CallAttrs.getRetAttrs(), {});
-}
-
-void VPIRAttributes::applyAttrs(CallInst &V) const {
-  LLVMContext &Ctx = V.getContext();
-
-  AttributeSet RetAttrs = CallAttrs.getRetAttrs();
-  if (RetAttrs.hasAttributes())
-    V.addRetAttrs(AttrBuilder(Ctx, RetAttrs));
-
-  for (unsigned I = 0, E = V.arg_size(); I != E; ++I) {
-    AttributeSet PA = CallAttrs.getParamAttrs(I);
-    if (PA.hasAttributes())
-      V.addParamAttrs(I, AttrBuilder(Ctx, PA));
-  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
