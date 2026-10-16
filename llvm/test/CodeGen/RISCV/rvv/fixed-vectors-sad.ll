@@ -379,3 +379,33 @@ entry:
   %op.rdx.3 = add i32 %27, %op.rdx.2
   ret i32 %op.rdx.3
 }
+
+define <vscale x 4 x i32> @vmacc_of_sext_add(<vscale x 4 x i16> %x, <vscale x 4 x i16> %y, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d) {
+; CHECK-LABEL: vmacc_of_sext_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsra.vi v14, v8, 1
+; CHECK-NEXT:    vsra.vi v15, v9, 1
+; CHECK-NEXT:    vwadd.vv v8, v14, v15
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmacc.vv v8, v12, v10
+; CHECK-NEXT:    ret
+;
+; ZVABD-LABEL: vmacc_of_sext_add:
+; ZVABD:       # %bb.0:
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVABD-NEXT:    vsra.vi v14, v8, 1
+; ZVABD-NEXT:    vsra.vi v15, v9, 1
+; ZVABD-NEXT:    vwadd.vv v8, v14, v15
+; ZVABD-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; ZVABD-NEXT:    vmacc.vv v8, v12, v10
+; ZVABD-NEXT:    ret
+  %a = ashr <vscale x 4 x i16> %x, splat (i16 1)
+  %b = ashr <vscale x 4 x i16> %y, splat (i16 1)
+  %sa = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
+  %sb = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
+  %ab = add <vscale x 4 x i32> %sa, %sb
+  %m = mul <vscale x 4 x i32> %c, %d
+  %r = add <vscale x 4 x i32> %ab, %m
+  ret <vscale x 4 x i32> %r
+}
