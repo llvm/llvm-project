@@ -3889,13 +3889,9 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
       if (Constant *C =
               ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI))
         return C;
-      // Constant folding cannot always decide a comparison between constant
-      // expressions. Fall through to the generic logic below, which can still
-      // reason about them with value tracking. Only do this for expressions:
-      // comparisons of plain global values are deliberately left alone, as
-      // their addresses may be interposed at link time.
-      if (!isa<ConstantExpr>(CLHS))
-        return nullptr;
+      // Constant folding cannot always decide a comparison between constants.
+      // Fall through to the generic logic below, which can still reason about
+      // them with value tracking.
     } else {
       // If we have a constant, make sure it is on the RHS.
       std::swap(LHS, RHS);
