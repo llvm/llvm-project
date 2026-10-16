@@ -1,7 +1,11 @@
-; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s --check-prefixes=CHECK,MERGE
+; RUN: opt -S -passes=gvn-hoist -pick-merged-source-locations < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,PICK
 
 ;; The hoisted instruction replaces both copies, so it keeps only the layers
-;; they share, on a line 0 location in the function's scope.
+;; they share, on a line 0 location in the function's scope. Under
+;; -pick-merged-source-locations, merging picks one copy's location, so the
+;; instruction keeps that copy's layers, as at any merge site.
 
 ;; Both copies have layer 100, so it is kept.
 define i32 @same_layers(i1 %c, i32 %x) !dbg !4 {
@@ -26,10 +30,13 @@ end:
 }
 
 ;; The copies have different layers, so nothing is shared and nothing is kept.
+;; Picking keeps the copy at the lower line (12) and its layer 100.
 define i32 @different_layers(i1 %c, i32 %x) !dbg !20 {
 ; CHECK-LABEL: define i32 @different_layers(
+; PICK-SAME:   !dbg ![[SP2:[0-9]+]]
 ; CHECK:       entry:
-; CHECK-NEXT:    %{{.*}} = add i32 %x, 1{{$}}
+; MERGE-NEXT:    %{{.*}} = add i32 %x, 1{{$}}
+; PICK-NEXT:     %{{.*}} = add i32 %x, 1, !dbg ![[PICKED:[0-9]+]]
 entry:
   br i1 %c, label %a, label %b
 
@@ -49,6 +56,7 @@ end:
 ; CHECK:      ![[SAME]] = !DILocation(line: 0, scope: ![[SP]], irlayers: ![[LIST:[0-9]+]])
 ; CHECK-NEXT: ![[LIST]] = !DILayerLocList(![[LAYER:[0-9]+]])
 ; CHECK-NEXT: ![[LAYER]] = !DILayerLoc(line: 100,
+; PICK:       ![[PICKED]] = !DILocation(line: 0, scope: ![[SP2]], irlayers: ![[LIST]])
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

@@ -1986,8 +1986,8 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
 
   // Create a unique call site, not to be confused with any other call from the
   // same location.
-  // Preserve the call site's irlayers so the (outermost) inlined-at
-  // frame keeps its intermediate-IR snapshot instead of being stripped.
+  // Keep the call site's irlayers: this node ends the inlinedAt chain of
+  // every location inlined here.
   InlinedAtNode = DILocation::getDistinct(
       Ctx, InlinedAtNode->getLine(), InlinedAtNode->getColumn(),
       InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt(),
