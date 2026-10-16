@@ -809,7 +809,7 @@ for (int i = 0; i < 10; ++i);
 // OMP50-DAG: ![[NOVECT]] = distinct !{![[NOVECT]], ![[NOVM:.+]]}
 // OMP50-DAG: ![[NOVM]] = !{!"llvm.loop.vectorize.disable"}
 
-// TERM_DEBUG-LABEL: bar
+// TERM_DEBUG-LABEL: define {{.*}}i32 @_Z3barv()
 int bar() { extern void mayThrow(); mayThrow(); return 0; };
 
 // TERM_DEBUG-LABEL: parallel_simd
