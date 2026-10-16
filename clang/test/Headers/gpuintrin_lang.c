@@ -23,7 +23,7 @@
 // RUN: | FileCheck %s --check-prefix=OPENMP
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include -DSYCL \
-// RUN:   -internal-isystem %S/../../lib/Headers/ -fsycl-is-device \
+// RUN:   -internal-isystem %S/../../lib/Headers/ -fsycl-is-device -fgpu-rdc \
 // RUN:   -x c++ -triple spirv64 -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=SYCL
 //

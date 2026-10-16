@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsycl-is-host -fgpu-rdc -std=c++17 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsycl-is-host -std=c++17 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsycl-is-device -fgpu-rdc -std=c++17 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsycl-is-host -fgpu-rdc -std=c++20 -fsyntax-only -verify -DCPP20 %s
+// RUN: %clang_cc1 -fsycl-is-host -std=c++20 -fsyntax-only -verify -DCPP20 %s
 // RUN: %clang_cc1 -fsycl-is-device -fgpu-rdc -std=c++20 -fsyntax-only -verify -DCPP20 %s
 
 // Semantic tests for the sycl_external attribute.

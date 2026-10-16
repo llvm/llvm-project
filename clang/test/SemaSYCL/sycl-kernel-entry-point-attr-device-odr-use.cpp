@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsycl-is-host -fgpu-rdc -verify=host %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsycl-is-host -verify=host %s
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++17 -fsycl-is-device -fgpu-rdc -verify=device %s
 
 // These tests validate that a diagnostic is issued if a function declared with

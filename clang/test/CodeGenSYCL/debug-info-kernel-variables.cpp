@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -o - -O0 -emit-llvm                                     \
 // RUN:            -triple spir64-unknown-unknown                             \
 // RUN:            -aux-triple x86_64-unknown-linux-gnu                       \
-// RUN:            -fsycl-is-device                                           \
+// RUN:            -fsycl-is-device -fgpu-rdc                                           \
 // RUN:            -finclude-default-header                                   \
 // RUN:            -debug-info-kind=limited -gno-column-info                  \
 // RUN:   | FileCheck %s

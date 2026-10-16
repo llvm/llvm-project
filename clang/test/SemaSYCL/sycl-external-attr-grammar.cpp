@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsycl-is-host -fgpu-rdc -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsycl-is-host -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsycl-is-device -fgpu-rdc -fsyntax-only -verify %s
 
 // FIXME-expected-error@+1{{'clang::sycl_external' attribute takes no arguments}}
