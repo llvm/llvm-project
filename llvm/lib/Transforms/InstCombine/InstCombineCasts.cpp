@@ -2595,6 +2595,11 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
 
+  // fpto{u/s}i (trunc X) --> fpto{u/s}i X
+  Value *Src;
+  if (match(FI.getOperand(0), m_Intrinsic<Intrinsic::trunc>(m_Value(Src))))
+    return IC.replaceOperand(FI, 0, Src);
+
   // fpto{u/s}i (fdiv ({u/s}itofp X to F), C_fp) --> {u/s}div X, C
   //
   // F has precision p (significand bits incl. hidden bit); C_fp is the exact FP

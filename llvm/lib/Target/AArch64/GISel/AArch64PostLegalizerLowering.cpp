@@ -223,7 +223,7 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
   // %zerovec(<2 x s32>)
   //
   // ...into:
-  // %splat = G_DUP %scalar
+  // %splat = G_SPLAT_VECTOR %scalar
 
   // Begin matching the insert.
   auto *InsMI = getOpcodeDef(TargetOpcode::G_INSERT_VECTOR_ELT,
@@ -239,7 +239,8 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
   if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ZeroInt()))
     return false;
 
-  MatchInfo = ShuffleVectorPseudo(AArch64::G_DUP, MI.getOperand(0).getReg(),
+  MatchInfo = ShuffleVectorPseudo(TargetOpcode::G_SPLAT_VECTOR,
+                                  MI.getOperand(0).getReg(),
                                   {InsMI->getOperand(2).getReg()});
   return true;
 }
@@ -262,8 +263,8 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
-  MatchInfo =
-      ShuffleVectorPseudo(AArch64::G_DUP, MI.getOperand(0).getReg(), {Reg});
+  MatchInfo = ShuffleVectorPseudo(TargetOpcode::G_SPLAT_VECTOR,
+                                  MI.getOperand(0).getReg(), {Reg});
   return true;
 }
 
@@ -353,6 +354,23 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
                           {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   }
   MI.eraseFromParent();
+}
+
+static bool preferTBLToMultiInstrShuffle(MachineBasicBlock *MBB) {
+  if (MBB->getParent()->getFunction().hasOptSize())
+    return false;
+  // Look for a simple single block loop.
+  return is_contained(successors(MBB), MBB);
+}
+
+bool matchFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  if (preferTBLToMultiInstrShuffle(MI.getParent()))
+    return false;
+
+  auto &Shuf = cast<GShuffleVector>(MI);
+  ArrayRef<int> Mask = Shuf.getMask();
+  return mi_match(Shuf.getSrc2Reg(), MRI, m_GImplicitDef()) &&
+         ShuffleVectorInst::isReverseMask(Mask, Mask.size());
 }
 
 void applyFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
@@ -480,12 +498,16 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
 bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
                   int64_t &Cnt) {
   assert(Ty.isVector() && "vector shift count is not a vector type");
-  MachineInstr *MI = MRI.getVRegDef(Reg);
-  auto Cst = getAArch64VectorSplatScalar(*MI, MRI);
-  if (!Cst)
-    return false;
-  Cnt = *Cst;
   int64_t ElementBits = Ty.getScalarSizeInBits();
+  assert(ElementBits <= 64 && "expected <= 64bit shift type");
+  MachineInstr *MI = MRI.getVRegDef(Reg);
+  std::optional<Register> Splat = getVectorSplat(*MI, MRI);
+  if (!Splat)
+    return false;
+  std::optional<APInt> C = getIConstantVRegVal(*Splat, MRI);
+  if (!C)
+    return false;
+  Cnt = C->getSExtValue();
   return Cnt >= 1 && Cnt <= ElementBits;
 }
 
@@ -847,7 +869,8 @@ bool matchBuildVectorToDup(MachineInstr &MI, Register &Src,
 void applyBuildVectorToDup(MachineInstr &MI, Register Src,
                            MachineRegisterInfo &MRI, MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
-  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()}, {Src});
+  B.buildInstr(TargetOpcode::G_SPLAT_VECTOR, {MI.getOperand(0).getReg()},
+               {Src});
   MI.eraseFromParent();
 }
 
@@ -1095,6 +1118,73 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   B.buildCopy(GBuildVec->getReg(0), DstReg);
   GBuildVec->eraseFromParent();
+}
+
+// Detect vector constants that cannot be natively represent, but can be
+// represented as fneg(constant). For example the constant
+// <0x800000000000000, 0x800000000000000> can be represented as fneg(<0, 0>).
+bool matchConstBuildVectorToFNeg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 const AArch64Subtarget &ST,
+                                 std::pair<APInt, unsigned> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  if (!ST.isNeonAvailable())
+    return false;
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  // Limit to fneg of v2f32, v4f32, f64, v2f64 or v4f16 and v8f16 with fullfp16.
+  if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 128)
+    return false;
+  unsigned EltSize = Ty.getScalarSizeInBits();
+
+  APInt Imm(Ty.getSizeInBits(), 0);
+  for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx++) {
+    auto C =
+        getAnyConstantVRegValWithLookThrough(MI.getOperand(Idx).getReg(), MRI);
+    if (!C)
+      return false;
+    Imm |= C->Value.trunc(EltSize)
+               .zext(Ty.getSizeInBits())
+               .shl((Idx - 1) * EltSize);
+  }
+
+  SmallVector<AArch64_IMM::ImmInsnModel> Insns;
+  if (AArch64_IMM::expandVectorMOVImm(Imm, Insns, ST))
+    return false;
+
+  auto Check = [&](APInt &Imm, unsigned Size) {
+    APInt NImm = Imm ^ APInt::getSplat(Imm.getBitWidth(),
+                                       APInt::getHighBitsSet(Size, 1));
+    SmallVector<AArch64_IMM::ImmInsnModel> Insns;
+    MatchInfo.first = NImm;
+    MatchInfo.second = Size;
+    return AArch64_IMM::expandVectorMOVImm(NImm, Insns, ST);
+  };
+
+  return Check(Imm, 64) || Check(Imm, 32) ||
+         (ST.hasFullFP16() && Check(Imm, 16));
+}
+
+void applyConstBuildVectorToFNeg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B,
+                                 std::pair<APInt, unsigned> &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  // Extract the Immediate into chunks of size EltSize
+  unsigned EltSize = MatchInfo.second;
+  unsigned NumLanes = Ty.getSizeInBits() / EltSize;
+  LLT VTy = NumLanes == 1
+                ? LLT::floatIEEE(EltSize)
+                : LLT::fixed_vector(NumLanes, LLT::floatIEEE(EltSize));
+  SmallVector<APInt> Imms;
+  for (unsigned I = 0; I < NumLanes; I++)
+    Imms.push_back(MatchInfo.first.extractBits(EltSize, I * EltSize));
+  // Build the new BV and FNeg of it.
+  auto BV = NumLanes == 1 ? B.buildFConstant(VTy, APFloat(APFloat::IEEEdouble(),
+                                                          MatchInfo.first))
+                          : B.buildBuildVectorConstant(VTy, Imms);
+  auto FNeg = B.buildFNeg(Ty == VTy ? DstOp(MI.getOperand(0)) : DstOp(VTy), BV);
+  if (Ty != VTy)
+    B.buildBitcast(MI.getOperand(0), FNeg);
+  MI.eraseFromParent();
 }
 
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,

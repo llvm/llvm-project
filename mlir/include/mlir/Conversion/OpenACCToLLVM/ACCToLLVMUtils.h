@@ -79,6 +79,13 @@ Value createIdent(Location loc, StringRef functionName, OpBuilder &builder,
 /// for values like queue numbers.
 Value castToI64(Location loc, Value value, OpBuilder &builder);
 
+/// Creates an i64 constant.
+Value constantI64(Location loc, int64_t value, OpBuilder &builder);
+
+/// Returns the value \p value was converted to, or \p value itself when the
+/// conversion left it as it was. Returns a null value for a null \p value.
+Value remapOrSelf(Value value, ConversionPatternRewriter &rewriter);
+
 /// Returns the queue an `async` clause selects: the value of the clause when it
 /// has one, the queue standing for an `async` clause without a value when
 /// \p asyncOnly is set, and the synchronous queue when there is no clause at
