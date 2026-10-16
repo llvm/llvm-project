@@ -2590,10 +2590,25 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     return {nullptr, nullptr};
   }
   case Intrinsic::prefetch: {
-    if (!isSplitFatPtr(I.getArgOperand(0)->getType()))
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};
-    // A prefetch is only a hint, and s_buffer_prefetch_data only takes an
-    // immediate offset, so drop it.
+    // s_buffer_prefetch_data only takes an immediate offset, so it can only
+    // replace a data prefetch at a constant offset. A prefetch is only a hint,
+    // so drop the others.
+    if (ST->hasSafeSmemPrefetch() &&
+        cast<ConstantInt>(I.getArgOperand(3))->isOne()) {
+      IRB.SetInsertPoint(&I);
+      auto [Rsrc, Off] = getPtrParts(Ptr);
+      auto *ConstOff = dyn_cast<ConstantInt>(Off);
+      if (ConstOff && AMDGPU::isLegalSMRDEncodedSignedOffset(
+                          *ST, ConstOff->getSExtValue(), /*IsBuffer=*/true)) {
+        Value *NewPrefetch =
+            IRB.CreateIntrinsic(Intrinsic::amdgcn_s_buffer_prefetch_data, {},
+                                {Rsrc, ConstOff, IRB.getInt32(0)});
+        copyMetadata(NewPrefetch, &I);
+      }
+    }
     SplitUsers.insert(&I);
     return {nullptr, nullptr};
   }

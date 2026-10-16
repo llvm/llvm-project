@@ -1461,6 +1461,39 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @prefetch_data_buffer_fat_pointer(ptr addrspace(8) inreg %rsrc) {
+; GFX1250-LABEL: prefetch_data_buffer_fat_pointer:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX1250-SPREFETCH-LABEL: prefetch_data_buffer_fat_pointer:
+; GFX1250-SPREFETCH:       ; %bb.0: ; %entry
+; GFX1250-SPREFETCH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SPREFETCH-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SPREFETCH-NEXT:    v_nop
+; GFX1250-SPREFETCH-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SPREFETCH-NEXT:    s_buffer_prefetch_data s[0:3], 0x80, null, 0
+; GFX1250-SPREFETCH-NEXT:    s_endpgm
+;
+; NOSPREFETCH-LABEL: prefetch_data_buffer_fat_pointer:
+; NOSPREFETCH:       ; %bb.0: ; %entry
+; NOSPREFETCH-NEXT:    s_endpgm
+;
+; GFX12-SPREFETCH-LABEL: prefetch_data_buffer_fat_pointer:
+; GFX12-SPREFETCH:       ; %bb.0: ; %entry
+; GFX12-SPREFETCH-NEXT:    s_buffer_prefetch_data s[0:3], 0x80, null, 0
+; GFX12-SPREFETCH-NEXT:    s_endpgm
+entry:
+  %p = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+  %q = getelementptr i8, ptr addrspace(7) %p, i32 128
+  tail call void @llvm.prefetch.p7(ptr addrspace(7) %q, i32 0, i32 0, i32 1)
+  ret void
+}
+
 define amdgpu_ps void @prefetch_data_buffer_resource(ptr addrspace(8) inreg %rsrc) {
 ; GFX1250-LABEL: prefetch_data_buffer_resource:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -1497,6 +1530,7 @@ declare void @llvm.prefetch.p3(ptr addrspace(3) nocapture readonly, i32, i32, i3
 declare void @llvm.prefetch.p4(ptr addrspace(4) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p5(ptr addrspace(5) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p6(ptr addrspace(6) nocapture readonly, i32, i32, i32)
+declare void @llvm.prefetch.p7(ptr addrspace(7) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p8(ptr addrspace(8) nocapture readonly, i32, i32, i32)
 attributes #0 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
