@@ -1212,7 +1212,7 @@ void FactsGenerator::handleUse(const Expr *E) {
 // opposed to the field itself (covered by $this).
 void FactsGenerator::issueFieldPlaceholderLoans(
     const CXXRecordDecl *ClassDef, llvm::SmallVectorImpl<Fact *> &Facts) {
-  assert(ClassDef);
+  assert(ClassDef && "class methods have a defined parent");
   assert(ClassDef->isThisDeclarationADefinition());
   auto IssueForRecord = [&](const CXXRecordDecl *RD) {
     for (const FieldDecl *Field : RD->fields()) {
@@ -1263,11 +1263,9 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(MD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
-    if (LSOpts.CheckFieldOriginEscape && !isa<CXXConstructorDecl>(MD)) {
-      const CXXRecordDecl *RecDef = MD->getParent()->getDefinition();
-      assert(RecDef && "class methods have a defined parent");
-      issueFieldPlaceholderLoans(RecDef, PlaceholderLoanFacts);
-    }
+    if (LSOpts.CheckFieldOriginEscape && !isa<CXXConstructorDecl>(MD))
+      issueFieldPlaceholderLoans(MD->getParent()->getDefinition(),
+                                 PlaceholderLoanFacts);
   }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);
