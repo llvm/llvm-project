@@ -193,6 +193,11 @@ class IRTranslatorImpl {
   SmallVector<std::pair<const PHINode *, SmallVector<MachineInstr *, 1>>, 4>
       PendingPHIs;
 
+  // Constant DbgValues that cannot be materialized as DBG_VALUEs
+  // because they are not an immediate or symbol reference.
+  SmallVector<std::pair<MachineInstr *, const Constant *>, 4>
+      PendingConstDbgValues;
+
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
   DenseMap<const AllocaInst *, int> FrameIndices;
@@ -385,6 +390,10 @@ class IRTranslatorImpl {
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
+
+  /// Describe any constants in PendingConstDbgValues that are
+  /// materialized as vregs.
+  void finishPendingConstDbgValues();
 
   /// Translate \p Inst into a unary operation \p Opcode.
   /// \pre \p U is a unary operation.
@@ -2064,7 +2073,7 @@ bool IRTranslatorImpl::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
       FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+          DefaultMBB->getBasicBlock()->getFirstNonPHIOrPseudoProbe());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -4592,6 +4601,22 @@ bool IRTranslatorImpl::translateFreeze(const User &U,
   return true;
 }
 
+void IRTranslatorImpl::finishPendingConstDbgValues() {
+  for (auto [MI, C] : PendingConstDbgValues) {
+    auto VRegsIt = VMap.findVRegs(*C);
+    if (VRegsIt == VMap.vregs_end() || VRegsIt->second->size() != 1)
+      continue;
+    // Constants are materialized in the entry block, so the vreg dominates
+    // every debug value; where it is not live, the location is dropped later.
+    MachineIRBuilder Builder(*MI);
+    Builder.buildDirectDbgValue(VRegsIt->second->front(),
+                                MI->getDebugVariable(),
+                                MI->getDebugExpression());
+    MI->eraseFromParent();
+  }
+  PendingConstDbgValues.clear();
+}
+
 void IRTranslatorImpl::finishPendingPhis() {
 #ifndef NDEBUG
   DILocationVerifier Verifier;
@@ -4645,7 +4670,9 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V, bool HasArgList,
   }
 
   if (const auto *CI = dyn_cast<Constant>(V)) {
-    MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    MachineInstr *MI = MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    if (MI->getDebugOperand(0).isReg() && !isa<UndefValue>(CI))
+      PendingConstDbgValues.emplace_back(MI, CI);
     return;
   }
 
@@ -5076,6 +5103,7 @@ void IRTranslatorImpl::finalizeFunction() {
   // Release the memory used by the different maps we
   // needed during the translation.
   PendingPHIs.clear();
+  PendingConstDbgValues.clear();
   VMap.reset();
   FrameIndices.clear();
   MachinePreds.clear();
@@ -5322,6 +5350,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   }
 
   finishPendingPhis();
+  finishPendingConstDbgValues();
 
   SwiftError.propagateVRegs();
 

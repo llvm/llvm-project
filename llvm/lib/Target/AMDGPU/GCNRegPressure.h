@@ -313,7 +313,7 @@ protected:
   LiveIntervals &LIS;
   LiveRegSet LiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
-  const MachineInstr *LastTrackedMI = nullptr;
+  MachineBasicBlock::const_iterator LastTrackedMI;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
   GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
@@ -336,7 +336,9 @@ public:
 
   // live regs for the current state
   const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
-  const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
+  const MachineInstr *getLastTrackedMI() const {
+    return LastTrackedMI.isValid() ? &*LastTrackedMI : nullptr;
+  }
 
   void clearMaxPressure() { MaxPressure.clear(); }
 

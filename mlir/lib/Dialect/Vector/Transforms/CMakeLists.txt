@@ -15,7 +15,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorToFromElementsToShuffleTree.cpp
   LowerVectorTransfer.cpp
   LowerVectorTranspose.cpp
-  MemorySlotOpInterfaceImpl.cpp
+  MemorySlotInterfacesImpl.cpp
   SubsetOpInterfaceImpl.cpp
   VectorDistribute.cpp
   VectorDropLeadUnitDim.cpp
