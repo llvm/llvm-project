@@ -98,16 +98,18 @@ class TestQSymbol(GDBRemoteTestBase):
 
     def check_dispatch_symbol(self, has_dispatch_data):
         self.runCmd("settings set target.preload-symbols false")
-        fixture = Path(self.getSourceDir()) / "test_qsymbol.yaml"
+        fixture = "test_qsymbol.yaml"
         if not has_dispatch_data:
             missing = Path(self.getBuildArtifact("qsymbol-missing.yaml"))
             missing.write_text(
-                fixture.read_text().replace(
+                (Path(self.getSourceDir()) / fixture)
+                .read_text()
+                .replace(
                     "Name: dispatch_queue_offsets", "Name: unrelated_dispatch_data"
                 )
             )
-            fixture = missing
-        target = self.createTarget(str(fixture))
+            fixture = str(missing)
+        target = self.createTarget(fixture)
         self.server.responder = MyResponder(
             self, ["dispatch_queue_offsets", "other_wire_request"]
         )
