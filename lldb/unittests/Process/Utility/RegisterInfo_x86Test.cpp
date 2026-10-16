@@ -1,4 +1,4 @@
-//===-- RegisterContextTest.cpp -------------------------------------------===//
+//===-- RegisterInfo_x86Test.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,7 +53,7 @@ const std::array<TagWordTestVector, 8> tag_word_test_vectors{
     TagWordTestVector{0x0000, 0x25a8, 0xff, 8},
 };
 
-TEST(RegisterContext_x86Test, AbridgedToFullTagWord) {
+TEST(RegisterInfo_x86Test, AbridgedToFullTagWord) {
   for (const auto &x : llvm::enumerate(tag_word_test_vectors)) {
     SCOPED_TRACE(llvm::formatv("tag_word_test_vectors[{0}]", x.index()));
     std::array<MMSReg, 8> test_regs;
@@ -65,7 +65,7 @@ TEST(RegisterContext_x86Test, AbridgedToFullTagWord) {
   }
 }
 
-TEST(RegisterContext_x86Test, FullToAbridgedTagWord) {
+TEST(RegisterInfo_x86Test, FullToAbridgedTagWord) {
   for (const auto &x : llvm::enumerate(tag_word_test_vectors)) {
     SCOPED_TRACE(llvm::formatv("tag_word_test_vectors[{0}]", x.index()));
     EXPECT_EQ(FullToAbridgedTagWord(x.value().tw), x.value().tw_abridged);
