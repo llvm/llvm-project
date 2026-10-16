@@ -4,11 +4,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:10:11:12:13"
 target triple = "x86_64-unknown-linux-gnu"
 
-@jlplt_ijl_alloc_array_1d_10294_got = external dso_local local_unnamed_addr global ptr
+@jlplt_ijl_alloc_array_1d_10294_got = external global ptr
 
-define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) local_unnamed_addr #0 {
+define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) #0 {
 ; CHECK-LABEL: define ptr addrspace(10) @japi1_vect_42283(
-; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = load atomic ptr, ptr @jlplt_ijl_alloc_array_1d_10294_got unordered, align 8
@@ -27,7 +27,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ult i64 [[TMP8]], 16
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP8]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP8]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
@@ -68,7 +68,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP8]], 4
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT10]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
@@ -93,10 +93,10 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N15]], label %[[L44]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[L26:.*]]
 ; CHECK:       [[L26]]:
-; CHECK-NEXT:    [[VALUE_PHI5:%.*]] = phi i64 [ [[BC_RESUME_VAL17]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[TMP27:%.*]], %[[L26]] ]
+; CHECK-NEXT:    [[VALUE_PHI5:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[TMP27:%.*]], %[[L26]] ]
 ; CHECK-NEXT:    [[DOTREPACK:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], i64 [[VALUE_PHI5]], i32 0
 ; CHECK-NEXT:    store ptr addrspace(10) [[DOTUNPACK]], ptr addrspace(13) [[DOTREPACK]], align 8, !tbaa [[JTBAA_ARRAYBUF_TBAA10]]
 ; CHECK-NEXT:    [[DOTREPACK4:%.*]] = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) [[TMP7]], i64 [[VALUE_PHI5]], i32 1
@@ -120,7 +120,7 @@ top:
   %.unpack2 = load i64, ptr addrspace(10) %.elt1, align 8, !tbaa !8
   br label %L26
 
-L26:                                              ; preds = %L26, %top
+L26:
   %value_phi5 = phi i64 [ 0, %top ], [ %8, %L26 ]
   %.repack = getelementptr inbounds { ptr addrspace(10), i64 }, ptr addrspace(13) %7, i64 %value_phi5, i32 0
   store ptr addrspace(10) %.unpack, ptr addrspace(13) %.repack, align 8, !tbaa !10
@@ -130,7 +130,7 @@ L26:                                              ; preds = %L26, %top
   %.not = icmp eq i64 %value_phi5, %2
   br i1 %.not, label %L44, label %L26
 
-L44:                                              ; preds = %L26
+L44:
   ret ptr addrspace(10) null
 }
 

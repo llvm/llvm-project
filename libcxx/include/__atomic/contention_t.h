@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // instead.
 #if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
 
-#  ifdef __linux__
+#  if defined(__linux__) || defined(__Fuchsia__)
 using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
 #  elif defined(__APPLE__)
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
@@ -37,15 +37,15 @@ using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
 #  else
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
-#  endif // __linux__
+#  endif // __linux__ || __Fuchsia__
 
 #else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
-#  if defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
+#  if defined(__linux__) || defined(__Fuchsia__) || (defined(_AIX) && !defined(__64BIT__))
 using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
 #  else
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
-#  endif // __linux__ || (_AIX && !__64BIT__)
+#  endif // __linux__ || __Fuchsia__ || (_AIX && !__64BIT__)
 
 #endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 

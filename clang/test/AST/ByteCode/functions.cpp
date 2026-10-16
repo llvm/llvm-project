@@ -1,6 +1,6 @@
-// RUN: %clang_cc1            -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++14 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++20 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter -DINTERP
+// RUN: %clang_cc1 -std=c++14 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter -DINTERP
+// RUN: %clang_cc1 -std=c++20 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter -DINTERP
 // RUN: %clang_cc1            -pedantic -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++14 -pedantic -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++20 -pedantic -verify=ref,both      %s
@@ -764,4 +764,22 @@ namespace NestedDiags {
     S s;
     return true;
   }
+}
+
+#ifdef INTERP
+namespace DependentReturnType {
+  template <typename T> struct S {
+    int a = [] { return [](auto t) noexcept((zomg(f))) { return 0; }(0); }(); // both-error {{use of undeclared identifier 'zomg'}}
+  };
+  S<float> x;
+}
+#endif
+
+namespace FuncToIntRoundtrip {
+  void f() {}
+  constexpr int foo() { // both-error {{constexpr function never produces a constant expression}}
+    auto p = (void*)(__UINTPTR_TYPE__)f; // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+    return 1;
+  }
+  auto a = foo();
 }

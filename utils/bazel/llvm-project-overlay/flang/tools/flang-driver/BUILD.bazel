@@ -1,0 +1,36 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_binary(
+    name = "flang",
+    srcs = [
+        "driver.cpp",
+        "fc1_main.cpp",
+    ],
+    deps = [
+        "//clang:basic",
+        "//clang:driver",
+        "//clang:options",
+        "//flang:FrontendHeaders",
+        "//flang:FrontendToolHeaders",
+        "//flang:config",
+        "//flang/lib/Frontend:flangFrontend",
+        "//flang/lib/FrontendTool:flangFrontendTool",
+        "//llvm:MC",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)

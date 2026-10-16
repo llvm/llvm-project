@@ -49,7 +49,7 @@ private:
 };
 
 // CHECK-LABEL: define dso_local void @_ZN14BarInheritsFooD1Ev(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+// CHECK-SAME: ptr noundef nonnull align 1 dead_on_return(16) dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // NO-LIFETIME-DSE-LABEL: define dso_local void @_ZN14BarInheritsFooD1Ev(
 // NO-LIFETIME-DSE-SAME: ptr noundef nonnull align 1 dereferenceable(16) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 BarInheritsFoo::~BarInheritsFoo() {

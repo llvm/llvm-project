@@ -24,9 +24,9 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Triple.h"
@@ -70,27 +70,14 @@ enum LipoID {
 };
 
 namespace lipo {
-#define OPTTABLE_STR_TABLE_CODE
-#include "LipoOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LipoOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info LipoInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(LIPO_, __VA_ARGS__),
+#define OPTTABLE_CODE
 #include "LipoOpts.inc"
-#undef OPTION
-};
 } // namespace lipo
 
-class LipoOptTable : public opt::GenericOptTable {
+class LipoOptTable : public opt::OptTable {
 public:
-  LipoOptTable()
-      : opt::GenericOptTable(lipo::OptionStrTable, lipo::OptionPrefixesTable,
-                             lipo::LipoInfoTable) {}
+  LipoOptTable() : opt::OptTable(lipo::optionTables()) {}
 };
 
 enum class LipoAction {
@@ -99,6 +86,7 @@ enum class LipoAction {
   VerifyArch,
   ThinArch,
   ExtractArch,
+  RemoveArch,
   CreateUniversal,
   ReplaceArch,
 };
@@ -112,6 +100,7 @@ struct Config {
   SmallVector<InputFile, 1> InputFiles;
   SmallVector<std::string, 1> VerifyArchList;
   SmallVector<InputFile, 1> ReplacementFiles;
+  SmallVector<std::string, 1> RemoveArchList;
   StringMap<const uint32_t> SegmentAlignments;
   std::string ArchType;
   std::string OutputFile;
@@ -229,14 +218,18 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
   SmallVector<opt::Arg *, 1> ActionArgs(InputArgs.filtered(LIPO_action_group));
   if (ActionArgs.empty())
     reportError("at least one action should be specified");
-  // errors if multiple actions specified other than replace
-  // multiple replace flags may be specified, as long as they are not mixed with
-  // other action flags
+  // errors if multiple actions specified other than replace or remove
+  // multiple replace/remove flags may be specified, as long as they are not
+  // mixed with other action flags
   auto ReplacementArgsRange = InputArgs.filtered(LIPO_replace);
+  auto RemoveArgsRange = InputArgs.filtered(LIPO_remove);
   if (ActionArgs.size() > 1 &&
       ActionArgs.size() !=
           static_cast<size_t>(std::distance(ReplacementArgsRange.begin(),
-                                            ReplacementArgsRange.end()))) {
+                                            ReplacementArgsRange.end())) &&
+      ActionArgs.size() !=
+          static_cast<size_t>(
+              std::distance(RemoveArgsRange.begin(), RemoveArgsRange.end()))) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     OS << "only one of the following actions can be specified:";
@@ -285,6 +278,19 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     C.ArchType = ActionArgs[0]->getValue();
     validateArchitectureName(C.ArchType);
     C.ActionToPerform = LipoAction::ExtractArch;
+    return C;
+
+  case LIPO_remove:
+    for (auto *Action : ActionArgs) {
+      std::string ArchType = Action->getValue();
+      validateArchitectureName(ArchType);
+      C.RemoveArchList.push_back(ArchType);
+    }
+    if (C.InputFiles.size() > 1)
+      reportError("remove expects a single input file");
+    if (C.OutputFile.empty())
+      reportError("remove expects a single output file");
+    C.ActionToPerform = LipoAction::RemoveArch;
     return C;
 
   case LIPO_create:
@@ -672,6 +678,52 @@ extractSlice(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
   exit(EXIT_SUCCESS);
 }
 
+[[noreturn]] static void
+removeSlice(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
+            const StringMap<const uint32_t> &Alignments,
+            ArrayRef<std::string> ArchTypes, StringRef OutputFileName) {
+  assert(!ArchTypes.empty() &&
+         "The architecture type list should be non-empty");
+  assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
+  assert(!OutputFileName.empty() && "Remove expects a single output file");
+
+  if (InputBinaries.front().getBinary()->isMachO()) {
+    reportError("input file " +
+                InputBinaries.front().getBinary()->getFileName() +
+                " must be a fat file when the -remove option is specified");
+  }
+
+  SmallVector<std::unique_ptr<SymbolicFile>, 2> ExtractedObjects;
+  SmallVector<std::unique_ptr<Archive>, 2> ExtractedArchives;
+  SmallVector<Slice, 2> Slices = buildSlices(
+      LLVMCtx, InputBinaries, Alignments, ExtractedObjects, ExtractedArchives);
+
+  SmallVector<StringRef, 1> NotFound;
+  for (StringRef ArchType : ArchTypes) {
+    size_t SizeBefore = Slices.size();
+    erase_if(Slices, [ArchType](const Slice &S) {
+      return ArchType == S.getArchString();
+    });
+    if (Slices.size() == SizeBefore)
+      NotFound.push_back(ArchType);
+  }
+
+  if (!NotFound.empty())
+    reportError("fat input file " +
+                InputBinaries.front().getBinary()->getFileName() +
+                " does not contain the specified architecture " + NotFound[0] +
+                " to remove");
+
+  if (Slices.empty())
+    reportError(
+        "removing all architectures would result in an empty universal binary");
+
+  llvm::stable_sort(Slices);
+  if (Error E = writeUniversalBinary(Slices, OutputFileName))
+    reportError(std::move(E));
+  exit(EXIT_SUCCESS);
+}
+
 static StringMap<Slice>
 buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
                        const StringMap<const uint32_t> &Alignments) {
@@ -769,6 +821,10 @@ int llvm_lipo_main(int argc, char **argv, const llvm::ToolContext &) {
   case LipoAction::ExtractArch:
     extractSlice(LLVMCtx, InputBinaries, C.SegmentAlignments, C.ArchType,
                  C.OutputFile);
+    break;
+  case LipoAction::RemoveArch:
+    removeSlice(LLVMCtx, InputBinaries, C.SegmentAlignments, C.RemoveArchList,
+                C.OutputFile);
     break;
   case LipoAction::CreateUniversal:
     createUniversalBinary(

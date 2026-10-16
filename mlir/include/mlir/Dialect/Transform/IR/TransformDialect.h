@@ -66,7 +66,7 @@ protected:
       : TransformDialectDataBase(TypeID::get<DerivedTy>(), ctx) {}
 };
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 namespace detail {
 /// Asserts that the operations provided as template arguments implement the
 /// TransformOpInterface and MemoryEffectsOpInterface. This must be a dynamic
@@ -79,7 +79,7 @@ void checkImplementsTransformOpInterface(StringRef name, MLIRContext *context);
 void checkImplementsTransformHandleTypeInterface(TypeID typeID,
                                                  MLIRContext *context);
 } // namespace detail
-#endif // NDEBUG
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 } // namespace transform
 } // namespace mlir
 
@@ -195,6 +195,16 @@ protected:
     });
   }
 
+  /// Injects the attributes into the Transform dialect. The attributes must
+  /// provide a `getMnemonic` static method returning an object convertible to
+  /// `StringRef` that is unique across all injected attributes.
+  template <typename... AttrTys>
+  void registerAttributes() {
+    initializers.push_back([](TransformDialect *transformDialect) {
+      transformDialect->addAttributesChecked<AttrTys...>();
+    });
+  }
+
   /// Injects the types into the Transform dialect. The types must implement
   /// the TransformHandleTypeInterface and the implementation must be already
   /// available when the type is injected. Furthermore, the types must provide
@@ -256,10 +266,10 @@ void TransformDialect::addOperationIfNotRegistered() {
       RegisteredOperationName::lookup(TypeID::get<OpTy>(), getContext());
   if (!opName) {
     addOperations<OpTy>();
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     StringRef name = OpTy::getOperationName();
     detail::checkImplementsTransformOpInterface(name, getContext());
-#endif // NDEBUG
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
     return;
   }
 
@@ -267,6 +277,29 @@ void TransformDialect::addOperationIfNotRegistered() {
     return;
 
   reportDuplicateOpRegistration(OpTy::getOperationName());
+}
+
+template <typename AttrTy>
+void TransformDialect::addAttributeIfNotRegistered() {
+  // Use the address of the parse method as a proxy for identifying whether we
+  // are registering the same type class for the same mnemonic.
+  StringRef mnemonic = AttrTy::getMnemonic();
+  auto [it, inserted] =
+      attributeParsingHooks.try_emplace(mnemonic, AttrTy::parse);
+  if (!inserted) {
+    const ExtensionAttributeParsingHook &parsingHook = it->getValue();
+    if (parsingHook != &AttrTy::parse)
+      reportDuplicateAttributeRegistration(mnemonic);
+    else
+      return;
+  }
+  attributePrintingHooks.try_emplace(
+      TypeID::get<AttrTy>(),
+      +[](mlir::Attribute attribute, AsmPrinter &printer) {
+        printer << AttrTy::getMnemonic();
+        cast<AttrTy>(attribute).print(printer);
+      });
+  addAttributes<AttrTy>();
 }
 
 template <typename Type>
@@ -289,10 +322,10 @@ void TransformDialect::addTypeIfNotRegistered() {
       });
   addTypes<Type>();
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   detail::checkImplementsTransformHandleTypeInterface(TypeID::get<Type>(),
                                                       getContext());
-#endif // NDEBUG
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 }
 
 template <typename DataTy>

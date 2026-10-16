@@ -54,6 +54,49 @@ static int getNumBits(Type type) {
 }
 
 namespace {
+struct MemoryRequirements {
+  spirv::MemoryAccessAttr memoryAccess;
+  IntegerAttr alignment;
+};
+} // namespace
+
+/// PhysicalStorageBuffer pointers always need Aligned, derived from pointee
+/// element size unless preferredAlignment is set. Other storage classes may
+/// omit it.
+static FailureOr<MemoryRequirements>
+calculateMemoryRequirements(Value accessedPtr, uint64_t preferredAlignment) {
+  if (preferredAlignment >= std::numeric_limits<uint32_t>::max())
+    return failure();
+
+  MLIRContext *ctx = accessedPtr.getContext();
+  auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
+  bool mayOmitAlignment =
+      !preferredAlignment &&
+      ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer;
+  if (mayOmitAlignment)
+    return MemoryRequirements{spirv::MemoryAccessAttr{}, IntegerAttr{}};
+
+  // PhysicalStorageBuffer pointers require Aligned. The vector pointer is a
+  // bitcast of a scalar element pointer, so only element alignment is known.
+  std::optional<int64_t> sizeInBytes;
+  Type pointeeType = ptrType.getPointeeType();
+  if (auto vecType = dyn_cast<VectorType>(pointeeType))
+    pointeeType = vecType.getElementType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType))
+    sizeInBytes = scalarType.getSizeInBytes();
+
+  if (!sizeInBytes)
+    return failure();
+
+  auto memoryAccess =
+      spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Aligned);
+  uint64_t alignmentValue =
+      preferredAlignment ? preferredAlignment : *sizeInBytes;
+  auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), alignmentValue);
+  return MemoryRequirements{memoryAccess, alignment};
+}
+
+namespace {
 
 struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
   using Base::Base;
@@ -416,6 +459,32 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 
     auto [resultType, extractedElements] = *reductionInfo;
     Location loc = reduceOp->getLoc();
+
+    // Handle boolean reductions with spirv.Any / spirv.All.
+    if (resultType.isInteger(1)) {
+      vector::CombiningKind kind = reduceOp.getKind();
+
+      if (kind == vector::CombiningKind::OR) {
+        Value result = spirv::AnyOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalOrOp::create(rewriter, loc, resultType, result,
+                                              acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+
+      if (kind == vector::CombiningKind::AND) {
+        Value result = spirv::AllOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalAndOp::create(rewriter, loc, resultType,
+                                               result, acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+    }
+
     Value result = extractedElements.front();
     for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
@@ -435,22 +504,28 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
     result = fop::create(rewriter, loc, resultType, result, next);             \
     break
 
+#define INT_CASE(kind, iop)                                                    \
+  case vector::CombiningKind::kind:                                            \
+    assert(isa<IntegerType>(resultType));                                      \
+    result = spirv::iop::create(rewriter, loc, resultType, result, next);      \
+    break
+
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
         INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);
         INT_OR_FLOAT_CASE(MINSI, SPIRVSMinOp);
         INT_OR_FLOAT_CASE(MAXUI, SPIRVUMaxOp);
         INT_OR_FLOAT_CASE(MAXSI, SPIRVSMaxOp);
+        INT_CASE(AND, BitwiseAndOp);
+        INT_CASE(OR, BitwiseOrOp);
+        INT_CASE(XOR, BitwiseXorOp);
 
-      case vector::CombiningKind::AND:
-      case vector::CombiningKind::OR:
-      case vector::CombiningKind::XOR:
-        return rewriter.notifyMatchFailure(reduceOp, "unimplemented");
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
 #undef INT_AND_FLOAT_CASE
 #undef INT_OR_FLOAT_CASE
+#undef INT_CASE
     }
 
     rewriter.replaceOp(reduceOp, result);
@@ -557,8 +632,12 @@ struct VectorShuffleOpConvert final
     // When at least one of the operands or the result becomes a scalar after
     // type conversion for SPIR-V, extract all the required elements and
     // construct the result vector.
-    auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc()](
+    auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc(),
+                            scalarType = oldV1Type.getElementType()](
                                Value scalarOrVec, int32_t idx) -> Value {
+      if (idx == vector::ShuffleOp::kPoisonIndex)
+        return spirv::UndefOp::create(rewriter, loc, scalarType);
+
       if (auto vecTy = dyn_cast<VectorType>(scalarOrVec.getType()))
         return spirv::CompositeExtractOp::create(rewriter, loc, scalarOrVec,
                                                  idx);
@@ -711,9 +790,9 @@ struct VectorLoadOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = loadOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
+    Value accessChain = spirv::getElementPtr(
+        typeConverter, memrefType, adaptor.getBase(), adaptor.getIndices(), loc,
+        rewriter, loadOp.getVectorType().getNumElements());
     if (!accessChain)
       return rewriter.notifyMatchFailure(
           loadOp, "failed to get memref element pointer");
@@ -728,22 +807,6 @@ struct VectorLoadOpConverter final
 
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
-    std::optional<uint64_t> alignment = loadOp.getAlignment();
-    if (alignment > std::numeric_limits<uint32_t>::max()) {
-      return rewriter.notifyMatchFailure(loadOp,
-                                         "invalid alignment requirement");
-    }
-
-    auto memoryAccess = spirv::MemoryAccess::None;
-    spirv::MemoryAccessAttr memoryAccessAttr;
-    IntegerAttr alignmentAttr;
-    if (alignment.has_value()) {
-      memoryAccess |= spirv::MemoryAccess::Aligned;
-      memoryAccessAttr =
-          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
-      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
-    }
-
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
@@ -753,9 +816,15 @@ struct VectorLoadOpConverter final
             : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
                                        accessChain);
 
-    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
-                                               castedAccessChain,
-                                               memoryAccessAttr, alignmentAttr);
+    auto memoryRequirements = calculateMemoryRequirements(
+        castedAccessChain, loadOp.getAlignment().value_or(0));
+    if (failed(memoryRequirements))
+      return rewriter.notifyMatchFailure(
+          loadOp, "failed to determine memory requirements");
+
+    auto [memoryAccess, alignment] = *memoryRequirements;
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(
+        loadOp, spirvVectorType, castedAccessChain, memoryAccess, alignment);
 
     return success();
   }
@@ -777,22 +846,22 @@ struct VectorStoreOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = storeOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
+    Value accessChain = spirv::getElementPtr(
+        typeConverter, memrefType, adaptor.getBase(), adaptor.getIndices(), loc,
+        rewriter, storeOp.getVectorType().getNumElements());
     if (!accessChain)
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
 
-    std::optional<uint64_t> alignment = storeOp.getAlignment();
-    if (alignment > std::numeric_limits<uint32_t>::max()) {
-      return rewriter.notifyMatchFailure(storeOp,
-                                         "invalid alignment requirement");
-    }
-
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
-    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    // Use the converted vector type instead of original (single element vector
+    // would get converted to scalar).
+    auto spirvVectorType = typeConverter.convertType(vectorType);
+    if (!spirvVectorType)
+      return rewriter.notifyMatchFailure(storeOp, "unsupported vector type");
+
+    auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
@@ -803,19 +872,16 @@ struct VectorStoreOpConverter final
             : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
                                        accessChain);
 
-    auto memoryAccess = spirv::MemoryAccess::None;
-    spirv::MemoryAccessAttr memoryAccessAttr;
-    IntegerAttr alignmentAttr;
-    if (alignment.has_value()) {
-      memoryAccess |= spirv::MemoryAccess::Aligned;
-      memoryAccessAttr =
-          spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
-      alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
-    }
+    auto memoryRequirements = calculateMemoryRequirements(
+        castedAccessChain, storeOp.getAlignment().value_or(0));
+    if (failed(memoryRequirements))
+      return rewriter.notifyMatchFailure(
+          storeOp, "failed to determine memory requirements");
 
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(
-        storeOp, castedAccessChain, adaptor.getValueToStore(), memoryAccessAttr,
-        alignmentAttr);
+    auto [memoryAccess, alignment] = *memoryRequirements;
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
+                                                adaptor.getValueToStore(),
+                                                memoryAccess, alignment);
 
     return success();
   }
@@ -986,8 +1052,11 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 
     Location loc = stepOp.getLoc();
     int64_t numElements = stepOp.getType().getNumElements();
-    auto intType =
-        rewriter.getIntegerType(typeConverter.getIndexTypeBitwidth());
+    // Use the element type; the type converter collapses size-1 vectors to
+    // scalars, so `dstType` may already be the scalar element type.
+    Type intType = isa<VectorType>(dstType)
+                       ? cast<VectorType>(dstType).getElementType()
+                       : dstType;
 
     // Input vectors of size 1 are converted to scalars by the type converter.
     // We just create a constant in this case.

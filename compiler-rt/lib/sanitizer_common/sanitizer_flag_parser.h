@@ -189,8 +189,8 @@ class FlagParser {
 };
 
 template <typename T>
-static void RegisterFlag(FlagParser *parser, const char *name, const char *desc,
-                         T *var) {
+void RegisterFlag(FlagParser* parser, const char* name, const char* desc,
+                  T* var) {
   FlagHandler<T> *fh = new (GetGlobalLowLevelAllocator()) FlagHandler<T>(var);
   parser->RegisterHandler(name, fh, desc);
 }

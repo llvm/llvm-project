@@ -587,7 +587,8 @@ NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   std::string optLevel = std::to_string(this->optLevel);
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
       targetOptions.tokenizeCmdOptions();
-  cmdOpts.second.append(
+  cmdOpts.second.insert(
+      cmdOpts.second.begin(),
       {"-arch", getTarget().getChip().data(), "--opt-level", optLevel.c_str()});
 
   // Set optional command line arguments

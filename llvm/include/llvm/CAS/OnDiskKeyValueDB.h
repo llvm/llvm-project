@@ -36,13 +36,12 @@ public:
   ///
   /// \returns the value associated with the \p Key. It may be different than
   /// \p Value if another value is already associated with this key.
-  LLVM_ABI_FOR_TEST Expected<ArrayRef<char>> put(ArrayRef<uint8_t> Key,
-                                                 ArrayRef<char> Value);
+  LLVM_ABI Expected<ArrayRef<char>> put(ArrayRef<uint8_t> Key,
+                                        ArrayRef<char> Value);
 
   /// \returns the value associated with the \p Key, or \p std::nullopt if the
   /// key does not exist.
-  LLVM_ABI_FOR_TEST Expected<std::optional<ArrayRef<char>>>
-  get(ArrayRef<uint8_t> Key);
+  LLVM_ABI Expected<std::optional<ArrayRef<char>>> get(ArrayRef<uint8_t> Key);
 
   /// \returns Total size of stored data.
   size_t getStorageSize() const { return Cache.size(); }
@@ -66,14 +65,14 @@ public:
   /// \param UnifiedCache An optional UnifiedOnDiskCache that manages the size
   /// and lifetime of the CAS instance and it must owns current initializing
   /// KeyValueDB after initialized.
-  LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskKeyValueDB>>
+  LLVM_ABI static Expected<std::unique_ptr<OnDiskKeyValueDB>>
   open(StringRef Path, StringRef HashName, unsigned KeySize,
        StringRef ValueName, size_t ValueSize,
        UnifiedOnDiskCache *UnifiedCache = nullptr,
        std::shared_ptr<OnDiskCASLogger> Logger = nullptr);
 
   /// Validate the storage.
-  LLVM_ABI_FOR_TEST Error validate() const;
+  LLVM_ABI Error validate() const;
 
 private:
   OnDiskKeyValueDB(size_t ValueSize, OnDiskTrieRawHashMap Cache,

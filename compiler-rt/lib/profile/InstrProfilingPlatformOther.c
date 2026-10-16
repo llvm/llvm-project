@@ -13,28 +13,38 @@
 // This implementation expects the compiler instrumentation pass to define a
 // constructor in each file which calls into this file.
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
-    !defined(__Fuchsia__) && !(defined(__sun__) && defined(__svr4__)) &&       \
-    !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX) &&              \
-    !defined(__wasm__) && !defined(__HAIKU__) &&                               \
-    !defined(COMPILER_RT_PROFILE_BAREMETAL)
-
-#include <stdlib.h>
-#include <stdio.h>
+#if (!defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&    \
+     !defined(__Fuchsia__) && !(defined(__sun__) && defined(__svr4__)) &&      \
+     !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX) &&             \
+     !defined(__wasm__) && !defined(__HAIKU__) &&                              \
+     !defined(COMPILER_RT_PROFILE_BAREMETAL)) ||                               \
+    defined(__NVPTX__)
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 
+#if defined(__NVPTX__)
+extern __llvm_profile_gpu_sections INSTR_PROF_SECT_BOUNDS_TABLE;
+#define DataFirst INSTR_PROF_SECT_BOUNDS_TABLE.DataStart
+#define DataLast INSTR_PROF_SECT_BOUNDS_TABLE.DataStop
+#define NamesFirst INSTR_PROF_SECT_BOUNDS_TABLE.NamesStart
+#define NamesLast INSTR_PROF_SECT_BOUNDS_TABLE.NamesStop
+#define CountersFirst INSTR_PROF_SECT_BOUNDS_TABLE.CountersStart
+#define CountersLast INSTR_PROF_SECT_BOUNDS_TABLE.CountersStop
+#else
 static const __llvm_profile_data *DataFirst = NULL;
 static const __llvm_profile_data *DataLast = NULL;
-static const VTableProfData *VTableProfDataFirst = NULL;
-static const VTableProfData *VTableProfDataLast = NULL;
 static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
-static const char *VNamesFirst = NULL;
-static const char *VNamesLast = NULL;
 static char *CountersFirst = NULL;
 static char *CountersLast = NULL;
+#endif
+static const VTableProfData *VTableProfDataFirst = NULL;
+static const VTableProfData *VTableProfDataLast = NULL;
+static const char *VNamesFirst = NULL;
+static const char *VNamesLast = NULL;
+static char *BitmapFirst = NULL;
+static char *BitmapLast = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
@@ -55,6 +65,19 @@ COMPILER_RT_VISIBILITY
 void __llvm_profile_register_function(void *Data_) {
   /* TODO: Only emit this function if we can't use linker magic. */
   const __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
+
+#if defined(__NVPTX__)
+  // NVPTX stores absolute counter addresses to avoid circular dependencies in
+  // PTX global variable initializers. Convert to a relative offset so the
+  // host-side profile reader sees the standard format.
+  {
+    uintptr_t Rel = (uintptr_t)Data->CounterPtr - (uintptr_t)Data_;
+    __builtin_memcpy((char *)Data_ +
+                         __builtin_offsetof(__llvm_profile_data, CounterPtr),
+                     &Rel, sizeof(Rel));
+  }
+#endif
+
   if (!DataFirst) {
     DataFirst = Data;
     DataLast = Data + 1;

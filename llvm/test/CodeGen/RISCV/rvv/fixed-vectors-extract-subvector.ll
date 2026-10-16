@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zvfh,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,CHECK32
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfh,+zvfbfmin -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,CHECK64
 
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zvfhmin,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,CHECK32
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfhmin,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,CHECK64
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+zvfh,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,CHECK32
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+zvfh,+zvfbfmin -early-live-intervals -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,VLA,CHECK64
-
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+v,+zvfhmin,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,VLS,CHECK32
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v,+zvfhmin,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,VLS,CHECK64
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+v,+zvfh,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,VLS,CHECK32
@@ -446,10 +441,11 @@ define void @extract_v2i1_v64i1_0(ptr %x, ptr %y) {
 ;
 ; VLS-LABEL: extract_v2i1_v64i1_0:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; VLS-NEXT:    vmv.v.i v8, 0
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
 ; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; VLS-NEXT:    vmv.v.i v8, 0
 ; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; VLS-NEXT:    vmv.v.i v9, 0
@@ -470,8 +466,8 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vmv.v.i v8, 0
+; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLA-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLA-NEXT:    vslidedown.vi v8, v8, 2
@@ -491,8 +487,8 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; VLS-LABEL: extract_v2i1_v64i1_2:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
-; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v8, 2
@@ -519,10 +515,10 @@ define void @extract_v2i1_v64i1_42(ptr %x, ptr %y) {
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    li a2, 64
 ; VLA-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; VLA-NEXT:    vlm.v v0, (a0)
-; VLA-NEXT:    li a0, 42
 ; VLA-NEXT:    vmv.v.i v8, 0
+; VLA-NEXT:    vlm.v v0, (a0)
 ; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLA-NEXT:    li a0, 42
 ; VLA-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
 ; VLA-NEXT:    vslidedown.vx v8, v8, a0
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -541,8 +537,8 @@ define void @extract_v2i1_v64i1_42(ptr %x, ptr %y) {
 ; VLS-LABEL: extract_v2i1_v64i1_42:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
-; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vmv.v.i v8, 0
+; VLS-NEXT:    vlm.v v0, (a0)
 ; VLS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; VLS-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; VLS-NEXT:    vslidedown.vi v8, v10, 10
@@ -677,8 +673,8 @@ define void @extract_v2i1_nxv64i1_42(<vscale x 64 x i1> %x, ptr %y) {
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; VLA-NEXT:    vmv.v.i v8, 0
-; VLA-NEXT:    li a1, 42
 ; VLA-NEXT:    vmerge.vim v8, v8, 1, v0
+; VLA-NEXT:    li a1, 42
 ; VLA-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
 ; VLA-NEXT:    vslidedown.vx v8, v8, a1
 ; VLA-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma

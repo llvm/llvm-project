@@ -30,6 +30,8 @@ class StopInfoMachException : public StopInfo {
 
   bool DetermineTagMismatch();
 
+  bool DetermineCPA2Failure();
+
 public:
   // Constructors and Destructors
   StopInfoMachException(Thread &thread, uint32_t exc_type,
@@ -85,6 +87,10 @@ public:
     static std::optional<exception_type_t> ExceptionCode(const char *name);
   };
 #endif
+
+  /// Allow this plugin to respond to stop events to enable skip-over-trap
+  /// behaviour on AArch64.
+  void PerformAction(Event *event_ptr) override;
 
   // Since some mach exceptions will be reported as breakpoints, signals,
   // or trace, we use this static accessor which will translate the mach

@@ -6,7 +6,7 @@
 ; RUN:      -mtriple powerpc-ibm-aix-xcoff --code-model=large < %s \
 ; RUN:      | FileCheck %s --check-prefix=LARGE32
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec \
-; RUN:      -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s \
+; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | FileCheck %s \
 ; RUN:      --check-prefix=SMALL64
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec \
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=large < %s \

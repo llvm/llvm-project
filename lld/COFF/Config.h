@@ -21,6 +21,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 
 namespace lld::coff {
@@ -48,6 +49,7 @@ enum class ExportSource {
   Directives,
   Export,
   ModuleDefinition,
+  ExportAll,
 };
 
 enum class EmitKind { Obj, LLVM, ASM };
@@ -216,6 +218,9 @@ struct Configuration {
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> merge;
 
+  // Used for /discard-section:.name
+  llvm::StringSet<> discardSection;
+
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;
   // Used for /sectionlayout: to layout sections in specified order.
@@ -353,6 +358,11 @@ struct Configuration {
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
   BuildIDHash buildIDHash = BuildIDHash::None;
+  llvm::StringRef optRemarksFilename;
+  llvm::StringRef optRemarksPasses;
+  llvm::StringRef optRemarksFormat;
+  bool optRemarksWithHotness = false;
+  std::optional<uint64_t> optRemarksHotnessThreshold = 0;
 };
 
 struct COFFSyncStream : SyncStream {

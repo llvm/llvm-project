@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ASTMatchersTest.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -3101,6 +3103,66 @@ TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective_CountExpression) {
     EXPECT_FALSE(LengthLiteral)
         << "Expected length to be a variable expression";
   }
+}
+
+// OpenMP 6 split directive / counts clause
+TEST(ASTMatchersTestOpenMP, OMPSplitDirective) {
+  auto Matcher = stmt(ompSplitDirective(hasStructuredBlock(forStmt())));
+
+  StringRef SplitOk = R"(
+void f() {
+#pragma omp split counts(2, omp_fill)
+  for (int i = 0; i < 10; ++i) {}
+}
+)";
+  EXPECT_TRUE(matchesWithOpenMP60(SplitOk, Matcher));
+
+  StringRef ParallelOnly = R"(
+void f() {
+#pragma omp parallel
+  ;
+}
+)";
+  EXPECT_TRUE(notMatchesWithOpenMP60(ParallelOnly, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPSplitDirective_HasCountsClause) {
+  auto Matcher = stmt(ompSplitDirective(hasAnyClause(ompCountsClause())));
+
+  StringRef Source0 = R"(
+void f() {
+#pragma omp split counts(2, omp_fill)
+  for (int i = 0; i < 10; ++i) {}
+}
+)";
+  EXPECT_TRUE(matchesWithOpenMP60(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPCountsClause_OmpFillOperand) {
+  StringRef Source0 = R"(
+void f() {
+#pragma omp split counts(1, omp_fill)
+  for (int i = 0; i < 10; ++i) {}
+}
+)";
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Source0, {"-std=gnu++11", "-target", "i386-unknown-unknown",
+                "-fopenmp=libomp", "-fopenmp-version=60"});
+  ASSERT_TRUE(AST);
+  auto Results = match(ompSplitDirective().bind("split"), AST->getASTContext());
+  ASSERT_EQ(Results.size(), 1u);
+  const auto *Dir = Results[0].getNodeAs<OMPSplitDirective>("split");
+  ASSERT_TRUE(Dir);
+  const OMPCountsClause *Counts = nullptr;
+  for (OMPClause *C : Dir->clauses()) {
+    if ((Counts = dyn_cast<OMPCountsClause>(C)))
+      break;
+  }
+  ASSERT_TRUE(Counts);
+  ASSERT_EQ(Counts->getNumCounts(), 2u);
+  EXPECT_TRUE(Counts->hasOmpFill());
+  EXPECT_EQ(*Counts->getOmpFillIndex(), 1u);
+  EXPECT_FALSE(Counts->getCountsRefs()[1]);
 }
 
 TEST(ASTMatchersTest, Finder_DynamicOnlyAcceptsSomeMatchers) {

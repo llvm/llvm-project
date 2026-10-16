@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-fuchsia -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-fuchsia -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # This test ensures that constant registers like XZR are not considered live
 # even if they are in the liveins list. This prevents the stack probe from

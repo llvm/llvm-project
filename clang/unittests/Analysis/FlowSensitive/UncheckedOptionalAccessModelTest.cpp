@@ -1599,6 +1599,38 @@ TEST_P(UncheckedOptionalAccessTest, WithAlias) {
 
     void target(MyOptional<int> opt) {
       opt.value(); // [[unsafe]]
+      *opt;        // [[unsafe]]
+      if (opt.has_value()) {
+        opt.value();
+        *opt;
+      }
+      if (opt) {
+        opt.value();
+        *opt;
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, WithAliasThroughPointer) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    using MyOptional = $ns::$optional<T>;
+
+    void target(const MyOptional<int>* opt) {
+      opt->value(); // [[unsafe]]
+      **opt;        // [[unsafe]]
+      if (opt->has_value()) {
+        opt->value();
+        **opt;
+      }
+      if (*opt) {
+        opt->value();
+        **opt;
+      }
     }
   )");
 }
@@ -2894,6 +2926,27 @@ TEST_P(UncheckedOptionalAccessTest, DiagnosticsHaveRanges) {
         }
       }
     }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstructorOtherStructField) {
+  // Repro for a crash: https://github.com/llvm/llvm-project/issues/128068
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct NonTrivDtor {
+      NonTrivDtor(int n);
+      ~NonTrivDtor() {}
+    };
+    struct Other {
+      $ns::$optional<int> x;
+      NonTrivDtor b = NonTrivDtor(x.value());
+    };
+    struct target {
+      target(int f) : f_(f), o_(Other{f_}) {}
+      int f_;
+      Other o_;
+    };
   )cc");
 }
 

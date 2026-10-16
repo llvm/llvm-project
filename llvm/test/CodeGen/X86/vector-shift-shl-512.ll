@@ -58,9 +58,8 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
 ; AVX512DQ-NEXT:    vpsllw $5, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpsllw $2, %ymm2, %ymm3
-; AVX512DQ-NEXT:    vpbroadcastb {{.*#+}} ymm6 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; AVX512DQ-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
+; AVX512DQ-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpaddb %ymm5, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm3, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
@@ -70,8 +69,8 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpand %ymm4, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsllw $2, %ymm0, %ymm3
-; AVX512DQ-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; AVX512DQ-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpaddb %ymm0, %ymm0, %ymm3

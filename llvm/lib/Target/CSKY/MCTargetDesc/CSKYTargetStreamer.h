@@ -12,6 +12,7 @@
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCStreamer.h"
+#include <map>
 
 namespace llvm {
 
@@ -56,6 +57,8 @@ protected:
 
   unsigned ConstantCounter = 0;
 
+  bool EmittedTargetAttributes = false;
+
 public:
   CSKYTargetStreamer(MCStreamer &S);
 
@@ -63,7 +66,7 @@ public:
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
 
-  virtual void emitTargetAttributes(const MCSubtargetInfo &STI);
+  void emitTargetAttributes(const MCSubtargetInfo &STI, bool HardFloatABI);
   /// Add a new entry to the constant pool for the current section and return an
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, SMLoc Loc,
@@ -75,12 +78,6 @@ public:
 };
 
 template <> struct DenseMapInfo<CSKYTargetStreamer::SymbolIndex> {
-  static inline CSKYTargetStreamer::SymbolIndex getEmptyKey() {
-    return {nullptr, CSKY::S_Invalid};
-  }
-  static inline CSKYTargetStreamer::SymbolIndex getTombstoneKey() {
-    return {nullptr, CSKY::S_Invalid};
-  }
   static unsigned getHashValue(const CSKYTargetStreamer::SymbolIndex &V) {
     return hash_combine(DenseMapInfo<const MCSymbol *>::getHashValue(V.sym),
                         DenseMapInfo<int>::getHashValue(V.kind));

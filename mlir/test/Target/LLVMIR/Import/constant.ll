@@ -1,5 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
-; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat --use-constant-fp-for-fixed-length-splat %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {
@@ -76,6 +76,18 @@ define ptr @gep_const_expr() {
   ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
   ; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
   ret ptr getelementptr (i32, ptr @global, i32 2)
+}
+
+; // -----
+
+@vt = external constant [3 x ptr]
+
+; CHECK-LABEL: @gep_const_expr_inrange
+define ptr @gep_const_expr_inrange() {
+  ; CHECK-DAG:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @vt : !llvm.ptr
+  ; CHECK-DAG:  %[[GEP:[0-9]+]] = llvm.getelementptr inbounds inrange <i{{[0-9]+}}, -16, 8> %[[ADDR]][{{.*}}] : (!llvm.ptr{{.*}}) -> !llvm.ptr
+  ; CHECK-DAG:  llvm.return %[[GEP]] : !llvm.ptr
+  ret ptr getelementptr inbounds inrange(-16, 8) ([3 x ptr], ptr @vt, i64 0, i64 2)
 }
 
 ; // -----

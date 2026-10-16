@@ -5,8 +5,6 @@
 
 ## Check that subtraction expressions emit R_LARCH_32_PCREL and R_LARCH_64_PCREL relocations.
 
-## TODO: 1- or 2-byte data relocations are not supported for now.
-
 # CHECK:        Relocations [
 # NORELAX-NEXT:   Section ({{.*}}) .rela.sx {
 # NORELAX-NEXT:     0x4 R_LARCH_PCALA_HI20 z 0x0
@@ -38,6 +36,27 @@
 # CHECK-NEXT:       0x30 R_LARCH_SUB64 x 0x0
 # CHECK-NEXT:       0x38 R_LARCH_ADD32 {{.*}} 0x0
 # CHECK-NEXT:       0x38 R_LARCH_SUB32 y 0x0
+# CHECK-NEXT:       0x3C R_LARCH_32_PCREL - 0xBEEF
+# CHECK-NEXT:       0x40 R_LARCH_64_PCREL - 0xBEEF
+# CHECK-NEXT:       0x48 R_LARCH_32_PCREL extsym 0x8
+# CHECK-NEXT:       0x4C R_LARCH_64_PCREL extsym 0xC
+# CHECK-NEXT:       0x54 R_LARCH_ADD16 x 0x0
+# CHECK-NEXT:       0x54 R_LARCH_SUB16 .L0  0x0
+# CHECK-NEXT:       0x56 R_LARCH_ADD16 y 0x0
+# CHECK-NEXT:       0x56 R_LARCH_SUB16 .L0  0x0
+# CHECK-NEXT:       0x58 R_LARCH_ADD8 x 0x0
+# CHECK-NEXT:       0x58 R_LARCH_SUB8 .L0  0x0
+# CHECK-NEXT:       0x59 R_LARCH_ADD8 y 0x0
+# CHECK-NEXT:       0x59 R_LARCH_SUB8 .L0  0x0
+# CHECK-NEXT:       0x5A R_LARCH_ADD16 x 0x0
+# CHECK-NEXT:       0x5A R_LARCH_SUB16 y 0x0
+# CHECK-NEXT:       0x5C R_LARCH_ADD16 y 0x0
+# CHECK-NEXT:       0x5C R_LARCH_SUB16 x 0x0
+# CHECK-NEXT:       0x5E R_LARCH_ADD8 x 0x0
+# CHECK-NEXT:       0x5E R_LARCH_SUB8 y 0x0
+# CHECK-NEXT:       0x5F R_LARCH_ADD8 y 0x0
+# CHECK-NEXT:       0x5F R_LARCH_SUB8 x 0x0
+
 # CHECK-NEXT:     }
 # NORELAX-NEXT:   Section ({{.*}}) .rela.sy {
 # NORELAX-NEXT:     0x0 R_LARCH_CALL36 foo 0x0
@@ -69,6 +88,20 @@ la.pcrel $a0, z
 .4byte y-x
 .8byte .-x
 .4byte .-y
+1:
+.4byte 0xbeef-1b
+1:
+.8byte 0xbeef-1b
+.4byte extsym-1b
+.8byte extsym-1b
+.2byte x-.
+.2byte y-.
+.byte x-.
+.byte y-.
+.2byte x-y
+.2byte y-x
+.byte x-y
+.byte y-x
 
 .section .sy,"ax"
 call36 foo

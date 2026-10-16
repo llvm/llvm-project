@@ -48,7 +48,7 @@ void GDBIndex::updateGdbIndexSection(
   Data += 24;
 
   // Map CUs offsets to indices and verify existing index table.
-  std::map<uint32_t, uint32_t> OffsetToIndexMap;
+  std::map<uint64_t, uint32_t> OffsetToIndexMap;
   const uint32_t CUListSize = CUTypesOffset - CUListOffset;
   const uint32_t TUListSize = AddressTableOffset - CUTypesOffset;
   const unsigned NUmCUsEncoded = CUListSize / 16;
@@ -133,7 +133,7 @@ void GDBIndex::updateGdbIndexSection(
   write32le(Buffer + 20, ConstantPoolOffset + Delta);
   Buffer += 24;
 
-  using MapEntry = std::pair<uint32_t, CUInfo>;
+  using MapEntry = std::pair<uint64_t, CUInfo>;
   std::vector<MapEntry> CUVector(CUMap.begin(), CUMap.end());
   // Remove the CUs we won't emit anyway.
   CUVector.erase(std::remove_if(CUVector.begin(), CUVector.end(),
@@ -182,8 +182,10 @@ void GDBIndex::updateGdbIndexSection(
   // Writing out CU List <Offset, Size>
   for (auto &CUInfo : CUVector) {
     write64le(Buffer, CUInfo.second.Offset);
-    // Length encoded in CU doesn't contain first 4 bytes that encode length.
-    write64le(Buffer + 8, CUInfo.second.Length + 4);
+    // Length encoded in CU doesn't contain the unit length field.
+    write64le(Buffer + 8,
+              CUInfo.second.Length +
+                  dwarf::getUnitLengthFieldByteSize(CUInfo.second.Format));
     Buffer += 16;
   }
   sortGDBIndexTUEntryVector();

@@ -36,6 +36,6 @@ loop:
   %iv.1.next = add nsw i64 %iv.1, -1
   br i1 %tmp11, label %loop, label %exit
 
-exit:                                             ; preds = %bb3
+exit:
   ret void
 }

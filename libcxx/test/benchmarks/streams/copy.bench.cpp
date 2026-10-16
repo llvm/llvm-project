@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 #include <iterator>
 #include <fstream>
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
-static void bm_copy(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_copy(benchmark::State& state) {
   std::vector<char> buffer;
   buffer.resize(16384);
 

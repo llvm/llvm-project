@@ -238,6 +238,10 @@ gpu.module @barriers {
     // CHECK:         [[NONE_FLAG2:%.*]] = llvm.mlir.constant(0 : i32) : i32
     // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG2]])
     gpu.barrier memfence [#gpu.address_space<private>]
+    // Constant memory is read-only, no fencing needed (same as private)
+    // CHECK:         [[NONE_FLAG3:%.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK:         llvm.call spir_funccc @_Z7barrierj([[NONE_FLAG3]])
+    gpu.barrier memfence [#gpu.address_space<constant>]
     return
   }
 }
@@ -509,6 +513,9 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_79:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK:           %[[VAL_80:.*]] = llvm.alloca %[[VAL_79]] x i32 : (i64) -> !llvm.ptr
 
+// Anchor past the first private descriptor, whose size constant is
+// indistinguishable from the next alloca's.
+// CHECK:           llvm.insertvalue %{{.*}}[4, 0]
 // CHECK:           %[[VAL_91:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK-64:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i64 : (i64) -> !llvm.ptr
 // CHECK-32:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i32 : (i64) -> !llvm.ptr

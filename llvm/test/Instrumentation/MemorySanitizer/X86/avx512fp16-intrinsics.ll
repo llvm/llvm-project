@@ -2114,7 +2114,8 @@ define <16 x half> @sint_to_fp_16i32_to_16f16(<16 x i32> %x) #0 {
 ; CHECK-SAME: <16 x i32> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <16 x i32> [[TMP1]] to <16 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <16 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <16 x i1> [[TMP3]] to <16 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = sitofp <16 x i32> [[X]] to <16 x half>
 ; CHECK-NEXT:    store <16 x i16> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x half> [[RES]]
@@ -2216,7 +2217,8 @@ define <16 x half> @uint_to_fp_16i32_to_16f16(<16 x i32> %x) #0 {
 ; CHECK-SAME: <16 x i32> [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <16 x i32> [[TMP1]] to <16 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <16 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <16 x i1> [[TMP3]] to <16 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = uitofp <16 x i32> [[X]] to <16 x half>
 ; CHECK-NEXT:    store <16 x i16> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x half> [[RES]]

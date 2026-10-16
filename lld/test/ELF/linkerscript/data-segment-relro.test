@@ -44,10 +44,18 @@
 # CHECK2:      Section to Segment mapping:
 # CHECK2:        06     .dynamic __libc_atexit .got .relro_padding {{$}}
 
+## Without DATA_SEGMENT_RELRO_END, __libc_atexit is not relro, splitting the
+## relro region into two PT_GNU_RELRO segments (.dynamic and .got).
 # RUN: sed '/DATA_SEGMENT_RELRO_END/d' %t/1.t > %t/2.t
-# RUN: not ld.lld %t/a.o %t/b.so -T %t/2.t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: ld.lld %t/a.o %t/b.so -T %t/2.t -o %t/a3
+# RUN: llvm-readelf -l %t/a3 | FileCheck %s --check-prefix=CHECK3
 
-# ERR: error: section: .got is not contiguous with other relro sections
+# CHECK3:      GNU_RELRO      0x001000 0x0000000000001000 0x0000000000001000 0x000100 0x000100 R   0x1
+# CHECK3-NEXT: GNU_RELRO      0x001108 0x0000000000001108 0x0000000000001108 0x000008 0x000008 R   0x1
+
+# CHECK3:      Section to Segment mapping:
+# CHECK3:        07     .dynamic {{$}}
+# CHECK3-NEXT:   08     .got {{$}}
 
 #--- a.s
 .global _start

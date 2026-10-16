@@ -148,12 +148,10 @@ define <8 x i1> @iszero_v8bf16(<8 x bfloat> %x) {
 define <8 x i1> @isfinite_v8bf16(<8 x bfloat> %x) {
 ; ZVFBFMIN-LABEL: isfinite_v8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    lui a0, 8
-; ZVFBFMIN-NEXT:    addi a1, a0, -1
 ; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFBFMIN-NEXT:    vand.vx v8, v8, a1
-; ZVFBFMIN-NEXT:    addi a0, a0, -128
-; ZVFBFMIN-NEXT:    vmslt.vx v0, v8, a0
+; ZVFBFMIN-NEXT:    vadd.vv v8, v8, v8
+; ZVFBFMIN-NEXT:    li a0, -256
+; ZVFBFMIN-NEXT:    vmsltu.vx v0, v8, a0
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: isfinite_v8bf16:

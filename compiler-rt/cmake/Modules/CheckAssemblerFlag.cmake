@@ -26,6 +26,7 @@ function(check_assembler_flag outvar flag)
     try_compile(${outvar}
       ${CMAKE_BINARY_DIR}
       SOURCES ${asm_source_file}
+      CMAKE_FLAGS -DCMAKE_ASM_COMPILER_TARGET=${CMAKE_C_COMPILER_TARGET}
       COMPILE_DEFINITIONS ${flag})
 
     if(NOT CMAKE_REQUIRED_QUIET)

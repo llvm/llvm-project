@@ -24,7 +24,8 @@ class MachineInstr;
 class MipsSubtarget;
 class MipsTargetMachine;
 class SelectionDAG;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
   class MipsSETargetLowering : public MipsTargetLowering  {
   public:
@@ -67,12 +68,11 @@ class TargetRegisterClass;
         const CCState &CCInfo, unsigned NextStackOffset,
         const MipsFunctionInfo &FI) const override;
 
-    void
-    getOpndList(SmallVectorImpl<SDValue> &Ops,
-                std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-                bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-                bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-                SDValue Chain) const override;
+    void getOpndList(SmallVectorImpl<SDValue> &Ops,
+                     std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
+                     bool IsPICCall, bool GlobalOrExternal, bool LocalLinkage,
+                     bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
+                     SDValue Chain) const override;
 
     SDValue lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
                            RTLIB::Libcall LC) const;
@@ -91,7 +91,8 @@ class TargetRegisterClass;
     /// Lower VECTOR_SHUFFLE into one of a number of instructions
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
-    SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
 
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
@@ -127,20 +128,6 @@ class TargetRegisterClass;
     /// Emit the FEXP2_D_1 pseudo instructions.
     MachineBasicBlock *emitFEXP2_D_1(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-    /// Emit the FILL_FW pseudo instruction
-    MachineBasicBlock *emitLD_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
-    /// Emit the FILL_FD pseudo instruction
-    MachineBasicBlock *emitST_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
-    /// Emit the FEXP2_W_1 pseudo instructions.
-    MachineBasicBlock *emitFPEXTEND_PSEUDO(MachineInstr &MI,
-                                           MachineBasicBlock *BB,
-                                           bool IsFGR64) const;
-    /// Emit the FEXP2_D_1 pseudo instructions.
-    MachineBasicBlock *emitFPROUND_PSEUDO(MachineInstr &MI,
-                                          MachineBasicBlock *BBi,
-                                          bool IsFGR64) const;
   };
 
 } // end namespace llvm

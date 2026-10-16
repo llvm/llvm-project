@@ -353,6 +353,12 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     }
   }
 
+  // Expand `undef` checks to match isUndef, and also cover ISD::POISON.
+  if (CInfo.getEnumName() == "ISD::UNDEF") {
+    AddMatcher(new CheckUndefMatcher());
+    return;
+  }
+
   // Check that the current opcode lines up.
   AddMatcher(new CheckOpcodeMatcher(CInfo));
 

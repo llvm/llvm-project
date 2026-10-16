@@ -1,0 +1,102 @@
+//===- CIROpenCLAttrs.td - CIR dialect attrs for OpenCL ----*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file declares the CIR dialect attributes for OpenCL.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef CLANG_CIR_DIALECT_IR_CIROPENCLATTRS_TD
+#define CLANG_CIR_DIALECT_IR_CIROPENCLATTRS_TD
+
+//===----------------------------------------------------------------------===//
+// OpenCLKernelArgMetadataAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OpenCLKernelArgMetadataAttr
+    : CIR_Attr<"OpenCLKernelArgMetadata", "cl.kernel_arg_metadata"> {
+  let summary = "OpenCL kernel argument metadata";
+  let description = [{
+    Stores the OpenCL kernel argument metadata emitted to LLVM IR as
+    `kernel_arg_*` metadata.
+
+    All parameters are arrays containing the argument information in source
+    order. The `name` field is optional and is emitted only when requested by
+    `-cl-kernel-arg-info`.
+  }];
+
+  let parameters = (ins
+    CIR_LangAddressSpaceArrayAttr:$addr_space,
+    CIR_StringArrayAttr:$access_qual,
+    CIR_StringArrayAttr:$type,
+    CIR_StringArrayAttr:$base_type,
+    CIR_StringArrayAttr:$type_qual,
+    CIR_StringArrayAttrOrNull:$name
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// MaxWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MaxWorkGroupSizeAttr
+    : CIR_Attr<"MaxWorkGroupSize", "max_work_group_size"> {
+  let summary = "Maximum kernel work-group size";
+  let description = [{
+    Stores the maximum work-group size of a kernel, emitted to LLVM IR as
+    `max_work_group_size` function metadata.
+  }];
+
+  let parameters = (ins
+    "uint32_t":$x,
+    "uint32_t":$y,
+    "uint32_t":$z
+  );
+
+  let assemblyFormat = "`<` $x `,` $y `,` $z `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// OpenCLVersionAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OpenCLVersionAttr : CIR_Attr<"OpenCLVersion", "cl.version"> {
+  let summary = "OpenCL version";
+  let description = [{
+    Represents an OpenCL language version preserved as module metadata.
+
+    The `cir.cl.cxx.version` module attribute requires a companion
+    `cir.cl.version` attribute specifying the compatible OpenCL version.
+
+    Example:
+    ```
+    // Module compiled from OpenCL C 1.2.
+    module attributes {cir.cl.version = #cir.cl.version<1, 2>} {}
+    // Module compiled from C++ for OpenCL 2021.
+    module attributes {
+      cir.cl.cxx.version = #cir.cl.version<2021, 0>,
+      cir.cl.version = #cir.cl.version<3, 0>
+    } {}
+    ```
+  }];
+
+  let parameters = (ins
+    "int32_t":$major,
+    "int32_t":$minor
+  );
+
+  let assemblyFormat = "`<` $major `,` $minor `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+#endif // CLANG_CIR_DIALECT_IR_CIROPENCLATTRS_TD

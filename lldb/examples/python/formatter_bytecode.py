@@ -25,7 +25,7 @@ from copy import copy
 from dataclasses import dataclass
 from typing import Any, BinaryIO, Optional, Sequence, TextIO, Tuple, Union, cast
 
-BINARY_VERSION = 1
+BINARY_VERSION = 2
 
 # Types
 type_String = 1
@@ -61,6 +61,8 @@ define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
 define_opcode(0x22, None, "lit_string")
 define_opcode(0x23, None, "lit_selector")
+define_opcode(0x24, None, "lit_integer")
+define_opcode(0x25, "null", "lit_null")
 
 define_opcode(0x2A, "as_int", "as_int")
 define_opcode(0x2B, "as_uint", "as_uint")
@@ -88,13 +90,19 @@ define_opcode(0x55, ">=", "ge")
 
 define_opcode(0x60, "call", "call")
 
+define_opcode(0x70, "dict", "dict")
+define_opcode(0x71, "dict_set", "dict_set")
+define_opcode(0x72, "dict_get", "dict_get")
+define_opcode(0x73, "dict_has", "dict_has")
+
 # Function signatures
 sig_summary = 0
 sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -102,6 +110,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -126,6 +135,7 @@ define_selector(0x11, "get_child_at_index")
 define_selector(0x12, "get_child_with_name")
 define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
+define_selector(0x14, "get_parent")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
 define_selector(0x18, "get_synthetic_value")
@@ -134,6 +144,10 @@ define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
+define_selector(0x24, "clone")
+define_selector(0x25, "get_pointee_type")
+define_selector(0x26, "get_byte_size")
+define_selector(0x27, "create_child_at_offset")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -211,7 +225,7 @@ class BytecodeSection:
         bin = bytearray()
         bin.extend(_to_uleb(len(self.type_name)))
         bin.extend(bytes(self.type_name, encoding="utf-8"))
-        bin.extend(_to_byte(self.flags))
+        bin.extend(_to_uleb(self.flags))
         for sig, bc in self.signatures:
             bin.extend(_to_byte(SIGNATURES[sig]))
             bin.extend(_to_uleb(len(bc)))
@@ -287,16 +301,11 @@ class BytecodeSection:
         builder.emit_uleb(size, "remaining record size")
         builder.emit_uleb(len(self.type_name), "type name size")
         builder.emit_string(self.type_name, "type name")
-        builder.emit_byte(self.flags, "flags")
+        builder.emit_uleb(self.flags, "flags")
         for sig, bc in self.signatures:
             builder.emit_byte(SIGNATURES[sig], f"sig_{sig}")
             builder.emit_uleb(len(bc), "program size")
             builder.emit_bytes(bc, "program")
-
-    @property
-    def _var_name(self):
-        var_name = re.sub(r"\W", "_", self.type_name)
-        return f"_{var_name}_formatter"
 
     def write_c(self, output: TextIO) -> None:
         self.validate()
@@ -320,7 +329,8 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char {self._var_name}[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
@@ -336,8 +346,8 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if swift(>=6.3)
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                #if swift(>=6.3) && !objectFormat(Wasm)
+                #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
@@ -347,7 +357,7 @@ class BytecodeSection:
             file=output,
         )
         print(
-            f"let {self._var_name}: {builder.type_decl} = (",
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
@@ -398,7 +408,9 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
             else:
-                emit(op_lit_int)
+                # With the introduction of op_lit_integer, op_lit_int is no
+                # longer emitted by the assembler.
+                emit(op_lit_integer)
                 emit(int(tok))  # FIXME
         elif tok[0] == "@":
             emit(op_lit_selector)
@@ -432,7 +444,7 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
 
     name_size = _from_uleb(stream)
     _type_name = stream.read(name_size).decode()
-    _flags = stream.read(1)[0]
+    _flags = _from_uleb(stream)
 
     while True:
         sig_byte = stream.read(1)
@@ -472,6 +484,9 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             asm += str(b)  # FIXME uleb
             asm += "u"
         elif b == op_lit_int:
+            b = next_byte()
+            asm += str(b)
+        elif b == op_lit_integer:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_selector:
@@ -617,6 +632,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
         elif b == op_lit_int:
             b = next_byte()  # FIXME uleb
             data.append(int(b))
+        elif b == op_lit_integer:
+            b = next_byte()  # FIXME sleb
+            data.append(int(b))
         elif b == op_lit_selector:
             b = next_byte()
             data.append(b)
@@ -627,6 +645,8 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 s += chr(next_byte())
                 length -= 1
             data.append(s)
+        elif b == op_lit_null:
+            data.append(None)
 
         elif b == op_as_uint:
             pass
@@ -696,6 +716,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 data.append(valobj.GetIndexOfChildWithName(name))
             elif sel == sel_get_type:
                 data.append(data.pop().GetType())
+            elif sel == sel_get_parent:
+                valobj = data.pop()
+                data.append(valobj.GetParent())
             elif sel == sel_get_template_argument_type:
                 n = data.pop()
                 valobj = data.pop()
@@ -716,6 +739,22 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 sbtype = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Cast(sbtype))
+            elif sel == sel_clone:
+                new_name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.Clone(new_name))
+            elif sel == sel_get_pointee_type:
+                sbtype = data.pop()
+                data.append(sbtype.GetPointeeType())
+            elif sel == sel_get_byte_size:
+                sbtype = data.pop()
+                data.append(sbtype.GetByteSize())
+            elif sel == sel_create_child_at_offset:
+                sbtype = data.pop()
+                offset = data.pop()
+                name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.CreateChildAtOffset(name, offset, sbtype))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -729,6 +768,24 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             else:
                 print("not implemented: " + selector[sel])
                 assert False
+
+        # Dictionary operations.
+        elif b == op_dict:
+            data.append(dict())
+        elif b == op_dict_set:
+            value = data.pop()
+            key = data.pop()
+            d = data.pop()
+            d[key] = value
+            data.append(d)
+        elif b == op_dict_get:
+            key = data.pop()
+            d = data.pop()
+            data.append(d[key])
+        elif b == op_dict_has:
+            key = data.pop()
+            d = data.pop()
+            data.append(int(key in d))
     return data[-1]
 
 
@@ -738,12 +795,23 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 _BUILTINS = {
     "Cast": "@cast",
+    "Clone": "@clone",
+    "CreateChildAtOffset": "@create_child_at_offset",
+    "GetByteSize": "@get_byte_size",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
+    "GetParent": "@get_parent",
+    "GetPointeeType": "@get_pointee_type",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
@@ -753,7 +821,7 @@ _COMPS = {
     ast.Lt: "<",
     ast.LtE: "=<",
     ast.Gt: ">",
-    ast.GtE: "=>",
+    ast.GtE: ">=",
 }
 
 # Maps Python method names in a formatter class to their bytecode signatures.
@@ -813,19 +881,18 @@ class Compiler(ast.NodeVisitor):
     # Variables
 
     The compiler supports two kinds of variables, local variables and attribute
-    variables (properties), but there are limitations on both.
+    variables (properties).
 
-    In __init__ and update, local variables are currently *not* supported, but
-    attributes can be assigned to. This matches the common case for these
-    functions.
+    Attributes are stored in `self`, which in the version 2 ABI is a Dictionary
+    owned by LLDB and passed as the first argument (data[0]) to every synthetic
+    method. Attribute writes (`self.x = expr`) are lowered to `dict_set`, and
+    attribute reads (`self.x`) are lowered to `dict_get`. Attributes can only
+    be assigned to in __init__ and update, which matches the common case.
 
-    In all other function bodies, local variables _are_ supported, but
-    attributes can only be read from, *not* assigned to. This also matches the
-    common case for these functions.
-
-    Variables (local and attributes) are tracked, allowing the compiler to know
-    their position in the stack. Variable reads can then be lowered to `pick`
-    instructions. See the compiler's `locals` and `attrs` attributes.
+    Local variables (including method arguments) live on the data stack, above
+    `self`. They are tracked, allowing the compiler to know their position in
+    the stack. Local variable reads are then lowered to `pick` instructions.
+    See the compiler's `locals` and `locals_base` attributes.
 
     # Functions
 
@@ -841,11 +908,13 @@ class Compiler(ast.NodeVisitor):
     # oldest/deepest; locals[-1] is the most recently pushed.
     locals: list[str]
 
-    # Names of visible attrs in bottom-to-top stack order. Always holds the
-    # full combined frame for the method being compiled: grows incrementally
-    # during __init__/update, and is set to the combined list before getter
-    # methods are compiled.
-    attrs: list[str]
+    # Stack index of locals[0]. In synthetic methods, data[0] holds `self`, so
+    # locals start at 1. In top-level functions (summaries), locals start at 0.
+    locals_base: int
+
+    # Names of attrs known to be stored in `self`. Grows during __init__ and
+    # update, which are compiled before the getter methods.
+    attrs: set[str]
 
     # Bytecode signature of the method being compiled, or None for top-level
     # functions.
@@ -855,7 +924,8 @@ class Compiler(ast.NodeVisitor):
 
     def __init__(self) -> None:
         self.locals = []
-        self.attrs = []
+        self.locals_base = 0
+        self.attrs = set()
         self.current_sig = None
         self.buffer = io.StringIO()
 
@@ -875,11 +945,16 @@ class Compiler(ast.NodeVisitor):
                     raise CompilerError(f"unsupported method: {item.name}", item)
                 methods[item.name] = item
 
-        self.attrs = []
+        self.attrs = set()
+
         if method := methods.get("__init__"):
             self._compile_method(method)
-        # self.attrs now holds init's attrs. update's attrs are appended above
-        # them, so after update self.attrs is the combined init+update list.
+        else:
+            # Without an @init, LLDB stores the value in self["valobj"].
+            self.attrs.add("valobj")
+
+        # update is compiled next, so that self.attrs holds all assigned attrs
+        # before the getter methods are compiled.
         if method := methods.get("update"):
             self._compile_method(method)
 
@@ -890,6 +965,13 @@ class Compiler(ast.NodeVisitor):
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
 
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
+
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
         args = copy(node.args.args)
@@ -898,6 +980,7 @@ class Compiler(ast.NodeVisitor):
             args.pop()  # drop trailing 'internal_dict'
 
         self.locals = [arg.arg for arg in args]
+        self.locals_base = 1
 
         # Compile into a temporary buffer so the signature line can be
         # emitted first.
@@ -917,8 +1000,9 @@ class Compiler(ast.NodeVisitor):
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         # Top-level function (not inside a class).
         self.current_sig = None
-        self.attrs = []
+        self.attrs = set()
         self.locals = [arg.arg for arg in node.args.args]
+        self.locals_base = 0
         self._visit_each(node.body)
         self.locals.clear()
 
@@ -950,6 +1034,8 @@ class Compiler(ast.NodeVisitor):
             self._output(f'"{node.value}"')
         elif isinstance(node.value, bool):
             self._output(int(node.value))
+        elif node.value is None:
+            self._output("null")
         else:
             self._output(node.value)
 
@@ -991,33 +1077,16 @@ class Compiler(ast.NodeVisitor):
                     node,
                 )
 
+            # self[attr] = value
             attr = target.attr
-            if attr in self.attrs:
-                raise CompilerError(f"attribute '{attr}' is already assigned", node)
-
-            # If the RHS is an argument (the only kind of local permitted in
-            # __init__) - then it is already on the stack in place, and no
-            # evaluation is needed.
-            is_arg = (
-                isinstance(node.value, ast.Name)
-                and self._local_index(node.value) is not None
-            )
-            if not is_arg:
-                # Evaluate the RHS, leaving its value on the stack.
-                self.visit(node.value)
-
-            # Record the attr.
-            self.attrs.append(attr)
+            self._output("0 pick")
+            self._output(f'"{attr}"')
+            self.visit(node.value)
+            self._output("dict_set")
+            self.attrs.add(attr)
             return
 
         # Handle local variable assignment.
-        if self.current_sig in ("@init", "@update"):
-            raise CompilerError(
-                "local variable assignment is not allowed in __init__ or update; "
-                "use attribute assignment (self.attr = ...) instead",
-                node,
-            )
-
         if isinstance(target, ast.Name):
             names = [target]
         elif isinstance(target, ast.Tuple):
@@ -1043,32 +1112,26 @@ class Compiler(ast.NodeVisitor):
             raise CompilerError(
                 "unsupported attribute access (only self.attr is supported)", node
             )
-        pick_idx = self._attr_index(node.attr, node)
-        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
+        if node.attr not in self.attrs:
+            raise CompilerError(f"unknown attribute: {node.attr}", node)
+        # self[attr]
+        self._output("0 pick")
+        self._output(f'"{node.attr}"')
+        self._output("dict_get")
 
     def visit_Name(self, node: ast.Name) -> None:
         idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx}u pick")  # "# {node.id}"
+        self._output(f"{idx} pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
             self.visit(child)
 
-    def _attr_index(self, name: str, node: ast.expr) -> int:
-        # self.attrs is always the full visible attr frame, so the index is
-        # the direct pick offset with no further adjustment.
-        try:
-            return self.attrs.index(name)
-        except ValueError:
-            raise CompilerError(f"unknown attribute: {name}", node)
-
     def _local_index(self, name: ast.Name) -> Optional[int]:
         try:
-            idx = self.locals.index(name.id)
-            # Offset past all attrs.
-            return len(self.attrs) + idx
+            return self.locals_base + self.locals.index(name.id)
         except ValueError:
             return None
 
@@ -1148,14 +1211,12 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
-        "--skip-invocation-comment",
-        action="store_true",
-        help="do not print invocation comment in compiled output",
-    )
-    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
+    )
+    parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
     )
     parser.add_argument(
         "-f",
@@ -1167,6 +1228,10 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1184,10 +1249,8 @@ def _main():
             with open(args.output, "wb") as output:
                 section.write_binary(output)
         else:
-            with open(args.output, "w") as output:
-                if not args.skip_invocation_comment:
-                    print("// Generated with:", file=output)
-                    print("//  ", shlex.join(sys.argv), file=output)
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
@@ -1222,6 +1285,7 @@ if __name__ == "__main__":
     ############################################################################
     # Tests.
     ############################################################################
+    import tempfile
     import unittest
 
     class TestAssembler(unittest.TestCase):
@@ -1229,7 +1293,7 @@ if __name__ == "__main__":
         def test_assemble(self):
             self.assertEqual(assemble("1u dup").hex(), "200101")
             self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "24105210010111")
             self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):
@@ -1243,6 +1307,11 @@ if __name__ == "__main__":
             roundtrip('1u "2u 3u"')
             roundtrip('"a  b"')
             roundtrip('"a \\" b"')
+
+            # Null literal.
+            roundtrip("null")
+            self.assertEqual(interpret(assemble("null is_null"), [], []), 1)
+            self.assertIsNone(interpret(assemble("null"), [], []))
 
             self.assertEqual(interpret(assemble("1 1 +"), [], []), 2)
             self.assertEqual(interpret(assemble("2 1 1 + *"), [], []), 4)
@@ -1300,7 +1369,7 @@ if __name__ == "__main__":
 
             self.assertIn("__attribute__((used, section(FORMATTER_SECTION)))", src)
             self.assertIn("unsigned char _Account_formatter[] =", src)
-            self.assertIn('"\\x01"', src)  # version
+            self.assertIn('// version\n    "\\x02"', src)  # version
             self.assertIn('"\\x15"', src)  # record size (21)
             self.assertIn('"\\x07"', src)  # type name size (7)
             self.assertIn('"Account"', src)  # type name
@@ -1320,5 +1389,137 @@ if __name__ == "__main__":
             out2 = io.StringIO()
             BytecodeSection("std::vector<int>", 0, []).write_source(out2, language="c")
             self.assertIn("_std__vector_int__formatter[] =", out2.getvalue())
+
+            # Flags are ULEB128 encoded to allow values wider than 7 bits.
+            flags = 1 << 10
+            wide = BytecodeSection("T", flags, [("summary", bytes([0x13]))])
+            out3 = io.StringIO()
+            wide.write_source(out3, language="c")
+            expected = "".join(f"\\x{b:02x}" for b in _to_uleb(flags))
+            self.assertIn(f'"{expected}"', out3.getvalue())
+            binary = io.BytesIO()
+            wide.write_binary(binary)
+            binary.seek(0)
+            dis = io.StringIO()
+            disassemble_file(binary, dis)
+            self.assertEqual(dis.getvalue(), "@summary: return\n")
+
+    class TestCompiler(unittest.TestCase):
+        class FakeValue:
+            """A minimal stand-in for SBValue."""
+
+            def __init__(self, value=0, children=None):
+                self.value = value
+                self.children = children or {}
+
+            def GetChildMemberWithName(self, name):
+                return self.children[name]
+
+            def GetChildAtIndex(self, idx):
+                return list(self.children.values())[idx]
+
+            def GetSyntheticValue(self):
+                return self
+
+            def GetValueAsUnsigned(self):
+                return self.value
+
+        def compile_methods(self, source):
+            with tempfile.NamedTemporaryFile("w", suffix=".py") as f:
+                f.write(textwrap.dedent(source))
+                f.flush()
+                assembly = Compiler().compile(f.name)
+            section = assemble_file("T", io.StringIO(assembly))
+            return dict(section.signatures)
+
+        def test_synthetic(self):
+            methods = self.compile_methods(
+                """
+                import lldb
+
+                class Synthetic:
+                    def __init__(self, valobj, _):
+                        self.valobj = valobj
+
+                    def update(self) -> bool:
+                        self.storage = self.valobj.GetChildMemberWithName("_storage")
+                        self.count = self.valobj.GetChildMemberWithName(
+                            "_count"
+                        ).GetValueAsUnsigned()
+                        return True
+
+                    def num_children(self):
+                        return self.count
+
+                    def get_child_at_index(self, idx):
+                        if idx < self.count:
+                            return self.storage.GetChildAtIndex(idx)
+                        return None
+                """
+            )
+
+            FakeValue = self.FakeValue
+            a, b = FakeValue(10), FakeValue(20)
+            valobj = FakeValue(
+                children={
+                    "_storage": FakeValue(children={"a": a, "b": b}),
+                    "_count": FakeValue(2),
+                }
+            )
+
+            # Without @init, LLDB stores the value in self["valobj"].
+            self_dict = {"valobj": valobj}
+            self.assertEqual(interpret(methods["update"], [], [self_dict]), 1)
+            self.assertEqual(self_dict["count"], 2)
+            self.assertEqual(interpret(methods["get_num_children"], [], [self_dict]), 2)
+            self.assertIs(
+                interpret(methods["get_child_at_index"], [], [self_dict, 1]), b
+            )
+            self.assertIsNone(
+                interpret(methods["get_child_at_index"], [], [self_dict, 2])
+            )
+
+        def test_init(self):
+            methods = self.compile_methods(
+                """
+                class Synthetic:
+                    def __init__(self, valobj, _):
+                        self.storage = valobj.GetChildMemberWithName("_storage")
+
+                    def update(self) -> bool:
+                        size = self.storage.GetValueAsUnsigned()
+                        self.size = size
+                        return False
+
+                    def num_children(self):
+                        return self.size
+                """
+            )
+            storage = self.FakeValue(3)
+            valobj = self.FakeValue(children={"_storage": storage})
+            self_dict = {}
+            interpret(methods["init"], [], [self_dict, valobj])
+            self.assertIs(self_dict["storage"], storage)
+            self.assertEqual(interpret(methods["update"], [], [self_dict]), 0)
+            self.assertEqual(interpret(methods["get_num_children"], [], [self_dict]), 3)
+
+        def test_errors(self):
+            with self.assertRaisesRegex(CompilerError, "unknown attribute: missing"):
+                self.compile_methods(
+                    """
+                    class Synthetic:
+                        def num_children(self):
+                            return self.missing
+                    """
+                )
+            with self.assertRaisesRegex(CompilerError, "only allowed in __init__"):
+                self.compile_methods(
+                    """
+                    class Synthetic:
+                        def num_children(self):
+                            self.count = 1
+                            return 1
+                    """
+                )
 
     unittest.main(argv=[__file__])

@@ -32,6 +32,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class recursive_directory_iterator {
 public:
@@ -139,6 +140,7 @@ begin(recursive_directory_iterator __iter) noexcept {
   return recursive_directory_iterator();
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #  if _LIBCPP_STD_VER >= 20

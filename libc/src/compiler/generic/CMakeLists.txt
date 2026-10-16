@@ -7,5 +7,5 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.OSUtil.osutil
-    libc.src.stdlib.abort
+    libc.src.stdlib.abort_utils
 )

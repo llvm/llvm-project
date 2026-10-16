@@ -160,21 +160,21 @@ define <4 x double> @fmul_v2f64(<2 x  double> %x, <2 x double> %y) {
 ;
 ; AVX1-LABEL: fmul_v2f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX1-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulpd %xmm2, %xmm2, %xmm1
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: fmul_v2f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX2-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm0[1],xmm1[1]
+; AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-NEXT:    vmulpd %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmulpd %xmm2, %xmm2, %xmm1
-; AVX2-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    retq
 ;

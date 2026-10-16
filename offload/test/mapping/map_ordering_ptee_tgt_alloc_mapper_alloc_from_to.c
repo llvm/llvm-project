@@ -4,7 +4,6 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
-// XFAIL: intelgpu
 
 // Since the allocation of the pointee happens on the "target" construct (1),
 // the "to" transfer requested as part of the mapper (2) should also happen.
@@ -30,8 +29,8 @@ int main() {
   s1.q = s1.p = &x[0];
 
   // clang-format off
-  // DEBUG: omptarget --> HstPtrBegin 0x[[#%x,HOST_ADDRX:]] was newly allocated for the current region
-  // DEBUG: omptarget --> Moving [[#%u,SIZEX:]] bytes (hst:0x{{0*}}[[#HOST_ADDRX]]) -> (tgt:0x{{.*}})
+  // DEBUG: --> HstPtrBegin 0x[[#%x,HOST_ADDRX:]] was newly allocated for the current region
+  // DEBUG: --> Moving [[#%u,SIZEX:]] bytes (hst:0x{{0*}}[[#HOST_ADDRX]]) -> (tgt:0x{{.*}})
   // clang-format on
 #pragma omp target map(alloc : s1.p[0 : 10])                                   \
     map(mapper(my_mapper), tofrom : s1) // (1)
@@ -40,8 +39,8 @@ int main() {
   }
 
   // clang-format off
-  // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x{{0*}}[[#HOST_ADDRX]] size=[[#SIZEX]] within region being released
-  // DEBUG: omptarget --> Moving [[#SIZEX]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDRX]])
+  // DEBUG: --> Found skipped FROM entry: HstPtr=0x{{0*}}[[#HOST_ADDRX]] size=[[#SIZEX]] within region being released
+  // DEBUG: --> Moving [[#SIZEX]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDRX]])
   // clang-format on
   printf("After tgt: %d\n", s1.p[1]); // CHECK: After tgt: 222
 }

@@ -26,6 +26,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -104,7 +105,7 @@ void DiagnosticInfoRegAllocFailure::print(DiagnosticPrinter &DP) const {
 }
 
 DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
-    const Function &Fn, const char *ResourceName, uint64_t ResourceSize,
+    const Function &Fn, const Twine &ResourceName, uint64_t ResourceSize,
     uint64_t ResourceLimit, DiagnosticSeverity Severity, DiagnosticKind Kind)
     : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, Fn.getSubprogram()),
       Fn(Fn), ResourceName(ResourceName), ResourceSize(ResourceSize),
@@ -418,6 +419,36 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
   DP << Str;
 }
 
+DiagnosticInfoUnsupportedTargetIntrinsic::
+    DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
+                                             unsigned IntrinsicID,
+                                             const DiagnosticLocation &Loc)
+    : DiagnosticInfoWithLocationBase(DK_UnsupportedTargetIntrinsic, DS_Error,
+                                     Fn, Loc),
+      IntrinsicID(IntrinsicID),
+      RequiredFeatures(Intrinsic::getRequiredTargetFeatures(
+          static_cast<Intrinsic::ID>(IntrinsicID))) {
+  assert(!RequiredFeatures.empty() &&
+         "intrinsic without required features should be supported");
+}
+
+std::string DiagnosticInfoUnsupportedTargetIntrinsic::getMessage() const {
+  return (Twine(
+              Intrinsic::getBaseName(static_cast<Intrinsic::ID>(IntrinsicID))) +
+          " requires target feature '" + RequiredFeatures + "'")
+      .str();
+}
+
+void DiagnosticInfoUnsupportedTargetIntrinsic::print(
+    DiagnosticPrinter &DP) const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << getLocationStr() << ": in function ";
+  getFunction().printAsOperand(OS, /*PrintType=*/false);
+  OS << ' ' << *getFunction().getFunctionType() << ": " << getMessage() << '\n';
+  DP << Str;
+}
+
 void DiagnosticInfoInstrumentation::print(DiagnosticPrinter &DP) const {
   DP << Msg;
 }
@@ -484,8 +515,27 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
       if (MDNode *MD = CI.getMetadata("srcloc"))
         LocCookie =
             mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      MDNode *InlinedFromMD = CI.getMetadata("inlined.from");
       DiagnosticInfoDontCall D(F->getName(), A.getValueAsString(), Sev,
-                               LocCookie);
+                               LocCookie, InlinedFromMD);
+
+      if (const DebugLoc &DL = CI.getDebugLoc()) {
+        SmallVector<DebugInlineInfo, 4> DebugChain;
+        auto AddLocation = [&](const DILocation *Loc) {
+          if (auto *Scope = Loc->getScope())
+            if (auto *SP = Scope->getSubprogram())
+              DebugChain.push_back({SP->getName(), Loc->getFilename(),
+                                    Loc->getLine(), Loc->getColumn()});
+        };
+        if (const DILocation *Loc = DL.get()) {
+          AddLocation(Loc);
+          for (const DILocation *InlinedAt = Loc->getInlinedAt(); InlinedAt;
+               InlinedAt = InlinedAt->getInlinedAt())
+            AddLocation(InlinedAt);
+        }
+        D.setDebugInlineChain(std::move(DebugChain));
+      }
+
       F->getContext().diagnose(D);
     }
   }
@@ -499,4 +549,21 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
     DP << "warn\"";
   if (!getNote().empty())
     DP << ": " << getNote();
+}
+
+SmallVector<std::pair<StringRef, uint64_t>>
+DiagnosticInfoDontCall::getInliningDecisions() const {
+  SmallVector<std::pair<StringRef, uint64_t>> Chain;
+  if (!InlinedFromMD)
+    return Chain;
+
+  for (unsigned I = 0, E = InlinedFromMD->getNumOperands(); I + 1 < E; I += 2) {
+    auto *NameMD = dyn_cast<MDString>(InlinedFromMD->getOperand(I));
+    auto *LocMD =
+        mdconst::dyn_extract<ConstantInt>(InlinedFromMD->getOperand(I + 1));
+    if (NameMD && !NameMD->getString().empty())
+      Chain.emplace_back(NameMD->getString(),
+                         LocMD ? LocMD->getZExtValue() : 0);
+  }
+  return Chain;
 }

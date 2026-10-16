@@ -81,6 +81,15 @@ def G_ROLW : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_ROLW, riscv_rolw>;
 
+// Pseudo equivalent to a RISCVISD::BREV8.
+def G_BREV8 : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = false;
+}
+
+def : GINodeEquiv<G_BREV8, riscv_brev8>;
+
 // Pseudo equivalent to a RISCVISD::CLZW.
 def G_CLZW : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -185,3 +194,16 @@ def G_CLSW : RISCVGenericInstruction {
   let hasSideEffects = false;
 }
 def : GINodeEquiv<G_CLSW , riscv_clsw>;
+
+// Pseudo equivalent to a software guarded indirect branch,
+// RISCVISD::SW_GUARDED_BRIND.
+def G_SW_GUARDED_BRIND : RISCVGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$target);
+  let hasSideEffects = false;
+  let isBranch = true;
+  let isTerminator = true;
+  let isBarrier = true;
+  let isIndirectBranch = true;
+}
+def : GINodeEquiv<G_SW_GUARDED_BRIND, riscv_sw_guarded_brind>;

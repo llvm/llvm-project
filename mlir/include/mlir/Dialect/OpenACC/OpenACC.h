@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACC_H_
 #define MLIR_DIALECT_OPENACC_OPENACC_H_
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -31,6 +32,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include <variant>
 
 #define GET_TYPEDEF_CLASSES
@@ -52,6 +54,8 @@
       mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
       mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
       mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
+#define ACC_DATA_ENTRY_AND_INIT_OPS                                            \
+  ACC_DATA_ENTRY_OPS, mlir::acc::ReductionInitOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp
@@ -138,6 +142,10 @@ mlir::ArrayAttr getAsyncOnly(mlir::Operation *accDataClauseOp);
 /// Used to obtain the `name` from an acc operation.
 std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
 
+/// Used to find out whether `op` is a data entry operation or an
+/// `acc.map_info`. `op` may be null.
+bool isDataEntryOp(mlir::Operation *op);
+
 /// Used to obtain the `dataClause` from a data entry operation.
 /// Returns empty optional if not a data entry operation.
 std::optional<mlir::acc::DataClause>
@@ -147,6 +155,14 @@ getDataClause(mlir::Operation *accDataEntryOp);
 /// Returns false if not a data operation or if it is a data operation without
 /// implicit flag.
 bool getImplicitFlag(mlir::Operation *accDataEntryOp);
+
+/// Used to find out whether the implementation created the data operation for
+/// its own bookkeeping, instead of to represent a data attribute of the
+/// program being compiled. Such an operation has no counterpart in that
+/// program, so it must not be described to the user.
+/// Returns false if not a data clause operation or if it is a data clause
+/// operation without the synthetic flag.
+bool getSyntheticFlag(mlir::Operation *accDataClauseOp);
 
 /// Used to get an immutable range iterating over the data operands.
 mlir::ValueRange getDataOperands(mlir::Operation *accOp);
@@ -189,17 +205,38 @@ static constexpr StringLiteral getSpecializedRoutineAttrName() {
 /// Used to check whether the current operation is marked with
 /// `acc routine`. The operation passed in should be a function.
 inline bool isAccRoutine(mlir::Operation *op) {
-  return op && op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+  return op && op->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName());
 }
 
 /// Used to check whether this is a specialized accelerator version of
 /// `acc routine` function.
 inline bool isSpecializedAccRoutine(mlir::Operation *op) {
-  return op && op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+  return op &&
+         op->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName());
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
   return StringLiteral("acc.from_default");
+}
+
+/// Name for a unit attribute on a data entry operation stating that nothing in
+/// the region reads the descriptor its variable is reached through, so the
+/// mapping supplies the bounds but needs no device copy of the descriptor.
+static constexpr StringLiteral getNoDeviceDescriptorAttrName() {
+  return StringLiteral("acc.no_device_descriptor");
+}
+
+/// Name for an attribute attached to a loop indicating the number of loops
+/// collapsed to create that loop
+static constexpr StringLiteral getCollapseCountAttrName() {
+  return StringLiteral("acc.collapse_count");
+}
+
+/// Name for a unit attribute attached to the region an unstructured
+/// independent loop was converted to, recording that the loop could not be
+/// represented as a structured loop and is therefore not parallelized.
+static constexpr StringLiteral getUnstructuredIndependentLoopAttrName() {
+  return StringLiteral("acc.unstructured_independent_loop");
 }
 
 static constexpr StringLiteral getVarNameAttrName() {
@@ -227,6 +264,32 @@ struct CurrentDeviceIdResource
   mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
   bool isAddressable() const override { return false; }
 };
+
+template <typename ComputeOpT>
+bool isGangWorkerVectorAllOne(ComputeOpT op) {
+  // Strip index_cast operations from a value before checking for a constant.
+  auto stripIndexCasts = [](Value val) -> Value {
+    while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
+      val = castOp.getIn();
+    return val;
+  };
+
+  auto numGangs = op.getNumGangsValues();
+  if (numGangs.empty())
+    return false;
+  for (Value gangSize : numGangs) {
+    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
+      return false;
+  }
+  Value numWorkers = op.getNumWorkersValue();
+  if (!numWorkers)
+    return false;
+  Value vectorLength = op.getVectorLengthValue();
+  if (!vectorLength)
+    return false;
+  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
+         isConstantIntValue(stripIndexCasts(vectorLength), 1);
+}
 
 } // namespace acc
 } // namespace mlir

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang-rt/runtime/type-info.h"
+#include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
@@ -37,11 +38,11 @@ RT_API_ATTRS std::size_t Component::GetElementByteSize(
   switch (category()) {
   case TypeCategory::Integer:
   case TypeCategory::Unsigned:
-  case TypeCategory::Real:
   case TypeCategory::Logical:
     return kind_;
+  case TypeCategory::Real:
   case TypeCategory::Complex:
-    return 2 * kind_;
+    return Descriptor::BytesFor(category(), kind_);
   case TypeCategory::Character:
     if (auto value{characterLen_.GetValue(&instance)}) {
       return kind_ * *value;

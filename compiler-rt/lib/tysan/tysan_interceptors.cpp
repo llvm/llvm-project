@@ -22,12 +22,50 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
-#if SANITIZER_LINUX
+#if !SANITIZER_APPLE
+#define TYSAN_INTERCEPT_FUNC(name)                                             \
+  do {                                                                         \
+    if (!INTERCEPT_FUNCTION(name))                                             \
+      VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
+  } while (0)
+#else // Apple interceptors don't need to be initialized with
+      // INTERCEPT_FUNCTION.
+#define TYSAN_INTERCEPT_FUNC(name)
+#endif
+
+#if SANITIZER_GLIBC
 extern "C" int mallopt(int param, int value);
 #endif
 
 using namespace __sanitizer;
 using namespace __tysan;
+
+namespace __tysan {
+// Defined in tysan.cpp
+void OnStackUnwind(const SignalContext &sig, const void *,
+                   BufferedStackTrace *stack);
+
+static void TysanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+
+void InitializeDeadlySignals();
+} // namespace __tysan
+
+#define SIGNAL_INTERCEPTOR_ENTER() __tysan::InitializeDeadlySignals()
+#define COMMON_INTERCEPT_FUNCTION(name) TYSAN_INTERCEPT_FUNC(name)
+#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+
+namespace __tysan {
+void InitializeDeadlySignals() {
+  static bool tysanSignalsInitialized = false;
+  if (tysanSignalsInitialized)
+    return;
+  InitializeSignalInterceptors();
+  InstallDeadlySignalHandlers(&TysanOnDeadlySignal);
+  tysanSignalsInitialized = true;
+}
+} // namespace __tysan
 
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
@@ -40,7 +78,7 @@ INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
     return internal_memset(dst, v, size);
 
   void *res = REAL(memset)(dst, v, size);
-  tysan_set_type_unknown(dst, size);
+  __tysan_set_type_unknown(dst, size);
   return res;
 }
 
@@ -53,23 +91,11 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
   return res;
 }
 
-INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
-  if (!tysan_inited && REAL(memcpy) == nullptr) {
-    // memmove is used here because on some platforms this will also
-    // intercept the memmove implementation.
-    return internal_memmove(dst, src, size);
-  }
-
-  void *res = REAL(memcpy)(dst, src, size);
-  tysan_copy_types(dst, src, size);
-  return res;
-}
-
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF_T offset) {
   void *res = REAL(mmap)(addr, length, prot, flags, fd, offset);
   if (res != (void *)-1)
-    tysan_set_type_unknown(res, RoundUpTo(length, GetPageSize()));
+    __tysan_set_type_unknown(res, RoundUpTo(length, GetPageSize()));
   return res;
 }
 
@@ -78,7 +104,7 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF64_T offset) {
   void *res = REAL(mmap64)(addr, length, prot, flags, fd, offset);
   if (res != (void *)-1)
-    tysan_set_type_unknown(res, RoundUpTo(length, GetPageSize()));
+    __tysan_set_type_unknown(res, RoundUpTo(length, GetPageSize()));
   return res;
 }
 #endif
@@ -104,7 +130,7 @@ INTERCEPTOR(void *, malloc, uptr size) {
     return DlsymAlloc::Allocate(size);
   void *res = REAL(malloc)(size);
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 
@@ -123,7 +149,7 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
   // We might want to copy the types from the original allocation (although
   // that would require that we knew its size).
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 
@@ -132,7 +158,7 @@ INTERCEPTOR(void *, calloc, uptr nmemb, uptr size) {
     return DlsymAlloc::Callocate(nmemb, size);
   void *res = REAL(calloc)(nmemb, size);
   if (res)
-    tysan_set_type_unknown(res, nmemb * size);
+    __tysan_set_type_unknown(res, nmemb * size);
   return res;
 }
 
@@ -145,7 +171,7 @@ INTERCEPTOR(void, free, void *ptr) {
 INTERCEPTOR(void *, valloc, uptr size) {
   void *res = REAL(valloc)(size);
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 
@@ -153,7 +179,7 @@ INTERCEPTOR(void *, valloc, uptr size) {
 INTERCEPTOR(void *, memalign, uptr alignment, uptr size) {
   void *res = REAL(memalign)(alignment, size);
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 #define TYSAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
@@ -165,7 +191,7 @@ INTERCEPTOR(void *, memalign, uptr alignment, uptr size) {
 INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
   void *res = REAL(__libc_memalign)(alignment, size);
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 #define TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN                                  \
@@ -178,7 +204,7 @@ INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
 INTERCEPTOR(void *, pvalloc, uptr size) {
   void *res = REAL(pvalloc)(size);
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 #define TYSAN_MAYBE_INTERCEPT_PVALLOC INTERCEPT_FUNCTION(pvalloc)
@@ -190,7 +216,7 @@ INTERCEPTOR(void *, pvalloc, uptr size) {
 INTERCEPTOR(void *, aligned_alloc, uptr alignment, uptr size) {
   void *res = REAL(aligned_alloc)(alignment, size);
   if (res)
-    tysan_set_type_unknown(res, size);
+    __tysan_set_type_unknown(res, size);
   return res;
 }
 #define TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
@@ -201,7 +227,7 @@ INTERCEPTOR(void *, aligned_alloc, uptr alignment, uptr size) {
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   int res = REAL(posix_memalign)(memptr, alignment, size);
   if (res == 0 && *memptr)
-    tysan_set_type_unknown(*memptr, size);
+    __tysan_set_type_unknown(*memptr, size);
   return res;
 }
 
@@ -211,7 +237,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
   // Instruct libc malloc to consume less memory.
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
   mallopt(1, 0);          // M_MXFAST
   mallopt(-3, 32 * 1024); // M_MMAP_THRESHOLD
 #endif
@@ -233,12 +259,11 @@ void InitializeInterceptors() {
   TYSAN_MAYBE_INTERCEPT_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN;
   TYSAN_MAYBE_INTERCEPT_PVALLOC;
-  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
+  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC;
   INTERCEPT_FUNCTION(posix_memalign);
 
   INTERCEPT_FUNCTION(memset);
   INTERCEPT_FUNCTION(memmove);
-  INTERCEPT_FUNCTION(memcpy);
 
   inited = 1;
 }

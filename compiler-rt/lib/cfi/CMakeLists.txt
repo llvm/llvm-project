@@ -43,4 +43,4 @@ if(OS_NAME MATCHES "Linux" OR OS_NAME MATCHES "FreeBSD" OR OS_NAME MATCHES "NetB
   endforeach()
 endif()
 
-add_compiler_rt_resource_file(cfi_ignorelist cfi_ignorelist.txt cfi)
+add_sanitizer_ignorelists_dependency(cfi)

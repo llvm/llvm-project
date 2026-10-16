@@ -1,0 +1,4 @@
+14:c:@S@foo@value cxxdefaultinitexpr-import.cpp.ast
+35:c:@S@QDomElementPrivate@F@importee# cxxdefaultinitexpr-import.cpp.ast
+45:c:@S@QDomElementPrivate@F@QDomElementPrivate# cxxdefaultinitexpr-import.cpp.ast
+39:c:@S@QDomNodePrivate@F@QDomNodePrivate# cxxdefaultinitexpr-import.cpp.ast

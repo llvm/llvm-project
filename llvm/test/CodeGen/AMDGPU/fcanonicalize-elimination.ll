@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgpu8.01 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgpu8.01 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgpu9.00 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgpu9.00 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
 
 ; GCN-LABEL: {{^}}test_no_fold_canonicalize_loaded_value_f32:
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
@@ -446,7 +446,7 @@ define amdgpu_kernel void @test_fold_canonicalize_cos_value_f16(ptr addrspace(1)
 define amdgpu_kernel void @test_fold_canonicalize_qNaN_value_f32(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
-  %canonicalized = tail call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %canonicalized = tail call float @llvm.canonicalize.f32(float +qnan)
   store float %canonicalized, ptr addrspace(1) %gep, align 4
   ret void
 }
@@ -500,7 +500,7 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(ptr addrspace
 ; FIXME: Should there be more checks here? minnum with sNaN operand is simplified to qNaN.
 
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
-; GCN: v_mov_b32_e32 v{{.+}}, 0x7fc00000
+; GCN: v_mov_b32_e32 v{{.+}}, 0x7fc00001
 define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
@@ -912,10 +912,6 @@ define float @v_test_canonicalize_maximumnum(float %a, float %b) {
   %canonicalized = call float @llvm.canonicalize.f32(float %min)
   ret float %canonicalized
 }
-
-; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
-; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
-; GCN: .amd_amdgpu_isa
 
 declare float @llvm.canonicalize.f32(float) #0
 declare float @llvm.copysign.f32(float, float) #0

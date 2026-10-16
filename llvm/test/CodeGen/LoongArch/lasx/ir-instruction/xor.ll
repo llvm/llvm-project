@@ -124,3 +124,33 @@ entry:
   store <4 x i64> %v1, ptr %res
   ret void
 }
+
+define <16 x i16> @xor_u_v16i16_1(<16 x i16> %a) nounwind {
+; CHECK-LABEL: xor_u_v16i16_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <16 x i16> %a, splat (i16 257)
+  ret <16 x i16> %0
+}
+
+define <8 x i32> @xor_u_v8i32_1(<8 x i32> %a) nounwind {
+; CHECK-LABEL: xor_u_v8i32_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <8 x i32> %a, splat (i32 16843009)
+  ret <8 x i32> %0
+}
+
+define <4 x i64> @xor_u_v4i64_1(<4 x i64> %a) nounwind {
+; CHECK-LABEL: xor_u_v4i64_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = xor <4 x i64> %a, splat (i64 72340172838076673)
+  ret <4 x i64> %0
+}

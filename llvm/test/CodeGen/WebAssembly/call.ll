@@ -4,6 +4,11 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,FAST-TAIL %s
 
 ; Test that basic call operations assemble as expected.
+;
+; NOTE: Any additions/changes made to this file should be also made to
+; `call-wasm64.ll` if the IR or codegen differs between Wasm32 and Wasm64
+; (namely anything using `ptr` or indirect calls).
+
 
 target triple = "wasm32-unknown-unknown"
 

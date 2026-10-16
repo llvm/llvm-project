@@ -26,7 +26,6 @@
 #include <__ranges/dangling.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -71,15 +70,14 @@ struct __unique_copy {
              (forward_iterator<_InIter> ||
               (input_iterator<_OutIter> && same_as<iter_value_t<_InIter>, iter_value_t<_OutIter>>) ||
               indirectly_copyable_storable<_InIter, _OutIter>)
-  _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<_InIter, _OutIter>
+  constexpr unique_copy_result<_InIter, _OutIter>
   operator()(_InIter __first, _Sent __last, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret = std::__unique_copy<_RangeAlgPolicy>(
+    return std::__unique_copy<_RangeAlgPolicy>(
         std::move(__first),
         std::move(__last),
         std::move(__result),
         std::__make_projected(__comp, __proj),
         __algo_tag_t<_InIter, _OutIter>());
-    return {std::move(__ret.first), std::move(__ret.second)};
   }
 
   template <input_range _Range,
@@ -90,15 +88,14 @@ struct __unique_copy {
              (forward_iterator<iterator_t<_Range>> ||
               (input_iterator<_OutIter> && same_as<range_value_t<_Range>, iter_value_t<_OutIter>>) ||
               indirectly_copyable_storable<iterator_t<_Range>, _OutIter>)
-  _LIBCPP_HIDE_FROM_ABI constexpr unique_copy_result<borrowed_iterator_t<_Range>, _OutIter>
+  constexpr unique_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret = std::__unique_copy<_RangeAlgPolicy>(
+    return std::__unique_copy<_RangeAlgPolicy>(
         ranges::begin(__range),
         ranges::end(__range),
         std::move(__result),
         std::__make_projected(__comp, __proj),
         __algo_tag_t<iterator_t<_Range>, _OutIter>());
-    return {std::move(__ret.first), std::move(__ret.second)};
   }
 };
 

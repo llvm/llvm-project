@@ -12,7 +12,6 @@
 #include "char-block.h"
 #include "characters.h"
 #include <functional>
-#include <iosfwd>
 
 namespace llvm {
 class raw_ostream;

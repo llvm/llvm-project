@@ -6,11 +6,11 @@ define <vscale x 1 x i1> @test_vp_reverse_nxv1i1_masked(<vscale x 1 x i1> %src, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
@@ -23,13 +23,13 @@ define <vscale x 1 x i1> @test_vp_reverse_nxv1i1_masked(<vscale x 1 x i1> %src, 
 define <vscale x 1 x i1> @test_vp_reverse_nxv1i1(<vscale x 1 x i1> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    vrsub.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v10, v9, v8
@@ -45,11 +45,11 @@ define <vscale x 2 x i1> @test_vp_reverse_nxv2i1_masked(<vscale x 2 x i1> %src, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
@@ -62,13 +62,13 @@ define <vscale x 2 x i1> @test_vp_reverse_nxv2i1_masked(<vscale x 2 x i1> %src, 
 define <vscale x 2 x i1> @test_vp_reverse_nxv2i1(<vscale x 2 x i1> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    vrsub.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v10, v9, v8
@@ -84,11 +84,11 @@ define <vscale x 4 x i1> @test_vp_reverse_nxv4i1_masked(<vscale x 4 x i1> %src, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
@@ -101,13 +101,13 @@ define <vscale x 4 x i1> @test_vp_reverse_nxv4i1_masked(<vscale x 4 x i1> %src, 
 define <vscale x 4 x i1> @test_vp_reverse_nxv4i1(<vscale x 4 x i1> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a1
+; CHECK-NEXT:    vrsub.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v10, v9, v8
@@ -123,11 +123,11 @@ define <vscale x 8 x i1> @test_vp_reverse_nxv8i1_masked(<vscale x 8 x i1> %src, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v9, v10, v0.t
@@ -140,14 +140,12 @@ define <vscale x 8 x i1> @test_vp_reverse_nxv8i1_masked(<vscale x 8 x i1> %src, 
 define <vscale x 8 x i1> @test_vp_reverse_nxv8i1(<vscale x 8 x i1> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v11, v10, v8
 ; CHECK-NEXT:    vmsne.vi v0, v11, 0
@@ -162,11 +160,11 @@ define <vscale x 16 x i1> @test_vp_reverse_nxv16i1_masked(<vscale x 16 x i1> %sr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vid.v v12, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v12, v12, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v16, v10, v12, v0.t
@@ -180,14 +178,12 @@ define <vscale x 16 x i1> @test_vp_reverse_nxv16i1_masked(<vscale x 16 x i1> %sr
 define <vscale x 16 x i1> @test_vp_reverse_nxv16i1(<vscale x 16 x i1> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v14, v12, v8
 ; CHECK-NEXT:    vmsne.vi v0, v14, 0
@@ -202,11 +198,11 @@ define <vscale x 32 x i1> @test_vp_reverse_nxv32i1_masked(<vscale x 32 x i1> %sr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vid.v v16, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v24, v12, v16, v0.t
@@ -220,14 +216,12 @@ define <vscale x 32 x i1> @test_vp_reverse_nxv32i1_masked(<vscale x 32 x i1> %sr
 define <vscale x 32 x i1> @test_vp_reverse_nxv32i1(<vscale x 32 x i1> %src, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vrsub.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vrsub.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    vrgatherei16.vv v20, v16, v8
 ; CHECK-NEXT:    vmsne.vi v0, v20, 0
@@ -242,28 +236,26 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1_masked(<vscale x 64 x i1> %sr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
+; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vrsub.vx v10, v10, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v31, v16, v10
-; CHECK-NEXT:    vrgatherei16.vv v30, v17, v10
-; CHECK-NEXT:    vrgatherei16.vv v29, v18, v10
-; CHECK-NEXT:    vrgatherei16.vv v28, v19, v10
-; CHECK-NEXT:    vrgatherei16.vv v27, v20, v10
-; CHECK-NEXT:    vrgatherei16.vv v26, v21, v10
-; CHECK-NEXT:    vrgatherei16.vv v25, v22, v10
-; CHECK-NEXT:    vrgatherei16.vv v24, v23, v10
-; CHECK-NEXT:    sub a1, a1, a0
+; CHECK-NEXT:    vrgatherei16.vv v23, v24, v10
+; CHECK-NEXT:    vrgatherei16.vv v22, v25, v10
+; CHECK-NEXT:    vrgatherei16.vv v21, v26, v10
+; CHECK-NEXT:    vrgatherei16.vv v20, v27, v10
+; CHECK-NEXT:    vrgatherei16.vv v19, v28, v10
+; CHECK-NEXT:    vrgatherei16.vv v18, v29, v10
+; CHECK-NEXT:    vrgatherei16.vv v17, v30, v10
+; CHECK-NEXT:    vrgatherei16.vv v16, v31, v10
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v24, a1, v0.t
+; CHECK-NEXT:    vslidedown.vx v16, v16, a1, v0.t
 ; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
@@ -276,31 +268,95 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1(<vscale x 64 x i1> %src, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v16, v8, 1, v0
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v16
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    addi a2, a1, -1
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vx v24, v16, a2
+; CHECK-NEXT:    vrsub.vx v24, v8, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v23, v8, v24
-; CHECK-NEXT:    vrgatherei16.vv v22, v9, v24
-; CHECK-NEXT:    vrgatherei16.vv v21, v10, v24
-; CHECK-NEXT:    vrgatherei16.vv v20, v11, v24
-; CHECK-NEXT:    vrgatherei16.vv v19, v12, v24
-; CHECK-NEXT:    vrgatherei16.vv v18, v13, v24
-; CHECK-NEXT:    vrgatherei16.vv v17, v14, v24
-; CHECK-NEXT:    vrgatherei16.vv v16, v15, v24
+; CHECK-NEXT:    vrgatherei16.vv v15, v16, v24
+; CHECK-NEXT:    vrgatherei16.vv v14, v17, v24
+; CHECK-NEXT:    vrgatherei16.vv v13, v18, v24
+; CHECK-NEXT:    vrgatherei16.vv v12, v19, v24
+; CHECK-NEXT:    vrgatherei16.vv v11, v20, v24
+; CHECK-NEXT:    vrgatherei16.vv v10, v21, v24
+; CHECK-NEXT:    vrgatherei16.vv v9, v22, v24
+; CHECK-NEXT:    vrgatherei16.vv v8, v23, v24
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v16, a1
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
 
   %dst = call <vscale x 64 x i1> @llvm.experimental.vp.reverse.nxv64i1(<vscale x 64 x i1> %src, <vscale x 64 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 64 x i1> %dst
+}
+
+; nxv128i1 is split via the generic SplitVecRes_VP_REVERSE stack round-trip.
+; The i1 elements must be widened to a byte type so the strided store uses a
+; per-element stride, not stride 0 (which aliases every lane to one slot).
+define <vscale x 128 x i1> @test_vp_reverse_nxv128i1(<vscale x 128 x i1> %src, i32 zeroext %evl) {
+; CHECK-LABEL: test_vp_reverse_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    bltu a0, a2, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 4
+; CHECK-NEXT:    sub sp, sp, a3
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    addi a3, sp, 64
+; CHECK-NEXT:    add a4, a0, a3
+; CHECK-NEXT:    li a5, -1
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vsse8.v v24, (a4), a5
+; CHECK-NEXT:    sub a6, a0, a2
+; CHECK-NEXT:    sltu a0, a0, a6
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a6
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    sub a4, a4, a1
+; CHECK-NEXT:    vsse8.v v8, (a4), a5
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    vle8.v v8, (a2)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vand.vi v16, v8, 1
+; CHECK-NEXT:    vmsne.vi v8, v16, 0
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v16, (a3)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vand.vi v16, v16, 1
+; CHECK-NEXT:    vmsne.vi v0, v16, 0
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %dst = call <vscale x 128 x i1> @llvm.experimental.vp.reverse.nxv128i1(<vscale x 128 x i1> %src, <vscale x 128 x i1> splat (i1 1), i32 %evl)
+  ret <vscale x 128 x i1> %dst
 }
 

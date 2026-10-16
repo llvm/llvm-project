@@ -89,4 +89,4 @@ mov %edx, %eax
 # CHECK-NEXT: 2.     3     1.7    0.0    0.7       movl	%ebx, %ecx
 # CHECK-NEXT: 3.     3     2.3    0.0    0.0       movl	%ecx, %edx
 # CHECK-NEXT: 4.     3     3.0    0.0    0.0       movl	%edx, %eax
-# CHECK-NEXT:        3     1.6    0.2    0.9       <total>
+# CHECK-NEXT:        15    1.6    0.2    0.9       <total>

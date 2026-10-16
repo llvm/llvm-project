@@ -24,4 +24,4 @@ LIBC_INLINE bfloat16 fmabf16(bfloat16 x, bfloat16 y, bfloat16 z) {
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_FMAXBF16_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_FMABF16_H

@@ -279,8 +279,8 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
 
 // FP immediate patterns.
-def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
-def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isPosZero();}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isNegZero();}]>;
 def fpimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.5);}]>;
 def fpnegimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.5);}]>;
 
@@ -318,14 +318,14 @@ def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
                     (ANDrr (SRAXri $rhs, 63), $lhs)))>;
 
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
-def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
+def : Pat<(i64 (ctlz_zero_poison i64:$src)), (LZCNT $src)>;
 // 32-bit LZCNT.
 // The zero extension will leave us with 32 extra leading zeros,
 // so we need to compensate for it.
 // FIXME remove this when the codegen supports using 64-bit values directly
 // in V8+ mode.
 def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
-def : Pat<(i32 (ctlz_zero_undef i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+def : Pat<(i32 (ctlz_zero_poison i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
 
 def : Pat<(i32 (bitconvert f32:$src)), (MOVSTOUW $src)>;
 def : Pat<(i64 (zanyext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;

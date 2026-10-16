@@ -42,6 +42,7 @@ public:
 };
 
 template <typename T> char InstructionError<T>::ID;
+extern template class LLVM_TEMPLATE_ABI InstructionError<MCInst>;
 
 /// This class represents the number of cycles per resource (fractions of
 /// cycles).  That quantity is managed here as a ratio, and accessed via the
@@ -95,6 +96,11 @@ public:
 /// problems with simple bit manipulation operations.
 LLVM_ABI void computeProcResourceMasks(const MCSchedModel &SM,
                                        MutableArrayRef<uint64_t> Masks);
+
+#ifndef NDEBUG
+LLVM_ABI void dumpProcResourceMasks(const MCSchedModel &SM,
+                                    ArrayRef<uint64_t> Masks);
+#endif
 
 // Returns the index of the highest bit set. For resource masks, the position of
 // the highest bit set can be used to construct a resource mask identifier.

@@ -54,7 +54,7 @@ body:             |
     ; RV64I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV64I-NEXT: $x10 = COPY [[AND8]](s64)
     ; RV64I-NEXT: $x11 = COPY [[C1]](s64)
-    ; RV64I-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; RV64I-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV64I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[AND9:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C3]]
@@ -90,7 +90,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C3]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C3]]
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG1]], [[C1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SUB1]](s64)
@@ -186,7 +186,7 @@ body:             |
     ; RV64ZBB-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
     ; RV64ZBB-NEXT: [[CLZW:%[0-9]+]]:_(s64) = G_CLZW [[AND]]
     ; RV64ZBB-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[CLZW]], [[C3]]
+    ; RV64ZBB-NEXT: [[SUB:%[0-9]+]]:_(s64) = nuw G_SUB [[CLZW]], [[C3]]
     ; RV64ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[SUB]], 32
     ; RV64ZBB-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[SEXT_INREG1]], [[C1]]
     ; RV64ZBB-NEXT: $x10 = COPY [[SUB1]](s64)
@@ -257,7 +257,7 @@ body:             |
     ; RV64I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; RV64I-NEXT: $x10 = COPY [[AND10]](s64)
     ; RV64I-NEXT: $x11 = COPY [[C10]](s64)
-    ; RV64I-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; RV64I-NEXT: PseudoCALL target-flags(riscv-call) &__muldi3, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; RV64I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64I-NEXT: [[AND11:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C2]]

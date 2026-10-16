@@ -40,6 +40,11 @@ Options
    members, such as ``gcc -Wsuggest-override``/``gcc -Werror=suggest-override``.
    Default is `false`.
 
+.. option:: AllowVirtualAndOverride
+
+   If set to `true`, this check will not diagnose ``virtual`` as redundant
+   with ``override``. Default is `false`.
+
 .. option:: OverrideSpelling
 
    Specifies a macro to use instead of ``override``. This is useful when

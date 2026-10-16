@@ -8,7 +8,7 @@ define void @no_propagate_range_metadata(ptr readonly %first.coerce, ptr readnon
 for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
+for.body:
   %result.addr.05 = phi ptr [ %incdec.ptr, %for.body ], [ %result, %for.body.preheader ]
   %first.sroa.0.04 = phi ptr [ %incdec.ptr.i.i.i, %for.body ], [ %first.coerce, %for.body.preheader ]
   %0 = load i8, ptr %first.sroa.0.04, align 1, !range !0
@@ -18,7 +18,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %lnot.i = icmp eq ptr %incdec.ptr.i.i.i, %last.coerce
   br i1 %lnot.i, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   ret void
 }
 

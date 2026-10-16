@@ -8,7 +8,7 @@
 // CHECK:       [[CONST2:%.+]] = arith.constant 2 : index
 // CHECK:       [[CST:%.+]] = arith.constant 3.000000e+00 : f32
 // CHECK:       [[DUMMY:%[0-9]+]] = fir.dummy_scope : !fir.dscope
-// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] uniq_name("x") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK:       [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:       [[BOXADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK:       [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
@@ -28,7 +28,7 @@ func.func @store_dynamic_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name =
   %c2 = arith.constant 2 : index
   %cst = arith.constant 3.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("x") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %2 = fir.rebox %1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
   %3 = fir.array_coor %2 %c2 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   fir.store %cst to %3 : !fir.ref<f32>
@@ -43,7 +43,7 @@ func.func @store_dynamic_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name =
 // CHECK:       [[CONST2:%.+]] = arith.constant 2 : index
 // CHECK:       [[CST:%.+]] = arith.constant 3.000000e+00 : f32
 // CHECK:       [[DUMMY:%[0-9]+]] = fir.dummy_scope : !fir.dscope
-// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] uniq_name("x") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:       [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:       [[BOXADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 // CHECK:       [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x?xf32>>) -> memref<?x?xf32>
@@ -70,7 +70,7 @@ func.func @store_dynamic_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name
   %c2 = arith.constant 2 : index
   %cst = arith.constant 3.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("x") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
   %2 = fir.rebox %1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
   %3 = fir.array_coor %2 %c2, %c2 : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
   fir.store %cst to %3 : !fir.ref<f32>
@@ -86,7 +86,7 @@ func.func @store_dynamic_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name
 // CHECK:       [[CONST2:%.+]] = arith.constant 2 : index
 // CHECK:       [[CST:%.+]] = arith.constant 3.000000e+00 : f32
 // CHECK:       [[DUMMY:%[0-9]+]] = fir.dummy_scope : !fir.dscope
-// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0 dummy_scope [[DUMMY]] uniq_name("x") : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:       [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:       [[BOXADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.ref<!fir.array<?x?x?xf32>>
 // CHECK:       [[CONVERT:%[0-9]+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?x?x?xf32>>) -> memref<?x?x?xf32>
@@ -121,7 +121,7 @@ func.func @store_dynamic_3d(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_na
   %c2 = arith.constant 2 : index
   %cst = arith.constant 3.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "x"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("x") : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
   %2 = fir.rebox %1 : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
   %3 = fir.array_coor %2 %c2, %c2, %c3 : (!fir.box<!fir.array<?x?x?xf32>>, index, index, index) -> !fir.ref<f32>
   fir.store %cst to %3 : !fir.ref<f32>

@@ -52,6 +52,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
@@ -62,10 +63,13 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 
 #define DEBUG_TYPE "acc-declare-action-conversion"
 
@@ -81,10 +85,52 @@ using namespace mlir;
 namespace {
 
 // Fortran runtime symbol names for pointer allocate/deallocate.
-static constexpr llvm::StringRef pointerAllocateName =
+static constexpr llvm::StringLiteral pointerAllocateName =
     RTNAME_STRING(PointerAllocate);
-static constexpr llvm::StringRef pointerDeallocateName =
+static constexpr llvm::StringLiteral pointerAllocateSourceName =
+    RTNAME_STRING(PointerAllocateSource);
+static constexpr llvm::StringLiteral pointerDeallocateName =
     RTNAME_STRING(PointerDeallocate);
+static constexpr llvm::StringLiteral pointerDeallocatePolymorphicName =
+    RTNAME_STRING(PointerDeallocatePolymorphic);
+static constexpr llvm::StringLiteral allocatableAllocateName =
+    RTNAME_STRING(AllocatableAllocate);
+static constexpr llvm::StringLiteral allocatableAllocateSourceName =
+    RTNAME_STRING(AllocatableAllocateSource);
+static constexpr llvm::StringLiteral allocatableDeallocateName =
+    RTNAME_STRING(AllocatableDeallocate);
+static constexpr llvm::StringLiteral allocatableDeallocatePolymorphicName =
+    RTNAME_STRING(AllocatableDeallocatePolymorphic);
+
+static bool isSupportedDeclareActionRuntime(llvm::StringRef funcName) {
+  return llvm::StringSwitch<bool>(funcName)
+      .Case(pointerAllocateName, true)
+      .Case(pointerAllocateSourceName, true)
+      .Case(pointerDeallocateName, true)
+      .Case(pointerDeallocatePolymorphicName, true)
+      .Case(allocatableAllocateName, true)
+      .Case(allocatableAllocateSourceName, true)
+      .Case(allocatableDeallocateName, true)
+      .Case(allocatableDeallocatePolymorphicName, true)
+      .Default(false);
+}
+
+/// Returns whether \p op is the recipe that \p declareAction names, which a
+/// recipe states about itself by naming itself in the slot of the action it
+/// carries out.
+static bool namesItself(Operation *op, acc::DeclareActionAttr declareAction) {
+  auto symbol = dyn_cast<SymbolOpInterface>(op);
+  if (!symbol)
+    return false;
+
+  StringAttr name = symbol.getNameAttr();
+  for (SymbolRefAttr action :
+       {declareAction.getPreAlloc(), declareAction.getPostAlloc(),
+        declareAction.getPreDealloc(), declareAction.getPostDealloc()})
+    if (action && action.getLeafReference() == name)
+      return true;
+  return false;
+}
 
 class ACCDeclareActionConversion
     : public fir::acc::impl::ACCDeclareActionConversionBase<
@@ -102,6 +148,12 @@ public:
       auto declareAction = op->getAttrOfType<acc::DeclareActionAttr>(
           acc::getDeclareActionAttrName());
       if (!declareAction)
+        return;
+
+      // A recipe names itself in the slot of the action it carries out, which
+      // states what the recipe does rather than asking for a call of it. Only
+      // the operations that allocate or deallocate the object do that.
+      if (namesItself(op, declareAction))
         return;
 
       LLVM_DEBUG(llvm::dbgs() << "Found " << acc::getDeclareActionAttrName()
@@ -124,10 +176,18 @@ public:
           if (!funcDef)
             continue;
 
+          // The recipe names itself in the slot of the action it performs, so
+          // that the action can be told from the attribute alone.
           if (auto funcOp = dyn_cast<func::FuncOp>(funcDef))
             if (!funcOp->hasAttr(mlir::acc::getDeclareActionAttrName()))
-              funcOp->setAttr(mlir::acc::getDeclareActionAttrName(),
-                              mlir::UnitAttr::get(funcOp.getContext()));
+              funcOp->setAttr(
+                  mlir::acc::getDeclareActionAttrName(),
+                  mlir::acc::DeclareActionAttr::get(
+                      funcOp.getContext(),
+                      action == preAlloc ? action : mlir::SymbolRefAttr{},
+                      action == postAlloc ? action : mlir::SymbolRefAttr{},
+                      action == preDealloc ? action : mlir::SymbolRefAttr{},
+                      action == postDealloc ? action : mlir::SymbolRefAttr{}));
 
           if (action == declareAction.getPreAlloc() ||
               action == declareAction.getPreDealloc())
@@ -148,20 +208,27 @@ public:
                         [&](auto store) { return store.getMemref(); })
                     .Case<fir::BoxAddrOp>(
                         [&](auto boxAddr) { return boxAddr.getVal(); })
+                    .Case<cuf::AllocateOp>(
+                        [&](auto allocate) { return allocate.getBox(); })
+                    .Case<cuf::DeallocateOp>(
+                        [&](auto deallocate) { return deallocate.getBox(); })
                     .Case<fir::CallOp>([&](fir::CallOp call) -> Value {
                       if (auto callee = call.getCalleeAttr()) {
                         StringRef funcName =
                             callee.getLeafReference().getValue();
-                        if (funcName == pointerAllocateName ||
-                            funcName == pointerDeallocateName) {
-                          auto args = call.getArgs();
-                          if (args.empty())
-                            return {};
-                          Value boxRef = args[0];
-                          if (!fir::isBoxAddress(boxRef.getType()))
-                            return {};
-                          return boxRef;
-                        }
+                        const bool isSupported =
+                            isSupportedDeclareActionRuntime(funcName);
+                        assert(isSupported && "unexpected fir.call callee for "
+                                              "acc.declare_action");
+                        if (!isSupported)
+                          return {};
+                        auto args = call.getArgs();
+                        if (args.empty())
+                          return {};
+                        Value boxRef = args[0];
+                        if (!fir::isBoxAddress(boxRef.getType()))
+                          return {};
+                        return boxRef;
                       }
                       return {};
                     })

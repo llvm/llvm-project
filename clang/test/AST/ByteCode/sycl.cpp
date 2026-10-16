@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++17 -triple x86_64-linux-gnu -fsycl-is-device -verify=both,ref -fsyntax-only -Wno-unused
-// RUN: %clang_cc1 %s -std=c++17 -triple x86_64-linux-gnu -fsycl-is-device -verify=both,expected -fsyntax-only -Wno-unused -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device -verify=both,ref -fsyntax-only -Wno-unused
+// RUN: %clang_cc1 %s -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device -verify=both,expected -fsyntax-only -Wno-unused -fexperimental-new-constant-interpreter
 
 // both-no-diagnostics
 

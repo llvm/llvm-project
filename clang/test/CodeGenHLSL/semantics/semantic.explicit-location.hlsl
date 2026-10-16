@@ -5,11 +5,12 @@
 
 // CHECK: define void @main() {{.*}} {
 [[vk::location(2)]] float4 main(float4 p : SV_Position) : SV_Target {
-  // CHECK-SPIRV: %[[#R:]] = call spir_func <4 x float> @_Z4mainDv4_f(<4 x float> %[[#]])
-  // CHECK-SPIRV:            store <4 x float> %[[#R]], ptr addrspace(8) @SV_Target0, align 16
+  // CHECK-SPIRV: %[[RESULT:.*]] = call spir_func <4 x float> @_Z4mainDv4_f(<4 x float> %{{.*}})
+  // CHECK-SPIRV:                 store <4 x float> %[[RESULT]], ptr addrspace(8) @SV_Target0, align 4
 
-  // CHECK-DXIL:    %[[#TMP:]] = call <4 x float> @_Z4mainDv4_f(<4 x float> %SV_Position0)
-  // CHECK-DXIL:                 call void @llvm.dx.store.output.v4f32(i32 4, i32 0, i32 0, i8 0, i32 poison, <4 x float> %[[#TMP]])
+  // CHECK-DXIL: %[[INPUT:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 0, i32 0, i8 0, i32 poison)
+  // CHECK-DXIL: %[[RESULT:.*]] = call <4 x float> @_Z4mainDv4_f(<4 x float> %[[INPUT]])
+  // CHECK-DXIL:                 call void @llvm.dx.store.output.v4f32(i32 0, i32 0, i8 0, <4 x float> %[[RESULT]])
   return p;
 }
 

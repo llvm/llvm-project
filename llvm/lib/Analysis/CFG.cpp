@@ -178,10 +178,10 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
-  SmallPtrSet<const Cycle *, 8> CyclesWithHoles;
+  DenseSet<CycleRef> CyclesWithHoles;
   if (CI && ExclusionSet) {
     for (auto *BB : *ExclusionSet) {
-      if (const Cycle *C = CI->getTopLevelParentCycle(BB))
+      if (CycleRef C = CI->getTopLevelParentCycle(BB))
         CyclesWithHoles.insert(C);
     }
   }
@@ -194,10 +194,10 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
-  SmallPtrSet<const Cycle *, 2> StopCycles;
+  DenseSet<CycleRef> StopCycles;
   if (CI) {
     for (auto *StopSetBB : StopSet) {
-      if (const Cycle *C = CI->getTopLevelParentCycle(StopSetBB))
+      if (CycleRef C = CI->getTopLevelParentCycle(StopSetBB))
         StopCycles.insert(C);
     }
   }
@@ -232,13 +232,24 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
         return true;
     }
 
-    const Cycle *OuterC = nullptr;
+    CycleRef OuterC;
     if (CI) {
       OuterC = CI->getTopLevelParentCycle(BB);
-      if (CyclesWithHoles.count(OuterC))
-        OuterC = nullptr;
-      else if (StopCycles.contains(OuterC))
-        return true;
+      if (OuterC) {
+        if (CyclesWithHoles.count(OuterC))
+          OuterC = CycleRef();
+        else if (StopCycles.contains(OuterC))
+          return true;
+      } else {
+        // If BB is not part of a cycle, then it can't reach any block that
+        // dominates it. An exception is if the block is unreachable, as all
+        // reachable blocks dominate an unreachable block.
+        if (DT && DT->isReachableFromEntry(BB) &&
+            llvm::all_of(StopSet, [&](const BasicBlock *StopBB) {
+              return DT->dominates(StopBB, BB);
+            }))
+          continue;
+      }
     }
 
     if (!--Limit) {
@@ -253,7 +264,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       // ignoring any other blocks inside the loop body.
       OuterL->getExitBlocks(Worklist);
     } else if (OuterC) {
-      OuterC->getExitBlocks(Worklist);
+      CI->getExitBlocks(OuterC, Worklist);
     } else {
       Worklist.append(succ_begin(BB), succ_end(BB));
     }
@@ -347,7 +358,7 @@ bool llvm::isPotentiallyReachable(
       // If cycle info is available, we can know for sure whether or not a
       // block is part of a cycle.
       if (CI)
-        return CI->getCycle(BB) != nullptr;
+        return CI->getCycle(BB).isValid();
 
       // If only loop info is available, even if the block is not part of a
       // natural loop, it may still be part of an irreducible cycle.

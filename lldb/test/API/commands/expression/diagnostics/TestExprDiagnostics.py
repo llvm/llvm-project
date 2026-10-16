@@ -140,7 +140,7 @@ class ExprDiagnosticsTestCase(TestBase):
             """
     1 | foo(1, 2)
       | ^~~
-note: candidate function not viable: requires single argument 'x', but 2 arguments were provided
+candidate function not viable: requires single argument 'x', but 2 arguments were provided
 """,
             value.GetError().GetCString(),
         )
@@ -200,6 +200,7 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         desc = value.GetObjectDescription()
         self.assertEqual(desc, None)
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_command_expr_sbdata(self):
         """Test the structured diagnostics data"""
         self.build()

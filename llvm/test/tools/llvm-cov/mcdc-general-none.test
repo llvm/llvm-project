@@ -15,9 +15,11 @@
 // CHECK-NEXT:  |     Condition C3 --> (12:20)
 // CHECK-NEXT:  |     Condition C4 --> (12:25)
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |  MC/DC Test Vectors:
 // CHECK-NEXT:  |
-// CHECK-NEXT:  |  None.
+// CHECK-NEXT:  |  Executed:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |     None.
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  C1-Pair: not covered
 // CHECK-NEXT:  |  C2-Pair: not covered
@@ -27,6 +29,124 @@
 // CHECK-NEXT:  |
 // CHECK-NEXT:  ------------------
 
+// RUN: llvm-cov show --show-mcdc --show-mcdc-non-executed-vectors %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=ALL
+
+//      ALL: test(bool
+
+//      ALL:  ------------------
+// ALL-NEXT:  |---> MC/DC Decision Region (12:7) to (12:27)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 4
+// ALL-NEXT:  |     Condition C1 --> (12:8)
+// ALL-NEXT:  |     Condition C2 --> (12:13)
+// ALL-NEXT:  |     Condition C3 --> (12:20)
+// ALL-NEXT:  |     Condition C4 --> (12:25)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     None.
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2, C3, C4    Result
+// ALL-NEXT:  |  1 { F,  -,  F,  -  = F      }
+// ALL-NEXT:  |  2 { T,  F,  F,  -  = F      }
+// ALL-NEXT:  |  3 { F,  -,  T,  F  = F      }
+// ALL-NEXT:  |  4 { T,  F,  T,  F  = F      }
+// ALL-NEXT:  |  5 { F,  -,  T,  T  = T      }
+// ALL-NEXT:  |  6 { T,  F,  T,  T  = T      }
+// ALL-NEXT:  |  7 { T,  T,  -,  -  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: not covered
+// ALL-NEXT:  |  C3-Pair: not covered
+// ALL-NEXT:  |  C4-Pair: not covered
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  ------------------
+
+//      ALL:  ------------------
+// ALL-NEXT:  |---> MC/DC Decision Region (15:7) to (15:13)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 2
+// ALL-NEXT:  |     Condition C1 --> (15:7)
+// ALL-NEXT:  |     Condition C2 --> (15:12)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     None.
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2    Result
+// ALL-NEXT:  |  1 { F,  -  = F      }
+// ALL-NEXT:  |  2 { T,  F  = F      }
+// ALL-NEXT:  |  3 { T,  T  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: not covered
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  |---> MC/DC Decision Region (15:19) to (15:25)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 2
+// ALL-NEXT:  |     Condition C1 --> (15:19)
+// ALL-NEXT:  |     Condition C2 --> (15:24)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     None.
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2    Result
+// ALL-NEXT:  |  1 { F,  -  = F      }
+// ALL-NEXT:  |  2 { T,  F  = F      }
+// ALL-NEXT:  |  3 { T,  T  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: not covered
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  ------------------
+
+//      ALL:  ------------------
+// ALL-NEXT:  |---> MC/DC Decision Region (18:7) to (19:15)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Number of Conditions: 4
+// ALL-NEXT:  |     Condition C1 --> (18:8)
+// ALL-NEXT:  |     Condition C2 --> (18:13)
+// ALL-NEXT:  |     Condition C3 --> (19:8)
+// ALL-NEXT:  |     Condition C4 --> (19:13)
+// ALL-NEXT:  |
+// ALL-NEXT:  |  MC/DC Test Vectors:
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     None.
+// ALL-NEXT:  |
+// ALL-NEXT:  |  Not executed:
+// ALL-NEXT:  |
+// ALL-NEXT:  |     C1, C2, C3, C4    Result
+// ALL-NEXT:  |  1 { F,  -,  -,  -  = F      }
+// ALL-NEXT:  |  2 { T,  F,  -,  -  = F      }
+// ALL-NEXT:  |  3 { T,  T,  F,  -  = F      }
+// ALL-NEXT:  |  4 { T,  T,  T,  F  = F      }
+// ALL-NEXT:  |  5 { T,  T,  T,  T  = T      }
+// ALL-NEXT:  |
+// ALL-NEXT:  |  C1-Pair: not covered
+// ALL-NEXT:  |  C2-Pair: not covered
+// ALL-NEXT:  |  C3-Pair: not covered
+// ALL-NEXT:  |  C4-Pair: not covered
+// ALL-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// ALL-NEXT:  |
+// ALL-NEXT:  ------------------
 
 // Turn off MC/DC visualization.
 // RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=NOMCDC

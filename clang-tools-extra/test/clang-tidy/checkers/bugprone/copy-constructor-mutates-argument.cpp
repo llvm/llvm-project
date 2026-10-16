@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-copy-constructor-mutates-argument %t
 
 // Example test cases from CERT rule
-// https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP58-CPP.+Copy+operations+must+not+mutate+the+source+object
+// https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/object-oriented-programming-oop/oop58-cpp/
 namespace test_mutating_noncompliant_example {
 class A {
   mutable int m;

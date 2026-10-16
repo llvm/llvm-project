@@ -86,13 +86,13 @@ protected:
 
 /// This class represents an instance of an SSA value in the MLIR system,
 /// representing a computable value that has a type and a set of users. An SSA
-/// value is either a BlockArgument or the result of an operation. Note: This
-/// class has value-type semantics and is just a simple wrapper around a
-/// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
-/// an Operation(in the case of an OpResult).
-/// As most IR constructs, this isn't const-correct, but we keep method
-/// consistent and as such method that immediately modify this Value aren't
-/// marked `const` (include modifying the Value use-list).
+/// value is either a BlockArgument or the result of an operation.
+/// Note: This class has value-type semantics and is just a simple wrapper
+/// around a ValueImpl that is either owned by a block (in the case of a
+/// BlockArgument) or an Operation (in the case of an OpResult).
+/// As most IR constructs, this isn't const-correct, but we keep the method
+/// consistent, and therefore methods that immediately modify this Value aren't
+/// marked `const` (including modifying the Value's use-list).
 class Value {
 public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
@@ -259,7 +259,7 @@ public:
   }
 
   /// Return which operand this is in the OpOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 
   /// Set the current value being used by this operand.
   void assign(Value value) { set(value); }
@@ -500,14 +500,6 @@ namespace llvm {
 
 template <>
 struct DenseMapInfo<mlir::Value> {
-  static mlir::Value getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
-  }
-  static mlir::Value getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::Value val) {
     return mlir::hash_value(val);
   }
@@ -515,37 +507,13 @@ struct DenseMapInfo<mlir::Value> {
 };
 template <>
 struct DenseMapInfo<mlir::BlockArgument> : public DenseMapInfo<mlir::Value> {
-  static mlir::BlockArgument getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
-  }
-  static mlir::BlockArgument getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return reinterpret_cast<mlir::detail::BlockArgumentImpl *>(pointer);
-  }
 };
 template <>
 struct DenseMapInfo<mlir::OpResult> : public DenseMapInfo<mlir::Value> {
-  static mlir::OpResult getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
-  }
-  static mlir::OpResult getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
-  }
 };
 template <typename T>
 struct DenseMapInfo<mlir::detail::TypedValue<T>>
     : public DenseMapInfo<mlir::Value> {
-  static mlir::detail::TypedValue<T> getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
-  }
-  static mlir::detail::TypedValue<T> getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
-  }
 };
 
 /// Allow stealing the low bits of a value.

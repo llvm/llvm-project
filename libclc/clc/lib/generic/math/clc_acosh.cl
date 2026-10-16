@@ -5,20 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "clc/clc_convert.h"
 #include "clc/float/definitions.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_ep_log.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_fma.h"
-#include "clc/math/clc_log1p.h"
+#include "clc/math/clc_acosh.h"
+#include "clc/math/clc_ep.h"
+#include "clc/math/clc_log2_fast.h"
 #include "clc/math/clc_mad.h"
-#include "clc/math/clc_sqrt.h"
-#include "clc/math/math.h"
-#include "clc/relational/clc_isinf.h"
-#include "clc/relational/clc_isnan.h"
-#include "clc/relational/clc_select.h"
+#include "clc/math/clc_sqrt_fast.h"
 
 #define __CLC_BODY "clc_acosh.inc"
 #include "clc/math/gentype.inc"

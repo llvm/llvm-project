@@ -16,9 +16,9 @@ define i32 @test() {
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB12:.*]], label %[[BB16:.*]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OR]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OR]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br label %[[BB13:.*]]
 ; CHECK:       [[BB13]]:
@@ -26,8 +26,8 @@ define i32 @test() {
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB11]] ], [ [[TMP7]], %[[BB13]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP8]], i64 1
 ; CHECK-NEXT:    br label %[[BB19]]
 ; CHECK:       [[BB19]]:
 ; CHECK-NEXT:    [[PHI20:%.*]] = phi i32 [ 0, %[[BB4]] ], [ [[TMP10]], %[[BB16]] ]
@@ -38,12 +38,12 @@ define i32 @test() {
 ; CHECK:       [[BB24]]:
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[PHI20]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[LSHR25:%.*]] = lshr i32 [[TMP11]], [[AND]]
 ; CHECK-NEXT:    [[OR26:%.*]] = or i32 0, [[OR23]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[OR26]], i32 2
-; CHECK-NEXT:    [[TMP13]] = insertelement <4 x i32> [[TMP12]], i32 [[LSHR25]], i32 3
-; CHECK-NEXT:    [[TMP14]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[LSHR25]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[OR26]], i64 2
+; CHECK-NEXT:    [[TMP13]] = insertelement <4 x i32> [[TMP12]], i32 [[LSHR25]], i64 3
+; CHECK-NEXT:    [[TMP14]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[LSHR25]], i64 1
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

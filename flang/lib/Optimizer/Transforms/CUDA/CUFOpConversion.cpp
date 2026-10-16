@@ -14,17 +14,12 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
-#include "flang/Runtime/CUDA/pointer.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -64,12 +59,73 @@ static bool inDeviceContext(mlir::Operation *op) {
   return false;
 }
 
+static bool keepOnDeviceOp(cuf::OnDeviceOp op, bool deferAccRoutines) {
+  // Leave the host copy of an OpenACC routine alone until it has been cloned
+  // for the device. Folding it to false here would bake the host value into
+  // that clone.
+  if (!deferAccRoutines || cuf::isExecutingOnDevice(op))
+    return false;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>())
+    return mlir::acc::isAccRoutine(funcOp);
+  return false;
+}
+
+struct CUFOnDeviceOpConversion
+    : public mlir::OpRewritePattern<cuf::OnDeviceOp> {
+  CUFOnDeviceOpConversion(mlir::MLIRContext *context, bool deferAccRoutines)
+      : OpRewritePattern(context), deferAccRoutines(deferAccRoutines) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::OnDeviceOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (keepOnDeviceOp(op, deferAccRoutines))
+      return mlir::failure();
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, rewriter.getBoolAttr(cuf::isExecutingOnDevice(op)));
+    return mlir::success();
+  }
+
+private:
+  bool deferAccRoutines;
+};
+
 static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
                                    mlir::Location loc, mlir::Type toTy,
                                    mlir::Value val) {
   if (val.getType() != toTy)
     return fir::ConvertOp::create(rewriter, loc, toTy, val);
   return val;
+}
+
+// Scalar CUDA constants use separate host-visible and device constant globals.
+// Host-to-device assignments keep them in sync.
+static bool isScalarCudaConstantGlobal(fir::GlobalOp global) {
+  return global && global.getDataAttr() &&
+         *global.getDataAttr() == cuf::DataAttribute::Constant &&
+         fir::isa_trivial(fir::unwrapRefType(global.getType()));
+}
+
+// The fir.addr_of feeding a declared value, or null.
+static fir::AddrOfOp getDeclaredAddrOf(mlir::Value val) {
+  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+  if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>())
+    return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+  return {};
+}
+
+// Address of the host shadow when val designates a scalar CUDA constant, null
+// otherwise.
+static fir::AddrOfOp
+getScalarConstantShadowAddr(mlir::Value val, const mlir::SymbolTable &symtab) {
+  fir::AddrOfOp addrOfOp = getDeclaredAddrOf(val);
+  if (!addrOfOp)
+    return {};
+  auto global = symtab.lookup<fir::GlobalOp>(
+      addrOfOp.getSymbol().getRootReference().getValue());
+  if (!isScalarCudaConstantGlobal(global))
+    return {};
+  return addrOfOp;
 }
 
 struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
@@ -90,6 +146,8 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
       }
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
+        if (isScalarCudaConstantGlobal(global))
+          return failure();
         if (cuf::isRegisteredDeviceGlobal(global)) {
           rewriter.setInsertionPointAfter(addrOfOp);
           mlir::Value devAddr = cuf::DeviceAddressOp::create(
@@ -124,6 +182,32 @@ static mlir::Value getShapeFromDecl(mlir::Value src) {
   if (auto declareOp = src.getDefiningOp<hlfir::DeclareOp>())
     return declareOp.getShape();
   return mlir::Value{};
+}
+
+static llvm::SmallVector<mlir::Value> getTypeParamsFromDecl(mlir::Value val) {
+  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getTypeparams();
+  if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>())
+    return declareOp.getTypeparams();
+  return {};
+}
+
+// hlfir.assign rejects a raw !fir.ref<!fir.array<?xT>> because a dynamic-size
+// array is not an HLFIR variable unless it is boxed. Use the transfer shape
+// (or a declare's shape) to build a descriptor.
+static mlir::Value asHLFIREntity(mlir::PatternRewriter &rewriter,
+                                 mlir::Location loc, mlir::Value val,
+                                 mlir::Value shape) {
+  if (hlfir::isFortranEntity(val))
+    return val;
+  mlir::Type unwrapped = fir::unwrapRefType(val.getType());
+  if (!shape)
+    shape = getShapeFromDecl(val);
+  auto boxTy = fir::BoxType::get(unwrapped);
+  return fir::EmboxOp::create(rewriter, loc, boxTy, val, shape,
+                              /*slice=*/mlir::Value{},
+                              fir::factory::elideLengthsAlreadyInType(
+                                  unwrapped, getTypeParamsFromDecl(val)));
 }
 
 static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
@@ -162,7 +246,7 @@ static mlir::Value emboxSrc(mlir::PatternRewriter &rewriter,
   } else {
     addr = op.getSrc();
   }
-  llvm::SmallVector<mlir::Value> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams = getTypeParamsFromDecl(op.getSrc());
   mlir::Type boxTy = fir::BoxType::get(srcTy);
   mlir::Value box =
       builder.createBox(loc, boxTy, addr, getShapeFromDecl(op.getSrc()),
@@ -182,7 +266,7 @@ static mlir::Value emboxDst(mlir::PatternRewriter &rewriter,
   mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
   mlir::Value dstAddr = op.getDst();
   mlir::Type dstBoxTy = fir::BoxType::get(dstTy);
-  llvm::SmallVector<mlir::Value> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams = getTypeParamsFromDecl(op.getDst());
   mlir::Value dstBox =
       builder.createBox(loc, dstBoxTy, dstAddr, getShapeFromDecl(op.getDst()),
                         /*slice=*/nullptr, lenParams,
@@ -211,6 +295,28 @@ struct CUFDataTransferOpConversion
     mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
 
     mlir::Location loc = op.getLoc();
+    // A transfer left in the accelerator copy of an OpenACC routine describes
+    // an assignment that the device executes itself. A host runtime copy makes
+    // no sense there, so turn it back into a plain assignment.
+    if (inDeviceContext(op) && mlir::acc::isSpecializedAccRoutine(
+                                   op->getParentOfType<mlir::func::FuncOp>())) {
+      mlir::Value src = op.getSrc();
+      mlir::Value dst = op.getDst();
+      if (fir::isa_trivial(srcTy) && fir::isa_ref_type(dst.getType()) &&
+          fir::isa_trivial(dstTy)) {
+        if (fir::isa_ref_type(src.getType()))
+          src = fir::LoadOp::create(rewriter, loc, src);
+        src = createConvertOp(rewriter, loc, dstTy, src);
+        fir::StoreOp::create(rewriter, loc, src, dst);
+      } else {
+        mlir::Value shape = op.getShape();
+        src = asHLFIREntity(rewriter, loc, src, shape);
+        dst = asHLFIREntity(rewriter, loc, dst, shape);
+        hlfir::AssignOp::create(rewriter, loc, src, dst);
+      }
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
     unsigned mode = 0;
     if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
       mode = kHostToDevice;
@@ -228,6 +334,31 @@ struct CUFDataTransferOpConversion
     mlir::Value modeValue =
         builder.createIntegerConstant(loc, builder.getI32Type(), mode);
 
+    // A host read of a scalar CUDA constant takes the device copy. Its host
+    // shadow is maintained only to service host writes; resolve the source to
+    // the registered device address so the device->host copy reads real device
+    // memory. The host shadow address would be an invalid "device" source for
+    // cudaMemcpy on a strict runtime. This is the read counterpart of the
+    // scalar-constant handling in the host-to-device and device-to-device
+    // paths below.
+    //
+    // Unlike those paths, this rewrites the op source itself and must run
+    // before the descriptor split: a read destination can be a scalar, an
+    // array (scalar broadcast, lowered via CUFDataTransferCstDesc) or a
+    // descriptor, and each of those paths reads op.getSrc() at a different
+    // point below. Fixing up the source here lets every one of them pick up the
+    // device address.
+    if (op.getTransferKind() == cuf::DataTransferKind::DeviceHost) {
+      if (fir::AddrOfOp shadow =
+              getScalarConstantShadowAddr(op.getSrc(), symtab)) {
+        mlir::Value devAddr = cuf::DeviceAddressOp::create(
+            rewriter, loc, op.getSrc().getType(), shadow.getSymbol());
+        rewriter.startOpModification(op);
+        op.getSrcMutable().assign(devAddr);
+        rewriter.finalizeOpModification(op);
+      }
+    }
+
     // Convert data transfer without any descriptor.
     if (!mlir::isa<fir::BaseBoxType>(srcTy) &&
         !mlir::isa<fir::BaseBoxType>(dstTy)) {
@@ -236,7 +367,7 @@ struct CUFDataTransferOpConversion
         // Initialization of an array from a scalar value should be implemented
         // via a kernel launch. Use the flang runtime via the Assign function
         // until we have more infrastructure.
-        mlir::Type dstEleTy = fir::unwrapInnerType(fir::unwrapRefType(dstTy));
+        mlir::Type dstEleTy = fir::getFortranElementType(dstTy);
         mlir::Value src = emboxSrc(rewriter, op, symtab, dstEleTy);
         mlir::Value dst = emboxDst(rewriter, op, symtab);
         mlir::func::FuncOp func =
@@ -280,6 +411,72 @@ struct CUFDataTransferOpConversion
 
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
+      // A scalar CUDA constant keeps a host shadow that host-to-device
+      // assignments update (so host writes stay visible); host reads take the
+      // device copy and were redirected to it above.
+      if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
+        // A non-null shadow means the destination is a scalar constant. Keep
+        // its host shadow up to date, then aim the copy at the device symbol
+        // instead of the shadow.
+        if (fir::AddrOfOp addrOfOp = getScalarConstantShadowAddr(dst, symtab)) {
+          mlir::Value hostValue = src;
+          if (fir::isa_ref_type(src.getType()))
+            hostValue = fir::LoadOp::create(builder, loc, src);
+          hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+          fir::StoreOp::create(builder, loc, hostValue, addrOfOp);
+          dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
+                                             addrOfOp.getSymbol());
+        }
+      }
+      if (op.getTransferKind() == cuf::DataTransferKind::DeviceDevice) {
+        // The device symbol of a scalar CUDA constant is registered and could
+        // be copied to directly, but such a variable is designated by its host
+        // shadow instead (see isScalarCudaConstantGlobal), so the address at
+        // hand is a host address and cannot be an operand of a device to
+        // device copy. Route the transfer through the shadow. There are three
+        // cases, depending on which side is a scalar constant.
+        fir::AddrOfOp srcShadow = getScalarConstantShadowAddr(src, symtab);
+        fir::AddrOfOp dstShadow = getScalarConstantShadowAddr(dst, symtab);
+        if (srcShadow || dstShadow) {
+          if (dstShadow) {
+            if (srcShadow) {
+              // constant = constant
+              // Both sides are shadows, so the value is already in host
+              // memory. Copy shadow to shadow.
+              mlir::Value hostValue =
+                  fir::LoadOp::create(builder, loc, srcShadow);
+              hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+              fir::StoreOp::create(builder, loc, hostValue, dstShadow);
+            } else {
+              // constant = device
+              // The source is real device memory. Bring the value into the
+              // host shadow first so that later host reads of the destination
+              // see it.
+              mlir::Value deviceToHost = builder.createIntegerConstant(
+                  loc, builder.getI32Type(), kDeviceToHost);
+              llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+                  builder, loc, fTy, dstShadow, src, bytes, deviceToHost,
+                  sourceFile, sourceLine)};
+              fir::CallOp::create(builder, loc, func, args);
+            }
+            // In both cases above the destination shadow now holds the value.
+            // Use it as the source and push it to the device symbol. Taking it
+            // from the shadow rather than from the original source also keeps
+            // any type conversion applied above.
+            src = dstShadow;
+            dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
+                                               dstShadow.getSymbol());
+          } else {
+            // device = constant
+            // The destination already carries a device address, so the source
+            // shadow is simply the host value to push.
+            src = srcShadow;
+          }
+          // Every case now reads from host memory.
+          modeValue = builder.createIntegerConstant(loc, builder.getI32Type(),
+                                                    kHostToDevice);
+        }
+      }
       // Materialize the src if constant.
       if (matchPattern(src.getDefiningOp(), mlir::m_Constant())) {
         mlir::Value temp = builder.createTemporary(loc, srcTy);
@@ -295,14 +492,18 @@ struct CUFDataTransferOpConversion
     }
 
     auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
+      // val can be a block argument and therefore has no defining operation.
+      mlir::Operation *defOp = val.getDefiningOp();
+      if (!defOp)
+        return val;
+      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(defOp)) {
         // Materialize the box to memory to be able to call the runtime.
         mlir::Value box = builder.createTemporary(loc, val.getType());
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
       if (mlir::isa<fir::BaseBoxType>(val.getType()))
-        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(defOp))
           return loadOp.getMemref();
       return val;
     };
@@ -319,7 +520,7 @@ struct CUFDataTransferOpConversion
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
       if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
-        mlir::Type dstEleTy = fir::unwrapInnerType(dstBoxTy.getEleTy());
+        mlir::Type dstEleTy = dstBoxTy.unwrapInnerType();
         src = emboxSrc(rewriter, op, symtab, dstEleTy);
         if (fir::isa_trivial(srcTy))
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(
@@ -437,22 +638,22 @@ public:
       args.push_back(arg);
     }
     mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
+    mlir::Type tokenType = nullptr;
+    SmallVector<Value, 1> tokens;
+    if (op.getStream()) {
+      tokens.push_back(
+          cuf::StreamCastOp::create(rewriter, loc, op.getStream()));
+      tokenType = tokens.front().getType();
+    }
     auto gpuLaunchOp = mlir::gpu::LaunchFuncOp::create(
         rewriter, loc, kernelName,
         mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
         mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
-        dynamicShmemSize, args);
+        dynamicShmemSize, args, tokenType, tokens);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
-    }
-    if (op.getStream()) {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(gpuLaunchOp);
-      mlir::Value stream =
-          cuf::StreamCastOp::create(rewriter, loc, op.getStream());
-      gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
     }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
@@ -461,7 +662,7 @@ public:
       gpuLaunchOp->setAttr(cuf::getProcAttrName(),
                            cuf::ProcAttributeAttr::get(
                                op.getContext(), cuf::ProcAttribute::Global));
-    rewriter.replaceOp(op, gpuLaunchOp);
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 
@@ -513,9 +714,21 @@ public:
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
-                           mlir::gpu::GPUDialect>();
+                           mlir::gpu::GPUDialect, hlfir::hlfirDialect>();
     target.addLegalOp<cuf::StreamCastOp>();
     target.addLegalOp<cuf::DeviceAddressOp>();
+    target.addDynamicallyLegalOp<cuf::DataTransferOp>(
+        [&](cuf::DataTransferOp op) {
+          if (!deferAccRoutineDataTransfers)
+            return false;
+          auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
+          return funcOp && mlir::acc::isAccRoutine(funcOp);
+        });
+    target.addLegalOp<cuf::DeviceIsActiveOp>();
+    target.addDynamicallyLegalOp<cuf::OnDeviceOp>([&](cuf::OnDeviceOp op) {
+      return keepOnDeviceOp(op, deferAccRoutineDataTransfers);
+    });
+    patterns.insert<CUFOnDeviceOpConversion>(ctx, deferAccRoutineDataTransfers);
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
@@ -534,6 +747,8 @@ public:
         if (auto global = symtab.lookup<fir::GlobalOp>(
                 addrOfOp.getSymbol().getRootReference().getValue())) {
           if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(global.getType())))
+            return true;
+          if (isScalarCudaConstantGlobal(global))
             return true;
           if (cuf::isRegisteredDeviceGlobal(global))
             return false;

@@ -134,10 +134,6 @@ public:
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
-  virtual void emitBeginCatch(CIRGenFunction &cgf,
-                              const CXXCatchStmt *catchStmt,
-                              mlir::Value ehToken) = 0;
-
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -381,6 +377,10 @@ public:
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
 
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense).
+  virtual bool isZeroInitializable(const MemberPointerType *mpt) = 0;
+
 protected:
   /// Returns the extra size required in order to store the array
   /// cookie for the given type.  Assumes that an array cookie is
@@ -390,6 +390,9 @@ protected:
 
 /// Creates and Itanium-family ABI
 CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &cgm);
+
+/// Creates Microsoft ABI
+CIRGenCXXABI *CreateCIRGenMicrosoftCXXABI(CIRGenModule &cgm);
 
 } // namespace clang::CIRGen
 

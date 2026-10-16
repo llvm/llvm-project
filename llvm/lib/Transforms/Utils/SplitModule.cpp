@@ -125,8 +125,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     if (GV.isDeclaration())
       return;
 
-    if (!GV.hasName())
-      GV.setName("__llvmsplit_unnamed");
+    GV.nameUnnamed();
 
     // Comdat groups must not be partitioned. For comdat groups that contain
     // locals, record all their members here so we can keep them together.
@@ -162,6 +161,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   llvm::for_each(M.functions(), recordGVSet);
   llvm::for_each(M.globals(), recordGVSet);
   llvm::for_each(M.aliases(), recordGVSet);
+  llvm::for_each(M.ifuncs(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
@@ -202,18 +202,6 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   }
 }
 
-static void externalize(GlobalValue *GV) {
-  if (GV->hasLocalLinkage()) {
-    GV->setLinkage(GlobalValue::ExternalLinkage);
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV->hasName())
-    GV->setName("__llvmsplit_unnamed");
-}
-
 // Returns whether GV should be in partition (0-based) I of N.
 static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
   if (const GlobalObject *Root = getGVPartitioningRoot(GV))
@@ -241,13 +229,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalize(&F);
+      F.externalize();
     for (GlobalVariable &GV : M.globals())
-      externalize(&GV);
+      GV.externalize();
     for (GlobalAlias &GA : M.aliases())
-      externalize(&GA);
+      GA.externalize();
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalize(&GIF);
+      GIF.externalize();
   }
 
   // This performs splitting without a need for externalization, which might not
@@ -303,7 +291,7 @@ void llvm::SplitModule(
             return isInPartition(GV, I, N);
         }));
     if (I != 0)
-      MPart->setModuleInlineAsm("");
+      MPart->removeModuleInlineAsm();
     ModuleCallback(std::move(MPart));
   }
 }

@@ -17,7 +17,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -26,10 +25,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-static cl::opt<unsigned>
-MaxNumPhis("instcombine-max-num-phis", cl::init(512),
-           cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
 
 STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
@@ -229,7 +224,7 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
   unsigned NumPhis = 0;
   for (PHINode &PtrPHI : BB->phis()) {
     // FIXME: consider handling this in AggressiveInstCombine
-    if (NumPhis++ > MaxNumPhis)
+    if (NumPhis++ > CLOpts.max_num_phis)
       return false;
     if (&PtrPHI == &PN || PtrPHI.getType() != IntToPtr->getType())
       continue;
@@ -705,12 +700,11 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
 
   // FIXME: This is overconservative; this transform is allowed in some cases
   // for atomic operations.
-  if (FirstLI->isAtomic())
+  if (!FirstLI->isSimple())
     return nullptr;
 
-  // When processing loads, we need to propagate two bits of information to the
-  // sunk load: whether it is volatile, and what its alignment is.
-  bool IsVolatile = FirstLI->isVolatile();
+  // When processing loads, we need to propagate the alignment and address
+  // space of the load.
   Align LoadAlignment = FirstLI->getAlign();
   const unsigned LoadAddrSpace = FirstLI->getPointerAddressSpace();
 
@@ -720,23 +714,15 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
       !isSafeAndProfitableToSinkLoad(FirstLI))
     return nullptr;
 
-  // If the PHI is of volatile loads and the load block has multiple
-  // successors, sinking it would remove a load of the volatile value from
-  // the path through the other successor.
-  if (IsVolatile &&
-      FirstLI->getParent()->getTerminator()->getNumSuccessors() != 1)
-    return nullptr;
-
   for (auto Incoming : drop_begin(zip(PN.blocks(), PN.incoming_values()))) {
     BasicBlock *InBB = std::get<0>(Incoming);
     Value *InVal = std::get<1>(Incoming);
     LoadInst *LI = dyn_cast<LoadInst>(InVal);
-    if (!LI || !LI->hasOneUser() || LI->isAtomic())
+    if (!LI || !LI->hasOneUser() || !LI->isSimple())
       return nullptr;
 
     // Make sure all arguments are the same type of operation.
-    if (LI->isVolatile() != IsVolatile ||
-        LI->getPointerAddressSpace() != LoadAddrSpace)
+    if (LI->getPointerAddressSpace() != LoadAddrSpace)
       return nullptr;
 
     if (!canReplaceOperandWithVariable(LI, 0))
@@ -748,12 +734,6 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
       return nullptr;
 
     LoadAlignment = std::min(LoadAlignment, LI->getAlign());
-
-    // If the PHI is of volatile loads and the load block has multiple
-    // successors, sinking it would remove a load of the volatile value from
-    // the path through the other successor.
-    if (IsVolatile && LI->getParent()->getTerminator()->getNumSuccessors() != 1)
-      return nullptr;
   }
 
   // Okay, they are all the same operation.  Create a new PHI node of the
@@ -764,8 +744,8 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
 
   Value *InVal = FirstLI->getOperand(0);
   NewPN->addIncoming(InVal, PN.getIncomingBlock(0));
-  LoadInst *NewLI =
-      new LoadInst(FirstLI->getType(), NewPN, "", IsVolatile, LoadAlignment);
+  LoadInst *NewLI = new LoadInst(FirstLI->getType(), NewPN, "",
+                                 /*IsVolatile=*/false, LoadAlignment);
   NewLI->copyMetadata(*FirstLI);
 
   // Add all operands to the new PHI and combine TBAA metadata.
@@ -788,13 +768,6 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   } else {
     InsertNewInstBefore(NewPN, PN.getIterator());
   }
-
-  // If this was a volatile load that we are merging, make sure to loop through
-  // and mark all the input loads as non-volatile.  If we don't do this, we will
-  // insert a new volatile load and the old ones will not be deletable.
-  if (IsVolatile)
-    for (Value *IncValue : PN.incoming_values())
-      cast<LoadInst>(IncValue)->setVolatile(false);
 
   PHIArgMergedDebugLoc(NewLI, PN);
   return NewLI;
@@ -1070,12 +1043,6 @@ struct LoweredPHIRecord {
 } // namespace
 
 template <> struct llvm::DenseMapInfo<LoweredPHIRecord> {
-  static inline LoweredPHIRecord getEmptyKey() {
-    return LoweredPHIRecord(nullptr, 0);
-  }
-  static inline LoweredPHIRecord getTombstoneKey() {
-    return LoweredPHIRecord(nullptr, 1);
-  }
   static unsigned getHashValue(const LoweredPHIRecord &Val) {
     return DenseMapInfo<PHINode *>::getHashValue(Val.PN) ^ (Val.Shift >> 3) ^
            (Val.Width >> 3);
@@ -1112,32 +1079,6 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   for (unsigned PHIId = 0; PHIId != PHIsToSlice.size(); ++PHIId) {
     PHINode *PN = PHIsToSlice[PHIId];
 
-    // Scan the input list of the PHI.  If any input is an invoke, and if the
-    // input is defined in the predecessor, then we won't be split the critical
-    // edge which is required to insert a truncate.  Because of this, we have to
-    // bail out.
-    for (auto Incoming : zip(PN->blocks(), PN->incoming_values())) {
-      BasicBlock *BB = std::get<0>(Incoming);
-      Value *V = std::get<1>(Incoming);
-      InvokeInst *II = dyn_cast<InvokeInst>(V);
-      if (!II)
-        continue;
-      if (II->getParent() != BB)
-        continue;
-
-      // If we have a phi, and if it's directly in the predecessor, then we have
-      // a critical edge where we need to put the truncate.  Since we can't
-      // split the edge in instcombine, we have to bail out.
-      return nullptr;
-    }
-
-    // If the incoming value is a PHI node before a catchswitch, we cannot
-    // extract the value within that BB because we cannot insert any non-PHI
-    // instructions in the BB.
-    for (auto *Pred : PN->blocks())
-      if (!Pred->hasInsertionPt())
-        return nullptr;
-
     for (User *U : PN->users()) {
       Instruction *UserI = cast<Instruction>(U);
 
@@ -1168,6 +1109,34 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
       unsigned Shift = cast<ConstantInt>(UserI->getOperand(1))->getZExtValue();
       PHIUsers.push_back(PHIUsageRecord(PHIId, Shift, UserI->user_back()));
     }
+  }
+
+  for (const auto &PN : PHIsToSlice) {
+    // Scan the input list of the PHI.  If any input is an invoke, and if the
+    // input is defined in the predecessor, then we won't be split the critical
+    // edge which is required to insert a truncate.  Because of this, we have to
+    // bail out.
+    for (auto Incoming : zip(PN->blocks(), PN->incoming_values())) {
+      BasicBlock *BB = std::get<0>(Incoming);
+      Value *V = std::get<1>(Incoming);
+      InvokeInst *II = dyn_cast<InvokeInst>(V);
+      if (!II)
+        continue;
+      if (II->getParent() != BB)
+        continue;
+
+      // If we have a phi, and if it's directly in the predecessor, then we have
+      // a critical edge where we need to put the truncate.  Since we can't
+      // split the edge in instcombine, we have to bail out.
+      return nullptr;
+    }
+
+    // If the incoming value is a PHI node before a catchswitch, we cannot
+    // extract the value within that BB because we cannot insert any non-PHI
+    // instructions in the BB.
+    for (auto *Pred : PN->blocks())
+      if (!Pred->hasInsertionPt())
+        return nullptr;
   }
 
   // If we have no users, they must be all self uses, just nuke the PHI.
@@ -1227,14 +1196,12 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
           continue;
         }
 
-        if (PHINode *InPHI = dyn_cast<PHINode>(PN)) {
-          // If the incoming value was a PHI, and if it was one of the PHIs we
-          // already rewrote it, just use the lowered value.
-          if (Value *Res = ExtractedVals[LoweredPHIRecord(InPHI, Offset, Ty)]) {
-            PredVal = Res;
-            EltPHI->addIncoming(PredVal, Pred);
-            continue;
-          }
+        // If the incoming value was a PHI, and if it was one of the PHIs we
+        // already rewrote it, just use the lowered value.
+        if (Value *Res = ExtractedVals[LoweredPHIRecord(PN, Offset, Ty)]) {
+          PredVal = Res;
+          EltPHI->addIncoming(PredVal, Pred);
+          continue;
         }
 
         // Otherwise, do an extract in the predecessor.
@@ -1368,7 +1335,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   // sinking.
   auto InsertPt = BB->getFirstInsertionPt();
   if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(&*BB, InsertPt);
+    Self.Builder.SetInsertPoint(InsertPt);
     return Self.Builder.CreateNot(Cond);
   }
 
@@ -1414,7 +1381,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   if (Iv2Start != Identity)
     return nullptr;
 
-  Builder.SetInsertPoint(&*BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
   if (!BO) {
     auto *GEP = cast<GEPOperator>(IvNext);
     return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",

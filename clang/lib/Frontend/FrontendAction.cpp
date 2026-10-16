@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,7 +53,7 @@
 #include <system_error>
 using namespace clang;
 
-LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, FrontendPluginRegistry)
 
 namespace {
 
@@ -369,16 +370,39 @@ FrontendAction::FrontendAction() : Instance(nullptr) {}
 
 FrontendAction::~FrontendAction() {}
 
+TranslationUnitKind FrontendAction::getTranslationUnitKind() {
+  // The ASTContext, if exists, knows the exact TUKind of the frondend.
+  if (Instance && Instance->hasASTContext())
+    return Instance->getASTContext().TUKind;
+  return TU_Complete;
+}
+
+bool FrontendAction::BeginSourceFileAction(CompilerInstance &CI) {
+  if (CurrentInput.isPreprocessed())
+    CI.getPreprocessor().SetMacroExpansionOnlyInDirectives();
+  return true;
+}
+
+void FrontendAction::EndSourceFileAction() {
+  if (CurrentInput.isPreprocessed())
+    // Reset the preprocessor macro expansion to the default.
+    getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
+}
+
 void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
                                      std::unique_ptr<ASTUnit> AST) {
   this->CurrentInput = CurrentInput;
   CurrentASTUnit = std::move(AST);
 }
 
+std::unique_ptr<ASTUnit> FrontendAction::takeCurrentASTUnit() {
+  return std::move(CurrentASTUnit);
+}
+
 Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
+      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch=*/false);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -497,8 +521,8 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   if (!MainFileBuf)
     return SourceLocation();
 
-  std::unique_ptr<Lexer> RawLexer(
-      new Lexer(MainFileID, *MainFileBuf, SourceMgr, CI.getLangOpts()));
+  auto RawLexer = std::make_unique<Lexer>(MainFileID, *MainFileBuf, SourceMgr,
+                                          CI.getLangOpts());
 
   // If the first line has the syntax of
   //
@@ -521,17 +545,20 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
       return SourceLocation();
   }
 
-  RawLexer->LexFromRawLexer(T);
-  if (T.isAtStartOfLine() || T.getKind() != tok::string_literal)
+  RawLexer->LexIncludeFilename(T);
+  if (T.isAtStartOfLine() || T.getKind() != tok::header_name)
     return SourceLocation();
 
-  StringLiteralParser Literal(T, CI.getPreprocessor());
-  if (Literal.hadError)
-    return SourceLocation();
+  Preprocessor &PP = CI.getPreprocessor();
+  SmallString<128> HeaderNameBuffer;
+  StringRef HeaderName = PP.getSpelling(T, HeaderNameBuffer);
+  PP.GetLineDirectiveFilenameSpelling(T.getLocation(), HeaderName);
+
   RawLexer->LexFromRawLexer(T);
   if (T.isNot(tok::eof) && !T.isAtStartOfLine())
     return SourceLocation();
-  InputFile = Literal.GetString().str();
+
+  InputFile = HeaderName.str();
 
   if (IsModuleMap)
     CI.getSourceManager().AddLineNote(
@@ -675,7 +702,7 @@ static std::error_code collectModuleHeaderIncludes(
   }
 
   // Recurse into submodules.
-  for (auto *Submodule : Module->submodules())
+  for (clang::Module *Submodule : Module->submodules())
     if (std::error_code Err = collectModuleHeaderIncludes(
             LangOpts, FileMgr, Diag, ModMap, Submodule, Includes))
       return Err;
@@ -801,6 +828,11 @@ static std::unique_ptr<llvm::MemoryBuffer>
 getInputBufferForModule(CompilerInstance &CI, Module *M) {
   FileManager &FileMgr = CI.getFileManager();
 
+  // Merge in directories the requesting instance enumerated on this module's
+  // behalf.
+  for (StringRef Dir : CI.getInheritedDirectoryDependencies())
+    M->addDirectoryDependency(Dir);
+
   // Collect the set of #includes we need to build the module.
   SmallString<256> HeaderContents;
   std::error_code Err = std::error_code();
@@ -850,6 +882,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (!BeginInvocation(CI))
     return false;
 
+  // The list of module files the input AST file depends on. This is separate
+  // from FrontendOptions::ModuleFiles, because those only represent explicit
+  // modules, while this is capable of representing implicit ones too.
+  SmallVector<ModuleFileName> ModuleFiles;
+
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
@@ -892,7 +929,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
       for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
-          CI.getFrontendOpts().ModuleFiles.emplace_back(MF.FileName.str());
+          ModuleFiles.emplace_back(MF.FileName);
 
       ASTReader->visitTopLevelModuleMaps(PrimaryModule, [&](FileEntryRef FE) {
         CI.getFrontendOpts().ModuleMapFiles.push_back(
@@ -995,10 +1032,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (CI.getFrontendOpts().ModulesEmbedAllFiles)
     CI.getSourceManager().setAllFilesAreTransient(true);
 
-  // IR files bypass the rest of initialization.
-  if (Input.getKind().getLanguage() == Language::LLVM_IR) {
-    if (!hasIRSupport()) {
-      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
+  // IR files (LLVM IR or ClangIR) bypass the rest of initialization.
+  Language InputLang = Input.getKind().getLanguage();
+  if (InputLang == Language::LLVM_IR || InputLang == Language::CIR) {
+    bool IsCIR = InputLang == Language::CIR;
+    if (IsCIR ? !hasCIRSupport() : !hasIRSupport()) {
+      CI.getDiagnostics().Report(IsCIR ? diag::err_ast_action_on_cir
+                                       : diag::err_ast_action_on_llvm_ir)
           << Input.getFile();
       return false;
     }
@@ -1296,6 +1336,17 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
           diag::warn_eagerly_load_for_standard_cplusplus_modules);
   }
 
+  // If we were asked to load any module files by the ASTUnit, do so now.
+  for (const auto &ModuleFile : ModuleFiles) {
+    serialization::ModuleFile *Loaded = nullptr;
+    if (!CI.loadModuleFile(ModuleFile, Loaded))
+      return false;
+
+    if (Loaded && Loaded->StandardCXXModule)
+      CI.getDiagnostics().Report(
+          diag::warn_eagerly_load_for_standard_cplusplus_modules);
+  }
+
   // If there is a layout overrides file, attach an external AST source that
   // provides the layouts from that file.
   if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() &&
@@ -1499,6 +1550,9 @@ bool WrapperFrontendAction::hasASTFileSupport() const {
 }
 bool WrapperFrontendAction::hasIRSupport() const {
   return WrappedAction->hasIRSupport();
+}
+bool WrapperFrontendAction::hasCIRSupport() const {
+  return WrappedAction->hasCIRSupport();
 }
 bool WrapperFrontendAction::hasCodeCompletionSupport() const {
   return WrappedAction->hasCodeCompletionSupport();

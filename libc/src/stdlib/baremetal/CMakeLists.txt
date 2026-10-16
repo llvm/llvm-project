@@ -1,9 +1,7 @@
-add_entrypoint_object(
-  abort
-  SRCS
-    abort.cpp
+add_header_library(
+  abort_utils
   HDRS
-    ../abort.h
+    abort_utils.h
 )
 
 add_entrypoint_object(
@@ -52,6 +50,16 @@ add_entrypoint_object(
     aligned_alloc.cpp
   HDRS
     ../aligned_alloc.h
+  DEPENDS
+    libc.src.__support.freelist_heap
+)
+
+add_entrypoint_object(
+  malloc_usable_size
+  SRCS
+    malloc_usable_size.cpp
+  HDRS
+    ../malloc_usable_size.h
   DEPENDS
     libc.src.__support.freelist_heap
 )

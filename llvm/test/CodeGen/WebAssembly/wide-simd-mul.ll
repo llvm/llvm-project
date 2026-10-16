@@ -140,36 +140,30 @@ define <16 x i32> @sext_zext_mul_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: sext_zext_mul_v16i8:
 ; CHECK:         .functype sext_zext_mul_v16i8 (i32, v128, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push2=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $pop2
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push1=, $pop0
-; CHECK-NEXT:    i32x4.mul $push4=, $pop3, $pop1
-; CHECK-NEXT:    v128.store 0($0), $pop4
-; CHECK-NEXT:    i8x16.shuffle $push25=, $1, $1, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push24=, $3=, $pop25
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push7=, $pop24
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push8=, $pop7
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push5=, $3
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push6=, $pop5
-; CHECK-NEXT:    i32x4.mul $push9=, $pop8, $pop6
-; CHECK-NEXT:    v128.store 48($0), $pop9
-; CHECK-NEXT:    i8x16.shuffle $push23=, $1, $1, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push22=, $3=, $pop23
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push12=, $pop22
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push13=, $pop12
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push10=, $3
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push11=, $pop10
-; CHECK-NEXT:    i32x4.mul $push14=, $pop13, $pop11
-; CHECK-NEXT:    v128.store 32($0), $pop14
-; CHECK-NEXT:    i8x16.shuffle $push21=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push20=, $1=, $pop21
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push17=, $pop20
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push18=, $pop17
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push15=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push16=, $pop15
-; CHECK-NEXT:    i32x4.mul $push19=, $pop18, $pop16
-; CHECK-NEXT:    v128.store 16($0), $pop19
+; CHECK-NEXT:    i16x8.extend_high_i8x16_s $push19=, $1
+; CHECK-NEXT:    local.tee $push18=, $4=, $pop19
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $pop18
+; CHECK-NEXT:    i16x8.extend_high_i8x16_u $push17=, $1
+; CHECK-NEXT:    local.tee $push16=, $3=, $pop17
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop16
+; CHECK-NEXT:    i32x4.mul $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $4
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $3
+; CHECK-NEXT:    i32x4.mul $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 32($0), $pop5
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push15=, $1
+; CHECK-NEXT:    local.tee $push14=, $4=, $pop15
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push7=, $pop14
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push13=, $1
+; CHECK-NEXT:    local.tee $push12=, $1=, $pop13
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push6=, $pop12
+; CHECK-NEXT:    i32x4.mul $push8=, $pop7, $pop6
+; CHECK-NEXT:    v128.store 16($0), $pop8
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $4
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push9=, $1
+; CHECK-NEXT:    i32x4.mul $push11=, $pop10, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop11
 ; CHECK-NEXT:    return
   %wide.a = sext <16 x i8> %a to <16 x i32>
   %wide.b = zext <16 x i8> %a to <16 x i32>

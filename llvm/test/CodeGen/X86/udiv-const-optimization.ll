@@ -62,7 +62,7 @@ define i32 @udiv_by_19(i32 %x) nounwind {
 ; X86-LABEL: udiv_by_19:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl ${{-?[0-9]+}}, %edx # imm = 0xAF286BCB
+; X86-NEXT:    movl $-1356305461, %edx # imm = 0xAF286BCB
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    subl %edx, %ecx
@@ -96,7 +96,7 @@ define i32 @udiv_by_21(i32 %x) nounwind {
 ; X86-LABEL: udiv_by_21:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl ${{-?[0-9]+}}, %edx # imm = 0x86186187
+; X86-NEXT:    movl $-2045222521, %edx # imm = 0x86186187
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    subl %edx, %ecx
@@ -131,11 +131,44 @@ define i32 @udiv_by_3(i32 %x) nounwind {
 ;
 ; X86-LABEL: udiv_by_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl ${{-?[0-9]+}}, %eax # imm = 0xAAAAAAAB
+; X86-NEXT:    movl $-1431655765, %eax # imm = 0xAAAAAAAB
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    retl
   %div = udiv i32 %x, 3
+  ret i32 %div
+}
+
+; Even divisors with 33-bit magic. On 64-bit targets these use the widened
+; high-multiply path (i32->i64 zero-extension is free here).
+define i32 @udiv_by_14(i32 %x) nounwind {
+; X64-LABEL: udiv_by_14:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movabsq $1317624576808583168, %rcx # imm = 0x1249249250000000
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+;
+; X64-BMI2-LABEL: udiv_by_14:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl %edi, %edx
+; X64-BMI2-NEXT:    movabsq $1317624576808583168, %rax # imm = 0x1249249250000000
+; X64-BMI2-NEXT:    mulxq %rax, %rax, %rax
+; X64-BMI2-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-BMI2-NEXT:    retq
+;
+; X86-LABEL: udiv_by_14:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    movl $-1840700269, %ecx # imm = 0x92492493
+; X86-NEXT:    mull %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    retl
+  %div = udiv i32 %x, 14
   ret i32 %div
 }

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -25,7 +26,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -34,9 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
-
-static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
@@ -77,7 +74,6 @@ static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
                                  Loop *LastLoop = nullptr) {
   assert((!LastLoop || LastLoop->contains(FirstLoop->getHeader())) &&
          "First loop is supposed to be inside of last loop!");
-  assert(FirstLoop->contains(BB) && "Must be a loop block!");
   for (Loop *Current = FirstLoop; Current != LastLoop;
        Current = Current->getParentLoop())
     Current->removeBlockFromLoop(BB);
@@ -535,9 +531,8 @@ private:
       if (MSSAU && TheOnlySuccDuplicates > 1)
         MSSAU->removeDuplicatePhiEdgesBetween(BB, TheOnlySucc);
 
-      IRBuilder<> Builder(BB->getContext());
       Instruction *Term = BB->getTerminator();
-      Builder.SetInsertPoint(Term);
+      IRBuilder<> Builder(Term);
       Builder.CreateBr(TheOnlySucc);
       Term->eraseFromParent();
 
@@ -655,7 +650,7 @@ public:
            "DT broken after transform!");
 #endif
     assert(DT.isReachableFromEntry(Header));
-    LI.verify(DT);
+    LI.verify();
 #endif
 
     return true;
@@ -673,7 +668,7 @@ static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI,
                                     ScalarEvolution &SE,
                                     MemorySSAUpdater *MSSAU,
                                     bool &IsLoopDeleted) {
-  if (!EnableTermFolding)
+  if (!ScalarOptions::Global.enable_loop_simplifycfg_term_folding)
     return false;
 
   // To keep things simple, only process loops with single latch. We

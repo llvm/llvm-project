@@ -42,8 +42,39 @@ MlirDynamicOpTrait mlirDynamicOpTraitIsTerminatorCreate() {
   return wrap(new DynamicOpTraits::IsTerminator());
 }
 
+MlirTypeID mlirDynamicOpTraitIsTerminatorGetTypeID() {
+  return wrap(DynamicOpTraits::IsTerminator::getStaticTypeID());
+}
+
 MlirDynamicOpTrait mlirDynamicOpTraitNoTerminatorCreate() {
   return wrap(new DynamicOpTraits::NoTerminator());
+}
+
+MlirTypeID mlirDynamicOpTraitNoTerminatorGetTypeID() {
+  return wrap(DynamicOpTraits::NoTerminator::getStaticTypeID());
+}
+
+namespace mlir::DynamicOpTraits {
+
+class RecursiveMemoryEffects
+    : public DynamicOpTraitImpl<OpTrait::HasRecursiveMemoryEffects> {};
+
+} // namespace mlir::DynamicOpTraits
+
+MlirDynamicOpTrait mlirDynamicOpTraitRecursiveMemoryEffectsCreate(void) {
+  return wrap(new DynamicOpTraits::RecursiveMemoryEffects());
+}
+
+MlirTypeID mlirDynamicOpTraitRecursiveMemoryEffectsGetTypeID(void) {
+  return wrap(DynamicOpTraits::RecursiveMemoryEffects::getStaticTypeID());
+}
+
+MlirDynamicOpTrait mlirDynamicOpTraitIsIsolatedFromAboveCreate() {
+  return wrap(new DynamicOpTraits::IsIsolatedFromAbove());
+}
+
+MlirTypeID mlirDynamicOpTraitIsIsolatedFromAboveGetTypeID() {
+  return wrap(DynamicOpTraits::IsIsolatedFromAbove::getStaticTypeID());
 }
 
 void mlirDynamicOpTraitDestroy(MlirDynamicOpTrait dynamicOpTrait) {

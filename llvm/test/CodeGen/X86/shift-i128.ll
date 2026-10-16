@@ -15,8 +15,8 @@ define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    subl $32, %esp
+; i686-NEXT:    movzbl 24(%ebp), %ecx
 ; i686-NEXT:    movl 8(%ebp), %eax
 ; i686-NEXT:    movl 12(%ebp), %edx
 ; i686-NEXT:    movl 16(%ebp), %esi
@@ -42,7 +42,6 @@ define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    shrdl %cl, %edi, %eax
 ; i686-NEXT:    shrdl %cl, %ebx, %esi
 ; i686-NEXT:    movl 40(%ebp), %ebx
-; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    shrl %cl, %edi
 ; i686-NEXT:    movl %edi, 12(%ebx)
 ; i686-NEXT:    movl %eax, 8(%ebx)
@@ -82,8 +81,8 @@ define void @test_ashr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    subl $32, %esp
+; i686-NEXT:    movzbl 24(%ebp), %ecx
 ; i686-NEXT:    movl 8(%ebp), %eax
 ; i686-NEXT:    movl 12(%ebp), %edx
 ; i686-NEXT:    movl 16(%ebp), %esi
@@ -110,7 +109,6 @@ define void @test_ashr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    shrdl %cl, %edi, %eax
 ; i686-NEXT:    shrdl %cl, %ebx, %esi
 ; i686-NEXT:    movl 40(%ebp), %ebx
-; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    sarl %cl, %edi
 ; i686-NEXT:    movl %edi, 12(%ebx)
 ; i686-NEXT:    movl %eax, 8(%ebx)
@@ -151,8 +149,8 @@ define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $48, %esp
-; i686-NEXT:    movl 24(%ebp), %ecx
+; i686-NEXT:    subl $32, %esp
+; i686-NEXT:    movzbl 24(%ebp), %ecx
 ; i686-NEXT:    movl 8(%ebp), %eax
 ; i686-NEXT:    movl 12(%ebp), %edx
 ; i686-NEXT:    movl 16(%ebp), %esi
@@ -182,7 +180,6 @@ define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-NEXT:    movl %esi, 8(%ebx)
 ; i686-NEXT:    movl %edx, %esi
 ; i686-NEXT:    shll %cl, %esi
-; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    shldl %cl, %edx, %eax
 ; i686-NEXT:    movl %eax, 4(%ebx)
 ; i686-NEXT:    movl %esi, (%ebx)
@@ -281,7 +278,7 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) no
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $112, %esp
+; i686-NEXT:    subl $96, %esp
 ; i686-NEXT:    movl 40(%ebp), %edx
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %ecx
@@ -408,7 +405,7 @@ define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) no
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $112, %esp
+; i686-NEXT:    subl $96, %esp
 ; i686-NEXT:    movl 40(%ebp), %edx
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %ecx
@@ -541,7 +538,7 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nou
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $128, %esp
+; i686-NEXT:    subl $112, %esp
 ; i686-NEXT:    movl 40(%ebp), %edi
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %ecx
@@ -1007,7 +1004,7 @@ define i128 @shift_i128_limited_shamt_no_nuw(i128 noundef %a, i32 noundef %b) no
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $48, %esp
+; i686-NEXT:    subl $32, %esp
 ; i686-NEXT:    movzbl 40(%ebp), %eax
 ; i686-NEXT:    movl 24(%ebp), %ecx
 ; i686-NEXT:    movl 28(%ebp), %edx
@@ -1079,7 +1076,7 @@ define i128 @shift_i128_limited_shamt_unknown_lhs(i128 noundef %a, i32 noundef %
 ; i686-NEXT:    pushl %edi
 ; i686-NEXT:    pushl %esi
 ; i686-NEXT:    andl $-16, %esp
-; i686-NEXT:    subl $48, %esp
+; i686-NEXT:    subl $32, %esp
 ; i686-NEXT:    movl 24(%ebp), %eax
 ; i686-NEXT:    movl 28(%ebp), %edx
 ; i686-NEXT:    movl 32(%ebp), %esi

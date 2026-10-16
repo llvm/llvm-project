@@ -430,3 +430,16 @@ namespace deduction_qualifiers {
     h(b, &CA::v);
   }
 } // namespace deduction_qualifiers
+
+namespace GH194524 {
+  struct Base {
+    typedef void (Base::*Func)(void);
+  };
+
+  template <class T> struct Sub {
+    typedef void (T::*TFunc)(void);
+    Sub(TFunc tfunc) {
+      (Base::Func&)tfunc;
+    }
+  };
+} // namespace GH194524

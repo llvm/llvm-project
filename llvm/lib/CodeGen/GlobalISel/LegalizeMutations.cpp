@@ -67,8 +67,17 @@ LegalizeMutation LegalizeMutations::changeElementSizeTo(unsigned TypeIdx,
   return [=](const LegalityQuery &Query) {
     const LLT OldTy = Query.Types[TypeIdx];
     const LLT NewTy = Query.Types[FromTypeIdx];
-    const LLT NewEltTy = LLT::scalar(NewTy.getScalarSizeInBits());
-    return std::make_pair(TypeIdx, OldTy.changeElementType(NewEltTy));
+    return std::make_pair(TypeIdx,
+                          OldTy.changeElementSize(NewTy.getScalarSizeInBits()));
+  };
+}
+
+LegalizeMutation LegalizeMutations::changeElementSizeTo(unsigned TypeIdx,
+                                                        LLT NewTy) {
+  return [=](const LegalityQuery &Query) {
+    const LLT OldTy = Query.Types[TypeIdx];
+    return std::make_pair(TypeIdx,
+                          OldTy.changeElementSize(NewTy.getScalarSizeInBits()));
   };
 }
 

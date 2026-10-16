@@ -4,7 +4,7 @@ declare ptr @llvm.returnaddress(i32)
 define void @return_address(i32 %var) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %var
-  ; CHECK-NEXT: %result = call ptr @llvm.returnaddress(i32 %var)
+  ; CHECK-NEXT: %result = call ptr @llvm.returnaddress.p0(i32 %var)
   %result = call ptr @llvm.returnaddress(i32 %var)
   ret void
 }
@@ -154,6 +154,18 @@ define void @test_prefetch(ptr %ptr, i32 %arg0, i32 %arg1) {
   ; CHECK-NEXT:  i32 %arg1
   call void @llvm.prefetch(ptr %ptr, i32 %arg0, i32 0, i32 0)
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 %arg1, i32 0)
+
+  ; CHECK: immarg value 2 for arg 1 out of range [0,2)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0(ptr %ptr, i32 2, i32 0, i32 0)
+  call void @llvm.prefetch(ptr %ptr, i32 2, i32 0, i32 0)
+
+  ; CHECK: immarg value 8 for arg 2 out of range [0,4)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0(ptr %ptr, i32 0, i32 8, i32 0)
+  call void @llvm.prefetch(ptr %ptr, i32 0, i32 8, i32 0)
+
+  ; CHECK: immarg value 4 for arg 3 out of range [0,2)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0(ptr %ptr, i32 0, i32 0, i32 4)
+  call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 4)
   ret void
 }
 

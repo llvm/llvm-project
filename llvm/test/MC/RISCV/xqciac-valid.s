@@ -72,3 +72,8 @@ sh2add x10, x11, x10
 # CHECK-ALIAS: qc.c.muliadd    a0, a1, 8
 # CHECK-ENC: encoding: [0x8a,0x31]
 sh3add x10, x11, x10
+
+# CHECK-NOALIAS: qc.c.muliadd    a0, a1, 16
+# CHECK-ALIAS: qc.c.muliadd    a0, a1, 16
+# CHECK-ENC: encoding: [0xaa,0x21]
+qc.shladd x10, x11, x10, 4

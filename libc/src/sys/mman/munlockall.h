@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_SYS_MMAN_MUNLOCKALL_H
 
 #include "src/__support/macros/config.h"
-#include <sys/mman.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

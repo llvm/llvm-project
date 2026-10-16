@@ -33,7 +33,8 @@
 // RUN: %fcheck-nvptx64-nvidia-cuda -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
 

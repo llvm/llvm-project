@@ -1,0 +1,11 @@
+# Test that setting a source regex breakpoint doesn't deadlock when the source
+# file has been deleted after compilation.
+
+# RUN: cp %p/Inputs/main.c %t.c
+# RUN: %clang_host -g -o %t %t.c
+# RUN: rm %t.c
+# RUN: %lldb -b -o "br set -p any" %t 2>&1 | FileCheck %s
+
+# CHECK: Breakpoint 1: no locations (pending).
+# CHECK-NOT: error
+# CHECK-NOT: assert

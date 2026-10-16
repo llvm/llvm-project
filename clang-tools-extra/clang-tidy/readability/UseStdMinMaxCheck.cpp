@@ -130,11 +130,11 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
-  auto AssignOperator =
+  const auto AssignOperator =
       binaryOperator(hasOperatorName("="),
                      hasLHS(expr(unless(isTypeDependent())).bind("AssignLhs")),
                      hasRHS(expr(unless(isTypeDependent())).bind("AssignRhs")));
-  auto BinaryOperator =
+  const auto BinaryOperator =
       binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
                      hasLHS(expr(unless(isTypeDependent())).bind("CondLhs")),
                      hasRHS(expr(unless(isTypeDependent())).bind("CondRhs")))
@@ -167,9 +167,9 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("binaryOp");
   const BinaryOperatorKind BinaryOpcode = BinaryOp->getOpcode();
   const SourceLocation IfLocation = If->getIfLoc();
-  const SourceLocation ThenLocation = If->getEndLoc();
+  SourceLocation ThenLocation = If->getEndLoc();
 
-  auto ReplaceAndDiagnose = [&](const StringRef FunctionName) {
+  const auto ReplaceAndDiagnose = [&](const StringRef FunctionName) {
     const SourceManager &Source = *Result.SourceManager;
     SmallString<64> Comment;
 
@@ -177,7 +177,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       Text = Text.ltrim();
       if (!Text.empty()) {
         if (!Comment.empty())
-          Comment += " ";
+          Comment += ' ';
         Comment += Text;
       }
     };
@@ -218,6 +218,12 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       if (Semi != StringRef::npos && PostInner.take_front(Semi).trim().empty())
         PostInner = PostInner.drop_front(Semi + 1);
       AppendNormalized(PostInner);
+    } else if (const auto SemiTok =
+                   Lexer::findNextToken(ThenLocation, Source, LO);
+               SemiTok && SemiTok->is(tok::semi)) {
+      AppendNormalized(
+          GetSourceText(ThenLocation, SemiTok->getLocation()).rtrim());
+      ThenLocation = SemiTok->getLocation();
     }
 
     diag(IfLocation, "use `%0` instead of `%1`")

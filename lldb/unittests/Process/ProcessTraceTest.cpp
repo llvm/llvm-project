@@ -1,4 +1,4 @@
-//===-- ProcessEventDataTest.cpp ------------------------------------------===//
+//===-- ProcessTraceTest.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -60,4 +60,29 @@ TEST_F(ProcessTraceTest, ConstructorWithNullptrCoreFile) {
       /*can_connect*/ false);
 
   ASSERT_NE(process_sp, nullptr);
+}
+
+// Test that a trace process stops after attaching.
+TEST_F(ProcessTraceTest, DidAttach) {
+  ArchSpec arch("i386-pc-linux");
+
+  Platform::SetHostPlatform(PlatformLinux::CreateInstance(true, &arch));
+  ASSERT_NE(Platform::GetHostPlatform(), nullptr);
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = target_sp->CreateProcess(
+      /*listener*/ nullptr, "trace",
+      /*crash_file*/ nullptr,
+      /*can_connect*/ false);
+
+  ASSERT_NE(process_sp, nullptr);
+
+  process_sp->DidAttach(arch);
+
+  ASSERT_EQ(process_sp->GetState(), lldb::eStateStopped);
 }

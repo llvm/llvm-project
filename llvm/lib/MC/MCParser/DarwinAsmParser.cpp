@@ -192,6 +192,8 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseMacOSXVersionMin>(
       ".macosx_version_min");
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
+    addDirectiveHandler<&DarwinAsmParser::parseTargetTripleDirective>(
+        ".target_triple");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
         ".cg_profile");
 
@@ -457,6 +459,7 @@ public:
   }
 
   bool parseBuildVersion(StringRef Directive, SMLoc Loc);
+  bool parseTargetTripleDirective(StringRef Directive, SMLoc Loc);
   bool parseVersionMin(StringRef Directive, SMLoc Loc, MCVersionMinType Type);
   bool parseMajorMinorVersionComponent(unsigned *Major, unsigned *Minor,
                                        const char *VersionName);
@@ -859,7 +862,7 @@ bool DarwinAsmParser::parseDirectiveTBSS(StringRef, SMLoc) {
       getContext().getMachOSection("__DATA", "__thread_bss",
                                    MachO::S_THREAD_LOCAL_ZEROFILL, 0,
                                    SectionKind::getThreadBSS()),
-      Sym, Size, Align(1ULL << Pow2Alignment));
+      Sym, Size, Align::fromLog2(Pow2Alignment));
 
   return false;
 }
@@ -945,7 +948,7 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   getStreamer().emitZerofill(
       getContext().getMachOSection(Segment, Section, MachO::S_ZEROFILL, 0,
                                    SectionKind::getBSS()),
-      Sym, Size, Align(1ULL << Pow2Alignment), SectionLoc);
+      Sym, Size, Align::fromLog2(Pow2Alignment), SectionLoc);
 
   return false;
 }
@@ -1183,6 +1186,25 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
     = getOSTypeFromPlatform((MachO::PlatformType)Platform);
   checkVersion(Directive, PlatformName, Loc, ExpectedOS);
   getStreamer().emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+  return false;
+}
+
+/// parseTargetTripleDirective
+///   ::= .target_triple parseTargetTriple
+bool DarwinAsmParser::parseTargetTripleDirective(StringRef Directive,
+                                                 SMLoc Loc) {
+  StringRef TargetTriple;
+  SMLoc TargetTripleLoc = getTok().getLoc();
+  if (getParser().parseIdentifier(TargetTriple))
+    return TokError("target triple expected");
+  std::string NormalizedTriple = Triple::normalize(TargetTriple);
+  if (!Triple(NormalizedTriple).isOSDarwin())
+    return Error(TargetTripleLoc, "non-Darwin target triple");
+
+  if (parseEOL())
+    return addErrorSuffix(" in '.target_triple' directive");
+
+  getStreamer().emitTargetTriple(NormalizedTriple);
   return false;
 }
 

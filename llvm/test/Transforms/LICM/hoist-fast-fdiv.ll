@@ -36,7 +36,7 @@ define void @invariant_fdiv(ptr %out, float %arg) {
 ; CHECK-LABEL: @invariant_fdiv(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: %div = fdiv fast float 4.000000e+00, %arg
-; CHECK-NEXT: fmul fast float %div, 0x41F0000000000000
+; CHECK-NEXT: fmul fast float %div, f0x4F800000
 entry:
   br label %loop
 

@@ -48,64 +48,67 @@ static std::string serializeToString(const Study &S) {
 MATCHER(EqualsCacheInfo, "") {
   const CacheInfo &A = ::testing::get<0>(arg);
   const CacheInfo &B = ::testing::get<1>(arg);
-  return ExplainMatchResult(AllOf(Field(&CacheInfo::Type, B.Type),
-                                  Field(&CacheInfo::Level, B.Level),
-                                  Field(&CacheInfo::Size, B.Size),
-                                  Field(&CacheInfo::NumSharing, B.NumSharing)),
-                            A, result_listener);
+  return ExplainMatchResult(
+      AllOf(Field(&CacheInfo::type, B.type), Field(&CacheInfo::level, B.level),
+            Field(&CacheInfo::size, B.size),
+            Field(&CacheInfo::num_sharing, B.num_sharing)),
+      A, result_listener);
 }
 
 auto equals(const HostState &H) -> auto {
   return AllOf(
-      Field(&HostState::CpuName, H.CpuName),
-      Field(&HostState::CpuFrequency, H.CpuFrequency),
-      Field(&HostState::Caches, Pointwise(EqualsCacheInfo(), H.Caches)));
+      Field(&HostState::cpu_name, H.cpu_name),
+      Field(&HostState::cpu_frequency, H.cpu_frequency),
+      Field(&HostState::caches, Pointwise(EqualsCacheInfo(), H.caches)));
 }
 
 auto equals(const StudyConfiguration &SC) -> auto {
   return AllOf(
-      Field(&StudyConfiguration::Function, SC.Function),
-      Field(&StudyConfiguration::NumTrials, SC.NumTrials),
-      Field(&StudyConfiguration::IsSweepMode, SC.IsSweepMode),
-      Field(&StudyConfiguration::SweepModeMaxSize, SC.SweepModeMaxSize),
-      Field(&StudyConfiguration::SizeDistributionName, SC.SizeDistributionName),
-      Field(&StudyConfiguration::AccessAlignment, SC.AccessAlignment),
-      Field(&StudyConfiguration::MemcmpMismatchAt, SC.MemcmpMismatchAt));
+      Field(&StudyConfiguration::function, SC.function),
+      Field(&StudyConfiguration::num_trials, SC.num_trials),
+      Field(&StudyConfiguration::is_sweep_mode, SC.is_sweep_mode),
+      Field(&StudyConfiguration::sweep_mode_max_size, SC.sweep_mode_max_size),
+      Field(&StudyConfiguration::size_distribution_name,
+            SC.size_distribution_name),
+      Field(&StudyConfiguration::access_alignment, SC.access_alignment),
+      Field(&StudyConfiguration::memcmp_mismatch_at, SC.memcmp_mismatch_at));
 }
 
 auto equals(const BenchmarkOptions &BO) -> auto {
   return AllOf(
-      Field(&BenchmarkOptions::MinDuration, BO.MinDuration),
-      Field(&BenchmarkOptions::MaxDuration, BO.MaxDuration),
-      Field(&BenchmarkOptions::InitialIterations, BO.InitialIterations),
-      Field(&BenchmarkOptions::MaxIterations, BO.MaxIterations),
-      Field(&BenchmarkOptions::MinSamples, BO.MinSamples),
-      Field(&BenchmarkOptions::MaxSamples, BO.MaxSamples),
-      Field(&BenchmarkOptions::Epsilon, BO.Epsilon),
-      Field(&BenchmarkOptions::ScalingFactor, BO.ScalingFactor),
-      Field(&BenchmarkOptions::Log, BO.Log));
+      Field(&BenchmarkOptions::min_duration, BO.min_duration),
+      Field(&BenchmarkOptions::max_duration, BO.max_duration),
+      Field(&BenchmarkOptions::initial_iterations, BO.initial_iterations),
+      Field(&BenchmarkOptions::max_iterations, BO.max_iterations),
+      Field(&BenchmarkOptions::min_samples, BO.min_samples),
+      Field(&BenchmarkOptions::max_samples, BO.max_samples),
+      Field(&BenchmarkOptions::epsilon, BO.epsilon),
+      Field(&BenchmarkOptions::scaling_factor, BO.scaling_factor),
+      Field(&BenchmarkOptions::log, BO.log));
 }
 
 auto equals(const Runtime &RI) -> auto {
-  return AllOf(Field(&Runtime::Host, equals(RI.Host)),
-               Field(&Runtime::BufferSize, RI.BufferSize),
-               Field(&Runtime::BatchParameterCount, RI.BatchParameterCount),
-               Field(&Runtime::BenchmarkOptions, equals(RI.BenchmarkOptions)));
+  return AllOf(
+      Field(&Runtime::host, equals(RI.host)),
+      Field(&Runtime::buffer_size, RI.buffer_size),
+      Field(&Runtime::batch_parameter_count, RI.batch_parameter_count),
+      Field(&Runtime::benchmark_options, equals(RI.benchmark_options)));
 }
 
 auto equals(const Study &S) -> auto {
-  return AllOf(Field(&Study::StudyName, S.StudyName),
-               Field(&Study::Runtime, equals(S.Runtime)),
-               Field(&Study::Configuration, equals(S.Configuration)),
-               Field(&Study::Measurements, S.Measurements));
+  return AllOf(Field(&Study::study_name, S.study_name),
+               Field(&Study::runtime, equals(S.runtime)),
+               Field(&Study::configuration, equals(S.configuration)),
+               Field(&Study::measurements, S.measurements));
 }
 
 TEST(JsonTest, RoundTrip) {
   const Study S = getStudy();
   const auto Serialized = serializeToString(S);
   auto StudyOrError = parseJsonStudy(Serialized);
-  if (auto Err = StudyOrError.takeError())
+  if (auto Err = StudyOrError.takeError()) {
     EXPECT_FALSE(Err) << "Unexpected error : " << Err << "\n" << Serialized;
+  }
   const Study &Parsed = *StudyOrError;
   EXPECT_THAT(Parsed, equals(S)) << Serialized << "\n"
                                  << serializeToString(Parsed);

@@ -31,6 +31,8 @@ class DXILResourceMap;
 
 namespace dxil {
 
+class ModuleSignatureInfo;
+
 struct ComputedShaderFlags {
 #define SHADER_FEATURE_FLAG(FeatureBit, DxilModuleBit, FlagName, Str)          \
   bool FlagName : 1;
@@ -85,7 +87,8 @@ struct ComputedShaderFlags {
 
 struct ModuleShaderFlags {
   void initialize(Module &, DXILResourceTypeMap &DRTM,
-                  const DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI);
+                  const DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI,
+                  const ModuleSignatureInfo &Signatures);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
@@ -121,7 +124,7 @@ public:
 
 /// Printer pass for ShaderFlagsAnalysis results.
 class ShaderFlagsAnalysisPrinter
-    : public PassInfoMixin<ShaderFlagsAnalysisPrinter> {
+    : public OptionalPassInfoMixin<ShaderFlagsAnalysisPrinter> {
   raw_ostream &OS;
 
 public:

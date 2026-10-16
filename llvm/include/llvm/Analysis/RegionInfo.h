@@ -97,6 +97,9 @@ struct RegionTraits<Function> {
   static unsigned getNumSuccessors(BasicBlock *BB) {
     return BB->getTerminator()->getNumSuccessors();
   }
+
+  /// Update statistics about created regions.
+  LLVM_ABI static void updateStatistics(Region *R);
 };
 
 /// Marker class to iterate over the elements of a Region in flat mode.
@@ -708,7 +711,7 @@ class RegionInfoBase {
     return *this;
   }
 
-  virtual ~RegionInfoBase();
+  ~RegionInfoBase();
 
   DomTreeT *DT;
   PostDomTreeT *PDT;
@@ -786,9 +789,6 @@ private:
 
   // Build the region hierarchy after all region detected.
   void buildRegionsTree(DomTreeNodeT *N, RegionT *region);
-
-  // Update statistic about created regions.
-  virtual void updateStatistics(RegionT *R) = 0;
 
   // Detect all regions in function and build the region tree.
   void calculate(FuncT &F);
@@ -874,6 +874,8 @@ public:
   void verifyAnalysis() const;
 };
 
+extern template class LLVM_TEMPLATE_ABI RegionNodeBase<RegionTraits<Function>>;
+
 class RegionNode : public RegionNodeBase<RegionTraits<Function>> {
 public:
   inline RegionNode(Region *Parent, BasicBlock *Entry, bool isSubRegion = false)
@@ -884,22 +886,26 @@ public:
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI RegionBase<RegionTraits<Function>>;
+
 class Region : public RegionBase<RegionTraits<Function>> {
 public:
-  Region(BasicBlock *Entry, BasicBlock *Exit, RegionInfo *RI, DominatorTree *DT,
-         Region *Parent = nullptr);
-  ~Region();
+  LLVM_ABI Region(BasicBlock *Entry, BasicBlock *Exit, RegionInfo *RI,
+                  DominatorTree *DT, Region *Parent = nullptr);
+  LLVM_ABI ~Region();
 
   bool operator==(const RegionNode &RN) const {
     return &RN == reinterpret_cast<const RegionNode *>(this);
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI RegionInfoBase<RegionTraits<Function>>;
+
 class RegionInfo : public RegionInfoBase<RegionTraits<Function>> {
 public:
   using Base = RegionInfoBase<RegionTraits<Function>>;
 
-  explicit RegionInfo();
+  LLVM_ABI explicit RegionInfo();
 
   RegionInfo(RegionInfo &&Arg) : Base(std::move(static_cast<Base &>(Arg))) {
     updateRegionTree(*this, TopLevelRegion);
@@ -911,33 +917,30 @@ public:
     return *this;
   }
 
-  ~RegionInfo() override;
+  LLVM_ABI ~RegionInfo();
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 
-  // updateStatistics - Update statistic about created regions.
-  void updateStatistics(Region *R) final;
-
-  void recalculate(Function &F, DominatorTree *DT, PostDominatorTree *PDT,
-                   DominanceFrontier *DF);
+  LLVM_ABI void recalculate(Function &F, DominatorTree *DT,
+                            PostDominatorTree *PDT, DominanceFrontier *DF);
 
 #ifndef NDEBUG
   /// Opens a viewer to show the GraphViz visualization of the regions.
   ///
   /// Useful during debugging as an alternative to dump().
-  void view();
+  LLVM_ABI void view();
 
   /// Opens a viewer to show the GraphViz visualization of this region
   /// without instructions in the BasicBlocks.
   ///
   /// Useful during debugging as an alternative to dump().
-  void viewOnly();
+  LLVM_ABI void viewOnly();
 #endif
 };
 
-class RegionInfoPass : public FunctionPass {
+class LLVM_ABI RegionInfoPass : public FunctionPass {
   RegionInfo RI;
 
 public:
@@ -970,25 +973,23 @@ class RegionInfoAnalysis : public AnalysisInfoMixin<RegionInfoAnalysis> {
 public:
   using Result = RegionInfo;
 
-  RegionInfo run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI RegionInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c RegionInfo.
-class RegionInfoPrinterPass : public PassInfoMixin<RegionInfoPrinterPass> {
+class RegionInfoPrinterPass
+    : public RequiredPassInfoMixin<RegionInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit RegionInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit RegionInfoPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Verifier pass for the \c RegionInfo.
-struct RegionInfoVerifierPass : PassInfoMixin<RegionInfoVerifierPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+struct RegionInfoVerifierPass : RequiredPassInfoMixin<RegionInfoVerifierPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 template <>
@@ -1019,10 +1020,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   else
     return OS << Node.template getNodeAs<BlockT>()->getName();
 }
-
-extern template class RegionBase<RegionTraits<Function>>;
-extern template class RegionNodeBase<RegionTraits<Function>>;
-extern template class RegionInfoBase<RegionTraits<Function>>;
 
 } // end namespace llvm
 

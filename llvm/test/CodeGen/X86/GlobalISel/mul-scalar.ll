@@ -67,15 +67,14 @@ define i64 @test_mul_i64(i64 %arg1, i64 %arg2) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    imull %edx, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    imull %edx, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imull %esi, %ecx
+; X86-NEXT:    mull %esi
+; X86-NEXT:    imull {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    addl %edi, %esi
-; X86-NEXT:    mull %edx
+; X86-NEXT:    addl %edi, %edx
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %esi

@@ -1,0 +1,114 @@
+// Tests for `clang-ssaf-linker static-library create`.
+//
+// These tests exercise the CLI shape (subcommand dispatch, verb positional,
+// flag surface) and the happy / error paths of StaticLibrary construction.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Happy path: single TU input
+// ============================================================================
+
+// The single-input case produces a StaticLibrary whose namespace name is
+// derived from the output file stem (`libempty`), whose target triple is
+// inferred from the input, and whose single member is the input TU.
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-empty.json -o %t/libempty.json
+// RUN: diff %S/Outputs/libempty.json %t/libempty.json
+
+// ============================================================================
+// Happy path: multiple TU inputs
+// ============================================================================
+
+// Multiple inputs are bundled together; every member's target triple must
+// match, and every member's TUNamespace must be unique.
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/libtwo.json
+// RUN: diff %S/Outputs/libtwo.json %t/libtwo.json
+
+// ============================================================================
+// Explicit --namespace overrides the output-stem default
+// ============================================================================
+
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-empty.json --namespace my-static-lib -o %t/lib-namespace-override.json
+// RUN: diff %S/Outputs/lib-namespace-override.json %t/lib-namespace-override.json
+
+// ============================================================================
+// Explicit --target-triple matches inputs
+// ============================================================================
+
+// When explicit and matching, the flag is accepted and the produced
+// StaticLibrary is identical to the inferred-triple case.
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-empty.json --target-triple arm64-apple-macosx -o %t/lib-explicit-triple.json
+// RUN: diff %S/Outputs/lib-explicit-triple.json %t/lib-explicit-triple.json
+
+// ============================================================================
+// Explicit --target-triple disagrees with input
+// ============================================================================
+
+// RUN: not clang-ssaf-linker static-library create %S/Inputs/tu-empty.json --target-triple x86_64-apple-macosx -o %t/lib-mismatch.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=EXPLICIT-MISMATCH
+// EXPLICIT-MISMATCH: target triple 'arm64-apple-macosx' from TU summary '{{.*}}tu-empty.json' does not match expected triple 'x86_64-apple-macosx'
+
+// A --target-triple with an unrecognized architecture, vendor, or OS is
+// rejected at the validation step — before any input is deserialized —
+// with a message identifying the offending flag value and which
+// component failed.
+// RUN: not clang-ssaf-linker static-library create %S/Inputs/tu-empty.json --target-triple gibberish -o %t/lib-bogus-arch.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BOGUS-ARCH
+// BOGUS-ARCH: invalid --target-triple 'gibberish': unrecognized architecture
+
+// RUN: not clang-ssaf-linker static-library create %S/Inputs/tu-empty.json --target-triple arm64-gibberish-macosx -o %t/lib-bogus-vendor.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BOGUS-VENDOR
+// BOGUS-VENDOR: invalid --target-triple 'arm64-gibberish-macosx': unrecognized vendor
+
+// RUN: not clang-ssaf-linker static-library create %S/Inputs/tu-empty.json --target-triple arm64-apple-gibberish -o %t/lib-bogus-os.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BOGUS-OS
+// BOGUS-OS: invalid --target-triple 'arm64-apple-gibberish': unrecognized OS
+
+// ============================================================================
+// Duplicate TU namespaces across inputs
+// ============================================================================
+
+// Passing the same TU summary twice trips duplicate-member detection.
+// RUN: not clang-ssaf-linker static-library create %S/Inputs/tu-empty.json %S/Inputs/tu-empty.json -o %t/lib-dup.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-MEMBER
+// DUP-MEMBER: duplicate TU summary member with namespace BuildNamespace(CompilationUnit, empty.cpp)
+
+// ============================================================================
+// Empty input list
+// ============================================================================
+
+// The subcommand requires at least one positional input after the verb.
+// RUN: not clang-ssaf-linker static-library create -o %t/lib-empty-inputs.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-INPUTS
+// NO-INPUTS: no input TU summaries: at least one input is required
+
+// ============================================================================
+// Unknown verb
+// ============================================================================
+
+// RUN: not clang-ssaf-linker static-library extract %S/Inputs/tu-empty.json -o %t/lib-unknown.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=UNKNOWN-VERB
+// UNKNOWN-VERB: unknown static-library verb 'extract': expected 'create'
+
+// ============================================================================
+// Round-trip: produced StaticLibrary parses cleanly with clang-ssaf-format
+// ============================================================================
+
+// The linker's output must be a valid StaticLibrary artifact that
+// clang-ssaf-format can read back and write out byte-identical (its own
+// reader-writer round-trip). This ties the linker to the same on-disk
+// invariants the format tool enforces.
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/librt.json
+// RUN: clang-ssaf-format --type static-library %t/librt.json -o %t/librt-roundtrip.json
+// RUN: diff %t/librt.json %t/librt-roundtrip.json
+
+// ============================================================================
+// Backward-compat: no subcommand still runs `link`
+// ============================================================================
+
+// Existing invocations that don't name a subcommand fall back to the linker
+// pipeline unchanged.
+// RUN: mkdir -p %t/default-cmd
+// RUN: clang-ssaf-linker %S/Inputs/tu-empty.json -o %t/default-cmd/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/default-cmd/lu-empty.json

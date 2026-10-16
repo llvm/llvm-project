@@ -74,7 +74,9 @@ define internal void @test_transpose_f32_2x3() {
 
 ; Test Transpose 1x4 float (Result is 4x1 float), should be a copy (vector of 4 floats)
 ; CHECK-LABEL: ; -- Begin function test_transpose_f32_1x4_to_4x1
-; CHECK: %[[Shuffle:[0-9]+]] = OpVectorShuffle %[[V4F32_ID]] {{.*}} 0 1 2 3
+; CHECK-COUNT-4: OpCompositeInsert %[[V4F32_ID]]
+; CHECK-NOT: OpVectorShuffle
+; CHECK-COUNT-4: OpCompositeExtract %[[Float_ID]]
 define internal void @test_transpose_f32_1x4_to_4x1() {
  %1 = load <4 x float>, ptr addrspace(10) @private_v4f32
  %2 = call <4 x float> @llvm.matrix.transpose.v4f32.i32(<4 x float> %1, i32 1, i32 4)
@@ -84,7 +86,9 @@ define internal void @test_transpose_f32_1x4_to_4x1() {
 
 ; Test Transpose 4x1 float (Result is 1x4 float), should be a copy (vector of 4 floats)
 ; CHECK-LABEL: ; -- Begin function test_transpose_f32_4x1_to_1x4
-; CHECK: %[[Shuffle:[0-9]+]] = OpVectorShuffle %[[V4F32_ID]] {{.*}} 0 1 2 3
+; CHECK-COUNT-4: OpCompositeInsert %[[V4F32_ID]]
+; CHECK-NOT: OpVectorShuffle
+; CHECK-COUNT-4: OpCompositeExtract %[[Float_ID]]
 define internal void @test_transpose_f32_4x1_to_1x4() {
  %1 = load <4 x float>, ptr addrspace(10) @private_v4f32
  %2 = call <4 x float> @llvm.matrix.transpose.v4f32.i32(<4 x float> %1, i32 4, i32 1)
@@ -93,13 +97,17 @@ define internal void @test_transpose_f32_4x1_to_1x4() {
 }
 
 ; Test Transpose 1x1 float (Result is 1x1 float), should be a copy (scalar float)
-; TODO(171175): The SPIR-V backend does not seem to be legalizing single element vectors.
-; define internal void @test_transpose_f32_1x1() {
-;   %1 = load <1 x float>, ptr addrspace(10) @private_v1f32
-;   %2 = call <1 x float> @llvm.matrix.transpose.v1f32.i32(<1 x float> %1, i32 1, i32 1)
-;   store <1 x float> %2, ptr addrspace(10) @private_v1f32
-;   ret void
-; }
+; CHECK-LABEL: ; -- Begin function test_transpose_f32_1x1
+; CHECK: %[[AccessChain1x1:[0-9]+]] = OpAccessChain %[[_ptr_Float_ID]] %{{[0-9]+}} %{{[0-9]+}}
+; CHECK: %[[Load1x1:[0-9]+]] = OpLoad %[[Float_ID]] %[[AccessChain1x1]]
+; CHECK: %[[AccessChain1x1Store:[0-9]+]] = OpAccessChain %[[_ptr_Float_ID]] %{{[0-9]+}} %{{[0-9]+}}
+; CHECK: OpStore %[[AccessChain1x1Store]] %[[Load1x1]]
+define internal void @test_transpose_f32_1x1() {
+  %1 = load <1 x float>, ptr addrspace(10) @private_v1f32
+  %2 = call <1 x float> @llvm.matrix.transpose.v1f32.i32(<1 x float> %1, i32 1, i32 1)
+  store <1 x float> %2, ptr addrspace(10) @private_v1f32
+  ret void
+}
 
 define void @main() #0 {
   ret void
@@ -107,6 +115,6 @@ define void @main() #0 {
 
 declare <4 x float> @llvm.matrix.transpose.v4f32.i32(<4 x float>, i32, i32)
 declare <6 x float> @llvm.matrix.transpose.v6f32.i32(<6 x float>, i32, i32)
-; declare <1 x float> @llvm.matrix.transpose.v1f32.i32(<1 x float>, i32, i32)
+declare <1 x float> @llvm.matrix.transpose.v1f32.i32(<1 x float>, i32, i32)
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

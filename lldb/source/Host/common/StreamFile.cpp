@@ -16,8 +16,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-StreamFile::StreamFile(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
-    : Stream(flags, addr_size, byte_order) {
+StreamFile::StreamFile(uint32_t flags, ByteOrder byte_order)
+    : Stream(flags, byte_order) {
   m_file_sp = std::make_shared<File>();
 }
 

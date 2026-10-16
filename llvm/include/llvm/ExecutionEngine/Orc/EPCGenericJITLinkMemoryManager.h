@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements JITLinkMemoryManager by making remove calls via
-// ExecutorProcessControl::callWrapperAsync.
+// Implements JITLinkMemoryManager by calling executor-side wrapper functions
+// through Proxy objects.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
 // as this implementation will always work (at the cost of some performance
 // overhead for the calls).
+//
+// This header is protocol-agnostic. To build an instance that targets the ORC
+// runtime's SPS controller interface, see EPCGenericJITLinkMemoryManagerSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +23,11 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMap.h"
 #include "llvm/Support/Compiler.h"
+
+#include <cstdint>
 
 namespace llvm {
 namespace orc {
@@ -28,19 +35,11 @@ namespace orc {
 class LLVM_ABI EPCGenericJITLinkMemoryManager
     : public jitlink::JITLinkMemoryManager {
 public:
-  /// Function addresses for memory access.
-  struct SymbolAddrs {
-    ExecutorAddr Allocator;
-    ExecutorAddr Reserve;
-    ExecutorAddr Initialize;
-    ExecutorAddr Deinitialize;
-    ExecutorAddr Release;
-  };
-
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of
-  /// function addrs.
-  EPCGenericJITLinkMemoryManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
-      : EPC(EPC), SAs(SAs) {}
+  /// memory-manager bindings.
+  EPCGenericJITLinkMemoryManager(ExecutionSession &ES,
+                                 SimpleMemoryMapBindings B)
+      : ES(ES), B(std::move(B)) {}
 
   void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;
@@ -60,40 +59,10 @@ private:
   void completeAllocation(ExecutorAddr AllocAddr, jitlink::BasicLayout BL,
                           OnAllocatedFunction OnAllocated);
 
-  ExecutorProcessControl &EPC;
-  SymbolAddrs SAs;
+  ExecutionSession &ES;
+  SimpleMemoryMapBindings B;
 };
 
-namespace shared {
-
-/// FIXME: This specialization should be moved into TargetProcessControlTypes.h
-///        (or wherever those types get merged to) once ORC depends on JITLink.
-template <>
-class SPSSerializationTraits<SPSExecutorAddr,
-                             jitlink::JITLinkMemoryManager::FinalizedAlloc> {
-public:
-  static size_t size(const jitlink::JITLinkMemoryManager::FinalizedAlloc &FA) {
-    return SPSArgList<SPSExecutorAddr>::size(ExecutorAddr(FA.getAddress()));
-  }
-
-  static bool
-  serialize(SPSOutputBuffer &OB,
-            const jitlink::JITLinkMemoryManager::FinalizedAlloc &FA) {
-    return SPSArgList<SPSExecutorAddr>::serialize(
-        OB, ExecutorAddr(FA.getAddress()));
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          jitlink::JITLinkMemoryManager::FinalizedAlloc &FA) {
-    ExecutorAddr A;
-    if (!SPSArgList<SPSExecutorAddr>::deserialize(IB, A))
-      return false;
-    FA = jitlink::JITLinkMemoryManager::FinalizedAlloc(A);
-    return true;
-  }
-};
-
-} // end namespace shared
 } // end namespace orc
 } // end namespace llvm
 

@@ -128,6 +128,14 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       KMP_DEBUG_ASSERT(ompt_work_type);
     }
   }
+#define OMPT_LOOP_BEGIN(count)                                                 \
+  if (ompt_enabled.ompt_callback_work) {                                       \
+    ompt_callbacks.ompt_callback(ompt_callback_work)(                          \
+        ompt_work_type, ompt_scope_begin, &(team_info->parallel_data),         \
+        &(task_info->task_data), count, codeptr);                              \
+  }
+#else
+#define OMPT_LOOP_BEGIN(count) // no-op
 #endif
 
   KMP_DEBUG_ASSERT(plastiter && plower && pupper && pstride);
@@ -181,13 +189,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #endif
     KE_TRACE(10, ("__kmpc_for_static_init: T#%d return\n", global_tid));
 
-#if OMPT_SUPPORT && OMPT_OPTIONAL
-    if (ompt_enabled.ompt_callback_work) {
-      ompt_callbacks.ompt_callback(ompt_callback_work)(
-          ompt_work_type, ompt_scope_begin, &(team_info->parallel_data),
-          &(task_info->task_data), 0, codeptr);
-    }
-#endif
+    OMPT_LOOP_BEGIN(0);
     KMP_STATS_LOOP_END(OMP_loop_static_iterations);
     return;
   }
@@ -235,13 +237,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #endif
     KE_TRACE(10, ("__kmpc_for_static_init: T#%d return\n", global_tid));
 
-#if OMPT_SUPPORT && OMPT_OPTIONAL
-    if (ompt_enabled.ompt_callback_work) {
-      ompt_callbacks.ompt_callback(ompt_callback_work)(
-          ompt_work_type, ompt_scope_begin, &(team_info->parallel_data),
-          &(task_info->task_data), *pstride, codeptr);
-    }
-#endif
+    OMPT_LOOP_BEGIN(*pstride);
     KMP_STATS_LOOP_END(OMP_loop_static_iterations);
     return;
   }
@@ -265,13 +261,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #endif
     KE_TRACE(10, ("__kmpc_for_static_init: T#%d return\n", global_tid));
 
-#if OMPT_SUPPORT && OMPT_OPTIONAL
-    if (ompt_enabled.ompt_callback_work) {
-      ompt_callbacks.ompt_callback(ompt_callback_work)(
-          ompt_work_type, ompt_scope_begin, &(team_info->parallel_data),
-          &(task_info->task_data), *pstride, codeptr);
-    }
-#endif
+    OMPT_LOOP_BEGIN(*pstride);
     KMP_STATS_LOOP_END(OMP_loop_static_iterations);
     return;
   }
@@ -445,12 +435,8 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #endif
   KE_TRACE(10, ("__kmpc_for_static_init: T#%d return\n", global_tid));
 
+  OMPT_LOOP_BEGIN(trip_count);
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  if (ompt_enabled.ompt_callback_work) {
-    ompt_callbacks.ompt_callback(ompt_callback_work)(
-        ompt_work_type, ompt_scope_begin, &(team_info->parallel_data),
-        &(task_info->task_data), trip_count, codeptr);
-  }
   if (ompt_enabled.ompt_callback_dispatch) {
     ompt_dispatch_t dispatch_type;
     ompt_data_t instance = ompt_data_none;

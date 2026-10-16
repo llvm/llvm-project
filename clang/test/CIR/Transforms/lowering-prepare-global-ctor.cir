@@ -1,0 +1,36 @@
+// RUN: cir-opt %s --cir-lowering-prepare | FileCheck %s
+
+// LoweringPrepare moves the ctor region into an init function and keeps the
+// initial value. @dm is post-CXXABILowering: its null member pointer is -1,
+// which cannot be recovered from the lowered !s64i type alone.
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" {pad !u8i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
+  cir.func private @_Z1fv() -> !s64i
+
+  cir.global external @s = #cir.zero : !rec_S ctor {
+    %0 = cir.get_global @s : !cir.ptr<!rec_S>
+    cir.call @_ZN1SC1Ev(%0) : (!cir.ptr<!rec_S>) -> ()
+  } align(1)
+
+  cir.global external @dm = #cir.int<-1> : !s64i ctor {
+    %0 = cir.get_global @dm : !cir.ptr<!s64i>
+    %1 = cir.call @_Z1fv() : () -> !s64i
+    cir.store %1, %0 : !s64i, !cir.ptr<!s64i>
+  } align(8)
+}
+
+// CHECK: cir.global external @s = #cir.zero : !rec_S align(1)
+// CHECK: cir.func internal private @__cxx_global_var_init()
+// CHECK:   %[[S:.*]] = cir.get_global @s : !cir.ptr<!rec_S>
+// CHECK:   cir.call @_ZN1SC1Ev(%[[S]])
+// CHECK: cir.global external @dm = #cir.int<-1> : !s64i align(8)
+// CHECK: cir.func internal private @__cxx_global_var_init.1()
+// CHECK:   %[[DM:.*]] = cir.get_global @dm : !cir.ptr<!s64i>
+// CHECK:   %[[V:.*]] = cir.call @_Z1fv()
+// CHECK:   cir.store %[[V]], %[[DM]]

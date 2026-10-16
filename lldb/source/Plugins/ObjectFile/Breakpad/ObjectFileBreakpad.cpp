@@ -101,11 +101,11 @@ ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileBreakpad::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
+ModuleSpecList ObjectFileBreakpad::GetModuleSpecifications(
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t file_offset,
+    offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
-    return 0;
+    return {};
   // If this is opearting on a VirtualDataExtractor, it can have
   // gaps between valid bytes in the DataBuffer. We extract an
   // ArrayRef of the raw bytes, and can segfault.
@@ -114,11 +114,12 @@ size_t ObjectFileBreakpad::GetModuleSpecifications(
   auto text = toStringRef(contiguous_extractor_sp->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
-    return 0;
+    return {};
   ModuleSpec spec(file, std::move(header->arch));
   spec.GetUUID() = std::move(header->uuid);
+  ModuleSpecList specs;
   specs.Append(spec);
-  return 1;
+  return specs;
 }
 
 ObjectFileBreakpad::ObjectFileBreakpad(const ModuleSP &module_sp,
@@ -156,8 +157,8 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
 
     offset_t end_offset = end_ptr - m_data_nsp->GetDataStart();
     auto section_sp = std::make_shared<Section>(
-        GetModule(), this, next_section_id++,
-        ConstString(toString(*current_section)), eSectionTypeOther,
+        GetModule(), this, next_section_id++, toString(*current_section).str(),
+        eSectionTypeOther,
         /*file_vm_addr*/ 0, /*vm_size*/ 0, section_start,
         end_offset - section_start, /*log2align*/ 0, /*flags*/ 0);
     m_sections_up->AddSection(section_sp);
