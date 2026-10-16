@@ -97,6 +97,7 @@ getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
       llvm::LLVMContext::MD_mmra,
       llvm::LLVMContext::MD_memprof,
       llvm::LLVMContext::MD_callsite,
+      llvm::LLVMContext::MD_tbaa_struct,
       llvmContext.getMDKindID(vecTypeHintMDName),
       llvmContext.getMDKindID(workGroupSizeHintMDName),
       llvmContext.getMDKindID(reqdWorkGroupSizeMDName),
@@ -212,6 +213,55 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
 
   iface.setTBAATags(ArrayAttr::get(iface.getContext(), tbaaTagSym));
   return success();
+}
+
+/// Converts `!tbaa.struct` to the `tbaa_struct` attribute on the imported
+/// aggregate copy. The node is a flat list of (offset, size, tag) triples: it
+/// says which fields of the aggregate the copy actually touches, so the copy is
+/// not treated as one opaque access and the gaps are known to be padding.
+static LogicalResult setTBAAStructAttr(OpBuilder &builder,
+                                       const llvm::MDNode *node, Operation *op,
+                                       LLVM::ModuleImport &moduleImport) {
+  if (!isa<LLVM::MemcpyOp, LLVM::MemcpyInlineOp, LLVM::MemmoveOp>(op))
+    return failure();
+
+  // Operands come in conceptual groups of three; anything else is malformed.
+  if (node->getNumOperands() == 0 || node->getNumOperands() % 3 != 0)
+    return failure();
+
+  SmallVector<Attribute> fields;
+  fields.reserve(node->getNumOperands() / 3);
+  for (unsigned i = 0, e = node->getNumOperands(); i != e; i += 3) {
+    auto *offset = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i));
+    auto *size = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i + 1));
+    if (!offset || !size)
+      return failure();
+    // Offsets and sizes are int64 in the attribute; wider constants cannot be
+    // represented, and extracting them would assert.
+    std::optional<int64_t> offsetValue = offset->getValue().trySExtValue();
+    std::optional<int64_t> sizeValue = size->getValue().trySExtValue();
+    if (!offsetValue || !sizeValue)
+      return failure();
+    auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
+    if (!tagNode)
+      return failure();
+    auto tag =
+        dyn_cast_if_present<TBAATagAttr>(moduleImport.lookupTBAAAttr(tagNode));
+    if (!tag)
+      return failure();
+    fields.push_back(
+        builder.getAttr<TBAAStructFieldAttr>(*offsetValue, *sizeValue, tag));
+  }
+
+  return TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<LLVM::MemcpyOp, LLVM::MemcpyInlineOp, LLVM::MemmoveOp>(
+          [&](auto copyOp) {
+            copyOp.setTbaaStructAttr(builder.getArrayAttr(fields));
+            return success();
+          })
+      .Default([](auto) { return failure(); });
 }
 
 /// Looks up all the access group attributes that map to the access group nodes
@@ -604,6 +654,8 @@ public:
       return setMemProfAttr(builder, node, op);
     if (kind == llvm::LLVMContext::MD_callsite)
       return setCallsiteAttr(builder, node, op);
+    if (kind == llvm::LLVMContext::MD_tbaa_struct)
+      return setTBAAStructAttr(builder, node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))
       return setVecTypeHintAttr(builder, node, op, moduleImport);

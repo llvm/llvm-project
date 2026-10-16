@@ -2418,6 +2418,29 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
+void ModuleTranslation::setTBAAStructMetadata(ArrayAttr fields,
+                                              llvm::Instruction *inst) {
+  if (!fields || fields.empty())
+    return;
+
+  // The node is a flat list of (offset, size, tag) triples, not a list of
+  // per-field nodes.
+  llvm::LLVMContext &ctx = getLLVMContext();
+  llvm::Type *i64 = llvm::Type::getInt64Ty(ctx);
+  SmallVector<llvm::Metadata *> operands;
+  operands.reserve(fields.size() * 3);
+  for (Attribute field : fields) {
+    auto fieldAttr = cast<TBAAStructFieldAttr>(field);
+    operands.push_back(llvm::ConstantAsMetadata::get(
+        llvm::ConstantInt::getSigned(i64, fieldAttr.getOffset())));
+    operands.push_back(llvm::ConstantAsMetadata::get(
+        llvm::ConstantInt::getSigned(i64, fieldAttr.getSize())));
+    operands.push_back(getTBAANode(fieldAttr.getTag()));
+  }
+  inst->setMetadata(llvm::LLVMContext::MD_tbaa_struct,
+                    llvm::MDNode::get(ctx, operands));
+}
+
 void ModuleTranslation::setDereferenceableMetadata(
     DereferenceableOpInterface op, llvm::Instruction *inst) {
   DereferenceableAttr derefAttr = op.getDereferenceableOrNull();
@@ -2504,6 +2527,21 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
   mlirModule->walk([&](AliasAnalysisOpInterface analysisOpInterface) {
     if (auto attr = analysisOpInterface.getTBAATagsOrNull())
       walker.walk(attr);
+  });
+
+  // The tags inside a `tbaa_struct` are reachable from nowhere else, so without
+  // this walk they never get an MDNode and the exported node has null tags.
+  auto walkStructFields = [&](ArrayAttr fields) {
+    if (fields)
+      walker.walk(fields);
+  };
+  mlirModule->walk([&](Operation *op) {
+    if (auto copyOp = dyn_cast<LLVM::MemcpyOp>(op))
+      walkStructFields(copyOp.getTbaaStructAttr());
+    else if (auto copyOp = dyn_cast<LLVM::MemcpyInlineOp>(op))
+      walkStructFields(copyOp.getTbaaStructAttr());
+    else if (auto copyOp = dyn_cast<LLVM::MemmoveOp>(op))
+      walkStructFields(copyOp.getTbaaStructAttr());
   });
 
   return success();

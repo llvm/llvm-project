@@ -1170,6 +1170,17 @@ LogicalResult ModuleImport::convertMetadata() {
       if (aliasAnalysisNodes.TBAA)
         if (failed(processTBAAMetadata(aliasAnalysisNodes.TBAA)))
           return failure();
+      // A `!tbaa.struct` node reaches its own tags, and those tags may appear
+      // nowhere else in the module. Without walking them here the lookup in
+      // setTBAAStructAttr finds nothing and the node is declined.
+      if (aliasAnalysisNodes.TBAAStruct) {
+        const llvm::MDNode *structNode = aliasAnalysisNodes.TBAAStruct;
+        for (unsigned i = 2, e = structNode->getNumOperands(); i < e; i += 3)
+          if (auto *tag =
+                  dyn_cast_if_present<llvm::MDNode>(structNode->getOperand(i)))
+            if (failed(processTBAAMetadata(tag)))
+              return failure();
+      }
       if (aliasAnalysisNodes.Scope)
         if (failed(processAliasScopeMetadata(aliasAnalysisNodes.Scope)))
           return failure();
