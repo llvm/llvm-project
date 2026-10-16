@@ -952,41 +952,25 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   if (isFPImmVLDILegal(FPVal, VT))
     return SDValue();
 
-  // Construct as integer, and move to float register.
-  APInt INTVal = FPVal.bitcastToAPInt();
-
-  // If more than MaterializeFPImmInsNum instructions will be used to
-  // generate the INTVal and move it to float register, fallback to
-  // use floating point load from the constant pool.
-  auto Seq = LoongArchMatInt::generateInstSeq(INTVal.getSExtValue());
-  int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
-  if (InsNum > MaterializeFPImmInsNum && !FPVal.isOne())
+  // The legalizer builds immediates the size of a GPR from their bits. Fall
+  // back to a load from the constant pool for expensive immediates.
+  if (VT.getSizeInBits() == Subtarget.getGRLen() ||
+      !isFPImmCheapInGPR(FPVal, VT))
     return SDValue();
 
-  switch (VT.getSimpleVT().SimpleTy) {
-  default:
-    llvm_unreachable("Unexpected floating point type!");
-    break;
-  case MVT::f32: {
-    SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i32);
-    if (Subtarget.is64Bit())
-      NewVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, NewVal);
-    return DAG.getNode(Subtarget.is64Bit() ? LoongArchISD::MOVGR2FR_W_LA64
-                                           : LoongArchISD::MOVGR2FR_W,
-                       DL, VT, NewVal);
-  }
-  case MVT::f64: {
-    if (Subtarget.is64Bit()) {
-      SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i64);
-      return DAG.getNode(LoongArchISD::MOVGR2FR_D, DL, VT, NewVal);
-    }
-    SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
-    SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
-    return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
-  }
+  // Construct as integer, and move to float register.
+  APInt INTVal = FPVal.bitcastToAPInt();
+  if (VT == MVT::f32) {
+    assert(Subtarget.is64Bit());
+    SDValue NewVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64,
+                                 DAG.getConstant(INTVal, DL, MVT::i32));
+    return DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, VT, NewVal);
   }
 
-  return SDValue();
+  assert(VT == MVT::f64 && !Subtarget.is64Bit());
+  SDValue Lo = DAG.getConstant(INTVal.trunc(32), DL, MVT::i32);
+  SDValue Hi = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
+  return DAG.getNode(LoongArchISD::MOVGR2FR_D_LO_HI, DL, VT, Lo, Hi);
 }
 
 // Ensure SETCC result and operand have the same bit width; isel does not
@@ -11088,9 +11072,24 @@ LoongArchTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
     return FPImmAction::ConstantPool;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())
     return FPImmAction::ConstantPool;
-  return (Imm.isZero() || Imm.isOne() || isFPImmVLDILegal(Imm, VT))
-             ? FPImmAction::Legal
-             : FPImmAction::ConstantPool;
+  if (Imm.isZero() || isFPImmVLDILegal(Imm, VT))
+    return FPImmAction::Legal;
+
+  // Immediates the size of a GPR are built from their bits. Others are built in
+  // lowerConstantFP.
+  if (VT.getSizeInBits() == Subtarget.getGRLen() && isFPImmCheapInGPR(Imm, VT))
+    return FPImmAction::Bitcast;
+  return Imm.isOne() ? FPImmAction::Legal : FPImmAction::ConstantPool;
+}
+
+bool LoongArchTargetLowering::isFPImmCheapInGPR(const APFloat &Imm,
+                                                EVT VT) const {
+  // Count the instructions to generate the bits and move them to a float
+  // register.
+  auto Seq =
+      LoongArchMatInt::generateInstSeq(Imm.bitcastToAPInt().getSExtValue());
+  int InsNum = Seq.size() + ((VT == MVT::f64 && !Subtarget.is64Bit()) ? 2 : 1);
+  return InsNum <= MaterializeFPImmInsNum || Imm.isOne();
 }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
