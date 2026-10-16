@@ -817,8 +817,11 @@ void Module::FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
                            options.include_inlines, sc_list);
     if (options.include_symbols)
       if (Symtab *symtab = symbols->GetSymtab())
-        symtab->FindFunctionSymbols(lookup_info.GetLookupName(),
-                                    lookup_info.GetNameTypeMask(), sc_list);
+        symtab->FindFunctionSymbols(options.match_linkage_names
+                                        ? lookup_info.GetName()
+                                        : lookup_info.GetLookupName(),
+                                    lookup_info.GetNameTypeMask(), sc_list,
+                                    options.match_linkage_names);
   }
 }
 
@@ -1306,12 +1309,14 @@ void Module::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
 
 void Module::FindSymbolsWithNameAndType(ConstString name,
                                         SymbolType symbol_type,
-                                        SymbolContextList &sc_list) {
+                                        SymbolContextList &sc_list,
+                                        bool match_linkage_names) {
   // No need to protect this call using m_mutex all other method calls are
   // already thread safe.
   if (Symtab *symtab = GetSymtab()) {
     std::vector<uint32_t> symbol_indexes;
-    symtab->FindAllSymbolsWithNameAndType(name, symbol_type, symbol_indexes);
+    symtab->FindAllSymbolsWithNameAndType(name, symbol_type, symbol_indexes,
+                                          match_linkage_names);
     SymbolIndicesToSymbolContextList(symtab, symbol_indexes, sc_list);
   }
 }

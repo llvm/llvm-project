@@ -16,9 +16,11 @@
 
 #include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -843,4 +845,213 @@ DWARF:
   // And we should be able to get it again once it has been created.
   Symtab *cached_symtab = symbol_file->GetSymtab(/*can_create=*/false);
   ASSERT_EQ(symtab, cached_symtab);
+}
+
+TEST_F(SymtabTest, LinkageFunctionLookupDoesNotIndexOtherNames) {
+  auto image = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Content: C3
+)");
+  ASSERT_THAT_EXPECTED(image, llvm::Succeeded());
+  auto module = std::make_shared<Module>(image->moduleSpec());
+  ObjectFile *object = module->GetObjectFile();
+  ASSERT_NE(object, nullptr);
+  Symtab *symtab = object->GetSymtab();
+  uint32_t id = 0;
+  auto add_symbol = [&](llvm::StringRef name, SymbolType type, bool trampoline,
+                        bool annotations) {
+    const uint32_t symbol_id = id++;
+    symtab->AddSymbol(Symbol(symbol_id, name, type, /*external=*/false,
+                             /*is_debug=*/false, trampoline,
+                             /*is_artificial=*/false, SectionSP(), id, 0,
+                             /*size_is_valid=*/false, annotations, 0));
+  };
+  add_symbol("runtime", eSymbolTypeCode, false, false);
+  add_symbol("runtime@VERSION", eSymbolTypeResolver, false, true);
+  add_symbol("runtime", eSymbolTypeReExported, false, false);
+  add_symbol("runtime", eSymbolTypeAbsolute, false, false);
+  add_symbol("runtime", eSymbolTypeUndefined, false, false);
+  add_symbol("runtime", eSymbolTypeData, false, false);
+  // IsTrampoline uses the symbol type; the constructor's legacy bool is unused.
+  add_symbol("runtime", eSymbolTypeTrampoline, true, false);
+  add_symbol("_Z7runtimev", eSymbolTypeCode, false, false);
+  add_symbol("$s4Test7runtimeyyF", eSymbolTypeCode, false, false);
+  for (unsigned i = 0; i < 1024; ++i)
+    add_symbol("_Z9unrelatedILi" + std::to_string(i) + "EEvv", eSymbolTypeCode,
+               false, false);
+
+  SymbolContextList matches;
+  symtab->FindFunctionSymbols(ConstString("runtime"), eFunctionNameTypeFull,
+                              matches, /*match_linkage_names=*/true);
+  ASSERT_EQ(matches.GetSize(), 4u);
+  for (unsigned i = 0; i < matches.GetSize(); ++i) {
+    SymbolContext context;
+    ASSERT_TRUE(matches.GetContextAtIndex(i, context));
+    ASSERT_NE(context.symbol, nullptr);
+    EXPECT_EQ(context.symbol->GetID(), i);
+  }
+  EXPECT_EQ(module->GetSymtabIndexTime().get().count(), 0.0);
+
+  SymbolContextList absent;
+  symtab->FindFunctionSymbols(ConstString("absent"), eFunctionNameTypeFull,
+                              absent, /*match_linkage_names=*/true);
+  EXPECT_EQ(absent.GetSize(), 0u);
+  EXPECT_EQ(module->GetSymtabIndexTime().get().count(), 0.0);
+
+  // The default still builds the general indexes and finds the C++ basename.
+  SymbolContextList normal;
+  symtab->FindFunctionSymbols(ConstString("runtime"), eFunctionNameTypeBase,
+                              normal);
+  EXPECT_GT(normal.GetSize(), matches.GetSize());
+  EXPECT_GT(module->GetSymtabIndexTime().get().count(), 0.0);
+}
+
+TEST_F(SymtabTest, LinkageSymbolLookupPreservesTypesOrderAndAnnotations) {
+  auto image = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Content: C3
+)");
+  ASSERT_THAT_EXPECTED(image, llvm::Succeeded());
+  auto module = std::make_shared<Module>(image->moduleSpec());
+  Symtab *symtab = module->GetObjectFile()->GetSymtab();
+  ASSERT_NE(symtab, nullptr);
+  auto add = [&](user_id_t id, llvm::StringRef name, SymbolType type,
+                 bool external, bool trampoline, bool annotations) {
+    symtab->AddSymbol(Symbol(id, name, type, external, false, trampoline, false,
+                             SectionSP(), id, 0, false, annotations, 0));
+  };
+  add(0, "dispatch_queue_offsets", eSymbolTypeData, false, false, false);
+  add(1, "dispatch_queue_offsets@VERSION", eSymbolTypeData, true, false, true);
+  add(2, "dispatch_queue_offsets", eSymbolTypeReExported, true, false, false);
+  add(3, "dispatch_queue_offsets", eSymbolTypeUndefined, true, false, false);
+  add(4, "dispatch_queue_offsets", eSymbolTypeTrampoline, true, true, false);
+  add(5, "_Z22dispatch_queue_offsetsv", eSymbolTypeCode, true, false, false);
+  add(6, "_Z18other_wire_requestv", eSymbolTypeCode, true, false, false);
+  Symbol named_synthetic(7, "dispatch_queue_offsets", eSymbolTypeData, false,
+                         false, false, false, SectionSP(), 7, 0, false, false,
+                         0);
+  named_synthetic.SetIsSynthetic(true);
+  symtab->AddSymbol(named_synthetic);
+  ConstString synthetic_name("_Z30qsymbol_synthetic_unrelated_06v");
+  Symbol unrelated_synthetic(8, synthetic_name.GetStringRef(), eSymbolTypeCode,
+                             false, false, false, false, SectionSP(), 8, 0,
+                             false, false, 0);
+  unrelated_synthetic.SetIsSynthetic(true);
+  symtab->AddSymbol(unrelated_synthetic);
+  ConstString counterpart;
+  ASSERT_FALSE(synthetic_name.GetMangledCounterpart(counterpart));
+
+  std::vector<uint32_t> matches;
+  symtab->FindAllSymbolsWithNameAndType(ConstString("dispatch_queue_offsets"),
+                                        eSymbolTypeAny, matches,
+                                        /*match_linkage_names=*/true);
+  ASSERT_EQ(matches.size(), 6u);
+  const user_id_t all_ids[] = {0, 1, 2, 3, 4, 7};
+  for (auto [index, id] : llvm::zip(matches, all_ids))
+    EXPECT_EQ(symtab->SymbolAtIndex(index)->GetID(), id);
+  // Checking autogenerated-name status on every named synthetic symbol would
+  // demangle this unrelated name even though no index is built.
+  EXPECT_FALSE(synthetic_name.GetMangledCounterpart(counterpart));
+
+  matches.clear();
+  symtab->FindAllSymbolsWithNameAndType(ConstString("dispatch_queue_offsets"),
+                                        eSymbolTypeData, matches,
+                                        /*match_linkage_names=*/true);
+  ASSERT_EQ(matches.size(), 3u);
+  const user_id_t data_ids[] = {0, 1, 7};
+  for (auto [index, id] : llvm::zip(matches, data_ids))
+    EXPECT_EQ(symtab->SymbolAtIndex(index)->GetID(), id);
+  EXPECT_EQ(module->GetSymtabIndexTime().get().count(), 0.0);
+
+  matches.clear();
+  symtab->FindAllSymbolsWithNameAndType(ConstString("dispatch_queue_offsets"),
+                                        eSymbolTypeTrampoline, matches,
+                                        /*match_linkage_names=*/true);
+  ASSERT_EQ(matches.size(), 1u);
+  EXPECT_EQ(symtab->SymbolAtIndex(matches.front())->GetID(), 4u);
+  EXPECT_EQ(module->GetSymtabIndexTime().get().count(), 0.0);
+
+  matches.clear();
+  symtab->FindAllSymbolsWithNameAndType(ConstString(), eSymbolTypeAny, matches,
+                                        /*match_linkage_names=*/true);
+  EXPECT_TRUE(matches.empty());
+  EXPECT_EQ(module->GetSymtabIndexTime().get().count(), 0.0);
+
+  // Unrelated qSymbol requests still use the established name index, including
+  // a C++ function's unqualified basename.
+  symtab->FindAllSymbolsWithNameAndType(ConstString("other_wire_request"),
+                                        eSymbolTypeAny, matches);
+  ASSERT_EQ(matches.size(), 1u);
+  EXPECT_EQ(symtab->SymbolAtIndex(matches.front())->GetID(), 6u);
+  EXPECT_GT(module->GetSymtabIndexTime().get().count(), 0.0);
+}
+
+TEST_F(SymtabTest, LinkageModuleListLookupPreservesModuleOrderAndTrampolines) {
+  auto image = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Content: C3
+)");
+  ASSERT_THAT_EXPECTED(image, llvm::Succeeded());
+  auto first = std::make_shared<Module>(image->moduleSpec());
+  auto second = std::make_shared<Module>(image->moduleSpec());
+  for (const auto &module : {first, second}) {
+    Symtab *symtab = module->GetObjectFile()->GetSymtab();
+    ASSERT_NE(symtab, nullptr);
+    // Keep the symtab provider available independently of the candidate type.
+    symtab->AddSymbol(Symbol(0, "unrelated", eSymbolTypeCode, false, false,
+                             false, false, SectionSP(), 0, 0, false, false, 0));
+    symtab->AddSymbol(Symbol(
+        1, "runtime", module == first ? eSymbolTypeTrampoline : eSymbolTypeData,
+        false, false, false, false, SectionSP(), 0, 0, false, false, 0));
+  }
+  ModuleList modules;
+  modules.Append(first);
+  modules.Append(second);
+  SymbolContextList matches;
+  modules.FindSymbolsWithNameAndType(ConstString("runtime"), eSymbolTypeAny,
+                                     matches, /*match_linkage_names=*/true);
+  ASSERT_EQ(matches.GetSize(), 2u);
+  EXPECT_EQ(matches[0].module_sp, first);
+  EXPECT_EQ(matches[0].symbol->GetType(), eSymbolTypeTrampoline);
+  EXPECT_EQ(matches[1].module_sp, second);
+  EXPECT_EQ(matches[1].symbol->GetType(), eSymbolTypeData);
+  EXPECT_EQ(first->GetSymtabIndexTime().get().count(), 0.0);
+  EXPECT_EQ(second->GetSymtabIndexTime().get().count(), 0.0);
+
+  // The default name indexes keep their existing trampoline exclusion.
+  matches.Clear();
+  modules.FindSymbolsWithNameAndType(ConstString("runtime"), eSymbolTypeAny,
+                                     matches);
+  ASSERT_EQ(matches.GetSize(), 1u);
+  EXPECT_EQ(matches[0].module_sp, second);
 }

@@ -101,7 +101,8 @@ public:
           Mangled::NamePreference::ePreferDemangled);
   void FindAllSymbolsWithNameAndType(ConstString name,
                                      lldb::SymbolType symbol_type,
-                                     std::vector<uint32_t> &symbol_indexes);
+                                     std::vector<uint32_t> &symbol_indexes,
+                                     bool match_linkage_names = false);
   void FindAllSymbolsWithNameAndType(ConstString name,
                                      lldb::SymbolType symbol_type,
                                      Debug symbol_debug_type,
@@ -120,8 +121,11 @@ public:
   Symbol *FindSymbolContainingFileAddress(lldb::addr_t file_addr);
   void ForEachSymbolContainingFileAddress(
       lldb::addr_t file_addr, std::function<bool(Symbol *)> const &callback);
+  /// When match_linkage_names is true, match only the exact linkage spelling,
+  /// including linker annotation aliases, without building demangled indexes.
   void FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
-                           SymbolContextList &sc_list);
+                           SymbolContextList &sc_list,
+                           bool match_linkage_names = false);
 
   void SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
                                 bool remove_duplicates) const;
