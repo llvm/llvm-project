@@ -6762,6 +6762,64 @@ define <2 x i32> @test_undef_v2i32() {
   ret <2 x i32> undef
 }
 
+define <2 x i32> @test_ppaire_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_ppaire_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaire_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_ppaireo_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_ppaireo_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaireo_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 3>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_ppairoe_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_ppairoe_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairoe_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 2>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_ppairo_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_ppairo_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairo_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairo.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x i32> %res
+}
+
 define <8 x i8> @test_ppaireo_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_ppaireo_v8i8:
 ; RV32:       # %bb.0:

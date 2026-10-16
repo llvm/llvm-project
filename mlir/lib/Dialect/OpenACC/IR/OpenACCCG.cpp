@@ -494,6 +494,9 @@ LogicalResult KernelEnvironmentOp::verify() {
     return emitError("async-only cannot appear with async operand");
   if (getWaitOnly() && (!getWaitOperands().empty() || getWaitDevnum()))
     return emitError("wait-only cannot appear with wait operands or devnum");
+  if ((*this)->getParentOfType<KernelEnvironmentOp>())
+    return emitError(
+        "must not be nested within another acc.kernel_environment");
   return success();
 }
 

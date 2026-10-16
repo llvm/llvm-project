@@ -2650,7 +2650,7 @@ constantValueOrMax(const parser::ScalarIntConstantExpr &intExpr) {
     if (auto v = evaluate::ToInt64(*expr))
       if (*v > 0)
         return *v;
-  return std::numeric_limits<int64_t>::max();
+  return common::numeric_limits<int64_t>::max();
 }
 
 /// Fill \p chain with the DoConstruct at each depth above (and including)

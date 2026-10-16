@@ -93,6 +93,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
 
+  // Classic CodeGen's CXX20ModuleInits: C++20 named modules get an
+  // initializer function of their own only under the Itanium mangler, since
+  // no Microsoft mangling for it has been settled on yet; otherwise they fall
+  // back to `_GLOBAL__sub_I_` as in classic CodeGen.
+  cxx20ModuleInits =
+      langOpts.CPlusPlusModules &&
+      getCXXABI().getMangleContext().getKind() == MangleContext::MK_Itanium;
+
   // Initialize cached types
   voidTy = cir::VoidType::get(&getMLIRContext());
   voidPtrTy = cir::PointerType::get(voidTy);
@@ -2528,6 +2536,60 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+
+  case Decl::Import: {
+    auto *importDecl = cast<ImportDecl>(decl);
+    clang::Module *mod = importDecl->getImportedModule();
+
+    // Nothing to record or to emit without a module.
+    if (!mod)
+      break;
+
+    // If we've already imported this module, we're done.
+    if (!importedModules.insert(mod))
+      break;
+    moduleImportLocs[mod] = importDecl->getLocation();
+
+    assert(!cir::MissingFeatures::generateDebugInfo());
+
+    // A C++20 named module has its own initializer function, so its
+    // initializers are not emitted here. The global init function of this
+    // translation unit calls that initializer, which in turn covers the
+    // modules it imports itself; release() records the modules to call.
+    if (cxx20ModuleInits && mod->isNamedModule())
+      break;
+
+    // For clang C++ module map modules the initializers for sub-modules are
+    // emitted here.
+
+    // Find all of the submodules and emit the module initializers.
+    llvm::SmallPtrSet<clang::Module *, 16> visited;
+    SmallVector<clang::Module *, 16> stack;
+    visited.insert(mod);
+    stack.push_back(mod);
+
+    while (!stack.empty()) {
+      clang::Module *cur = stack.pop_back_val();
+      if (!emittedModuleInitializers.insert(cur).second)
+        continue;
+
+      for (Decl *initializer : astContext.getModuleInitializers(cur))
+        emitTopLevelDecl(initializer);
+
+      // Visit the submodules of this module.
+      for (clang::Module *submodule : cur->submodules()) {
+        // Skip explicit children; they need to be explicitly imported to emit
+        // the initializers.
+        if (submodule->IsExplicit)
+          continue;
+
+        if (visited.insert(submodule).second)
+          stack.push_back(submodule);
+      }
+    }
+    break;
+  }
+
   case Decl::Export:
     emitDeclContext(cast<ExportDecl>(decl));
     break;
@@ -3286,7 +3348,7 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
-    const clang::FunctionDecl *decl, cir::FuncOp f) {
+    const clang::Decl *decl, cir::FuncOp f) {
 
   if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables)
     f.setUwtable(static_cast<cir::UnwindTableKind>(codeGenOpts.UnwindTables));
@@ -3318,14 +3380,44 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
 
   assert(!cir::MissingFeatures::opFuncArmStreamingAttr());
   assert(!cir::MissingFeatures::opFuncArmNewAttr());
-  assert(!cir::MissingFeatures::opFuncOptNoneAttr());
-  assert(!cir::MissingFeatures::opFuncMinSizeAttr());
-  assert(!cir::MissingFeatures::opFuncNakedAttr());
-  assert(!cir::MissingFeatures::opFuncNoDuplicateAttr());
   assert(!cir::MissingFeatures::hlsl());
 
+  // Track whether we need to add the optnone attribute, starting with the
+  // default for this optimization level.
+  bool shouldAddOptNone =
+      !codeGenOpts.DisableO0ImplyOptNone && codeGenOpts.OptimizationLevel == 0;
+  // optnone is incompatible with minsize and alwaysinline.
+  shouldAddOptNone &= !decl->hasAttr<MinSizeAttr>();
+  shouldAddOptNone &= !decl->hasAttr<AlwaysInlineAttr>();
+
   // Handle inline attributes
-  if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
+  if ((shouldAddOptNone || decl->hasAttr<OptimizeNoneAttr>()) &&
+      !isAlwaysInline) {
+    // Add optnone, but do so only if the function isn't always_inline.
+    f->setAttr(cir::CIRDialect::getOptNoneAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
+
+    // OptimizeNone implies noinline; we should not be inlining such functions.
+    f.setInlineKind(cir::InlineKind::NoInline);
+
+    // We still need to handle naked functions even though optnone subsumes
+    // much of their semantics.
+    if (decl->hasAttr<NakedAttr>())
+      f->setAttr(cir::CIRDialect::getNakedAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+
+    // OptimizeNone wins over OptimizeForSize and MinSize.
+    f->removeAttr(cir::CIRDialect::getOptimizeForSizeAttrName());
+    f->removeAttr(cir::CIRDialect::getMinSizeAttrName());
+  } else if (decl->hasAttr<NakedAttr>()) {
+    // Naked implies noinline: we should not be inlining such functions.
+    f->setAttr(cir::CIRDialect::getNakedAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
+    f.setInlineKind(cir::InlineKind::NoInline);
+  } else if (decl->hasAttr<NoDuplicateAttr>()) {
+    f->setAttr(cir::CIRDialect::getNoDuplicatesAttrName(),
+               mlir::UnitAttr::get(&getMLIRContext()));
+  } else if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
     // Add noinline if the function isn't always_inline.
     f.setInlineKind(cir::InlineKind::NoInline);
   } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
@@ -3366,7 +3458,26 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     }
   }
 
-  assert(!cir::MissingFeatures::opFuncColdHotAttr());
+  // Add other optimization related attributes if we are optimizing this
+  // function.
+  if (!decl->hasAttr<OptimizeNoneAttr>()) {
+    if (decl->hasAttr<ColdAttr>()) {
+      if (!shouldAddOptNone)
+        f->setAttr(cir::CIRDialect::getOptimizeForSizeAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
+
+      f->setAttr(cir::CIRDialect::getColdAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
+    if (decl->hasAttr<HotAttr>())
+      f->setAttr(cir::CIRDialect::getHotAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+
+    if (decl->hasAttr<MinSizeAttr>())
+      f->setAttr(cir::CIRDialect::getMinSizeAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+  }
 
   std::optional<uint64_t> explicitAlignment;
   if (unsigned alignment =
@@ -3885,6 +3996,14 @@ CIRGenModule::getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind glk) {
   llvm_unreachable("linkage should be handled above!");
 }
 
+std::string CIRGenModule::getModuleInitializerName(clang::Module *mod) {
+  std::string name;
+  llvm::raw_string_ostream out(name);
+  cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
+      .mangleModuleInitializer(mod, out);
+  return name;
+}
+
 void CIRGenModule::release() {
   emitDeferred();
   emitVTablesOpportunistically();
@@ -3946,25 +4065,36 @@ void CIRGenModule::release() {
   // and that the function needs external linkage, and its absence selects the
   // `_GLOBAL__sub_I_` form.  Lowering therefore never has to rediscover the
   // module from the AST.
-  //
-  // The mangler-kind check mirrors classic codegen's `CXX20ModuleInits` (see
-  // CodeGenModule.cpp), which only enables C++20 module initializers for the
-  // Itanium mangler because no Microsoft mangling for them has been settled
-  // on yet.  Non-Itanium named modules fall back to `_GLOBAL__sub_I_` exactly
-  // as they do in classic codegen.
-  if (langOpts.CPlusPlusModules &&
-      getCXXABI().getMangleContext().getKind() ==
-          clang::ItaniumMangleContext::MK_Itanium) {
-    if (clang::Module *primary = astContext.getCurrentNamedModule();
-        primary && !primary->isModuleImplementation()) {
-      llvm::SmallString<256> fnName;
-      llvm::raw_svector_ostream out(fnName);
-      cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
-          .mangleModuleInitializer(primary, out);
-      theModule->setAttr(cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
-                         builder.getStringAttr(fnName));
+  if (cxx20ModuleInits) {
+    clang::Module *primary = astContext.getCurrentNamedModule();
+    bool isInterfaceUnit = primary && !primary->isModuleImplementation();
+    if (isInterfaceUnit)
+      theModule->setAttr(
+          cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
+          builder.getStringAttr(getModuleInitializerName(primary)));
+
+    // The imported modules whose initializers the global init function of
+    // this translation unit calls first, selected as in classic CodeGen.
+    llvm::SmallVector<mlir::Attribute> importedInits;
+    for (clang::Module *mod : CodeGenUtils::importedModulesToInitialize(
+             primary, importedModules.getArrayRef())) {
+      // A module that only the interface unit's export or import lists name
+      // takes the location of the module declaration.
+      auto importLoc = moduleImportLocs.find(mod);
+      mlir::Location loc =
+          getLoc(importLoc != moduleImportLocs.end() ? importLoc->second
+                                                     : primary->DefinitionLoc);
+      importedInits.push_back(cir::CXXModuleInitAttr::get(
+          &getMLIRContext(),
+          builder.getStringAttr(getModuleInitializerName(mod)), loc));
     }
+    if (!importedInits.empty())
+      theModule->setAttr(cir::CIRDialect::getCXXModuleImportedInitsAttrName(),
+                         builder.getArrayAttr(importedInits));
   }
+
+  // Autolink metadata for the imported modules is not emitted yet.
+  assert(!cir::MissingFeatures::emitModuleLinkOptions());
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.
