@@ -471,7 +471,7 @@ private:
   bool rewrite(ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands);
 
   /// \returns true if this MI is a rewrite candidate.
-  bool isRewriteCandidate(MachineInstr *MI) const;
+  bool isRewriteCandidate(MachineInstr *MI);
 
   /// Resets all candidates in \p RewriteCands back to VGPR form.
   void resetRewriteCandsToVGPR(
