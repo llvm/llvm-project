@@ -135,11 +135,6 @@ def main(argv: List[str]) -> int:
         help='The LNT machine to plan work for.')
     parser.add_argument('--samples', type=common.at_least(1), default=3,
         help='How many benchmark runs each commit should have.')
-    parser.add_argument('--allow-missing-machine', action='store_true',
-        help='Accept that the LNT instance has no such machine, and plan despite that. '
-             'Needed when first populating a machine, and withheld by default because a '
-             'mistyped or renamed machine is otherwise indistinguishable from one that '
-             'has no data yet.')
     parser.add_argument('--output', type=pathlib.Path, default=None,
         help='Where to write the plan. Defaults to standard output.')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -161,11 +156,6 @@ def main(argv: List[str]) -> int:
 
     have = benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
     if have is None:
-        if not args.allow_missing_machine:
-            raise ValueError(f'{args.lnt_url} has no machine named {args.machine} in test suite '
-                             f'{args.test_suite}. Pass --allow-missing-machine if that is intended, '
-                             f'otherwise check your usage of the tool to avoid generating a potentially '
-                             f'large list of commits to benchmark.')
         logging.warning(f'{args.lnt_url} has no machine named {args.machine} yet: planning as if it had no data')
         have = {}
 

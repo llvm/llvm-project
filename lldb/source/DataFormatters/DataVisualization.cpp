@@ -160,16 +160,19 @@ DataVisualization::Categories::GetCategoryAtIndex(size_t index) {
 
 bool DataVisualization::NamedSummaryFormats::GetSummaryFormat(
     ConstString type, lldb::TypeSummaryImplSP &entry) {
-  return GetFormatManager().GetNamedSummaryContainer().GetExact(type, entry);
+  return GetFormatManager().GetNamedSummaryContainer().GetExact(
+      type.GetStringRef().str(), entry);
 }
 
 void DataVisualization::NamedSummaryFormats::Add(
     ConstString type, const lldb::TypeSummaryImplSP &entry) {
-  GetFormatManager().GetNamedSummaryContainer().Add(type, entry);
+  GetFormatManager().GetNamedSummaryContainer().Add(type.GetStringRef().str(),
+                                                    entry);
 }
 
 bool DataVisualization::NamedSummaryFormats::Delete(ConstString type) {
-  return GetFormatManager().GetNamedSummaryContainer().Delete(type);
+  return GetFormatManager().GetNamedSummaryContainer().Delete(
+      type.GetStringRef().str());
 }
 
 void DataVisualization::NamedSummaryFormats::Clear() {

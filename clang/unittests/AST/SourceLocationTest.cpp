@@ -1091,6 +1091,26 @@ template <X::CCC<int> T> void print(T object);
   EXPECT_TRUE(Verifier.match(Code3, templateTypeParmDecl(), Lang_CXX20));
 }
 
+class PackIndexingTypeLocVerifier : public RangeVerifier<TypeLoc> {
+protected:
+  SourceRange getRange(const TypeLoc &Node) override {
+    PackIndexingTypeLoc TL = Node.getAs<PackIndexingTypeLoc>();
+    assert(!TL.isNull());
+    return SourceRange(TL.getPatternLoc().getBeginLoc(), TL.getEllipsisLoc());
+  }
+};
+
+TEST(PackIndexingTypeLoc, PatternAndEllipsisLoc) {
+  PackIndexingTypeLocVerifier Verifier;
+  // FIXME: There's no packIndexingType matcher yet.
+  Verifier.expectRange(2, 8, 2, 9);
+  EXPECT_TRUE(Verifier.match(
+      R"cpp(template <class... T> void foo() {
+       T...[0] x;
+  })cpp",
+      typeLoc(hasParent(varDecl(hasName("x")))), Lang_CXX26));
+}
+
 class ConceptSpecializationExprConceptReferenceRangeVerifier
     : public RangeVerifier<VarTemplateDecl> {
 protected:

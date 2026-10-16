@@ -1,4 +1,4 @@
-//===-------------- AddDebugInfo.cpp -- add debug info -------------------===//
+//===-------------- AddDebugInfo.cpp -- add debug info --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -439,17 +439,21 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
 
   if (emitFakeUseForDebugVars) {
     // Create fake uses for internal variables that represent count and lower
-    // bound of dynamic arrays to ensure they are not optimized out.
+    // bound of dynamic arrays to ensure they are not optimized out. A value
+    // that convertType has put in a stack slot needs none, as the debug info
+    // describes the slot and nothing has to keep the value itself alive.
     if (auto arrayTy =
             mlir::dyn_cast<mlir::LLVM::DICompositeTypeAttr>(tyAttr)) {
       if (arrayTy.getTag() == llvm::dwarf::DW_TAG_array_type) {
         if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
           // Count is represented as a value in the shape attribute
           for (auto val : declOp.getShape())
-            InsertFakeUseForDebugVar(builder, declOp, val);
+            if (!typeGen.hasBoundSlot(val, declOp))
+              InsertFakeUseForDebugVar(builder, declOp, val);
           // Lower bound is represented as a value in the shift attribute
           for (auto val : declOp.getShift())
-            InsertFakeUseForDebugVar(builder, declOp, val);
+            if (!typeGen.hasBoundSlot(val, declOp))
+              InsertFakeUseForDebugVar(builder, declOp, val);
         }
       }
     }
@@ -458,7 +462,8 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
     // are not optimized out.
     if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
       for (auto val : declOp.getTypeparams())
-        InsertFakeUseForDebugVar(builder, declOp, val);
+        if (!typeGen.hasBoundSlot(val, declOp))
+          InsertFakeUseForDebugVar(builder, declOp, val);
     }
   }
 
@@ -1218,7 +1223,8 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
                                       builder.getArrayAttr(moduleFlags));
   }
-  fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl);
+  fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl,
+                                  boundsInStackSlots);
   // We need 2 type of file paths here.
   // 1. Name of the file as was presented to compiler. This can be absolute
   // or relative to 2.

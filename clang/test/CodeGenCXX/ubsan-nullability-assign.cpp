@@ -2,6 +2,7 @@
 
 struct S1 {
   int *_Nonnull p;
+  void q() {}
 };
 
 struct S2 {
@@ -28,6 +29,28 @@ void f1(int *p) {
   // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
   // CHECK: store
   u.s2.s1.p = p;
+
+  using MemberPtr = void (S1::*)(void);
+
+  // CHECK: br i1 true, label %cont{{.*}}, !nosanitize
+  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: store
+  MemberPtr _Nonnull qptr = &S1::q;
+
+  // CHECK: br i1 false, label %cont{{.*}}, !nosanitize
+  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: store
+  MemberPtr _Nonnull nqptr = nullptr;
+
+  // CHECK: br i1 true, label %cont{{.*}}, !nosanitize
+  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: store
+  int* S1::* _Nonnull pptr = &S1::p;
+
+  // CHECK: br i1 false, label %cont{{.*}}, !nosanitize
+  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: store
+  int* S1::* _Nonnull npptr = nullptr;
 
   // CHECK-NOT: __ubsan_handle_type_mismatch
   // CHECK-NOT: store

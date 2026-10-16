@@ -347,8 +347,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
 
   // Handle argmin/argmax pattern: PHI has uses outside the reduction chain
   // that are not intermediate min/max operations (which are handled below).
-  // Requires integer min/max, and single-use BackedgeValue (so vectorizer can
-  // handle both PHIs together).
+  // Requires integer min/max, and the PHI must be the only in-loop user of
+  // BackedgeValue (so vectorizer can handle both PHIs together).
   bool PhiHasInvalidUses = any_of(Phi->users(), [&](Instruction *U) {
     Value *A, *B;
     return !Chain.contains(U) && TheLoop->contains(U) &&
@@ -356,7 +356,10 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   });
   if (PhiHasInvalidUses) {
     if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-        !BackedgeValue->hasOneUse())
+        any_of(BackedgeValue->users(), [&](User *U) {
+          auto *UI = cast<Instruction>(U);
+          return UI != Phi && TheLoop->contains(UI);
+        }))
       return {};
     return RecurrenceDescriptor(
         Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
@@ -1174,8 +1177,15 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
   }
 
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || isa<PHINode>(Previous))
     return false;
+
+  // Handle recurrences with a loop-invariant latch value.
+  if (!TheLoop->contains(Previous)) {
+    assert(DT->dominates(Previous, Phi) &&
+           "loop-invariant latch value must dominate the header phi");
+    return true;
+  }
 
   // Ensure every user of the phi node (recursively) is dominated by the
   // previous value. The dominance requirement ensures the loop vectorizer will

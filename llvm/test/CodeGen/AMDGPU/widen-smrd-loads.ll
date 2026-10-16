@@ -397,7 +397,7 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(ptr addrspace(4)
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x3e7, v0.l
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, 0x3e7
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 4
 ; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
 ; GFX11-TRUE16-NEXT:    s_endpgm
@@ -411,7 +411,7 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(ptr addrspace(4)
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v0, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_add_nc_u16 v2, 0x3e7, v0
+; GFX11-FAKE16-NEXT:    v_add_nc_u16 v2, v0, 0x3e7
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, 4, v2
