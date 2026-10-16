@@ -110,10 +110,11 @@ define i16 @smin_of_smax_range2(i16 %x) {
 define i32 @with_cast(i16 %x) {
 ; CHECK-LABEL: define i32 @with_cast(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[UMIN:%.*]] = call range(i16 50, 1000) i16 @llvm.umin.i16(i16 [[X]], i16 1000)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i16 @llvm.umin.i16(i16 [[X]], i16 1000)
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i16 [[UMIN]] to i32
 ; CHECK-NEXT:    call void @use.i32(i32 [[EXT]])
-; CHECK-NEXT:    [[RV:%.*]] = zext nneg i16 [[UMIN]] to i32
+; CHECK-NEXT:    [[RV1:%.*]] = call i16 @llvm.umax.i16(i16 [[UMIN]], i16 1)
+; CHECK-NEXT:    [[RV:%.*]] = zext nneg i16 [[RV1]] to i32
 ; CHECK-NEXT:    ret i32 [[RV]]
 ;
   %umin = call range(i16 50, 1000) i16 @llvm.umin.i16(i16 %x, i16 1000)
