@@ -519,7 +519,8 @@ void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
       GetCommandInterpreter().GetDebugger().GetAsyncErrorStream();
 
   CommandReturnObject return_obj(
-      GetCommandInterpreter().GetDebugger().GetUseColor());
+      GetCommandInterpreter().GetDebugger().GetUseColor(),
+      GetCommandInterpreter().GetDebugger().GetShowHints());
   EvaluateExpression(line.c_str(), *output_stream, *error_stream, return_obj);
 
   output_stream->Flush();

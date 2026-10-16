@@ -28,7 +28,7 @@ namespace lldb_private {
 
 class CommandReturnObject {
 public:
-  CommandReturnObject(bool colors);
+  CommandReturnObject(bool colors, bool show_hints = true);
 
   ~CommandReturnObject() = default;
 
@@ -118,6 +118,9 @@ public:
 
   void AppendWarning(llvm::StringRef in_string);
 
+  /// Dropped if the result was constructed with \c show_hints disabled.
+  void AppendHint(llvm::StringRef in_string);
+
   void AppendError(llvm::StringRef in_string);
 
   void AppendErrorWithFormat(const char *format, ...)
@@ -136,6 +139,11 @@ public:
   template <typename... Args>
   void AppendWarningWithFormatv(const char *format, Args &&...args) {
     AppendWarning(llvm::formatv(format, std::forward<Args>(args)...).str());
+  }
+
+  template <typename... Args>
+  void AppendHintWithFormatv(const char *format, Args &&...args) {
+    AppendHint(llvm::formatv(format, std::forward<Args>(args)...).str());
   }
 
   template <typename... Args>
@@ -203,6 +211,7 @@ private:
   /// If true, then the input handle from the debugger will be hooked up.
   bool m_interactive = true;
   bool m_colors;
+  bool m_show_hints;
 };
 
 } // namespace lldb_private

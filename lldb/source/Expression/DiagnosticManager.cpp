@@ -46,6 +46,8 @@ static llvm::StringRef StringForSeverity(lldb::Severity severity) {
     return "warning: ";
   case lldb::eSeverityInfo:
     return "";
+  case lldb::eSeverityHint:
+    return "hint: ";
   }
   llvm_unreachable("switch needs another case for lldb::Severity enum");
 }

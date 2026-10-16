@@ -339,6 +339,8 @@ public:
   FormatEntity::Entry GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
+  bool GetShowHints() const;
+
   llvm::StringRef GetSeparator() const;
   bool SetSeparator(llvm::StringRef s);
 
@@ -633,6 +635,11 @@ public:
   ReportInfo(std::string message,
              std::optional<lldb::user_id_t> debugger_id = std::nullopt,
              std::once_flag *once = nullptr);
+
+  /// Dropped if the show-hints setting is disabled.
+  static void
+  ReportHint(std::string message,
+             std::optional<lldb::user_id_t> debugger_id = std::nullopt);
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);
 

@@ -380,7 +380,7 @@ static Status CompleteLineEntry(ExecutionContext &exe_ctx,
       return error;
     }
     Debugger &dbg = target->GetDebugger();
-    CommandReturnObject result(dbg.GetUseColor());
+    CommandReturnObject result(dbg.GetUseColor(), dbg.GetShowHints());
     if (!GetDefaultFile(*target, exe_ctx.GetFramePtr(), default_file_spec,
                         result)) {
       error.FromErrorStringWithFormatv("{0}/nCouldn't get default file for "

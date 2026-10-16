@@ -96,6 +96,50 @@ TEST_F(DiagnosticEventTest, Error) {
   Debugger::Destroy(debugger_sp);
 }
 
+TEST_F(DiagnosticEventTest, Hint) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+
+  Broadcaster &broadcaster = debugger_sp->GetBroadcaster();
+  ListenerSP listener_sp = Listener::MakeListener("test-listener");
+
+  listener_sp->StartListeningForEvents(&broadcaster, lldb::eBroadcastBitHint);
+  EXPECT_TRUE(broadcaster.EventTypeHasListeners(lldb::eBroadcastBitHint));
+
+  Debugger::ReportHint("qux", debugger_sp->GetID());
+
+  EventSP event_sp;
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, TIMEOUT));
+  ASSERT_TRUE(event_sp);
+  EXPECT_EQ(event_sp->GetType(), lldb::eBroadcastBitHint);
+
+  const DiagnosticEventData *data =
+      DiagnosticEventData::GetEventDataFromEvent(event_sp.get());
+  ASSERT_NE(data, nullptr);
+  EXPECT_EQ(data->GetPrefix(), "hint");
+  EXPECT_EQ(data->GetMessage(), "qux");
+
+  Debugger::Destroy(debugger_sp);
+}
+
+TEST_F(DiagnosticEventTest, HintDisabled) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+
+  Broadcaster &broadcaster = debugger_sp->GetBroadcaster();
+  ListenerSP listener_sp = Listener::MakeListener("test-listener");
+  listener_sp->StartListeningForEvents(&broadcaster, lldb::eBroadcastBitHint);
+
+  ASSERT_TRUE(debugger_sp
+                  ->SetPropertyValue(nullptr, eVarSetOperationAssign,
+                                     "show-hints", "false")
+                  .Success());
+  Debugger::ReportHint("qux", debugger_sp->GetID());
+
+  EventSP event_sp;
+  EXPECT_FALSE(listener_sp->GetEvent(event_sp, TIMEOUT));
+
+  Debugger::Destroy(debugger_sp);
+}
+
 TEST_F(DiagnosticEventTest, MultipleDebuggers) {
   std::vector<DebuggerSP> debuggers;
   std::vector<ListenerSP> listeners;

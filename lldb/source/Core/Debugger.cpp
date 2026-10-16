@@ -632,6 +632,12 @@ bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
   return ret;
 }
 
+bool Debugger::GetShowHints() const {
+  constexpr uint32_t idx = ePropertyShowHints;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value != 0);
+}
+
 llvm::StringRef Debugger::GetSeparator() const {
   constexpr uint32_t idx = ePropertySeparator;
   return GetPropertyAtIndexAs<llvm::StringRef>(
@@ -1026,7 +1032,8 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
   CommandInterpreter &cmd_interpreter = debugger_sp->GetCommandInterpreter();
 
   if (cmd_interpreter.GetSaveSessionOnQuit()) {
-    CommandReturnObject result(debugger_sp->GetUseColor());
+    CommandReturnObject result(debugger_sp->GetUseColor(),
+                               debugger_sp->GetShowHints());
     cmd_interpreter.SaveTranscript(result);
     if (result.Succeeded())
       (*debugger_sp->GetAsyncOutputStream())
@@ -1831,6 +1838,11 @@ static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
   case eSeverityError:
     event_type = lldb::eBroadcastBitError;
     break;
+  case eSeverityHint:
+    if (!debugger.GetShowHints())
+      return;
+    event_type = lldb::eBroadcastBitHint;
+    break;
   }
 
   Broadcaster &broadcaster = debugger.GetBroadcaster();
@@ -1905,6 +1917,12 @@ void Debugger::ReportInfo(std::string message,
                           std::optional<lldb::user_id_t> debugger_id,
                           std::once_flag *once) {
   ReportDiagnosticImpl(eSeverityInfo, std::move(message), debugger_id, once);
+}
+
+void Debugger::ReportHint(std::string message,
+                          std::optional<lldb::user_id_t> debugger_id) {
+  ReportDiagnosticImpl(eSeverityHint, std::move(message), debugger_id,
+                       /*once=*/nullptr);
 }
 
 void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
@@ -2283,7 +2301,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
 
   listener_sp->StartListeningForEvents(
       &m_broadcaster, lldb::eBroadcastBitProgress | lldb::eBroadcastBitWarning |
-                          lldb::eBroadcastBitError |
+                          lldb::eBroadcastBitError | lldb::eBroadcastBitHint |
                           lldb::eBroadcastSymbolChange |
                           lldb::eBroadcastBitExternalProgress);
 
@@ -2364,6 +2382,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
             else if (event_type & lldb::eBroadcastBitWarning)
               HandleDiagnosticEvent(event_sp);
             else if (event_type & lldb::eBroadcastBitError)
+              HandleDiagnosticEvent(event_sp);
+            else if (event_type & lldb::eBroadcastBitHint)
               HandleDiagnosticEvent(event_sp);
           }
         }
