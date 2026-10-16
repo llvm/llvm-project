@@ -34,6 +34,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
+namespace __statpart {
 
 template <class _Index, class _DifferenceType, class _Compare>
 _LIBCPP_HIDE_FROM_ABI _Index
@@ -71,6 +72,8 @@ __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Co
   return __first + __end;
 }
 
+} // namespace __statpart
+
 template <class _ExecutionPolicy>
 struct __find_if<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
@@ -93,7 +96,7 @@ struct __find_if<__statpart_backend_tag, _ExecutionPolicy> {
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       using __diff_t = __iterator_difference_type<_ForwardIterator>;
-      return __pstl::__simd_first(
+      return __statpart::__simd_first(
           __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
             return __pred(__iter[__i]);
           });

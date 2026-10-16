@@ -27,6 +27,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
+namespace __statpart {
 
 template <class _Index, class _DifferenceType, class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept {
@@ -36,6 +37,8 @@ _LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, 
     __first[__i] = __value;
   return __first + __n;
 }
+
+} // namespace __statpart
 
 template <class _ExecutionPolicy>
 struct __fill<__statpart_backend_tag, _ExecutionPolicy> {
@@ -53,7 +56,7 @@ struct __fill<__statpart_backend_tag, _ExecutionPolicy> {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      __pstl::__simd_fill_n(__first, __last - __first, __value);
+      __statpart::__simd_fill_n(__first, __last - __first, __value);
       return __empty{};
     } else {
       std::fill(__first, __last, __value);

@@ -36,6 +36,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
+namespace __statpart {
 
 template <class _Index, class _Brick>
 _LIBCPP_HIDE_FROM_ABI optional<bool> __parallel_or(_Index __first, _Index __last, _Brick __f) {
@@ -75,6 +76,8 @@ _LIBCPP_HIDE_FROM_ABI bool __simd_or(_Index __first, _DifferenceType __n, _Pred 
   return false;
 }
 
+} // namespace __statpart
+
 template <class _ExecutionPolicy>
 struct __any_of<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
@@ -82,7 +85,7 @@ struct __any_of<__statpart_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return __pstl::__parallel_or(
+      return __statpart::__parallel_or(
           __first, __last, [&__policy, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
             using _AnyOfUnseq = __pstl::__any_of<__statpart_backend_tag, __remove_parallel_policy_t<_ExecutionPolicy>>;
             auto __res = _AnyOfUnseq()(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __pred);
@@ -91,7 +94,7 @@ struct __any_of<__statpart_backend_tag, _ExecutionPolicy> {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return __pstl::__simd_or(__first, __last - __first, __pred);
+      return __statpart::__simd_or(__first, __last - __first, __pred);
     } else {
       return std::any_of(__first, __last, __pred);
     }

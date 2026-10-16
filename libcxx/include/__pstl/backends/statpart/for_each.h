@@ -33,6 +33,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
+namespace __statpart {
 
 template <class _Iterator, class _DifferenceType, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
@@ -42,6 +43,8 @@ _LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceTy
 
   return __first + __n;
 }
+
+} // namespace __statpart
 
 template <class _ExecutionPolicy>
 struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
@@ -60,7 +63,7 @@ struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      __pstl::__simd_for_each(__first, __last - __first, __func);
+      __statpart::__simd_for_each(__first, __last - __first, __func);
       return __empty{};
     } else {
       std::for_each(std::move(__first), std::move(__last), std::move(__func));

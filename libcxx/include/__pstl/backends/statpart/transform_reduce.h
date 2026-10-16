@@ -39,6 +39,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
+namespace __statpart {
 
 template < typename _DifferenceType,
            typename _Tp,
@@ -66,8 +67,7 @@ template < typename _Size,
                          int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept {
-  constexpr size_t __lane_size = __statpart::__lane_size;
-  const _Size __block_size     = __lane_size / sizeof(_Tp);
+  const _Size __block_size = __lane_size / sizeof(_Tp);
   if (__n > 2 * __block_size && __block_size > 1) {
     alignas(__lane_size) char __lane_buffer[__lane_size];
     _Tp* __lane = reinterpret_cast<_Tp*>(__lane_buffer);
@@ -108,6 +108,8 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
   return __init;
 }
 
+} // namespace __statpart
+
 template <class _ExecutionPolicy>
 struct __transform_reduce<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp, class _BinaryOperation, class _UnaryOperation>
@@ -141,7 +143,7 @@ struct __transform_reduce<__statpart_backend_tag, _ExecutionPolicy> {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return __pstl::__simd_transform_reduce(
+      return __statpart::__simd_transform_reduce(
           __last - __first,
           std::move(__init),
           std::move(__reduce),
@@ -198,7 +200,7 @@ struct __transform_reduce_binary<__statpart_backend_tag, _ExecutionPolicy> {
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-      return __pstl::__simd_transform_reduce(
+      return __statpart::__simd_transform_reduce(
           __last1 - __first1,
           std::move(__init),
           std::move(__reduce),

@@ -32,6 +32,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
+namespace __statpart {
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator2
@@ -50,6 +51,8 @@ _LIBCPP_HIDE_FROM_ABI _Iterator3 __simd_transform(
     __f(__first1[__i], __first2[__i], __first3[__i]);
   return __first3 + __n;
 }
+
+} // namespace __statpart
 
 template <class _ExecutionPolicy>
 struct __transform<__statpart_backend_tag, _ExecutionPolicy> {
@@ -80,7 +83,7 @@ struct __transform<__statpart_backend_tag, _ExecutionPolicy> {
     } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      return __pstl::__simd_transform(
+      return __statpart::__simd_transform(
           __first,
           __last - __first,
           __result,
@@ -132,7 +135,7 @@ struct __transform_binary<__statpart_backend_tag, _ExecutionPolicy> {
                          __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      return __pstl::__simd_transform(
+      return __statpart::__simd_transform(
           __first1,
           __last1 - __first1,
           __first2,
