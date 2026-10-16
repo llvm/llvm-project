@@ -1237,8 +1237,10 @@ bool CheckThis(InterpState &S, CodePtr OpPC) {
 
 bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
                       FPOptions FPO) {
-  // In a constant context, assume that any dynamic rounding mode or FP
-  // exception state matches the default floating-point environment.
+  // In a constant context (including C++/C23 constexpr and C initializers for
+  // objects with static or thread storage duration), assume that any dynamic
+  // rounding mode or FP exception state matches the default floating-point
+  // environment (C23 F.8.2, F.8.4, F.8.5).
   if (S.inConstantContext())
     return true;
 
@@ -1271,12 +1273,6 @@ bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
   // perform compile-time evaluation.
   if (!FPO.getAllowFEnvAccess() &&
       FPO.getExceptionMode() == LangOptions::FPE_Ignore)
-    return true;
-
-  // Initializers for objects with static or thread storage duration (such as
-  // global variables) are evaluated at compile time during translation using
-  // default floating-point settings (C17 7.6.1p2).
-  if (S.EvaluatingDecl && S.EvaluatingDecl->hasGlobalStorage())
     return true;
 
   // Some floating point exception is raised and the FP mode is strict,

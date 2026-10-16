@@ -774,18 +774,23 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
   if (S.inConstantContext()) {
     // [library.c]p3: A call to a math function is not a core constant
     // expression if an exception other than FE_INEXACT is raised.
+    // Emit a CCEDiag and noteUndefinedBehavior() so that C++ constexpr /
+    // C23 constexpr contexts reject the call, while C static/thread-storage
+    // initializers (which are evaluated at translation time in ConstantFold
+    // mode per C23 F.8.2, F.8.4, F.8.5) still fold to the IEEE 754 result.
     if (Status & (~APFloat::opStatus::opInexact)) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       const FunctionDecl *FD = Call->getDirectCallee();
       if (Status & APFloat::opStatus::opUnderflow)
-        S.FFDiag(E, diag::note_constexpr_float_underflow) << FD;
+        S.CCEDiag(E, diag::note_constexpr_float_underflow) << FD;
       else if (Status & APFloat::opStatus::opOverflow)
-        S.FFDiag(E, diag::note_constexpr_float_overflow) << FD;
+        S.CCEDiag(E, diag::note_constexpr_float_overflow) << FD;
       else if (Status & APFloat::opStatus::opDivByZero)
-        S.FFDiag(E, diag::note_constexpr_float_divide_by_zero) << FD;
+        S.CCEDiag(E, diag::note_constexpr_float_divide_by_zero) << FD;
       else
-        S.FFDiag(E, diag::note_constexpr_float_invalid_op) << FD;
-      return false;
+        S.CCEDiag(E, diag::note_constexpr_float_invalid_op) << FD;
+      if (!S.noteUndefinedBehavior())
+        return false;
     }
     Floating Res = S.allocFloat(Arg.getSemantics());
     Res.copy(*Result);

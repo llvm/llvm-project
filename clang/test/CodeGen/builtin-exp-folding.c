@@ -1,11 +1,25 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fmath-errno %s | FileCheck %s --check-prefix=CHECK-ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - %s | FileCheck %s --check-prefix=CHECK-NO-ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -frounding-math %s | FileCheck %s --check-prefix=CHECK-ROUNDING
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -ffp-exception-behavior=strict %s | FileCheck %s --check-prefix=CHECK-STRICT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fmath-errno %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-NO-ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -frounding-math %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-ROUNDING
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -ffp-exception-behavior=strict %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-STRICT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fexperimental-new-constant-interpreter -fmath-errno %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fexperimental-new-constant-interpreter %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-NO-ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fexperimental-new-constant-interpreter -frounding-math %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-ROUNDING
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fexperimental-new-constant-interpreter -ffp-exception-behavior=strict %s | FileCheck %s --check-prefixes=CHECK-GLOBAL,CHECK-STRICT
 
-// Global variable initializers are evaluated at compile time using default FP settings (C17 7.6.1p2):
+// Initializers for objects with static or thread storage duration are evaluated
+// at translation time using default FP settings (C23 F.8.2, F.8.4, F.8.5):
 float global_exp_inexact = __builtin_expf(1.0f);
-// CHECK-STRICT: @global_exp_inexact = {{.*}}global float f0x402DF854
+float global_exp_overflow = __builtin_expf(100.0f);
+float global_exp_underflow = __builtin_expf(-100.0f);
+float global_exp_denormal = __builtin_expf(-88.0f);
+float global_exp_snan = __builtin_expf(__builtin_nansf(""));
+// CHECK-GLOBAL: @global_exp_inexact = {{.*}}global float f0x402DF854
+// CHECK-GLOBAL: @global_exp_overflow = {{.*}}global float +inf
+// CHECK-GLOBAL: @global_exp_underflow = {{.*}}global float 3.783510e-44
+// CHECK-GLOBAL: @global_exp_denormal = {{.*}}global float f0x0041EDC4
+// CHECK-GLOBAL: @global_exp_snan = {{.*}}global float +nan(0x200000)
+// CHECK-GLOBAL: @test_fenv_access_inexact.static_local_overflow = internal global float +inf
 
 // An exact or inexact exp that doesn't set errno folds even with -fmath-errno:
 float test_expf_1() {
@@ -161,10 +175,12 @@ float test_pragma_fenv_round_dynamic_exact() {
 // CHECK-ROUNDING-LABEL: @test_pragma_fenv_round_dynamic_exact
 // CHECK-ROUNDING: ret float 1.000000e+00
 
-// Pragma STDC FENV_ACCESS ON prevents folding of inexact calls:
+// Pragma STDC FENV_ACCESS ON prevents folding of inexact runtime calls,
+// while static local initializers still fold at translation time:
 float test_fenv_access_inexact() {
   #pragma STDC FENV_ACCESS ON
-  return __builtin_expf(1.0f);
+  static float static_local_overflow = __builtin_expf(100.0f);
+  return __builtin_expf(1.0f) + static_local_overflow;
 }
 // CHECK-ERRNO-LABEL: @test_fenv_access_inexact
 // CHECK-ERRNO: call float @expf(float noundef 1.000000e+00)

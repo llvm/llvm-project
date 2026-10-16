@@ -34,18 +34,30 @@ static_assert(1.0 == __builtin_exp(DenormDouble));
 static_assert(1.0 == __builtin_exp(NegDenormDouble));
 
 // No constexpr for overflow.
+constexpr float OvfFloat = __builtin_expf(100.0f); // expected-error {{constexpr variable 'OvfFloat' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_expf' raises a floating-point overflow exception}}
+constexpr double OvfDouble = __builtin_exp(1000.0); // expected-error {{constexpr variable 'OvfDouble' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_exp' raises a floating-point overflow exception}}
 static_assert(InfFloat == __builtin_expf(100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
 // expected-note@-1 {{call to '__builtin_expf' raises a floating-point overflow exception}}
 static_assert(InfDouble == __builtin_exp(1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
 // expected-note@-1 {{call to '__builtin_exp' raises a floating-point overflow exception}}
 
 // No constexpr for underflow: normal input yielding denormal output.
+constexpr float DenormOutFloat = __builtin_expf(-88.0f); // expected-error {{constexpr variable 'DenormOutFloat' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_expf' raises a floating-point underflow exception}}
+constexpr double DenormOutDouble = __builtin_exp(-709.0); // expected-error {{constexpr variable 'DenormOutDouble' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_exp' raises a floating-point underflow exception}}
 static_assert(0.0f == __builtin_expf(-88.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
 // expected-note@-1 {{call to '__builtin_expf' raises a floating-point underflow exception}}
 static_assert(0.0 == __builtin_exp(-709.0)); // expected-error {{static assertion expression is not an integral constant expression}}
 // expected-note@-1 {{call to '__builtin_exp' raises a floating-point underflow exception}}
 
 // No constexpr for underflow: output rounding to zero.
+constexpr float UdfFloat = __builtin_expf(-100.0f); // expected-error {{constexpr variable 'UdfFloat' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_expf' raises a floating-point underflow exception}}
+constexpr double UdfDouble = __builtin_exp(-1000.0); // expected-error {{constexpr variable 'UdfDouble' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_exp' raises a floating-point underflow exception}}
 static_assert(0.0f == __builtin_expf(-100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
 // expected-note@-1 {{call to '__builtin_expf' raises a floating-point underflow exception}}
 static_assert(0.0 == __builtin_exp(-1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
@@ -54,6 +66,10 @@ static_assert(0.0 == __builtin_exp(-1000.0)); // expected-error {{static asserti
 // No constexpr for signaling NaN (invalid operation).
 constexpr float sNaNFloat = __builtin_nansf("");
 constexpr double sNaNDouble = __builtin_nans("");
+constexpr float InvFloat = __builtin_expf(sNaNFloat); // expected-error {{constexpr variable 'InvFloat' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_expf' raises an invalid floating-point operation exception}}
+constexpr double InvDouble = __builtin_exp(sNaNDouble); // expected-error {{constexpr variable 'InvDouble' must be initialized by a constant expression}}
+// expected-note@-1 {{call to '__builtin_exp' raises an invalid floating-point operation exception}}
 static_assert(__builtin_isnan(__builtin_expf(sNaNFloat))); // expected-error {{static assertion expression is not an integral constant expression}}
 // expected-note@-1 {{call to '__builtin_expf' raises an invalid floating-point operation exception}}
 static_assert(__builtin_isnan(__builtin_exp(sNaNDouble))); // expected-error {{static assertion expression is not an integral constant expression}}

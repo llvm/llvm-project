@@ -2713,8 +2713,10 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
 static bool checkFloatingPointResultForConstantFolding(EvalInfo &Info,
                                                        const Expr *E,
                                                        APFloat::opStatus St) {
-  // In a constant context, assume that any dynamic rounding mode or FP
-  // exception state matches the default floating-point environment.
+  // In a constant context (including C++/C23 constexpr and C initializers for
+  // objects with static or thread storage duration), assume that any dynamic
+  // rounding mode or FP exception state matches the default floating-point
+  // environment (C23 F.8.2, F.8.4, F.8.5).
   if (Info.InConstantContext)
     return true;
 
@@ -2750,16 +2752,6 @@ static bool checkFloatingPointResultForConstantFolding(EvalInfo &Info,
   if (!FPO.getAllowFEnvAccess() &&
       FPO.getExceptionMode() == LangOptions::FPE_Ignore)
     return true;
-
-  // Initializers for objects with static or thread storage duration (such as
-  // global variables) are evaluated at compile time during translation using
-  // default floating-point settings (C17 7.6.1p2).
-  if (const auto *VD = Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()) {
-    if (const auto *Var = dyn_cast<VarDecl>(VD)) {
-      if (Var->hasGlobalStorage())
-        return true;
-    }
-  }
 
   // Some floating point exception is raised and the FP mode is strict,
   // exceptions may be trapped, or FENV access is enabled.
@@ -20568,17 +20560,22 @@ static bool evaluateUnaryMathBuiltin(EvalInfo &Info, const CallExpr *E,
   if (Info.InConstantContext) {
     // [library.c]p3: A call to a math function is not a core constant
     // expression if an exception other than FE_INEXACT is raised.
+    // Emit a CCEDiag and noteUndefinedBehavior() so that C++ constexpr /
+    // C23 constexpr contexts reject the call, while C static/thread-storage
+    // initializers (which are evaluated at translation time in ConstantFold
+    // mode per C23 F.8.2, F.8.4, F.8.5) still fold to the IEEE 754 result.
     if (Status & (~APFloat::opStatus::opInexact)) {
       const FunctionDecl *FD = E->getDirectCallee();
       if (Status & APFloat::opStatus::opUnderflow)
-        Info.FFDiag(E, diag::note_constexpr_float_underflow) << FD;
+        Info.CCEDiag(E, diag::note_constexpr_float_underflow) << FD;
       else if (Status & APFloat::opStatus::opOverflow)
-        Info.FFDiag(E, diag::note_constexpr_float_overflow) << FD;
+        Info.CCEDiag(E, diag::note_constexpr_float_overflow) << FD;
       else if (Status & APFloat::opStatus::opDivByZero)
-        Info.FFDiag(E, diag::note_constexpr_float_divide_by_zero) << FD;
+        Info.CCEDiag(E, diag::note_constexpr_float_divide_by_zero) << FD;
       else
-        Info.FFDiag(E, diag::note_constexpr_float_invalid_op) << FD;
-      return false;
+        Info.CCEDiag(E, diag::note_constexpr_float_invalid_op) << FD;
+      if (!Info.noteUndefinedBehavior())
+        return false;
     }
     Result = *r;
     return true;
@@ -22246,7 +22243,8 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
   EvalInfo Info(Ctx, EStatus,
                 (IsConstantInitialization &&
-                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
+                 (Ctx.getLangOpts().CPlusPlus ||
+                  (VD->isConstexpr() && Ctx.getLangOpts().C23)))
                     ? EvaluationMode::ConstantExpression
                     : EvaluationMode::ConstantFold);
   Info.setEvaluatingDecl(VD, EStatus.Val);
