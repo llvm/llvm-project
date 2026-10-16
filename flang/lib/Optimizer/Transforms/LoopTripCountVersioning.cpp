@@ -244,17 +244,28 @@ static void versionLoop(mlir::OpBuilder &builder, fir::DoLoopOp loop,
 /// Device code may contain convergent operations which must not be duplicated
 /// under a condition that can differ between threads. Three things make a loop
 /// device code: a device ancestor (cuf.kernel, gpu.launch, acc compute region,
-/// omp.target), a device function (cuf.proc_attr, acc routine), or a device
-/// module (omp.is_target_device, where every remaining function is compiled
-/// for the target). attributes(host,device) and unspecialized acc routines
-/// count: their device copy is split off after this pass runs, so the one
-/// func.func here would be versioned for both.
+/// omp.target), a device function (cuf.proc_attr, acc routine, omp
+/// declare_target nohost), or a device module (omp.is_target_device, where
+/// every remaining function is compiled for the target). attributes(host,
+/// device) and unspecialized acc routines count: their device copy is split
+/// off after this pass runs, so the one func.func here would be versioned for
+/// both.
+static bool isNoHostDeclareTarget(mlir::func::FuncOp func) {
+  auto iface = mlir::dyn_cast<mlir::omp::DeclareTargetInterface>(*func);
+  if (!iface)
+    return false;
+  mlir::omp::DeclareTargetAttr attr = iface.getDeclareTarget();
+  return attr &&
+         attr.getDeviceType() == mlir::omp::DeclareTargetDeviceType::nohost;
+}
+
 static bool runsOnDevice(fir::DoLoopOp loop) {
   if (cuf::isExecutingOnDevice(loop) ||
       loop->getParentOfType<mlir::omp::TargetOp>())
     return true;
   auto func = loop->getParentOfType<mlir::func::FuncOp>();
-  if (func && (cuf::isDeviceProcedure(func) || mlir::acc::isAccRoutine(func)))
+  if (func && (cuf::isDeviceProcedure(func) || mlir::acc::isAccRoutine(func) ||
+               isNoHostDeclareTarget(func)))
     return true;
   auto offloadMod = loop->getParentOfType<mlir::omp::OffloadModuleInterface>();
   return offloadMod && offloadMod.getIsTargetDevice();

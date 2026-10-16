@@ -747,6 +747,35 @@ acc.routine @acc_routine_0 func(@acc_routine) seq
 // CHECK-NOT:     fir.if
 // CHECK:         return
 
+// !$omp declare target device_type(nohost) is device-only regardless of the
+// enclosing module. device_type(any) has a host compile and stays eligible
+// here; the device-side compile is covered by the module-level test.
+func.func @omp_declare_nohost(%a: !fir.ref<!fir.array<4xi32>>, %n: index) attributes {omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = enter>} {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  fir.do_loop %i = %c1 to %n step %c1 {
+    %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+    fir.store %c0_i32 to %p : !fir.ref<i32>
+  }
+  return
+}
+// CHECK-LABEL: func.func @omp_declare_nohost(
+// CHECK-NOT:     fir.if
+// CHECK:         return
+
+func.func @omp_declare_any(%a: !fir.ref<!fir.array<4xi32>>, %n: index) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  fir.do_loop %i = %c1 to %n step %c1 {
+    %p = fir.array_coor %a %i : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+    fir.store %c0_i32 to %p : !fir.ref<i32>
+  }
+  return
+}
+// CHECK-LABEL: func.func @omp_declare_any(
+// CHECK:         fir.if
+// CHECK:         return
+
 // A loop containing a loop that is not a fir.do_loop is not innermost and is
 // not versioned.
 func.func @contains_iterate_while(%arg0: !fir.ref<!fir.array<4xf64>>, %arg1: !fir.ref<i32>, %arg2: i1) {
