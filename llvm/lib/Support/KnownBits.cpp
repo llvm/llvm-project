@@ -1300,10 +1300,10 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
 
   // The quotient grows when the numerator grows and shrinks when the
   // denominator grows, and all four operand bounds are attainable, so the
-  // result is in [MinNum / MaxDenom, MaxNum / MinDenom]. If the division is 
+  // result is in [MinNum / MaxDenom, MaxNum / MinDenom]. If the division is
   // exact we tighten the bounds on minimum result, so we round up the lower
-  // bound to its ceiling. Keep the common leading bits of the two bounds (as 
-  // ConstantRange::toKnownBits does), which can include leading ones, not 
+  // bound to its ceiling. Keep the common leading bits of the two bounds (as
+  // ConstantRange::toKnownBits does), which can include leading ones, not
   // just leading zeros.
   APInt MaxDenom = RHS.getMaxValue();
   APInt MaxRes = LHS.getMaxValue().udiv(MinDenom);
