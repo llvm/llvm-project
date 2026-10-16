@@ -475,18 +475,18 @@ declare <8 x i8> @llvm.riscv.pasubu.v8i8(<8 x i8>, <8 x i8>)
 define <4 x i16> @narrow_zero_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; RV32-LABEL: narrow_zero_bits_ashr:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pzext.dh.b a0, a0
-; RV32-NEXT:    pzext.dh.b a2, a2
-; RV32-NEXT:    psub.dh a0, a0, a2
-; RV32-NEXT:    psrai.dh a0, a0, 1
+; RV32-NEXT:    pncvt.b a2, a2
+; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pasubu.b a0, a0, a2
+; RV32-NEXT:    pwcvt.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: narrow_zero_bits_ashr:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pzext.h.b a0, a0
-; RV64-NEXT:    pzext.h.b a1, a1
-; RV64-NEXT:    psub.h a0, a0, a1
-; RV64-NEXT:    psrai.h a0, a0, 1
+; RV64-NEXT:    pasubu.b a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
+; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    ret
   %a = and <4 x i16> %x, splat (i16 255)
   %b = and <4 x i16> %y, splat (i16 255)
@@ -498,18 +498,18 @@ define <4 x i16> @narrow_zero_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
 define <4 x i16> @narrow_sign_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; RV32-LABEL: narrow_sign_bits_ashr:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psext.dh.b a0, a0
-; RV32-NEXT:    psext.dh.b a2, a2
-; RV32-NEXT:    psub.dh a0, a0, a2
-; RV32-NEXT:    psrai.dh a0, a0, 1
+; RV32-NEXT:    pncvt.b a2, a2
+; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pasub.b a0, a0, a2
+; RV32-NEXT:    pwcvt.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: narrow_sign_bits_ashr:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    pasub.b a0, a0, a1
+; RV64-NEXT:    pncvt.wb a0, a0
+; RV64-NEXT:    pwcvtu.wb a0, a0
 ; RV64-NEXT:    psext.h.b a0, a0
-; RV64-NEXT:    psext.h.b a1, a1
-; RV64-NEXT:    psub.h a0, a0, a1
-; RV64-NEXT:    psrai.h a0, a0, 1
 ; RV64-NEXT:    ret
   %a = shl <4 x i16> %x, splat (i16 8)
   %b = shl <4 x i16> %y, splat (i16 8)
@@ -525,18 +525,14 @@ define <4 x i16> @narrow_sign_bits_ashr(<4 x i16> %x, <4 x i16> %y) {
 define <4 x i8> @narrow_zero_bits_lshr_trunc(<4 x i16> %x, <4 x i16> %y) {
 ; RV32-LABEL: narrow_zero_bits_lshr_trunc:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pzext.dh.b a0, a0
-; RV32-NEXT:    pzext.dh.b a2, a2
-; RV32-NEXT:    psub.dh a0, a0, a2
-; RV32-NEXT:    pnsrli.b a0, a0, 1
+; RV32-NEXT:    pncvt.b a2, a2
+; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pasubu.b a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: narrow_zero_bits_lshr_trunc:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pzext.h.b a0, a0
-; RV64-NEXT:    pzext.h.b a1, a1
-; RV64-NEXT:    psub.h a0, a0, a1
-; RV64-NEXT:    psrli.h a0, a0, 1
+; RV64-NEXT:    pasubu.b a0, a0, a1
 ; RV64-NEXT:    pncvt.wb a0, a0
 ; RV64-NEXT:    ret
   %a = and <4 x i16> %x, splat (i16 255)
@@ -584,8 +580,7 @@ define <4 x i16> @narrow_one_zero_bit_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; RV32-NEXT:    and a3, a3, a4
 ; RV32-NEXT:    and a0, a0, a4
 ; RV32-NEXT:    and a2, a2, a4
-; RV32-NEXT:    psub.dh a0, a0, a2
-; RV32-NEXT:    psrai.dh a0, a0, 1
+; RV32-NEXT:    pasubu.dh a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: narrow_one_zero_bit_ashr:
@@ -595,8 +590,7 @@ define <4 x i16> @narrow_one_zero_bit_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; RV64-NEXT:    pmv.hs a2, a2
 ; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    and a1, a1, a2
-; RV64-NEXT:    psub.h a0, a0, a1
-; RV64-NEXT:    psrai.h a0, a0, 1
+; RV64-NEXT:    pasubu.h a0, a0, a1
 ; RV64-NEXT:    ret
   %a = and <4 x i16> %x, splat (i16 32767)
   %b = and <4 x i16> %y, splat (i16 32767)
@@ -629,13 +623,20 @@ define <4 x i16> @no_narrow_ashr(<4 x i16> %x, <4 x i16> %y) {
 ; because (sub x, C) is canonicalized to (add x, -C).
 
 define i16 @narrow_scalar_constant(i16 %x) {
-; CHECK-LABEL: narrow_scalar_constant:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 100
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    sub a0, a1, a0
-; CHECK-NEXT:    srai a0, a0, 1
-; CHECK-NEXT:    ret
+; RV32-LABEL: narrow_scalar_constant:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 100
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    asubu a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_scalar_constant:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 100
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    sub a0, a1, a0
+; RV64-NEXT:    srai a0, a0, 1
+; RV64-NEXT:    ret
   %a = and i16 %x, 255
   %d = sub i16 100, %a
   %r = ashr i16 %d, 1
@@ -646,13 +647,20 @@ define i16 @narrow_scalar_constant(i16 %x) {
 ; AVGSUBFLOORU node is created for i32, which is legal. It isn't legal on RV64.
 
 define i16 @narrow_scalar_illegal_type(i16 %x, i16 %y) {
-; CHECK-LABEL: narrow_scalar_illegal_type:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    zext.b a1, a1
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    srai a0, a0, 1
-; CHECK-NEXT:    ret
+; RV32-LABEL: narrow_scalar_illegal_type:
+; RV32:       # %bb.0:
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    asubu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: narrow_scalar_illegal_type:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    sub a0, a0, a1
+; RV64-NEXT:    srai a0, a0, 1
+; RV64-NEXT:    ret
   %a = and i16 %x, 255
   %b = and i16 %y, 255
   %d = sub i16 %a, %b
