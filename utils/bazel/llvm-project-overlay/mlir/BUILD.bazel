@@ -4095,6 +4095,7 @@ td_library(
         ":CallInterfacesTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":DLTIDialectTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -5020,6 +5021,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
+        ":DLTIDialect",
         ":FuncIncGen",
         ":FunctionInterfaces",
         ":IR",
@@ -14552,6 +14554,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/DLTI/DLTI.td",
         "include/mlir/Dialect/DLTI/DLTIBase.td",
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
     ],
     includes = ["include"],
     deps = [
@@ -14597,6 +14600,17 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "DLTIOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/DLTIOpInterfaces.td",
+    deps = [":DLTIDialectTdFiles"],
+)
+
 cc_library(
     name = "DLTIDialect",
     srcs = glob(["lib/Dialect/DLTI/*.cpp"]),
@@ -14605,6 +14619,7 @@ cc_library(
     deps = [
         ":DLTIAttrsIncGen",
         ":DLTIBaseIncGen",
+        ":DLTIOpInterfacesIncGen",
         ":DataLayoutInterfaces",
         ":IR",
         "//llvm:Support",
