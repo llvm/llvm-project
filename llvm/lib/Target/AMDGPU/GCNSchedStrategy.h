@@ -482,17 +482,20 @@ private:
   void findReachingDefs(MachineOperand &UseMO, LiveIntervals *LIS,
                         SmallVectorImpl<SlotIndex> &DefIdxs);
 
-  /// Finds all the reaching uses of \p DefMI and stores the use operands in \p
-  /// ReachingUses
-  void findReachingUses(const MachineInstr *DefMI, LiveIntervals *LIS,
+  /// Finds all the reaching uses of \p DefReg defined by \p DefMI and stores
+  /// the use operands in \p ReachingUses. \p DefReg must be passed explicitly
+  /// because \p DefMI may define a register other than its operand 0 (e.g.
+  /// ds_write2*).
+  void findReachingUses(const MachineInstr *DefMI, Register DefReg,
+                        LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
-  /// Returns true if \p Reg (a rewrite candidate's dst or src2, selected by
-  /// \p IsDst) can be wholly reclassified to AGPR without creating an illegal
-  /// VALU AGPR access.
+  /// Returns true if \p Reg (a rewrite candidate's dst or src2) can be wholly
+  /// reclassified to AGPR without creating an illegal VALU AGPR access. \p
+  /// DstReachingUses lists the uses exempted from the user check (the dst's own
+  /// reaching uses, bridged back to VGPR by case2); pass {} for a src2.
   bool isRecolorSafe(Register Reg, ArrayRef<MachineOperand *> DstReachingUses,
-                     const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet,
-                     bool IsDst);
+                     const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet);
 
 public:
   bool initGCNSchedStage() override;

@@ -1396,11 +1396,10 @@ void RewriteMFMAFormStage::findReachingDefs(
 }
 
 void RewriteMFMAFormStage::findReachingUses(
-    const MachineInstr *DefMI, LiveIntervals *LIS,
+    const MachineInstr *DefMI, Register DefReg, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
-  for (MachineOperand &UseMO :
-       DAG.MRI.use_nodbg_operands(DefMI->getOperand(0).getReg())) {
+  for (MachineOperand &UseMO : DAG.MRI.use_nodbg_operands(DefReg)) {
     SmallVector<SlotIndex, 8> ReachingDefIndexes;
     findReachingDefs(UseMO, LIS, ReachingDefIndexes);
 
@@ -2375,7 +2374,7 @@ static bool userAcceptsAGPR(const MachineInstr *UserMI, Register Reg,
 
 bool RewriteMFMAFormStage::isRecolorSafe(
     Register Reg, ArrayRef<MachineOperand *> DstReachingUses,
-    const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet, bool IsDst) {
+    const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet) {
   const TargetRegisterClass *RegAGPRClass =
       SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(Reg));
   for (MachineInstr &DefMI : DAG.MRI.def_instructions(Reg)) {
@@ -2385,22 +2384,27 @@ bool RewriteMFMAFormStage::isRecolorSafe(
       continue;
     if (!canWriteAGPR(&DefMI, Reg, RegAGPRClass, TII, SRI))
       return false;
-    SmallVector<MachineOperand *, 8> DefReachingUses;
-    findReachingUses(&DefMI, DAG.LIS, DefReachingUses);
-    for (MachineOperand *UseMO : DefReachingUses) {
-      // Exempt uses that do not constrain the recolor: for a dst, its own
-      // reaching uses (bridged to VGPR by case2); for a src2, uses that are
-      // candidate MFMAs (they read the AGPR result directly after rewrite).
-      if (IsDst) {
-        if (is_contained(DstReachingUses, UseMO))
-          continue;
-      } else if (isRewriteCandidateMAI(UseMO->getParent(), TII,
-                                       RewriteCandsSet)) {
-        continue;
-      }
-      if (!userAcceptsAGPR(UseMO->getParent(), Reg, RegAGPRClass, TII, SRI))
-        return false;
-    }
+  }
+
+  for (MachineInstr &UserMI : DAG.MRI.use_nodbg_instructions(Reg)) {
+
+    if (isRewriteCandidateMAI(&UserMI, TII, RewriteCandsSet))
+      continue;
+
+    MachineOperand *UseMO = UserMI.findRegisterUseOperand(Reg, /*TRI=*/nullptr);
+
+    if (is_contained(DstReachingUses, UseMO))
+      continue;
+
+    SmallVector<SlotIndex, 8> ReachingDefs;
+    findReachingDefs(*UseMO, DAG.LIS, ReachingDefs);
+    if (none_of(ReachingDefs, [&](SlotIndex RDIdx) {
+          const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+          return RD && !isRewriteCandidateMAI(RD, TII, RewriteCandsSet);
+        }))
+      continue;
+    if (!userAcceptsAGPR(&UserMI, Reg, RegAGPRClass, TII, SRI))
+      return false;
   }
   return true;
 }
@@ -2470,7 +2474,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
 
         bool Src2RecolorSafe =
-            isRecolorSafe(Src2->getReg(), {}, RewriteSet, /*IsDst=*/false);
+            isRecolorSafe(Src2->getReg(), {}, RewriteSet);
         if (!Src2RecolorSafe) {
           for (SlotIndex RDIdx : Src2ReachingDefs) {
             MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
@@ -2482,10 +2486,9 @@ bool RewriteMFMAFormStage::initHeuristics(
       MachineOperand &Dst = MI.getOperand(0);
       SmallVector<MachineOperand *, 8> DstReachingUses;
 
-      findReachingUses(&MI, DAG.LIS, DstReachingUses);
+      findReachingUses(&MI, Dst.getReg(), DAG.LIS, DstReachingUses);
       bool DstRecolorSafe =
-          isRecolorSafe(Dst.getReg(), DstReachingUses, RewriteSet,
-                        /*IsDst=*/true);
+          isRecolorSafe(Dst.getReg(), DstReachingUses, RewriteSet);
 
       for (MachineOperand *RUOp : DstReachingUses) {
         MachineInstr *UserMI = RUOp->getParent();
@@ -2742,7 +2745,7 @@ bool RewriteMFMAFormStage::rewrite(
       bool Src2AlreadyRedef = RedefMap.contains(Src2Reg);
       bool Src2RecolorSafe =
           !Src2AlreadyRedef &&
-          isRecolorSafe(Src2Reg, {}, RewriteCandsSet, /*IsDst=*/false);
+          isRecolorSafe(Src2Reg, {}, RewriteCandsSet);
       // src2 cannot be recolored to AGPR: collect its non-candidate reaching
       // defs to bridge below (candidate MFMAs already produce AGPR directly).
       if (!Src2RecolorSafe) {
@@ -2814,14 +2817,14 @@ bool RewriteMFMAFormStage::rewrite(
     SmallVector<MachineOperand *, 8> DstReachingUseCopies;
     SmallVector<MachineInstr *, 8> DstUseDefsReplace;
 
-    findReachingUses(MI, DAG.LIS, DstReachingUses);
+    findReachingUses(MI, DstReg, DAG.LIS, DstReachingUses);
 
     // An already-redefined dst reuses its mapped reg, so treat it as unsafe to
     // recolor and bridge its reaching defs instead.
     bool DstAlreadyRedef = RedefMap.contains(DstReg);
     bool DstRecolorSafe =
         !DstAlreadyRedef &&
-        isRecolorSafe(DstReg, DstReachingUses, RewriteCandsSet, /*IsDst=*/true);
+        isRecolorSafe(DstReg, DstReachingUses, RewriteCandsSet);
     const TargetRegisterClass *DstAGPRClass =
         SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(DstReg));
     for (MachineOperand *RUOp : DstReachingUses) {
