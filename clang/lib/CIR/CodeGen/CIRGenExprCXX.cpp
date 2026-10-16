@@ -342,8 +342,11 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
   stores.emplace_back(CharUnits::Zero(), nvSize);
 
   // Each store is split by the existence of a vbptr.
-  // TODO(cir): This only needs handling for the MS CXXABI.
-  assert(!cir::MissingFeatures::msabi());
+  if (cgf.cgm.getTarget().getCXXABI().isMicrosoft() && base->getNumVBases()) {
+    cgf.cgm.errorNYI(base->getSourceRange(),
+                     "emitNullBaseClassInitialization: MSVC vbptr splitting");
+    return;
+  }
 
   // If the type contains a pointer to data member we can't memset it to zero.
   // Instead, create a null constant and copy it to the destination.

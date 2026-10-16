@@ -1,4 +1,4 @@
-//===---- LowerMicrosoftCXXABI.cpp - Emit CIR for Microsoft-specific code -===//
+//===---- LowerMicrosoftCXXABI.cpp - Emit CIR code Microsoft-specific code -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,10 +59,10 @@ public:
     llvm_unreachable("Microsoft ABI member pointer lowering NYI");
   }
 
-  void
-  lowerGetMethod(cir::GetMethodOp op, mlir::Value &callee, mlir::Value &thisArg,
-                 mlir::Value loweredMethod, mlir::Value loweredObjectPtr,
-                 mlir::ConversionPatternRewriter &rewriter) const override {
+  void lowerGetMethod(cir::GetMethodOp op, mlir::Value &callee,
+                      mlir::Value &thisArg, mlir::Value loweredMethod,
+                      mlir::Value loweredObjectPtr,
+                      mlir::ConversionPatternRewriter &rewriter) const override {
     llvm_unreachable("Microsoft ABI method pointer lowering NYI");
   }
 
@@ -136,7 +136,9 @@ public:
 
   clang::CharUnits
   getArrayCookieSizeImpl(clang::CharUnits elementAlign) const override {
-    llvm_unreachable("Microsoft ABI array cookie lowering NYI");
+    clang::CharUnits cookieSize =
+        clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
+    return std::max(cookieSize, elementAlign);
   }
 
   mlir::Value readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
@@ -144,7 +146,10 @@ public:
                                   clang::CharUnits cookieAlignment,
                                   const mlir::DataLayout &dataLayout,
                                   CIRBaseBuilderTy &builder) const override {
-    llvm_unreachable("Microsoft ABI array cookie lowering NYI");
+    mlir::Type sizeTy = builder.getUIntNTy(getPtrSizeInBits());
+    mlir::Value cookiePtr =
+        builder.createBitcast(allocPtr, builder.getPointerTo(sizeTy));
+    return builder.createLoad(loc, cookiePtr);
   }
 };
 
