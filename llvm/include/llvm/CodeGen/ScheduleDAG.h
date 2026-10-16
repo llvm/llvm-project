@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -271,6 +272,7 @@ class TargetRegisterInfo;
 
     SmallVector<SDep, 4> Preds;  ///< All sunit predecessors.
     SmallVector<SDep, 4> Succs;  ///< All sunit successors.
+    std::unique_ptr<BitVector> PredsSet; ///< Predecessors set by NodeNum.
 
     typedef SmallVectorImpl<SDep>::iterator pred_iterator;
     typedef SmallVectorImpl<SDep>::iterator succ_iterator;
