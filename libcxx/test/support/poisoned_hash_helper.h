@@ -153,10 +153,7 @@ struct TestConstexprHashEnabled {
 
 // We use the same types that std::hash uses, except for pointers since pointers can't be hashed during constant evaluation
 using SupportedConstexprHashTypes =
-    types::concatenate_t<types::arithmetic_types,
-                         types::type_list<Enum,
-                                          EnumClass, //void*, void const*, Class*,
-                                          std::nullptr_t>>;
+    types::concatenate_t<types::arithmetic_types, types::type_list<Enum, EnumClass, std::nullptr_t>>;
 
 // Test that each of the library hash specializations for arithmetic types,
 // enum types, and pointer types are available and enabled.
