@@ -8254,7 +8254,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
             return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
                                                     Depth + 1, Kind);
           });
-        return true;
+        if (isa<ConstantData>(C))
+          return true;
       }
     }
   }
