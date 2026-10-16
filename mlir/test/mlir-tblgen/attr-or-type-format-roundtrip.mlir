@@ -37,6 +37,58 @@ attributes {
   attr_14 = #test.simple_enum<"+">,
   // CHECK: #test.simple_enum<"dash-separated-sentence">
   attr_15 = #test.simple_enum<"dash-separated-sentence">,
+  // CHECK: #test.attr_with_int8_params<200, -100>
+  attr_16 = #test.attr_with_int8_params<200, -100>,
+  // Test that chars print as a bare keyword or a quoted string, not a number.
+  // CHECK: #test.attr_with_char_param<A>
+  attr_17 = #test.attr_with_char_param<A>,
+  // CHECK: #test.attr_with_char_param<"\0A">
+  attr_18 = #test.attr_with_char_param<"\0A">,
+  // CHECK: #test.attr_with_int8_params<255, -128>
+  attr_19 = #test.attr_with_int8_params<255, -128>,
+  // CHECK: #test.attr_with_int8_params<0, 0>
+  attr_20 = #test.attr_with_int8_params<0, 0>,
+  // Characters that need escaping and a digit, which is not a bare identifier.
+  // CHECK: #test.attr_with_char_param<"\22">
+  attr_21 = #test.attr_with_char_param<"\22">,
+  // CHECK: #test.attr_with_char_param<"\\">
+  attr_22 = #test.attr_with_char_param<"\\">,
+  // CHECK: #test.attr_with_char_param<"5">
+  attr_23 = #test.attr_with_char_param<"5">,
+  // CHECK: #test.attr_with_optional_char<A>
+  attr_24 = #test.attr_with_optional_char<A>,
+  // CHECK: #test.attr_with_optional_char<>
+  attr_25 = #test.attr_with_optional_char<>,
+  // CHECK: #test.attr_with_optional_uint8<200>
+  attr_26 = #test.attr_with_optional_uint8<200>,
+  // CHECK: #test.attr_with_optional_uint8<>
+  attr_27 = #test.attr_with_optional_uint8<>,
+  // CHECK: #test.attr_with_uint8_array<[0, 65, 255]>
+  attr_28 = #test.attr_with_uint8_array<[0, 65, 255]>,
+  // CHECK: #test.attr_with_char_array<[A, "\0A", "5", ","]>
+  attr_29 = #test.attr_with_char_array<[A, "\0A", "5", ","]>,
+  // `_` is a valid bare identifier even though it is not a letter.
+  // CHECK: #test.attr_with_char_param<_>
+  attr_30 = #test.attr_with_char_param<_>,
+  // Named escapes are accepted as input but are canonicalized to hex escapes.
+  // CHECK: #test.attr_with_char_param<"\0A">
+  attr_31 = #test.attr_with_char_param<"\n">,
+  // CHECK: #test.attr_with_char_param<"\09">
+  attr_32 = #test.attr_with_char_param<"\t">,
+  // The NUL byte and bytes >= 0x80 round-trip through hex escapes.
+  // CHECK: #test.attr_with_char_param<"\00">
+  attr_33 = #test.attr_with_char_param<"\00">,
+  // CHECK: #test.attr_with_char_param<"\80">
+  attr_34 = #test.attr_with_char_param<"\80">,
+  // CHECK: #test.attr_with_char_param<"\FF">
+  attr_35 = #test.attr_with_char_param<"\FF">,
+  // Escaped values through the optional and array paths.
+  // CHECK: #test.attr_with_optional_char<"\FF">
+  attr_36 = #test.attr_with_optional_char<"\FF">,
+  // CHECK: #test.attr_with_optional_char<"\0A">
+  attr_37 = #test.attr_with_optional_char<"\n">,
+  // CHECK: #test.attr_with_char_array<[_, "\00", "\0A", "\80", "\FF", "\22"]>
+  attr_38 = #test.attr_with_char_array<[_, "\00", "\n", "\80", "\FF", "\22"]>,
   // Test that ArrayRefParameter in non-last struct position is wrapped in
   // brackets to avoid ambiguity with the struct-level comma (issue #156623).
   // CHECK: #test.arr_struct<elements = [1, 2, 3], count = 42>
