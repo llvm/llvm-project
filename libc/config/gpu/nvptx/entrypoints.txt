@@ -313,6 +313,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanhf
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
+    libc.src.math.canonicalizef128
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
@@ -475,6 +476,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
+    libc.src.math.modff128
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
@@ -502,6 +504,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remainderl
     libc.src.math.remquo
     libc.src.math.remquof
+    libc.src.math.remquof128
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
