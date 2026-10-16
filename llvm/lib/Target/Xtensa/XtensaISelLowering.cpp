@@ -384,10 +384,10 @@ static bool CC_Xtensa_Custom(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCState &State) {
   if (ArgFlags.isByVal()) {
     Align ByValAlign = ArgFlags.getNonZeroByValAlign();
-    unsigned ByValSize = ArgFlags.getByValSize();
-    if (ByValSize < 4) {
-      ByValSize = 4;
-    }
+    // Every stack argument occupies whole words, so a byval aggregate whose
+    // size is not a multiple of 4 must not leave the next stack argument, the
+    // varargs area or the call frame size misaligned.
+    unsigned ByValSize = alignTo(ArgFlags.getByValSize(), 4);
     if (ByValAlign < Align(4)) {
       ByValAlign = Align(4);
     }
