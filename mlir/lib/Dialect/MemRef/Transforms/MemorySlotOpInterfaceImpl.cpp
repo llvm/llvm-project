@@ -197,10 +197,9 @@ static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
 
 /// Stores a slot's value to the target of a `memref.copy`: writes `vec` into
 /// `mem` at the origin, with the identity map and in-bounds rule of
-/// `readMemRefAsVector`. `mask`, when set, restricts the write to the lanes it
-/// selects.
+/// `readMemRefAsVector`.
 static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
-                                Value mem, Value mask = {}) {
+                                Value mem) {
   auto memType = cast<MemRefType>(mem.getType());
   auto vecType = cast<VectorType>(vec.getType());
   assert(!vecType.isScalable() && "expected a fixed-size vector");
@@ -213,8 +212,8 @@ static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
                   memType.getDimSize(d) >= vecType.getDimSize(d);
   vector::TransferWriteOp::create(
       builder, loc, vec, mem, indices,
-      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), mask,
-      builder.getBoolArrayAttr(inBounds));
+      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)),
+      /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
 }
 
 //===----------------------------------------------------------------------===//
@@ -230,7 +229,7 @@ namespace {
 /// A copy between two slots is rewritten one slot at a time, in either order.
 /// For dynamic subviews,
 /// `PromotableAliaserInterface::projectAliasValueToSlotValue` masks writes into
-/// the slot, and this model masks copies out of it.
+/// the slot.
 struct CopyOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<CopyOpMemOpModel,
                                                      memref::CopyOp> {
@@ -265,7 +264,7 @@ struct CopyOpMemOpModel
     // not modeled here.
     if (srcIsSlot == dstIsSlot)
       return false;
-    // No further check: `memref.copy` verifies that both operands have the same
+    // No further check: `memref.copy` requires both operands to have the same
     // shape and element type.
     return true;
   }
@@ -278,14 +277,9 @@ struct CopyOpMemOpModel
                      OpBuilder &builder, Value reachingDefinition,
                      const DataLayout &dataLayout) const {
     auto copyOp = cast<memref::CopyOp>(op);
-    if (copyOp.getSource() == slot.ptr) {
-      Location loc = op->getLoc();
-      Value mask;
-      if (memref::SubViewOp subView = getDynamicSubView(slot.ptr))
-        mask = buildSubViewMask(builder, loc, subView);
-      writeVectorToMemRef(builder, loc, reachingDefinition, copyOp.getTarget(),
-                          mask);
-    }
+    if (copyOp.getSource() == slot.ptr)
+      writeVectorToMemRef(builder, op->getLoc(), reachingDefinition,
+                          copyOp.getTarget());
     return DeletionKind::Delete;
   }
 };

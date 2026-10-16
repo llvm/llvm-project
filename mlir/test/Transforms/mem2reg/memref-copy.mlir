@@ -171,3 +171,90 @@ func.func @copy_global_to_dyn_subview(%v: vector<128x64xf16>, %n: index, %pad: f
   %r = vector.transfer_read %slm[%c0, %c0], %pad {in_bounds = [true, true]} : memref<128x64xf16, 3>, vector<128x64xf16>
   return %r : vector<128x64xf16>
 }
+
+// -----
+
+// A copy out of a dynamic subview becomes an unmasked transfer_write: the
+// target has the subview's runtime shape, so the write's out-of-bounds lanes
+// fall outside it.
+
+// CHECK-LABEL: func.func @copy_out_of_dyn_subview(
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[DST:.*]]: memref<?x?xf32>
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     memref.copy
+// CHECK-NOT:     vector.create_mask
+// CHECK:         vector.transfer_write %[[V]], %[[DST]][%{{.*}}, %{{.*}}] : vector<8x16xf32>, memref<?x?xf32>
+// CHECK-NEXT:    return
+func.func @copy_out_of_dyn_subview(%v: vector<8x16xf32>, %dst: memref<?x?xf32>, %n: index) {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 0] [%n, %n] [1, 1] : memref<8x16xf32> to memref<?x?xf32, strided<[16, 1]>>
+  memref.copy %sv, %dst : memref<?x?xf32, strided<[16, 1]>> to memref<?x?xf32>
+  return
+}
+
+// -----
+
+// Copying between dynamic subviews of two promotable slots eliminates both
+// buffers: only the elements inside the extent reach the target's value.
+
+// CHECK-LABEL: func.func @copy_dyn_subview_between_slots(
+// CHECK-SAME:      %[[VA:.*]]: vector<8x16xf32>, %[[VB:.*]]: vector<8x16xf32>, %[[N:.*]]: index
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     memref.copy
+// CHECK:         %[[M:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
+// CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[VA]], %[[VB]]
+// CHECK:         return %[[SEL]]
+func.func @copy_dyn_subview_between_slots(%va: vector<8x16xf32>, %vb: vector<8x16xf32>, %n: index, %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  %b = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %va, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  vector.transfer_write %vb, %b[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sa = memref.subview %a[0, 0] [8, %n] [1, 1] : memref<8x16xf32> to memref<8x?xf32, strided<[16, 1]>>
+  %sb = memref.subview %b[0, 0] [8, %n] [1, 1] : memref<8x16xf32> to memref<8x?xf32, strided<[16, 1]>>
+  memref.copy %sa, %sb : memref<8x?xf32, strided<[16, 1]>> to memref<8x?xf32, strided<[16, 1]>>
+  %r = vector.transfer_read %b[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
+// NEGATIVE: a copy between two dynamic subviews of the same buffer is not
+// promoted.
+
+// CHECK-LABEL: func.func @negative_copy_dyn_subviews_same_buffer(
+// CHECK:         memref.alloca
+// CHECK:         memref.copy
+// CHECK:         vector.transfer_read
+func.func @negative_copy_dyn_subviews_same_buffer(%v: vector<8x16xf32>, %n: index, %m: index, %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %s1 = memref.subview %a[0, 0] [8, %n] [1, 1] : memref<8x16xf32> to memref<8x?xf32, strided<[16, 1]>>
+  %s2 = memref.subview %a[0, 0] [8, %m] [1, 1] : memref<8x16xf32> to memref<8x?xf32, strided<[16, 1]>>
+  memref.copy %s1, %s2 : memref<8x?xf32, strided<[16, 1]>> to memref<8x?xf32, strided<[16, 1]>>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
+// NEGATIVE: a copy between two static subviews of the same buffer, shifting
+// the low half into the high half, is not promoted.
+
+// CHECK-LABEL: func.func @negative_copy_static_subviews_same_buffer(
+// CHECK:         memref.alloca
+// CHECK:         memref.copy
+// CHECK:         vector.transfer_read
+func.func @negative_copy_static_subviews_same_buffer(%v: vector<8xf32>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %lo = memref.subview %a[0] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1]>>
+  %hi = memref.subview %a[4] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 4>>
+  memref.copy %lo, %hi : memref<4xf32, strided<[1]>> to memref<4xf32, strided<[1], offset: 4>>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+  return %r : vector<8xf32>
+}
