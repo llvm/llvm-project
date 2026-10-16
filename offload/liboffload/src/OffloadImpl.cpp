@@ -1378,8 +1378,11 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
       if (!KernelImpl)
         return KernelImpl.takeError();
 
-      if (auto Err = KernelImpl->init(Device, *Program->Image))
+      if (auto Err = KernelImpl->init(Device, *Program->Image)) {
+        Device.Plugin.free(&*KernelImpl);
+        Program->KernelSymbols.erase(Name);
         return Err;
+      }
 
       Kernel = std::make_unique<ol_symbol_impl_t>(&*KernelImpl);
     }
