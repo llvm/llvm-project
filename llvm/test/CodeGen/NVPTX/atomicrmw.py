@@ -29,7 +29,16 @@ INTEGER_OPERATIONS = [
     "usub_sat",
 ]
 
-FLOATING_POINT_OPERATIONS = ["fadd", "fsub", "fmin", "fmax", "fminimum", "fmaximum"]
+FLOATING_POINT_OPERATIONS = [
+    "fadd",
+    "fsub",
+    "fmin",
+    "fmax",
+    "fminimum",
+    "fmaximum",
+    "fminimumnum",
+    "fmaximumnum",
+]
 
 DATATYPE_SUFFIXES = {
     "float": "f32",
