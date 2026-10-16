@@ -187,6 +187,7 @@ public:
     OpenACCSupport &accSupport =
         cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
     SymbolTable outerSymTab(module);
+    SymbolTableCollection symbolTables;
     bool failed = false;
 
     func.walk([&](CallOpInterface callOp) {
@@ -200,11 +201,11 @@ public:
       if (!calleeSymbolRef)
         return;
       FunctionOpInterface callee =
-          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(
+          symbolTables.lookupNearestSymbolFrom<FunctionOpInterface>(
               callOp, calleeSymbolRef);
       if (!callee)
-        callee = outerSymTab.lookup<FunctionOpInterface>(
-            calleeSymbolRef.getLeafReference());
+        callee = symbolTables.lookupSymbolIn<FunctionOpInterface>(
+            module, calleeSymbolRef.getLeafReference());
       if (!callee)
         return;
 
