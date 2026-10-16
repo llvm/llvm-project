@@ -11,7 +11,7 @@
 #define _LIBCPP___ITERATOR_DATA_H
 
 #include <__config>
-#include <initializer_list>
+#include <__cstddef/size_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,11 +36,6 @@ template <class _Cont>
 template <class _Tp, size_t _Sz>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* data(_Tp (&__array)[_Sz]) noexcept {
   return __array;
-}
-
-template <class _Ep>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Ep* data(initializer_list<_Ep> __il) noexcept {
-  return __il.begin();
 }
 
 _LIBCPP_END_NAMESPACE_STD
