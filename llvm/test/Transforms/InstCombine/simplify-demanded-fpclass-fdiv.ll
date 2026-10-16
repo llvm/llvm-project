@@ -289,7 +289,7 @@ define nofpclass(inf) half @ret_noinf_self(half noundef %x) {
 define nofpclass(snan) half @ret_src_nonan_noinf_self(half noundef nofpclass(nan inf) %x) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_src_nonan_noinf_self(
 ; CHECK-SAME: half noundef nofpclass(nan inf) [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq half [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan ueq half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[TMP1]], half +qnan, half 1.000000e+00
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
