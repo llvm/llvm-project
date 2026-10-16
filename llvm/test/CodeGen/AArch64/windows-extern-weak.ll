@@ -41,3 +41,24 @@ define void @func() nounwind {
 }
 
 declare extern_weak void @weakfunc()
+
+define ptr @use() {
+; CHECK-LABEL: use:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK:    bl foo
+; CHECK:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK:    ret
+;
+; FISEL-LABEL: use:
+; FISEL:       // %bb.0: // %entry
+; FISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; FISEL:    bl foo
+; FISEL:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; FISEL:    ret
+entry:
+  %r = call ptr @foo()
+  ret ptr %r
+}
+
+declare extern_weak dso_local ptr @foo()
