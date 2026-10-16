@@ -204,9 +204,10 @@ ReductionProcessor::findUserDefinedReductionForIntrinsic(
   if (!symbol || !type)
     return nullptr;
 
-  std::string mangledName = "op." + getRealName(symbol).ToString();
-  const semantics::Symbol *reductionSymbol =
-      scope.FindSymbol(parser::CharBlock{mangledName});
+  parser::CharBlock mangledName =
+      semantics::MangleSpecialFunctions(getRealName(symbol));
+
+  const semantics::Symbol *reductionSymbol = scope.FindSymbol(mangledName);
   if (!reductionSymbol)
     return nullptr;
 
