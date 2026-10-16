@@ -47,13 +47,16 @@ class InitHeaderSearch {
   std::vector<DirectoryLookupInfo> IncludePath;
   std::vector<std::pair<std::string, bool> > SystemHeaderPrefixes;
   HeaderSearch &Headers;
+  llvm::raw_ostream &VerboseOutput;
   bool Verbose;
   std::string IncludeSysroot;
   bool HasSysroot;
 
 public:
-  InitHeaderSearch(HeaderSearch &HS, bool verbose, StringRef sysroot)
-      : Headers(HS), Verbose(verbose), IncludeSysroot(std::string(sysroot)),
+  InitHeaderSearch(HeaderSearch &HS, bool verbose, StringRef sysroot,
+                   llvm::raw_ostream &VerboseOutput)
+      : Headers(HS), VerboseOutput(VerboseOutput), Verbose(verbose),
+        IncludeSysroot(std::string(sysroot)),
         HasSysroot(!(sysroot.empty() || sysroot == "/")) {}
 
   /// Add the specified path to the specified group list, prefixing the sysroot
@@ -165,8 +168,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   }
 
   if (Verbose)
-    llvm::errs() << "ignoring nonexistent directory \""
-                 << MappedPathStr << "\"\n";
+    VerboseOutput << "ignoring nonexistent directory \"" << MappedPathStr
+                  << "\"\n";
   return false;
 }
 
@@ -282,7 +285,8 @@ void InitHeaderSearch::AddDefaultIncludePaths(
 /// remove the later (dead) ones.  Returns the number of non-system headers
 /// removed, which is used to update NumAngled.
 static unsigned RemoveDuplicates(std::vector<DirectoryLookupInfo> &SearchList,
-                                 unsigned First, bool Verbose) {
+                                 unsigned First, bool Verbose,
+                                 llvm::raw_ostream &VerboseOutput) {
   llvm::SmallPtrSet<const DirectoryEntry *, 8> SeenDirs;
   llvm::SmallPtrSet<const DirectoryEntry *, 8> SeenFrameworkDirs;
   llvm::SmallPtrSet<const HeaderMap *, 8> SeenHeaderMaps;
@@ -347,11 +351,11 @@ static unsigned RemoveDuplicates(std::vector<DirectoryLookupInfo> &SearchList,
     }
 
     if (Verbose) {
-      llvm::errs() << "ignoring duplicate directory \""
-                   << CurEntry.getName() << "\"\n";
+      VerboseOutput << "ignoring duplicate directory \"" << CurEntry.getName()
+                    << "\"\n";
       if (DirToRemove != i)
-        llvm::errs() << "  as it is a non-system directory that duplicates "
-                     << "a system directory\n";
+        VerboseOutput << "  as it is a non-system directory that duplicates "
+                      << "a system directory\n";
     }
     if (DirToRemove != i)
       ++NonSystemRemoved;
@@ -397,14 +401,14 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
       SearchList.push_back(Include);
 
   // Deduplicate and remember index.
-  RemoveDuplicates(SearchList, 0, Verbose);
+  RemoveDuplicates(SearchList, 0, Verbose, VerboseOutput);
   unsigned NumQuoted = SearchList.size();
 
   for (auto &Include : IncludePath)
     if (Include.Group == Angled)
       SearchList.push_back(Include);
 
-  RemoveDuplicates(SearchList, NumQuoted, Verbose);
+  RemoveDuplicates(SearchList, NumQuoted, Verbose, VerboseOutput);
   unsigned NumAngled = SearchList.size();
 
   for (auto &Include : IncludePath)
@@ -423,7 +427,8 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
   // Remove duplicates across both the Angled and System directories.  GCC does
   // this and failing to remove duplicates across these two groups breaks
   // #include_next.
-  unsigned NonSystemRemoved = RemoveDuplicates(SearchList, NumQuoted, Verbose);
+  unsigned NonSystemRemoved =
+      RemoveDuplicates(SearchList, NumQuoted, Verbose, VerboseOutput);
   NumAngled -= NonSystemRemoved;
 
   Headers.SetSearchPaths(extractLookups(SearchList), NumQuoted, NumAngled,
@@ -433,10 +438,10 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
 
   // If verbose, print the list of directories that will be searched.
   if (Verbose) {
-    llvm::errs() << "#include \"...\" search starts here:\n";
+    VerboseOutput << "#include \"...\" search starts here:\n";
     for (unsigned i = 0, e = SearchList.size(); i != e; ++i) {
       if (i == NumQuoted)
-        llvm::errs() << "#include <...> search starts here:\n";
+        VerboseOutput << "#include <...> search starts here:\n";
       StringRef Name = SearchList[i].Lookup.getName();
       const char *Suffix;
       if (SearchList[i].Lookup.isNormalDir())
@@ -447,17 +452,19 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
         assert(SearchList[i].Lookup.isHeaderMap() && "Unknown DirectoryLookup");
         Suffix = " (headermap)";
       }
-      llvm::errs() << " " << Name << Suffix << "\n";
+      VerboseOutput << " " << Name << Suffix << "\n";
     }
-    llvm::errs() << "End of search list.\n";
+    VerboseOutput << "End of search list.\n";
   }
 }
 
 void clang::ApplyHeaderSearchOptions(HeaderSearch &HS,
                                      const HeaderSearchOptions &HSOpts,
                                      const LangOptions &Lang,
-                                     const llvm::Triple &Triple) {
-  InitHeaderSearch Init(HS, HSOpts.Verbose, HSOpts.Sysroot);
+                                     const llvm::Triple &Triple,
+                                     llvm::raw_ostream *VerboseOutput) {
+  InitHeaderSearch Init(HS, HSOpts.Verbose, HSOpts.Sysroot,
+                        VerboseOutput ? *VerboseOutput : llvm::errs());
 
   // Add the user defined entries.
   for (unsigned i = 0, e = HSOpts.UserEntries.size(); i != e; ++i) {
