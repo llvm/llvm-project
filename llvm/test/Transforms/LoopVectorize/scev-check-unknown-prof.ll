@@ -61,12 +61,10 @@ define void @runtime_step_memcheck(ptr %in, ptr %out, i64 %n, i64 %step) !prof !
 ; CHECK:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8:%.*]], i1 [[TMP7:%.*]], !prof [[PROF1]]
 ; CHECK:    br i1 [[TMP16:%.*]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:  [[VECTOR_MEMCHECK]]:
-; CHECK:    [[TMP26:%.*]] = select i1 [[TMP25:%.*]], ptr [[IN]], ptr [[TMP24:%.*]], !prof [[PROF1]]
-; CHECK:    [[TMP28:%.*]] = select i1 [[TMP27:%.*]], ptr [[IN]], ptr [[TMP24]], !prof [[PROF1]]
 ; CHECK:    br i1 [[FOUND_CONFLICT:%.*]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:  [[VECTOR_PH]]:
 ; CHECK:  [[VECTOR_BODY:.*]]:
-; CHECK:    br i1 [[TMP52:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:    br i1 [[TMP48:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:  [[MIDDLE_BLOCK]]:
 ; CHECK:    br i1 [[CMP_N:%.*]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:  [[SCALAR_PH]]:

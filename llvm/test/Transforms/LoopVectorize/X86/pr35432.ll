@@ -47,7 +47,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i8 [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP9]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp sgt i8 [[TMP9]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i32 [[TMP7]], 255
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[DOTPROMOTED]], 1

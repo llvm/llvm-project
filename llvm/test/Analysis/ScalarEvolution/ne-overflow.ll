@@ -319,15 +319,15 @@ define void @test_sext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %N to i1) to i64) == 0
 ; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i64 9223372036854775807
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %N to i1) to i64) == 0
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %N to i1) to i64) == 0
 ;
 entry:
@@ -352,17 +352,17 @@ define void @test_zext_of_sext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %N to i1) to i64) == 0
 ; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i64 9223372036854775807
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %N to i1) to i64) == 0
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %N to i1) to i64) == 0
 ;
@@ -423,15 +423,15 @@ define void @test_sext_offset(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-21 + %N) /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (true + (trunc i64 %N to i1)) to i64) == 0
 ; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i64 9223372036854775807
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (true + (trunc i64 %N to i1)) to i64) == 0
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is ((-21 + %N) /u 2)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:      Equal predicate: (zext i1 (true + (trunc i64 %N to i1)) to i64) == 0
 ;
 entry:
