@@ -18,16 +18,13 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <cmath>
 #include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "lower-mem-intrinsics"
 
 using namespace llvm;
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
 
 /// \returns \p Len urem \p OpSize, checking for optimization opportunities.
 /// \p OpSizeVal must be the integer value of the \c ConstantInt \p OpSize.
@@ -70,8 +67,6 @@ struct LoopExpansionInfo {
 };
 
 std::optional<uint64_t> getAverageMemOpLoopTripCount(const MemIntrinsic &I) {
-  if (ProfcheckDisableMetadataFixes)
-    return std::nullopt;
   if (std::optional<uint64_t> EC = I.getFunction()->getEntryCount();
       !EC || *EC == 0)
     return std::nullopt;
@@ -148,7 +143,7 @@ insertLoopExpansion(Instruction *InsertBefore, Value *Len,
       InsertBefore, BBNamePrefix + "-post-expansion");
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
+  const DebugLoc &DbgLoc = InsertBefore->getDebugLoc();
   IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
   PreLoopBuilder.SetCurrentDebugLocation(DbgLoc);
 
@@ -700,7 +695,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       ConstantInt::get(ILengthType, ResidualLoopOpSize);
   ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
 
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
+  const DebugLoc &DbgLoc = InsertBefore->getDebugLoc();
   IRBuilder<> PLBuilder(InsertBefore);
   PLBuilder.SetCurrentDebugLocation(DbgLoc);
 
@@ -967,7 +962,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   ConstantInt *LoopBound = ConstantInt::get(ILengthType, BytesCopiedInLoop);
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
 
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
+  const DebugLoc &DbgLoc = InsertBefore->getDebugLoc();
   IRBuilder<> PLBuilder(InsertBefore);
   PLBuilder.SetCurrentDebugLocation(DbgLoc);
 
@@ -1020,8 +1015,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // the same way, except that we change the IRBuilder insert point for each
     // load/store pair so that each one is inserted before the previous one
     // instead of after it.
-    IRBuilder<> BwdResBuilder(CopyBackwardsBB,
-                              CopyBackwardsBB->getFirstNonPHIIt());
+    IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHIIt());
     BwdResBuilder.SetCurrentDebugLocation(DbgLoc);
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
@@ -1029,8 +1023,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
                                           PartDstAlign);
     for (auto *OpTy : RemainingOps) {
       // reverse the order of the emitted operations
-      BwdResBuilder.SetInsertPoint(CopyBackwardsBB,
-                                   CopyBackwardsBB->getFirstNonPHIIt());
+      BwdResBuilder.SetInsertPoint(CopyBackwardsBB->getFirstNonPHIIt());
       GenerateResidualLdStPair(OpTy, BwdResBuilder, BytesCopied);
     }
   }
@@ -1462,7 +1455,7 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   bool SrcIsVolatile = Memmove->isVolatile();
   bool DstIsVolatile = SrcIsVolatile;
   IRBuilder<> CastBuilder(Memmove);
-  CastBuilder.SetCurrentDebugLocation(Memmove->getStableDebugLoc());
+  CastBuilder.SetCurrentDebugLocation(Memmove->getDebugLoc());
 
   unsigned SrcAS = SrcAddr->getType()->getPointerAddressSpace();
   unsigned DstAS = DstAddr->getType()->getPointerAddressSpace();

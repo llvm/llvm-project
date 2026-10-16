@@ -126,7 +126,9 @@ class InstrItineraryData;
     void dump() const override;
     void dumpSchedule() const;
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     std::string getGraphNodeLabel(const SUnit *SU) const override;
+#endif
 
     std::string getDAGName() const override;
 

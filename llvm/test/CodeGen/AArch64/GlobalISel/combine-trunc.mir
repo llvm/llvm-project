@@ -146,9 +146,9 @@ body:             |
     ; CHECK-PRE: liveins: $w0
     ; CHECK-PRE-NEXT: {{  $}}
     ; CHECK-PRE-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
     ; CHECK-PRE-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
-    ; CHECK-PRE-NEXT: [[SHL:%[0-9]+]]:_(i16) = G_SHL [[TRUNC]], [[C]](i32)
+    ; CHECK-PRE-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 2
+    ; CHECK-PRE-NEXT: [[SHL:%[0-9]+]]:_(i16) = G_SHL [[TRUNC]], [[C]](i16)
     ; CHECK-PRE-NEXT: $h0 = COPY [[SHL]](i16)
     ;
     ; CHECK-POST-LABEL: name: test_combine_trunc_shl_s32_by_2

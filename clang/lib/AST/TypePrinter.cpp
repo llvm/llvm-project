@@ -242,6 +242,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Pipe:
     case Type::BitInt:
     case Type::DependentBitInt:
+    case Type::OverflowBehavior:
     case Type::BTFTagAttributed:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
@@ -286,7 +287,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
-    case Type::OverflowBehavior:
     case Type::CountAttributed:
     case Type::LateParsedAttr:
       CanPrefixQualifiers = false;
@@ -1181,9 +1181,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86RegCall:
       OS << " __attribute__((regcall))";
       break;
-    case CC_SpirFunction:
-      // Do nothing. These CCs are not available as attributes.
-      break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;
@@ -1362,6 +1359,10 @@ void TypePrinter::printTypeOfBefore(const TypeOfType *T, raw_ostream &OS) {
 void TypePrinter::printTypeOfAfter(const TypeOfType *T, raw_ostream &OS) {}
 
 void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
+  if (Policy.ResolveDecltype && T->isSugared()) {
+    printBefore(T->desugar(), OS);
+    return;
+  }
   OS << "decltype(";
   if (const Expr *E = T->getUnderlyingExpr()) {
     PrintingPolicy ExprPolicy = Policy;
@@ -1387,7 +1388,10 @@ void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
 void TypePrinter::printPackIndexingAfter(const PackIndexingType *T,
                                          raw_ostream &OS) {}
 
-void TypePrinter::printDecltypeAfter(const DecltypeType *T, raw_ostream &OS) {}
+void TypePrinter::printDecltypeAfter(const DecltypeType *T, raw_ostream &OS) {
+  if (Policy.ResolveDecltype && T->isSugared())
+    printAfter(T->desugar(), OS);
+}
 
 void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {
@@ -1396,7 +1400,7 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
   static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   }};
   OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
@@ -1415,12 +1419,16 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
     if (T->isConstrained()) {
       // FIXME: Track a TypeConstraint as type sugar, so that we can print the
       // type as it was written.
-      T->getTypeConstraintConcept()->getDeclName().print(OS, Policy);
+      TemplateName Concept = T->getTypeConstraintConcept();
+      Concept.print(OS, Policy, TemplateName::Qualified::None);
       auto Args = T->getTypeConstraintArguments();
-      if (!Args.empty())
-        printTemplateArgumentList(
-            OS, Args, Policy,
-            T->getTypeConstraintConcept()->getTemplateParameters());
+      if (!Args.empty()) {
+        const TemplateDecl *TD = Concept.getAsTemplateDecl();
+        if (!TD)
+          TD = Concept.getAsTemplateTemplateParmDecl();
+        printTemplateArgumentList(OS, Args, Policy,
+                                  TD->getTemplateParameters());
+      }
       OS << ' ';
     }
     switch (T->getKeyword()) {
@@ -2025,7 +2033,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
   case attr::HLSLResourceClass:
-  case attr::HLSLROV:
+  case attr::HLSLIsROV:
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:
@@ -2042,10 +2050,14 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::OpenCLConstantAddressSpace:
   case attr::OpenCLGenericAddressSpace:
   case attr::HLSLGroupSharedAddressSpace:
+  case attr::SYCLPrivateAddressSpace:
+  case attr::SYCLGlobalAddressSpace:
+  case attr::SYCLLocalAddressSpace:
+  case attr::SYCLConstantAddressSpace:
+  case attr::SYCLGenericAddressSpace:
     // FIXME: Update printAttributedBefore to print these once we generate
     // AttributedType nodes for them.
-    break;
-
+    llvm_unreachable("Address space attributes handled separately");
   case attr::CountedBy:
   case attr::CountedByOrNull:
   case attr::SizedBy:
@@ -2202,9 +2214,9 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printAfter(T->getWrappedType(), OS);
   const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
-  OS << " [[hlsl::resource_class("
+  OS << " [[hlsl::resource_class(\""
      << HLSLResourceClassAttr::ConvertResourceClassToStr(Attrs.ResourceClass)
-     << ")]]";
+     << "\")]]";
   if (Attrs.IsROV)
     OS << " [[hlsl::is_rov]]";
   if (Attrs.RawBuffer)
@@ -2213,7 +2225,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_counter]]";
   if (Attrs.IsArray)
     OS << " [[hlsl::is_array]]";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     OS << " [[hlsl::is_ms]]";
 
   QualType ContainedTy = T->getContainedType();
@@ -2225,10 +2237,10 @@ void TypePrinter::printHLSLAttributedResourceAfter(
   }
 
   if (Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
-    OS << " [[hlsl::resource_dimension("
+    OS << " [[hlsl::dimension(\""
        << HLSLResourceDimensionAttr::ConvertResourceDimensionToStr(
               Attrs.ResourceDimension)
-       << ")]]";
+       << "\")]]";
 }
 
 void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
@@ -2720,24 +2732,33 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::Default:
     return "";
   case LangAS::opencl_global:
-  case LangAS::sycl_global:
     return "__global";
   case LangAS::opencl_local:
-  case LangAS::sycl_local:
     return "__local";
   case LangAS::opencl_private:
-  case LangAS::sycl_private:
     return "__private";
   case LangAS::opencl_constant:
     return "__constant";
   case LangAS::opencl_generic:
     return "__generic";
+  // TODO: Remove *_global_device and *_global_host after corresponding
+  // attributes are deprecated for the required time.
   case LangAS::opencl_global_device:
   case LangAS::sycl_global_device:
     return "__global_device";
   case LangAS::opencl_global_host:
   case LangAS::sycl_global_host:
     return "__global_host";
+  case LangAS::sycl_global:
+    return "[[clang::sycl_global]]";
+  case LangAS::sycl_local:
+    return "[[clang::sycl_local]]";
+  case LangAS::sycl_private:
+    return "[[clang::sycl_private]]";
+  case LangAS::sycl_generic:
+    return "[[clang::sycl_generic]]";
+  case LangAS::sycl_constant:
+    return "[[clang::sycl_constant]]";
   case LangAS::cuda_device:
     return "__device__";
   case LangAS::cuda_constant:
@@ -2766,6 +2787,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
+  case LangAS::amdgpu_barrier:
+    return "amdgpu_barrier";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

@@ -14,7 +14,7 @@
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/math/exp2f.h"
+#include "src/__support/math/exp2f_double_eval.h"
 #include "src/mathvec/exp2f.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/mathvec/UnitTestWrappers.h"
@@ -23,9 +23,8 @@
 
 using LlvmLibcVecExp2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-using Exp2fOp =
-    LIBC_NAMESPACE::testing::mathvec::UnaryOp<float, LIBC_NAMESPACE::exp2f,
-                                              LIBC_NAMESPACE::exp2f>;
+using Exp2fOp = LIBC_NAMESPACE::testing::mathvec::UnaryOp<
+    float, LIBC_NAMESPACE::math::double_eval::exp2f, LIBC_NAMESPACE::exp2f>;
 using LIBC_NAMESPACE::cpp::splat;
 using LIBC_NAMESPACE::testing::mathvec::wrap_ref;
 using LIBC_NAMESPACE::testing::mathvec::wrap_vector;

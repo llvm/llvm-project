@@ -4,11 +4,11 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fms-compatibility -verify %s
 // RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fms-compatibility -verify %s
 //
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -fms-compatibility -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify -fms-compatibility %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -fms-compatibility -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -verify -fms-compatibility %s
 // expected-no-diagnostics
 
 #define assert(...) ((__VA_ARGS__) ? ((void)0) : throw 42)
@@ -874,7 +874,7 @@ constexpr int test_init_capture(int a =
                 [b = SL::current().line()] { return b; }()) {
   return a;
 }
-#if defined(USE_CONSTEVAL) && !defined(NEW_INTERP)
+#if defined(USE_CONSTEVAL)
 static_assert(test_init_capture() == __LINE__ - 4);
 #else
 static_assert(test_init_capture() == __LINE__ );
@@ -1108,13 +1108,17 @@ int baz() {
   auto lfunction = []() noexcept(sizeof(__FUNCTION__) == functionSize) -> Sized<sizeof(__FUNCTION__)> { return {}; };
   auto lpretty = []() noexcept(sizeof(__PRETTY_FUNCTION__) == prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> { return {}; };
 
-  static_assert(sizeof(lfunc()) == 5, "baz");
+  static_assert(sizeof(lfunc()) == 4, "baz");
   static_assert(noexcept(lfunc()) == true, "noexcept");
 
-  static_assert(sizeof(lfunction()) == 5, "baz");
+#ifdef MS
+  static_assert(sizeof(lfunction()) == 14, "GH122657::baz");
+#else
+  static_assert(sizeof(lfunction()) == 4, "baz");
+#endif
   static_assert(noexcept(lfunction()) == true, "noexcept");
 
-  static_assert(sizeof(lpretty()) == 43, "int GH122657::baz() [T = int]_block_invoke");
+  static_assert(sizeof(lpretty()) == 30, "int GH122657::baz() [T = int]");
   static_assert(noexcept(lpretty()) == true, "noexcept");
 
   return 0;
@@ -1133,7 +1137,7 @@ int main() {
   static_assert(noexcept(lfunc()) == true, "noexcept");
 
 #ifdef MS
-  static_assert(sizeof(lfunction()) == 15, "main");
+  static_assert(sizeof(lfunction()) == 15, "GH122657::main");
 #else
   static_assert(sizeof(lfunction()) == 5, "main");
 #endif
@@ -1141,6 +1145,31 @@ int main() {
 
   static_assert(sizeof(lpretty()) == 21, "int GH122657::main()");
   static_assert(noexcept(lpretty()) == true, "noexcept");
-  return 0;
+
+  return baz<int>();
 }
 } // namespace GH122657
+
+namespace GH213420 {
+template <unsigned long long n>
+struct Sized {
+  char data[n];
+};
+
+void baz() {
+  auto lfunc = []() {
+    struct F {
+      auto foo(Sized<sizeof(__func__)> s = Sized<sizeof(__func__)>{}) {
+        return s;
+      }
+    };
+    return F{}.foo();
+  };
+  static_assert(sizeof(lfunc()) == 11, "operator()");
+
+  auto lfuncparam = [](Sized<sizeof(__func__)> s = Sized<sizeof(__func__)>{}) -> Sized<sizeof(s)> {
+   return s;
+  };
+  static_assert(sizeof(lfuncparam()) == 4, "baz");
+}
+} // namespace GH213420

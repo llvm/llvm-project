@@ -316,6 +316,19 @@ struct S {
 };
 } // namespace cwg1824
 
+namespace cwg1825 { // cwg1825: sup P4004R1
+#if __cplusplus >= 201103L
+template <class... T> int f(T *...); // #cwg1825-variadic
+template <class T> int f(const T &); // #cwg1825-nonvariadic
+int g() {
+  return f((int *)0);
+  // since-cxx11-error@-1 {{call to 'f' is ambiguous}}
+  //   since-cxx11-note@#cwg1825-variadic {{candidate function [with T = <int>]}}
+  //   since-cxx11-note@#cwg1825-nonvariadic {{candidate function [with T = int *]}}
+}
+#endif
+} // namespace cwg1825
+
 namespace cwg1832 { // cwg1832: 3.0
 enum E { // #cwg1832-E
   a = static_cast<int>(static_cast<E>(0))
@@ -375,7 +388,7 @@ namespace cwg1837 { // cwg1837: 3.3
 #endif
 } // namespace cwg1837
 
-namespace cwg1862 { // cwg1862: no
+namespace cwg1862 { // cwg1862: 24
 template<class T>
 struct A {
   struct B {
@@ -416,29 +429,24 @@ struct A<float*> {
 };
 
 class C {
-  int private_int;
+  int private_int; // #cwg1862-C-private_int
 
   template<class T>
   friend struct A<T>::B;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend void A<T>::f();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
-  // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
   template<class T>
   friend void A<T>::D::g();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-error@-1 {{'A<T>::D' does not name a class template}}
 
   template<class T>
   friend int *A<T*>::h();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T *>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   template<T U>
   friend T A<T>::i();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 };
 
 C c;
@@ -450,11 +458,16 @@ void A<int>::B::e() { (void)c.private_int; }
 template<class T>
 void A<T>::f() { (void)c.private_int; }
 int A<int>::f() { (void)c.private_int; return 0; }
+// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
+//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
-// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int'
 template<class T>
 void A<T>::D::g() { (void)c.private_int; }
+// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
+//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 void A<int>::D::g() { (void)c.private_int; }
+// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
+//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
 template<class T>
 T A<T>::h() { (void)c.private_int; }

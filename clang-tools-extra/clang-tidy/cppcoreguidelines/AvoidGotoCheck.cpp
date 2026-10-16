@@ -38,8 +38,8 @@ void AvoidGotoCheck::registerMatchers(MatchFinder *Finder) {
 
   // Check if the 'goto' is used for control flow other than jumping
   // out of a nested loop.
-  auto Loop = mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt);
-  auto NestedLoop = Loop.with(hasAncestor(Loop));
+  const auto Loop = mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt);
+  const auto NestedLoop = Loop.with(hasAncestor(Loop));
 
   const ast_matchers::internal::Matcher<GotoStmt> Anything = anything();
 

@@ -25,6 +25,6 @@ subroutine no_vector
 end subroutine no_vector
 
 ! CHECK: ![[ANNOTATION]] = distinct !{![[ANNOTATION]], ![[VECTORIZE:.*]]}
-! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable"}
 ! CHECK: ![[ANNOTATION2]] = distinct !{![[ANNOTATION2]], ![[VECTORIZE2:.*]]}
-! CHECK: ![[VECTORIZE2]] = !{!"llvm.loop.vectorize.enable", i1 false}
+! CHECK: ![[VECTORIZE2]] = !{!"llvm.loop.vectorize.disable"}

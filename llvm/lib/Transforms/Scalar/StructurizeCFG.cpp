@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
@@ -39,7 +40,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -60,17 +60,6 @@ using namespace llvm::PatternMatch;
 const char FlowBlockName[] = "Flow";
 
 namespace {
-
-static cl::opt<bool> ForceSkipUniformRegions(
-  "structurizecfg-skip-uniform-regions",
-  cl::Hidden,
-  cl::desc("Force whether the StructurizeCFG pass skips uniform regions"),
-  cl::init(false));
-
-static cl::opt<bool>
-    RelaxedUniformRegions("structurizecfg-relaxed-uniform-regions", cl::Hidden,
-                          cl::desc("Allow relaxed uniform region checks"),
-                          cl::init(true));
 
 // Definition of the complex types used in this pass.
 
@@ -379,8 +368,9 @@ public:
 
   explicit StructurizeCFGLegacyPass(bool SkipUniformRegions_ = false)
       : RegionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
-    if (ForceSkipUniformRegions.getNumOccurrences())
-      SkipUniformRegions = ForceSkipUniformRegions.getValue();
+    SkipUniformRegions =
+        valueOr(ScalarOptions::Global.structurizecfg_skip_uniform_regions,
+                SkipUniformRegions);
     initializeStructurizeCFGLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -405,7 +395,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (SkipUniformRegions)
       AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
 
@@ -422,6 +411,7 @@ INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
@@ -1135,9 +1125,8 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
 /// Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, PredInfo> Pred) {
-    return DT->dominates(BB, Pred.first);
-  });
+  return llvm::all_of(
+      Preds, [&](const auto &Pred) { return DT->dominates(BB, Pred.first); });
 }
 
 /// Can we predict that this node will always be called?
@@ -1257,7 +1246,7 @@ void StructurizeCFG::createFlow() {
 }
 
 /// Handle a rare case where the disintegrated nodes instructions
-/// no longer dominate all their uses. Not sure if this is really necessary
+/// no longer dominate all their uses.
 void StructurizeCFG::rebuildSSA() {
   SSAUpdater Updater;
   for (BasicBlock *BB : ParentRegion->blocks())
@@ -1289,61 +1278,28 @@ void StructurizeCFG::rebuildSSA() {
     }
 }
 
-static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
-                                   const UniformityInfo &UA) {
-  // Bool for if all sub-regions are uniform.
-  bool SubRegionsAreUniform = true;
-  // Count of how many direct children are conditional.
-  unsigned ConditionalDirectChildren = 0;
-
-  for (auto *E : R->elements()) {
-    if (!E->isSubRegion()) {
-      auto Br = dyn_cast<CondBrInst>(E->getEntry()->getTerminator());
-      if (!Br)
-        continue;
-
-      if (UA.isDivergentTerminator(Br))
-        return false;
-
-      // One of our direct children is conditional.
-      ConditionalDirectChildren++;
-
-      LLVM_DEBUG(dbgs() << "BB: " << Br->getParent()->getName()
-                        << " has uniform terminator\n");
-    } else {
-      // Explicitly refuse to treat regions as uniform if they have non-uniform
-      // subregions. We cannot rely on UniformityAnalysis for branches in
-      // subregions because those branches may have been removed and re-created,
-      // so we look for our metadata instead.
-      //
-      // Warning: It would be nice to treat regions as uniform based only on
-      // their direct child basic blocks' terminators, regardless of whether
-      // subregions are uniform or not. However, this requires a very careful
-      // look at SIAnnotateControlFlow to make sure nothing breaks there.
-      for (auto *BB : E->getNodeAs<Region>()->blocks()) {
-        auto Br = dyn_cast<CondBrInst>(BB->getTerminator());
-        if (!Br)
-          continue;
-
-        if (!Br->getMetadata(UniformMDKindID)) {
-          // Early exit if we cannot have relaxed uniform regions.
-          if (!RelaxedUniformRegions)
-            return false;
-
-          SubRegionsAreUniform = false;
-          break;
-        }
-      }
-    }
-  }
-
-  // Our region is uniform if:
-  // 1. All conditional branches that are direct children are uniform (checked
-  // above).
-  // 2. And either:
-  //   a. All sub-regions are uniform.
-  //   b. There is one or less conditional branches among the direct children.
-  return SubRegionsAreUniform || (ConditionalDirectChildren <= 1);
+/// Can region \p R be left unstructurized because all of its own control flow
+/// is uniform?
+///
+/// Only the terminators of direct child blocks are checked. Sub-regions are
+/// processed before their parent, so any divergent control flow inside a
+/// sub-region has already been structurized and is self-contained: it is
+/// entered only through the sub-region's entry, and it rejoins either at Flow
+/// blocks inside the sub-region or, if the sub-region's entry dominates its
+/// exit, at the exit block itself. Uniform control flow around a sub-region
+/// therefore does not need structurizing, whatever the sub-region contains.
+/// (The branches inside sub-regions could not be checked anyway, because they
+/// may have been removed and re-created since UniformityAnalysis ran.)
+///
+/// FIXME: This does not hold for a sub-region whose entry block ends in a
+/// callbr, because run() leaves such regions unstructurized.
+static bool hasOnlyUniformBranches(Region *R, const UniformityInfo &UA) {
+  return none_of(R->elements(), [&](RegionNode *E) {
+    if (E->isSubRegion())
+      return false;
+    auto *Br = dyn_cast<CondBrInst>(E->getEntry()->getTerminator());
+    return Br && UA.isDivergentTerminator(Br);
+  });
 }
 
 void StructurizeCFG::init(Region *R) {
@@ -1363,28 +1319,21 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 
   this->UA = &UA;
 
-  // TODO: We could probably be smarter here with how we handle sub-regions.
-  // We currently rely on the fact that metadata is set by earlier invocations
-  // of the pass on sub-regions, and that this metadata doesn't get lost --
-  // but we shouldn't rely on metadata for correctness!
-  unsigned UniformMDKindID =
-      R->getEntry()->getContext().getMDKindID("structurizecfg.uniform");
-
-  if (hasOnlyUniformBranches(R, UniformMDKindID, UA)) {
+  if (hasOnlyUniformBranches(R, UA)) {
     LLVM_DEBUG(dbgs() << "Skipping region with uniform control flow: " << *R
                       << '\n');
 
     // Mark all direct child block terminators as having been treated as
-    // uniform. To account for a possible future in which non-uniform
-    // sub-regions are treated more cleverly, indirect children are not
-    // marked as uniform.
-    MDNode *MD = MDNode::get(R->getEntry()->getParent()->getContext(), {});
+    // uniform. Indirect children must not be marked, because sub-regions may
+    // contain divergent control flow.
+    LLVMContext &Ctx = R->getEntry()->getContext();
+    unsigned UniformMDKindID = Ctx.getMDKindID("structurizecfg.uniform");
+    MDNode *MD = MDNode::get(Ctx, {});
     for (RegionNode *E : R->elements()) {
       if (E->isSubRegion())
         continue;
 
-      if (Instruction *Term = E->getEntry()->getTerminator())
-        Term->setMetadata(UniformMDKindID, MD);
+      E->getEntry()->getTerminator()->setMetadata(UniformMDKindID, MD);
     }
 
     return true;
@@ -1451,8 +1400,9 @@ static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
 
 StructurizeCFGPass::StructurizeCFGPass(bool SkipUniformRegions_)
     : SkipUniformRegions(SkipUniformRegions_) {
-  if (ForceSkipUniformRegions.getNumOccurrences())
-    SkipUniformRegions = ForceSkipUniformRegions.getValue();
+  SkipUniformRegions =
+      valueOr(ScalarOptions::Global.structurizecfg_skip_uniform_regions,
+              SkipUniformRegions);
 }
 
 void StructurizeCFGPass::printPipeline(

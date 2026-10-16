@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <optional>
+#include <utility>
 
 #include "test_macros.h"
 

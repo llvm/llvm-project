@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 class TestMetadataRegisters(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote
     def test_add_registers_via_metadata(self):
         self.build()

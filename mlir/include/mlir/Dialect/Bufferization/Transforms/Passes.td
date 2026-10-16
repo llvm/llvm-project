@@ -163,8 +163,7 @@ def BufferDeallocationSimplificationPass
     some memref isn't deallocated twice (double free).
   }];
 
-  let dependentDialects = ["mlir::bufferization::BufferizationDialect",
-                           "mlir::arith::ArithDialect",
+  let dependentDialects = ["mlir::arith::ArithDialect",
                            "mlir::memref::MemRefDialect"];
 }
 
@@ -194,8 +193,14 @@ def StaticMemoryPlannerAnalysisPass
     For each `memref.alloc` the pass checks a conservative eligibility
     envelope:
     - Static memref shape.
-    - Unique same-block `memref.dealloc`.
-    - Allocations in nested blocks are ignored for now.
+    - The allocation lives directly in the function's entry block
+      (allocations nested in a region are skipped for now).
+    - Every `memref.dealloc` that may free the buffer is anchored in the entry
+      block. Deallocs reached indirectly through `arith.select`, `scf.if`
+      results, `cf` branches, or view ops are handled via the shared
+      `BufferViewFlowAnalysis`; a dealloc nested inside an entry-block op
+      (e.g. an `scf.if` body) is accepted and bounds the lifetime
+      conservatively.
 
     Eligible allocations are packed into a single arena using a configurable
     planning algorithm (see the `algorithm` option). The arena is an i8 byte
@@ -300,6 +305,14 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let description = [{
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
+
+    `memref.alloc` operations directly in the `before` region of `scf.while`
+    may also be hoisted when their buffers are forwarded through loop results.
+    This extension requires a loop strictly inside the transformation target.
+    Its parent must stop further loop hoisting: it must either be a non-loop
+    operation or have the `HasParallelRegion` trait. No alias may be carried
+    back to `before`, and all alias uses, including uses of loop results, must
+    permit reusing the allocation across iterations.
   }];
 }
 
@@ -511,9 +524,9 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
        Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
               "bool", /*default=*/"0",
               "Bufferize function boundaries (experimental).">,
-       Option<"checkParallelRegions", "check-parallel-regions", "bool",
+       Option<"mayHaveParallelRegions", "may-have-parallel-regions", "bool",
               /*default=*/"true",
-              "Account for parallel regions in RaW analysis.">,
+              "Whether the IR may contain parallel regions.">,
        Option<"copyBeforeWrite", "copy-before-write", "bool",
               /*default=*/"false",
               "Skip the analysis. Make a buffer copy on every write.">,

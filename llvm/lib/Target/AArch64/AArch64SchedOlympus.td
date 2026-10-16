@@ -26,6 +26,7 @@ def OlympusModel : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
+                                                     HasSVEBFSCALE,
                                                      HasCPA, HasCSSC,
                                                      HasMatMulFP64, HasMOPS, HasMOPS_GO]);
 }
@@ -2133,7 +2134,7 @@ def : InstRW<[OlympusWr_ZFMul], (instregex "^FMUL_ZZZI_[HSD]")>;
 // FCADD
 def : InstRW<[OlympusWrite_3c_1V], (instregex "^FCADD_ZPmZ_[HSD]")>;
 // FSCALE
-def : InstRW<[OlympusWrite_3c_1V], (instregex "^FSCALE_ZPmZ_[HSD]")>;
+def : InstRW<[OlympusWrite_3c_1V], (instregex "^FSCALE_ZP[mZ]Z_[HSD]")>;
 // FTSMUL
 def : InstRW<[OlympusWrite_3c_1V], (instregex "^FTSMUL_ZZZ_[HSD]")>;
 // FTSSEL

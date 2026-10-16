@@ -29,15 +29,20 @@ struct LLVMBlockAddressInfo;
 /// block address attributes, `blockInfoAddr` is used to resolve them.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
+                                mlir::SymbolTableCollection &symbolTables,
                                 const mlir::TypeConverter *converter,
                                 LLVMBlockAddressInfo *blockInfoAddr = nullptr);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
-void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
-                              cir::SideEffect sideEffect,
-                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn, bool &noReturn);
+/// Declare `fnName` with type `fnTy` before the function enclosing `srcOp`,
+/// unless the module already has a symbol of that name.
+void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
+                                mlir::SymbolTableCollection &symbolTables,
+                                mlir::Operation *srcOp, llvm::StringRef fnName,
+                                mlir::Type fnTy,
+                                mlir::ArrayAttr argAttrs = nullptr,
+                                mlir::ArrayAttr resAttrs = nullptr);
 
 struct LLVMBlockAddressInfo {
   // Get the next tag index
@@ -90,7 +95,7 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    const mlir::TypeConverter &typeConverter,
+    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
 

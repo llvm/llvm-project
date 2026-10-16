@@ -36,7 +36,7 @@ AST_MATCHER_P2(Stmt, argumentOf, bool, AllowPartialMove, StatementMatcher,
 } // namespace
 
 void RvalueReferenceParamNotMovedCheck::registerMatchers(MatchFinder *Finder) {
-  auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
+  const auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
   const StatementMatcher MoveCallMatcher =
       callExpr(

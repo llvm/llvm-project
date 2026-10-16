@@ -13,15 +13,15 @@ int main() {
 #pragma omp target data map(alloc : x)
   {
 #pragma omp target enter data map(alloc : x) map(to : x)
-// DEBUG-NOT: omptarget --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
+// DEBUG-NOT: --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
 #pragma omp target map(present, alloc : x)
     {
       printf("In tgt: %d\n", x);
       x = 222;
     }
 #pragma omp target exit data map(always, from : x) map(always, from : x)
-    // DEBUG: omptarget --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
-    // DEBUG-NOT: omptarget --> Moving {{.*}} bytes
+    // DEBUG: --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
+    // DEBUG-NOT: --> Moving {{.*}} bytes
   }
 
   printf("After tgt exit data: %d\n", x); // CHECK: After tgt exit data: 222

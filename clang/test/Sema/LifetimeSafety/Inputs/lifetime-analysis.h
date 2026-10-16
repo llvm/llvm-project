@@ -367,3 +367,8 @@ extern "C" void *malloc(std::size_t);
 extern "C" void free(void *);
 extern "C" void *calloc(std::size_t, std::size_t);
 extern "C" void *realloc(void *, std::size_t);
+
+// Marks a use for -Wlifetime-safety. `(void)v` is not one: a discarded-value
+// expression performs no lvalue-to-rvalue conversion in C++.
+template <typename... Ts> void use(const Ts &...vs);
+

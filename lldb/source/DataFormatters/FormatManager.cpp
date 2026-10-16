@@ -388,14 +388,14 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
     category_sp = GetCategoryAtIndex(category_id);
     if (!category_sp->IsEnabled())
       continue;
-    lldb::ScriptedSyntheticChildrenSP synth_current_sp(
-        (ScriptedSyntheticChildren *)category_sp->GetSyntheticForType(type_sp)
-            .get());
-    if (synth_current_sp &&
+    auto synth_current_sp = category_sp->GetSyntheticForType(type_sp);
+
+    if (synth_current_sp && synth_current_sp->IsScripted() &&
         (synth_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
-      synth_chosen_sp = synth_current_sp;
+      synth_chosen_sp =
+          std::static_pointer_cast<ScriptedSyntheticChildren>(synth_current_sp);
     }
   }
   return synth_chosen_sp;

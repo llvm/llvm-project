@@ -53,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -806,8 +805,7 @@ public:
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-HexagonInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+HexagonInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // We really "analyze" only hardware loops right now.
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
 
@@ -1673,6 +1671,13 @@ void HexagonInstrInfo::insertNoop(MachineBasicBlock &MBB,
 
 bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
   return getAddrMode(MI) == HexagonII::PostInc;
+}
+
+bool HexagonInstrInfo::isPostIncWithImmOffset(const MachineInstr &MI) const {
+  unsigned BasePos, OffsetPos;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    return false;
+  return isPostIncrement(MI) && MI.getOperand(OffsetPos).isImm();
 }
 
 // Returns true if an instruction is predicated irrespective of the predicate
@@ -2780,7 +2785,7 @@ bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
 }
 
 bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
-      const TargetRegisterInfo *TRI, bool Extend) const {
+                                     bool Extend) const {
   // This function is to check whether the "Offset" is in the correct range of
   // the given "Opcode". If "Offset" is not in the correct range, "A2_addi" is
   // inserted to calculate the final address. Due to this reason, the function
@@ -2843,7 +2848,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vgathermhq_pseudo:
   case Hexagon::V6_vgathermwq_pseudo:
   case Hexagon::V6_vgathermhwq_pseudo: {
-    unsigned VectorSize = TRI->getSpillSize(Hexagon::HvxVRRegClass);
+    unsigned VectorSize = RegInfo.getSpillSize(Hexagon::HvxVRRegClass);
     assert(isPowerOf2_32(VectorSize));
     if (Offset & (VectorSize-1))
       return false;
@@ -3110,8 +3115,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
   if (!BaseOp || !BaseOp->isReg())
@@ -3193,11 +3197,6 @@ bool HexagonInstrInfo::hasNonExtEquivalent(const MachineInstr &MI) const {
     return true;
   }
   return false;
-}
-
-bool HexagonInstrInfo::hasPseudoInstrPair(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(),
-                                 Hexagon::InstrType_Pseudo) >= 0;
 }
 
 bool HexagonInstrInfo::hasUncondBranch(const MachineBasicBlock *B)
@@ -4339,10 +4338,6 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   return HexagonII::HSIG_None;
 }
 
-short HexagonInstrInfo::getEquivalentHWInstr(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(), Hexagon::InstrType_Real);
-}
-
 unsigned HexagonInstrInfo::getInstrTimingClassLatency(
       const InstrItineraryData *ItinData, const MachineInstr &MI) const {
   // Default to one cycle for no itinerary. However, an "empty" itinerary may
@@ -4604,10 +4599,6 @@ bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
   if (Cond[1].isUndef())
     PredRegFlags |= RegState::Undef;
   return true;
-}
-
-short HexagonInstrInfo::getPseudoInstrPair(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(), Hexagon::InstrType_Pseudo);
 }
 
 short HexagonInstrInfo::getRegForm(const MachineInstr &MI) const {

@@ -138,6 +138,11 @@ testing macros specifically used for floating point values, such as
   libc/test/src/math/smoke/CMakeLists.txt
   libc/test/src/math/CMakeLists.txt
 ```
+- Add the corresponding Bazel test targets (if applicable) to:
+```
+  utils/bazel/llvm-project-overlay/libc/test/src/math/smoke/BUILD.bazel
+  utils/bazel/llvm-project-overlay/libc/test/src/math/BUILD.bazel
+```
 
 ### Exhaustive tests
 
@@ -217,20 +222,20 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test.__unit__
-  $ projects/libc/test/src/math/libc.test.src.math.<func>_test.__unit__
+  $ ninja libc.test.src.math.<func>_test
+  $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
 - Build and Run shared math test:
 ```
-  $ ninja libc.test.shared.shared_math_test.__unit__
-  $ projects/libc/test/shared/libc.test.shared.shared_math_test.__unit__
+  $ ninja libc.test.shared.shared_math_test
+  $ projects/libc/test/shared/libc.test.shared.shared_math_test
 ```
 
 - Build and Run exhaustive test (might take hours to run):
 ```
-  $ ninja libc.test.src.math.exhaustive.<func>_test.__unit__
-  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test.__unit__
+  $ ninja libc.test.src.math.exhaustive.<func>_test
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
 ```
 
 - Build and Run performance test:

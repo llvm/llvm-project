@@ -10,4 +10,4 @@
 
 #include "src/math/fminimum_num.h"
 
-LIST_FMINIMUM_NUM_TESTS(double, LIBC_NAMESPACE::fminimum_num)
+LIST_FMINIMUM_NUM_TESTS(FminimumNum, double, LIBC_NAMESPACE::fminimum_num)

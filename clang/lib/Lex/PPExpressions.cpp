@@ -328,12 +328,13 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     }
 
     // 'z/uz' literals are a C++23 feature.
-    if (Literal.isSizeT)
-      PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus
-                           ? PP.getLangOpts().CPlusPlus23
-                                 ? diag::warn_cxx20_compat_size_t_suffix
-                                 : diag::ext_cxx23_size_t_suffix
-                           : diag::err_cxx23_size_t_suffix);
+    if (Literal.isSizeT) {
+      if (PP.getLangOpts().CPlusPlus) {
+        PP.DiagCompat(PeekTok, diag_compat::size_t_suffix);
+      } else {
+        PP.Diag(PeekTok, diag::err_cxx23_size_t_suffix);
+      }
+    }
 
     // 'wb/uwb' literals are a C23 feature.
     // '__wb/__uwb' are a C++ extension.

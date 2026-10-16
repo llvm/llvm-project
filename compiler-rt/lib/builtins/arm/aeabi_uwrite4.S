@@ -33,3 +33,5 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uwrite4)
 #endif
         bx      lr
 END_COMPILERRT_FUNCTION(__aeabi_uwrite4)
+
+NO_EXEC_STACK_DIRECTIVE
