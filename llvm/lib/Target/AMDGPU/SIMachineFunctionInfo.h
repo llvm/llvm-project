@@ -540,9 +540,9 @@ private:
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
-  MCPhysReg getNextUserSGPR() const;
+  MCRegister getNextUserSGPR() const;
 
-  MCPhysReg getNextSystemSGPR() const;
+  MCRegister getNextSystemSGPR() const;
 
   // MachineRegisterInfo callback functions to notify events.
   void MRI_NoteNewVirtualRegister(Register Reg) override;
@@ -644,7 +644,7 @@ public:
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
 
-  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
+  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCRegister Reg) const;
 
   void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
     MaskForVGPRBlockOps.grow(RegisterBlock);
