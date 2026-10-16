@@ -592,6 +592,42 @@ cc_test(
 )
 
 cc_test(
+    name = "LLDBPlatformTests",
+    srcs = glob(
+        [
+            "Platform/*.cpp",
+            "Platform/*.h",
+        ],
+        # PlatformAppleSimulator.h includes the macOS-only objcxx headers.
+        exclude = ["Platform/PlatformAppleSimulatorTest.cpp"],
+    ) + select({
+        "@platforms//os:macos": ["Platform/PlatformAppleSimulatorTest.cpp"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformEmscripten",
+        "//lldb/source/Plugins:PluginPlatformFreeBSD",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginPlatformNetBSD",
+        "//lldb/source/Plugins:PluginPlatformWasm",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "LLDBValueObjectTests",
     srcs = glob(["ValueObject/*.cpp"]),
     deps = [
