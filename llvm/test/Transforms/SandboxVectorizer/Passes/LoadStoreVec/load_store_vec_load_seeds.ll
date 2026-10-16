@@ -5,8 +5,8 @@ define void @load_store_vec_trivial_load_defuse_store(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: @load_store_vec_trivial_load_defuse_store(
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 0
 ; CHECK-NEXT:    [[PTRS0:%.*]] = getelementptr i8, ptr [[PTR2:%.*]], i32 0
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META4:![0-9]+]]
-; CHECK-NEXT:    store <2 x i8> [[VECIINITL]], ptr [[PTRS0]], align 1, !sandboxvec [[META4]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    store <2 x i8> [[VECIINITL]], ptr [[PTRS0]], align 1, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
@@ -23,7 +23,7 @@ define void @load_store_vec_trivial_load_defuse_store(ptr %ptr, ptr %ptr2) {
 define void @vectorize_loads_no_uses(ptr %ptr) {
 ; CHECK-LABEL: @vectorize_loads_no_uses(
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
@@ -36,8 +36,8 @@ define void @vectorize_loads_no_uses(ptr %ptr) {
 define i8 @vectorize_loads_single_use(ptr %ptr) {
 ; CHECK-LABEL: @vectorize_loads_single_use(
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META1:![0-9]+]]
-; CHECK-NEXT:    [[UNPACK:%.*]] = extractelement <2 x i8> [[VECIINITL]], i32 0, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META2:![0-9]+]]
+; CHECK-NEXT:    [[UNPACK:%.*]] = extractelement <2 x i8> [[VECIINITL]], i32 0, !sandboxvec [[META2]]
 ; CHECK-NEXT:    ret i8 [[UNPACK]]
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
@@ -50,9 +50,9 @@ define i8 @vectorize_loads_single_use(ptr %ptr) {
 define i8 @vectorize_loads_general_uses(ptr %ptr) {
 ; CHECK-LABEL: @vectorize_loads_general_uses(
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META2:![0-9]+]]
-; CHECK-NEXT:    [[UNPACK:%.*]] = extractelement <2 x i8> [[VECIINITL]], i32 0, !sandboxvec [[META2]]
-; CHECK-NEXT:    [[UNPACK1:%.*]] = extractelement <2 x i8> [[VECIINITL]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    [[UNPACK:%.*]] = extractelement <2 x i8> [[VECIINITL]], i32 0, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[UNPACK1:%.*]] = extractelement <2 x i8> [[VECIINITL]], i32 1, !sandboxvec [[META3]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[UNPACK]], [[UNPACK1]]
 ; CHECK-NEXT:    ret i8 [[SUM]]
 ;
@@ -70,9 +70,9 @@ define i8 @vectorize_loads_general_uses(ptr %ptr) {
 define <2 x i8> @vectorize_loads_vector_typed(ptr %ptr) {
 ; CHECK-LABEL: @vectorize_loads_vector_typed(
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META3:![0-9]+]]
-; CHECK-NEXT:    [[UNPACK:%.*]] = shufflevector <4 x i8> [[VECIINITL]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>, !sandboxvec [[META3]]
-; CHECK-NEXT:    [[UNPACK1:%.*]] = shufflevector <4 x i8> [[VECIINITL]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 2, !sandboxvec [[META4:![0-9]+]]
+; CHECK-NEXT:    [[UNPACK:%.*]] = shufflevector <4 x i8> [[VECIINITL]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>, !sandboxvec [[META4]]
+; CHECK-NEXT:    [[UNPACK1:%.*]] = shufflevector <4 x i8> [[VECIINITL]], <4 x i8> poison, <2 x i32> <i32 2, i32 3>, !sandboxvec [[META4]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add <2 x i8> [[UNPACK]], [[UNPACK1]]
 ; CHECK-NEXT:    ret <2 x i8> [[SUM]]
 ;
