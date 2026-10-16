@@ -266,3 +266,30 @@ template <typename T> struct D : T {
 };
 D<A> da; // expected-note {{in instantiation of template class}}
 } // namespace test8
+
+namespace test9 {
+__attribute__((deprecated)) const char check = 1; // #TEST9_CHECK
+
+#define DIAGNOSE_IF(Expr)                                                      \
+  __attribute__((diagnose_if(Expr, "", "warning"))) __attribute__((deprecated))
+
+// expected-note@#TEST9_CHECK {{'check' has been explicitly marked deprecated here}}
+// expected-warning@+1 {{'check' is deprecated}}
+DIAGNOSE_IF(check != 1) void old_func();
+
+namespace inner {
+// expected-note@#TEST9_CHECK {{'check' has been explicitly marked deprecated here}}
+// expected-warning@+1 {{'check' is deprecated}}
+DIAGNOSE_IF(check != 1) void old_inner_func();
+} // namespace inner
+
+struct S {
+  // expected-note@#TEST9_CHECK {{'check' has been explicitly marked deprecated here}}
+  // expected-warning@+1 {{'check' is deprecated}}
+  DIAGNOSE_IF(check != 1) void old_member();
+};
+
+// expected-note@#TEST9_CHECK {{'check' has been explicitly marked deprecated here}}
+// expected-warning@+1 {{'check' is deprecated}}
+template <typename T> DIAGNOSE_IF(check != 1) void old_tmpl();
+} // namespace test9
