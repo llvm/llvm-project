@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <limits>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -344,13 +342,6 @@ AssumptionCache &AssumptionCacheTracker::getAssumptionCache(Function &F) {
       FunctionCallbackVH(&F, this), std::make_unique<AssumptionCache>(F, TTI)));
   assert(IP.second && "Scanning function already in the map?");
   return *IP.first->second;
-}
-
-AssumptionCache *AssumptionCacheTracker::lookupAssumptionCache(Function &F) {
-  auto I = AssumptionCaches.find_as(&F);
-  if (I != AssumptionCaches.end())
-    return I->second.get();
-  return nullptr;
 }
 
 void AssumptionCacheTracker::verifyAnalysis() const {

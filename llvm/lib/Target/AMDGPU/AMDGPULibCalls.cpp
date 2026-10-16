@@ -19,7 +19,6 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -115,9 +114,6 @@ private:
   // __read_pipe/__write_pipe
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
                             const FuncInfo &FInfo);
-
-  // Get a scalar native builtin single argument FP function
-  FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
   /// Substitute a call to a known libcall with an intrinsic call. If \p
   /// AllowMinSize is true, allow the replacement in a minsize function.
@@ -458,8 +454,7 @@ bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
 }
 
 AMDGPULibCalls::AMDGPULibCalls(Function &F, FunctionAnalysisManager &FAM)
-    : SQ(F.getParent()->getDataLayout(),
-         &FAM.getResult<TargetLibraryAnalysis>(F),
+    : SQ(F.getDataLayout(), &FAM.getResult<TargetLibraryAnalysis>(F),
          FAM.getCachedResult<DominatorTreeAnalysis>(F),
          &FAM.getResult<AssumptionAnalysis>(F)) {}
 
@@ -899,7 +894,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
           FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) &&
          "fold_pow: encounter a wrong function call");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Type *eltType = FPOp->getType()->getScalarType();
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
@@ -1203,7 +1198,7 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
 
   CallInst *CI = cast<CallInst>(FPOp);
 
@@ -1611,16 +1606,6 @@ bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
   return expandFastPow(FPOp, B, PowKind::Pow);
 }
 
-// Get a scalar native builtin single argument FP function
-FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
-                                                 const FuncInfo &FInfo) {
-  if (getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()))
-    return nullptr;
-  FuncInfo nf = FInfo;
-  nf.setPrefix(AMDGPULibFunc::NATIVE);
-  return getFunction(M, nf);
-}
-
 // Some library calls are just wrappers around llvm intrinsics, but compiled
 // conservatively. Preserve the flags from the original call site by
 // substituting them with direct calls with all the flags.
@@ -1696,7 +1681,7 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
     // sincos call there. Otherwise, right after the allocas works well enough
     // if it's an argument or constant.
 
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(*ArgInst->getInsertionPointAfterDef());
 
     // SetInsertPoint unwelcomely always tries to set the debug loc.
     B.SetCurrentDebugLocation(DL);
@@ -1807,6 +1792,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   }
 
   if (SinCalls.empty() || CosCalls.empty())
+    return false;
+
+  // insertSinCos needs an insertion point after the argument's def.
+  if (auto *ArgInst = dyn_cast<Instruction>(CArgVal);
+      ArgInst && !ArgInst->getInsertionPointAfterDef())
     return false;
 
   B.setFastMathFlags(FMF);

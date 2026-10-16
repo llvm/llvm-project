@@ -35,6 +35,10 @@
 //     }
 //   }
 //
+// The example element loop bounds above assume ascending steps. For an
+// acc.loop with negative steps, a descending dimension would use
+// max(ub, %i+s*T) instead.
+//
 // Gang/worker/vector attributes are distributed as follows:
 // - gang: applied to tile loops
 // - vector: applied to element loops

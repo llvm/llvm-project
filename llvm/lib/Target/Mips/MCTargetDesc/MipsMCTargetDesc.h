@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCTARGETDESC_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCTARGETDESC_H
 
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -24,6 +25,7 @@ class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCRegister;
 class MCRegisterInfo;
 class MCStreamer;
 class MCSubtargetInfo;
@@ -60,6 +62,14 @@ namespace MIPS_MC {
 void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
+
+/// Match a symbolic name in RegClassID, or return an invalid register.
+MCRegister matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
+                             unsigned RegClassID, unsigned AltIdx);
+
+/// Return a GPR name's hardware index, or -1 if unknown.
+int getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
+                        unsigned AltIdx, bool *IsDeprecated = nullptr);
 }
 
 } // End llvm namespace
@@ -68,6 +78,21 @@ StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
 // register name to register number.
 #define GET_REGINFO_ENUM
 #include "MipsGenRegisterInfo.inc"
+
+namespace llvm {
+namespace Mips {
+// Readable names for the GPRs with a dedicated role. Other GPRs use their R<n>
+// names, or the MipsABIInfo accessors when their role depends on the ABI.
+inline constexpr MCPhysReg GP = R28;
+inline constexpr MCPhysReg SP = R29;
+inline constexpr MCPhysReg FP = R30;
+inline constexpr MCPhysReg RA = R31;
+inline constexpr MCPhysReg GP_64 = R28_64;
+inline constexpr MCPhysReg SP_64 = R29_64;
+inline constexpr MCPhysReg FP_64 = R30_64;
+inline constexpr MCPhysReg RA_64 = R31_64;
+} // namespace Mips
+} // namespace llvm
 
 // Defines symbolic names for the Mips instructions.
 #define GET_INSTRINFO_ENUM

@@ -19,8 +19,8 @@ func.func @_QPvector_always() -> i32 {
 ^bb1(%3: index, %4: i32, %5: index):  // 2 preds: ^bb0, ^bb2
   %c0 = arith.constant 0 : index
   %6 = arith.cmpi sgt, %5, %c0 : index
-  cf.cond_br %6, ^bb2, ^bb3 {loop_annotation = #loop_annotation}
-// CHECK:   llvm.cond_br %{{.*}}, ^{{.*}}, ^{{.*}} {loop_annotation = #[[ANNOTATION]]}
+  cf.cond_br %6, ^bb2, ^bb3 {llvm.loop_annotation = #loop_annotation}
+// CHECK:   llvm.cond_br %{{.*}}, ^{{.*}}, ^{{.*}} loop_annotation = #[[ANNOTATION]]
 ^bb2:  // pred: ^bb1
   %7 = arith.addi %3, %c1 : index
   %c1_0 = arith.constant 1 : index
@@ -29,4 +29,3 @@ func.func @_QPvector_always() -> i32 {
 ^bb3:  // pred: ^bb1
   return %4 : i32
 }
-

@@ -52,12 +52,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/NewGVN.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -97,11 +97,9 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/GVNExpression.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -145,15 +143,6 @@ DEBUG_COUNTER(VNCounter, "newgvn-vn",
               "Controls which instructions are value numbered");
 DEBUG_COUNTER(PHIOfOpsCounter, "newgvn-phi",
               "Controls which instructions we create phi of ops for");
-// Currently store defining access refinement is too slow due to basicaa being
-// egregiously slow.  This flag lets us keep it working while we work on this
-// issue.
-static cl::opt<bool> EnableStoreRefinement("enable-store-refinement",
-                                           cl::init(false), cl::Hidden);
-
-/// Currently, the generation "phi of ops" can result in correctness issues.
-static cl::opt<bool> EnablePhiOfOps("enable-phi-of-ops", cl::init(true),
-                                    cl::Hidden);
 
 //===----------------------------------------------------------------------===//
 //                                GVN Pass
@@ -470,6 +459,7 @@ template <> struct llvm::DenseMapInfo<const Expression *> {
 namespace {
 
 class NewGVN {
+  const ScalarOptions &Opts;
   Function &F;
   DominatorTree *DT = nullptr;
   const TargetLibraryInfo *TLI = nullptr;
@@ -646,7 +636,8 @@ public:
   NewGVN(Function &F, DominatorTree *DT, AssumptionCache *AC,
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
-      : F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
+      : Opts(ScalarOptions::Global), F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA),
+        AC(AC), DL(DL),
         // Reuse ExpressionAllocator for PredicateInfo as well.
         PredInfo(
             std::make_unique<PredicateInfo>(F, *DT, *AC, ExpressionAllocator)),
@@ -1411,7 +1402,7 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) const {
   auto *StoreAccess = getMemoryAccess(SI);
   // Get the expression, if any, for the RHS of the MemoryDef.
   const MemoryAccess *StoreRHS = StoreAccess->getDefiningAccess();
-  if (EnableStoreRefinement)
+  if (Opts.enable_store_refinement)
     StoreRHS = MSSAWalker->getClobberingMemoryAccess(StoreAccess);
   // If we bypassed the use-def chains, make sure we add a use.
   StoreRHS = lookupMemoryLeader(StoreRHS);
@@ -2588,8 +2579,8 @@ void NewGVN::addPhiOfOps(PHINode *Op, BasicBlock *BB,
       PHINodeUses.insert(UI);
 }
 
-static bool okayForPHIOfOps(const Instruction *I) {
-  if (!EnablePhiOfOps)
+static bool okayForPHIOfOps(const ScalarOptions &Opts, const Instruction *I) {
+  if (!Opts.enable_phi_of_ops)
     return false;
   return isa<BinaryOperator>(I) || isa<SelectInst>(I) || isa<CmpInst>(I) ||
          isa<LoadInst>(I);
@@ -2704,7 +2695,7 @@ Value *NewGVN::findLeaderForInst(Instruction *TransInst,
 const Expression *
 NewGVN::makePossiblePHIOfOps(Instruction *I,
                              SmallPtrSetImpl<Value *> &Visited) {
-  if (!okayForPHIOfOps(I))
+  if (!okayForPHIOfOps(Opts, I))
     return nullptr;
 
   if (!Visited.insert(I).second)
@@ -2926,7 +2917,7 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
       if (isa<PHINode>(&I))
         for (auto *U : I.users())
           if (auto *UInst = dyn_cast<Instruction>(U))
-            if (InstrToDFSNum(UInst) != 0 && okayForPHIOfOps(UInst))
+            if (InstrToDFSNum(UInst) != 0 && okayForPHIOfOps(Opts, UInst))
               PHINodeUses.insert(UInst);
       // Don't insert void terminators into the class. We don't value number
       // them, and they just end up sitting in TOP.

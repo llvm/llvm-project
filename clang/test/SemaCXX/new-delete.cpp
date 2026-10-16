@@ -718,7 +718,7 @@ int *fail = dependent_array_size("hello"); // expected-note {{instantiation of}}
 // FIXME: Our behavior here is incredibly inconsistent. GCC allows
 // constant-folding in array bounds in new-expressions.
 int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
-#if __cplusplus >= 201402L && !defined(NEW_INTERP)
+#if __cplusplus >= 201402L
 // expected-error@-2 {{array size is not a constant expression}}
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
 #elif __cplusplus < 201103L

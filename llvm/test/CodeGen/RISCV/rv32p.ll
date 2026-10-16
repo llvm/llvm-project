@@ -929,6 +929,42 @@ define i32 @asubu_i32(i32 %a, i32 %b) {
   ret i32 %res
 }
 
+define i32 @test_aadd_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_aaddu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aaddu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aaddu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asub a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asub.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asubu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asubu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asubu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i32 @mulhr_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: mulhr_i32:
 ; CHECK:       # %bb.0:
@@ -2330,4 +2366,130 @@ define i32 @test_plui_h_remat(ptr %p) nounwind {
   tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
   ; Use the constant again - it should be rematerialized, not spilled/reloaded
   ret i32 u0x7fc07fc0
+}
+
+define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulh_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulh a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.smulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhr_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhr.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.umulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhru_u32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhru_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhru a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhru.u32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhsu_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhrsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mhacc_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhacc_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhacc a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhacc.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhracc_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhracc_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhracc a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhracc.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhaccu_u32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhaccu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccu a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhaccu.u32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhraccu_u32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhraccu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhraccu a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhraccu.u32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhaccsu_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhaccsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhaccsu a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhaccsu.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhraccsu_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhraccsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mhraccsu a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhraccsu.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mulq_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_mulq_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulq a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulq.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mulqr_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_mulqr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulqr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulqr.i32(i32 %a, i32 %b)
+  ret i32 %res
 }

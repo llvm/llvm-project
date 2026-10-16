@@ -34,11 +34,11 @@ define i64 @vsetvli_const_avl_at_min128() {
 }
 
 ; AVL == 20 sits in (MinVLMAX, ...) at VLEN128, so vl is only known to be
-; [0, 20]; at VLEN512 it is still below VLMAX (64), so vl == 20 folds.
+; [10, 20]; at VLEN512 it is still below VLMAX (64), so vl == 20 folds.
 define i64 @vsetvli_const_avl_mid() {
 ; VLEN128-LABEL: define i64 @vsetvli_const_avl_mid(
 ; VLEN128-SAME: ) #[[ATTR0]] {
-; VLEN128-NEXT:    [[VL:%.*]] = call range(i64 1, 21) i64 @llvm.riscv.vsetvli.i64(i64 20, i64 0, i64 0)
+; VLEN128-NEXT:    [[VL:%.*]] = call range(i64 10, 21) i64 @llvm.riscv.vsetvli.i64(i64 20, i64 0, i64 0)
 ; VLEN128-NEXT:    ret i64 [[VL]]
 ;
 ; VLEN512-LABEL: define i64 @vsetvli_const_avl_mid(
@@ -50,12 +50,17 @@ define i64 @vsetvli_const_avl_mid() {
 }
 
 ; AVL far above the largest VLMAX (8192): vl is capped by VLMAX, giving the
-; VLEN-independent range [0, 8192].
+; VLEN-independent range [MinVLMAX, 8192].
 define i64 @vsetvli_const_avl_above_max() {
-; CHECK-LABEL: define i64 @vsetvli_const_avl_above_max(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[VL:%.*]] = call range(i64 1, 8193) i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
-; CHECK-NEXT:    ret i64 [[VL]]
+; VLEN128-LABEL: define i64 @vsetvli_const_avl_above_max(
+; VLEN128-SAME: ) #[[ATTR0]] {
+; VLEN128-NEXT:    [[VL:%.*]] = call range(i64 16, 8193) i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
+; VLEN128-NEXT:    ret i64 [[VL]]
+;
+; VLEN512-LABEL: define i64 @vsetvli_const_avl_above_max(
+; VLEN512-SAME: ) #[[ATTR0]] {
+; VLEN512-NEXT:    [[VL:%.*]] = call range(i64 64, 8193) i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
+; VLEN512-NEXT:    ret i64 [[VL]]
 ;
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 100000, i64 0, i64 0)
   ret i64 %vl
@@ -124,7 +129,7 @@ define i1 @vsetvli_runtime_avl_gt_max_folds(i64 %avl) {
   ret i1 %c
 }
 
-; vl known > 0, so range must be > 0
+; avl known > 0, so range must be > 0
 define i64 @vsetvli_vl_known_nonzero(i64 %x) {
 ; CHECK-LABEL: define i64 @vsetvli_vl_known_nonzero(
 ; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
@@ -133,6 +138,18 @@ define i64 @vsetvli_vl_known_nonzero(i64 %x) {
 ; CHECK-NEXT:    ret i64 [[VL]]
 ;
   %avl = add nuw i64 %x, 1
+  %vl = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 0, i64 0)
+  ret i64 %vl
+}
+
+; avl known <= vlmax, so vl = avl
+define i64 @vsetvli_avl_known_lt_vlmax(i64 %x) {
+; CHECK-LABEL: define i64 @vsetvli_avl_known_lt_vlmax(
+; CHECK-SAME: i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[VL:%.*]] = and i64 [[X]], 7
+; CHECK-NEXT:    ret i64 [[VL]]
+;
+  %avl = and i64 %x, 7
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 0, i64 0)
   ret i64 %vl
 }

@@ -317,7 +317,7 @@ define dso_local x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, 
 ; WIN64-NEXT:    .seh_pushreg %r11
 ; WIN64-NEXT:    pushq %r10
 ; WIN64-NEXT:    .seh_pushreg %r10
-; WIN64-NEXT:    subq $128, %rsp
+; WIN64-NEXT:    addq $-128, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 128
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
 ; WIN64-NEXT:    .seh_setframe %rbp, 128

@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/IR/LLVMContext.h" // Explicitly include for LLVMContext
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -26,34 +25,50 @@ SPIRVCombinerHelper::SPIRVCombinerHelper(
     : CombinerHelper(Observer, B, IsPreLegalize, VT, MDT, LI), STI(STI) {}
 
 /// This match is part of a combine that
-/// rewrites length(X - Y) to distance(X, Y)
-///   (f32 (g_intrinsic length
-///           (g_fsub (vXf32 X) (vXf32 Y))))
+/// rewrites X / length(X) to normalize(X)
+///   (vXf32 (g_fdiv
+///             (vXf32 X)
+///             (vXf32 splat
+///                    (f32 (g_intrinsic length (vXf32 X))))))
 /// ->
-///   (f32 (g_intrinsic distance
-///           (vXf32 X) (vXf32 Y)))
+///   (vXf32 (g_intrinsic normalize (vXf32 X)))
 ///
-bool SPIRVCombinerHelper::matchLengthToDistance(MachineInstr &MI) const {
-  if (!mi_match(MI, MRI, m_GIntrinsic<Intrinsic::spv_length>()))
+bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
+  Register NumeratorReg = MI.getOperand(1).getReg();
+  Register DivisorReg = MI.getOperand(2).getReg();
+
+  // Match the divisor as a splat of length, inserted into lane 0.
+  MachineInstr *ShuffleInstr = MRI.getVRegDef(DivisorReg);
+  if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
+    return false;
+  if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
+              [](int M) { return M == 0; }))
     return false;
 
-  // First operand of MI is `G_INTRINSIC` so start at operand 2.
-  Register SubReg = MI.getOperand(2).getReg();
-  return mi_match(SubReg, MRI, m_GFSub(m_Reg(), m_Reg()));
+  MachineInstr *InsertInstr =
+      MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
+  if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
+    return false;
+  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
+    return false;
+
+  MachineInstr *LengthInstr =
+      MRI.getVRegDef(InsertInstr->getOperand(3).getReg());
+  if (!isSpvIntrinsic(*LengthInstr, Intrinsic::spv_length))
+    return false;
+
+  // Check that length's argument is the same as the numerator.
+  return LengthInstr->getOperand(2).getReg() == NumeratorReg;
 }
 
-void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
-  // Extract the operands for X and Y from the match criteria.
-  Register SubDestReg = MI.getOperand(2).getReg();
-  MachineInstr *SubInstr = MRI.getVRegDef(SubDestReg);
-  Register SubOperand1 = SubInstr->getOperand(1).getReg();
-  Register SubOperand2 = SubInstr->getOperand(2).getReg();
+void SPIRVCombinerHelper::applySPIRVNormalize(MachineInstr &MI) const {
+  // Extract the operand for X from the match criteria.
+  Register NumeratorReg = MI.getOperand(1).getReg();
   Register ResultReg = MI.getOperand(0).getReg();
 
   Builder.setInstrAndDebugLoc(MI);
-  Builder.buildIntrinsic(Intrinsic::spv_distance, ResultReg)
-      .addUse(SubOperand1)
-      .addUse(SubOperand2);
+  Builder.buildIntrinsic(Intrinsic::spv_normalize, ResultReg)
+      .addUse(NumeratorReg);
 
   MI.eraseFromParent();
 }

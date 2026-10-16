@@ -2732,6 +2732,20 @@ def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
 def : Pat<(i64 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
           (INSERT_SUBREG (IMPLICIT_DEF), (COPY_TO_REGCLASS VK8:$src, GR32), sub_32bit)>;
 
+// zext(and(bitcast(mask), C)) --> and(anyext(bitcast(mask)), zext(C)). PR120389.
+def : Pat<(i32 (zext (and (i8 (bitconvert (v8i1 VK8:$src))), imm:$c))),
+          (AND32ri (COPY_TO_REGCLASS VK8:$src, GR32), (i32 (GetLo32XForm imm:$c)))>;
+def : Pat<(i64 (zext (and (i8 (bitconvert (v8i1 VK8:$src))), imm:$c))),
+          (SUBREG_TO_REG
+            (AND32ri (COPY_TO_REGCLASS VK8:$src, GR32), (i32 (GetLo32XForm imm:$c))),
+            sub_32bit)>;
+def : Pat<(i32 (zext (and (i16 (bitconvert (v16i1 VK16:$src))), imm:$c))),
+          (AND32ri (COPY_TO_REGCLASS VK16:$src, GR32), (i32 (GetLo32XForm imm:$c)))>;
+def : Pat<(i64 (zext (and (i16 (bitconvert (v16i1 VK16:$src))), imm:$c))),
+          (SUBREG_TO_REG
+            (AND32ri (COPY_TO_REGCLASS VK16:$src, GR32), (i32 (GetLo32XForm imm:$c))),
+            sub_32bit)>;
+
 def : Pat<(v32i1 (bitconvert (i32 GR32:$src))),
           (COPY_TO_REGCLASS GR32:$src, VK32)>;
 def : Pat<(i32 (bitconvert (v32i1 VK32:$src))),
@@ -3126,6 +3140,11 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPS", v4f32x_info, v16f32_info>;
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v4f64x_info, v8f64_info>;
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v2f64x_info, v8f64_info>;
+}
+
+let Predicates = [HasFP16, NoVLX] in {
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v16f16x_info, v32f16_info>;
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v8f16x_info, v32f16_info>;
 }
 
 let Predicates = [HasBWI, NoVLX] in {
@@ -12618,7 +12637,7 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (ins VTI.RC:$src2, VTI.MemOp:$src3), OpStr,
                                    "$src3, $src2", "$src2, $src3",
                                    (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                                            (VTI.VT (VTI.LdFrag addr:$src3))))>,
+                                            (load addr:$src3)))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, T8,
                                    Sched<[sched.Folded, sched.ReadAfterFold,
                                           sched.ReadAfterFold]>;
@@ -12626,8 +12645,9 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                    (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3),
                                    OpStr, "${src3}"#VTI.BroadcastStr#", $src2",
                                    "$src2, ${src3}"#VTI.BroadcastStr,
-                                   (OpNode VTI.RC:$src1, VTI.RC:$src2,
-                                    (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))>,
+                                   (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
+                                            (bitconvert
+                                             (VTI.VT (VTI.BroadcastLdFrag addr:$src3)))))>,
                                    EVEX, VVVV, EVEX_CD8<32, CD8VF>, EVEX_B,
                                    T8, Sched<[sched.Folded, sched.ReadAfterFold,
                                                 sched.ReadAfterFold]>;

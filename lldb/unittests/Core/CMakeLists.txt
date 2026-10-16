@@ -21,6 +21,7 @@ add_lldb_unittest(LLDBCoreTests
   Value.cpp
 
   LINK_COMPONENTS
+    Option
     Support
     Telemetry
   LINK_LIBS

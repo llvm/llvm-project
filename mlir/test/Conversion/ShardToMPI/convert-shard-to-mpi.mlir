@@ -69,7 +69,7 @@ func.func @neighbors_dim2(%arg0 : tensor<120x120x120xi8>) -> (index, index) {
 
 // -----
 // CHECK: shard.grid @grid0
-module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
+module attributes { dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
   shard.grid @grid0(shape = 3x4x5)
   func.func @process_multi_index() -> (index, index, index) {
     // CHECK-DAG: %[[c4:.*]] = arith.constant 4 : index
@@ -107,7 +107,7 @@ module {
 }
 
 // -----
-module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
+module attributes { dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
   shard.grid @grid0(shape = 3x4x5)
   // CHECK-LABEL: func.func @allreduce_tensor(
   func.func @allreduce_tensor(
@@ -291,7 +291,7 @@ func.func @update_halo_1d_first(
 }
 
 // -----
-module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 1> } {
+module attributes { dlti = #dlti.map<"MPI:comm_world_rank" = 1> } {
   shard.grid @grid0(shape = 4)
   // CHECK-LABEL: func @update_halo_1d_with_zero
   func.func @update_halo_1d_with_zero (
@@ -316,7 +316,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 1> } {
 }
 
 // -----
-module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
+module attributes { dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
   shard.grid @grid0(shape = 3x4x5)
   // CHECK-LABEL: func @update_halo_3d
   func.func @update_halo_3d(

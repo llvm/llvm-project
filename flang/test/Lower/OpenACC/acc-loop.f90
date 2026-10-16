@@ -408,9 +408,9 @@ end subroutine
 ! A DO CONCURRENT index-name is a construct entity distinct from a like-named
 ! dummy argument, so the induction variables are fresh construct-local
 ! allocations that get privatized (not the dummy arguments).
-! CHECK-DAG: %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i"}
-! CHECK-DAG: %[[ALLOCA_J:.*]] = fir.alloca i32 {bindc_name = "j"}
-! CHECK-DAG: %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k"}
+! CHECK-DAG: %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i"}>
+! CHECK-DAG: %[[ALLOCA_J:.*]] = fir.alloca i32 <{bindc_name = "j"}>
+! CHECK-DAG: %[[ALLOCA_K:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 ! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[ALLOCA_I]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[ALLOCA_J]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[ALLOCA_K]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("k") -> !fir.ref<i32>

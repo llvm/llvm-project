@@ -30,7 +30,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -327,7 +326,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v2i64, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
-    // But saturating fp_to_int converstions are
+    // But saturating fp_to_int conversions are
     for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}) {
       setOperationAction(Op, MVT::v4i32, Custom);
       if (Subtarget->hasFP16()) {
@@ -608,7 +607,7 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
 }
 
 // Lower a `MEMCPY` instruction into a CFG triangle around a `MEMORY_COPY`
-// instuction to handle the zero-length case.
+// instruction to handle the zero-length case.
 static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
                                       MachineBasicBlock *BB,
                                       const TargetInstrInfo &TII, bool Int64) {
@@ -700,7 +699,7 @@ static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
 }
 
 // Lower a `MEMSET` instruction into a CFG triangle around a `MEMORY_FILL`
-// instuction to handle the zero-length case.
+// instruction to handle the zero-length case.
 static MachineBasicBlock *LowerMemset(MachineInstr &MI, DebugLoc DL,
                                       MachineBasicBlock *BB,
                                       const TargetInstrInfo &TII, bool Int64) {
@@ -788,14 +787,15 @@ static MachineBasicBlock *
 LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                  const WebAssemblySubtarget *Subtarget,
                  const TargetInstrInfo &TII) {
-  MachineInstr &CallParams = *CallResults.getPrevNode();
-  assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
          CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
+  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
+  MachineInstr &CallParams = *CallResults.getPrevNode();
+  assert(CallParams.getOpcode() ==
+         (IsRetCall ? WebAssembly::RET_CALL_PARAMS : WebAssembly::CALL_PARAMS));
 
   bool IsIndirect =
       CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
-  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
   bool IsFuncrefCall = false;
   if (IsIndirect && CallParams.getOperand(0).isReg()) {
@@ -868,7 +868,8 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     }
   }
 
-  for (auto Use : CallParams.uses())
+  // Avoid duplicating the implicit operands.
+  for (auto Use : CallParams.explicit_uses())
     MIB.add(Use);
 
   BB->insert(CallResults.getIterator(), MIB);
@@ -1355,6 +1356,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         }
       }
     }
+
+    // A byval argument is copied into this function's stack frame below, and
+    // a tail call releases that frame before the callee reads the copy.
+    if (llvm::any_of(CLI.Outs, [](const ISD::OutputArg &Out) {
+          return Out.Flags.isByVal() && Out.Flags.getByValSize() != 0;
+        }))
+      NoTail("WebAssembly does not support tail calling with byval arguments");
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
@@ -1814,7 +1822,11 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTTZ:
     return DAG.UnrollVectorOp(Op.getNode());
   case ISD::CLEAR_CACHE:
-    report_fatal_error("llvm.clear_cache is not supported on wasm");
+    // Report this as a diagnostic rather than aborting, like the other
+    // unsupported features in this target. Pass the chain through so that
+    // codegen can reach the point where the diagnostic is emitted.
+    fail(SDLoc(Op), DAG, "llvm.clear_cache is not supported on wasm");
+    return Op.getOperand(0);
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return LowerMUL_LOHI(Op, DAG);
@@ -2122,7 +2134,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
 
   unsigned OperandFlags = 0;
   const GlobalValue *GV = GA->getGlobal();
-  // Since WebAssembly tables cannot yet be shared accross modules, we don't
+  // Since WebAssembly tables cannot yet be shared across modules, we don't
   // need special treatment for tables in PIC mode.
   if (isPositionIndependent() &&
       !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
@@ -3407,8 +3419,8 @@ static SDValue performBitcastCombine(SDNode *N,
     SDValue Concat, SetCCVector;
     ISD::CondCode SetCond;
 
-    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat), m_Value(SetCCVector),
-                                         m_CondCode(SetCond)))))
+    if (!sd_match(N, m_BitCast(m_c_SetCC(SetCond, m_Value(Concat),
+                                         m_Value(SetCCVector)))))
       return SDValue();
     if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
       return SDValue();
@@ -3454,17 +3466,22 @@ static SDValue performBitcastCombine(SDNode *N,
       SDValue ExtendedConcatOperandBitmask =
           DAG.getZExtOrTrunc(ConcatOperandBitmask, DL, ReturnVT);
 
-      // Shift the previously reconstructed bits to make room for this chunk.
+      // Shift each chunk's mask to its original lane position before merging it
+      // into the result:
+      //   Result bit index = I * ConcatOperandNumElts + local lane index
+      //
+      // Example: four chunks, each containing 8 mask bits:
+      //   result = M0 | (M1 << 8) | (M2 << 16) | (M3 << 24)
+      //
+      SDValue PositionedChunkBitmask = ExtendedConcatOperandBitmask;
       if (I != 0) {
-        ReconstructedBitmask = DAG.getNode(
-            ISD::SHL, DL, ReturnVT, ReconstructedBitmask,
-            DAG.getShiftAmountConstant(ConcatOperandNumElts, ReturnVT, DL));
+        PositionedChunkBitmask = DAG.getNode(
+            ISD::SHL, DL, ReturnVT, ExtendedConcatOperandBitmask,
+            DAG.getShiftAmountConstant(I * ConcatOperandNumElts, ReturnVT, DL));
       }
 
-      // Merge disjoint partial bitmasks with OR.
-      ReconstructedBitmask =
-          DAG.getNode(ISD::OR, DL, ReturnVT, ReconstructedBitmask,
-                      ExtendedConcatOperandBitmask);
+      ReconstructedBitmask = DAG.getNode(
+          ISD::OR, DL, ReturnVT, ReconstructedBitmask, PositionedChunkBitmask);
     }
 
     return ReconstructedBitmask;
@@ -3482,8 +3499,8 @@ static SDValue performBitmaskCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue LHS;
-  if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
-                                            m_SpecificCondCode(ISD::SETLT))))
+  if (!sd_match(N->getOperand(1),
+                m_c_SpecificSetCC(ISD::SETLT, m_Value(LHS), m_Zero())))
     return SDValue();
 
   SDLoc DL(N);
@@ -3502,8 +3519,7 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue LHS;
   if (N->getNumOperands() < 2 ||
-      !sd_match(N->getOperand(1),
-                m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
+      !sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero())))
     return SDValue();
   EVT LT = LHS.getValueType();
   if (LT.getScalarSizeInBits() > 128 / LT.getVectorNumElements())
@@ -3516,8 +3532,8 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDValue LHS;
-    if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
-                                              m_SpecificCondCode(SetType))))
+    if (!sd_match(N->getOperand(1),
+                  m_c_SpecificSetCC(SetType, m_Value(LHS), m_Zero())))
       return SDValue();
 
     SDLoc DL(N);

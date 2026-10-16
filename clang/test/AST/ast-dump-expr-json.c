@@ -4650,7 +4650,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
-// CHECK-NEXT:      "kind": "ImplicitCastExpr",
+// CHECK-NEXT:      "kind": "ExprWithCleanups",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "offset": {{[0-9]+}},
@@ -4668,11 +4668,17 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       "qualType": "int *"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
-// CHECK-NEXT:      "castKind": "ArrayToPointerDecay",
+// CHECK-NEXT:      "cleanupsHaveSideEffects": true,
+// CHECK-NEXT:      "cleanups": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "CompoundLiteralExpr"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ],
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "CompoundLiteralExpr",
+// CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},
@@ -4686,17 +4692,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "int[4]"
+// CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "lvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "castKind": "ArrayToPointerDecay",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
-// CHECK-NEXT:          "kind": "InitListExpr",
+// CHECK-NEXT:          "kind": "CompoundLiteralExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "offset": {{[0-9]+}},
-// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
@@ -4708,91 +4715,113 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "int[4]"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "prvalue",
+// CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "id": "0x{{.*}}",
-// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "kind": "InitListExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 13,
+// CHECK-NEXT:              "col": 12,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 13,
+// CHECK-NEXT:              "col": 25,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:             "qualType": "int[4]"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
-// CHECK-NEXT:            "value": "1"
-// CHECK-NEXT:           },
-// CHECK-NEXT:           {
-// CHECK-NEXT:            "id": "0x{{.*}}",
-// CHECK-NEXT:            "kind": "IntegerLiteral",
-// CHECK-NEXT:            "range": {
-// CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "tokLen": 1
+// CHECK-NEXT:            "inner": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "IntegerLiteral",
+// CHECK-NEXT:              "range": {
+// CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 13,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 13,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "int"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "valueCategory": "prvalue",
+// CHECK-NEXT:              "value": "1"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "tokLen": 1
-// CHECK-NEXT:             }
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int"
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "prvalue",
-// CHECK-NEXT:            "value": "2"
-// CHECK-NEXT:           },
-// CHECK-NEXT:           {
-// CHECK-NEXT:            "id": "0x{{.*}}",
-// CHECK-NEXT:            "kind": "IntegerLiteral",
-// CHECK-NEXT:            "range": {
-// CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 19,
-// CHECK-NEXT:              "tokLen": 1
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "IntegerLiteral",
+// CHECK-NEXT:              "range": {
+// CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 16,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 16,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "int"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "valueCategory": "prvalue",
+// CHECK-NEXT:              "value": "2"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 19,
-// CHECK-NEXT:              "tokLen": 1
-// CHECK-NEXT:             }
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int"
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "prvalue",
-// CHECK-NEXT:            "value": "3"
-// CHECK-NEXT:           },
-// CHECK-NEXT:           {
-// CHECK-NEXT:            "id": "0x{{.*}}",
-// CHECK-NEXT:            "kind": "IntegerLiteral",
-// CHECK-NEXT:            "range": {
-// CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 22,
-// CHECK-NEXT:              "tokLen": 1
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "IntegerLiteral",
+// CHECK-NEXT:              "range": {
+// CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 19,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 19,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "int"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "valueCategory": "prvalue",
+// CHECK-NEXT:              "value": "3"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 22,
-// CHECK-NEXT:              "tokLen": 1
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "IntegerLiteral",
+// CHECK-NEXT:              "range": {
+// CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 22,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 22,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "int"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "valueCategory": "prvalue",
+// CHECK-NEXT:              "value": "4"
 // CHECK-NEXT:             }
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int"
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "prvalue",
-// CHECK-NEXT:            "value": "4"
+// CHECK-NEXT:            ]
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         }
@@ -4802,7 +4831,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
-// CHECK-NEXT:      "kind": "ImplicitCastExpr",
+// CHECK-NEXT:      "kind": "ExprWithCleanups",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "offset": {{[0-9]+}},
@@ -4820,11 +4849,17 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       "qualType": "struct S"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
-// CHECK-NEXT:      "castKind": "LValueToRValue",
+// CHECK-NEXT:      "cleanupsHaveSideEffects": true,
+// CHECK-NEXT:      "cleanups": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "CompoundLiteralExpr"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ],
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "CompoundLiteralExpr",
+// CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},
@@ -4840,15 +4875,16 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "struct S"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "lvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "castKind": "LValueToRValue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
-// CHECK-NEXT:          "kind": "InitListExpr",
+// CHECK-NEXT:          "kind": "CompoundLiteralExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "offset": {{[0-9]+}},
-// CHECK-NEXT:            "col": 13,
+// CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
@@ -4860,28 +4896,50 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "struct S"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "prvalue",
+// CHECK-NEXT:          "valueCategory": "lvalue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "id": "0x{{.*}}",
-// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "kind": "InitListExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 14,
+// CHECK-NEXT:              "col": 13,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "offset": {{[0-9]+}},
-// CHECK-NEXT:              "col": 14,
+// CHECK-NEXT:              "col": 15,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:             "qualType": "struct S"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "prvalue",
-// CHECK-NEXT:            "value": "1"
+// CHECK-NEXT:            "inner": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "IntegerLiteral",
+// CHECK-NEXT:              "range": {
+// CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 14,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "col": 14,
+// CHECK-NEXT:                "tokLen": 1
+// CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "int"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "valueCategory": "prvalue",
+// CHECK-NEXT:              "value": "1"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         }

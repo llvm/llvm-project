@@ -12,6 +12,8 @@
 
 // These compiler versions and platforms don't enable sized deallocation by default.
 // ADDITIONAL_COMPILE_FLAGS(apple-clang-21): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(apple-clang-22): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(apple-clang-23): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=x86_64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=i686-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=aarch64-w64-windows-gnu): -fsized-deallocation

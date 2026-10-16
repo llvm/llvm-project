@@ -35,10 +35,9 @@
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Minidump.h"
 
-// Write std::string to minidump in the UTF16 format(with null termination char)
-// with the size(without null termination char) preceding the UTF16 string.
-// Empty strings are also printed with zero length and just null termination
-// char.
+// Write std::string to minidump in the UTF16 format(with null terminator)
+// with the size(without null terminator) preceding the UTF16 string.
+// Empty strings are also printed with zero length and just a null terminator.
 lldb_private::Status WriteString(const std::string &to_write,
                                  lldb_private::DataBufferHeap *buffer);
 

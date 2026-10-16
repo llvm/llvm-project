@@ -17,6 +17,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -42,22 +43,31 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(
-        mlir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
-        llvm::ArrayRef(clauses));
+    int64_t verAttr = mlir::omp::getOpenMPVersionAttribute(modOp);
+    // verAttr will be -1 if the module attribute is missing.
+    llvm::omp::Version version(std::max<int64_t>(verAttr, 0));
+    tomp::ConstructDecompositionT decompose(version, *this, compound,
+                                            llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
 
   // Given an object, return its base object if one exists.
-  std::optional<Object> getBaseObject(const Object &object) {
+  std::optional<Object> getBaseObject(const Object &object) const {
     return lower::omp::getBaseObject(object, semaCtx);
   }
 
   // Return the iteration variable of the associated loop if any.
-  std::optional<Object> getLoopIterVar() {
+  std::optional<Object> getLoopIterVar() const {
     if (semantics::Symbol *symbol = getIterationVariableSymbol(eval))
       return Object{symbol, /*designator=*/{}};
     return std::nullopt;
+  }
+
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) const {
+    return semantics::omp::IsClauseAllowedOnDirective(clauseId, dirId, version,
+                                                      &semaCtx);
   }
 
   semantics::SemanticsContext &semaCtx;

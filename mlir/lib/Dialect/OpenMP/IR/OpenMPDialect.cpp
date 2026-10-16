@@ -363,7 +363,7 @@ static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
              << "omp.declare_target 'automap' is not valid on functions";
 
     // TODO: Disallow the `local` clause (OpenMP 6.0).
-    if (declareTargetAttr.getCaptureClause().getValue() ==
+    if (declareTargetAttr.getCaptureClause() ==
         mlir::omp::DeclareTargetCaptureClause::link)
       return op->emitOpError()
              << "omp.declare_target 'link' is not valid on functions";
@@ -722,6 +722,10 @@ static LogicalResult verifyAllocateClause(
       return op->emitError()
              << "type mismatch between allocate variable and private variable "
                 "at index "
+             << privateIndex;
+    if (allocateVar != privateVar)
+      return op->emitError()
+             << "allocate variable does not match private variable at index "
              << privateIndex;
 
     if (!privateSyms ||
@@ -2609,10 +2613,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
                                   "'omp.iterator' ops";
 
     // Check that the iterator body yields a value defined by omp.map.info.
-    auto yieldOp =
-        cast<mlir::omp::YieldOp>(iterOp.getRegion().front().getTerminator());
+    mlir::omp::YieldOp yieldOp = iterOp.getYieldOp();
     auto yieldedMapInfo =
-        yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+        yieldOp && yieldOp.getNumOperands() == 1
+            ? yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>()
+            : nullptr;
     if (!yieldedMapInfo)
       return op->emitOpError() << "'map_iterated' iterator body must yield "
                                   "a value defined by 'omp.map.info'";
@@ -3005,7 +3010,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                     /*allocate_private_indices=*/nullptr, /*if_expr=*/nullptr,
                     /*num_threads_vars=*/ValueRange(),
                     /*private_vars=*/ValueRange(),
-                    /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
+                    /*private_syms=*/nullptr, /*private_needs_barrier=*/false,
                     /*proc_bind_kind=*/nullptr,
                     /*reduction_mod =*/nullptr, /*reduction_vars=*/ValueRange(),
                     /*reduction_byref=*/nullptr, /*reduction_syms=*/nullptr);
@@ -3135,7 +3140,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
       clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
       clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
       clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
-      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+      /*private_needs_barrier=*/false, clauses.reductionMod,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
@@ -3276,7 +3281,8 @@ LogicalResult ScopeOp::verify() {
   if (failed(verifyAllocateClause(
           getOperation(), getAllocateVars(), getAllocatorVars(),
           getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
-          getPrivateVars(), getPrivateSymsAttr())))
+          getPrivateVars(), getPrivateSymsAttr(),
+          /*requirePrivateIndices=*/true)))
     return failure();
 
   if (failed(verifyPrivateVarList(*this)))
@@ -3843,19 +3849,20 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(
-      builder, state, clauses.iterated, clauses.affinityVars,
-      clauses.allocateVars, clauses.allocatorVars,
-      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
-      clauses.final, clauses.ifExpr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-      clauses.priority, /*private_vars=*/clauses.privateVars,
-      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
+  TaskOp::build(builder, state, clauses.iterated, clauses.affinityVars,
+                clauses.allocateVars, clauses.allocatorVars,
+                makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+                makeArrayAttr(ctx, clauses.dependIteratedKinds),
+                clauses.dependIterated, clauses.final, clauses.ifExpr,
+                clauses.inReductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+                clauses.priority, /*private_vars=*/clauses.privateVars,
+                /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+                clauses.privateNeedsBarrier, clauses.threadset, clauses.untied,
+                clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
@@ -3925,7 +3932,8 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
       clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadset,
+      clauses.untied);
   state.addAttribute("omp.combined", UnitAttr::get(ctx));
 }
 
@@ -5007,7 +5015,7 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
       /*depend_vars=*/clauses.dependVars,
       /*depend_iterated_kinds=*/makeArrayAttr(ctx, clauses.dependIteratedKinds),
       /*depend_iterated=*/ValueRange(clauses.dependIterated),
-      /*nowait=*/nullptr);
+      /*nowait=*/clauses.nowait);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5427,6 +5435,16 @@ void MaskedOp::build(OpBuilder &builder, OperationState &state,
 }
 
 //===----------------------------------------------------------------------===//
+// Spec 5.2: Dispatch construct (7.6)
+//===----------------------------------------------------------------------===//
+
+void DispatchOp::build(OpBuilder &builder, OperationState &state,
+                       const DispatchOperands &clauses) {
+  DispatchOp::build(builder, state, clauses.nocontext, clauses.novariants,
+                    clauses.nowait);
+}
+
+//===----------------------------------------------------------------------===//
 // Spec 5.2: Scan construct (5.6)
 //===----------------------------------------------------------------------===//
 
@@ -5725,40 +5743,49 @@ static void printIteratorHeader(OpAsmPrinter &p, Operation *op, Region &region,
                 /*printBlockTerminators=*/true);
 }
 
+YieldOp IteratorOp::getYieldOp() {
+  YieldOp yield;
+  for (Block &block : getRegion()) {
+    auto blockYield =
+        dyn_cast_if_present<YieldOp>(block.empty() ? nullptr : &block.back());
+    if (!blockYield)
+      continue;
+    if (yield)
+      return {};
+    yield = blockYield;
+  }
+  return yield;
+}
+
 LogicalResult IteratorOp::verify() {
   auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
   if (!iteratedTy)
     return emitOpError() << "result must be omp.iterated<entry_ty>";
 
-  for (auto [lb, ub, step] : llvm::zip_equal(
-           getLoopLowerBounds(), getLoopUpperBounds(), getLoopSteps())) {
-    if (matchPattern(step, m_Zero()))
-      return emitOpError() << "loop step must not be zero";
+  Block::BlockArgListType ivs = getRegion().front().getArguments();
+  if (getLoopLowerBounds().size() != ivs.size())
+    return emitOpError() << "number of range arguments and IVs do not match";
 
-    IntegerAttr lbAttr;
-    IntegerAttr ubAttr;
-    IntegerAttr stepAttr;
-    if (!matchPattern(lb, m_Constant(&lbAttr)) ||
-        !matchPattern(ub, m_Constant(&ubAttr)) ||
-        !matchPattern(step, m_Constant(&stepAttr)))
-      continue;
-
-    const APInt &lbVal = lbAttr.getValue();
-    const APInt &ubVal = ubAttr.getValue();
-    const APInt &stepVal = stepAttr.getValue();
-    if (stepVal.isStrictlyPositive() && lbVal.sgt(ubVal))
-      return emitOpError() << "positive loop step requires lower bound to be "
-                              "less than or equal to upper bound";
-    if (stepVal.isNegative() && lbVal.slt(ubVal))
-      return emitOpError() << "negative loop step requires lower bound to be "
-                              "greater than or equal to upper bound";
+  for (auto [lb, iv] : llvm::zip_equal(getLoopLowerBounds(), ivs)) {
+    if (lb.getType() != iv.getType())
+      return emitOpError()
+             << "range argument type does not match corresponding IV type";
   }
 
-  Block &b = getRegion().front();
-  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
+  for (Value step : getLoopSteps()) {
+    if (matchPattern(step, m_Zero()))
+      return emitOpError() << "loop step must not be zero";
+  }
 
-  if (!yield)
+  YieldOp yield = getYieldOp();
+  if (!yield) {
+    bool hasYield = llvm::any_of(getRegion(), [](Block &block) {
+      return !block.empty() && isa<YieldOp>(block.back());
+    });
+    if (hasYield)
+      return emitOpError() << "region must contain exactly one omp.yield";
     return emitOpError() << "region must be terminated by omp.yield";
+  }
 
   if (yield.getNumOperands() != 1)
     return emitOpError()
@@ -5772,6 +5799,17 @@ LogicalResult IteratorOp::verify() {
                          << ") does not match omp.yield operand type ("
                          << yieldedTy << ")";
 
+  return success();
+}
+
+LogicalResult IteratorOp::verifyRegions() {
+  // Translation routes only the omp.yield block back to the iterator loop.
+  for (Block &block : getRegion()) {
+    Operation *terminator = block.getTerminator();
+    if (block.getNumSuccessors() == 0 && !isa<YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `omp.yield` op.";
+  }
   return success();
 }
 

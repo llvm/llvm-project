@@ -273,7 +273,7 @@ public:
   static bool WatchpointCallbackFunction(void *baton,
                                          StoppointCallbackContext *context,
                                          lldb::user_id_t watch_id);
-  static void Initialize();
+  static llvm::Error Initialize();
 
   class SynchronicityHandler {
   private:
