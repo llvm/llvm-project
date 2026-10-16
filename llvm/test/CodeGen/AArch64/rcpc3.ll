@@ -214,26 +214,34 @@ define hidden void @test_stl1_1xdouble_lane0(ptr nocapture noundef writeonly %a,
   ret void
 }
 
-; The remaining tests do not have any particular RCPC3-specific codegen:
-
 ; load-acquire a plain non-vector double value
 define hidden double @test_double_load(ptr nocapture noundef readonly %a) local_unnamed_addr {
-; BOTH-LABEL: test_double_load:
-; BOTH:       // %bb.0:
-; BOTH-NEXT:    ldapr x8, [x0]
-; BOTH-NEXT:    fmov d0, x8
-; BOTH-NEXT:    ret
+; RCPC3-LABEL: test_double_load:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    ldapur d0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_double_load:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    ldapr x8, [x0]
+; NO-RCPC3-NEXT:    fmov d0, x8
+; NO-RCPC3-NEXT:    ret
   %1 = load atomic double, ptr %a acquire, align 8
   ret double %1
 }
 
 ; store-release a plain non-vector double value
 define hidden void @test_double_store(ptr nocapture noundef writeonly %a, double noundef %b) local_unnamed_addr {
-; BOTH-LABEL: test_double_store:
-; BOTH:       // %bb.0:
-; BOTH-NEXT:    fmov x8, d0
-; BOTH-NEXT:    stlr x8, [x0]
-; BOTH-NEXT:    ret
+; RCPC3-LABEL: test_double_store:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stlur d0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_double_store:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov x8, d0
+; NO-RCPC3-NEXT:    stlr x8, [x0]
+; NO-RCPC3-NEXT:    ret
   store atomic double %b, ptr %a release, align 8
   ret void
 }
