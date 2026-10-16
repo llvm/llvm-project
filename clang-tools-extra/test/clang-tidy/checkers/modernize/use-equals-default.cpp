@@ -314,6 +314,14 @@ struct DCNSM {
   int x;
 };
 
+// Same for a plain scalar member with default init.
+struct DCNSMI {
+  DCNSMI() : x() {}
+  // Defaulting would remove the default-init of x.
+  // Note that assigning 0 would not change the linter behavior.
+  int x = 1;
+};
+
 // user-provided default ctor -> no zero-init required
 struct DCAU {
   Base entries[4];
