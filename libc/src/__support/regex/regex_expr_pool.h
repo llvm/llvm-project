@@ -118,6 +118,9 @@ public:
   /// O(1) nullability query for a valid ExprId.
   bool is_nullable(ExprId id) const { return get(id).nullable; }
 
+  /// Returns the number of unique AST nodes currently interned in this pool.
+  size_t size() const { return node_count; }
+
   /// Returns the current heap bytes allocated by this pool.
   size_t allocated_bytes() const {
     return (block_count * sizeof(Block)) + blocks.size_bytes() +
