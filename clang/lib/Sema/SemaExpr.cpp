@@ -13633,6 +13633,14 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
 QualType Sema::GetSignedVectorType(QualType V) {
   const VectorType *VTy = V->castAs<VectorType>();
+  if (const auto *BIT = VTy->getElementType()->getAs<BitIntType>()) {
+    QualType EltTy =
+        Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits());
+    if (isa<ExtVectorType>(VTy))
+      return Context.getExtVectorType(EltTy, VTy->getNumElements());
+    return Context.getVectorType(EltTy, VTy->getNumElements(),
+                                 VectorKind::Generic);
+  }
   unsigned TypeSize = Context.getTypeSize(VTy->getElementType());
 
   if (isa<ExtVectorType>(VTy)) {
