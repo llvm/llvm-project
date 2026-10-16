@@ -22,7 +22,8 @@ define float @frem2_nsz(float %x) {
 ; CHECK-NEXT:    fmul.s fa5, fa0, fa5
 ; CHECK-NEXT:    fround.s fa5, fa5, rtz
 ; CHECK-NEXT:    fli.s fa4, 2.0
-; CHECK-NEXT:    fnmsub.s fa0, fa5, fa4, fa0
+; CHECK-NEXT:    fnmsub.s fa5, fa5, fa4, fa0
+; CHECK-NEXT:    fsgnj.s fa0, fa5, fa0
 ; CHECK-NEXT:    ret
   %fmod = frem nsz float %x, 2.0
   ret float %fmod
@@ -35,7 +36,8 @@ define double @drem2_nsz(double %x) {
 ; CHECK-NEXT:    fmul.d fa5, fa0, fa5
 ; CHECK-NEXT:    fround.d fa5, fa5, rtz
 ; CHECK-NEXT:    fli.d fa4, 2.0
-; CHECK-NEXT:    fnmsub.d fa0, fa5, fa4, fa0
+; CHECK-NEXT:    fnmsub.d fa5, fa5, fa4, fa0
+; CHECK-NEXT:    fsgnj.d fa0, fa5, fa0
 ; CHECK-NEXT:    ret
   %fmod = frem nsz double %x, 2.0
   ret double %fmod

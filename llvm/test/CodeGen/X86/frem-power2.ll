@@ -38,14 +38,23 @@ define float @frem2_nsz(float %x) {
 ; SSE-NEXT:    mulss %xmm0, %xmm1
 ; SSE-NEXT:    roundss $11, %xmm1, %xmm1
 ; SSE-NEXT:    addss %xmm1, %xmm1
-; SSE-NEXT:    subss %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    subss %xmm1, %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: frem2_nsz:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX-NEXT:    vroundss $11, %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vfnmadd231ss {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
+; AVX-NEXT:    vroundss $11, %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vandps %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %fmod = frem nsz float %x, 2.0
   ret float %fmod
@@ -58,14 +67,21 @@ define double @drem2_nsz(double %x) {
 ; SSE-NEXT:    mulsd %xmm0, %xmm1
 ; SSE-NEXT:    roundsd $11, %xmm1, %xmm1
 ; SSE-NEXT:    addsd %xmm1, %xmm1
-; SSE-NEXT:    subsd %xmm1, %xmm0
+; SSE-NEXT:    movapd %xmm0, %xmm2
+; SSE-NEXT:    subsd %xmm1, %xmm2
+; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    orpd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: drem2_nsz:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX-NEXT:    vroundsd $11, %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vfnmadd231sd {{.*#+}} xmm0 = -(xmm1 * mem) + xmm0
+; AVX-NEXT:    vfnmadd132sd {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vorpd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %fmod = frem nsz double %x, 2.0
   ret double %fmod
@@ -78,16 +94,25 @@ define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; SSE-NEXT:    mulps %xmm0, %xmm1
 ; SSE-NEXT:    roundps $11, %xmm1, %xmm1
 ; SSE-NEXT:    addps %xmm1, %xmm1
-; SSE-NEXT:    subps %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    subps %xmm1, %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: frem2_nsz_vec:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
-; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vroundps $11, %xmm1, %xmm1
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
-; AVX-NEXT:    vfnmadd231ps {{.*#+}} xmm0 = -(xmm1 * xmm2) + xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
+; AVX-NEXT:    vmulps %xmm2, %xmm0, %xmm2
+; AVX-NEXT:    vroundps $11, %xmm2, %xmm2
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; AVX-NEXT:    vfnmadd213ps {{.*#+}} xmm3 = -(xmm2 * xmm3) + xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vandps %xmm0, %xmm3, %xmm0
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %fmod = frem nsz <4 x float> %x, splat (float 2.0)
   ret <4 x float> %fmod

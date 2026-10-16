@@ -73,6 +73,8 @@ define float @test_frem_fabs(float %x) {
 define float @test_fadd_zero_minnum_nsz(float %x) {
 ; CHECK-LABEL: test_fadd_zero_minnum_nsz:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    ret
@@ -84,6 +86,8 @@ define float @test_fadd_zero_minnum_nsz(float %x) {
 define float @test_fsub_neg_zero_maxnum_nsz(float %x) {
 ; CHECK-LABEL: test_fsub_neg_zero_maxnum_nsz:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #-1.00000000
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    ret
@@ -95,7 +99,8 @@ define float @test_fsub_neg_zero_maxnum_nsz(float %x) {
 define float @test_zero_fsub_minimum_nsz(float %x) {
 ; CHECK-LABEL: test_zero_fsub_minimum_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fneg s0, s0
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    fsub s0, s1, s0
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fmin s0, s0, s1
 ; CHECK-NEXT:    ret
@@ -107,8 +112,9 @@ define float @test_zero_fsub_minimum_nsz(float %x) {
 define float @test_sitofp_fptosi_maximumnum_nsz(float %x) {
 ; CHECK-LABEL: test_sitofp_fptosi_maximumnum_nsz:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz s0, s0
+; CHECK-NEXT:    fcvtzs s0, s0
 ; CHECK-NEXT:    fmov s1, #-1.00000000
+; CHECK-NEXT:    scvtf s0, s0
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    ret
   %conv = fptosi float %x to i32
