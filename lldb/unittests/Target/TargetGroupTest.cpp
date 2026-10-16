@@ -103,6 +103,47 @@ TEST_F(TargetGroupTest, StoresTargetRoles) {
   EXPECT_EQ(std::vector<TargetGroupSP>{group_sp}, groups.GetGroups());
 }
 
+TEST_F(TargetGroupTest, ReturnsGroupsForRole) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(*debugger_sp);
+  ASSERT_TRUE(target_sp);
+
+  TargetGroupList &groups = debugger_sp->GetTargetGroupList();
+  TargetGroupSP first_cpu_group_sp =
+      groups.CreateTargetGroup("first CPU group");
+  TargetGroupSP accelerator_group_sp =
+      groups.CreateTargetGroup("accelerator group");
+  TargetGroupSP second_cpu_group_sp =
+      groups.CreateTargetGroup("second CPU group");
+
+  EXPECT_TRUE(target_sp->GetTargetGroups(TargetGroup::Role::CPU).empty());
+  EXPECT_TRUE(
+      target_sp->GetTargetGroups(TargetGroup::Role::Accelerator).empty());
+
+  EXPECT_THAT_ERROR(
+      first_cpu_group_sp->AddTarget(target_sp, TargetGroup::Role::CPU),
+      llvm::Succeeded());
+  EXPECT_EQ(std::vector<TargetGroupSP>{first_cpu_group_sp},
+            target_sp->GetTargetGroups(TargetGroup::Role::CPU));
+  EXPECT_TRUE(
+      target_sp->GetTargetGroups(TargetGroup::Role::Accelerator).empty());
+
+  EXPECT_THAT_ERROR(accelerator_group_sp->AddTarget(
+                        target_sp, TargetGroup::Role::Accelerator),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(
+      second_cpu_group_sp->AddTarget(target_sp, TargetGroup::Role::CPU),
+      llvm::Succeeded());
+
+  EXPECT_EQ(
+      (std::vector<TargetGroupSP>{first_cpu_group_sp, second_cpu_group_sp}),
+      target_sp->GetTargetGroups(TargetGroup::Role::CPU));
+  EXPECT_EQ(std::vector<TargetGroupSP>{accelerator_group_sp},
+            target_sp->GetTargetGroups(TargetGroup::Role::Accelerator));
+}
+
 TEST_F(TargetGroupTest, DeleteGroupReleasesDebuggerOwnership) {
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
