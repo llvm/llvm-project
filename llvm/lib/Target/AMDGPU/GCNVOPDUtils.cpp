@@ -601,7 +601,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     }
 
     IIdx = 0;
-    SmallVector<SUnit *, 8> ILoadSuccs;
+    SmallVector<SUnit *> ILoadSuccs;
 
     // Cache collected load predecessors.
     // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
