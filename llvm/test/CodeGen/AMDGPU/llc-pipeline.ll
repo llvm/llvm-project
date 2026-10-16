@@ -425,6 +425,7 @@
 ; GCN-O1-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-NEXT:        SI Memory Legalizer
 ; GCN-O1-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O1-NEXT:        SI reuse invariant scalar loads
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
@@ -747,6 +748,7 @@
 ; GCN-O1-OPTS-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-OPTS-NEXT:        SI Memory Legalizer
 ; GCN-O1-OPTS-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O1-OPTS-NEXT:        SI reuse invariant scalar loads
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
@@ -1074,6 +1076,7 @@
 ; GCN-O2-NEXT:        GCN Create VOPD Instructions
 ; GCN-O2-NEXT:        SI Memory Legalizer
 ; GCN-O2-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O2-NEXT:        SI reuse invariant scalar loads
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
@@ -1416,6 +1419,7 @@
 ; GCN-O3-NEXT:        GCN Create VOPD Instructions
 ; GCN-O3-NEXT:        SI Memory Legalizer
 ; GCN-O3-NEXT:        SI post-RA 16bit Mov Folding
+; GCN-O3-NEXT:        SI reuse invariant scalar loads
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
