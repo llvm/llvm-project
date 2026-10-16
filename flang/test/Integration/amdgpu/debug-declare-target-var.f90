@@ -17,7 +17,7 @@ end
 
 ! CHECK-DAG: @_QMhelperEvar_x = addrspace(1) {{.*}}!dbg ![[XE:[0-9]+]]
 ! CHECK-DAG: @_QMhelperEvar_y = addrspace(1) {{.*}}!dbg ![[YE:[0-9]+]]
-! CHECK-DAG: ![[XE]] = !DIGlobalVariableExpression(var: ![[X:[0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(ptr addrspace(1))))
-! CHECK-DAG: ![[YE]] = !DIGlobalVariableExpression(var: ![[Y:[0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(ptr addrspace(1))))
+! CHECK-DAG: ![[XE]] = !DIGlobalVariableExpression(var: ![[X:[0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(float)))
+! CHECK-DAG: ![[YE]] = !DIGlobalVariableExpression(var: ![[Y:[0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(float)))
 ! CHECK-DAG: ![[X]] = {{.*}}!DIGlobalVariable(name: "var_x"{{.*}})
 ! CHECK-DAG: ![[Y]] = {{.*}}!DIGlobalVariable(name: "var_y"{{.*}})
