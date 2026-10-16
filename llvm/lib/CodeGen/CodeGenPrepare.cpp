@@ -1657,18 +1657,18 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     return BO->hasOneUse() && DT.dominates(Cmp->getParent(), L->getLoopLatch());
   };
 
-  auto QuickDomAndPressureCheck = [=] {
+  auto QuickDomAndPressureCheck = [&]() {
     // A cheap dominance check.
     if (BO->getParent()->getUniquePredecessor() != Cmp->getParent())
       return false;
 
     // If the only uses of Arg0/Arg1 are the BO and Cmp, replacing them
-    // with an intrinsic means we're replacing one live value (the non-constnat
-    // argument) with another (the intrinsic), thus keeping register preassure
+    // with an intrinsic means we're replacing one live value (the non-constant
+    // argument) with another (the intrinsic), thus keeping register pressure
     // unchanged.
-    if (!isa<ConstantInt>(Arg0) && Arg0->hasNUsesOrMore(3))
+    if (!isa<Constant>(Arg0) && Arg0->hasNUsesOrMore(3))
       return false;
-    if (!isa<ConstantInt>(Arg1) && Arg1->hasNUsesOrMore(3))
+    if (!isa<Constant>(Arg1) && Arg1->hasNUsesOrMore(3))
       return false;
 
     return true;
