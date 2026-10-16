@@ -253,20 +253,22 @@ public:
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: [B1.4] (CXXConstructExpr, C([B1.4]) (Base initializer), C)
 // CHECK-NEXT:     6: C([B1.5]) (Base initializer)
-// CHECK-NEXT:     7: CFGNewAllocator(C *)
-// CHECK-NEXT:     8: C::get
-// CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, FunctionToPointerDecay, C (*)(void))
-// CXX11-ELIDE-NEXT:    10: [B1.9]() (CXXRecordTypedCall, [B1.11], [B1.12])
-// CXX11-NOELIDE-NEXT:    10: [B1.9]() (CXXRecordTypedCall, [B1.11])
-// CXX11-NEXT:    11: [B1.10]
-// CXX11-NEXT:    12: [B1.11] (CXXConstructExpr, [B1.13], C)
-// CXX11-NEXT:    13: new C([B1.12])
-// CXX11-NEXT:    14: [B1.13] (CXXConstructExpr, c1([B1.13]) (Member initializer), C)
-// CXX11-NEXT:    15: c1([B1.14]) (Member initializer)
-// CXX17-NEXT:    10: [B1.9]()
-// CXX17-NEXT:    11: new C([B1.10])
-// CXX17-NEXT:    12: [B1.11] (CXXConstructExpr, c1([B1.11]) (Member initializer), C)
-// CXX17-NEXT:    13: c1([B1.12]) (Member initializer)
+// CHECK-NEXT:     7: (FullExprCleanup collected 1 MTE: [B1.3])
+// CHECK-NEXT:     8: CFGNewAllocator(C *)
+// CHECK-NEXT:     9: C::get
+// CHECK-NEXT:    10: [B1.9] (ImplicitCastExpr, FunctionToPointerDecay, C (*)(void))
+// CXX11-ELIDE-NEXT:    11: [B1.10]() (CXXRecordTypedCall, [B1.12], [B1.13])
+// CXX11-NOELIDE-NEXT:    11: [B1.10]() (CXXRecordTypedCall, [B1.12])
+// CXX11-NEXT:    12: [B1.11]
+// CXX11-NEXT:    13: [B1.12] (CXXConstructExpr, [B1.14], C)
+// CXX11-NEXT:    14: new C([B1.13])
+// CXX11-NEXT:    15: [B1.14] (CXXConstructExpr, c1([B1.14]) (Member initializer), C)
+// CXX11-NEXT:    16: c1([B1.15]) (Member initializer)
+// CXX11-NEXT:    17: (FullExprCleanup collected 1 MTE: [B1.11])
+// CXX17-NEXT:    11: [B1.10]()
+// CXX17-NEXT:    12: new C([B1.11])
+// CXX17-NEXT:    13: [B1.12] (CXXConstructExpr, c1([B1.12]) (Member initializer), C)
+// CXX17-NEXT:    14: c1([B1.13]) (Member initializer)
   D(double): C(C::get()), c1(new C(C::get())) {}
 };
 
@@ -292,7 +294,8 @@ public:
 // CXX11-NEXT:     6: [B1.5]
 // CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, e([B1.6]) (Member initializer), E)
 // CXX11-NEXT:     8: e([B1.7]) (Member initializer)
-// CXX11-NEXT:     9: ~E() (Temporary object destructor)
+// CXX11-NEXT:     9: (FullExprCleanup collected 1 MTE: [B1.5])
+// CXX11-NEXT:    10: ~E() (Temporary object destructor)
 // CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, e([B1.4]) (Member initializer), [B1.4])
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
 // CXX17-NEXT:     5: e([B1.4]) (Member initializer)
@@ -345,8 +348,9 @@ C returnBracesWithMultipleItems() {
 // CXX11-ELIDE:    1: C() (CXXConstructExpr, [B1.2], [B1.3], C)
 // CXX11-NOELIDE:  1: C() (CXXConstructExpr, [B1.2], C)
 // CXX11-NEXT:     2: [B1.1]
-// CXX11-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], C)
-// CXX11-NEXT:     4: return [B1.3];
+// CXX11-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], C)
+// CXX11-NEXT:     4: (FullExprCleanup collected 1 MTE: [B1.1])
+// CXX11-NEXT:     5: return [B1.3];
 // CXX17:          1: C() (CXXConstructExpr, [B1.2], C)
 // CXX17-NEXT:     2: return [B1.1];
 C returnTemporary() {
@@ -361,8 +365,9 @@ C returnTemporary() {
 // CXX17-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], C)
 // CHECK-NEXT:     4: C([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, C)
 // CXX11-NEXT:     5: [B1.4]
-// CXX11-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.7], C)
-// CXX11-NEXT:     7: return [B1.6];
+// CXX11-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], C)
+// CXX11-NEXT:     7: (FullExprCleanup collected 1 MTE: [B1.4])
+// CXX11-NEXT:     8: return [B1.6];
 // CXX17-NEXT:     5: return [B1.4];
 
 C returnTemporaryWithArgument() {
@@ -375,8 +380,9 @@ C returnTemporaryWithArgument() {
 // CXX11-ELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.5])
 // CXX11-NOELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX11-NEXT:     4: [B1.3]
-// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], C)
-// CXX11-NEXT:     6: return [B1.5];
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], C)
+// CXX11-NEXT:     6: (FullExprCleanup collected 1 MTE: [B1.3])
+// CXX11-NEXT:     7: return [B1.5];
 // CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX17-NEXT:     4: return [B1.3];
 C returnTemporaryConstructedByFunction() {
@@ -393,8 +399,9 @@ C returnTemporaryConstructedByFunction() {
 // CXX11-NOELIDE-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], C)
 // CXX11-NEXT:     6: C([B1.5]) (CXXFunctionalCastExpr, ConstructorConversion, C)
 // CXX11-NEXT:     7: [B1.6]
-// CXX11-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.9], C)
-// CXX11-NEXT:     9: return [B1.8];
+// CXX11-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10], C)
+// CXX11-NEXT:     9: (FullExprCleanup collected 2 MTEs: [B1.6], [B1.3])
+// CXX11-NEXT:    10: return [B1.8];
 // CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.5])
 // CXX17-NEXT:     4: C([B1.3]) (CXXFunctionalCastExpr, NoOp, C)
 // CXX17-NEXT:     5: return [B1.4];
@@ -418,9 +425,10 @@ public:
 // CXX11-NEXT:     2: [B1.1] (BindTemporary)
 // CXX11-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const D)
 // CXX11-NEXT:     4: [B1.3]
-// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], D)
-// CXX11-NEXT:     6: ~D() (Temporary object destructor)
-// CXX11-NEXT:     7: return [B1.5];
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.8], D)
+// CXX11-NEXT:     6: (FullExprCleanup collected 1 MTE: [B1.3])
+// CXX11-NEXT:     7: ~D() (Temporary object destructor)
+// CXX11-NEXT:     8: return [B1.5];
 // CXX17:          1: D() (CXXConstructExpr, [B1.3], [B1.2], D)
 // CXX17-NEXT:     2: [B1.1] (BindTemporary)
 // CXX17-NEXT:     3: return [B1.2];
@@ -438,11 +446,15 @@ D returnTemporary() {
 // CXX11-NEXT:     6: [B1.5]
 // CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.8], D)
 // CXX11-NEXT:     8: D d = returnTemporary();
-// CXX11-NEXT:     9: ~D() (Temporary object destructor)
-// CXX11-NEXT:    10: [B1.8].~D() (Implicit destructor)
+// CXX11-NEXT:     9: (FullExprCleanup collected 1 MTE: [B1.5])
+// CXX11-NEXT:    10: ~D() (Temporary object destructor)
+// CXX11-NEXT:    11: [B1.8].~D() (Implicit destructor)
+// CXX11-NEXT:    12: [B1.8] (Lifetime ends)
 // CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.5], [B1.4])
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
 // CXX17-NEXT:     5: D d = returnTemporary();
+// CXX17-NEXT:     6: [B1.5].~D() (Implicit destructor)
+// CXX17-NEXT:     7: [B1.5] (Lifetime ends)
 void returnByValueIntoVariable() {
   D d = returnTemporary();
 }
@@ -466,90 +478,148 @@ void simpleTemporary() {
 // CHECK-NEXT:     4: [B2.3].operator bool
 // CHECK-NEXT:     5: [B2.3]
 // CHECK-NEXT:     6: [B2.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK-NEXT:     7: (FullExprCleanup collected 1 MTE: [B2.1])
 // CHECK-NEXT:     T: if [B2.6]
 void temporaryInCondition() {
   if (C());
 }
 
 // CHECK: void temporaryInConditionVariable()
-// CXX11-ELIDE:    1: C() (CXXConstructExpr, [B2.2], [B2.3], C)
-// CXX11-NOELIDE:  1: C() (CXXConstructExpr, [B2.2], C)
-// CXX11-NEXT:     2: [B2.1]
-// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], C)
+// CHECK:      [B4 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B3
+// CHECK:      [B1]
+// CXX11-NEXT:     1: [B3.4] (Lifetime ends)
+// CXX17-NEXT:     1: [B3.2] (Lifetime ends)
+// CHECK-NEXT:   Preds (2): B2 B3
+// CHECK-NEXT:   Succs (1): B0
+// CHECK:      [B2]
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (1): B1
+// CHECK:      [B3]
+// CXX11-ELIDE-NEXT:    1: C() (CXXConstructExpr, [B3.2], [B3.3], C)
+// CXX11-NOELIDE-NEXT:  1: C() (CXXConstructExpr, [B3.2], C)
+// CXX11-NEXT:     2: [B3.1]
+// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], C)
 // CXX11-NEXT:     4: C c = C();
-// CXX11-NEXT:     5: c
-// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
-// CXX11-NEXT:     7: [B2.6].operator bool
-// CXX11-NEXT:     8: [B2.6]
-// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11-NEXT:     T: if [B2.9]
-// CXX17:          1: C() (CXXConstructExpr, [B2.2], C)
+// CXX11-NEXT:     5: (FullExprCleanup collected 1 MTE: [B3.1])
+// CXX11-NEXT:     6: c
+// CXX11-NEXT:     7: [B3.6] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     8: [B3.7].operator bool
+// CXX11-NEXT:     9: [B3.7]
+// CXX11-NEXT:    10: [B3.9] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: if [B3.10]
+// CXX17:          1: C() (CXXConstructExpr, [B3.2], C)
 // CXX17-NEXT:     2: C c = C();
 // CXX17-NEXT:     3: c
-// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
-// CXX17-NEXT:     5: [B2.4].operator bool
-// CXX17-NEXT:     6: [B2.4]
-// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX17-NEXT:     T: if [B2.7]
+// CXX17-NEXT:     4: [B3.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B3.4].operator bool
+// CXX17-NEXT:     6: [B3.4]
+// CXX17-NEXT:     7: [B3.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: if [B3.7]
+// CHECK-NEXT:   Preds (1): B4
+// CHECK-NEXT:   Succs (2): B2 B1
+// CHECK:      [B0 (EXIT)]
+// CHECK-NEXT:   Preds (1): B1
 void temporaryInConditionVariable() {
   if (C c = C());
 }
 
 
 // CHECK: void temporaryInForLoopConditionVariable()
-// CHECK:        [B2]
-// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B2.2], [B2.3], C)
-// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B2.2], C)
-// CXX11-NEXT:     2: [B2.1]
-// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], C)
-// CXX11-NEXT:     4: C c2 = C();
-// CXX11-NEXT:     5: c2
-// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
-// CXX11-NEXT:     7: [B2.6].operator bool
-// CXX11-NEXT:     8: [B2.6]
-// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11-NEXT:     T: for (...; [B2.9]; )
-// CXX17-NEXT:     1: C() (CXXConstructExpr, [B2.2], C)
-// CXX17-NEXT:     2: C c2 = C();
-// CXX17-NEXT:     3: c2
-// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
-// CXX17-NEXT:     5: [B2.4].operator bool
-// CXX17-NEXT:     6: [B2.4]
-// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX17-NEXT:     T: for (...; [B2.7]; )
-// CHECK:        [B3]
+// CHECK:      [B5 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B4
+// CHECK:      [B1]
+// CXX11-NEXT:     1: [B3.5] (Lifetime ends)
+// CXX17-NEXT:     1: [B3.2] (Lifetime ends)
+// CXX11-NEXT:     2: [B4.4] (Lifetime ends)
+// CXX17-NEXT:     2: [B4.2] (Lifetime ends)
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (1): B0
+// CHECK:      [B2]
+// CXX11-NEXT:     1: [B3.5] (Lifetime ends)
+// CXX17-NEXT:     1: [B3.2] (Lifetime ends)
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (1): B3
+// CHECK:      [B3]
 // CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], [B3.3], C)
 // CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], C)
 // CXX11-NEXT:     2: [B3.1]
-// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], C)
-// CXX11-NEXT:     4: C c1 = C();
+// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], C)
+// CXX11-NEXT:     4: (FullExprCleanup collected 1 MTE: [B3.1])
+// CXX11-NEXT:     5: C c2 = C();
+// CXX11-NEXT:     6: c2
+// CXX11-NEXT:     7: [B3.6] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     8: [B3.7].operator bool
+// CXX11-NEXT:     9: [B3.7]
+// CXX11-NEXT:    10: [B3.9] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: for (...; [B3.10]; )
 // CXX17-NEXT:     1: C() (CXXConstructExpr, [B3.2], C)
+// CXX17-NEXT:     2: C c2 = C();
+// CXX17-NEXT:     3: c2
+// CXX17-NEXT:     4: [B3.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B3.4].operator bool
+// CXX17-NEXT:     6: [B3.4]
+// CXX17-NEXT:     7: [B3.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: for (...; [B3.7]; )
+// CHECK-NEXT:   Preds (2): B2 B4
+// CHECK-NEXT:   Succs (2): B2 B1
+// CHECK:      [B4]
+// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B4.2], [B4.3], C)
+// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B4.2], C)
+// CXX11-NEXT:     2: [B4.1]
+// CXX11-NEXT:     3: [B4.2] (CXXConstructExpr, [B4.4], C)
+// CXX11-NEXT:     4: C c1 = C();
+// CXX11-NEXT:     5: (FullExprCleanup collected 1 MTE: [B4.1])
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B4.2], C)
 // CXX17-NEXT:     2: C c1 = C();
+// CHECK-NEXT:   Preds (1): B5
+// CHECK-NEXT:   Succs (1): B3
+// CHECK:      [B0 (EXIT)]
 void temporaryInForLoopConditionVariable() {
   for (C c1 = C(); C c2 = C(); );
 }
 
 
 // CHECK: void temporaryInWhileLoopConditionVariable()
-// CXX11-ELIDE:          1: C() (CXXConstructExpr, [B2.2], [B2.3], C)
-// CXX11-NOELIDE:          1: C() (CXXConstructExpr, [B2.2], C)
-// CXX11-NEXT:     2: [B2.1]
-// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], C)
-// CXX11-NEXT:     4: C c = C();
-// CXX11-NEXT:     5: c
-// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
-// CXX11-NEXT:     7: [B2.6].operator bool
-// CXX11-NEXT:     8: [B2.6]
-// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11-NEXT:     T: while [B2.9]
-// CXX17:          1: C() (CXXConstructExpr, [B2.2], C)
+// CHECK:      [B5 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B4
+// CHECK:      [B1]
+// CXX11-NEXT:     1: [B4.5] (Lifetime ends)
+// CXX17-NEXT:     1: [B4.2] (Lifetime ends)
+// CHECK-NEXT:   Preds (1): B4
+// CHECK-NEXT:   Succs (1): B0
+// CHECK:      [B2]
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (1): B4
+// CHECK:      [B3]
+// CXX11-NEXT:     1: [B4.5] (Lifetime ends)
+// CXX17-NEXT:     1: [B4.2] (Lifetime ends)
+// CHECK-NEXT:   Preds (1): B4
+// CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B4]
+// CXX11-ELIDE:          1: C() (CXXConstructExpr, [B4.2], [B4.3], C)
+// CXX11-NOELIDE:          1: C() (CXXConstructExpr, [B4.2], C)
+// CXX11-NEXT:     2: [B4.1]
+// CXX11-NEXT:     3: [B4.2] (CXXConstructExpr, [B4.5], C)
+// CXX11-NEXT:     4: (FullExprCleanup collected 1 MTE: [B4.1])
+// CXX11-NEXT:     5: C c = C();
+// CXX11-NEXT:     6: c
+// CXX11-NEXT:     7: [B4.6] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     8: [B4.7].operator bool
+// CXX11-NEXT:     9: [B4.7]
+// CXX11-NEXT:    10: [B4.9] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: while [B4.10]
+// CXX17:          1: C() (CXXConstructExpr, [B4.2], C)
 // CXX17-NEXT:     2: C c = C();
 // CXX17-NEXT:     3: c
-// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
-// CXX17-NEXT:     5: [B2.4].operator bool
-// CXX17-NEXT:     6: [B2.4]
-// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX17-NEXT:     T: while [B2.7]
+// CXX17-NEXT:     4: [B4.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B4.4].operator bool
+// CXX17-NEXT:     6: [B4.4]
+// CXX17-NEXT:     7: [B4.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: while [B4.7]
+// CHECK-NEXT:   Preds (2): B2 B5
+// CHECK-NEXT:   Succs (2): B3 B1
+// CHECK:      [B0 (EXIT)]
 void temporaryInWhileLoopConditionVariable() {
   while (C c = C());
 }
@@ -578,15 +648,26 @@ void simpleTemporary() {
 }
 
 // CHECK:  void temporaryInCondition()
-// CHECK:          1: D() (CXXConstructExpr, [B2.2], [B2.3], D)
+// CHECK:      [B3 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B1]
+// CHECK-NEXT:   Preds (1): B2
+// CHECK-NEXT:   Succs (1): B0
+// CHECK:      [B2]
+// CHECK-NEXT:     1: D() (CXXConstructExpr, [B2.2], [B2.3], D)
 // CHECK-NEXT:     2: [B2.1] (BindTemporary)
 // CHECK-NEXT:     3: [B2.2]
 // CHECK-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     5: [B2.4].operator bool
 // CHECK-NEXT:     6: [B2.4]
 // CHECK-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK-NEXT:     8: ~D() (Temporary object destructor)
+// CHECK-NEXT:     8: (FullExprCleanup collected 1 MTE: [B2.2])
+// CHECK-NEXT:     9: ~D() (Temporary object destructor)
 // CHECK-NEXT:     T: if [B2.7]
+// CHECK-NEXT:   Preds (1): B3
+// CHECK-NEXT:   Succs (2): B1 B0
+// CHECK:      [B0 (EXIT)]
+// CHECK-NEXT:   Preds (2): B1 B2
 void temporaryInCondition() {
   if (D());
 }
@@ -614,8 +695,11 @@ void referenceVariableWithInitializer() {
 }
 
 // CHECK: void referenceVariableWithTernaryOperator(bool coin)
+// CXX11:      [B8 (ENTRY)]
+// CXX11-NEXT:   Succs (1): B7
 // CXX11:        [B1]
 // CXX11-NEXT:     1: [B4.4].~D() (Implicit destructor)
+// CXX11-NEXT:     2: [B4.4] (Lifetime ends)
 // CXX11:        [B2]
 // CXX11-NEXT:     1: ~D() (Temporary object destructor)
 // CXX11:        [B3]
@@ -625,6 +709,7 @@ void referenceVariableWithInitializer() {
 // CXX11-NEXT:     2: [B4.1] (ImplicitCastExpr, NoOp, const D)
 // CXX11-NEXT:     3: [B4.2]
 // CXX11-NEXT:     4: const D &d = coin ? D::get() : D(0);
+// CXX11-NEXT:     5: (FullExprCleanup collected 2 MTEs: [B5.5], [B6.5])
 // CXX11-NEXT:     T: (Temp Dtor) [B6.3]
 // CXX11:        [B5]
 // CXX11-NEXT:     1: D::get
@@ -650,12 +735,15 @@ void referenceVariableWithInitializer() {
 // CXX11-NEXT:     1: coin
 // CXX11-NEXT:     2: [B7.1] (ImplicitCastExpr, LValueToRValue, _Bool)
 // CXX11-NEXT:     T: [B7.2] ? ... : ...
+// CXX17:      [B5 (ENTRY)]
+// CXX17-NEXT:   Succs (1): B4
 // CXX17:        [B1]
 // CXX17-NEXT:     1: [B4.2] ? [B2.4] : [B3.4]
 // CXX17-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const D)
 // CXX17-NEXT:     3: [B1.2]
 // CXX17-NEXT:     4: const D &d = coin ? D::get() : D(0);
 // CXX17-NEXT:     5: [B1.4].~D() (Implicit destructor)
+// CXX17-NEXT:     6: [B1.4] (Lifetime ends)
 // CXX17:        [B2]
 // CXX17-NEXT:     1: D::get
 // CXX17-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, D (*)(void))
@@ -737,14 +825,18 @@ public:
 // CXX11-NEXT:     8: [B1.7]
 // CXX11-NEXT:     9: [B1.8] (CXXConstructExpr, [B1.10], B)
 // CXX11-NEXT:    10: B b = A();
-// CXX11-NEXT:    11: ~B() (Temporary object destructor)
-// CXX11-NEXT:    12: [B1.10].~B() (Implicit destructor)
+// CXX11-NEXT:    11: (FullExprCleanup collected 2 MTEs: [B1.7], [B1.2])
+// CXX11-NEXT:    12: ~B() (Temporary object destructor)
+// CXX11-NEXT:    13: [B1.10].~B() (Implicit destructor)
+// CXX11-NEXT:    14: [B1.10] (Lifetime ends)
 // CXX17-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const A)
 // CXX17-NEXT:     3: [B1.2]
 // CXX17-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], B)
 // CXX17-NEXT:     5: [B1.4] (ImplicitCastExpr, ConstructorConversion, B)
 // CXX17-NEXT:     6: B b = A();
-// CXX17-NEXT:     7: [B1.6].~B() (Implicit destructor)
+// CXX17-NEXT:     7: (FullExprCleanup collected 1 MTE: [B1.2])
+// CXX17-NEXT:     8: [B1.6].~B() (Implicit destructor)
+// CXX17-NEXT:     9: [B1.6] (Lifetime ends)
 void implicitConstructionConversionFromTemporary() {
   B b = A();
 }
@@ -763,12 +855,16 @@ void implicitConstructionConversionFromTemporary() {
 // CXX11-NEXT:    10: [B1.9]
 // CXX11-NEXT:    11: [B1.10] (CXXConstructExpr, [B1.12], B)
 // CXX11-NEXT:    12: B b = get();
-// CXX11-NEXT:    13: ~B() (Temporary object destructor)
-// CXX11-NEXT:    14: [B1.12].~B() (Implicit destructor)
+// CXX11-NEXT:    13: (FullExprCleanup collected 2 MTEs: [B1.9], [B1.4])
+// CXX11-NEXT:    14: ~B() (Temporary object destructor)
+// CXX11-NEXT:    15: [B1.12].~B() (Implicit destructor)
+// CXX11-NEXT:    16: [B1.12] (Lifetime ends)
 // CXX17-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], B)
 // CXX17-NEXT:     7: [B1.6] (ImplicitCastExpr, ConstructorConversion, B)
 // CXX17-NEXT:     8: B b = get();
-// CXX17-NEXT:     9: [B1.8].~B() (Implicit destructor)
+// CXX17-NEXT:     9: (FullExprCleanup collected 1 MTE: [B1.4])
+// CXX17-NEXT:    10: [B1.8].~B() (Implicit destru
+// CXX17-NEXT:    11: [B1.8] (Lifetime ends)
 void implicitConstructionConversionFromFunctionValue() {
   B b = get();
 }
@@ -782,7 +878,9 @@ void implicitConstructionConversionFromFunctionValue() {
 // CHECK-NEXT:     6: [B1.5] (ImplicitCastExpr, NoOp, const B)
 // CHECK-NEXT:     7: [B1.6]
 // CHECK-NEXT:     8: const B &b = A();
-// CHECK-NEXT:     9: [B1.8].~B() (Implicit destructor)
+// CHECK-NEXT:     9: (FullExprCleanup collected 1 MTE: [B1.2])
+// CHECK-NEXT:    10: [B1.8].~B() (Implicit destructor)
+// CHECK-NEXT:    11: [B1.8] (Lifetime ends)
 void implicitConstructionConversionFromTemporaryWithLifetimeExtension() {
   const B &b = A();
 }
@@ -798,7 +896,9 @@ void implicitConstructionConversionFromTemporaryWithLifetimeExtension() {
 // CHECK-NEXT:     8: [B1.7] (ImplicitCastExpr, NoOp, const B)
 // CHECK-NEXT:     9: [B1.8]
 // CHECK-NEXT:    10: const B &b = get();
-// CHECK-NEXT:    11: [B1.10].~B() (Implicit destructor)
+// CHECK-NEXT:    11: (FullExprCleanup collected 1 MTE: [B1.4])
+// CHECK-NEXT:    12: [B1.10].~B() (Implicit destructor)
+// CHECK-NEXT:    13: [B1.10] (Lifetime ends)
 void implicitConstructionConversionFromFunctionValueWithLifetimeExtension() {
   const B &b = get(); // no-crash
 }
@@ -854,8 +954,9 @@ void passArgument() {
 // CXX11-NEXT:    10: [B1.9] (CXXConstructExpr, [B1.11], [B1.12]+1, D)
 // CXX11-NEXT:    11: [B1.10] (BindTemporary)
 // CXX11-NEXT:    12: [B1.2]([B1.5], [B1.11])
-// CXX11-NEXT:    13: ~D() (Temporary object destructor)
+// CXX11-NEXT:    13: (FullExprCleanup collected 2 MTEs: [B1.3], [B1.8])
 // CXX11-NEXT:    14: ~D() (Temporary object destructor)
+// CXX11-NEXT:    15: ~D() (Temporary object destructor)
 // CXX17-NEXT:     3: C() (CXXConstructExpr, [B1.6]+0, C)
 // CXX17-NEXT:     4: D() (CXXConstructExpr, [B1.5], [B1.6]+1, D)
 // CXX17-NEXT:     5: [B1.4] (BindTemporary)
@@ -887,8 +988,9 @@ void passArgumentByReference() {
 // CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.8], [B1.9]+0, D)
 // CXX11-NEXT:     8: [B1.7] (BindTemporary)
 // CXX11-NEXT:     9: [B1.2]([B1.8])
-// CXX11-NEXT:    10: ~D() (Temporary object destructor)
+// CXX11-NEXT:    10: (FullExprCleanup collected 1 MTE: [B1.5])
 // CXX11-NEXT:    11: ~D() (Temporary object destructor)
+// CXX11-NEXT:    12: ~D() (Temporary object destructor)
 // CXX17-NEXT:     3: D() (CXXConstructExpr, [B1.4], [B1.5]+0, D)
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
 // CXX17-NEXT:     5: [B1.2]([B1.4])
@@ -905,7 +1007,8 @@ void passArgumentWithDestructor() {
 // CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const D)
 // CHECK-NEXT:     6: [B1.5]
 // CHECK-NEXT:     7: [B1.2]([B1.6])
-// CHECK-NEXT:     8: ~D() (Temporary object destructor)
+// CHECK-NEXT:     8: (FullExprCleanup collected 1 MTE: [B1.5])
+// CHECK-NEXT:     9: ~D() (Temporary object destructor)
 void passArgumentWithDestructorByReference() {
   useDByReference(D());
 }
@@ -924,14 +1027,17 @@ void passArgumentWithDestructorByReference() {
 // CXX11-NEXT:     9: [B1.8]
 // CXX11-NEXT:    10: [B1.9] (CXXConstructExpr, [B1.11], E)
 // CXX11-NEXT:    11: E e = E(D());
-// CXX11-NEXT:    12: ~D() (Temporary object destructor)
+// CXX11-NEXT:    12: (FullExprCleanup collected 2 MTEs: [B1.8], [B1.3])
 // CXX11-NEXT:    13: ~D() (Temporary object destructor)
+// CXX11-NEXT:    14: ~D() (Temporary object destructor)
+// CXX11-NEXT:    15: [B1.11] (Lifetime ends)
 // CXX17:          1: D() (CXXConstructExpr, [B1.2], [B1.3]+0, D)
 // CXX17-NEXT:     2: [B1.1] (BindTemporary)
 // CXX17-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], E)
 // CXX17-NEXT:     4: E([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, E)
 // CXX17-NEXT:     5: E e = E(D());
 // CXX17-NEXT:     6: ~D() (Temporary object destructor)
+// CXX17-NEXT:     7: [B1.5] (Lifetime ends)
 void passArgumentIntoAnotherConstructor() {
   E e = E(D());
 }
@@ -953,17 +1059,11 @@ void passArgumentIntoAnotherConstructor() {
 // CXX11-NEXT:    11: [B1.10] (CXXConstructExpr, [B1.12], [B1.13]+1, D)
 // CXX11-NEXT:    12: [B1.11] (BindTemporary)
 // CXX11-NEXT:    13: E([B1.6], [B1.12]) (CXXConstructExpr, E)
-// CXX11-NEXT:    14: ~D() (Temporary object destructor)
+// CXX11-NEXT:    14: (FullExprCleanup collected 2 MTEs: [B1.3], [B1.9])
 // CXX11-NEXT:    15: ~D() (Temporary object destructor)
 // CXX11-NEXT:    16: ~D() (Temporary object destructor)
 // CXX11-NEXT:    17: ~D() (Temporary object destructor)
-// CXX17:          1: D() (CXXConstructExpr, [B1.2], [B1.5]+0, D)
-// CXX17-NEXT:     2: [B1.1] (BindTemporary)
-// CXX17-NEXT:     3: D() (CXXConstructExpr, [B1.4], [B1.5]+1, D)
-// CXX17-NEXT:     4: [B1.3] (BindTemporary)
-// CXX17-NEXT:     5: E([B1.2], [B1.4]) (CXXConstructExpr, E)
-// CXX17-NEXT:     6: ~D() (Temporary object destructor)
-// CXX17-NEXT:     7: ~D() (Temporary object destructor)
+// CXX11-NEXT:    18: ~D() (Temporary object destructor)
 void passTwoArgumentsIntoAnotherConstructor() {
   E(D(), D());
 }

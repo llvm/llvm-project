@@ -6,7 +6,8 @@
 
 // CHECK:       [B1]
 // CHECK-NEXT:   1: ForStmt (LoopExit)
-// CHECK-NEXT:   2: return;
+// CHECK-NEXT:   2: [B5.2] (Lifetime ends)
+// CHECK-NEXT:   3: return;
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 
@@ -82,6 +83,7 @@ void check_forloop2() {
 
 // CHECK:       [B3]
 // CHECK-NEXT:   1: int i;
+// CHECK-NEXT:   2: [B3.1] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B2
 
@@ -107,6 +109,8 @@ void check_while1() {
 // CHECK-NEXT:   2: 2
 // CHECK-NEXT:   3: int k = 2;
 // CHECK-NEXT:   4: return;
+// CHECK-NEXT:   5: [B1.3] (Lifetime ends)
+// CHECK-NEXT:   6: [B4.1] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B3
 // CHECK-NEXT:   Succs (1): B0
 
@@ -195,6 +199,7 @@ void check_dowhile1() {
 // CHECK-NEXT:   2: j
 // CHECK-NEXT:   3: [B1.2]--
 // CHECK-NEXT:   4: return;
+// CHECK-NEXT:   5: [B5.2] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 
@@ -240,6 +245,7 @@ void check_dowhile2() {
 
 // CHECK:       [B1]
 // CHECK-NEXT:   1: WhileStmt (LoopExit)
+// CHECK-NEXT:   2: [B9.3] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B8
 // CHECK-NEXT:   Succs (1): B0
 
@@ -249,6 +255,7 @@ void check_dowhile2() {
 
 // CHECK:       [B3]
 // CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B7.2] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (1): B2
 
@@ -310,6 +317,8 @@ void nested_loops1() {
 
 // CHECK:       [B1]
 // CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B8.5] (Lifetime ends)
+// CHECK-NEXT:   3: [B8.3] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B0
 
@@ -381,6 +390,7 @@ void nested_loops2() {
 // CHECK:       [B1]
 // CHECK-NEXT:   1: WhileStmt (LoopExit)
 // CHECK-NEXT:   2: return;
+// CHECK-NEXT:   3: [B6.4] (Lifetime ends)
 // CHECK-NEXT:   Preds (2): B3 B5
 // CHECK-NEXT:   Succs (1): B0
 
@@ -416,8 +426,9 @@ void nested_loops2() {
 
 // CHECK:       [B6]
 // CHECK-NEXT:   1: ForStmt (LoopExit)
-// CHECK-NEXT:   2: 1
-// CHECK-NEXT:   3: int i = 1;
+// CHECK-NEXT:   2: [B11.2] (Lifetime ends)
+// CHECK-NEXT:   3: 1
+// CHECK-NEXT:   4: int i = 1;
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B5
 

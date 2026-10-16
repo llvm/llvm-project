@@ -45,27 +45,29 @@ void funcWithBranch() {
 }
 
 //                  1st if  2nd if
-//  [B5 (ENTRY)]  -> [B4] -> [B3] -> [B2] -> [B1] -> [B0 (EXIT)]
-//                    \        \              /         /
-//                     \        ------------->         /
-//                      ------------------------------>
+//  [B6 (ENTRY)]  -> [B5] -> [B4] -> [B3] -> [B2] -> [B1] -> [B0 (EXIT)]
+//                    \        \              /                 /
+//                     \        ------------->                 /
+//                      -------------------------------------->
 
 // CHECK:      Control dependencies (Node#,Dependency#):
-// CHECK-NEXT: (1,4)
-// CHECK-NEXT: (2,3)
+// CHECK-NEXT: (2,5)
+// CHECK-NEXT: (3,4)
+// CHECK-NEXT: (3,5)
+// CHECK-NEXT: (4,5)
+// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,1)
+// CHECK-NEXT: (1,5)
 // CHECK-NEXT: (2,4)
 // CHECK-NEXT: (3,4)
-// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
-// CHECK-NEXT: (0,4)
-// CHECK-NEXT: (1,3)
-// CHECK-NEXT: (2,3)
-// CHECK-NEXT: (3,4)
 // CHECK-NEXT: (4,5)
-// CHECK-NEXT: (5,5)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: (6,6)
 // CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
 // CHECK-NEXT: (0,0)
 // CHECK-NEXT: (1,0)
 // CHECK-NEXT: (2,1)
-// CHECK-NEXT: (3,1)
-// CHECK-NEXT: (4,0)
-// CHECK-NEXT: (5,4)
+// CHECK-NEXT: (3,2)
+// CHECK-NEXT: (4,2)
+// CHECK-NEXT: (5,1)
+// CHECK-NEXT: (6,5)

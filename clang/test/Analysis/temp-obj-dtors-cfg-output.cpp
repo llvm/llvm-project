@@ -240,9 +240,10 @@ const C &bar3(bool coin) {
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const A)
 // CHECK:     4: [B1.3]
 // WARNINGS:     5: [B1.4] (CXXConstructExpr, A)
-// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.7], A)
-// CHECK:     6: ~A() (Temporary object destructor)
-// CHECK:     7: return [B1.5];
+// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.8], A)
+// CHECK:     6: (FullExprCleanup collected 1 MTE: [B1.3])
+// CHECK:     7: ~A() (Temporary object destructor)
+// CHECK:     8: return [B1.5];
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -300,9 +301,10 @@ const C &bar3(bool coin) {
 // CHECK:     3: [B1.2] (ImplicitCastExpr, NoOp, const A)
 // CHECK:     4: [B1.3]
 // WARNINGS:     5: [B1.4] (CXXConstructExpr, A)
-// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.7], A)
-// CHECK:     6: ~A() (Temporary object destructor)
-// CHECK:     7: return [B1.5];
+// ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.8], A)
+// CHECK:     6: (FullExprCleanup collected 1 MTE: [B1.3])
+// CHECK:     7: ~A() (Temporary object destructor)
+// CHECK:     8: return [B1.5];
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -328,31 +330,35 @@ const C &bar3(bool coin) {
 // CHECK:    14: int([B1.13]) (CXXFunctionalCastExpr, NoOp, int)
 // CHECK:    15: [B1.7] + [B1.14]
 // CHECK:    16: int a = int(A()) + int(B());
-// CHECK:    17: ~B() (Temporary object destructor)
-// CHECK:    18: ~A() (Temporary object destructor)
-// CHECK:    19: foo
-// CHECK:    20: [B1.19] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(int))
-// WARNINGS:    21: A() (CXXConstructExpr, A)
-// ANALYZER:    21: A() (CXXConstructExpr, [B1.22], [B1.23], A)
-// CHECK:    22: [B1.21] (BindTemporary)
-// CHECK:    23: [B1.22]
-// CHECK:    24: [B1.23].operator int
-// CHECK:    25: [B1.23]
-// CHECK:    26: [B1.25] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:    27: int([B1.26]) (CXXFunctionalCastExpr, NoOp, int)
-// WARNINGS:    28: B() (CXXConstructExpr, B)
-// ANALYZER:    28: B() (CXXConstructExpr, [B1.29], [B1.30], B)
-// CHECK:    29: [B1.28] (BindTemporary)
-// CHECK:    30: [B1.29]
-// CHECK:    31: [B1.30].operator int
-// CHECK:    32: [B1.30]
-// CHECK:    33: [B1.32] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:    34: int([B1.33]) (CXXFunctionalCastExpr, NoOp, int)
-// CHECK:    35: [B1.27] + [B1.34]
-// CHECK:    36: [B1.20]([B1.35])
-// CHECK:    37: ~B() (Temporary object destructor)
-// CHECK:    38: ~A() (Temporary object destructor)
-// CHECK:    39: int b;
+// CHECK:    17: (FullExprCleanup collected 2 MTEs: [B1.2], [B1.9])
+// CHECK:    18: ~B() (Temporary object destructor)
+// CHECK:    19: ~A() (Temporary object destructor)
+// CHECK:    20: foo
+// CHECK:    21: [B1.20] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(int))
+// WARNINGS:    22: A() (CXXConstructExpr, A)
+// ANALYZER:    22: A() (CXXConstructExpr, [B1.23], [B1.24], A)
+// CHECK:    23: [B1.22] (BindTemporary)
+// CHECK:    24: [B1.23]
+// CHECK:    25: [B1.24].operator int
+// CHECK:    26: [B1.24]
+// CHECK:    27: [B1.26] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:    28: int([B1.27]) (CXXFunctionalCastExpr, NoOp, int)
+// WARNINGS:    29: B() (CXXConstructExpr, B)
+// ANALYZER:    29: B() (CXXConstructExpr, [B1.30], [B1.31], B)
+// CHECK:    30: [B1.29] (BindTemporary)
+// CHECK:    31: [B1.30]
+// CHECK:    32: [B1.31].operator int
+// CHECK:    33: [B1.31]
+// CHECK:    34: [B1.33] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:    35: int([B1.34]) (CXXFunctionalCastExpr, NoOp, int)
+// CHECK:    36: [B1.28] + [B1.35]
+// CHECK:    37: [B1.21]([B1.36])
+// CHECK:    38: (FullExprCleanup collected 2 MTEs: [B1.23], [B1.30])
+// CHECK:    39: ~B() (Temporary object destructor)
+// CHECK:    40: ~A() (Temporary object destructor)
+// CHECK:    41: int b;
+// CHECK:    42: [B1.41] (Lifetime ends)
+// CHECK:    43: [B1.16] (Lifetime ends)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -362,6 +368,8 @@ const C &bar3(bool coin) {
 // CHECK:   [B1]
 // CHECK:     1: ~A() (Temporary object destructor)
 // CHECK:     2: int b;
+// CHECK:     3: [B1.2] (Lifetime ends)
+// CHECK:     4: [B7.2] (Lifetime ends)
 // CHECK:     Preds (2): B2 B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B2]
@@ -371,6 +379,7 @@ const C &bar3(bool coin) {
 // CHECK:   [B3]
 // CHECK:     1: [B5.9] && [B4.6]
 // CHECK:     2: [B5.3]([B3.1])
+// CHECK:     3: (FullExprCleanup collected 2 MTEs: [B5.5], [B4.2])
 // CHECK:     T: (Temp Dtor) [B4.2]
 // CHECK:     Preds (2): B4 B5
 // CHECK:     Succs (2): B2 B1
@@ -405,6 +414,7 @@ const C &bar3(bool coin) {
 // CHECK:   [B7]
 // CHECK:     1: [B9.6] && [B8.6]
 // CHECK:     2: bool a = A() && B();
+// CHECK:     3: (FullExprCleanup collected 2 MTEs: [B9.2], [B8.2])
 // CHECK:     T: (Temp Dtor) [B8.2]
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B6 B5
@@ -436,6 +446,8 @@ const C &bar3(bool coin) {
 // CHECK:   [B1]
 // CHECK:     1: ~A() (Temporary object destructor)
 // CHECK:     2: int b;
+// CHECK:     3: [B1.2] (Lifetime ends)
+// CHECK:     4: [B7.2] (Lifetime ends)
 // CHECK:     Preds (2): B2 B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B2]
@@ -445,6 +457,7 @@ const C &bar3(bool coin) {
 // CHECK:   [B3]
 // CHECK:     1: [B5.9] || [B4.6]
 // CHECK:     2: [B5.3]([B3.1])
+// CHECK:     3: (FullExprCleanup collected 2 MTEs: [B5.5], [B4.2])
 // CHECK:     T: (Temp Dtor) [B4.2]
 // CHECK:     Preds (2): B4 B5
 // CHECK:     Succs (2): B2 B1
@@ -479,6 +492,7 @@ const C &bar3(bool coin) {
 // CHECK:   [B7]
 // CHECK:     1: [B9.6] || [B8.6]
 // CHECK:     2: bool a = A() || B();
+// CHECK:     3: (FullExprCleanup collected 2 MTEs: [B9.2], [B8.2])
 // CHECK:     T: (Temp Dtor) [B8.2]
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B6 B5
@@ -510,6 +524,8 @@ const C &bar3(bool coin) {
 // CHECK:   [B1]
 // CHECK:     1: int b;
 // CHECK:     2: [B7.5].~A() (Implicit destructor)
+// CHECK:     3: [B7.5] (Lifetime ends)
+// CHECK:     4: [B1.1] (Lifetime ends)
 // CHECK:     Preds (2): B2 B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B2]
@@ -535,7 +551,8 @@ const C &bar3(bool coin) {
 // CHECK:     5: [B4.4].operator bool
 // CHECK:     6: [B4.4]
 // CHECK:     7: [B4.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     8: ~B() (Temporary object destructor)
+// CHECK:     8: (FullExprCleanup collected 1 MTE: [B4.3])
+// CHECK:     9: ~B() (Temporary object destructor)
 // CHECK:     T: if [B4.7]
 // CHECK:     Preds (2): B5 B6
 // CHECK:     Succs (2): B3 B2
@@ -558,6 +575,7 @@ const C &bar3(bool coin) {
 // WARNINGS:     4: [B7.3] (CXXConstructExpr, A)
 // ANALYZER:     4: [B7.3] (CXXConstructExpr, [B7.5], A)
 // CHECK:     5: A a = B() ? A() : A(B());
+// CHECK:     6: (FullExprCleanup collected 6 MTEs: [B7.2], [B10.2], [B8.3], [B9.13], [B9.8], [B9.2])
 // CHECK:     T: (Temp Dtor) [B9.2]
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B6 B5
@@ -671,7 +689,8 @@ const C &bar3(bool coin) {
 // CHECK:     4: [B3.3].operator bool
 // CHECK:     5: [B3.3]
 // CHECK:     6: [B3.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     7: ~C() (Temporary object destructor)
+// CHECK:     7: (FullExprCleanup collected 1 MTE: [B3.2])
+// CHECK:     8: ~C() (Temporary object destructor)
 // CHECK:     T: if [B3.6]
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (2): B2 B1
@@ -681,17 +700,20 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B4
 // CHECK:   [B1]
 // CHECK:     1: [B4.6].~C() (Implicit destructor)
+// CHECK:     2: [B4.6] (Lifetime ends)
 // CHECK:     Succs (1): B0
 // CHECK:   [B2]
 // CHECK:     1: 0
 // CHECK:     2: return [B2.1];
 // CHECK:     3: [B4.6].~C() (Implicit destructor)
+// CHECK:     4: [B4.6] (Lifetime ends)
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (1): B0
 // CHECK:   [B3]
 // CHECK:     1: 1
 // CHECK:     2: return [B3.1];
 // CHECK:     3: [B4.6].~C() (Implicit destructor)
+// CHECK:     4: [B4.6] (Lifetime ends)
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (1): B0
 // CHECK:   [B4]
@@ -703,12 +725,13 @@ const C &bar3(bool coin) {
 // WARNINGS:     5: [B4.4] (CXXConstructExpr, C)
 // ANALYZER:     5: [B4.4] (CXXConstructExpr, [B4.6], C)
 // CHECK:     6: C c = C();
-// CHECK:     7: ~C() (Temporary object destructor)
-// CHECK:     8: c
-// CHECK:     9: [B4.8].operator bool
-// CHECK:    10: [B4.8]
-// CHECK:    11: [B4.10] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: if [B4.11]
+// CHECK:     7: (FullExprCleanup collected 1 MTE: [B4.3])
+// CHECK:     8: ~C() (Temporary object destructor)
+// CHECK:     9: c
+// CHECK:    10: [B4.9].operator bool
+// CHECK:    11: [B4.9]
+// CHECK:    12: [B4.11] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: if [B4.12]
 // CHECK:     Preds (1): B5
 // CHECK:     Succs (2): B3 B2
 // CHECK:   [B0 (EXIT)]
@@ -732,51 +755,62 @@ const C &bar3(bool coin) {
 // CHECK:     3: [B3.2].operator bool
 // CHECK:     4: [B3.2]
 // CHECK:     5: [B3.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     6: (FullExprCleanup collected 1 MTE: [B3.1])
 // CHECK:     T: if [B3.5]
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (2): B2 B1
 // CHECK:   [B0 (EXIT)]
 // CHECK:     Preds (2): B1 B2
-// CHECK:   [B4 (ENTRY)]
-// CHECK:     Succs (1): B3
+// CHECK:   [B5 (ENTRY)]
+// CHECK:     Succs (1): B4
 // CHECK:   [B1]
-// CHECK:     1: 0
-// CHECK:     2: return [B1.1];
-// CHECK:     Preds (1): B3
+// CXX98:     1: [B4.5] (Lifetime ends)
+// CXX11:     1: [B4.4] (Lifetime ends)
 // CHECK:     Succs (1): B0
 // CHECK:   [B2]
-// CHECK:     1: 1
+// CHECK:     1: 0
 // CHECK:     2: return [B2.1];
-// CHECK:     Preds (1): B3
+// CXX98:     3: [B4.5] (Lifetime ends)
+// CXX11:     3: [B4.4] (Lifetime ends)
+// CHECK:     Preds (1): B4
 // CHECK:     Succs (1): B0
 // CHECK:   [B3]
-// CXX98-WARNINGS:     1: D() (CXXConstructExpr, D)
-// CXX98-ANALYZER:     1: D() (CXXConstructExpr, [B3.3], [B3.4], D)
-// CXX98:     2: [B3.1] (ImplicitCastExpr, NoOp, const D)
-// CXX98:     3: [B3.2]
-// CXX98-WARNINGS:     4: [B3.3] (CXXConstructExpr, D)
-// CXX98-ANALYZER:     4: [B3.3] (CXXConstructExpr, [B3.5], D)
-// CXX98:     5: D d = D();
-// CXX98:     6: d
-// CXX98:     7: [B3.6].operator bool
-// CXX98:     8: [B3.6]
-// CXX98:     9: [B3.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX98:     T: if [B3.9]
-// CXX11-WARNINGS:     1: D() (CXXConstructExpr, D)
-// CXX11-ANALYZER:     1: D() (CXXConstructExpr, [B3.2], [B3.3], D)
-// CXX11:     2: [B3.1]
-// CXX11-WARNINGS:     3: [B3.2] (CXXConstructExpr, D)
-// CXX11-ANALYZER:     3: [B3.2] (CXXConstructExpr, [B3.4], D)
-// CXX11:     4: D d = D();
-// CXX11:     5: d
-// CXX11:     6: [B3.5].operator bool
-// CXX11:     7: [B3.5]
-// CXX11:     8: [B3.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11:     T: if [B3.8]
+// CHECK:     1: 1
+// CHECK:     2: return [B3.1];
+// CXX98:     3: [B4.5] (Lifetime ends)
+// CXX11:     3: [B4.4] (Lifetime ends)
 // CHECK:     Preds (1): B4
-// CHECK:     Succs (2): B2 B1
+// CHECK:     Succs (1): B0
+// CHECK:   [B4]
+// CXX98-WARNINGS:     1: D() (CXXConstructExpr, D)
+// CXX98-ANALYZER:     1: D() (CXXConstructExpr, [B4.3], [B4.4], D)
+// CXX98:     2: [B4.1] (ImplicitCastExpr, NoOp, const D)
+// CXX98:     3: [B4.2]
+// CXX98-WARNINGS:     4: [B4.3] (CXXConstructExpr, D)
+// CXX98-ANALYZER:     4: [B4.3] (CXXConstructExpr, [B4.5], D)
+// CXX98:     5: D d = D();
+// CXX98:     6: (FullExprCleanup collected 1 MTE: [B4.2])
+// CXX98:     7: d
+// CXX98:     8: [B4.7].operator bool
+// CXX98:     9: [B4.7]
+// CXX98:    10: [B4.9] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX98:     T: if [B4.10]
+// CXX11-WARNINGS:     1: D() (CXXConstructExpr, D)
+// CXX11-ANALYZER:     1: D() (CXXConstructExpr, [B4.2], [B4.3], D)
+// CXX11:     2: [B4.1]
+// CXX11-WARNINGS:     3: [B4.2] (CXXConstructExpr, D)
+// CXX11-ANALYZER:     3: [B4.2] (CXXConstructExpr, [B4.4], D)
+// CXX11:     4: D d = D();
+// CXX11:     5: (FullExprCleanup collected 1 MTE: [B4.1])
+// CXX11:     6: d
+// CXX11:     7: [B4.6].operator bool
+// CXX11:     8: [B4.6]
+// CXX11:     9: [B4.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11:     T: if [B4.9]
+// CHECK:     Preds (1): B5
+// CHECK:     Succs (2): B3 B2
 // CHECK:   [B0 (EXIT)]
-// CHECK:     Preds (2): B1 B2
+// CHECK:     Preds (3): B1 B2 B3
 // CHECK:   [B14 (ENTRY)]
 // CHECK:     Succs (1): B13
 // CHECK:   [B1]
@@ -1103,9 +1137,12 @@ const C &bar3(bool coin) {
 // WARNINGS:     5: [B1.4] (CXXConstructExpr, A)
 // ANALYZER:     5: [B1.4] (CXXConstructExpr, [B1.6], A)
 // CHECK:     6: A a = A();
-// CHECK:     7: ~A() (Temporary object destructor)
-// CHECK:     8: int b;
-// CHECK:     9: [B1.6].~A() (Implicit destructor)
+// CHECK:     7: (FullExprCleanup collected 1 MTE: [B1.3])
+// CHECK:     8: ~A() (Temporary object destructor)
+// CHECK:     9: int b;
+// CHECK:    10: [B1.6].~A() (Implicit destructor)
+// CHECK:    11: [B1.6] (Lifetime ends)
+// CHECK:    12: [B1.9] (Lifetime ends)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1127,9 +1164,12 @@ const C &bar3(bool coin) {
 // CHECK:    10: [B1.9] (ImplicitCastExpr, NoOp, const A)
 // CHECK:    11: [B1.10]
 // CHECK:    12: [B1.7]([B1.11])
-// CHECK:    13: ~A() (Temporary object destructor)
-// CHECK:    14: int b;
-// CHECK:    15: [B1.5].~A() (Implicit destructor)
+// CHECK:    13: (FullExprCleanup collected 1 MTE: [B1.10])
+// CHECK:    14: ~A() (Temporary object destructor)
+// CHECK:    15: int b;
+// CHECK:    16: [B1.5].~A() (Implicit destructor)
+// CHECK:    17: [B1.5] (Lifetime ends)
+// CHECK:    18: [B1.15] (Lifetime ends)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1147,9 +1187,12 @@ const C &bar3(bool coin) {
 // WARNINGS:     7: [B1.6] (CXXConstructExpr, A)
 // ANALYZER:     7: [B1.6] (CXXConstructExpr, [B1.8], A)
 // CHECK:     8: A a = A::make();
-// CHECK:     9: ~A() (Temporary object destructor)
-// CHECK:    10: int b;
-// CHECK:    11: [B1.8].~A() (Implicit destructor)
+// CHECK:     9: (FullExprCleanup collected 1 MTE: [B1.5])
+// CHECK:    10: ~A() (Temporary object destructor)
+// CHECK:    11: int b;
+// CHECK:    12: [B1.8].~A() (Implicit destructor)
+// CHECK:    13: [B1.8] (Lifetime ends)
+// CHECK:    14: [B1.11] (Lifetime ends)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1175,9 +1218,12 @@ const C &bar3(bool coin) {
 // CHECK:    14: [B1.13] (ImplicitCastExpr, NoOp, const A)
 // CHECK:    15: [B1.14]
 // CHECK:    16: [B1.9]([B1.15])
-// CHECK:    17: ~A() (Temporary object destructor)
-// CHECK:    18: int b;
-// CHECK:    19: [B1.7].~A() (Implicit destructor)
+// CHECK:    17: (FullExprCleanup collected 1 MTE: [B1.14])
+// CHECK:    18: ~A() (Temporary object destructor)
+// CHECK:    19: int b;
+// CHECK:    20: [B1.7].~A() (Implicit destructor)
+// CHECK:    21: [B1.7] (Lifetime ends)
+// CHECK:    22: [B1.19] (Lifetime ends)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1195,8 +1241,11 @@ const C &bar3(bool coin) {
 // CHECK:     7: [B1.6] (ImplicitCastExpr, UserDefinedConversion, int)
 // CHECK:     8: a
 // CHECK:     9: [B1.8] = [B1.7]
-// CHECK:    10: ~A() (Temporary object destructor)
-// CHECK:    11: int b;
+// CHECK:    10: (FullExprCleanup collected 1 MTE: [B1.3])
+// CHECK:    11: ~A() (Temporary object destructor)
+// CHECK:    12: int b;
+// CHECK:    13: [B1.12] (Lifetime ends)
+// CHECK:    14: [B1.1] (Lifetime ends)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1222,9 +1271,10 @@ const C &bar3(bool coin) {
 // CHECK:    14: int([B1.13]) (CXXFunctionalCastExpr, NoOp, int)
 // CHECK:    15: [B1.7] + [B1.14]
 // CHECK:    16: a([B1.15]) (Member initializer)
-// CHECK:    17: ~B() (Temporary object destructor)
-// CHECK:    18: ~A() (Temporary object destructor)
-// CHECK:    19: b(/*implicit*/(int)0) (Member initializer)
+// CHECK:    17: (FullExprCleanup collected 2 MTEs: [B1.2], [B1.9])
+// CHECK:    18: ~B() (Temporary object destructor)
+// CHECK:    19: ~A() (Temporary object destructor)
+// CHECK:    20: b(/*implicit*/(int)0) (Member initializer)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1233,6 +1283,8 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B2
 // CHECK:   [B1]
 // CHECK:     1: int b;
+// CHECK:     2: [B1.1] (Lifetime ends)
+// CHECK:     3: [B2.1] (Lifetime ends)
 // CHECK:     Preds (1): B2(Unreachable)
 // CHECK:     Succs (1): B0
 // CHECK:   [B2 (NORETURN)]
@@ -1243,7 +1295,8 @@ const C &bar3(bool coin) {
 // CHECK:     3: [B2.2] (BindTemporary)
 // CHECK:     [[MEMBER:[45]]]: [B2.{{[34]}}].f
 // CHECK:     {{[56]}}: [B2.[[MEMBER]]]()
-// CHECK:     {{[67]}}: ~NoReturn() (Temporary object destructor)
+// CHECK:     {{[78]}}: (FullExprCleanup collected 1 MTE: [B2.3])
+// CHECK:     {{[89]}}: ~NoReturn() (Temporary object destructor)
 // CHECK:     Preds (1): B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]

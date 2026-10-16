@@ -133,6 +133,7 @@ public:
 // WARNINGS-NEXT:    11:  (CXXConstructExpr, A)
 // ANALYZER-NEXT:    11:  (CXXConstructExpr, [B1.12], A)
 // CHECK-NEXT:    12: A a;
+// CHECK-NEXT:    13: [B1.12] (Lifetime ends)
 // CHECK-NEXT:     Preds (2): B2 B3
 // CHECK-NEXT:     Succs (1): B0
 // CHECK:        [B2]
@@ -169,6 +170,7 @@ public:
 // CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:     6: z([B1.5]) (Member initializer)
 // CHECK-NEXT:     7: int v;
+// CHECK-NEXT:     8: [B1.7] (Lifetime ends)
 // CHECK-NEXT:     Preds (2): B2 B3
 // CHECK-NEXT:     Succs (1): B0
 // CHECK:        [B2]
