@@ -105,25 +105,25 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    mtc1 $7, $f2 # <MCInst #[[#MCINST1:]] MTC1
 ; MM32R3-NEXT:    # <MCOperand Reg:F2>
-; MM32R3-NEXT:    # <MCOperand Reg:A3>>
+; MM32R3-NEXT:    # <MCOperand Reg:R7>>
 ; MM32R3-NEXT:    mthc1 $6, $f2 # <MCInst #[[#MCINST2:]] MTHC1_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D1>
 ; MM32R3-NEXT:    # <MCOperand Reg:D1>
-; MM32R3-NEXT:    # <MCOperand Reg:A2>>
+; MM32R3-NEXT:    # <MCOperand Reg:R6>>
 ; MM32R3-NEXT:    andi16 $2, $4, 1 # <MCInst #[[#MCINST3:]] ANDI16_MM
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
-; MM32R3-NEXT:    # <MCOperand Reg:A0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
+; MM32R3-NEXT:    # <MCOperand Reg:R4>
 ; MM32R3-NEXT:    # <MCOperand Imm:1>>
 ; MM32R3-NEXT:    ldc1 $f0, 16($sp) # <MCInst #[[#MCINST4:]] LDC1_MM_D32
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
-; MM32R3-NEXT:    # <MCOperand Reg:SP>
+; MM32R3-NEXT:    # <MCOperand Reg:R29>
 ; MM32R3-NEXT:    # <MCOperand Imm:16>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movn.d $f0, $f2, $2 # <MCInst #[[#MCINST6:]] MOVN_I_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D1>
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_i1_double:
@@ -222,19 +222,19 @@ define double @tst_select_i1_double_reordered(double %x, double %y,
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>>
 ; MM32R3-NEXT:    lw $2, 16($sp) # <MCInst #[[#MCINST8:]] LWSP_MM
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
-; MM32R3-NEXT:    # <MCOperand Reg:SP>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
+; MM32R3-NEXT:    # <MCOperand Reg:R29>
 ; MM32R3-NEXT:    # <MCOperand Imm:16>>
 ; MM32R3-NEXT:    andi16 $2, $2, 1 # <MCInst #[[#MCINST3]] ANDI16_MM
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Imm:1>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movn.d $f0, $f12, $2 # <MCInst #[[#MCINST6]] MOVN_I_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_i1_double_reordered:
@@ -330,7 +330,7 @@ define double @tst_select_fcmp_olt_double(double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>
 ; MM32R3-NEXT:    # <MCOperand Imm:4>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST10:]] MOVT_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
@@ -428,7 +428,7 @@ define double @tst_select_fcmp_ole_double(double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>
 ; MM32R3-NEXT:    # <MCOperand Imm:6>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST10]] MOVT_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
@@ -526,7 +526,7 @@ define double @tst_select_fcmp_ogt_double(double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>
 ; MM32R3-NEXT:    # <MCOperand Imm:23>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST11:]] MOVF_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
@@ -624,7 +624,7 @@ define double @tst_select_fcmp_oge_double(double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>
 ; MM32R3-NEXT:    # <MCOperand Imm:21>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST11]] MOVF_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
@@ -722,7 +722,7 @@ define double @tst_select_fcmp_oeq_double(double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>
 ; MM32R3-NEXT:    # <MCOperand Imm:2>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movt.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST10]] MOVT_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
@@ -820,7 +820,7 @@ define double @tst_select_fcmp_one_double(double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>
 ; MM32R3-NEXT:    # <MCOperand Imm:19>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
-; MM32R3-NEXT:    # <MCOperand Reg:RA>>
+; MM32R3-NEXT:    # <MCOperand Reg:R31>>
 ; MM32R3-NEXT:    movf.d $f0, $f12, $fcc0 # <MCInst #[[#MCINST11]] MOVF_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>

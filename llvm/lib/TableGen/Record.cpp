@@ -3165,11 +3165,11 @@ LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";
-  for (const auto &[_, C] : RK.getClasses())
+  for (const Record *C : RK.getClasses())
     OS << "class " << *C;
 
   OS << "------------- Defs -----------------\n";
-  for (const auto &[_, D] : RK.getDefs())
+  for (const Record *D : RK.getDefs())
     OS << "def " << *D;
   return OS;
 }
@@ -3190,10 +3190,35 @@ RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   return Iter->second;
 }
 
+// Return the records in Map sorted by name. Records are never removed, so
+// Sorted is out of date if its size differs.
+static ArrayRef<const Record *>
+getSortedRecords(const StringMap<std::unique_ptr<Record>> &Map,
+                 std::vector<const Record *> &Sorted) {
+  if (Sorted.size() != Map.size()) {
+    Sorted.clear();
+    Sorted.reserve(Map.size());
+    for (const auto &Entry : Map)
+      Sorted.push_back(Entry.second.get());
+    llvm::sort(Sorted, [](const Record *LHS, const Record *RHS) {
+      return LHS->getName() < RHS->getName();
+    });
+  }
+  return Sorted;
+}
+
+ArrayRef<const Record *> RecordKeeper::getClasses() const {
+  return getSortedRecords(Classes, SortedClasses);
+}
+
+ArrayRef<const Record *> RecordKeeper::getDefs() const {
+  return getSortedRecords(Defs, SortedDefs);
+}
+
 std::vector<const Record *>
 RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
   SmallVector<const Record *, 2> ClassRecs;
-  std::vector<const Record *> Defs;
+  std::vector<const Record *> Derived;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (StringRef ClassName : ClassNames) {
@@ -3203,14 +3228,15 @@ RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
     ClassRecs.push_back(Class);
   }
 
-  for (const auto &OneDef : getDefs()) {
-    if (all_of(ClassRecs, [&OneDef](const Record *Class) {
-          return OneDef.second->isSubClassOf(Class);
-        }))
-      Defs.push_back(OneDef.second.get());
+  // The iteration order of Defs doesn't matter since the result is sorted.
+  for (const auto &OneDef : Defs) {
+    const Record *Def = OneDef.second.get();
+    if (all_of(ClassRecs,
+               [Def](const Record *Class) { return Def->isSubClassOf(Class); }))
+      Derived.push_back(Def);
   }
-  llvm::sort(Defs, LessRecord());
-  return Defs;
+  llvm::sort(Derived, LessRecord());
+  return Derived;
 }
 
 ArrayRef<const Record *>
