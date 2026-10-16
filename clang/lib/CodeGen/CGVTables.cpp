@@ -226,11 +226,14 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
   if (CGM.ReturnTypeUsesSRet(FnInfo))
     ++AI;
 
+  const CXXRecordDecl *ThisValueClass =
+      Thunk.ThisType->getPointeeCXXRecordDecl();
+
   // Find the first store of "this", which will be to the alloca associated
   // with "this".
   Address ThisPtr = makeNaturalAddressForPointer(
-      &*AI, MD->getFunctionObjectParameterType(),
-      CGM.getClassPointerAlignment(MD->getParent()));
+      &*AI, Thunk.ThisType->getPointeeType(),
+      CGM.getClassPointerAlignment(ThisValueClass));
   llvm::BasicBlock *EntryBB = &Fn->front();
   llvm::BasicBlock::iterator ThisStore =
       llvm::find_if(*EntryBB, [&](llvm::Instruction &I) {
@@ -241,7 +244,6 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
   // Adjust "this", if necessary.
   Builder.SetInsertPoint(&*ThisStore);
 
-  const CXXRecordDecl *ThisValueClass = Thunk.ThisType->getPointeeCXXRecordDecl();
   llvm::Value *AdjustedThisPtr = CGM.getCXXABI().performThisAdjustment(
       *this, ThisPtr, ThisValueClass, Thunk);
   AdjustedThisPtr = Builder.CreateBitCast(AdjustedThisPtr,
@@ -332,8 +334,10 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
   // Adjust the 'this' pointer if necessary
   const CXXRecordDecl *ThisValueClass =
       MD->getThisType()->getPointeeCXXRecordDecl();
-  if (Thunk)
+  if (Thunk) {
     ThisValueClass = Thunk->ThisType->getPointeeCXXRecordDecl();
+    CXXThisAlignment = CGM.getClassPointerAlignment(ThisValueClass);
+  }
 
   llvm::Value *AdjustedThisPtr =
       Thunk ? CGM.getCXXABI().performThisAdjustment(*this, LoadCXXThisAddress(),
