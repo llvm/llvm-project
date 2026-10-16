@@ -1,0 +1,95 @@
+## Test section-relative address syntax for XCOFF.
+## The syntax (SECTION_TYPE)(+offset) represents the offset from section base.
+## Only TEXT and DATA section types are supported.
+
+## Create XCOFF object with TEXT section at address 0x100 and DATA at 0x200.
+# RUN: yaml2obj %s --docnum=1 -o %t.xcoff
+
+## Symbolize function using TEXT section-relative offset.
+## .foo is at 0x100 (TEXT base) + 0x0 offset.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x0)' | FileCheck %s --check-prefix=TEXT-FOO
+
+# TEXT-FOO: .foo
+# TEXT-FOO-NEXT: ??:0:0
+
+## Symbolize function at offset within TEXT section.
+## .bar is at 0x100 (TEXT base) + 0x4 offset = 0x104.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x4)' | FileCheck %s --check-prefix=TEXT-BAR
+
+# TEXT-BAR: .bar
+# TEXT-BAR-NEXT: ??:0:0
+
+## Read-only constant (XMC_RO) using TEXT section-relative offset.
+## my_const is at 0x100 (TEXT base) + 0x8 offset = 0x108.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x8)' | FileCheck %s --check-prefix=TEXT-CONST
+
+## TODO(https://github.com/llvm/llvm-project/issues/194547): XMC_RO should be
+## classified as ST_Data; expect my_const once fixed.
+# TEXT-CONST: ??
+
+## Symbolize global variable using DATA section-relative offset.
+## global_var is at 0x200 (DATA base) + 0x4 offset = 0x204.
+# RUN: llvm-symbolizer --obj=%t.xcoff 'DATA (DATA)(+0x4)' | FileCheck %s --check-prefix=DATA-VAR
+
+# DATA-VAR: global_var
+
+## Verify decimal offset works.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+4)' | FileCheck %s --check-prefix=TEXT-BAR
+
+## XCOFF object with TEXT section at 0x100 and DATA section at 0x200.
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name:            .text
+    Address:         0x100
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "4E8000204E8000200000002A"
+  - Name:            .data
+    Address:         0x200
+    Flags:           [ STYP_DATA ]
+    SectionData:     "000000000000002A"
+Symbols:
+  - Name:            .foo
+    Value:           0x100
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
+  ## .bar csect (XTY_SD): second function in its own csect.
+  - Name:            .bar
+    Value:           0x104
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
+  ## my_const csect (XTY_SD, XMC_RO): read-only constant in TEXT section.
+  - Name:            my_const
+    Value:           0x108
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_RO
+        SectionOrLength:      4
+  ## global_var csect at DATA+0x4 (non-zero offset to show DATA offsets work).
+  - Name:            global_var
+    Value:           0x204
+    Section:         .data
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_RW
+        SectionOrLength:      4
