@@ -220,6 +220,10 @@ public:
 } // namespace gpu
 } // namespace mlir
 
+namespace mlir::gpu {
+#include "mlir/Dialect/GPU/IR/GPUTypeConstraints.h.inc"
+} // namespace mlir::gpu
+
 #include "mlir/Dialect/GPU/IR/GPUOpInterfaces.h.inc"
 
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
