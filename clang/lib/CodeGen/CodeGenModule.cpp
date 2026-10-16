@@ -4246,28 +4246,39 @@ void CodeGenModule::EmitDeferred() {
       }
     }
 
+    // Check to see if we've already emitted this. This is necessary for a
+    // couple of reasons: first, decls can end up in the deferred-decls queue
+    // multiple times, and second, decls can end up with definitions in unusual
+    // ways (e.g. by an extern inline function acquiring a strong function
+    // redefinition). Just ignore these cases. Do this before requesting a
+    // correctly typed value for the definition, since that operation may
+    // replace an existing global whose LLVM type differs.
+    StringRef MangledName = getMangledName(D);
+    llvm::GlobalValue *GV = GetGlobalValue(MangledName);
+    if (GV && !GV->isDeclaration()) {
+      GlobalDecl ExistingGD;
+      if (lookupRepresentativeDecl(MangledName, ExistingGD) &&
+          D.getCanonicalDecl().getDecl() ==
+              ExistingGD.getCanonicalDecl().getDecl())
+        continue;
+    }
+
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
     // different type.
-    llvm::GlobalValue *GV = dyn_cast<llvm::GlobalValue>(
-        GetAddrOfGlobal(D, ForDefinition));
+    GV = dyn_cast<llvm::GlobalValue>(GetAddrOfGlobal(D, ForDefinition));
 
     // In case of different address spaces, we may still get a cast, even with
     // IsForDefinition equal to true. Query mangled names table to get
     // GlobalValue.
     if (!GV)
-      GV = GetGlobalValue(getMangledName(D));
+      GV = GetGlobalValue(MangledName);
 
     // Make sure GetGlobalValue returned non-null.
     assert(GV);
 
-    // Check to see if we've already emitted this.  This is necessary
-    // for a couple of reasons: first, decls can end up in the
-    // deferred-decls queue multiple times, and second, decls can end
-    // up with definitions in unusual ways (e.g. by an extern inline
-    // function acquiring a strong function redefinition).  Just
-    // ignore these cases.
+    // GetAddrOfGlobal may itself cause the declaration to be emitted.
     if (!GV->isDeclaration())
       continue;
 
@@ -4763,14 +4774,6 @@ ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {
   return ConstantAddress(Aliasee, DeclTy, Alignment);
 }
 
-template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
-  if (!D)
-    return false;
-  if (auto *A = D->getAttr<AttrT>())
-    return A->isImplicit();
-  return D->isImplicit();
-}
-
 static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
                                     const ValueDecl *Global) {
   const LangOptions &LangOpts = CGM.getLangOpts();
@@ -4803,19 +4806,6 @@ static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
   return false;
 }
 
-bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
-  assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
-  // We need to emit host-side 'shadows' for all global
-  // device-side variables because the CUDA runtime needs their
-  // size and host-side address in order to provide access to
-  // their device-side incarnations.
-  return !LangOpts.CUDAIsDevice || Global->hasAttr<CUDADeviceAttr>() ||
-         Global->hasAttr<CUDAConstantAttr>() ||
-         Global->hasAttr<CUDASharedAttr>() ||
-         Global->getType()->isCUDADeviceBuiltinSurfaceType() ||
-         Global->getType()->isCUDADeviceBuiltinTextureType();
-}
-
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
@@ -4840,31 +4830,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     return emitCPUDispatchDefinition(GD);
 
   // If this is CUDA, be selective about which declarations we emit.
-  // Non-constexpr non-lambda implicit host device functions are not emitted
-  // unless they are used on device side.
-  if (LangOpts.CUDA) {
-    assert((isa<FunctionDecl>(Global) || isa<VarDecl>(Global)) &&
-           "Expected Variable or Function");
-    if (const auto *VD = dyn_cast<VarDecl>(Global)) {
-      if (!shouldEmitCUDAGlobalVar(VD))
-        return;
-    } else if (LangOpts.CUDAIsDevice) {
-      const auto *FD = dyn_cast<FunctionDecl>(Global);
-      if ((!Global->hasAttr<CUDADeviceAttr>() ||
-           (LangOpts.OffloadImplicitHostDeviceTemplates &&
-            hasImplicitAttr<CUDAHostAttr>(FD) &&
-            hasImplicitAttr<CUDADeviceAttr>(FD) && !FD->isConstexpr() &&
-            !isLambdaCallOperator(FD) &&
-            !getContext().CUDAImplicitHostDeviceFunUsedByDevice.count(FD))) &&
-          !Global->hasAttr<CUDAGlobalAttr>() &&
-          !(LangOpts.HIPStdPar && isa<FunctionDecl>(Global) &&
-            !Global->hasAttr<CUDAHostAttr>()))
-        return;
-      // Device-only functions are the only things we skip.
-    } else if (!Global->hasAttr<CUDAHostAttr>() &&
-               Global->hasAttr<CUDADeviceAttr>())
-      return;
-  }
+  if (LangOpts.CUDA && !getContext().shouldEmitCUDADecl(Global))
+    return;
 
   if (LangOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
@@ -7056,7 +7023,7 @@ static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
 void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   auto DK = VD->isThisDeclarationADefinition();
   if ((DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>()) ||
-      (LangOpts.CUDA && !shouldEmitCUDAGlobalVar(VD)))
+      (LangOpts.CUDA && !getContext().shouldEmitCUDADecl(VD)))
     return;
 
   TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();
