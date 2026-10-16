@@ -2863,6 +2863,7 @@ add_header_library(
     .cosf_double_eval
     .cosf_float_eval
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
 )
 
@@ -5663,6 +5664,7 @@ add_header_library(
     .sinf_double_eval
     .sinf_float_eval
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
 )
 
