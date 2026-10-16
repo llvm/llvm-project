@@ -36,6 +36,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <optional>
 
 #define DEBUG_TYPE "amdgpu-codegenprepare"
 
@@ -231,7 +232,8 @@ public:
 class AMDGPUCodeGenPrepare : public FunctionPass {
 public:
   static char ID;
-  explicit AMDGPUCodeGenPrepare(bool ExpandDiv64InIR = false)
+  explicit AMDGPUCodeGenPrepare(
+      std::optional<bool> ExpandDiv64InIR = std::nullopt)
       : FunctionPass(ID), ExpandDiv64InIR(ExpandDiv64InIR) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
@@ -239,15 +241,16 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
 
-    // FIXME: Division expansion needs to preserve the dominator tree.
-    if (!ExpandDiv64InIR)
+    // Target options can enable division expansion for a default-constructed
+    // pass. Only promise CFG preservation when expansion is known to be off.
+    if (ExpandDiv64InIR == false)
       AU.setPreservesCFG();
   }
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
 
 private:
-  bool ExpandDiv64InIR;
+  std::optional<bool> ExpandDiv64InIR;
 };
 
 } // end anonymous namespace
@@ -2306,7 +2309,10 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA, ExpandDiv64InIR)
+  return AMDGPUCodeGenPrepareImpl(
+             F, TM, TTI, TLI, AC, DT, UA,
+             ExpandDiv64InIR.value_or(
+                 TM.getCLOpts().codegenprepare_expand_div64))
       .run();
 }
 
