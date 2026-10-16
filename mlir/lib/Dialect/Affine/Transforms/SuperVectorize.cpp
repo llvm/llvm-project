@@ -1370,12 +1370,14 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
   auto loopToVecDimIt = strategy.loopToVectorDim.find(forOp);
   bool isLoopVecDim = loopToVecDimIt != strategy.loopToVectorDim.end();
 
-  // TODO: Vectorization of reduction loops is not supported for non-unit steps.
-  if (isLoopVecDim && forOp.getNumIterOperands() > 0 && forOp.getStep() != 1) {
-    LLVM_DEBUG(
-        dbgs()
-        << "\n[early-vect]+++++ unsupported step size for reduction loop: "
-        << forOp.getStep() << "\n");
+  // The body is vectorized with contiguous transfers while the vector loop
+  // step is the original step times the vectorization factor, which is only
+  // consistent for a unit step.
+  // TODO: Support non-unit steps with strided accesses.
+  if (isLoopVecDim && forOp.getStep() != 1) {
+    LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ unsupported step size for "
+                         "vectorized loop: "
+                      << forOp.getStep() << "\n");
     return nullptr;
   }
 
