@@ -286,6 +286,11 @@ features cannot lower the translation-unit ABI level;
 
 ### New Compiler Flags
 
+- Added `-finline-stringops[=memset]` and `-fno-inline-stringops` to prevent
+  compiler-generated out-of-line `memset` calls for applicable memory operations
+  in opted-in code, expanding eligible constant sizes to `llvm.memset.inline` and
+  large or runtime-variable sizes into loops.
+
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,
   such as an umbrella directory or the directory of an umbrella header, after it

@@ -2737,6 +2737,36 @@ adjustNullPointerValidAttr(Function &Caller, const Function &Callee) {
   }
 }
 
+/// If the inlined function has inline-stringops attribute, ensure the caller
+/// inherits it so string operation guarantees survive inlining.
+static void adjustInlineStringops(Function &Caller, const Function &Callee) {
+  Attribute CalleeAttr = Callee.getFnAttribute("inline-stringops");
+  if (!CalleeAttr.isValid())
+    return;
+
+  Attribute CallerAttr = Caller.getFnAttribute("inline-stringops");
+  if (!CallerAttr.isValid()) {
+    Caller.addFnAttr(CalleeAttr);
+    return;
+  }
+
+  StringRef CallerVal = CallerAttr.getValueAsString();
+  StringRef CalleeVal = CalleeAttr.getValueAsString();
+  if (CallerVal == CalleeVal)
+    return;
+
+  SmallVector<StringRef, 4> Ops;
+  CallerVal.split(Ops, ',', -1, false);
+  SmallVector<StringRef, 4> CalleeOps;
+  CalleeVal.split(CalleeOps, ',', -1, false);
+  for (StringRef Op : CalleeOps) {
+    if (!llvm::is_contained(Ops, Op))
+      Ops.push_back(Op);
+  }
+  std::string Merged = llvm::join(Ops, ",");
+  Caller.addFnAttr("inline-stringops", Merged);
+}
+
 struct EnumAttr {
   static bool isSet(const Function &Fn,
                     Attribute::AttrKind Kind) {
