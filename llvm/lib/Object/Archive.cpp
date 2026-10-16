@@ -1479,9 +1479,10 @@ struct GlobalSymtabInfo {
   StringRef StringTable;
 };
 
-static void
+static Error
 appendGlobalSymbolTableInfo(SmallVector<GlobalSymtabInfo> &SymtabInfos,
-                            const char *GlobalSymtabLoc, uint64_t Size) {
+                            const char *GlobalSymtabLoc, uint64_t Size,
+                            const char *BitMessage) {
   // In a big archive, a global symbol table contains the following information:
   // - The number of symbols.
   // - The array of offsets into the archive file. The length is eight
@@ -1489,15 +1490,30 @@ appendGlobalSymbolTableInfo(SmallVector<GlobalSymtabInfo> &SymtabInfos,
   // - The name-string table. The size is:
   //   Size-(8*(the number of symbols + 1)).
 
+  if (Size < sizeof(uint64_t))
+    return malformedError(Twine(BitMessage) +
+                          " global symbol table is too small to read the "
+                          "symbol count, size is " +
+                          Twine(Size));
+
   StringRef SymbolTable =
       StringRef(GlobalSymtabLoc + sizeof(BigArMemHdrType), Size);
-  uint64_t SymNum = read64be(GlobalSymtabLoc + sizeof(BigArMemHdrType));
-  StringRef SymbolOffsetTable = StringRef(SymbolTable.data() + 8, 8 * SymNum);
-  unsigned SymOffsetsSize = 8 * (SymNum + 1);
-  uint64_t SymbolTableStringSize = Size - SymOffsetsSize;
-  StringRef StringTable =
-      StringRef(SymbolTable.data() + SymOffsetsSize, SymbolTableStringSize);
+  uint64_t SymNum = read64be(SymbolTable.data());
+
+  // SymNum is read from the archive. Bound it by dividing rather than by
+  // forming 8 * (SymNum + 1), which wraps for a large symbol count and would
+  // then leave the offset and string tables pointing outside SymbolTable.
+  if (SymNum > Size / sizeof(uint64_t) - 1)
+    return malformedError(Twine(BitMessage) + " global symbol table has " +
+                          Twine(SymNum) + " symbols, more than its size of " +
+                          Twine(Size) + " can hold");
+
+  uint64_t SymOffsetsSize = (SymNum + 1) * sizeof(uint64_t);
+  StringRef SymbolOffsetTable =
+      SymbolTable.substr(sizeof(uint64_t), SymNum * sizeof(uint64_t));
+  StringRef StringTable = SymbolTable.substr(SymOffsetsSize);
   SymtabInfos.push_back({SymNum, SymbolTable, SymbolOffsetTable, StringTable});
+  return Error::success();
 }
 
 BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
@@ -1572,10 +1588,18 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
 
   SmallVector<GlobalSymtabInfo> SymtabInfos;
 
-  if (GlobSymtab32Offset)
-    appendGlobalSymbolTableInfo(SymtabInfos, GlobSymtab32Loc, GlobSymtab32Size);
-  if (GlobSymtab64Offset)
-    appendGlobalSymbolTableInfo(SymtabInfos, GlobSymtab64Loc, GlobSymtab64Size);
+  if (GlobSymtab32Offset) {
+    Err = appendGlobalSymbolTableInfo(SymtabInfos, GlobSymtab32Loc,
+                                      GlobSymtab32Size, "32-bit");
+    if (Err)
+      return;
+  }
+  if (GlobSymtab64Offset) {
+    Err = appendGlobalSymbolTableInfo(SymtabInfos, GlobSymtab64Loc,
+                                      GlobSymtab64Size, "64-bit");
+    if (Err)
+      return;
+  }
 
   if (SymtabInfos.size() == 1) {
     SymbolTable = SymtabInfos[0].SymbolTable;
@@ -1594,9 +1618,9 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
     Out << SymtabInfos[1].StringTable;
     SymbolTable = MergedGlobalSymtabBuf;
     // The size of the symbol offset to the member file is 8 bytes.
-    StringTable = StringRef(SymbolTable.begin() + (SymNum + 1) * 8,
-                            SymtabInfos[0].StringTable.size() +
-                                SymtabInfos[1].StringTable.size());
+    StringTable = SymbolTable.substr((SymNum + 1) * sizeof(uint64_t),
+                                     SymtabInfos[0].StringTable.size() +
+                                         SymtabInfos[1].StringTable.size());
   }
 
   child_iterator I = child_begin(Err, false);
