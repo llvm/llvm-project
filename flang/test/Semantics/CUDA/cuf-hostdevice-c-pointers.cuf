@@ -30,7 +30,7 @@ contains
     integer, value :: i
   end subroutine
   attributes(host,device) subroutine pass_expression()
-    !ERROR: The HOST procedure 'host_value' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
+    !ERROR: 'host_value', a procedure with the HOST attribute, can't be called from host,device code.
     call consume_value(host_value())
   end subroutine
   attributes(host,device) subroutine both(p, q, f, g, d, e, result)
@@ -70,7 +70,7 @@ contains
   end function
   attributes(host,device) subroutine caller(result)
     logical :: result
-    !ERROR: The HOST procedure 'c_associated_c_ptr' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
+    !ERROR: 'c_associated_c_ptr', a procedure with the HOST attribute, can't be called from host,device code.
     result = c_associated_c_ptr()
   end subroutine
 end module

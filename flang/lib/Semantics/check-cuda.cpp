@@ -202,12 +202,10 @@ private:
         calleeAttrs == common::CUDASubprogramAttrs::HostDevice
             ? "HOST,DEVICE"
             : parser::ToUpperCaseLetters(common::EnumToString(calleeAttrs))};
-    // clang-format off
     const char *codeContext{callContext_ == CallContext::HostDevice
-            ? "HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module"
-            : inHostCode ? "HOST code"
-                         : "DEVICE code"};
-    // clang-format on
+            ? "host,device"
+            : inHostCode ? "host"
+                         : "device"};
     if (auto generic{proc.genericName()}) {
       const Symbol *specific{proc.GetInterfaceSymbol()};
       const std::string specificName{specific
@@ -215,13 +213,13 @@ private:
               : proc.GetName()};
       if (*generic != specificName) {
         return parser::MessageFormattedText(
-            "The %s procedure '%s' (specific procedure '%s') may not be called in %s"_err_en_US,
-            procedureType, *generic, specificName, codeContext);
+            "'%s' (specific procedure '%s'), a procedure with the %s attribute, can't be called from %s code."_err_en_US,
+            *generic, specificName, procedureType, codeContext);
       }
     }
     return parser::MessageFormattedText(
-        "The %s procedure '%s' may not be called in %s"_err_en_US,
-        procedureType, proc.GetName(), codeContext);
+        "'%s', a procedure with the %s attribute, can't be called from %s code."_err_en_US,
+        proc.GetName(), procedureType, codeContext);
   }
 };
 
