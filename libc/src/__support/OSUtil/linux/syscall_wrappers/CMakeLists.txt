@@ -1325,6 +1325,7 @@ add_header_library(
   HDRS
     ppoll.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.types.nfds_t
     libc.hdr.types.sigset_t
