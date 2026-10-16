@@ -21,7 +21,6 @@ using LlvmLibcIfNameToIndexTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcIfNameToIndexTest, Loopback) {
   unsigned int idx = LIBC_NAMESPACE::if_nametoindex("lo");
   ASSERT_GT(idx, 0u);
-  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_F(LlvmLibcIfNameToIndexTest, InvalidName) {

@@ -23,14 +23,13 @@ void FEnvSafeTest::PreserveFEnv::check() {
   test.expect_fenv_eq(before, after);
 }
 
-void FEnvSafeTest::TearDown() {
+void FEnvSafeTest::OnTearDown() {
   if (!should_be_unchanged) {
     restore_fenv();
   }
   // TODO (PR 135320): Remove this override once all FEnvSafeTest instances are
   // updated to validate or ignore errno.
   libc_errno = 0;
-  ErrnoCheckingTest::TearDown();
 }
 
 void FEnvSafeTest::get_fenv(fenv_t &fenv) {

@@ -203,10 +203,8 @@ public:
     ASSERT_ERRNO_SUCCESS();
   }
 
-  void TearDown() override {
+  void OnTearDown() override {
     ASSERT_THAT(LIBC_NAMESPACE::chdir(start_dir), Succeeds());
-
-    ErrnoCheckingTest::TearDown();
   }
 
   char *realpath_buffered(const char *path) {
