@@ -752,6 +752,8 @@ bool matchDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
   }
 
+  // Find shuffle uses that deinterleave the result. We are generally looking
+  // for Factor deinterleaves of each value, but some might be missing.
   unsigned Factor = 0;
   for (MachineInstr &Use : MRI.use_nodbg_instructions(Load.getDstReg())) {
     auto *Shuf = dyn_cast<GShuffleVector>(&Use);
@@ -810,7 +812,8 @@ void applyDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineMemOperand *MMO = *MI.memoperands_begin();
   MachineFunction &MF = *MI.getParent()->getParent();
 
-  // Generate a LD2/3/4 per vector part
+  // Generate a LD2/3/4 per vector part into Srcs registers. Blank/noreg
+  // elements will be filled with a valid register.
   auto generateLoad = [&](SmallVector<Register> &Srcs, LLT Ty,
                           unsigned Offset) {
     auto PtrOffset = Pointer;
@@ -833,7 +836,7 @@ void applyDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
     if (Src.isValid())
       MRI.getVRegDef(Src)->eraseFromParent();
 
-  // Generate loads
+  // Generate loads split into 128 / 64bit chunks concat together.
   LLT Ty = MRI.getType(*find_if(Srcs, [](Register R) { return R.isValid(); }));
   LLT MainTy =
       LLT::fixed_vector(128 / Ty.getScalarSizeInBits(), Ty.getScalarType());
