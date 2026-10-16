@@ -133,11 +133,11 @@ public:
       if (!calleeSymbolRef)
         return WalkResult::advance();
       FunctionOpInterface callee =
-          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(
+          symbolTables.lookupNearestSymbolFrom<FunctionOpInterface>(
               callOp, calleeSymbolRef);
       if (!callee)
-        callee = outerSymTab.lookup<FunctionOpInterface>(
-            calleeSymbolRef.getLeafReference());
+        callee = symbolTables.lookupSymbolIn<FunctionOpInterface>(
+            mod, calleeSymbolRef.getLeafReference());
       if (!callee || !(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
         return WalkResult::advance();
 
