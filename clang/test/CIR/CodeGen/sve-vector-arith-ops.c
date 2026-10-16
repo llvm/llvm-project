@@ -280,6 +280,374 @@ svfloat64_t add_inplace_f64(svfloat64_t a, svfloat64_t b) {
   return a += b;
 }
 
+// CIR-LABEL: cir.func {{.*}} @add_scalar_i8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_scalar_i8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_scalar_i8(svint8_t a, int8_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_i16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s16i, !cir.vector<[8] x !s16i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[8] x !s16i>
+
+// LLVM-LABEL: @add_scalar_i16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[ADD]]
+//
+svint16_t add_scalar_i16(svint16_t a, int16_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_i32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s32i, !cir.vector<[4] x !s32i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[4] x !s32i>
+
+// LLVM-LABEL: @add_scalar_i32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[ADD]]
+//
+svint32_t add_scalar_i32(svint32_t a, int32_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_i64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s64i, !cir.vector<[2] x !s64i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[2] x !s64i>
+
+// LLVM-LABEL: @add_scalar_i64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[ADD]]
+//
+svint64_t add_scalar_i64(svint64_t a, int64_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_u8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !u8i>
+
+// LLVM-LABEL: @add_scalar_u8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svuint8_t add_scalar_u8(svuint8_t a, uint8_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_u16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[8] x !u16i>
+
+// LLVM-LABEL: @add_scalar_u16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[ADD]]
+//
+svuint16_t add_scalar_u16(svuint16_t a, uint16_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_u32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[4] x !u32i>
+
+// LLVM-LABEL: @add_scalar_u32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[ADD]]
+//
+svuint32_t add_scalar_u32(svuint32_t a, uint32_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_u64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[2] x !u64i>
+
+// LLVM-LABEL: @add_scalar_u64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[ADD]]
+//
+svuint64_t add_scalar_u64(svuint64_t a, uint64_t b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_f16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.f16, !cir.vector<[8] x !cir.f16>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[8] x !cir.f16>
+
+// LLVM-LABEL: @add_scalar_f16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x half> [[SPLAT_SPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 8 x half> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x half> [[ADD]]
+//
+svfloat16_t add_scalar_f16(svfloat16_t a, __fp16 b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_f32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.float, !cir.vector<[4] x !cir.float>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[4] x !cir.float>
+
+// LLVM-LABEL: @add_scalar_f32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[SPLAT_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 4 x float> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x float> [[ADD]]
+//
+svfloat32_t add_scalar_f32(svfloat32_t a, float b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_scalar_f64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_scalar_f64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[SPLAT_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_scalar_f64(svfloat64_t a, double b) {
+  return a + b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_i8_i_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s8i
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_i8_i_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_i_lit(svint8_t a) {
+  return a + 0;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_i8_il_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s8i
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_i8_il_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_il_lit(svint8_t a) {
+  return a + 0l;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_i8_ill_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s8i
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_i8_ill_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_ill_lit(svint8_t a) {
+  return a + 0ll;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_i8_u_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s8i
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_i8_u_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_u_lit(svint8_t a) {
+  return a + 0u;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_i8_ul_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s8i
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_i8_ul_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_ul_lit(svint8_t a) {
+  return a + 0ul;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_i8_ull_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s8i
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.add {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @add_i8_ull_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_ull_lit(svint8_t a) {
+  return a + 0ull;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_i_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s32i
+// CIR: {{%.*}} = cir.cast int_to_float {{%.*}} : !s32i -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_i_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_i_lit(svfloat64_t a) {
+  return a + 0;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_il_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s64i
+// CIR: {{%.*}} = cir.cast int_to_float {{%.*}} : !s64i -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_il_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_il_lit(svfloat64_t a) {
+  return a + 0l;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_ill_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !s64i
+// CIR: {{%.*}} = cir.cast int_to_float {{%.*}} : !s64i -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_ill_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_ill_lit(svfloat64_t a) {
+  return a + 0ll;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_u_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !u32i
+// CIR: {{%.*}} = cir.cast int_to_float {{%.*}} : !u32i -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_u_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_u_lit(svfloat64_t a) {
+  return a + 0u;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_ul_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !u64i
+// CIR: {{%.*}} = cir.cast int_to_float {{%.*}} : !u64i -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_ul_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+
+svfloat64_t add_f64_ul_lit(svfloat64_t a) {
+  return a + 0ul;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_ull_lit(
+// CIR: {{%.*}} = cir.const #cir.int<0> : !u64i
+// CIR: {{%.*}} = cir.cast int_to_float {{%.*}} : !u64i -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_ull_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+
+svfloat64_t add_f64_ull_lit(svfloat64_t a) {
+  return a + 0ull;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_f_lit(
+// CIR: {{%.*}} = cir.const #cir.fp<0.000000e+00> : !cir.float
+// CIR: {{%.*}} = cir.cast floating {{%.*}} : !cir.float -> !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_f_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_f_lit(svfloat64_t a) {
+  return a + 0.f;
+}
+
+// CIR-LABEL: cir.func {{.*}} @add_f64_d_lit(
+// CIR: {{%.*}} = cir.const #cir.fp<0.000000e+00> : !cir.double
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fadd {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @add_f64_d_lit(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// LLVM-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_d_lit(svfloat64_t a) {
+  return a + 0.;
+}
+
 // SUBTRACTION
 
 // CIR-LABEL: cir.func {{.*}} @sub_i8(
@@ -543,6 +911,171 @@ svfloat32_t sub_inplace_f32(svfloat32_t a, svfloat32_t b) {
 // LLVM-NEXT:    ret <vscale x 2 x double> [[SUB]]
 //
 svfloat64_t sub_inplace_f64(svfloat64_t a, svfloat64_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_i8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @sub_scalar_i8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[SUB]]
+//
+svint8_t sub_scalar_i8(svint8_t a, int8_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_i16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s16i, !cir.vector<[8] x !s16i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[8] x !s16i>
+
+// LLVM-LABEL: @sub_scalar_i16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[SUB]]
+//
+svint16_t sub_scalar_i16(svint16_t a, int16_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_i32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s32i, !cir.vector<[4] x !s32i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[4] x !s32i>
+
+// LLVM-LABEL: @sub_scalar_i32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[SUB]]
+//
+svint32_t sub_scalar_i32(svint32_t a, int32_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_i64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s64i, !cir.vector<[2] x !s64i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[2] x !s64i>
+
+// LLVM-LABEL: @sub_scalar_i64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[SUB]]
+//
+svint64_t sub_scalar_i64(svint64_t a, int64_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_u8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[16] x !u8i>
+
+// LLVM-LABEL: @sub_scalar_u8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[SUB]]
+//
+svuint8_t sub_scalar_u8(svuint8_t a, uint8_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_u16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[8] x !u16i>
+
+// LLVM-LABEL: @sub_scalar_u16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[SUB]]
+//
+svuint16_t sub_scalar_u16(svuint16_t a, uint16_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_u32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[4] x !u32i>
+
+// LLVM-LABEL: @sub_scalar_u32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[SUB]]
+//
+svuint32_t sub_scalar_u32(svuint32_t a, uint32_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_u64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR: {{%.*}} = cir.sub {{%.*}}, {{%.*}} : !cir.vector<[2] x !u64i>
+
+// LLVM-LABEL: @sub_scalar_u64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = sub <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[SUB]]
+//
+svuint64_t sub_scalar_u64(svuint64_t a, uint64_t b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_f16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.f16, !cir.vector<[8] x !cir.f16>
+// CIR: {{%.*}} = cir.fsub {{%.*}}, {{%.*}} : !cir.vector<[8] x !cir.f16>
+
+// LLVM-LABEL: @sub_scalar_f16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x half> [[SPLAT_SPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = fsub <vscale x 8 x half> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x half> [[SUB]]
+//
+svfloat16_t sub_scalar_f16(svfloat16_t a, __fp16 b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_f32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.float, !cir.vector<[4] x !cir.float>
+// CIR: {{%.*}} = cir.fsub {{%.*}}, {{%.*}} : !cir.vector<[4] x !cir.float>
+
+// LLVM-LABEL: @sub_scalar_f32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[SPLAT_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = fsub <vscale x 4 x float> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x float> [[SUB]]
+//
+svfloat32_t sub_scalar_f32(svfloat32_t a, float b) {
+  return a - b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @sub_scalar_f64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fsub {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @sub_scalar_f64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[SPLAT_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[SUB:%.*]] = fsub <vscale x 2 x double> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x double> [[SUB]]
+//
+svfloat64_t sub_scalar_f64(svfloat64_t a, double b) {
   return a - b;
 }
 
@@ -812,6 +1345,171 @@ svfloat64_t mul_inplace_f64(svfloat64_t a, svfloat64_t b) {
   return a * b;
 }
 
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_i8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @mul_scalar_i8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[MUL]]
+//
+svint8_t mul_scalar_i8(svint8_t a, int8_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_i16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s16i, !cir.vector<[8] x !s16i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[8] x !s16i>
+
+// LLVM-LABEL: @mul_scalar_i16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[MUL]]
+
+svint16_t mul_scalar_i16(svint16_t a, int16_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_i32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s32i, !cir.vector<[4] x !s32i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[4] x !s32i>
+
+// LLVM-LABEL: @mul_scalar_i32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[MUL]]
+//
+svint32_t mul_scalar_i32(svint32_t a, int32_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_i64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s64i, !cir.vector<[2] x !s64i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[2] x !s64i>
+
+// LLVM-LABEL: @mul_scalar_i64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[MUL]]
+//
+svint64_t mul_scalar_i64(svint64_t a, int64_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_u8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[16] x !u8i>
+
+// LLVM-LABEL: @mul_scalar_u8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[MUL]]
+//
+svuint8_t mul_scalar_u8(svuint8_t a, uint8_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_u16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[8] x !u16i>
+
+// LLVM-LABEL: @mul_scalar_u16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[MUL]]
+//
+svuint16_t mul_scalar_u16(svuint16_t a, uint16_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_u32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[4] x !u32i>
+
+// LLVM-LABEL: @mul_scalar_u32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[MUL]]
+//
+svuint32_t mul_scalar_u32(svuint32_t a, uint32_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_u64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR: {{%.*}} = cir.mul {{%.*}}, {{%.*}} : !cir.vector<[2] x !u64i>
+
+// LLVM-LABEL: @mul_scalar_u64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = mul <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[MUL]]
+//
+svuint64_t mul_scalar_u64(svuint64_t a, uint64_t b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_f16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.f16, !cir.vector<[8] x !cir.f16>
+// CIR: {{%.*}} = cir.fmul {{%.*}}, {{%.*}} : !cir.vector<[8] x !cir.f16>
+
+// LLVM-LABEL: @mul_scalar_f16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x half> [[SPLAT_SPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = fmul <vscale x 8 x half> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x half> [[MUL]]
+//
+svfloat16_t mul_scalar_f16(svfloat16_t a, __fp16 b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_f32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.float, !cir.vector<[4] x !cir.float>
+// CIR: {{%.*}} = cir.fmul {{%.*}}, {{%.*}} : !cir.vector<[4] x !cir.float>
+
+// LLVM-LABEL: @mul_scalar_f32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[SPLAT_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = fmul <vscale x 4 x float> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x float> [[MUL]]
+//
+svfloat32_t mul_scalar_f32(svfloat32_t a, float b) {
+  return a * b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @mul_scalar_f64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fmul {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @mul_scalar_f64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[SPLAT_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[MUL:%.*]] = fmul <vscale x 2 x double> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x double> [[MUL]]
+//
+svfloat64_t mul_scalar_f64(svfloat64_t a, double b) {
+  return a * b;
+}
+
 // DIVISION
 
 // CIR-LABEL: cir.func {{.*}} @div_i8(
@@ -1078,6 +1776,171 @@ svfloat64_t div_inplace_f64(svfloat64_t a, svfloat64_t b) {
   return a / b;
 }
 
+// CIR-LABEL: cir.func {{.*}} @div_scalar_i8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @div_scalar_i8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = sdiv <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[DIV]]
+//
+svint8_t div_scalar_i8(svint8_t a, int8_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_i16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s16i, !cir.vector<[8] x !s16i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[8] x !s16i>
+
+// LLVM-LABEL: @div_scalar_i16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = sdiv <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[DIV]]
+//
+svint16_t div_scalar_i16(svint16_t a, int16_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_i32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s32i, !cir.vector<[4] x !s32i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[4] x !s32i>
+
+// LLVM-LABEL: @div_scalar_i32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = sdiv <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[DIV]]
+//
+svint32_t div_scalar_i32(svint32_t a, int32_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_i64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s64i, !cir.vector<[2] x !s64i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[2] x !s64i>
+
+// LLVM-LABEL: @div_scalar_i64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = sdiv <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[DIV]]
+//
+svint64_t div_scalar_i64(svint64_t a, int64_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_u8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[16] x !u8i>
+
+// LLVM-LABEL: @div_scalar_u8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = udiv <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[DIV]]
+//
+svuint8_t div_scalar_u8(svuint8_t a, uint8_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_u16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[8] x !u16i>
+
+// LLVM-LABEL: @div_scalar_u16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = udiv <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[DIV]]
+//
+svuint16_t div_scalar_u16(svuint16_t a, uint16_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_u32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[4] x !u32i>
+
+// LLVM-LABEL: @div_scalar_u32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[DIV]]
+//
+svuint32_t div_scalar_u32(svuint32_t a, uint32_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_u64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR: {{%.*}} = cir.div {{%.*}}, {{%.*}} : !cir.vector<[2] x !u64i>
+
+// LLVM-LABEL: @div_scalar_u64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = udiv <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[DIV]]
+//
+svuint64_t div_scalar_u64(svuint64_t a, uint64_t b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_f16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.f16, !cir.vector<[8] x !cir.f16>
+// CIR: {{%.*}} = cir.fdiv {{%.*}}, {{%.*}} : !cir.vector<[8] x !cir.f16>
+
+// LLVM-LABEL: @div_scalar_f16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x half> [[SPLAT_SPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = fdiv <vscale x 8 x half> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x half> [[DIV]]
+//
+svfloat16_t div_scalar_f16(svfloat16_t a, __fp16 b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_f32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.float, !cir.vector<[4] x !cir.float>
+// CIR: {{%.*}} = cir.fdiv {{%.*}}, {{%.*}} : !cir.vector<[4] x !cir.float>
+
+// LLVM-LABEL: @div_scalar_f32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[SPLAT_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = fdiv <vscale x 4 x float> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x float> [[DIV]]
+//
+svfloat32_t div_scalar_f32(svfloat32_t a, float b) {
+  return a / b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @div_scalar_f64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !cir.double, !cir.vector<[2] x !cir.double>
+// CIR: {{%.*}} = cir.fdiv {{%.*}}, {{%.*}} : !cir.vector<[2] x !cir.double>
+
+// LLVM-LABEL: @div_scalar_f64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[SPLAT_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[DIV:%.*]] = fdiv <vscale x 2 x double> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x double> [[DIV]]
+//
+svfloat64_t div_scalar_f64(svfloat64_t a, double b) {
+  return a / b;
+}
+
 // REMAINDER
 
 // CIR-LABEL: cir.func {{.*}} @rem_i8(
@@ -1269,6 +2132,126 @@ svuint32_t rem_inplace_u32(svuint32_t a, svuint32_t b) {
 // LLVM-NEXT:    ret <vscale x 2 x i64> [[REM]]
 //
 svuint64_t rem_inplace_u64(svuint64_t a, svuint64_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_i8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s8i, !cir.vector<[16] x !s8i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[16] x !s8i>
+
+// LLVM-LABEL: @rem_scalar_i8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = srem <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[REM]]
+//
+svint8_t rem_scalar_i8(svint8_t a, int8_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_i16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s16i, !cir.vector<[8] x !s16i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[8] x !s16i>
+
+// LLVM-LABEL: @rem_scalar_i16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = srem <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[REM]]
+//
+svint16_t rem_scalar_i16(svint16_t a, int16_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_i32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s32i, !cir.vector<[4] x !s32i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[4] x !s32i>
+
+// LLVM-LABEL: @rem_scalar_i32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = srem <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[REM]]
+//
+svint32_t rem_scalar_i32(svint32_t a, int32_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_i64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !s64i, !cir.vector<[2] x !s64i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[2] x !s64i>
+
+// LLVM-LABEL: @rem_scalar_i64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = srem <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[REM]]
+//
+svint64_t rem_scalar_i64(svint64_t a, int64_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_u8(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[16] x !u8i>
+
+// LLVM-LABEL: @rem_scalar_u8(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[SPLAT_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = urem <vscale x 16 x i8> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[REM]]
+//
+svuint8_t rem_scalar_u8(svuint8_t a, uint8_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_u16(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[8] x !u16i>
+
+// LLVM-LABEL: @rem_scalar_u16(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[SPLAT_SPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = urem <vscale x 8 x i16> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[REM]]
+//
+svuint16_t rem_scalar_u16(svuint16_t a, uint16_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_u32(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[4] x !u32i>
+
+// LLVM-LABEL: @rem_scalar_u32(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[SPLAT_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = urem <vscale x 4 x i32> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[REM]]
+//
+svuint32_t rem_scalar_u32(svuint32_t a, uint32_t b) {
+  return a % b;
+}
+
+// CIR-LABEL: cir.func {{.*}} @rem_scalar_u64(
+// CIR: {{%.*}} = cir.vec.splat {{%.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR: {{%.*}} = cir.rem {{%.*}}, {{%.*}} : !cir.vector<[2] x !u64i>
+
+// LLVM-LABEL: @rem_scalar_u64(
+// OGCG-NEXT:  entry:
+// LLVM-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[B:%.*]], i64 0
+// LLVM-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[SPLAT_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM-NEXT:    [[REM:%.*]] = urem <vscale x 2 x i64> [[A:%.*]], [[SPLAT_SPLAT]]
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[REM]]
+//
+svuint64_t rem_scalar_u64(svuint64_t a, uint64_t b) {
   return a % b;
 }
 
