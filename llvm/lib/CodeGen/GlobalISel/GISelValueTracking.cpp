@@ -1534,17 +1534,21 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_STRICT_FSQRT: {
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
-    if (InterestedClasses & fcNan)
-      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+    if (InterestedClasses & fcQNan)
+      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+    // Subnormals may flush to zero.
+    if (InterestedClasses & fcZero)
+      InterestedSrcs |= fcSubnormal;
 
     Register Val = MI.getOperand(1).getReg();
     computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
 
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    // Note that NSZ only permits flipping the sign of a zero input operand,
+    // and does not make a -0.0 poison. So the NSZ flag cannot be used to
+    // refine the result class here.
     Known = KnownFPClass::sqrt(KnownSrc, Mode);
-    if (MI.getFlag(MachineInstr::MIFlag::FmNsz))
-      Known.knownNot(fcNegZero);
     break;
   }
   case TargetOpcode::G_FABS: {
