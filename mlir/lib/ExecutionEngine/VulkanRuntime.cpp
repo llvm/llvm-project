@@ -211,8 +211,13 @@ LogicalResult VulkanRuntime::run() {
             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT),
         "vkGetQueryPoolResults");
     float microsec = (timestamps[1] - timestamps[0]) * timestampPeriod / 1000;
+    // std::setprecision is sticky on the stream, so save and restore the
+    // caller's formatting state rather than leaving it changed.
+    std::ios formatState(nullptr);
+    formatState.copyfmt(std::cout);
     std::cout << "Compute shader execution time: " << std::setprecision(3)
               << microsec << "us\n";
+    std::cout.copyfmt(formatState);
   }
 
   std::cout << "Command buffer submit time: " << submitDuration.count()
