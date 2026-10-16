@@ -7293,9 +7293,14 @@ bool SPIRVInstructionSelector::selectTrap(MachineInstr &I) const {
 bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I) const {
-  // Change order of instructions if needed: all OpVariable instructions in a
-  // function must be the first instructions in the first block
-  auto It = getOpVariableMBBIt(*I.getMF());
+  // Keep entry-block variables together at the start of the function. Preserve
+  // non-entry alloca placement: different executions may require distinct
+  // objects. This deliberately allows non-entry Function variables, which are
+  // not permitted by core SPIR-V.
+  MachineBasicBlock::iterator It = I.getIterator();
+  if (I.getOpcode() == TargetOpcode::G_FRAME_INDEX ||
+      I.getParent() == &I.getMF()->front())
+    It = getOpVariableMBBIt(*I.getMF());
 
   // Pointers to opaque types stay typed even with the extension on, so emit the
   // untyped variant only when the result is actually an untyped pointer.

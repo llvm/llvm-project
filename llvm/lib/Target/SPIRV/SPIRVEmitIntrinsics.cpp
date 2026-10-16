@@ -334,7 +334,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
-  bool foldStaticArrayAllocas(Module &M);
+  bool foldConstantArrayAllocas(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -4277,20 +4277,21 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::foldConstantArrayAllocas(Module &M) {
   bool Changed = false;
   Type *I32Ty = Type::getInt32Ty(M.getContext());
-  // Leave non-entry allocations alone: they may execute repeatedly.
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
-    for (Instruction &I : F.getEntryBlock()) {
+    for (Instruction &I : instructions(F)) {
       auto *AI = dyn_cast<AllocaInst>(&I);
-      if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation())
+      if (!AI || AI->isUsedWithInAlloca() || !AI->isArrayAllocation() ||
+          AI->getAddressSpace() !=
+              storageClassToAddressSpace(SPIRV::StorageClass::Function))
         continue;
-      auto *Count = cast<ConstantInt>(AI->getArraySize());
+      auto *Count = dyn_cast<ConstantInt>(AI->getArraySize());
       // Zero sizes are legalized earlier; array lengths must fit in 32 bits.
-      if (Count->isZero() || !Count->getValue().isIntN(32))
+      if (!Count || Count->isZero() || !Count->getValue().isIntN(32))
         continue;
       AI->setAllocatedType(
           ArrayType::get(AI->getAllocatedType(), Count->getZExtValue()));
@@ -4302,8 +4303,8 @@ bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
 }
 
 bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
-  // Fold static allocation counts before pointer type inference.
-  bool Changed = foldStaticArrayAllocas(M);
+  // Fold constant allocation counts before pointer type inference.
+  bool Changed = foldConstantArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);
