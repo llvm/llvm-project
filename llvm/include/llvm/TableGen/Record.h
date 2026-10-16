@@ -793,9 +793,6 @@ public:
     return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  LLVM_DEPRECATED_WITH_FIXIT("Use getElements instead", "getElements")
-  ArrayRef<const Init *> getValues() const { return getElements(); }
-
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
 
   std::pair<ArrayRef<const Init *>, const RecTy *> getKey() const {
