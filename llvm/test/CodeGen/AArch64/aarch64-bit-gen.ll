@@ -282,10 +282,8 @@ define <8 x i8> @test_bit_sink_not_after_splat_not(<8 x i8> %m, <8 x i8> %b, i8 
 ; CHECK-SD-NEXT:    tbz w1, #0, .LBB12_2
 ; CHECK-SD-NEXT:  // %bb.1: // %if.then
 ; CHECK-SD-NEXT:    dup v2.8b, w0
-; CHECK-SD-NEXT:    mvn v3.8b, v0.8b
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    bic v1.8b, v3.8b, v2.8b
-; CHECK-SD-NEXT:    orr v1.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    mvn v2.8b, v2.8b
+; CHECK-SD-NEXT:    bif v1.8b, v2.8b, v0.8b
 ; CHECK-SD-NEXT:    str d1, [x2]
 ; CHECK-SD-NEXT:  .LBB12_2: // %common.ret
 ; CHECK-SD-NEXT:    fmov d0, d1

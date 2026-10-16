@@ -3330,14 +3330,14 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
 /// OtherAnd, A and B are out parameters with the corresponding instructions.
 /// MainAnd refers to And that has Not as one of its operands.
 static bool matchBSL(const Instruction *I, Instruction *&MainAnd,
-                     Instruction *&OtherAnd, Instruction *&A, Instruction *&B) {
+                     Instruction *&OtherAnd, Value *&A, Value *&B) {
   Value *MaskValue;
   if (!match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
                        m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
-                                        m_Instruction(A))))))
+                                        m_Value(A))))))
     return false;
 
-  if (!match(OtherAnd, m_c_And(m_Specific(MaskValue), m_Instruction(B))))
+  if (!match(OtherAnd, m_c_And(m_Specific(MaskValue), m_Value(B))))
     return false;
 
   MainAnd = I->getOperand(0) == OtherAnd ? cast<Instruction>(I->getOperand(1))
@@ -3346,10 +3346,6 @@ static bool matchBSL(const Instruction *I, Instruction *&MainAnd,
   // Both Ands should be in same basic block as Or
   if (I->getParent() != MainAnd->getParent() ||
       I->getParent() != OtherAnd->getParent())
-    return false;
-
-  // Non-mask operands of both Ands should also be in same basic block
-  if (I->getParent() != A->getParent() || I->getParent() != B->getParent())
     return false;
 
   return true;
@@ -8129,10 +8125,11 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     // bitselect(MaskValue, A, B) where Not(MaskValue) = Xor(MaskValue, -1)
     if (ST->hasNEON()) {
       // MainAnd refers to And instruction that has 'Not' as one of its operands
-      Instruction *MainAnd, *OtherAnd, *IA, *IB;
-      if (matchBSL(I, MainAnd, OtherAnd, IA, IB)) {
+      Instruction *MainAnd, *OtherAnd;
+      Value *A, *B;
+      if (matchBSL(I, MainAnd, OtherAnd, A, B)) {
         Ops.push_back(
-            &MainAnd->getOperandUse(MainAnd->getOperand(0) == IA ? 1 : 0));
+            &MainAnd->getOperandUse(MainAnd->getOperand(0) == A ? 1 : 0));
         Ops.push_back(&I->getOperandUse(0));
         Ops.push_back(&I->getOperandUse(1));
 
