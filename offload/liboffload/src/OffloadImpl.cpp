@@ -323,6 +323,30 @@ struct OffloadContext {
     assert(OffloadContextVal);
     return *OffloadContextVal;
   }
+
+  /// Get a device belonging to the host platform.
+  Expected<ol_device_handle_t> getHostDevice() {
+    if (auto *Cached = HostDevice.load())
+      return Cached;
+
+    for (auto &Platform : Platforms) {
+      if (Platform->BackendType != OL_PLATFORM_BACKEND_HOST)
+        continue;
+      auto DevicesOrErr = Platform->getDevices();
+      if (!DevicesOrErr)
+        return DevicesOrErr.takeError();
+      if (!DevicesOrErr->empty()) {
+        auto *Device = DevicesOrErr->front().get();
+        HostDevice.store(Device);
+        return Device;
+      }
+    }
+
+    return createOffloadError(ErrorCode::INVALID_DEVICE,
+                              "no host device is available");
+  }
+
+  std::atomic<ol_device_handle_t> HostDevice{nullptr};
 };
 
 // If the context is uninited, then we assume tracing is disabled
@@ -1153,6 +1177,17 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
+  // A null device handle means the pointer belongs to the host.
+  if (!DstDevice || !SrcDevice) {
+    auto HostDevice = OffloadContext::get().getHostDevice();
+    if (!HostDevice)
+      return HostDevice.takeError();
+    if (!DstDevice)
+      DstDevice = *HostDevice;
+    if (!SrcDevice)
+      SrcDevice = *HostDevice;
+  }
+
   bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
   bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
 
