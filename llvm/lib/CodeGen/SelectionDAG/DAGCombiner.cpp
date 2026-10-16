@@ -13404,6 +13404,31 @@ SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+// Fold (X > +0.0) ? X : +0.0 and (+0.0 < X) ? X : +0.0 to llvm.maximumnum(X,
+// +0.0).
+static SDValue combineSelectCCToFMaximumNum(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue LHS, SDValue RHS,
+                                            SDValue True, SDValue False,
+                                            ISD::CondCode CC,
+                                            SDNodeFlags Flags) {
+  EVT VT = True.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!VT.isFloatingPoint() ||
+      !TLI.isOperationLegalOrCustom(ISD::FMAXIMUMNUM, VT))
+    return SDValue();
+
+  if (CC == ISD::SETOLT)
+    std::swap(LHS, RHS);
+  else if (CC != ISD::SETOGT)
+    return SDValue();
+
+  auto *Zero = isConstOrConstSplatFP(False);
+  if (LHS != True || RHS != False || !Zero || !Zero->isPosZero())
+    return SDValue();
+
+  return DAG.getNode(ISD::FMAXIMUMNUM, DL, VT, True, False, Flags);
+}
+
 // Combine x olt y ? x : y to pseudo_fmin and x ogt y ? x : y to pseudo_fmax.
 // Op0/Op1 are the setcc operands, LHS/RHS are the select operands, Flags are
 // from the select.
@@ -13790,6 +13815,11 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
     return R;
+
+  if (N0.getOpcode() == ISD::SETCC)
+    return combineSelectCCToFMaximumNum(
+        DAG, DL, N0.getOperand(0), N0.getOperand(1), N1, N2,
+        cast<CondCodeSDNode>(N0.getOperand(2))->get(), Flags);
 
   return SDValue();
 }
@@ -15062,6 +15092,11 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
 
   if (SDValue R = combineSelectToPseudoMinMax(DAG, N))
     return R;
+
+  if (N0.getOpcode() == ISD::SETCC)
+    return combineSelectCCToFMaximumNum(
+        DAG, DL, N0.getOperand(0), N0.getOperand(1), N1, N2,
+        cast<CondCodeSDNode>(N0.getOperand(2))->get(), N->getFlags());
 
   return SDValue();
 }
