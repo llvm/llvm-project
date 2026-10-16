@@ -8,6 +8,6 @@ add_mlir_dialect_library(MLIRDLTIDialect
   MLIRDLTIAttrsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRDataLayoutInterfaces
   )

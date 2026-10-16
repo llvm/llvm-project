@@ -13,5 +13,5 @@ add_mlir_library(MLIRAsmParser
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Parser
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   )

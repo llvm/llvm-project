@@ -4,8 +4,8 @@ add_clang_library(CIRTestAnalysis
   LINK_LIBS PUBLIC
   MLIRCIRAnalysis
   MLIRCIR
-  MLIRIR
-  MLIRAnalysis
+  MLIRIRCore
+  MLIRAnalysisUtilities
   MLIRPass
   MLIRTestAliasAnalysis
 )

@@ -8,7 +8,7 @@ add_mlir_conversion_library(MLIRPDLToPDLInterp
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/PDLToPDLInterp
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRInferTypeOpInterface
   MLIRPDLDialect
   MLIRPDLInterpDialect

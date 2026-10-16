@@ -26,14 +26,14 @@ add_clang_library(MLIRCIRTransforms
   clangBasic
 
   MLIRABI
-  MLIRAnalysis
+  MLIRAnalysisUtilities
   MLIRDLTIDialect
-  MLIRIR
+  MLIRIRCore
   MLIRPass
-  MLIRTransformUtils
+  MLIRRewriteUtils
 
   MLIRCIR
-  MLIRCIRInterfaces
+  MLIRCIRInterfacesCore
   MLIRCIRTargetLowering
   MLIROpenACCDialect
   MLIROpenMPDialect

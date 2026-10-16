@@ -12,6 +12,6 @@ add_mlir_library(MLIRBytecodeOpInterface
   MLIRBytecodeDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSupport
+  MLIRIRCore
+  MLIRSupportCore
   )

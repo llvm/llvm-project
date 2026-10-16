@@ -13,7 +13,7 @@ add_mlir_dialect_library(MLIROpenMPDialect
   TargetParser
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRLLVMDialect
   MLIRFuncDialect
   MLIRLoopLikeInterface

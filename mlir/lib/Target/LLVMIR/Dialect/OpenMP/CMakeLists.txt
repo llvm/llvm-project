@@ -5,11 +5,11 @@ add_mlir_translation_library(MLIROpenMPToLLVMIRTranslation
   Core
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRLLVMDialect
   MLIROpenMPDialect
   MLIROpenMPUtils
-  MLIRSupport
+  MLIRSupportCore
   MLIRTargetLLVMIRExport
-  MLIRTransformUtils
+  MLIRRewriteUtils
   )

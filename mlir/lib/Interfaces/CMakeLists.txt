@@ -38,7 +38,7 @@ function(add_mlir_interface_library name)
     MLIR${name}IncGen
 
     LINK_LIBS PUBLIC
-    MLIRIR
+    MLIRIRCore
     )
 endfunction(add_mlir_interface_library)
 
@@ -63,7 +63,7 @@ add_mlir_library(MLIRFunctionInterfaces
 
   LINK_LIBS PUBLIC
   MLIRCallInterfaces
-  MLIRIR
+  MLIRIRCore
 )
 
 add_mlir_interface_library(IndexingMapOpInterface)
@@ -96,7 +96,7 @@ add_mlir_library(MLIRLoopLikeInterface
   MLIRLoopLikeInterfaceIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
 )
@@ -149,9 +149,9 @@ add_mlir_library(MLIRValueBoundsOpInterface
   MLIRValueBoundsOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisUtilities
   MLIRDestinationStyleOpInterface
-  MLIRIR
+  MLIRIRCore
   )
 
 add_subdirectory(Utils)

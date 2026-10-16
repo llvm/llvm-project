@@ -5,8 +5,8 @@ add_mlir_translation_library(MLIRBuiltinToLLVMIRTranslation
   Core
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRLLVMDialect
-  MLIRSupport
+  MLIRSupportCore
   MLIRTargetLLVMIRExport
   )

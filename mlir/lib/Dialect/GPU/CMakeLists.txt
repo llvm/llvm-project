@@ -1,7 +1,10 @@
-add_mlir_dialect_library(MLIRGPUDialect
+# Keep the complete public library as an umbrella over its components.
+add_mlir_library(MLIRGPUCore
+  OBJECT
   IR/GPUDialect.cpp
   IR/InferIntRangeInterfaceImpls.cpp
-  IR/ValueBoundsOpInterfaceImpl.cpp
+
+  PARTIAL_SOURCES_INTENDED
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -23,6 +26,38 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
+  MLIRIRCore
+  MLIRLoopLikeInterface
+  MLIRMathOps
+  MLIRMemRefCore
+  MLIRSideEffectInterfaces
+  MLIRSupportCore
+  )
+
+add_mlir_dialect_library(MLIRGPUDialect
+  IR/ValueBoundsOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
+
+  DEPENDS
+  MLIRGPUOpsIncGen
+  MLIRGPUOpsAttributesIncGen
+  MLIRGPUOpsEnumsGen
+  MLIRGPUOpInterfacesIncGen
+  MLIRGPUCompilationAttrInterfacesIncGen
+  MLIRParallelLoopMapperEnumsGen
+  MLIRGPUDeviceMapperEnumsGen
+  # GPU dialect sources include llvm/IR/Attributes.h.
+  intrinsics_gen
+
+  LINK_LIBS PUBLIC
+  MLIRGPUCore
+  MLIRArithDialect
+  MLIRDLTIDialect
+  MLIRControlFlowInterfaces
+  MLIRFunctionInterfaces
+  MLIRInferIntRangeInterface
   MLIRIR
   MLIRLoopLikeInterface
   MLIRMathDialect
@@ -30,6 +65,12 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRSideEffectInterfaces
   MLIRSupport
   )
+
+# Preserve the complete public archive. The component objects are compiled
+# once; libMLIR still collects each object's defining library exactly once.
+if(NOT BUILD_SHARED_LIBS)
+  target_sources(MLIRGPUDialect PRIVATE $<TARGET_OBJECTS:obj.MLIRGPUCore>)
+endif()
 
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp

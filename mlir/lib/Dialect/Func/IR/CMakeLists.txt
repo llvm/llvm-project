@@ -16,6 +16,6 @@ add_mlir_dialect_library(MLIRFuncDialect
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
   MLIRInferTypeOpInterface
-  MLIRIR
+  MLIRIRCore
   MLIRSideEffectInterfaces
   )

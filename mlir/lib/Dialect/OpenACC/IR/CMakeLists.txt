@@ -13,12 +13,12 @@ add_mlir_dialect_library(MLIROpenACCDialect
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRDialectUtils
-  MLIRGPUDialect
+  MLIRIRCore
+  MLIRDialectCoreUtils
+  MLIRGPUCore
   MLIRLLVMDialect
-  MLIRMemRefDialect
-  MLIRTransformUtils
+  MLIRMemRefCore
+  MLIRRewriteUtils
   MLIROpenACCMPCommon
   )
 

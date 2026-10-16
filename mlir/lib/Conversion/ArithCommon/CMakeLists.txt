@@ -3,5 +3,5 @@ add_mlir_conversion_library(MLIRArithCommonConversion
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
-  MLIRIR
+  MLIRIRCore
   )

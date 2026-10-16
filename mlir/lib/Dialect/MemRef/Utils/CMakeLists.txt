@@ -5,8 +5,8 @@ add_mlir_dialect_library(MLIRMemRefUtils
   ${PROJECT_SOURCE_DIR}/inlude/mlir/Dialect/MemRef/Utils
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRAffineDialect
+  MLIRIRCore
+  MLIRAffineCore
   MLIRArithUtils
   MLIRSideEffectInterfaces
 )

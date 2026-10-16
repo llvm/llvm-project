@@ -13,8 +13,10 @@ add_mlir_conversion_library(MLIRLLVMCommonConversion
   Core
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRLLVMDialect
-  MLIRSupport
+  MLIRSupportCore
+
+  HEADER_LIBS
   MLIRTransforms
   )

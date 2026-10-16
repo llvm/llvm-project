@@ -14,14 +14,15 @@ add_clang_library(MLIRCIR
   MLIRCIREnumsGen
   MLIRCIROpInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen
+  MLIRPtrMemorySpaceInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRCIRInterfaces
+  MLIRIRCore
+  MLIRCIRInterfacesCore
   MLIRDLTIDialect
   MLIRDataLayoutInterfaces
   MLIRFuncDialect
   MLIRLoopLikeInterface
-  MLIRPtrMemorySpaceInterfaces
   clangAST
+
   )

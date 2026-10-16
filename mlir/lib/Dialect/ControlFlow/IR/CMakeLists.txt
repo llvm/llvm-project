@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRControlFlowDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRControlFlowInterfaces
-  MLIRIR
+  MLIRIRCore
   MLIRSideEffectInterfaces
   MLIRUBDialect
   )

@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS Support)
-set(LIBS MLIRSupport)
+set(LIBS MLIRSupportCore)
 
 add_tablegen(mlir-src-sharder MLIR_SRC_SHARDER
   DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"

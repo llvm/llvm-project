@@ -29,8 +29,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIROpenMPDialect
   MLIROpenMPToLLVM
   MLIROpenMPToLLVMIRTranslation
-  MLIROpenMPTransforms
-  MLIRIR
+  MLIROpenMPCodeGenTransforms
+  MLIRIRCore
   )
 
 target_include_directories(clangCIRLoweringDirectToLLVM PRIVATE

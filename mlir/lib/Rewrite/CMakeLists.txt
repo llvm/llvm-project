@@ -21,7 +21,8 @@ add_mlir_library(MLIRRewrite
   ${pdl_header_libraries}
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
+  $<$<OR:$<BOOL:${LLVM_ENABLE_ASSERTIONS}>,$<CONFIG:Debug>>:MLIRIRPatternLogging>
   MLIRSideEffectInterfaces
   )
 
@@ -36,7 +37,7 @@ if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
     mlir-generic-headers
 
     LINK_LIBS PUBLIC
-    MLIRIR
+    MLIRIRCore
     MLIRPDLDialect
     MLIRPDLInterpDialect
     MLIRPDLToPDLInterp

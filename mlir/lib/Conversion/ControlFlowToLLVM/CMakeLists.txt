@@ -11,11 +11,11 @@ add_mlir_conversion_library(MLIRControlFlowToLLVM
   Core
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisUtilities
   MLIRDataLayoutInterfaces
   MLIRControlFlowDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRPass
-  MLIRTransformUtils
+  MLIRRewriteUtils
   )

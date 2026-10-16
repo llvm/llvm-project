@@ -6,7 +6,7 @@ add_clang_library(CIROpenACCSupport
   MLIRCIRTypeConstraintsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRCIR
   MLIROpenACCDialect
   )

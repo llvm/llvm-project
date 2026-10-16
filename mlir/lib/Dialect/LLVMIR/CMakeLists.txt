@@ -58,11 +58,13 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
-  MLIRIR
+  MLIRIRCore
   MLIRMemorySlotInterfaces
-  MLIRPtrMemorySpaceInterfaces
   MLIRSideEffectInterfaces
-  MLIRSupport
+  MLIRSupportCore
+
+  HEADER_LIBS
+  MLIRPtrMemorySpaceInterfaces
   )
 
 set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)

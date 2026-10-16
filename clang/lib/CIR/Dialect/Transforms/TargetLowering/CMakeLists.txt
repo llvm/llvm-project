@@ -19,11 +19,11 @@ add_clang_library(MLIRCIRTargetLowering
 
   clangBasic
   MLIRABI
-  MLIRIR
+  MLIRIRCore
   MLIRPass
   MLIRDLTIDialect
   MLIRCIR
   MLIRCIRAnalysis
-  MLIRCIRInterfaces
+  MLIRCIRInterfacesCore
   MLIRLLVMDialect
 )

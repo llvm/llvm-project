@@ -10,5 +10,5 @@ MLIROpenACCMPOpsInterfacesIncGen
 
 LINK_LIBS PUBLIC
 MLIRArithDialect
-MLIRIR
+MLIRIRCore
 )

@@ -41,15 +41,15 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
   LINK_LIBS PUBLIC
   MLIRDLTIDialect
   MLIRLLVMDialect
-  MLIRLLVMIRTransforms
-  MLIRTranslateLib
-  MLIRTransformUtils
+  MLIRLLVMIRExportLegalization
+  MLIRRewriteUtils
   )
 
 add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   ConvertToLLVMIR.cpp
 
   LINK_LIBS PUBLIC
+  MLIRTranslateLib
   MLIRArmNeonToLLVMIRTranslation
   MLIRArmSMEToLLVMIRTranslation
   MLIRArmSVEToLLVMIRTranslation
@@ -65,8 +65,20 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   MLIRXeVMToLLVMIRTranslation
   )
 
-add_mlir_translation_library(MLIRTargetLLVMIRImport
+# Data-layout conversion is also used by frontends that do not import LLVM IR.
+add_mlir_library(MLIRLLVMIRDataLayoutImporter
+  OBJECT
   DataLayoutImporter.cpp
+
+  LINK_COMPONENTS
+  Core
+
+  LINK_LIBS PUBLIC
+  MLIRDLTIDialect
+  MLIRLLVMDialect
+  )
+
+add_mlir_translation_library(MLIRTargetLLVMIRImport
   DebugImporter.cpp
   LoopAnnotationImporter.cpp
   ModuleImport.cpp
@@ -86,8 +98,15 @@ add_mlir_translation_library(MLIRTargetLLVMIRImport
   LINK_LIBS PUBLIC
   MLIRDLTIDialect
   MLIRLLVMDialect
+  MLIRLLVMIRDataLayoutImporter
   MLIRTranslateLib
   )
+
+# Preserve the complete public archive. The component objects are compiled
+# once; libMLIR still collects each object's defining library exactly once.
+if(NOT BUILD_SHARED_LIBS)
+  target_sources(MLIRTargetLLVMIRImport PRIVATE $<TARGET_OBJECTS:obj.MLIRLLVMIRDataLayoutImporter>)
+endif()
 
 add_mlir_translation_library(MLIRFromLLVMIRTranslationRegistration
   ConvertFromLLVMIR.cpp

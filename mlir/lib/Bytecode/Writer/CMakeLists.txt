@@ -6,7 +6,7 @@ add_mlir_library(MLIRBytecodeWriter
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Bytecode
 
   LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSupport
+  MLIRIRCore
+  MLIRSupportCore
   MLIRBytecodeOpInterface
   )

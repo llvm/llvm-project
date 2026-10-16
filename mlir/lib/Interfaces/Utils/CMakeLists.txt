@@ -12,7 +12,7 @@ add_mlir_library(MLIRInferIntRangeCommon
     LINK_LIBS PUBLIC
     MLIRShapedOpInterfaces
     MLIRInferIntRangeInterface
-    MLIRIR
+    MLIRIRCore
 )
 
 add_mlir_library(MLIRMemorySlotUtils
@@ -22,5 +22,5 @@ add_mlir_library(MLIRMemorySlotUtils
     ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces/Utils
 
     LINK_LIBS PUBLIC
-    MLIRIR
+    MLIRIRCore
 )

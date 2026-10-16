@@ -11,8 +11,8 @@ add_clang_library(clangCIRLoweringCommon
   clangCIR
   MLIRCIR
   MLIRCIRTransforms
-  MLIRTransforms
-  MLIRSupport
+  MLIRPass
+  MLIRSupportCore
   )
 
 add_subdirectory(DirectToLLVM)

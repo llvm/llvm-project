@@ -29,13 +29,15 @@ add_mlir_dialect_library(MLIRArithDialect
 
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
-  MLIRDialect
-  MLIRInferIntDivisibilityOpInterface
   MLIRInferIntRangeCommon
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
-  MLIRIR
+  MLIRIRCore
   MLIRUBDialect
+
+  HEADER_LIBS
+  MLIRDialect
+  MLIRInferIntDivisibilityOpInterface
   )
 
 add_mlir_dialect_library(MLIRArithValueBoundsOpInterfaceImpl

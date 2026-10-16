@@ -68,6 +68,7 @@ add_clang_library(clangCIR
   DEPENDS
   MLIRCIR
   MLIRCIROpInterfacesIncGen
+  MLIRPtrMemorySpaceInterfacesIncGen
 
   LINK_LIBS
   clangAST
@@ -79,12 +80,12 @@ add_clang_library(clangCIR
   CIROpenMPSupport
   MLIRArithDialect
   MLIRCIR
-  MLIRCIRInterfaces
+  MLIRCIRInterfacesCore
   MLIRDLTIDialect
   MLIRLLVMDialect
   MLIROpenACCDialect
   MLIROpenMPDialect
   MLIROpenMPUtils
-  MLIRPtrMemorySpaceInterfaces
-  MLIRTargetLLVMIRImport
+  MLIRLLVMIRDataLayoutImporter
+
 )

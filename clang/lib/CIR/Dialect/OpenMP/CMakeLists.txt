@@ -5,7 +5,7 @@ add_clang_library(CIROpenMPSupport
   MLIRCIROpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRIR
+  MLIRIRCore
   MLIRCIR
   MLIROpenMPDialect
   )
