@@ -2862,6 +2862,29 @@ RISCVTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
              : FPImmAction::ConstantPool;
 }
 
+static bool hasFPType(const RISCVSubtarget &Subtarget, LLT Ty) {
+  if (Ty.isBFloat16())
+    return Subtarget.hasStdExtZfbfmin();
+
+  switch (Ty.getSizeInBits()) {
+  case 16:
+    return Subtarget.hasStdExtZfhmin();
+  case 32:
+    return Subtarget.hasStdExtF();
+  case 64:
+    return Subtarget.hasStdExtD();
+  default:
+    return false;
+  }
+}
+
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                    bool ForCodeSize) const {
+  return hasFPType(Subtarget, Ty) ? FPImmAction::ConstantPool
+                                  : FPImmAction::Bitcast;
+}
+
 // TODO: This is very conservative.
 TargetLowering::ExtractSubvectorCost
 RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
