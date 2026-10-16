@@ -36,6 +36,7 @@ class AssumptionCache;
 class BasicBlock;
 class CallBase;
 class CallInst;
+class CastInst;
 class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
@@ -573,6 +574,9 @@ LLVM_ABI Value *invertCondition(Value *Condition);
 /// If we can infer one attribute from another on the declaration of a
 /// function, explicitly materialize the maximal set in the IR.
 LLVM_ABI bool inferAttributesFromOthers(Function &F);
+
+/// Sink the specified cast instruction into its user blocks.
+LLVM_ABI bool sinkCastToUsers(CastInst *CI);
 
 //===----------------------------------------------------------------------===//
 //  Helpers to track and update flags on instructions.
