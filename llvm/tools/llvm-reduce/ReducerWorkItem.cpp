@@ -148,7 +148,7 @@ static void cloneFrameInfo(
 
   // Copy the fixed frame objects backwards to preserve frame index numbers,
   // since CreateFixedObject uses front insertion.
-  for (int i = -1; i >= (int)-SrcMFI.getNumFixedObjects(); --i) {
+  for (int i = -1; i >= -static_cast<int>(SrcMFI.getNumFixedObjects()); --i) {
     assert(SrcMFI.isFixedObjectIndex(i));
     int NewFI = DstMFI.CreateFixedObject(
       SrcMFI.getObjectSize(i), SrcMFI.getObjectOffset(i),

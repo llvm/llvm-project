@@ -409,7 +409,7 @@ public:
     int64_t Offset;
     if (NegativeOffsets) {
       StackSize = alignTo(StackSize + Size, Alignment);
-      Offset = -StackSize;
+      Offset = -static_cast<int64_t>(StackSize);
     } else {
       Offset = alignTo(StackSize, Alignment);
       StackSize = Offset + Size;
