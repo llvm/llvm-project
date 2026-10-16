@@ -290,6 +290,11 @@ private:
   bool DbgInfoAvailable = false;
 
 protected:
+  /// The attribute used for a pointer type's DWARF address space. Targets that
+  /// describe address spaces with a target-specific attribute set this in their
+  /// constructor.
+  dwarf::Attribute TypeAddressSpaceAttribute = dwarf::DW_AT_address_class;
+
   AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
              char &ID = AsmPrinter::ID);
 
@@ -298,6 +303,10 @@ protected:
   virtual DwarfDebug *createDwarfDebug();
 
 public:
+  dwarf::Attribute getTypeAddressSpaceAttribute() const {
+    return TypeAddressSpaceAttribute;
+  }
+
   ~AsmPrinter() override;
 
   DwarfDebug *getDwarfDebug() { return DD; }
@@ -526,8 +535,6 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
-
-  bool needsSEHMoves();
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind

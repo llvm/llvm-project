@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class TargetMachine;
+
 enum class RunOutliner {
   TargetDefault,
   AlwaysOutline,
@@ -82,7 +84,8 @@ struct CGPassBuilderOption {
   std::string FSProfileFile;
   std::string FSRemappingFile;
 
-  cl::boolOrDefault VerifyMachineCode = cl::boolOrDefault::BOU_UNSET;
+  MachineVerifierMode VerifyMachineCode = MachineVerifierMode::End;
+
   cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableRegAllocFastTied = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
@@ -90,7 +93,7 @@ struct CGPassBuilderOption {
   cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
 };
 
-LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption(const TargetMachine &TM);
 
 } // namespace llvm
 

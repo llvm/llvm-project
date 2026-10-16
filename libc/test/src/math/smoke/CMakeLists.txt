@@ -1444,7 +1444,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-
 add_fp_unittest(
   expf16_test
   SUITE
@@ -1497,6 +1496,19 @@ add_fp_unittest(
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2bf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp2bf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.exp2bf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
