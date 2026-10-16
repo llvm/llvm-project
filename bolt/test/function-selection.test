@@ -1,0 +1,96 @@
+## Check regex and exact function-selection options, both on the command line
+## and through files.
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: %clang %cflags %t/input.c -o %t.exe -Wl,-q
+# RUN: echo '^foo$' > %t/regex
+# RUN: echo 'foo' > %t/exact
+
+## Regex skip options.
+## BOLT reports skipped functions, so check both regex matches without relying
+## on their order.
+# RUN: llvm-bolt %t.exe -o %t.skip-regex --lite=0 -v=1 \
+# RUN:   --skip-funcs='foo.*' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-REGEX
+# RUN: llvm-bolt %t.exe -o %t.skip-regex-file --lite=0 -v=1 \
+# RUN:   --skip-funcs-file=%t/regex 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-FOO \
+# RUN:     --implicit-check-not="skipping processing foobar per user request"
+
+## Exact skip options must not match a function for which the name is only a
+## prefix.
+# RUN: llvm-bolt %t.exe -o %t.skip-exact --lite=0 -v=1 \
+# RUN:   --skip-funcs-no-regex=foo 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-FOO \
+# RUN:     --implicit-check-not="skipping processing foobar per user request"
+# RUN: llvm-bolt %t.exe -o %t.skip-exact-file --lite=0 -v=1 \
+# RUN:   --skip-funcs-file-no-regex=%t/exact 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-FOO \
+# RUN:     --implicit-check-not="skipping processing foobar per user request"
+
+# SKIP-REGEX-DAG: BOLT-INFO: skipping processing foo per user request
+# SKIP-REGEX-DAG: BOLT-INFO: skipping processing foobar per user request
+# SKIP-FOO: BOLT-INFO: skipping processing foo per user request
+
+## Regex force options.
+## BOLT does not report functions selected for processing, so check that an
+## excluded function is skipped and that the selected function is not.
+# RUN: llvm-bolt %t.exe -o %t.force-regex --lite=0 -v=1 \
+# RUN:   --funcs='^foo$' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-FOO \
+# RUN:     --implicit-check-not="skipping processing foo per user request"
+# RUN: llvm-bolt %t.exe -o %t.force-regex-file --lite=0 -v=1 \
+# RUN:   --funcs-file=%t/regex 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-FOO \
+# RUN:     --implicit-check-not="skipping processing foo per user request"
+
+## Exact force options.
+# RUN: llvm-bolt %t.exe -o %t.force-exact --lite=0 -v=1 \
+# RUN:   --funcs-no-regex=foo 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-FOO \
+# RUN:     --implicit-check-not="skipping processing foo per user request"
+# RUN: llvm-bolt %t.exe -o %t.force-exact-file --lite=0 -v=1 \
+# RUN:   --funcs-file-no-regex=%t/exact 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-FOO \
+# RUN:     --implicit-check-not="skipping processing foo per user request"
+# FORCE-FOO: BOLT-INFO: skipping processing foobar per user request
+
+## Exact matching uses BOLT-disambiguated binary-function names literally.
+# RUN: llvm-bolt %t.exe -o %t.skip-local-base --lite=0 -v=1 \
+# RUN:   --skip-funcs-no-regex=localfoo 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-LOCAL-BASE \
+# RUN:     --implicit-check-not="skipping processing localfoo/"
+# SKIP-LOCAL-BASE: BOLT-INFO: writing section header for .note.bolt_info
+
+# RUN: llvm-bolt %t.exe -o %t.skip-local-suffix --lite=0 -v=1 \
+# RUN:   --skip-funcs-no-regex=localfoo/1 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SKIP-LOCAL-SUFFIX
+# SKIP-LOCAL-SUFFIX: BOLT-INFO: skipping processing localfoo/1{{.*}} per user request
+
+# RUN: llvm-bolt %t.exe -o %t.force-local-base --lite=0 -v=1 \
+# RUN:   --funcs-no-regex=localfoo 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-LOCAL-BASE
+# FORCE-LOCAL-BASE: BOLT-INFO: skipping processing localfoo/1{{.*}} per user request
+
+# RUN: llvm-bolt %t.exe -o %t.force-local-suffix --lite=0 -v=1 \
+# RUN:   --funcs-no-regex=localfoo/1 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=FORCE-LOCAL-SUFFIX \
+# RUN:     --implicit-check-not="skipping processing localfoo/"
+# FORCE-LOCAL-SUFFIX: BOLT-INFO: skipping processing foo per user request
+
+## Processing and skipping selectors cannot be combined.
+# RUN: not llvm-bolt %t.exe -o %t.error --lite=0 \
+# RUN:   --funcs-no-regex=foo --skip-funcs-no-regex=foobar 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ERROR
+# ERROR: cannot select functions to process and skip at the same time
+
+#--- input.c
+__attribute__((noinline)) int foo(void) { return 1; }
+__attribute__((noinline)) int foobar(void) { return 2; }
+// Local symbols receive BOLT's /N suffix, allowing the test to verify that
+// exact selectors require the disambiguated binary-function name.
+static __attribute__((noinline, used)) int localfoo(void) { return 3; }
+
+int main(void) { return foo() + foobar() + localfoo(); }
