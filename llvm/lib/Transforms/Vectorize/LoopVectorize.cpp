@@ -6525,6 +6525,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                  *OrigLoop);
   RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
                  OrigLoop);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI);
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
