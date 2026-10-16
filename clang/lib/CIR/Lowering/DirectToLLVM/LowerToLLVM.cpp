@@ -933,7 +933,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   // Iteratively lower each constant element of the array.
   if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts())) {
     // Fewer struct members than elements: adjustGlobalTypeForInit grouped the
-    // elements of an array ending in many zeros into one leading array.
+    // elements of an array ending in many zeros into one leading array. That
+    // array has no trailing zeros, so it keeps its type and still lowers as
+    // one dense constant.
     auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmTy);
     if (structTy && structTy.getBody().size() < arrayAttr.size()) {
       auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());

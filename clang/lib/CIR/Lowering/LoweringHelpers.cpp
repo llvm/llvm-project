@@ -829,7 +829,6 @@ static mlir::Type adjustGlobalArrayTypeForInit(
     adjustedElts.push_back(adjusted);
   }
 
-
   if (shouldSplitTrailingZeros(arrayInit)) {
     mlir::Type commonEltTy =
         llvm::all_equal(adjustedElts) ? adjustedElts.front() : mlir::Type{};

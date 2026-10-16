@@ -144,26 +144,26 @@ namespace ZeroInit {
     long a, b, c;
   };
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish1Ev(
-  // CHECK-NOT }
+  // CHECK-NOT: }
   // OGCG: call {{.*}}memset
   // LLVM: store i64 0
   Largeish largeish1() { return {}; }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish2Ev(
-  // CHECK-NOT }
+  // CHECK-NOT: }
   // CHECK: call {{.*}}memset
   Largeish largeish2() { return Largeish(); }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish3Ev(
-  // CHECK-NOT }
+  // CHECK-NOT: }
   // OGCG: call {{.*}}memset
   // LLVM: store i64 0
   Largeish largeish3() { return Largeish{}; }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish4Ev(
-  // CHECK-NOT }
+  // CHECK-NOT: }
   // OGCG: call {{.*}}memset
   // LLVM: store i64 0
   Largeish largeish4() { return (Largeish){}; }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish5Ev(
-  // CHECK-NOT }
+  // CHECK-NOT: }
   // OGCG: call {{.*}}memset
   // LLVM: store i64 0
   Largeish largeish5() { return {0, 0, 0}; }
@@ -181,7 +181,7 @@ namespace ZeroInit {
     long i;
   };
   // CHECK: define {{.*}}@_ZN8ZeroInit11conversionsEv(
-  // CHECK-NOT }
+  // CHECK-NOT: }
   // OGCG: call {{.*}}memset
   // LLVM: store { i32, i32 } zeroinitializer
   Conversions conversions() {

@@ -2,12 +2,26 @@
 
 !s32i = !cir.int<s, 32>
 !rec_S = !cir.struct<"S" {data !cir.array<!s32i x 10>}>
+!rec_P = !cir.struct<"P" {data !cir.ptr<!s32i>, data !cir.array<!s32i x 16>}>
 
 // A global initializer ending in many zeros lowers to a packed struct with a
 // zero-initialized tail, but a cir.const keeps its array type.
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global external @g = #cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
   // CHECK: llvm.mlir.global external @g([1 : i32, #llvm.zero]) {{.*}} : !llvm.struct<packed (i32, array<9 x i32>)>
+
+  // The offset address cannot be a constant attribute, so @p is built with
+  // insertvalue. The grouped explicit elements still lower as one dense
+  // constant, not element by element.
+  cir.global external @arr = #cir.zero : !cir.array<!s32i x 2>
+  cir.global external @p = #cir.const_record<{#cir.global_view<@arr, [1 : i32]> : !cir.ptr<!s32i>, #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i], trailing_zeros> : !cir.array<!s32i x 16>}> : !rec_P
+  // CHECK-LABEL: llvm.mlir.global external @p()
+  // CHECK-NOT: llvm.insertvalue {{.*}} : !llvm.array<8 x i32>
+  // CHECK: %[[PREFIX:.*]] = llvm.mlir.constant(dense<[1, 2, 3, 4, 5, 6, 7, 8]> : tensor<8xi32>) : !llvm.array<8 x i32>
+  // CHECK-NOT: llvm.insertvalue {{.*}} : !llvm.array<8 x i32>
+  // CHECK: llvm.insertvalue %[[PREFIX]], %{{.*}}[0] : !llvm.struct<packed (array<8 x i32>, array<8 x i32>)>
+  // CHECK-NOT: llvm.insertvalue {{.*}} : !llvm.array<8 x i32>
+  // CHECK: llvm.return
 
   cir.func @array(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
     %0 = cir.const #cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
