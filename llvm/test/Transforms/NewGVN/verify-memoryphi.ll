@@ -5,11 +5,12 @@
 ; REQUIRES: asserts
 
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 define void @tinkywinky() {
 ; CHECK-LABEL: define void @tinkywinky() {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br i1 false, label [[BODY:%.*]], label [[END:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    store i8 poison, ptr null, align 1
@@ -18,11 +19,12 @@ define void @tinkywinky() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.lifetime.start.p0(i64 4, ptr undef)
+  %a = alloca i8
+  call void @llvm.lifetime.start.p0(ptr %a)
   br i1 false, label %body, label %end
 
 body:
-  call void @llvm.lifetime.start.p0(i64 4, ptr undef)
+  call void @llvm.lifetime.start.p0(ptr %a)
   br label %end
 
 end:

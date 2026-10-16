@@ -1,4 +1,4 @@
-//===-- FunctionSizeCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,17 +20,20 @@ class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
   using Base = RecursiveASTVisitor<FunctionASTVisitor>;
 
 public:
+  explicit FunctionASTVisitor(bool IgnoreMacros) : IgnoreMacros(IgnoreMacros) {}
+
   bool VisitVarDecl(VarDecl *VD) {
     // Do not count function params.
     // Do not count decomposition declarations (C++17's structured bindings).
     if (StructNesting == 0 &&
-        !(isa<ParmVarDecl>(VD) || isa<DecompositionDecl>(VD)))
+        !(isa<ParmVarDecl>(VD) || isa<DecompositionDecl>(VD)) &&
+        shouldCountLocation(VD->getBeginLoc()))
       ++Info.Variables;
     return true;
   }
   bool VisitBindingDecl(BindingDecl *BD) {
     // Do count each of the bindings (in the decomposition declaration).
-    if (StructNesting == 0)
+    if (StructNesting == 0 && shouldCountLocation(BD->getBeginLoc()))
       ++Info.Variables;
     return true;
   }
@@ -39,7 +42,8 @@ public:
     if (!Node)
       return Base::TraverseStmt(Node);
 
-    if (TrackedParent.back() && !isa<CompoundStmt>(Node))
+    if (TrackedParent.back() && !isa<CompoundStmt>(Node) &&
+        shouldCountLocation(Node->getBeginLoc()))
       ++Info.Statements;
 
     switch (Node->getStmtClass()) {
@@ -49,7 +53,8 @@ public:
     case Stmt::CXXForRangeStmtClass:
     case Stmt::ForStmtClass:
     case Stmt::SwitchStmtClass:
-      ++Info.Branches;
+      if (shouldCountLocation(Node->getBeginLoc()))
+        ++Info.Branches;
       [[fallthrough]];
     case Stmt::CompoundStmtClass:
       TrackedParent.push_back(true);
@@ -67,15 +72,19 @@ public:
   }
 
   bool TraverseCompoundStmt(CompoundStmt *Node) {
+    const bool CountThisCompound = shouldCountLocation(Node->getBeginLoc());
+
     // If this new compound statement is located in a compound statement, which
     // is already nested NestingThreshold levels deep, record the start location
     // of this new compound statement.
-    if (CurrentNestingLevel == Info.NestingThreshold)
+    if (CountThisCompound && (CurrentNestingLevel == Info.NestingThreshold))
       Info.NestingThresholders.push_back(Node->getBeginLoc());
 
-    ++CurrentNestingLevel;
+    if (CountThisCompound)
+      ++CurrentNestingLevel;
     Base::TraverseCompoundStmt(Node);
-    --CurrentNestingLevel;
+    if (CountThisCompound)
+      --CurrentNestingLevel;
 
     return true;
   }
@@ -108,6 +117,14 @@ public:
     return true;
   }
 
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    if (CountMemberInitAsStmt && shouldCountLocation(Init->getSourceLocation()))
+      ++Info.Statements;
+
+    Base::TraverseConstructorInitializer(Init);
+    return true;
+  }
+
   struct FunctionInfo {
     unsigned Lines = 0;
     unsigned Statements = 0;
@@ -120,6 +137,13 @@ public:
   llvm::BitVector TrackedParent;
   unsigned StructNesting = 0;
   unsigned CurrentNestingLevel = 0;
+  bool CountMemberInitAsStmt;
+  const bool IgnoreMacros;
+
+private:
+  bool shouldCountLocation(SourceLocation Loc) const {
+    return !IgnoreMacros || !Loc.isMacroID();
+  }
 };
 
 } // namespace
@@ -135,7 +159,10 @@ FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
       NestingThreshold(
           Options.get("NestingThreshold", DefaultNestingThreshold)),
       VariableThreshold(
-          Options.get("VariableThreshold", DefaultVariableThreshold)) {}
+          Options.get("VariableThreshold", DefaultVariableThreshold)),
+      CountMemberInitAsStmt(
+          Options.get("CountMemberInitAsStmt", DefaultCountMemberInitAsStmt)),
+      IgnoreMacros(Options.get("IgnoreMacros", DefaultIgnoreMacros)) {}
 
 void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LineThreshold", LineThreshold);
@@ -144,6 +171,8 @@ void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ParameterThreshold", ParameterThreshold);
   Options.store(Opts, "NestingThreshold", NestingThreshold);
   Options.store(Opts, "VariableThreshold", VariableThreshold);
+  Options.store(Opts, "CountMemberInitAsStmt", CountMemberInitAsStmt);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
@@ -158,8 +187,9 @@ void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
-  FunctionASTVisitor Visitor;
+  FunctionASTVisitor Visitor(IgnoreMacros);
   Visitor.Info.NestingThreshold = NestingThreshold.value_or(-1);
+  Visitor.CountMemberInitAsStmt = CountMemberInitAsStmt;
   Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func));
   auto &FI = Visitor.Info;
 
@@ -168,14 +198,14 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Count the lines including whitespace and comments. Really simple.
   if (const Stmt *Body = Func->getBody()) {
-    SourceManager *SM = Result.SourceManager;
+    const SourceManager *SM = Result.SourceManager;
     if (SM->isWrittenInSameFile(Body->getBeginLoc(), Body->getEndLoc())) {
       FI.Lines = SM->getSpellingLineNumber(Body->getEndLoc()) -
                  SM->getSpellingLineNumber(Body->getBeginLoc());
     }
   }
 
-  unsigned ActualNumberParameters = Func->getNumParams();
+  const unsigned ActualNumberParameters = Func->getNumParams();
 
   if ((LineThreshold && FI.Lines > LineThreshold) ||
       (StatementThreshold && FI.Statements > StatementThreshold) ||
@@ -212,10 +242,12 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
         << ActualNumberParameters << ParameterThreshold.value();
   }
 
-  for (const auto &CSPos : FI.NestingThresholders) {
-    diag(CSPos, "nesting level %0 starts here (threshold %1)",
-         DiagnosticIDs::Note)
-        << NestingThreshold.value() + 1 << NestingThreshold.value();
+  if (NestingThreshold) {
+    for (const auto &CSPos : FI.NestingThresholders) {
+      diag(CSPos, "nesting level %0 starts here (threshold %1)",
+           DiagnosticIDs::Note)
+          << *NestingThreshold + 1 << *NestingThreshold;
+    }
   }
 
   if (VariableThreshold && FI.Variables > VariableThreshold) {

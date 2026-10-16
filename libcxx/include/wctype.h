@@ -45,13 +45,14 @@ wctrans_t wctrans(const char* property);
 */
 
 #if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/wctype.h>
+#  include <__cxx03/__config>
 #else
 #  include <__config>
+#endif
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
 // TODO:
 // In the future, we should unconditionally include_next <wctype.h> here and instead
@@ -62,33 +63,32 @@ wctrans_t wctrans(const char* property);
 // nothing (with using_if_exists), and if we include another header that defines one
 // of these declarations (e.g. <wchar.h>), the second `using ::wint_t` with using_if_exists
 // will fail because it does not refer to the same declaration.
-#  if __has_include_next(<wctype.h>)
-#    include_next <wctype.h>
-#    define _LIBCPP_INCLUDED_C_LIBRARY_WCTYPE_H
-#  endif
+#if __has_include_next(<wctype.h>)
+#  include_next <wctype.h>
+#  define _LIBCPP_INCLUDED_C_LIBRARY_WCTYPE_H
+#endif
 
-#  ifdef __cplusplus
+#ifdef __cplusplus
 
-#    undef iswalnum
-#    undef iswalpha
-#    undef iswblank
-#    undef iswcntrl
-#    undef iswdigit
-#    undef iswgraph
-#    undef iswlower
-#    undef iswprint
-#    undef iswpunct
-#    undef iswspace
-#    undef iswupper
-#    undef iswxdigit
-#    undef iswctype
-#    undef wctype
-#    undef towlower
-#    undef towupper
-#    undef towctrans
-#    undef wctrans
+#  undef iswalnum
+#  undef iswalpha
+#  undef iswblank
+#  undef iswcntrl
+#  undef iswdigit
+#  undef iswgraph
+#  undef iswlower
+#  undef iswprint
+#  undef iswpunct
+#  undef iswspace
+#  undef iswupper
+#  undef iswxdigit
+#  undef iswctype
+#  undef wctype
+#  undef towlower
+#  undef towupper
+#  undef towctrans
+#  undef wctrans
 
-#  endif // __cplusplus
-#endif   // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#endif // __cplusplus
 
 #endif // _LIBCPP_WCTYPE_H

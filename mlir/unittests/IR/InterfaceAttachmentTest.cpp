@@ -90,6 +90,51 @@ TEST(InterfaceAttachment, Type) {
   EXPECT_FALSE(isa<TestExternalTypeInterface>(i8other));
 }
 
+/// External interface model that overrides the OVERLOADED `getOverloadedValue`
+/// methods by their source name (both arities).
+struct OverloadModel
+    : public TestExternalTypeInterface::ExternalModel<OverloadModel,
+                                                      IntegerType> {
+  using Base =
+      TestExternalTypeInterface::ExternalModel<OverloadModel, IntegerType>;
+  using Base::getOverloadedValue;
+  // Required (non-default) methods of the interface.
+  unsigned getBitwidthPlusArg(Type type, unsigned arg) const {
+    return type.getIntOrFloatBitWidth() + arg;
+  }
+  static unsigned staticGetSomeValuePlusArg(unsigned arg) { return 42 + arg; }
+
+  // Overrides of the two overloads, by source name.
+  unsigned getOverloadedValue(Type type, unsigned arg) const { return arg; }
+  unsigned getOverloadedValue(Type type, unsigned arg, unsigned arg2) const {
+    return arg * arg2;
+  }
+};
+
+// Verify that an external model is able to override an overloaded interface
+// method by its source name and the generated forwarders dispatch there rather
+// than fall back to the inherited default.
+TEST(InterfaceAttachment, OverloadedExternalModel) {
+  MLIRContext context;
+  IntegerType i8 = IntegerType::get(&context, 8);
+  IntegerType::attachInterface<OverloadModel>(context);
+  TestExternalTypeInterface iface = dyn_cast<TestExternalTypeInterface>(i8);
+  ASSERT_TRUE(iface != nullptr);
+
+  // First overload (unique name == source name): dispatched to the override.
+  // The default implementation would have returned 1000 + 7 = 1007 instead.
+  EXPECT_EQ(iface.getOverloadedValue(7u), 7u);
+
+  // Second overload: overridden by source name. If the forwarder dispatches by
+  // the mangled unique name instead, the override is missed and the inherited
+  // default (2000 + 6 + 7 == 2013) runs.
+  EXPECT_EQ(iface.getOverloadedValue(6u, 7u), 42u);
+
+  // Third overload: not overridden, should be dispatched to the base
+  // implementation. The default implementation returns 3000 + 6 + 7 + 8 = 3021.
+  EXPECT_EQ(iface.getOverloadedValue(6u, 7u, 8u), 3021u);
+}
+
 /// External interface model for the test type from the test dialect.
 struct TestTypeModel
     : public TestExternalTypeInterface::ExternalModel<TestTypeModel,
@@ -303,7 +348,7 @@ TEST(InterfaceAttachment, Operation) {
 
   // Initially, the operation doesn't have the interface.
   OwningOpRef<ModuleOp> moduleOp =
-      builder.create<ModuleOp>(UnknownLoc::get(&context));
+      ModuleOp::create(builder, UnknownLoc::get(&context));
   ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp->getOperation()));
 
   // We can attach an external interface and now the operaiton has it.
@@ -317,8 +362,8 @@ TEST(InterfaceAttachment, Operation) {
 
   // Default implementation can be overridden.
   OwningOpRef<UnrealizedConversionCastOp> castOp =
-      builder.create<UnrealizedConversionCastOp>(UnknownLoc::get(&context),
-                                                 TypeRange(), ValueRange());
+      UnrealizedConversionCastOp::create(builder, UnknownLoc::get(&context),
+                                         TypeRange(), ValueRange());
   ASSERT_FALSE(isa<TestExternalOpInterface>(castOp->getOperation()));
   UnrealizedConversionCastOp::attachInterface<TestExternalOpOverridingModel>(
       context);
@@ -368,11 +413,11 @@ TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
   OpBuilder builder(module->getBody(), module->getBody()->begin());
   auto opJ =
-      builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
+      test::OpJ::create(builder, builder.getUnknownLoc(), builder.getI32Type());
   auto opH =
-      builder.create<test::OpH>(builder.getUnknownLoc(), opJ.getResult());
+      test::OpH::create(builder, builder.getUnknownLoc(), opJ.getResult());
   auto opI =
-      builder.create<test::OpI>(builder.getUnknownLoc(), opJ.getResult());
+      test::OpI::create(builder, builder.getUnknownLoc(), opJ.getResult());
 
   EXPECT_TRUE(isa<TestExternalOpInterface>(module->getOperation()));
   EXPECT_TRUE(isa<TestExternalOpInterface>(opJ.getOperation()));
@@ -399,11 +444,11 @@ TEST(InterfaceAttachment, OperationDelayedContextAppend) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
   OpBuilder builder(module->getBody(), module->getBody()->begin());
   auto opJ =
-      builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
+      test::OpJ::create(builder, builder.getUnknownLoc(), builder.getI32Type());
   auto opH =
-      builder.create<test::OpH>(builder.getUnknownLoc(), opJ.getResult());
+      test::OpH::create(builder, builder.getUnknownLoc(), opJ.getResult());
   auto opI =
-      builder.create<test::OpI>(builder.getUnknownLoc(), opJ.getResult());
+      test::OpI::create(builder, builder.getUnknownLoc(), opJ.getResult());
 
   EXPECT_FALSE(isa<TestExternalOpInterface>(module->getOperation()));
   EXPECT_FALSE(isa<TestExternalOpInterface>(opJ.getOperation()));

@@ -14,16 +14,13 @@
 #include <__algorithm/set_difference.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/mergeable.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
-#include <__type_traits/decay.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,7 +48,7 @@ struct __set_difference {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires mergeable<_InIter1, _InIter2, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr set_difference_result<_InIter1, _OutIter> operator()(
+  constexpr set_difference_result<_InIter1, _OutIter> operator()(
       _InIter1 __first1,
       _Sent1 __last1,
       _InIter2 __first2,
@@ -60,9 +57,8 @@ struct __set_difference {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_difference(
+    return std::__set_difference(
         __first1, __last1, __first2, __last2, __result, ranges::__make_projected_comp(__comp, __proj1, __proj2));
-    return {std::move(__ret.first), std::move(__ret.second)};
   }
 
   template <input_range _Range1,
@@ -72,21 +68,20 @@ struct __set_difference {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires mergeable<iterator_t<_Range1>, iterator_t<_Range2>, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr set_difference_result<borrowed_iterator_t<_Range1>, _OutIter>
+  constexpr set_difference_result<borrowed_iterator_t<_Range1>, _OutIter>
   operator()(_Range1&& __range1,
              _Range2&& __range2,
              _OutIter __result,
              _Comp __comp   = {},
              _Proj1 __proj1 = {},
              _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_difference(
+    return std::__set_difference(
         ranges::begin(__range1),
         ranges::end(__range1),
         ranges::begin(__range2),
         ranges::end(__range2),
         __result,
         ranges::__make_projected_comp(__comp, __proj1, __proj2));
-    return {std::move(__ret.first), std::move(__ret.second)};
   }
 };
 

@@ -1,41 +1,29 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI %s
 
 declare double @llvm.fabs.f64(double) #0
 
 ; SI-LABEL: {{^}}fsub_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fsub_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                      ptr addrspace(1) %in2) {
-  %r0 = load double, ptr addrspace(1) %in1
-  %r1 = load double, ptr addrspace(1) %in2
-  %r2 = fsub double %r0, %r1
-  store double %r2, ptr addrspace(1) %out
-  ret void
+define double @fsub_f64(double %in1, double %in2) {
+  %r2 = fsub double %in1, %in2
+  ret double %r2
 }
 
 ; SI-LABEL: {{^}}fsub_fabs_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|}}
-define amdgpu_kernel void @fsub_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                           ptr addrspace(1) %in2) {
-  %r0 = load double, ptr addrspace(1) %in1
-  %r1 = load double, ptr addrspace(1) %in2
-  %r1.fabs = call double @llvm.fabs.f64(double %r1) #0
-  %r2 = fsub double %r0, %r1.fabs
-  store double %r2, ptr addrspace(1) %out
-  ret void
+define double @fsub_fabs_f64(double %in1, double %in2) {
+  %r1.fabs = call double @llvm.fabs.f64(double %in2) #0
+  %r2 = fsub double %in1, %r1.fabs
+  ret double %r2
 }
 
 ; SI-LABEL: {{^}}fsub_fabs_inv_f64:
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], |v\[[0-9]+:[0-9]+\]|, -v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fsub_fabs_inv_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                               ptr addrspace(1) %in2) {
-  %r0 = load double, ptr addrspace(1) %in1
-  %r1 = load double, ptr addrspace(1) %in2
-  %r0.fabs = call double @llvm.fabs.f64(double %r0) #0
-  %r2 = fsub double %r0.fabs, %r1
-  store double %r2, ptr addrspace(1) %out
-  ret void
+define double @fsub_fabs_inv_f64(double %in1, double %in2) {
+  %r0.fabs = call double @llvm.fabs.f64(double %in1) #0
+  %r2 = fsub double %r0.fabs, %in2
+  ret double %r2
 }
 
 ; SI-LABEL: {{^}}s_fsub_f64:
@@ -84,13 +72,9 @@ define amdgpu_kernel void @fsub_v2f64(ptr addrspace(1) %out, <2 x double> %a, <2
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 ; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fsub_v4f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %b_ptr = getelementptr <4 x double>, ptr addrspace(1) %in, i32 1
-  %a = load <4 x double>, ptr addrspace(1) %in
-  %b = load <4 x double>, ptr addrspace(1) %b_ptr
+define <4 x double> @fsub_v4f64(<4 x double> %a, <4 x double> %b) {
   %result = fsub <4 x double> %a, %b
-  store <4 x double> %result, ptr addrspace(1) %out
-  ret void
+  ret <4 x double> %result
 }
 
 ; SI-LABEL: {{^}}s_fsub_v4f64:

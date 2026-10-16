@@ -1,0 +1,5 @@
+#
+# This file defines Python requirements to run the libc++ test suite.
+#
+llvm-testing-tools==23.0.0
+psutil==5.9.8

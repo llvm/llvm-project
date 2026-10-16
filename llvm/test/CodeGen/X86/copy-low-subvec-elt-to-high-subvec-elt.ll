@@ -151,8 +151,8 @@ define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_un
 define <4 x double> @vec256_eltty_double_source_subvec_0_target_subvec_mask_2_binary(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_double_source_subvec_0_target_subvec_mask_2_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[2]
+; CHECK-NEXT:    vbroadcastsd %xmm1, %ymm1
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x double> %r
@@ -342,7 +342,7 @@ define <4 x i64> @vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary(<
 ; CHECK-LABEL: vec256_eltty_i64_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,2,2,2]
-; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; CHECK-NEXT:    retq
   %r = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 0, i32 6, i32 2, i32 6>
   ret <4 x i64> %r
@@ -597,8 +597,8 @@ define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_unary(<8
 define <8 x i32> @vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; CHECK-SLOW-LABEL: vec256_eltty_i32_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK-SLOW:       # %bb.0:
-; CHECK-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0,0,0,4,4,4,4]
+; CHECK-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; CHECK-SLOW-NEXT:    vbroadcastss %xmm1, %ymm1
 ; CHECK-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6],ymm1[7]
 ; CHECK-SLOW-NEXT:    retq
 ;
@@ -733,8 +733,8 @@ define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_unary(<
 define <16 x i16> @vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_binary(<16 x i16> %x, <16 x i16> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i16_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0,1],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16,17]
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; CHECK-NEXT:    vpbroadcastw %xmm1, %ymm1
 ; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; CHECK-NEXT:    retq
   %r = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 24, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 24>
@@ -799,8 +799,7 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_unary(<32
 define <32 x i8> @vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_binary(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_0_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,0,1]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
+; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
@@ -870,8 +869,8 @@ define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_unary(<32
 define <32 x i8> @vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_binary(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; CHECK-LABEL: vec256_eltty_i8_source_subvec_1_target_subvec_mask_3_binary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; CHECK-NEXT:    vpslldq {{.*#+}} ymm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm1[16]
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; CHECK-NEXT:    vpbroadcastb %xmm1, %ymm1
 ; CHECK-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
 ; CHECK-NEXT:    # ymm2 = mem[0,1,0,1]
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0

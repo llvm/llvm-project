@@ -150,10 +150,8 @@ define void @neg_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-NEXT:    vmovups (%ecx), %ymm0
-; X86-AVX512-NEXT:    vcmpnltps (%eax), %ymm0, %k1
-; X86-AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; X86-AVX512-NEXT:    vpsrld $31, %ymm0, %ymm0
+; X86-AVX512-NEXT:    vcmpnltps (%eax), %ymm0, %ymm0
+; X86-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vmovdqa %ymm0, (%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -161,10 +159,8 @@ define void @neg_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 ; X64-AVX512-LABEL: neg_masks:
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vmovups (%rsi), %ymm0
-; X64-AVX512-NEXT:    vcmpnltps (%rdi), %ymm0, %k1
-; X64-AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; X64-AVX512-NEXT:    vpsrld $31, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vcmpnltps (%rdi), %ymm0, %ymm0
+; X64-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vmovdqa %ymm0, (%rax)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq

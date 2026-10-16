@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc -mcpu=cortex-a57 -mtriple=thumb -enable-misched -run-pass=machine-scheduler -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s
 
-# CHECK-LABEL: ********** MI Scheduling **********
+# CHECK-LABEL: Current Schedule Region
 # CHECK:       %[[RES:[0-9]+]]:rgpr = t2MLA
 # CHECK-NEXT:  # preds left
 # CHECK-NEXT:  # succs left

@@ -8,12 +8,14 @@
 
 #include "bolt/Core/DebugNames.h"
 #include "bolt/Core/BinaryContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include <cstdint>
+#include <limits>
 #include <optional>
+#include <tuple>
 
 namespace llvm {
 namespace bolt {
@@ -38,7 +40,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
   // for the .debug_names contributions they are in .debug_str section.
   if (BC.getNumDWOCUs()) {
     DataExtractor StrData(BC.DwCtx->getDWARFObj().getStrSection(),
-                          BC.DwCtx->isLittleEndian(), 0);
+                          BC.DwCtx->isLittleEndian());
     uint64_t Offset = 0;
     uint64_t StrOffset = 0;
     while (StrData.isValidOffset(Offset)) {
@@ -55,7 +57,7 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
           llvm::hash_value(llvm::StringRef(CStr)), StrOffset);
       if (!R.second)
         BC.errs()
-            << "BOLT-WARNING: [internal-dwarf-error]: collision occured on "
+            << "BOLT-WARNING: [internal-dwarf-error]: collision occurred on "
             << CStr << " at offset : 0x" << Twine::utohexstr(StrOffset)
             << ". Previous string offset is: 0x"
             << Twine::utohexstr(R.first->second) << ".\n";
@@ -64,10 +66,50 @@ DWARF5AcceleratorTable::DWARF5AcceleratorTable(
   }
 }
 
+void DWARF5AcceleratorTable::preAllocateUnits(DWARFContext &DwCtx) {
+  // Single pass: allocate CU slots and collect Foreign TU hashes
+  // in deterministic order (by CU offset in .debug_info).
+  for (const auto &CU : DwCtx.compile_units()) {
+    std::optional<uint64_t> DWOId = CU->getDWOId();
+    if (!DWOId)
+      continue;
+
+    uint32_t Idx = CUList.size();
+    CUList.push_back(BADCUOFFSET);
+    CUOffsetsToPatch[*DWOId] = Idx;
+
+    const DWARFDie UnitDIE = CU->getUnitDIE();
+    if (!UnitDIE.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}))
+      continue;
+
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    if (!DWOCU || !*DWOCU)
+      continue;
+
+    // Iterate DWO info section units for type units (Foreign TU list).
+    DWARFContext &DWOCtx = (*DWOCU)->getContext();
+    for (const auto &TU : DWOCtx.dwo_info_section_units()) {
+      if (!TU->isTypeUnit())
+        continue;
+      const uint64_t TUHash = cast<DWARFTypeUnit>(TU.get())->getTypeHash();
+      if (!TUHashToIndexMap.count(TUHash)) {
+        TUHashToIndexMap.insert({TUHash, ForeignTUList.size()});
+        ForeignTUList.push_back(TUHash);
+      }
+    }
+  }
+  Preallocated = true;
+}
+
 void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
                                             const uint64_t UnitStartOffset) {
   CurrentUnit = nullptr;
   CurrentUnitOffset = UnitStartOffset;
+  // .debug_names is emitted as a single contribution, so mixed DWARF32/DWARF64
+  // inputs need one common section offset size. Use DWARF64 if any unit is
+  // DWARF64.
+  if (Unit.getFormParams().Format == dwarf::DwarfFormat::DWARF64)
+    Format = dwarf::DwarfFormat::DWARF64;
   std::optional<uint64_t> DWOID = Unit.getDWOId();
   // We process skeleton CUs after DWO Units for it.
   // Patching offset in CU list to correct one.
@@ -79,14 +121,37 @@ void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
   }
 }
 
+void DWARF5AcceleratorTable::addCrossCUDie(DWARFUnit *Unit, const DIE *Die) {
+  std::lock_guard<std::mutex> Lock(CrossCUDiesMutex);
+  CrossCUDies.insert({Die->getOffset(), {Unit, Die}});
+}
+std::optional<std::pair<DWARFUnit *, const DIE *>>
+DWARF5AcceleratorTable::getCrossCUDie(uint64_t Offset) {
+  std::lock_guard<std::mutex> Lock(CrossCUDiesMutex);
+  auto Iter = CrossCUDies.find(Offset);
+  if (Iter == CrossCUDies.end())
+    return std::nullopt;
+  return Iter->second;
+}
+
 void DWARF5AcceleratorTable::addUnit(DWARFUnit &Unit,
                                      const std::optional<uint64_t> &DWOID) {
-  constexpr uint32_t BADCUOFFSET = 0xBADBAD;
   StrSection = Unit.getStringSection();
+  if (Preallocated) {
+    if (!Unit.isTypeUnit() && !DWOID) {
+      CUList.push_back(CurrentUnitOffset);
+    }
+    if (Unit.isTypeUnit() && !DWOID) {
+      LocalTUList.push_back(CurrentUnitOffset);
+    }
+    // For DWO CUs and TUs, slots are already preallocated.
+    return;
+  }
+
   if (Unit.isTypeUnit()) {
     if (DWOID) {
       // We adding an entry for a DWO TU. The DWO CU might not have any entries,
-      // so need to add it to the list pre-emptively.
+      // so need to add it to the list preemptively.
       auto Iter = CUOffsetsToPatch.insert({*DWOID, CUList.size()});
       if (Iter.second)
         CUList.push_back(BADCUOFFSET);
@@ -136,9 +201,7 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
     constructVect(LocAttrInfo.getDIELoc().values());
   else
     constructVect(LocAttrInfo.getDIEBlock().values());
-  ArrayRef<uint8_t> Expr = ArrayRef<uint8_t>(Sblock);
-  DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
-                     Unit.getContext().isLittleEndian(), 0);
+  DataExtractor Data(Sblock, Unit.getContext().isLittleEndian());
   DWARFExpression LocExpr(Data, Unit.getAddressByteSize(),
                           Unit.getFormParams().Format);
   for (const DWARFExpression::Operation &Expr : LocExpr)
@@ -215,8 +278,11 @@ static uint64_t getNameOffset(BinaryContext &BC, DWARFUnit &Unit,
   }
 
   const uint8_t DwarfOffsetByteSize = Contr->getDwarfOffsetByteSize();
-  return support::endian::read32le(StrOffsetsSection.Data.data() + Contr->Base +
-                                   Index * DwarfOffsetByteSize);
+  const char *OffsetPtr =
+      StrOffsetsSection.Data.data() + Contr->Base + Index * DwarfOffsetByteSize;
+  if (DwarfOffsetByteSize == sizeof(uint64_t))
+    return support::endian::read64le(OffsetPtr);
+  return support::endian::read32le(OffsetPtr);
 }
 
 static uint64_t getEntryID(const BOLTDWARF5AccelTableData &Entry) {
@@ -235,6 +301,11 @@ uint32_t DWARF5AcceleratorTable::getUnitID(const DWARFUnit &Unit,
       return Iter->second;
     }
     return LocalTUList.size() - 1;
+  }
+  if (Preallocated && DWOID) {
+    auto Iter = CUOffsetsToPatch.find(*DWOID);
+    assert(Iter != CUOffsetsToPatch.end() && "DWO ID not preallocated");
+    return Iter->second;
   }
   return CUList.size() - 1;
 }
@@ -258,18 +329,17 @@ std::optional<std::string> DWARF5AcceleratorTable::getName(
   }
   auto &It = Entries[Name];
   if (It.Values.empty()) {
-    if (DWOID && NameToUse.empty()) {
-      // For DWO Unit the offset is in the .debug_str.dwo section.
-      // Need to find offset for the name in the .debug_str section.
+    if (DWOID || !NameToUse.empty()) {
+      // The offset in hand is into .debug_str.dwo, or absent for a synthesized
+      // name. Look for its offset in the main .debug_str.
       llvm::hash_code Hash = llvm::hash_value(llvm::StringRef(Name));
       auto ItCache = StrCacheToOffsetMap.find(Hash);
+      // New string not in the main .debug_str, we'll assign an offset later.
       if (ItCache == StrCacheToOffsetMap.end())
-        NameIndexOffset = MainBinaryStrWriter.addString(Name);
+        It.NeedsStrOffset = true;
       else
         NameIndexOffset = ItCache->second;
     }
-    if (!NameToUse.empty())
-      NameIndexOffset = MainBinaryStrWriter.addString(Name);
     It.StrOffset = NameIndexOffset;
     // This is the same hash function used in DWARF5AccelTableData.
     It.HashValue = caseFoldingDjbHash(Name);
@@ -331,15 +401,15 @@ DWARF5AcceleratorTable::processReferencedDie(
     if (!Value)
       return std::nullopt;
     if (Value.getForm() == dwarf::DW_FORM_ref_addr) {
-      auto Iter = CrossCUDies.find(Value.getDIEInteger().getValue());
-      if (Iter == CrossCUDies.end()) {
+      auto CrossCUEntry = getCrossCUDie(Value.getDIEInteger().getValue());
+      if (!CrossCUEntry) {
         BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                      "referenced DIE in CrossCUDies for "
                   << Twine::utohexstr(Value.getDIEInteger().getValue())
                   << ".\n";
         return std::nullopt;
       }
-      return Iter->second;
+      return CrossCUEntry;
     }
     const DIEEntry &DIEENtry = Value.getDIEEntry();
     return {{&Unit, &DIEENtry.getEntry()}};
@@ -440,8 +510,7 @@ void DWARF5AcceleratorTable::computeBucketCount() {
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
   array_pod_sort(Uniques.begin(), Uniques.end());
-  std::vector<uint32_t>::iterator P =
-      std::unique(Uniques.begin(), Uniques.end());
+  std::vector<uint32_t>::iterator P = llvm::unique(Uniques);
 
   UniqueHashCount = std::distance(Uniques.begin(), P);
 
@@ -453,6 +522,20 @@ void DWARF5AcceleratorTable::computeBucketCount() {
     BucketCount = std::max<uint32_t>(UniqueHashCount, 1);
 }
 
+/// Returns a stable compile-unit sort key for a debug_names entry.
+static unsigned getCompileUnitKey(const BOLTDWARF5AccelTableData *Entry) {
+  if (Entry->getSecondUnitID())
+    return *Entry->getSecondUnitID();
+  if (!Entry->isTU())
+    return Entry->getUnitID();
+  return std::numeric_limits<unsigned>::max();
+}
+
+static unsigned getTypeUnitKey(const BOLTDWARF5AccelTableData *Entry) {
+  return Entry->isTU() ? Entry->getUnitID()
+                       : std::numeric_limits<unsigned>::max();
+}
+
 /// Bucket code as in: AccelTableBase::finalize()
 void DWARF5AcceleratorTable::finalize() {
   if (!NeedToCreate)
@@ -462,9 +545,11 @@ void DWARF5AcceleratorTable::finalize() {
   // data structures.
   computeBucketCount();
 
-  // Compute bucket contents and final ordering.
+  // Compute bucket contents and final ordering. Entries is done growing, so
+  // its keys have settled and an entry can point back at its own name.
   Buckets.resize(BucketCount);
   for (auto &E : Entries) {
+    E.second.Name = &E.first;
     uint32_t Bucket = E.second.HashValue % BucketCount;
     Buckets[Bucket].push_back(&E.second);
   }
@@ -473,21 +558,39 @@ void DWARF5AcceleratorTable::finalize() {
   // up together. Stable sort makes testing easier and doesn't cost much more.
   for (HashList &Bucket : Buckets) {
     llvm::stable_sort(Bucket, [](const HashData *LHS, const HashData *RHS) {
-      return LHS->HashValue < RHS->HashValue;
+      return std::tie(LHS->HashValue, *LHS->Name) <
+             std::tie(RHS->HashValue, *RHS->Name);
     });
     for (HashData *H : Bucket)
       llvm::stable_sort(H->Values, [](const BOLTDWARF5AccelTableData *LHS,
                                       const BOLTDWARF5AccelTableData *RHS) {
-        return LHS->getDieOffset() < RHS->getDieOffset();
+        // Sort entries by (DieOffset, CompileUnitID, TypeUnitID) to ensure
+        // deterministic output order across multi-threaded processing runs.
+        return std::make_tuple(LHS->getDieOffset(), getCompileUnitKey(LHS),
+                               getTypeUnitKey(LHS)) <
+               std::make_tuple(RHS->getDieOffset(), getCompileUnitKey(RHS),
+                               getTypeUnitKey(RHS));
       });
   }
+
+  assignStrOffsets();
 
   CUIndexForm = DIEInteger::BestForm(/*IsSigned*/ false, CUList.size() - 1);
   TUIndexForm = DIEInteger::BestForm(
       /*IsSigned*/ false, LocalTUList.size() + ForeignTUList.size() - 1);
-  const dwarf::FormParams FormParams{5, 4, dwarf::DwarfFormat::DWARF32, false};
+  const dwarf::FormParams FormParams{5, 4, Format, false};
   CUIndexEncodingSize = *dwarf::getFixedFormByteSize(CUIndexForm, FormParams);
   TUIndexEncodingSize = *dwarf::getFixedFormByteSize(TUIndexForm, FormParams);
+}
+
+void DWARF5AcceleratorTable::assignStrOffsets() {
+  // Walk the buckets, which finalize() has just put in a total order.
+  for (HashList &Bucket : Buckets)
+    for (HashData *Hash : Bucket)
+      if (Hash->NeedsStrOffset) {
+        assert(Hash->Name && "Name back-pointer was not set");
+        Hash->StrOffset = MainBinaryStrWriter.addString(*Hash->Name);
+      }
 }
 
 std::optional<DWARF5AccelTable::UnitIndexAndEncoding>
@@ -537,9 +640,9 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
               {dwarf::DW_IDX_parent, dwarf::DW_FORM_flag_present});
         FoldingSetNodeID ID;
         Abbrev.Profile(ID);
-        void *InsertPos;
+        FoldingSetInsertToken Token;
         if (DebugNamesAbbrev *Existing =
-                AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
+                AbbreviationsSet.lookup(ID, Token)) {
           Value->setAbbrevNumber(Existing->getNumber());
           continue;
         }
@@ -547,7 +650,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
             new (Alloc) DebugNamesAbbrev(std::move(Abbrev));
         AbbreviationsVector.push_back(NewAbbrev);
         NewAbbrev->setNumber(AbbreviationsVector.size());
-        AbbreviationsSet.InsertNode(NewAbbrev, InsertPos);
+        AbbreviationsSet.insert(NewAbbrev, Token);
         Value->setAbbrevNumber(NewAbbrev->getNumber());
       }
     }
@@ -556,7 +659,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
 
 void DWARF5AcceleratorTable::writeEntry(BOLTDWARF5AccelTableData &Entry) {
   const uint64_t EntryID = getEntryID(Entry);
-  if (EntryRelativeOffsets.find(EntryID) != EntryRelativeOffsets.end())
+  if (EntryRelativeOffsets.contains(EntryID))
     EntryRelativeOffsets[EntryID] = EntriesBuffer->size();
 
   const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
@@ -649,9 +752,9 @@ void DWARF5AcceleratorTable::writeEntries() {
         if (const auto Iter = EntryRelativeOffsets.find(*ParentOffset);
             Iter != EntryRelativeOffsets.end()) {
           const uint64_t PatchOffset = Entry->getPatchOffset();
-          uint32_t *Ptr = reinterpret_cast<uint32_t *>(
-              &EntriesBuffer.get()->data()[PatchOffset]);
-          *Ptr = Iter->second;
+          uint32_t RelativeOffset = Iter->second;
+          memcpy(&EntriesBuffer->data()[PatchOffset], &RelativeOffset,
+                 sizeof(uint32_t));
         } else {
           BC.errs() << "BOLT-WARNING: [internal-dwarf-warning]: Could not find "
                        "entry with offset "
@@ -678,20 +781,23 @@ static constexpr uint32_t getDebugNamesHeaderSize() {
   constexpr uint32_t BucketCountLength = sizeof(uint32_t);
   constexpr uint32_t NameCountLength = sizeof(uint32_t);
   constexpr uint32_t AbbrevTableSizeLength = sizeof(uint32_t);
-  constexpr uint32_t AugmentationStringSizeLenght = sizeof(uint32_t);
+  constexpr uint32_t AugmentationStringSizeLength = sizeof(uint32_t);
   return VersionLength + PaddingLength + CompUnitCountLength +
          LocalTypeUnitCountLength + ForeignTypeUnitCountLength +
          BucketCountLength + NameCountLength + AbbrevTableSizeLength +
-         AugmentationStringSizeLenght;
+         AugmentationStringSizeLength;
 }
 
 void DWARF5AcceleratorTable::emitHeader() const {
   constexpr uint32_t HeaderSize = getDebugNamesHeaderSize();
-  // Header Length
-  support::endian::write(*FullTableStream,
-                         static_cast<uint32_t>(HeaderSize + StrBuffer->size() +
-                                               AugmentationStringSize),
-                         llvm::endianness::little);
+  // .debug_names Header
+  // Length (DWARF64 needs escaped marker)
+  if (Format == dwarf::DwarfFormat::DWARF64)
+    support::endian::write(*FullTableStream, dwarf::DW_LENGTH_DWARF64,
+                           llvm::endianness::little);
+  writeDWARFLengthOrOffset(*FullTableStream, Format,
+                           HeaderSize + StrBuffer->size() +
+                               AugmentationStringSize);
   // Version
   support::endian::write(*FullTableStream, static_cast<uint16_t>(5),
                          llvm::endianness::little);
@@ -730,12 +836,12 @@ void DWARF5AcceleratorTable::emitHeader() const {
 }
 
 void DWARF5AcceleratorTable::emitCUList() const {
-  for (const uint32_t CUID : CUList)
-    support::endian::write(*StrStream, CUID, llvm::endianness::little);
+  for (const uint64_t CUID : CUList)
+    writeDWARFLengthOrOffset(*StrStream, Format, CUID);
 }
 void DWARF5AcceleratorTable::emitTUList() const {
-  for (const uint32_t TUID : LocalTUList)
-    support::endian::write(*StrStream, TUID, llvm::endianness::little);
+  for (const uint64_t TUID : LocalTUList)
+    writeDWARFLengthOrOffset(*StrStream, Format, TUID);
 
   for (const uint64_t TUID : ForeignTUList)
     support::endian::write(*StrStream, TUID, llvm::endianness::little);
@@ -758,16 +864,13 @@ void DWARF5AcceleratorTable::emitHashes() const {
 void DWARF5AcceleratorTable::emitStringOffsets() const {
   for (const auto &Bucket : getBuckets()) {
     for (const DWARF5AcceleratorTable::HashData *Hash : Bucket)
-      support::endian::write(*StrStream, static_cast<uint32_t>(Hash->StrOffset),
-                             llvm::endianness::little);
+      writeDWARFLengthOrOffset(*StrStream, Format, Hash->StrOffset);
   }
 }
 void DWARF5AcceleratorTable::emitOffsets() const {
   for (const auto &Bucket : getBuckets()) {
     for (const DWARF5AcceleratorTable::HashData *Hash : Bucket)
-      support::endian::write(*StrStream,
-                             static_cast<uint32_t>(Hash->EntryOffset),
-                             llvm::endianness::little);
+      writeDWARFLengthOrOffset(*StrStream, Format, Hash->EntryOffset);
   }
 }
 void DWARF5AcceleratorTable::emitAbbrevs() {

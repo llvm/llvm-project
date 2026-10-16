@@ -25,7 +25,7 @@ void fn2(Obj O[4]) { }
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'Obj[4]' <HLSLArrayRValue>
 
 void call2() {
-  Obj Arr[4] = {};
+  Obj Arr[4] = {0, 0, 0, 0, 0, 0, 0, 0};
   fn2(Arr);
 }
 

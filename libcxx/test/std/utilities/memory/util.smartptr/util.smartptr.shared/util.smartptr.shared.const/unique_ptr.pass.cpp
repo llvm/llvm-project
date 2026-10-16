@@ -165,12 +165,10 @@ int main(int, char**)
     { // LWG 2399
         fn(std::unique_ptr<int>(new int));
     }
-#if TEST_STD_VER >= 14
     { // LWG 2415
         std::unique_ptr<int, void (*)(int*)> p(nullptr, assert_deleter<int>);
         std::shared_ptr<int> p2(std::move(p)); // should not call deleter when going out of scope
     }
-#endif
 
     {
     adl::D d;

@@ -12,13 +12,13 @@
 
 # Check that LIT_OPTS understands multiple options with arbitrary spacing.
 #
-# RUN: env LIT_OPTS='-a -v  -Dvar=foobar' \
+# RUN: env LIT_OPTS='-v -a  -Dvar=foobar' \
 # RUN: %{lit} -s %{inputs}/lit-opts \
 # RUN: | FileCheck -check-prefix=SHOW-ALL -DVAR=foobar %s
 
 # Check that LIT_OPTS parses shell-like quotes and escapes.
 #
-# RUN: env LIT_OPTS='-a   -v -Dvar="foo bar"\ baz' \
+# RUN: env LIT_OPTS='-v   -a -Dvar="foo bar"\ baz' \
 # RUN: %{lit} -s %{inputs}/lit-opts \
 # RUN: | FileCheck -check-prefix=SHOW-ALL -DVAR="foo bar baz" %s
 

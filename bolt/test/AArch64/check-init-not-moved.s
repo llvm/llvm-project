@@ -5,7 +5,7 @@
 # address. Test checks that _init is not moved.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
-# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static -Wl,--section-start=.data=0x1000 -Wl,--section-start=.init=0x1004
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static -Wl,--image-base=0,-Tdata=0x1000,--section-start=.init=0x1004
 # RUN: llvm-bolt %t.exe -o %t.bolt
 # RUN: llvm-nm %t.exe | FileCheck --check-prefix=CHECK-ORIGINAL %s
 # RUN: llvm-nm %t.bolt | FileCheck --check-prefix=CHECK-BOLTED %s

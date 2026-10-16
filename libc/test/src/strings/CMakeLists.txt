@@ -8,8 +8,37 @@ add_libc_test(
     bcopy_test.cpp
   DEPENDS
     libc.src.strings.bcopy
-  LINK_LIBRARIES
-    LibcMemoryHelpers
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
+  ffs_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffs_test.cpp
+  DEPENDS
+    libc.src.strings.ffs
+)
+
+add_libc_test(
+  ffsl_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffsl_test.cpp
+  DEPENDS
+    libc.src.strings.ffsl
+)
+
+add_libc_test(
+  ffsll_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffsll_test.cpp
+  DEPENDS
+    libc.src.strings.ffsll
 )
 
 add_libc_test(
@@ -45,6 +74,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  strcasecmp_l_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    strcasecmp_l_test.cpp
+  DEPENDS
+    libc.hdr.locale_macros
+    libc.src.locale.freelocale
+    libc.src.locale.newlocale
+    libc.src.strings.strcasecmp_l
+)
+
+add_libc_test(
   strncasecmp_test
   SUITE
     libc-strings-tests
@@ -52,6 +94,35 @@ add_libc_test(
     strncasecmp_test.cpp
   DEPENDS
     libc.src.strings.strncasecmp
+)
+
+add_libc_test(
+  strncasecmp_l_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    strncasecmp_l_test.cpp
+  DEPENDS
+    libc.hdr.locale_macros
+    libc.src.locale.freelocale
+    libc.src.locale.newlocale
+    libc.src.strings.strncasecmp_l
+)
+
+add_libc_test(
+  wide_read_memory_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    wide_read_memory_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.src.string.string_utils
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mprotect
+    libc.src.sys.mman.munmap
+    libc.src.unistd.linux.getpagesize
+    libc.src.__support.CPP.array
 )
 
 add_libc_multi_impl_test(bcmp libc-strings-tests SRCS bcmp_test.cpp)

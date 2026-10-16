@@ -108,9 +108,7 @@ int internal_dlinfo(void *handle, int request, void *p) {
 
 // In contrast to POSIX, on Windows GetCurrentThreadId()
 // returns a system-unique identifier.
-tid_t GetTid() {
-  return GetCurrentThreadId();
-}
+ThreadID GetTid() { return GetCurrentThreadId(); }
 
 uptr GetThreadSelf() {
   return GetTid();
@@ -400,21 +398,6 @@ bool DontDumpShadowMemory(uptr addr, uptr length) {
   return true;
 }
 
-uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment, UNUSED uptr &high_mem_end,
-                      uptr granularity) {
-  const uptr alignment =
-      Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
-  const uptr left_padding =
-      Max<uptr>(granularity, 1ULL << min_shadow_base_alignment);
-  uptr space_size = shadow_size_bytes + left_padding;
-  uptr shadow_start = FindAvailableMemoryRange(space_size, alignment,
-                                               granularity, nullptr, nullptr);
-  CHECK_NE((uptr)0, shadow_start);
-  CHECK(IsAligned(shadow_start, alignment));
-  return shadow_start;
-}
-
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
                               uptr *largest_gap_found,
                               uptr *max_occupied_addr) {
@@ -435,6 +418,21 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     address = (uptr)info.BaseAddress + info.RegionSize;
   }
   return 0;
+}
+
+uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
+                      uptr min_shadow_base_alignment, UNUSED uptr& high_mem_end,
+                      uptr granularity) {
+  const uptr alignment =
+      Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
+  const uptr left_padding =
+      Max<uptr>(granularity, 1ULL << min_shadow_base_alignment);
+  uptr space_size = shadow_size_bytes + left_padding;
+  uptr shadow_start = FindAvailableMemoryRange(space_size, alignment,
+                                               granularity, nullptr, nullptr);
+  CHECK_NE((uptr)0, shadow_start);
+  CHECK(IsAligned(shadow_start, alignment));
+  return shadow_start;
 }
 
 uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
@@ -761,9 +759,11 @@ static int RunAtexit() {
   return ret;
 }
 
-#pragma section(".CRT$XID", long, read)
-__declspec(allocate(".CRT$XID")) int (*__run_atexit)() = RunAtexit;
-#endif
+#    if !defined(__GNUC__) || defined(__clang__)
+#      pragma section(".CRT$XID", long, read)
+#    endif
+IN_SECTION(".CRT$XID") int (*__run_atexit)() = RunAtexit;
+#  endif
 
 // ------------------ sanitizer_libc.h
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *last_error) {
@@ -915,11 +915,12 @@ void ReportFile::Write(const char *buffer, uptr length) {
   }
 }
 
-void SetAlternateSignalStack() {
+void* SetAlternateSignalStack() {
   // FIXME: Decide what to do on Windows.
+  return nullptr;
 }
 
-void UnsetAlternateSignalStack() {
+void UnsetAlternateSignalStack(void* altstack_base) {
   // FIXME: Decide what to do on Windows.
 }
 
@@ -1011,6 +1012,9 @@ void SignalContext::InitPcSpBp() {
 #    if SANITIZER_ARM
   bp = (uptr)context_record->R11;
   sp = (uptr)context_record->Sp;
+#    elif SANITIZER_MIPS32
+  bp = (uptr)context_record->IntS8;
+  sp = (uptr)context_record->IntSp;
 #    else
   bp = (uptr)context_record->Ebp;
   sp = (uptr)context_record->Esp;
@@ -1221,7 +1225,7 @@ int WaitForProcess(pid_t pid) { return -1; }
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
-void CheckNoDeepBind(const char *filename, int flag) {
+void OnDlOpen(const char* filename, int flag) {
   // Do nothing.
 }
 

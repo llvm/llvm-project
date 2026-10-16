@@ -19,6 +19,7 @@
 #ifndef LLVM_CODEGEN_MACHINEJUMPTABLEINFO_H
 #define LLVM_CODEGEN_MACHINEJUMPTABLEINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
 #include <cassert>
 #include <vector>
@@ -40,7 +41,8 @@ struct MachineJumpTableEntry {
   /// block(s) that reference it.
   MachineFunctionDataHotness Hotness;
 
-  explicit MachineJumpTableEntry(const std::vector<MachineBasicBlock *> &M);
+  LLVM_ABI explicit MachineJumpTableEntry(
+      const std::vector<MachineBasicBlock *> &M);
 };
 
 class MachineJumpTableInfo {
@@ -95,13 +97,14 @@ public:
   JTEntryKind getEntryKind() const { return EntryKind; }
 
   /// getEntrySize - Return the size of each entry in the jump table.
-  unsigned getEntrySize(const DataLayout &TD) const;
+  LLVM_ABI unsigned getEntrySize(const DataLayout &TD) const;
   /// getEntryAlignment - Return the alignment of each entry in the jump table.
-  unsigned getEntryAlignment(const DataLayout &TD) const;
+  LLVM_ABI unsigned getEntryAlignment(const DataLayout &TD) const;
 
   /// createJumpTableIndex - Create a new jump table.
   ///
-  unsigned createJumpTableIndex(const std::vector<MachineBasicBlock*> &DestBBs);
+  LLVM_ABI unsigned
+  createJumpTableIndex(const std::vector<MachineBasicBlock *> &DestBBs);
 
   /// isEmpty - Return true if there are no jump tables.
   ///
@@ -113,8 +116,8 @@ public:
 
   // Update machine jump table entry's hotness. Return true if the hotness is
   // updated.
-  bool updateJumpTableEntryHotness(size_t JTI,
-                                   MachineFunctionDataHotness Hotness);
+  LLVM_ABI bool updateJumpTableEntryHotness(size_t JTI,
+                                            MachineFunctionDataHotness Hotness);
 
   /// RemoveJumpTable - Mark the specific index as being dead.  This will
   /// prevent it from being emitted.
@@ -123,25 +126,26 @@ public:
   }
 
   /// RemoveMBBFromJumpTables - If MBB is present in any jump tables, remove it.
-  bool RemoveMBBFromJumpTables(MachineBasicBlock *MBB);
+  LLVM_ABI bool RemoveMBBFromJumpTables(MachineBasicBlock *MBB);
 
   /// ReplaceMBBInJumpTables - If Old is the target of any jump tables, update
   /// the jump tables to branch to New instead.
-  bool ReplaceMBBInJumpTables(MachineBasicBlock *Old, MachineBasicBlock *New);
+  LLVM_ABI bool ReplaceMBBInJumpTables(MachineBasicBlock *Old,
+                                       MachineBasicBlock *New);
 
   /// ReplaceMBBInJumpTable - If Old is a target of the jump tables, update
   /// the jump table to branch to New instead.
-  bool ReplaceMBBInJumpTable(unsigned Idx, MachineBasicBlock *Old,
-                             MachineBasicBlock *New);
+  LLVM_ABI bool ReplaceMBBInJumpTable(unsigned Idx, MachineBasicBlock *Old,
+                                      MachineBasicBlock *New);
 
   /// print - Used by the MachineFunction printer to print information about
   /// jump tables.  Implemented in MachineFunction.cpp
   ///
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// dump - Call to stderr.
   ///
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 
@@ -151,7 +155,7 @@ public:
 ///   %jump-table.5       - a jump table entry with index == 5.
 ///
 /// Usage: OS << printJumpTableEntryReference(Idx) << '\n';
-Printable printJumpTableEntryReference(unsigned Idx);
+LLVM_ABI Printable printJumpTableEntryReference(unsigned Idx);
 
 } // End llvm namespace
 

@@ -50,11 +50,9 @@ public:
   }
 };
 
-#define LIST_ISSIGNALING_TESTS(T, func)                                        \
-  using LlvmLibcIsSignalingTest = IsSignalingTest<T>;                          \
-  TEST_F(LlvmLibcIsSignalingTest, SpecialNumbers) {                            \
-    testSpecialNumbers(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcIsSignalingTest, RoundedNubmers) { testRoundedNumbers(&func); }
+#define LIST_ISSIGNALING_TESTS(Name, T, func)                                  \
+  using LlvmLibc##Name##Test = IsSignalingTest<T>;                             \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ISSIGNALINGTEST_H

@@ -16,10 +16,10 @@ vpclmulqdq    $11, (%rax), %ymm17, %ymm19
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  4      4     2.00                        vpclmulqdq	$11, %xmm16, %xmm17, %xmm19
-# CHECK-NEXT:  4      11    2.00    *                   vpclmulqdq	$11, (%rax), %xmm17, %xmm19
-# CHECK-NEXT:  4      4     2.00                        vpclmulqdq	$11, %ymm16, %ymm17, %ymm19
-# CHECK-NEXT:  4      11    2.00    *                   vpclmulqdq	$11, (%rax), %ymm17, %ymm19
+# CHECK-NEXT:  4      4     1.50                        vpclmulqdq	$11, %xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  4      11    1.50    *                   vpclmulqdq	$11, (%rax), %xmm17, %xmm19
+# CHECK-NEXT:  4      4     1.50                        vpclmulqdq	$11, %ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  4      11    1.50    *                   vpclmulqdq	$11, (%rax), %ymm17, %ymm19
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn4AGU0
@@ -48,11 +48,11 @@ vpclmulqdq    $11, (%rax), %ymm17, %ymm19
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     8.00   8.00    -      -     1.00   1.00    -     0.67   0.67   0.67   0.67   0.67   0.67    -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     6.00   6.00    -      -     1.00   1.00    -     0.67   0.67   0.67   0.67   0.67   0.67    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpclmulqdq	$11, %xmm16, %xmm17, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpclmulqdq	$11, (%rax), %xmm17, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpclmulqdq	$11, %ymm16, %ymm17, %ymm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpclmulqdq	$11, (%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -      -      -      -      -      -      -     vpclmulqdq	$11, %xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpclmulqdq	$11, (%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -      -      -      -      -      -      -     vpclmulqdq	$11, %ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpclmulqdq	$11, (%rax), %ymm17, %ymm19

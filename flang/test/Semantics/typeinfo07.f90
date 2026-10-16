@@ -16,7 +16,7 @@
     type(t_container_extension) :: wrapper
   end type
 end
-! CHECK: .dt.t_container, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
-! CHECK: .dt.t_container_extension, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
-! CHECK: .dt.t_container_not_polymorphic, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=1_1)
-! CHECK: .dt.t_container_wrapper, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=0_1)
+! CHECK: .dt.t_container, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=0_1,nodefinedassignment=0_1)
+! CHECK: .dt.t_container_extension, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=0_1,nodefinedassignment=0_1)
+! CHECK: .dt.t_container_not_polymorphic, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=1_1,nodefinedassignment=1_1)
+! CHECK: .dt.t_container_wrapper, SAVE, TARGET (CompilerCreated, ReadOnly): {{.*}}noinitializationneeded=0_1,nodestructionneeded=0_1,nofinalizationneeded=0_1,nodefinedassignment=0_1)

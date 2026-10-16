@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true -terminal-rule=0 | FileCheck %s
 
 ; This version of the conv3x3 test has both loops. This test checks that the
 ; inner loop has 14 packets.
@@ -162,7 +162,7 @@ attributes #2 = { nounwind }
 !4 = !{!"Simple C/C++ TBAA"}
 !5 = !{!6}
 !6 = distinct !{!6, !7, !"x: %a"}
-!7 = distinct !{!7, !"x"}
+!7 = distinct !{!7, i1 false, !"x"}
 !8 = !{!9, !10}
 !9 = distinct !{!9, !7, !"x: %b"}
 !10 = distinct !{!10, !7, !"x: %c"}

@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "tests/scudo_unit_test.h"
-
 #include "quarantine.h"
 
 #include <pthread.h>
 #include <stdlib.h>
 
-static void *FakePtr = reinterpret_cast<void *>(0xFA83FA83);
-static const scudo::uptr BlockSize = 8UL;
-static const scudo::uptr LargeBlockSize = 16384UL;
+#include "tests/scudo_unit_test.h"
+
+namespace {
+
+void *FakePtr = reinterpret_cast<void *>(0xFA83FA83);
+const scudo::uptr BlockSize = 8UL;
+const scudo::uptr LargeBlockSize = 16384UL;
 
 struct QuarantineCallback {
   void recycle(void *P) { EXPECT_EQ(P, FakePtr); }
@@ -26,9 +28,9 @@ struct QuarantineCallback {
 typedef scudo::GlobalQuarantine<QuarantineCallback, void> QuarantineT;
 typedef typename QuarantineT::CacheT CacheT;
 
-static QuarantineCallback Cb;
+QuarantineCallback Cb;
 
-static void deallocateCache(CacheT *Cache) {
+void deallocateCache(CacheT *Cache) {
   while (scudo::QuarantineBatch *Batch = Cache->dequeueBatch())
     Cb.deallocate(Batch);
 }
@@ -65,6 +67,94 @@ TEST(ScudoQuarantineTest, QuarantineBatchMerge) {
   From.init(FakePtr, 8UL);
 
   EXPECT_FALSE(Into.canMerge(&From));
+}
+
+TEST(ScudoQuarantineTest, QuarantineBatchBounds) {
+  scudo::QuarantineBatch Into;
+  scudo::QuarantineBatch From;
+  Into.init(FakePtr, BlockSize);
+  From.init(FakePtr, BlockSize);
+  Into.merge(&From);
+  // Empty batches produced by merging remain valid for merging and shuffling.
+  EXPECT_TRUE(Into.canMerge(&From));
+  Into.merge(&From);
+  From.shuffle(1);
+  EXPECT_EQ(From.Count, 0U);
+
+  while (Into.Count < scudo::QuarantineBatch::MaxCount)
+    Into.push_back(FakePtr, BlockSize);
+  EXPECT_TRUE(Into.canMerge(&From));
+  Into.merge(&From);
+  Into.shuffle(1);
+  EXPECT_TRUE(Into.Count == scudo::QuarantineBatch::MaxCount);
+  for (scudo::u32 I = 0; I < Into.Count; ++I)
+    EXPECT_EQ(Into.Batch[I], FakePtr);
+}
+
+TEST(ScudoQuarantineDeathTest, QuarantineBatchPushBackFull) {
+  scudo::QuarantineBatch B;
+  B.init(FakePtr, BlockSize);
+  while (B.Count < scudo::QuarantineBatch::MaxCount)
+    B.push_back(FakePtr, BlockSize);
+  SCUDO_EXPECT_DEATH(B.push_back(FakePtr, BlockSize), "Count");
+}
+
+TEST(ScudoQuarantineDeathTest, QuarantineBatchInvalidCount) {
+  for (scudo::u32 Count : {scudo::QuarantineBatch::MaxCount + 1, UINT32_MAX}) {
+    scudo::QuarantineBatch B;
+    scudo::QuarantineBatch Other;
+    B.init(FakePtr, BlockSize);
+    Other.init(FakePtr, BlockSize);
+    B.Count = Count;
+    SCUDO_EXPECT_DEATH(B.push_back(FakePtr, BlockSize), "Count");
+    SCUDO_EXPECT_DEATH(B.canMerge(&Other), "Count");
+    SCUDO_EXPECT_DEATH(Other.canMerge(&B), "Count");
+    SCUDO_EXPECT_DEATH(B.merge(&Other), "Count");
+    SCUDO_EXPECT_DEATH(Other.merge(&B), "Count");
+    SCUDO_EXPECT_DEATH(B.shuffle(1), "Count");
+  }
+}
+
+TEST(ScudoQuarantineDeathTest, QuarantineBatchMergeOverflow) {
+  scudo::QuarantineBatch Into;
+  scudo::QuarantineBatch From;
+  Into.init(FakePtr, BlockSize);
+  From.init(FakePtr, BlockSize);
+  Into.Count = scudo::QuarantineBatch::MaxCount;
+  EXPECT_FALSE(Into.canMerge(&From));
+  SCUDO_EXPECT_DEATH(Into.merge(&From), "canMerge");
+
+  // A sum of corrupted counts must not wrap around and appear to fit.
+  Into.Count = From.Count = 1U << 31;
+  SCUDO_EXPECT_DEATH(Into.canMerge(&From), "Count");
+  SCUDO_EXPECT_DEATH(Into.merge(&From), "Count");
+}
+
+TEST(ScudoQuarantineDeathTest, QuarantineCacheEnqueueInvalidCount) {
+  CacheT Cache;
+  Cache.init();
+  scudo::QuarantineBatch B;
+  B.init(FakePtr, BlockSize);
+  Cache.enqueueBatch(&B);
+  // An oversized count bypasses enqueue's full-batch equality check.
+  B.Count = scudo::QuarantineBatch::MaxCount + 1;
+  SCUDO_EXPECT_DEATH(Cache.enqueue(Cb, FakePtr, BlockSize), "Count");
+  EXPECT_EQ(Cache.dequeueBatch(), &B);
+}
+
+TEST(ScudoQuarantineDeathTest, GlobalQuarantineRecycleInvalidCount) {
+  QuarantineT Quarantine;
+  CacheT Cache;
+  Cache.init();
+  Quarantine.init(1024UL << 10, 256UL << 10);
+  auto *B = static_cast<scudo::QuarantineBatch *>(
+      Cb.allocate(sizeof(scudo::QuarantineBatch)));
+  ASSERT_NE(B, nullptr);
+  B->init(FakePtr, BlockSize);
+  Cache.enqueueBatch(B);
+  B->Count = scudo::QuarantineBatch::MaxCount + 1;
+  SCUDO_EXPECT_DEATH(Quarantine.drainAndRecycle(&Cache, Cb), "Count");
+  deallocateCache(&Cache);
 }
 
 TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesEmpty) {
@@ -187,8 +277,8 @@ TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesALotOfBatches) {
   deallocateCache(&ToDeallocate);
 }
 
-static const scudo::uptr MaxQuarantineSize = 1024UL << 10; // 1MB
-static const scudo::uptr MaxCacheSize = 256UL << 10;       // 256KB
+const scudo::uptr MaxQuarantineSize = 1024UL << 10; // 1MB
+const scudo::uptr MaxCacheSize = 256UL << 10;       // 256KB
 
 TEST(ScudoQuarantineTest, GlobalQuarantine) {
   QuarantineT Quarantine;
@@ -214,9 +304,11 @@ TEST(ScudoQuarantineTest, GlobalQuarantine) {
   Quarantine.drainAndRecycle(&Cache, Cb);
   EXPECT_EQ(Cache.getSize(), 0UL);
 
-  scudo::ScopedString Str;
-  Quarantine.getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Quarantine.getStats(&Str);
+    Str.output();
+  }
 }
 
 struct PopulateQuarantineThread {
@@ -246,10 +338,14 @@ TEST(ScudoQuarantineTest, ThreadedGlobalQuarantine) {
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     pthread_join(T[I].Thread, 0);
 
-  scudo::ScopedString Str;
-  Quarantine.getStats(&Str);
-  Str.output();
+  if (TEST_HAS_FAILURE) {
+    scudo::ScopedString Str;
+    Quarantine.getStats(&Str);
+    Str.output();
+  }
 
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     Quarantine.drainAndRecycle(&T[I].Cache, Cb);
 }
+
+} // namespace

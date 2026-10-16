@@ -17,12 +17,9 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
 
@@ -107,14 +104,8 @@ void Dialect::addInterface(std::unique_ptr<DialectInterface> interface) {
 
   auto it = registeredInterfaces.try_emplace(interface->getID(),
                                              std::move(interface));
-  (void)it;
-  LLVM_DEBUG({
-    if (!it.second) {
-      llvm::dbgs() << "[" DEBUG_TYPE
-                      "] repeated interface registration for dialect "
-                   << getNamespace();
-    }
-  });
+  if (!it.second)
+    LDBG() << "repeated interface registration for dialect " << getNamespace();
 }
 
 //===----------------------------------------------------------------------===//
@@ -234,6 +225,29 @@ void DialectRegistry::insert(TypeID typeID, StringRef name,
   }
 }
 
+LogicalResult DialectRegistry::preloadSelectDialects(
+    MLIRContext *ctx, function_ref<InFlightDiagnostic()> emitError) const {
+  for (const std::string &name : dialectsToPreload) {
+    if (!ctx->getOrLoadDialect(name)) {
+      if (emitError)
+        emitError() << "can't load dialect '" << name
+                    << "': missing registration?";
+      return failure();
+    }
+  }
+  return success();
+}
+
+void DialectRegistry::addDialectToPreload(StringRef name) {
+  // If we already have an allocator for this name, nothing to do: the existing
+  // registration will take care of loading the dialect.
+  if (registry.count(name))
+    return;
+  if (llvm::is_contained(dialectsToPreload, name))
+    return;
+  dialectsToPreload.emplace_back(name);
+}
+
 void DialectRegistry::insertDynamic(
     StringRef name, const DynamicDialectPopulationFunction &ctor) {
   // This TypeID marks dynamic dialects. We cannot give a TypeID for the
@@ -335,6 +349,14 @@ bool DialectRegistry::isSubsetOf(const DialectRegistry &rhs) const {
     return false;
 
   // Check that the current dialects fully overlap with the dialects in 'rhs'.
-  return llvm::all_of(
-      registry, [&](const auto &it) { return rhs.registry.count(it.first); });
+  if (!llvm::all_of(registry, [&](const auto &it) {
+        return rhs.registry.count(it.first);
+      }))
+    return false;
+
+  // Check that all preload-only entries are known in 'rhs'.
+  return llvm::all_of(dialectsToPreload, [&](const std::string &name) {
+    return rhs.registry.count(name) ||
+           llvm::is_contained(rhs.dialectsToPreload, name);
+  });
 }

@@ -33,11 +33,10 @@
    (uint64_t)'o' << 24 | (uint64_t)'f' << 16 | (uint64_t)'r' << 8 | (uint64_t)129)
 
 // The version number of the raw binary format.
-#define MEMPROF_RAW_VERSION 4ULL
+#define MEMPROF_RAW_VERSION 5ULL
 
 // Currently supported versions.
-#define MEMPROF_RAW_SUPPORTED_VERSIONS                                         \
-  { 3ULL, 4ULL }
+#define MEMPROF_RAW_SUPPORTED_VERSIONS {3ULL, 4ULL, 5ULL}
 
 #define MEMPROF_V3_MIB_SIZE 132ULL;
 
@@ -228,6 +227,41 @@ void Merge(const MemInfoBlock &newMIB) {
 #else
 } __attribute__((__packed__));
 #endif
+
+constexpr int MantissaBits = 12;
+constexpr int ExponentBits = 4;
+constexpr uint16_t MaxMantissa = (1U << MantissaBits) - 1;
+constexpr uint16_t MaxExponent = (1U << ExponentBits) - 1;
+constexpr uint64_t MaxRepresentableValue = static_cast<uint64_t>(MaxMantissa)
+                                           << MaxExponent;
+
+// Encodes a 64-bit unsigned integer into a 16-bit scaled integer format.
+inline uint16_t encodeHistogramCount(uint64_t Count) {
+  if (Count == 0)
+    return 0;
+
+  if (Count > MaxRepresentableValue)
+    Count = MaxRepresentableValue;
+
+  if (Count <= MaxMantissa)
+    return Count;
+
+  uint64_t M = Count;
+  uint16_t E = 0;
+  while (M > MaxMantissa) {
+    M = (M + 1) >> 1;
+    E++;
+  }
+  return (E << MantissaBits) | static_cast<uint16_t>(M);
+}
+
+// Decodes a 16-bit scaled integer and returns the
+// decoded 64-bit unsigned integer.
+inline uint64_t decodeHistogramCount(uint16_t EncodedValue) {
+  const uint16_t E = EncodedValue >> MantissaBits;
+  const uint16_t M = EncodedValue & MaxMantissa;
+  return static_cast<uint64_t>(M) << E;
+}
 
 } // namespace memprof
 } // namespace llvm

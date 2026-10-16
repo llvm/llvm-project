@@ -13,12 +13,14 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
@@ -30,27 +32,32 @@
 
 namespace llvm {
 
+LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
+
 class AAManager;
 using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MachineModuleInfoWrapperPass;
+struct MachineSchedContext;
 class Mangler;
 class MCAsmInfo;
 class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassBuilder;
 class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
+class ScheduleDAGInstrs;
 class SMDiagnostic;
 class SMRange;
 class Target;
-class TargetIntrinsicInfo;
 class TargetIRAnalysis;
 class TargetTransformInfo;
 class TargetLoweringObjectFile;
@@ -74,7 +81,7 @@ struct MachineFunctionInfo;
 /// machine.  All target-specific information should be accessible through this
 /// interface.
 ///
-class TargetMachine {
+class LLVM_ABI TargetMachine {
 protected: // Can only create subclasses.
   TargetMachine(const Target &T, StringRef DataLayoutString,
                 const Triple &TargetTriple, StringRef CPU, StringRef FS,
@@ -108,14 +115,24 @@ protected: // Can only create subclasses.
   std::unique_ptr<const MCInstrInfo> MII;
   std::unique_ptr<const MCSubtargetInfo> STI;
 
+  /// MC subtarget keyed by target features and target CPU.
+  StringMap<std::unique_ptr<const MCSubtargetInfo>> MCSubtargetMap;
+
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
+  unsigned EnableTiedFastRegAlloc : 1;
+
+  /// Set if the target supports default outlining behaviour.
+  unsigned SupportsDefaultOutlining : 1;
+
+  /// Set if the target supports the debug entry values by default.
+  unsigned SupportsDebugEntryValues : 1;
 
   // PGO related tunables.
   std::optional<PGOOptions> PGOOption;
 
 public:
-  mutable TargetOptions Options;
+  TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
   void operator=(const TargetMachine &) = delete;
@@ -127,6 +144,16 @@ public:
   StringRef getTargetCPU() const { return TargetCPU; }
   StringRef getTargetFeatureString() const { return TargetFS; }
   void setTargetFeatureString(StringRef FS) { TargetFS = std::string(FS); }
+
+  /// Returns the effective target ABI name: the "target-abi" module flag if
+  /// present, otherwise the -target-abi option. This is a pure query; call
+  /// verifyOptionsConsistency once per module to diagnose a conflict.
+  StringRef getTargetABIName(const Module &M) const;
+
+  /// Diagnoses command-line codegen options that conflict with the
+  /// corresponding module flags (e.g. -target-abi vs the "target-abi" module
+  /// flag). Intended to be called once per module.
+  void verifyOptionsConsistency(const Module &M) const;
 
   /// Virtual method implemented by subclasses that returns a reference to that
   /// target's TargetSubtargetInfo-derived member variable.
@@ -141,6 +168,28 @@ public:
   virtual MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const {
+    return nullptr;
+  }
+
+  /// Create an instance of ScheduleDAGInstrs to be run within the standard
+  /// MachineScheduler pass for this function and target at the current
+  /// optimization level.
+  ///
+  /// This can also be used to plug a new MachineSchedStrategy into an instance
+  /// of the standard ScheduleDAGMI:
+  ///   return new ScheduleDAGMI(C, std::make_unique<MyStrategy>(C),
+  ///   /*RemoveKillFlags=*/false)
+  ///
+  /// Return NULL to select the default (generic) machine scheduler.
+  virtual ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const {
+    return nullptr;
+  }
+
+  /// Similar to createMachineScheduler but used when postRA machine scheduling
+  /// is enabled.
+  virtual ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const {
     return nullptr;
   }
 
@@ -203,25 +252,44 @@ public:
     return DL.getPointerSize(DL.getAllocaAddrSpace());
   }
 
-  /// Reset the target options based on the function's attributes.
-  // FIXME: Remove TargetOptions that affect per-function code generation
-  // from TargetMachine.
-  void resetTargetOptions(const Function &F) const;
-
   /// Return target specific asm information.
-  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo.get(); }
+  const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }
 
-  const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
+  const MCRegisterInfo &getMCRegisterInfo() const { return *MRI; }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
-  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
+  const MCSubtargetInfo &getMCSubtargetInfo() const { return *STI; }
 
-  /// If intrinsic information is available, return it.  If not, return null.
-  virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {
-    return nullptr;
+  /// Get the MCSubtargetInfo for the given target CPU and target features.
+  /// For use in contexts where a feature-specific MC subtarget is needed,
+  /// but no MachineFunctionis available, such as for module-level inline
+  /// assembly.
+  const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
+
+  /// Return the ExceptionHandling to use. A Default model resolves to the
+  /// triple's default; None means exceptions are disabled.
+  ExceptionHandling getExceptionModel() const {
+    return Options.ExceptionModel == ExceptionHandling::Default
+               ? TargetTriple.getDefaultExceptionHandling()
+               : Options.ExceptionModel;
   }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
+
+  bool supportsDefaultOutlining() const { return SupportsDefaultOutlining; }
+  void setSupportsDefaultOutlining(bool Enable) {
+    SupportsDefaultOutlining = Enable;
+  }
+
+  /// NOTE: There are targets that still do not support the debug entry values
+  /// production.
+  bool shouldEmitDebugEntryValues() const;
+
+  /// Whether the fast register allocator lowers tied operands itself instead
+  /// of running TwoAddressInstructionPass. AMDGPU anchors passes on
+  /// TwoAddressInstructionPassID and cannot enable it.
+  bool enableTiedFastRegAlloc() const { return EnableTiedFastRegAlloc; }
+  void setEnableTiedFastRegAlloc(bool Value) { EnableTiedFastRegAlloc = Value; }
 
   /// Returns the code generation relocation model. The choices are static, PIC,
   /// and dynamic-no-pic, and target default.
@@ -239,6 +307,7 @@ public:
 
   void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
   bool isLargeGlobalValue(const GlobalValue *GV) const;
+  bool isLargeDataSize(uint64_t Size) const;
 
   bool isPositionIndependent() const;
 
@@ -269,18 +338,14 @@ public:
   void setMachineOutliner(bool Enable) {
     Options.EnableMachineOutliner = Enable;
   }
-  void setSupportsDefaultOutlining(bool Enable) {
-    Options.SupportsDefaultOutlining = Enable;
-  }
   void setSupportsDebugEntryValues(bool Enable) {
-    Options.SupportsDebugEntryValues = Enable;
+    SupportsDebugEntryValues = Enable;
+  }
+  void setEnableDefaultMachineVerifier(bool Enable) {
+    Options.EnableDefaultMachineVerifier = Enable;
   }
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
-
-  bool getAIXExtendedAltivecABI() const {
-    return Options.EnableAIXExtendedAltivecABI;
-  }
 
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
@@ -331,7 +396,8 @@ public:
   }
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+  virtual bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const {
     return false;
   }
 
@@ -374,6 +440,11 @@ public:
   /// Allow the target to modify the pass pipeline.
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
   virtual void registerPassBuilderCallbacks(PassBuilder &) {}
+
+  /// Allow the target to register early alias analyses (AA before BasicAA) with
+  /// the AAManager for use with the new pass manager. Only affects the
+  /// "default" AAManager.
+  virtual void registerEarlyDefaultAliasAnalyses(AAManager &) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
@@ -419,8 +490,6 @@ public:
   static constexpr unsigned DefaultSjLjDataSize = 32;
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
 
-  static std::pair<int, int> parseBinutilsVersion(StringRef Version);
-
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.
   virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
@@ -429,6 +498,9 @@ public:
 
   /// Entry point for module splitting. Targets can implement custom module
   /// splitting logic, mainly used by LTO for --lto-partitions.
+  ///
+  /// On success, this guarantees that between 1 and \p NumParts modules were
+  /// created and passed to \p ModuleCallBack.
   ///
   /// \returns `true` if the module was split, `false` otherwise. When  `false`
   /// is returned, it is assumed that \p ModuleCallback has never been called
@@ -445,13 +517,18 @@ public:
     return nullptr;
   }
 
-  virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
-                                     raw_pwrite_stream *, CodeGenFileType,
-                                     const CGPassBuilderOption &,
-                                     PassInstrumentationCallbacks *) {
+  virtual Error
+  buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                       raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                       CodeGenFileType FileType, const CGPassBuilderOption &Opt,
+                       MCContext &Ctx, PassInstrumentationCallbacks *PIC) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
   }
+
+  /// Returns true if frontends should default to using the NewPM for this
+  /// specific target.
+  virtual bool shouldDefaultToNewPM() const { return false; }
 
   /// Returns true if the target is expected to pass all machine verifier
   /// checks. This is a stopgap measure to fix targets one by one. We will
@@ -469,9 +546,7 @@ public:
 
   virtual Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx) {
-    return nullptr;
-  }
+                   CodeGenFileType FileType, MCContext &Ctx);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register
@@ -491,6 +566,20 @@ public:
 
   // MachineRegisterInfo callback function
   virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
+
+  /// Remove all Linker Optimization Hints (LOH) associated with instructions in
+  /// \p MIs and \return the number of hints removed. This is useful in
+  /// transformations that cause these hints to be illegal, like in the machine
+  /// outliner.
+  virtual size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+    return 0;
+  }
+
+  /// Returns whether the backend can lower the llvm.cond.loop intrinsic. If
+  /// this function returns false, the intrinsic will be supported generically
+  /// but without loop detection support.
+  virtual bool canLowerCondLoop() const { return false; }
 };
 
 } // end namespace llvm

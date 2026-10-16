@@ -9,8 +9,10 @@
 #ifndef TEST_SUPPORT_CONCAT_MACROS_H
 #define TEST_SUPPORT_CONCAT_MACROS_H
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
+#include <source_location>
 
 #include "assert_macros.h"
 #include "test_macros.h"
@@ -58,7 +60,7 @@ void test_encode(OutIt& out_it, char16_t value) {
     *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   } else {
     *out_it++ = static_cast<char>(0b11100000 | (value >> 12));
-    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 6 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value >> 6) & 0b00111111));
     *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   }
 }
@@ -70,8 +72,8 @@ void test_encode(OutIt& out_it, char32_t value) {
     test_encode(out_it, static_cast<char16_t>(value));
   else {
     *out_it++ = static_cast<char>(0b11100000 | (value >> 18));
-    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 12 & 0b00111111));
-    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 6 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value >> 12) & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value >> 6) & 0b00111111));
     *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   }
 }
@@ -132,6 +134,10 @@ OutIt test_transcode(InIt first, InIt last, OutIt out_it) {
       test_encode(out_it, static_cast<char16_t>(test_replacement_character));
   }
   return out_it;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::source_location& loc) {
+  return os << loc.file_name() << ':' << loc.line() << ':' << loc.column();
 }
 
 template <class T>

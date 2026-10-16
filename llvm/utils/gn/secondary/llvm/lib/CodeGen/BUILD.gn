@@ -1,3 +1,10 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("CodeGenOptions") {
+  visibility = [ ":CodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("CodeGen") {
   output_name = "LLVMCodeGen"
   public_deps = [
@@ -5,7 +12,9 @@ static_library("CodeGen") {
     "//llvm/include/llvm/Config:llvm-config",
   ]
   deps = [
+    ":CodeGenOptions",
     "//llvm/include/llvm/CodeGen:GenVT",
+    "//llvm/include/llvm/CodeGen:RegAllocEvictModels",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",
@@ -13,6 +22,7 @@ static_library("CodeGen") {
     "//llvm/lib/CodeGenTypes",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
@@ -27,6 +37,7 @@ static_library("CodeGen") {
     "Analysis.cpp",
     "AssignmentTrackingAnalysis.cpp",
     "AtomicExpandPass.cpp",
+    "BasicBlockMatchingAndInference.cpp",
     "BasicBlockPathCloning.cpp",
     "BasicBlockSections.cpp",
     "BasicBlockSectionsProfileReader.cpp",
@@ -38,10 +49,10 @@ static_library("CodeGen") {
     "CFIFixup.cpp",
     "CFIInstrInserter.cpp",
     "CalcSpillWeights.cpp",
-    "CallBrPrepare.cpp",
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenCommonISel.cpp",
+    "CodeGenOptions.cpp",
     "CodeGenPrepare.cpp",
     "CodeGenTargetMachineImpl.cpp",
     "CommandFlags.cpp",
@@ -50,14 +61,13 @@ static_library("CodeGen") {
     "DFAPacketizer.cpp",
     "DeadMachineInstructionElim.cpp",
     "DetectDeadLanes.cpp",
+    "DroppedVariableStatsMIR.cpp",
     "DwarfEHPrepare.cpp",
-    "EHContGuardCatchret.cpp",
+    "EHContGuardTargets.cpp",
     "EarlyIfConversion.cpp",
     "EdgeBundles.cpp",
     "ExecutionDomainFix.cpp",
-    "ExpandLargeDivRem.cpp",
-    "ExpandLargeFpConvert.cpp",
-    "ExpandMemCmp.cpp",
+    "ExpandIRInsts.cpp",
     "ExpandPostRAPseudos.cpp",
     "ExpandReductions.cpp",
     "ExpandVectorPredication.cpp",
@@ -77,7 +87,9 @@ static_library("CodeGen") {
     "ImplicitNullChecks.cpp",
     "IndirectBrExpandPass.cpp",
     "InitUndef.cpp",
+    "InlineAsmPrepare.cpp",
     "InlineSpiller.cpp",
+    "InsertCodePrefetch.cpp",
     "InterferenceCache.cpp",
     "InterleavedAccessPass.cpp",
     "InterleavedLoadCombinePass.cpp",
@@ -87,6 +99,7 @@ static_library("CodeGen") {
     "LatencyPriorityQueue.cpp",
     "LazyMachineBlockFrequencyInfo.cpp",
     "LexicalScopes.cpp",
+    "LibcallLoweringInfo.cpp",
     "LiveDebugValues/InstrRefBasedImpl.cpp",
     "LiveDebugValues/LiveDebugValues.cpp",
     "LiveDebugValues/VarLocBasedImpl.cpp",
@@ -108,6 +121,7 @@ static_library("CodeGen") {
     "LowLevelTypeUtils.cpp",
     "LowerEmuTLS.cpp",
     "MBFIWrapper.cpp",
+    "MIR2Vec.cpp",
     "MIRCanonicalizerPass.cpp",
     "MIRFSDiscriminator.cpp",
     "MIRNamerPass.cpp",
@@ -120,6 +134,7 @@ static_library("CodeGen") {
     "MLRegAllocPriorityAdvisor.cpp",
     "MachineBasicBlock.cpp",
     "MachineBlockFrequencyInfo.cpp",
+    "MachineBlockHashInfo.cpp",
     "MachineBlockPlacement.cpp",
     "MachineBranchProbabilityInfo.cpp",
     "MachineCFGPrinter.cpp",
@@ -138,7 +153,7 @@ static_library("CodeGen") {
     "MachineFunctionAnalysis.cpp",
     "MachineFunctionPass.cpp",
     "MachineFunctionPrinterPass.cpp",
-    "MachineFunctionSplitter.cpp",
+    "MachineIDFSSAUpdater.cpp",
     "MachineInstr.cpp",
     "MachineInstrBundle.cpp",
     "MachineLICM.cpp",
@@ -203,6 +218,7 @@ static_library("CodeGen") {
     "RegisterPressure.cpp",
     "RegisterScavenging.cpp",
     "RegisterUsageInfo.cpp",
+    "Rematerializer.cpp",
     "RemoveLoadsIntoFakeUses.cpp",
     "RemoveRedundantDebugValues.cpp",
     "RenameIndependentSubregs.cpp",
@@ -228,6 +244,7 @@ static_library("CodeGen") {
     "StackMaps.cpp",
     "StackProtector.cpp",
     "StackSlotColoring.cpp",
+    "StaticDataAnnotator.cpp",
     "StaticDataSplitter.cpp",
     "SwiftErrorValueTracking.cpp",
     "SwitchLoweringUtils.cpp",
@@ -237,7 +254,6 @@ static_library("CodeGen") {
     "TargetInstrInfo.cpp",
     "TargetLoweringBase.cpp",
     "TargetLoweringObjectFileImpl.cpp",
-    "TargetOptionsImpl.cpp",
     "TargetPassConfig.cpp",
     "TargetRegisterInfo.cpp",
     "TargetSchedule.cpp",
@@ -251,6 +267,7 @@ static_library("CodeGen") {
     "WasmEHPrepare.cpp",
     "WinEHPrepare.cpp",
     "WindowScheduler.cpp",
+    "WindowsSecureHotPatching.cpp",
     "XRayInstrumentation.cpp",
   ]
 }

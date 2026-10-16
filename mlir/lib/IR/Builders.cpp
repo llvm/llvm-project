@@ -12,11 +12,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -33,6 +31,16 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 //===----------------------------------------------------------------------===//
 // Types.
 //===----------------------------------------------------------------------===//
+
+FloatType Builder::getF8E8M0Type() { return Float8E8M0FNUType::get(context); }
+
+FloatType Builder::getF8E5M3FNUType() {
+  return Float8E5M3FNUType::get(context);
+}
+
+FloatType Builder::getF8E4M3FNType() { return Float8E4M3FNType::get(context); }
+
+FloatType Builder::getF8E5M2Type() { return Float8E5M2Type::get(context); }
 
 FloatType Builder::getBF16Type() { return BFloat16Type::get(context); }
 
@@ -75,6 +83,10 @@ IntegerType Builder::getIntegerType(unsigned width, bool isSigned) {
 
 FunctionType Builder::getFunctionType(TypeRange inputs, TypeRange results) {
   return FunctionType::get(context, inputs, results);
+}
+
+GraphType Builder::getGraphType(TypeRange inputs, TypeRange results) {
+  return GraphType::get(context, inputs, results);
 }
 
 TupleType Builder::getTupleType(TypeRange elementTypes) {
@@ -211,7 +223,8 @@ IntegerAttr Builder::getUI32IntegerAttr(uint32_t value) {
 }
 
 IntegerAttr Builder::getI16IntegerAttr(int16_t value) {
-  return IntegerAttr::get(getIntegerType(16), APInt(16, value));
+  return IntegerAttr::get(getIntegerType(16),
+                          APInt(16, value, /*isSigned=*/true));
 }
 
 IntegerAttr Builder::getI8IntegerAttr(int8_t value) {
@@ -465,8 +478,9 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-LogicalResult OpBuilder::tryFold(Operation *op,
-                                 SmallVectorImpl<Value> &results) {
+LogicalResult
+OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
+                   SmallVectorImpl<Operation *> *materializedConstants) {
   assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
@@ -482,8 +496,27 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
+  LDBG() << "Trying to fold: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   if (failed(op->fold(foldResults)))
     return cleanupFailure();
+
+  // Bound the number of in-place fold iterations. Legitimate chains are very
+  // short (e.g. foldCommutative swaps once, then the op folds to a value).
+  // Without a bound, circular SSA uses in graph regions can cause an infinite
+  // loop (e.g. addi(x, 0) where x is the op's own result).
+  constexpr int kMaxInPlaceFolds = 64;
+  int count = 0;
+  do {
+    LDBG() << "Folded in place #" << count
+           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    if (++count >= kMaxInPlaceFolds) {
+      LDBG() << "Aborting after " << kMaxInPlaceFolds
+             << " in-place fold iterations: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
+      return cleanupFailure();
+    }
+  } while (foldResults.empty() && succeeded(op->fold(foldResults)));
 
   // An in-place fold does not require generation of any constants.
   if (foldResults.empty())
@@ -527,6 +560,10 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   // If we were successful, insert any generated constants.
   for (Operation *cst : generatedConstants)
     insert(cst);
+
+  // Return materialized constant operations.
+  if (materializedConstants)
+    *materializedConstants = std::move(generatedConstants);
 
   return success();
 }

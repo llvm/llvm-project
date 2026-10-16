@@ -97,7 +97,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   Operation *materializeCallConversion(OpBuilder &builder, Value input,
                                        Type resultType,
                                        Location conversionLoc) const final {
-    return builder.create<CastOp>(conversionLoc, resultType, input);
+    return CastOp::create(builder, conversionLoc, resultType, input);
   }
 };
 
@@ -138,7 +138,7 @@ static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
 /// forms depending on if all of the types match.
 static void printBinaryOp(mlir::OpAsmPrinter &printer, mlir::Operation *op) {
   printer << " " << op->getOperands();
-  printer.printOptionalAttrDict(op->getAttrs());
+  printer.printOptionalAttrDict(op->getDiscardableAttrDictionary());
   printer << " : ";
 
   // If all of the types are the same, print the type directly.
@@ -189,7 +189,7 @@ mlir::ParseResult ConstantOp::parse(mlir::OpAsmParser &parser,
 /// strings, attributes, operands, types, etc.
 void ConstantOp::print(mlir::OpAsmPrinter &printer) {
   printer << " ";
-  printer.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"value"});
+  printer.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   printer << getValue();
 }
 
@@ -350,9 +350,9 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 void GenericCallOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                          StringRef callee, ArrayRef<mlir::Value> arguments) {
-  // Generic call always returns an unranked Tensor initially.
-  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+                          mlir::Type resultType, StringRef callee,
+                          ArrayRef<mlir::Value> arguments) {
+  state.addTypes(resultType);
   state.addOperands(arguments);
   state.addAttribute("callee",
                      mlir::SymbolRefAttr::get(builder.getContext(), callee));
@@ -429,7 +429,8 @@ llvm::LogicalResult ReturnOp::verify() {
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
-  if (inputType == resultType || llvm::isa<mlir::UnrankedTensorType>(inputType) ||
+  if (inputType == resultType ||
+      llvm::isa<mlir::UnrankedTensorType>(inputType) ||
       llvm::isa<mlir::UnrankedTensorType>(resultType))
     return mlir::success();
 
@@ -657,8 +658,8 @@ mlir::Operation *ToyDialect::materializeConstant(mlir::OpBuilder &builder,
                                                  mlir::Type type,
                                                  mlir::Location loc) {
   if (llvm::isa<StructType>(type))
-    return builder.create<StructConstantOp>(loc, type,
-                                            llvm::cast<mlir::ArrayAttr>(value));
-  return builder.create<ConstantOp>(loc, type,
-                                    llvm::cast<mlir::DenseElementsAttr>(value));
+    return StructConstantOp::create(builder, loc, type,
+                                    llvm::cast<mlir::ArrayAttr>(value));
+  return ConstantOp::create(builder, loc, type,
+                            llvm::cast<mlir::DenseElementsAttr>(value));
 }

@@ -7,19 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/locale/newlocale.h"
-#include "include/llvm-libc-macros/locale-macros.h"
-#include "src/locale/locale.h"
-
+#include "hdr/locale_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/locale/locale.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(locale_t, newlocale,
                    (int category_mask, const char *locale_name, locale_t)) {
   cpp::string_view name(locale_name);
-  if (category_mask > LC_ALL || (!name.empty() && name != "C"))
+  if ((category_mask & ~LC_ALL_MASK) != 0 || (!name.empty() && name != "C"))
     return nullptr;
 
   return &c_locale;

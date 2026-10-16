@@ -11,15 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -55,7 +54,7 @@ static bool isInsideLaunch(Operation *op) {
 static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>>
 getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
                         ArrayRef<OpFoldResult> subOffsets,
-                        ArrayRef<OpFoldResult> subStrides = std::nullopt) {
+                        ArrayRef<OpFoldResult> subStrides = {}) {
   auto sourceType = cast<MemRefType>(source.getType());
   auto sourceRank = static_cast<unsigned>(sourceType.getRank());
 
@@ -64,7 +63,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
     OpBuilder::InsertionGuard g(rewriter);
     setInsertionPointToStart(rewriter, source);
     newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
+        memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
   }
 
   auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
@@ -110,8 +109,9 @@ static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
   auto &&[base, offset, ignore] =
       getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
   MemRefType retType = inferCastResultType(base, offset);
-  return rewriter.create<memref::ReinterpretCastOp>(loc, retType, base, offset,
-                                                    std::nullopt, std::nullopt);
+  return memref::ReinterpretCastOp::create(rewriter, loc, retType, base, offset,
+                                           ArrayRef<OpFoldResult>(),
+                                           ArrayRef<OpFoldResult>());
 }
 
 static bool needFlatten(Value val) {
@@ -127,7 +127,7 @@ static bool checkLayout(Value val) {
 
 namespace {
 struct FlattenLoad : public OpRewritePattern<memref::LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::LoadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -143,13 +143,15 @@ struct FlattenLoad : public OpRewritePattern<memref::LoadOp> {
 
     Location loc = op.getLoc();
     Value flatMemref = getFlatMemref(rewriter, loc, memref, op.getIndices());
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, flatMemref);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(
+        op, flatMemref, ValueRange{}, op.getNontemporalAttr(),
+        op.getAlignmentAttr(), op.getInvariantAttr());
     return success();
   }
 };
 
 struct FlattenStore : public OpRewritePattern<memref::StoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::StoreOp op,
                                 PatternRewriter &rewriter) const override {
@@ -166,13 +168,15 @@ struct FlattenStore : public OpRewritePattern<memref::StoreOp> {
     Location loc = op.getLoc();
     Value flatMemref = getFlatMemref(rewriter, loc, memref, op.getIndices());
     Value value = op.getValue();
-    rewriter.replaceOpWithNewOp<memref::StoreOp>(op, value, flatMemref);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        op, value, flatMemref, ValueRange{}, op.getNontemporalAttr(),
+        op.getAlignmentAttr());
     return success();
   }
 };
 
 struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::SubViewOp op,
                                 PatternRewriter &rewriter) const override {
@@ -213,8 +217,18 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
       finalStrides.push_back(strides[i]);
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        op, resultType, base, finalOffset, finalSizes, finalStrides);
+    resultType = updateTypeFromMetadata(resultType, finalOffset, finalSizes,
+                                        finalStrides);
+    auto flattenedSubview = memref::ReinterpretCastOp::create(
+        rewriter, op.getLoc(), resultType, base, finalOffset, finalSizes,
+        finalStrides);
+    if (resultType == op.getType()) {
+      rewriter.replaceOp(op, flattenedSubview);
+      return success();
+    }
+    // Preserve the original result type expected by existing users.
+    rewriter.replaceOpWithNewOp<memref::CastOp>(op, op.getType(),
+                                                flattenedSubview);
     return success();
   }
 };
@@ -237,8 +251,4 @@ struct GpuDecomposeMemrefsPass
 void mlir::populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns) {
   patterns.insert<FlattenLoad, FlattenStore, FlattenSubview>(
       patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createGpuDecomposeMemrefsPass() {
-  return std::make_unique<GpuDecomposeMemrefsPass>();
 }

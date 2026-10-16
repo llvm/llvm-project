@@ -31,11 +31,6 @@ static cl::opt<unsigned> VExtractThreshold(
     "hexagon-vextract-threshold", cl::Hidden, cl::init(1),
     cl::desc("Threshold for triggering vextract replacement"));
 
-namespace llvm {
-  void initializeHexagonVExtractPass(PassRegistry& Registry);
-  FunctionPass *createHexagonVExtract();
-}
-
 namespace {
   class HexagonVExtract : public MachineFunctionPass {
   public:
@@ -130,7 +125,6 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
     return AddrR;
   };
 
-  MaybeAlign MaxAlign;
   for (auto &P : VExtractMap) {
     unsigned VecR = P.first;
     if (P.second.size() <= VExtractThreshold)
@@ -138,7 +132,6 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
 
     const auto &VecRC = *MRI.getRegClass(VecR);
     Align Alignment = HRI.getSpillAlign(VecRC);
-    MaxAlign = std::max(MaxAlign.valueOrOne(), Alignment);
     // Make sure this is not a spill slot: spill slots cannot be aligned
     // if there are variable-sized objects on the stack. They must be
     // accessible via FP (which is not aligned), because SP is unknown,
@@ -166,7 +159,6 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
       assert(ExtI->getOperand(1).getReg() == VecR);
 
       MachineBasicBlock &ExtB = *ExtI->getParent();
-      DebugLoc DL = ExtI->getDebugLoc();
       Register BaseR = EmitAddr(ExtB, ExtI, ExtI->getDebugLoc(), FI,
                                 SR == 0 ? 0 : VecSize/2);
 
@@ -176,15 +168,6 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
       ExtB.erase(ExtI);
       Changed = true;
     }
-  }
-
-  if (AR && MaxAlign) {
-    // Update the required stack alignment.
-    MachineInstr *AlignaI = MRI.getVRegDef(AR);
-    assert(AlignaI->getOpcode() == Hexagon::PS_aligna);
-    MachineOperand &Op = AlignaI->getOperand(1);
-    if (*MaxAlign > Op.getImm())
-      Op.setImm(MaxAlign->value());
   }
 
   return Changed;

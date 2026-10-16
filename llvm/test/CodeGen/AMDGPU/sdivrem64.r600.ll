@@ -100,29 +100,29 @@ define amdgpu_kernel void @test_srem3264(ptr addrspace(1) %out, i64 %x, i64 %y) 
   ret void
 }
 
-;EG-LABEL: {{^}}test_sdiv2464:
+;EG-LABEL: {{^}}test_sdiv2364:
 ;EG: INT_TO_FLT
 ;EG: INT_TO_FLT
 ;EG: FLT_TO_INT
 ;EG-NOT: RECIP_UINT
 ;EG-NOT: BFE_UINT
-define amdgpu_kernel void @test_sdiv2464(ptr addrspace(1) %out, i64 %x, i64 %y) {
-  %1 = ashr i64 %x, 40
-  %2 = ashr i64 %y, 40
+define amdgpu_kernel void @test_sdiv2364(ptr addrspace(1) %out, i64 %x, i64 %y) {
+  %1 = ashr i64 %x, 41
+  %2 = ashr i64 %y, 41
   %result = sdiv i64 %1, %2
   store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-;EG-LABEL: {{^}}test_srem2464:
+;EG-LABEL: {{^}}test_srem2364:
 ;EG: INT_TO_FLT
 ;EG: INT_TO_FLT
 ;EG: FLT_TO_INT
 ;EG-NOT: RECIP_UINT
 ;EG-NOT: BFE_UINT
-define amdgpu_kernel void @test_srem2464(ptr addrspace(1) %out, i64 %x, i64 %y) {
-  %1 = ashr i64 %x, 40
-  %2 = ashr i64 %y, 40
+define amdgpu_kernel void @test_srem2364(ptr addrspace(1) %out, i64 %x, i64 %y) {
+  %1 = ashr i64 %x, 41
+  %2 = ashr i64 %y, 41
   %result = srem i64 %1, %2
   store i64 %result, ptr addrspace(1) %out
   ret void

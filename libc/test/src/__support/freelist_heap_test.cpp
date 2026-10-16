@@ -1,9 +1,14 @@
-//===-- Unittests for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for freelist_heap.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
@@ -11,12 +16,23 @@
 #include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
 #include "src/string/memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "test/UnitTest/Test.h"
 
-using LIBC_NAMESPACE::Block;
+asm(R"(
+.globl _end, __llvm_libc_heap_limit
+
+.bss
+_end:
+  .fill 1024
+__llvm_libc_heap_limit:
+)");
+
+using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
+using LIBC_NAMESPACE::FreeStore;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::span;
 
@@ -48,7 +64,7 @@ using LIBC_NAMESPACE::cpp::span;
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \
   void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap &allocator,    \
-                                                   size_t N)
+                                                   [[maybe_unused]] size_t N)
 
 TEST_FOR_EACH_ALLOCATOR(CanAllocate, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
@@ -82,8 +98,12 @@ TEST_FOR_EACH_ALLOCATOR(CanFreeAndRealloc, 2048) {
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   allocator.free(ptr1);
   void *ptr2 = allocator.allocate(ALLOC_SIZE);
-
-  EXPECT_EQ(ptr1, ptr2);
+  // The freed block is quarantined in the inactive free store, so it cannot
+  // be handed back out until the stores rotate.
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1)
+    EXPECT_NE(ptr1, ptr2);
+  else
+    EXPECT_EQ(ptr1, ptr2);
 }
 
 TEST_FOR_EACH_ALLOCATOR(ReturnsNullWhenAllocationTooLarge, 2048) {
@@ -114,12 +134,12 @@ TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
   void *ptr1 = allocator.allocate(1);
 
   uintptr_t ptr1_start = reinterpret_cast<uintptr_t>(ptr1);
-  EXPECT_EQ(ptr1_start % alignof(max_align_t), static_cast<size_t>(0));
+  EXPECT_EQ(ptr1_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 
   void *ptr2 = allocator.allocate(1);
   uintptr_t ptr2_start = reinterpret_cast<uintptr_t>(ptr2);
 
-  EXPECT_EQ(ptr2_start % alignof(max_align_t), static_cast<size_t>(0));
+  EXPECT_EQ(ptr2_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 }
 
 TEST_FOR_EACH_ALLOCATOR(CanRealloc, 2048) {
@@ -171,8 +191,52 @@ TEST_FOR_EACH_ALLOCATOR(ReallocSmallerSize, 2048) {
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
 
-  // For smaller sizes, realloc will not shrink the block.
+  // For smaller sizes, realloc will shrink the block in-place, returning the
+  // same pointer.
   EXPECT_EQ(ptr1, ptr2);
+}
+
+constexpr size_t SMALL_HEAP_SIZE = 512;
+
+TEST_FOR_EACH_ALLOCATOR(ReallocShrinkAndAllocateTrailing, SMALL_HEAP_SIZE) {
+  constexpr size_t ALLOC_SIZE = (SMALL_HEAP_SIZE * 3) / 4;
+  constexpr size_t NEW_ALLOC_SIZE = SMALL_HEAP_SIZE / 4;
+  constexpr size_t TRAILING_ALLOC_SIZE = SMALL_HEAP_SIZE / 2;
+
+  void *ptr1 = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+
+  // Fill the block with a pattern to verify data preservation.
+  LIBC_NAMESPACE::inline_memset(ptr1, 0x5A, ALLOC_SIZE);
+
+  // Shrink the block in-place.
+  void *ptr2 = allocator.realloc(ptr1, NEW_ALLOC_SIZE);
+  EXPECT_EQ(ptr1, ptr2);
+
+  // Verify that the data in the shrunk block is preserved.
+  unsigned char *uptr2 = static_cast<unsigned char *>(ptr2);
+  for (size_t i = 0; i < NEW_ALLOC_SIZE; ++i)
+    EXPECT_EQ(uptr2[i], static_cast<unsigned char>(0x5A));
+
+  // Allocate another trailing block from the newly split/freed space.
+  void *ptr3 = allocator.allocate(TRAILING_ALLOC_SIZE);
+  ASSERT_NE(ptr3, static_cast<void *>(nullptr));
+
+  // Verify that the trailing block does not overlap with the shrunk block.
+  uintptr_t addr2 = reinterpret_cast<uintptr_t>(ptr2);
+  uintptr_t addr3 = reinterpret_cast<uintptr_t>(ptr3);
+  EXPECT_GE(addr3, addr2 + NEW_ALLOC_SIZE);
+
+  // Verify that writing to the trailing block works without corrupting the
+  // shrunk block.
+  LIBC_NAMESPACE::inline_memset(ptr3, 0xAA, TRAILING_ALLOC_SIZE);
+
+  for (size_t i = 0; i < NEW_ALLOC_SIZE; ++i)
+    EXPECT_EQ(uptr2[i], static_cast<unsigned char>(0x5A));
+
+  // Free the allocations.
+  allocator.free(ptr2);
+  allocator.free(ptr3);
 }
 
 TEST_FOR_EACH_ALLOCATOR(ReallocTooLarge, 2048) {
@@ -225,7 +289,7 @@ TEST_FOR_EACH_ALLOCATOR(AllocateZero, 2048) {
   ASSERT_EQ(ptr, static_cast<void *>(nullptr));
 }
 
-TEST_FOR_EACH_ALLOCATOR(AlignedAlloc, 2048) {
+TEST_FOR_EACH_ALLOCATOR(AlignedAlloc, 3072) {
   constexpr size_t ALIGNMENTS[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
   constexpr size_t SIZE_SCALES[] = {1, 2, 3, 4, 5};
 
@@ -246,7 +310,7 @@ TEST_FOR_EACH_ALLOCATOR(AlignedAlloc, 2048) {
 // still get aligned allocations even if the underlying buffer is not aligned to
 // the alignments we request.
 TEST(LlvmLibcFreeListHeap, AlignedAllocUnalignedBuffer) {
-  byte buf[4096] = {byte(0)};
+  byte buf[8192] = {byte(0)};
 
   // Ensure the underlying buffer is poorly aligned.
   FreeListHeap allocator(span<byte>(buf).subspan(1));
@@ -286,4 +350,157 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   // Don't accept zero alignment.
   ptr = allocator.aligned_allocate(0, 8);
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
+}
+
+TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
+  constexpr size_t ALLOC_SIZE = 256;
+
+  // 1. Null pointer returns 0.
+  EXPECT_EQ(allocator.allocation_size(nullptr), size_t(0));
+
+  // 2. Invalid pointer (outside heap) returns 0.
+  int dummy = 0;
+  EXPECT_EQ(allocator.allocation_size(&dummy), size_t(0));
+
+  // 3. Valid pointer returns >= allocation size.
+  void *ptr = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr, static_cast<void *>(nullptr));
+  EXPECT_GE(allocator.allocation_size(ptr), ALLOC_SIZE);
+
+  // 4. Freed pointer returns 0.
+  allocator.free(ptr);
+  EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
+}
+
+TEST_FOR_EACH_ALLOCATOR(NegativeTestForFullHeap, 2048) {
+  // Numbers are selected to stress the first exponential bin for 64bit target.
+  void *ptr1 = allocator.allocate(528);
+  allocator.allocate(1000);
+  allocator.free(ptr1);
+  void *ptr3 = allocator.allocate(605);
+  EXPECT_EQ(ptr3, static_cast<void *>(nullptr));
+}
+
+TEST_FOR_EACH_ALLOCATOR(IntegrityCheck, 2048) {
+  allocator.integrity_check();
+
+  void *ptr1 = allocator.allocate(512);
+  allocator.integrity_check();
+
+  void *ptr2 = allocator.allocate(512);
+  allocator.integrity_check();
+
+  allocator.free(ptr1);
+  allocator.integrity_check();
+
+  allocator.free(ptr2);
+  allocator.integrity_check();
+}
+
+TEST(LlvmLibcFreeListHeap, RotationSmokeTest) {
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1) {
+    byte buf[4096] = {byte(0)};
+    FreeListHeap allocator(buf);
+
+    constexpr size_t SIZES[] = {64, 128, 256, 512};
+
+    for (size_t size : SIZES) {
+      void *ptr1 = allocator.allocate(size);
+      ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+      allocator.free(ptr1);
+
+      // free() quarantines the block in the inactive store, so allocating the
+      // same size again yields a different address.
+      void *ptr2 = allocator.allocate(size);
+      ASSERT_NE(ptr2, static_cast<void *>(nullptr));
+      EXPECT_NE(ptr1, ptr2);
+      allocator.free(ptr2);
+    }
+
+    // Ask for more than the active store has left, which forces a rotation:
+    // all the quarantined blocks are migrated and coalesced into the store
+    // that is about to become active.
+    void *large_ptr = allocator.allocate(3500);
+    ASSERT_NE(large_ptr, static_cast<void *>(nullptr));
+    allocator.integrity_check();
+    allocator.free(large_ptr);
+  }
+}
+
+// Padding split off by an aligned allocation may be too small to track and
+// hence owned by no store. If left between a quarantined block A and the
+// aligned block B, freeing B into A's store must coalesce all three rather
+// than stop at [A][padding + B].
+TEST(LlvmLibcFreeListHeap, CoalescesAcrossUntrackedPadding) {
+  constexpr size_t MIN_ALIGN = BlockRef::MIN_ALIGN;
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1 &&
+                MIN_ALIGN < FreeStore::MIN_OUTER_SIZE) {
+    constexpr size_t N = 2048;
+    constexpr size_t ALIGNMENT = 2 * MIN_ALIGN;
+
+    // X's usable space must be one MIN_ALIGN unit short of ALIGNMENT; which
+    // size of A gets there depends on where the heap starts, so try a few.
+    bool tested = false;
+    for (size_t a_size = 2 * MIN_ALIGN; a_size <= 8 * MIN_ALIGN && !tested;
+         a_size += MIN_ALIGN) {
+      byte buf[N] = {byte(0)};
+      FreeListHeap allocator(buf);
+
+      void *a = allocator.allocate(a_size);
+      void *x = allocator.allocate(8 * MIN_ALIGN);
+      void *fence = allocator.allocate(MIN_ALIGN);
+      ASSERT_NE(a, static_cast<void *>(nullptr));
+      ASSERT_NE(x, static_cast<void *>(nullptr));
+      ASSERT_NE(fence, static_cast<void *>(nullptr));
+      if (reinterpret_cast<uintptr_t>(x) % ALIGNMENT != MIN_ALIGN)
+        continue;
+      tested = true;
+
+      // Quarantine X, rotate (a request for more than is free fails, but
+      // the stores rotate first), then quarantine A in the other store.
+      allocator.free(x);
+      ASSERT_EQ(allocator.allocate(N - 64), static_cast<void *>(nullptr));
+      allocator.free(a);
+
+      // Carve B out of X, leaving one MIN_ALIGN unit of untracked padding.
+      void *b = allocator.aligned_allocate(ALIGNMENT, ALIGNMENT);
+      ASSERT_NE(b, static_cast<void *>(nullptr));
+      ASSERT_EQ(b, static_cast<void *>(static_cast<byte *>(x) + MIN_ALIGN));
+
+      BlockRef block_a = BlockRef::from_usable_space(a);
+      BlockRef block_b = BlockRef::from_usable_space(b);
+      BlockRef padding = block_b.prev_free();
+      ASSERT_NE(padding.addr(), BlockRef().addr());
+      ASSERT_EQ(padding.prev_free().addr(), block_a.addr());
+      ASSERT_TRUE(FreeStore::too_small(padding));
+      ASSERT_FALSE(FreeStore::too_small(block_a));
+      BlockRef after_b = block_b.next();
+
+      allocator.free(b);
+      EXPECT_EQ(block_a.next().addr(), after_b.addr());
+      allocator.integrity_check();
+    }
+    EXPECT_TRUE(tested);
+  }
+}
+
+// A request larger than the whole heap can never be served, so it must fail
+// without ending the quarantine period.
+TEST(LlvmLibcFreeListHeap, OversizedRequestDoesNotRotate) {
+  if constexpr (FreeListHeap::NUM_FREE_STORES > 1) {
+    byte buf[2048] = {byte(0)};
+    FreeListHeap allocator(buf);
+
+    void *ptr1 = allocator.allocate(64);
+    ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+    allocator.free(ptr1);
+
+    ASSERT_EQ(allocator.allocate(allocator.region().size() + 1),
+              static_cast<void *>(nullptr));
+
+    // The freed block is still quarantined, so it cannot be handed back out.
+    void *ptr2 = allocator.allocate(64);
+    ASSERT_NE(ptr2, static_cast<void *>(nullptr));
+    EXPECT_NE(ptr1, ptr2);
+  }
 }

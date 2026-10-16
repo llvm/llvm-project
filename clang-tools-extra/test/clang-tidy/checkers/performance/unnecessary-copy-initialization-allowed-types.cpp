@@ -88,7 +88,7 @@ void negative_smart_ref() {
 
 void positiveOtherType() {
   const auto O = getOtherType();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'O' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'O' of type 'const OtherType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& O = getOtherType();
   O.constMethod();
 }

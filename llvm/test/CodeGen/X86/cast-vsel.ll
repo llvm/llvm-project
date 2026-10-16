@@ -397,10 +397,10 @@ define dso_local void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE2:       # %bb.0: # %vector.ph
 ; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE2-NEXT:    movd %esi, %xmm1
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB6_1: # %vector.body
@@ -429,10 +429,10 @@ define dso_local void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE41:       # %bb.0: # %vector.ph
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; SSE41-NEXT:    movd %esi, %xmm0
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
 ; SSE41-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; SSE41-NEXT:    .p2align 4
 ; SSE41-NEXT:  .LBB6_1: # %vector.body
@@ -458,10 +458,10 @@ define dso_local void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; AVX1:       # %bb.0: # %vector.ph
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vmovd %esi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    movq $-4096, %rax # imm = 0xF000
 ; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm0
 ; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm1

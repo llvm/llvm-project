@@ -4,7 +4,7 @@
 @one_f = addrspace(4) global float 1.000000e+00, align 4
 
 define float @foo() {
-; CHECK: ld.const.f32
+; CHECK: ld.const.b32
   %val = load float, ptr addrspace(4) @one_f
   ret float %val
 }

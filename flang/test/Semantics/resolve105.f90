@@ -1,9 +1,9 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test instantiation of components that are procedure pointers.
-! 
 program test
   type dtype(kindParam)
     integer, kind :: kindParam = 4
+    !ERROR: KIND parameter expression (kindparam) of intrinsic type REAL did not resolve to a constant value
     !ERROR: KIND parameter value (66) of intrinsic type REAL did not resolve to a supported value
     !ERROR: KIND parameter value (55) of intrinsic type REAL did not resolve to a supported value
     procedure (real(kindParam)), pointer, nopass :: field => null()

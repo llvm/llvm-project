@@ -125,8 +125,7 @@ static llvm::Error CloneError(const llvm::Error &error) {
       return llvm::Error(static_cast<const CloneableError &>(e).Clone());
     if (e.isA<llvm::ECError>())
       return llvm::errorCodeToError(e.convertToErrorCode());
-    return llvm::make_error<llvm::StringError>(e.message(),
-                                               e.convertToErrorCode(), true);
+    return llvm::createStringError(e.message(), e.convertToErrorCode());
   };
   llvm::visitErrors(error, [&](const llvm::ErrorInfoBase &e) {
     result = joinErrors(std::move(result), clone(e));

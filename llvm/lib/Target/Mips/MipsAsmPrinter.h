@@ -42,8 +42,6 @@ class TargetMachine;
 class LLVM_LIBRARY_VISIBILITY MipsAsmPrinter : public AsmPrinter {
   MipsTargetStreamer &getTargetStreamer() const;
 
-  void EmitInstrWithMacroNoAT(const MachineInstr *MI);
-
   //===------------------------------------------------------------------===//
   // XRay implementation
   //===------------------------------------------------------------------===//
@@ -83,7 +81,12 @@ private:
   void emitInlineAsmStart() const override;
 
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
+
+  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                          const MachineBasicBlock *MBB,
+                          unsigned uid) const override;
 
   void EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol);
 
@@ -108,18 +111,18 @@ private:
 
   void EmitFPCallStub(const char *, const Mips16HardFloatInfo::FuncSignature *);
 
-  void NaClAlignIndirectJumpTargets(MachineFunction &MF);
-
   bool isLongBranchPseudo(int Opcode) const;
 
 public:
+  static char ID;
+
   const MipsSubtarget *Subtarget;
   const MipsFunctionInfo *MipsFI;
   MipsMCInstLower MCInstLowering;
 
   explicit MipsAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(*this) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
 
   StringRef getPassName() const override { return "Mips Assembly Printer"; }
 
@@ -136,7 +139,6 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
   void printSavedRegsBitmask();
   void emitFrameDirective();
-  const char *getCurrentABIString() const;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
@@ -148,13 +150,15 @@ public:
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
-                       const char *Modifier = nullptr);
+  void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O);
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
   void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
+  void emitDirectiveRelocJalr(const MachineInstr &MI, MCContext &OutContext,
+                              TargetMachine &TM, MCStreamer &OutStreamer,
+                              const MipsSubtarget &Subtarget);
 };
 
 } // end namespace llvm

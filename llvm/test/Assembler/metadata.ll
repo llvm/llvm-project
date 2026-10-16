@@ -5,6 +5,14 @@
 ; CHECK-UNMAT: @global = global i32 0, !foo [[M2:![0-9]+]], !foo [[M3:![0-9]+]], !baz [[M3]]
 @global = global i32 0, !foo !2, !foo !3, !baz !3
 
+; CHECK-UNMAT: @ifunc_func = ifunc void (...), ptr @resolver, !foo [[M2]]
+@ifunc_func = ifunc void (...), ptr @resolver, !foo !2
+
+define internal ptr @resolver() {
+entry:
+  ret ptr @test
+}
+
 ; CHECK-LABEL: @test
 ; CHECK: ret void, !foo [[M0:![0-9]+]], !bar [[M1:![0-9]+]]
 define void @test() !dbg !1 {
@@ -39,10 +47,12 @@ define void @test_attachment_name() {
 ; CHECK: [[M1]] = distinct !DISubprogram
 ; CHECK: [[M4]] = distinct !{}
 
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !llvm.module.flags = !{!7}
 !llvm.dbg.cu = !{!5}
 !0 = !DILocation(line: 662302, column: 26, scope: !1)
-!1 = distinct !DISubprogram(name: "foo", isDefinition: true, unit: !5)
+!1 = distinct !DISubprogram(name: "foo", isDefinition: true, type: !9, unit: !5)
 !2 = distinct !{}
 !3 = distinct !{}
 !4 = distinct !{}

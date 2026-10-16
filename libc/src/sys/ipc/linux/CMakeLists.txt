@@ -1,0 +1,14 @@
+add_entrypoint_object(
+  ftok
+  SRCS
+    ftok.cpp
+  HDRS
+    ../ftok.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.key_t
+    libc.src.__support.OSUtil.linux.stat.kernel_statx_types
+    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
+    libc.src.__support.common
+    libc.src.errno.errno
+)

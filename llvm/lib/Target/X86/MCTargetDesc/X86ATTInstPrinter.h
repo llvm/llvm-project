@@ -23,6 +23,7 @@ public:
                     const MCRegisterInfo &MRI)
       : X86InstPrinterCommon(MAI, MII, MRI), HasCustomInstComment(false) {}
 
+  void printExprOperand(raw_ostream &OS, const MCExpr &E) override;
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &OS) override;

@@ -14,7 +14,7 @@ define void @test_fcmp_storei1(i1 %cond, ptr %fptr, ptr %iptr, float %f1, float 
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY $rdx
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr8 = COPY [[COPY5]].sub_8bit
-  ; CHECK-NEXT:   TEST8ri killed [[COPY6]], 1, implicit-def $eflags
+  ; CHECK-NEXT:   TEST8ri [[COPY6]], 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.2, 4, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}

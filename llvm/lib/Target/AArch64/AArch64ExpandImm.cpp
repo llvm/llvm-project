@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
 #include "AArch64ExpandImm.h"
+#include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 
 using namespace llvm;
@@ -232,11 +233,76 @@ static bool trySequenceOfOnes(uint64_t UImm,
     return true;
 
   // Create the second MOVK instruction.
-  Insn.push_back({ AArch64::MOVKXi, getChunk(UImm, SecondMovkIdx),
-	           AArch64_AM::getShifterImm(AArch64_AM::LSL,
-                                             SecondMovkIdx * 16) });
+  Insn.push_back(
+      {AArch64::MOVKXi, getChunk(UImm, SecondMovkIdx),
+       AArch64_AM::getShifterImm(AArch64_AM::LSL, SecondMovkIdx * 16)});
 
   return true;
+}
+
+// Attempt to expand 64-bit immediate values that consist of shifted negated
+// components such as 0x1234'5678'edcb'a987, where the upper half is the
+// negation of the lower half. Immediates of this form can generally be
+// expanded via a sequence of MOVN+MOVK to expand the lower half, followed by
+// an EOR or EON to shift and negate the result to the upper half, for example:
+//   mov  x0, #-22137          // =0xffffffffffffa987
+//   movk x0, #60875, lsl #16  // =0xffffffffedcba987
+//   eor  x0, x0, x0, lsl #32  // =0xffffffffedcba987 ^ 0xedcba98700000000
+//                                =0x12345678edcba987.
+// The logic extends to other shift amounts in the range [17, 48) (outside that
+// range we get runs of ones/zeros that are optimised separately).
+//
+// When the lower half contains a 16-bit chunk of ones, such as
+// 0x0000'5678'ffff'a987, the intermediate MOVK is redundant.
+// Similarly, when it contains a 16-bit chunk of zeros, such as
+// 0xffff'5678'0000'a987, the expansion can instead be effected by expanding
+// the negation of the lower half and negating the result with an EON, e.g.:
+//   mov  x0, #-43400          // =0xffffffffffff5678
+//   eon  x0, x0, x0, lsl #32  // =0xffffffffffff5678 ^ ~0xffff567800000000
+//                                =0xffffffffffff5678 ^  0x0000a987ffffffff
+//                                =0xffff56780000a987.
+// In any of these cases, the expansion with EOR/EON saves an instruction
+// compared to the default expansion based on MOV and MOVKs.
+static bool tryCopyWithNegation(uint64_t Imm, bool AllowThreeSequence,
+                                SmallVectorImpl<ImmInsnModel> &Insn) {
+  // Degenerate cases where Imm is a run of ones should be handled separately.
+  if (!Imm || llvm::isShiftedMask_64(Imm))
+    return false;
+
+  const unsigned Mask = 0xffff;
+
+  auto tryExpansion = [&](unsigned Opc, uint64_t C, unsigned N) {
+    assert((C >> 32) == 0xffffffffULL && "Invalid immediate");
+    const unsigned Imm0 = C & Mask;
+    const unsigned Imm16 = (C >> 16) & Mask;
+    if (Imm0 != Mask && Imm16 != Mask && !AllowThreeSequence)
+      return false;
+
+    if (Imm0 != Mask) {
+      Insn.push_back({AArch64::MOVNXi, Imm0 ^ Mask, 0});
+      if (Imm16 != Mask)
+        Insn.push_back({AArch64::MOVKXi, Imm16, 16});
+    } else {
+      Insn.push_back({AArch64::MOVNXi, Imm16 ^ Mask, 16});
+    }
+
+    Insn.push_back({Opc, std::nullopt, N});
+    return true;
+  };
+
+  for (unsigned N = 17; N < 48; ++N) {
+    // Attempt EOR.
+    uint64_t C = 0xffffffff00000000ULL | (Imm ^ (Imm << N));
+    if ((C ^ (C << N)) == Imm && tryExpansion(AArch64::EORXrs, C, N))
+      return true;
+
+    // Attempt EON.
+    C = 0xffffffff00000000ULL | (Imm ^ ~(~Imm << N));
+    if ((C ^ ~(C << N)) == Imm && tryExpansion(AArch64::EONXrs, C, N))
+      return true;
+  }
+
+  return false;
 }
 
 static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
@@ -549,6 +615,8 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // Prefer MOVZ/MOVN over ORR because of the rules for the "mov" alias.
   if ((BitSize / 16) - OneChunks <= 1 || (BitSize / 16) - ZeroChunks <= 1) {
     expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+    assert(Insn.size() == 1 &&
+           "Move of immediate should have expanded to a single MOVZ/MOVN");
     return;
   }
 
@@ -585,7 +653,7 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
     uint64_t ShiftedMask = (0xFFFFULL << Shift);
     uint64_t ZeroChunk = UImm & ~ShiftedMask;
     uint64_t OneChunk = UImm | ShiftedMask;
-    uint64_t RotatedImm = (UImm << 32) | (UImm >> 32);
+    uint64_t RotatedImm = llvm::rotl(UImm, 32);
     uint64_t ReplicateChunk = ZeroChunk | (RotatedImm & ShiftedMask);
     if (AArch64_AM::processLogicalImmediate(ZeroChunk, BitSize, Encoding) ||
         AArch64_AM::processLogicalImmediate(OneChunk, BitSize, Encoding) ||
@@ -612,6 +680,10 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
 
   // Attempt to use a sequence of ORR-immediate followed by EOR-immediate.
   if (tryEorOfLogicalImmediates(UImm, Insn))
+    return;
+
+  // Attempt to use a sequence of MOVN+EOR/EON (shifted register).
+  if (tryCopyWithNegation(Imm, /*AllowThreeSequence=*/false, Insn))
     return;
 
   // FIXME: Add more two-instruction sequences.
@@ -641,7 +713,178 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   if (BitSize == 64 && trySequenceOfOnes(UImm, Insn))
     return;
 
+  // Attempt to use a sequence of MOVN+MOVK+EOR/EON (shifted register).
+  if (tryCopyWithNegation(Imm, /*AllowThreeSequence=*/true, Insn))
+    return;
+
   // We found no possible two or three instruction sequence; use the general
   // four-instruction sequence.
   expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+}
+
+void AArch64_IMM::expandMOVAddr(unsigned Opcode, unsigned TargetFlags,
+                                bool IsTargetMachO,
+                                SmallVectorImpl<AddrInsnModel> &Insn) {
+  if (Opcode == AArch64::MOVaddrBA && IsTargetMachO) {
+    // Block address on Mach-O goes through a constant pool.
+    Insn.push_back({AArch64::ADRP});
+    Insn.push_back({AArch64::LDRXui});
+    return;
+  }
+  Insn.push_back({AArch64::ADRP});
+  if (TargetFlags & AArch64II::MO_TAGGED)
+    Insn.push_back({AArch64::MOVKXi});
+  Insn.push_back({AArch64::ADDXri});
+}
+
+bool AArch64_IMM::expandVectorMOVImm(
+    APInt Imm, SmallVectorImpl<AArch64_IMM::ImmInsnModel> &Insns,
+    const AArch64Subtarget &ST) {
+  assert((Imm.getBitWidth() == 64 || Imm.getBitWidth() == 128) &&
+         "Expected vector sized constant");
+  bool Is64Bit = Imm.getBitWidth() == 64;
+
+  if (ST.isNeonAvailable() && Imm.getHiBits(64) == Imm.getLoBits(64)) {
+    uint64_t Value = Imm.trunc(64).getZExtValue();
+    if (Value == 0) {
+      Insns.push_back({AArch64::FMOVD0, std::nullopt, std::nullopt});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType10(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVID : AArch64::MOVIv2d_ns;
+      Insns.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType10(Value), std::nullopt});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType2(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType3(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType4(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType5(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType6(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType9(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MOVIv8b_ns : AArch64::MOVIv16b_ns;
+      Insns.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType9(Value), std::nullopt});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType11(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::FMOVv2f32_ns : AArch64::FMOVv4f32_ns;
+      Insns.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType11(Value), std::nullopt});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType12(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::FMOVDi : AArch64::FMOVv2f64_ns;
+      Insns.push_back(
+          {Opc, AArch64_AM::encodeAdvSIMDModImmType12(Value), std::nullopt});
+      return true;
+    }
+
+    APInt NotImm = ~Imm;
+    Value = NotImm.trunc(64).getZExtValue();
+    if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType2(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType3(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType4(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType5(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType6(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl;
+      Insns.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
+      return true;
+    }
+  }
+
+  if (ST.isNeonAvailable() && ST.hasFullFP16() && Imm.isSplat(16)) {
+    int Enc = AArch64_AM::getFP16Imm(Imm.trunc(16));
+    if (Enc != -1) {
+      unsigned Opc = Is64Bit ? AArch64::FMOVv4f16_ns : AArch64::FMOVv8f16_ns;
+      Insns.push_back({Opc, Enc, std::nullopt});
+      return true;
+    }
+  }
+
+  // TODO: We should be able to support 64-bit destinations too
+  if (ST.hasSVE() && !Is64Bit && Imm.getHiBits(64) == Imm.getLoBits(64)) {
+    // See if we can make use of the SVE dup instruction.
+    APInt Val64 = Imm.trunc(64);
+    int32_t ImmVal, ShiftVal;
+    if (AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal,
+                                   ShiftVal)) {
+      Insns.push_back(
+          {AArch64::DUP_ZI_D, (uint64_t)ImmVal, (uint64_t)ShiftVal});
+      return true;
+    }
+    uint64_t Encoding;
+    if (AArch64_AM::isSVELogicalImm(64, Val64.getZExtValue(), Encoding)) {
+      Insns.push_back({AArch64::DUPM_ZI, Encoding, std::nullopt});
+      return true;
+    }
+  }
+
+  return false;
 }

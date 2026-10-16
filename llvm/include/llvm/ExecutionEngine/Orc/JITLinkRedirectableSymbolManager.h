@@ -13,8 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_JITLINKREDIRECABLESYMBOLMANAGER_H
 
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 
 #include <atomic>
@@ -22,11 +24,12 @@
 namespace llvm {
 namespace orc {
 
-class JITLinkRedirectableSymbolManager : public RedirectableSymbolManager {
+class LLVM_ABI JITLinkRedirectableSymbolManager
+    : public RedirectableSymbolManager {
 public:
   /// Create redirection manager that uses JITLink based implementaion.
   static Expected<std::unique_ptr<RedirectableSymbolManager>>
-  Create(ObjectLinkingLayer &ObjLinkingLayer) {
+  Create(ObjectLinkingLayer &ObjLinkingLayer, MemoryAccess &MemAccess) {
     auto AnonymousPtrCreator(jitlink::getAnonymousPointerCreator(
         ObjLinkingLayer.getExecutionSession().getTargetTriple()));
     auto PtrJumpStubCreator(jitlink::getPointerJumpStubCreator(
@@ -35,15 +38,16 @@ public:
       return make_error<StringError>("Architecture not supported",
                                      inconvertibleErrorCode());
     return std::unique_ptr<RedirectableSymbolManager>(
-        new JITLinkRedirectableSymbolManager(
-            ObjLinkingLayer, AnonymousPtrCreator, PtrJumpStubCreator));
+        new JITLinkRedirectableSymbolManager(ObjLinkingLayer, MemAccess,
+                                             AnonymousPtrCreator,
+                                             PtrJumpStubCreator));
   }
 
   JITLinkRedirectableSymbolManager(
-      ObjectLinkingLayer &ObjLinkingLayer,
+      ObjectLinkingLayer &ObjLinkingLayer, MemoryAccess &MemAccess,
       jitlink::AnonymousPointerCreator &AnonymousPtrCreator,
       jitlink::PointerJumpStubCreator &PtrJumpStubCreator)
-      : ObjLinkingLayer(ObjLinkingLayer),
+      : ObjLinkingLayer(ObjLinkingLayer), MemAccess(MemAccess),
         AnonymousPtrCreator(std::move(AnonymousPtrCreator)),
         PtrJumpStubCreator(std::move(PtrJumpStubCreator)) {}
 
@@ -56,6 +60,7 @@ public:
 
 private:
   ObjectLinkingLayer &ObjLinkingLayer;
+  MemoryAccess &MemAccess;
   jitlink::AnonymousPointerCreator AnonymousPtrCreator;
   jitlink::PointerJumpStubCreator PtrJumpStubCreator;
   std::atomic_size_t StubGraphIdx{0};

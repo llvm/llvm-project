@@ -1,13 +1,13 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 module attributes {omp.is_target_device = true} {
-  omp.private {type = private} @simd_privatizer : !llvm.ptr alloc {
-  ^bb0(%arg0: !llvm.ptr):
+  omp.private {type = private} @simd_privatizer : !llvm.ptr init {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     omp.yield(%arg0 : !llvm.ptr)
   }
 
   llvm.func @test_target_simd() {
-    omp.target {
+    omp.target kernel_type(generic) {
       %5 = llvm.mlir.constant(1 : i32) : i32
       %x = llvm.alloca %5 x i32 {bindc_name = "x"} : (i32) -> !llvm.ptr
       omp.simd private(@simd_privatizer %x -> %arg1 : !llvm.ptr) {

@@ -1,10 +1,10 @@
-; RUN: llc -mtriple arm64-windows -filetype asm -o - %s \
+    ; RUN: llc -mtriple arm64-windows -filetype asm -o - %s \
 ; RUN:    | FileCheck %s -check-prefix CHECK-ASM
 
 ; RUN: llc -mtriple arm64-windows -filetype obj -o - %s \
 ; RUN:    | llvm-readobj --symbols - | FileCheck %s -check-prefix CHECK-OBJECT
 
-define arm_aapcs_vfpcc void @external() {
+define aarch64_vector_pcs void @external() {
 entry:
   ret void
 }
@@ -15,7 +15,7 @@ entry:
 ; CHECK-ASM: .endef
 ; CHECK-ASM: .globl external
 
-define internal arm_aapcs_vfpcc void @internal() {
+define internal aarch64_vector_pcs void @internal() {
 entry:
   ret void
 }

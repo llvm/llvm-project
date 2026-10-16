@@ -290,16 +290,16 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA  (idx: [[#NFA+1]])      .__get_tpointer[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 3, 3, 4
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 4(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 3, 0(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 5, 2, 0
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 5, 0(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 3, 4(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 4, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: [[#NFA+25]]) VarInit[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 5, 8(5)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 8(4)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL       (idx: [[#NFA+25]]) VarInit[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 6, 4(5)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 5, 0(5)
-; DIS-NEXT:                                       addc 4, 6, 4
-; DIS-NEXT:                                       adde 3, 5, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 6, 0(4)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 4(4)
+; DIS-NEXT:                                       addc 4, 4, 3
+; DIS-NEXT:                                       adde 3, 6, 5
 ; DIS-NEXT:                                       addi 1, 1, 32
 ; DIS-NEXT:                                       lwz 0, 8(1)
 ; DIS-NEXT:                                       mtlr 0
@@ -324,10 +324,10 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 12(4)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL       (idx: [[#NFA+27]]) IThreadLocalVarUninit2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 3, 3, 4
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 4(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 3, 0(3)
-; DIS-NEXT:                                       addic 4, 4, 1
-; DIS-NEXT:                                       addze 3, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 5, 0(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 3, 4(3)
+; DIS-NEXT:                                       addic 4, 3, 1
+; DIS-NEXT:                                       addze 3, 5
 ; DIS-NEXT:                                       addi 1, 1, 32
 ; DIS-NEXT:                                       lwz 0, 8(1)
 ; DIS-NEXT:                                       mtlr 0

@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -remote-mcjit -O0 -disable-lazy-compilation=false -mcjit-remote-process=lli-child-target%exeext %s
+; RUN: %lli -jit-kind=mcjit -remote-mcjit -O0 -disable-lazy-compilation=false -mcjit-remote-process=lli-child-target %s
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}
 ; REQUIRES: thread_support
 ; UNSUPPORTED: target=powerpc64-unknown-linux-gnu

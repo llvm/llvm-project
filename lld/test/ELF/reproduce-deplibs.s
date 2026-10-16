@@ -8,7 +8,7 @@
 # RUN: llvm-ar rc foo.a foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o bar.o
 
-# RUN: ld.lld bar.o -o /dev/null --reproduce repro.tar
+# RUN: ld.lld bar.o --reproduce repro.tar
 # RUN: tar tf repro.tar | FileCheck -DPATH='%:t.dir' %s
 
 # CHECK: [[PATH]]/foo.a

@@ -5,37 +5,46 @@ add_flang_library(FortranLower
   Allocatable.cpp
   Bridge.cpp
   CallInterface.cpp
-  Coarray.cpp
-  ComponentPath.cpp
   ConvertArrayConstructor.cpp
   ConvertCall.cpp
   ConvertConstant.cpp
-  ConvertExpr.cpp
   ConvertExprToHLFIR.cpp
   ConvertProcedureDesignator.cpp
   ConvertType.cpp
   ConvertVariable.cpp
+  CUDA.cpp
   CustomIntrinsicCall.cpp
-  DumpEvaluateExpr.cpp
   HlfirIntrinsics.cpp
   HostAssociations.cpp
   IO.cpp
-  IterationSpace.cpp
   LoweringOptions.cpp
   Mangler.cpp
+  MultiImageFortran.cpp
   OpenACC.cpp
+  OpenMP/Atomic.cpp
   OpenMP/ClauseProcessor.cpp
   OpenMP/Clauses.cpp
   OpenMP/DataSharingProcessor.cpp
   OpenMP/Decomposer.cpp
   OpenMP/OpenMP.cpp
-  OpenMP/PrivateReductionUtils.cpp
-  OpenMP/ReductionProcessor.cpp
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  Support/LoopAnnotation.cpp
+  Support/PrivateReductionUtils.cpp
+  Support/ReductionProcessor.cpp
+  Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
+
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["flang/Lower/SymbolMap.h"]]
+  [["flang/Lower/AbstractConverter.h"]]
+  [["flang/Lower/CallInterface.h"]]
+  [["flang/Lower/BoxAnalyzer.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/DirectivesCommon.h"]]
   
   DEPENDS
   CUFAttrs
@@ -43,8 +52,7 @@ add_flang_library(FortranLower
   FIRDialect
   FIRTransforms
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -52,16 +60,24 @@ add_flang_library(FortranLower
   FIRDialect
   FIRDialectSupport
   FIRBuilder
+  FIROpenACCSupport
   FIRSupport
   FIRTransforms
   HLFIRDialect
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics
+  FortranUtils
+  MIFDialect
 
   LINK_COMPONENTS
+  FrontendOpenMP
   Support
+
+  MLIR_DEPS
+  ${dialect_libs}
+  ${extension_libs}
 
   MLIR_LIBS
   ${dialect_libs}

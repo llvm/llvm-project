@@ -1,20 +1,37 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm %s -o - | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t
 
-// RUN: echo "fun:test1" > %t-func.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-func.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FUNC
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm %t/main.c -o - | FileCheck %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t/func.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=FUNC
 
-// RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t-file.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-file.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FILE
+// RUN: echo "src:%t/main.c" | sed -e 's/\\/\\\\/g' > %t-file.list
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-file.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=FILE
+// RUN: %clang_cc1 -fprofile-instrument=llvm -fprofile-list=%t/section.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=SECTION
+// RUN: %clang_cc1 -fprofile-instrument=sample-coldcov -fprofile-list=%t/cold-func.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=COLDCOV 
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t/exclude.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=EXCLUDE
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t/exclude-only.list -emit-llvm %t/main.c -o - | FileCheck %s --check-prefix=EXCLUDE
 
-// RUN: echo -e "[clang]\nfun:test1\n[llvm]\nfun:test2" > %t-section.list
-// RUN: %clang_cc1 -fprofile-instrument=llvm -fprofile-list=%t-section.list -emit-llvm %s -o - | FileCheck %s --check-prefix=SECTION
+//--- func.list
+fun:test1
 
-// RUN: echo -e "fun:test*\n!fun:test1" > %t-exclude.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-exclude.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
+//--- section.list
+[clang]
+fun:test1
+[llvm]
+fun:test2
 
-// RUN: echo "!fun:test1" > %t-exclude-only.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-exclude-only.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
+//--- cold-func.list
+[sample-coldcov]
+fun:test*
+!fun:test2
 
+//--- exclude.list
+fun:test*
+!fun:test1
+
+//--- exclude-only.list
+!fun:test1
+
+//--- main.c
 unsigned i;
 
 // CHECK: test1
@@ -36,6 +53,8 @@ unsigned i;
 // SECTION: @test1
 // EXCLUDE: noprofile
 // EXCLUDE: @test1
+// COLDCOV-NOT: noprofile
+// COLDCOV: @test1
 unsigned test1(void) {
   // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test1
   // FUNC: %pgocount = load i64, ptr @__profc_{{_?}}test1
@@ -55,6 +74,8 @@ unsigned test1(void) {
 // SECTION: @test2
 // EXCLUDE-NOT: noprofile
 // EXCLUDE: @test2
+// COLDCOV: noprofile
+// COLDCOV: @test2
 unsigned test2(void) {
   // CHECK: %pgocount = load i64, ptr @__profc_{{_?}}test2
   // FUNC-NOT: %pgocount = load i64, ptr @__profc_{{_?}}test2

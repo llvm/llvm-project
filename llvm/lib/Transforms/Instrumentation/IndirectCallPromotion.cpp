@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
@@ -32,6 +33,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -44,7 +46,6 @@
 #include <cstdint>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -55,90 +56,11 @@ using namespace llvm;
 STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
+namespace llvm {
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
-namespace llvm {
 extern cl::opt<bool> EnableVTableProfileUse;
-}
-
-// Command line option to disable indirect-call promotion with the default as
-// false. This is for debug purpose.
-static cl::opt<bool> DisableICP("disable-icp", cl::init(false), cl::Hidden,
-                                cl::desc("Disable indirect call promotion"));
-
-// Set the cutoff value for the promotion. If the value is other than 0, we
-// stop the transformation once the total number of promotions equals the cutoff
-// value.
-// For debug use only.
-static cl::opt<unsigned>
-    ICPCutOff("icp-cutoff", cl::init(0), cl::Hidden,
-              cl::desc("Max number of promotions for this compilation"));
-
-// If ICPCSSkip is non zero, the first ICPCSSkip callsites will be skipped.
-// For debug use only.
-static cl::opt<unsigned>
-    ICPCSSkip("icp-csskip", cl::init(0), cl::Hidden,
-              cl::desc("Skip Callsite up to this number for this compilation"));
-
-// Set if the pass is called in LTO optimization. The difference for LTO mode
-// is the pass won't prefix the source module name to the internal linkage
-// symbols.
-static cl::opt<bool> ICPLTOMode("icp-lto", cl::init(false), cl::Hidden,
-                                cl::desc("Run indirect-call promotion in LTO "
-                                         "mode"));
-
-// Set if the pass is called in SamplePGO mode. The difference for SamplePGO
-// mode is it will add prof metadatato the created direct call.
-static cl::opt<bool>
-    ICPSamplePGOMode("icp-samplepgo", cl::init(false), cl::Hidden,
-                     cl::desc("Run indirect-call promotion in SamplePGO mode"));
-
-// If the option is set to true, only call instructions will be considered for
-// transformation -- invoke instructions will be ignored.
-static cl::opt<bool>
-    ICPCallOnly("icp-call-only", cl::init(false), cl::Hidden,
-                cl::desc("Run indirect-call promotion for call instructions "
-                         "only"));
-
-// If the option is set to true, only invoke instructions will be considered for
-// transformation -- call instructions will be ignored.
-static cl::opt<bool> ICPInvokeOnly("icp-invoke-only", cl::init(false),
-                                   cl::Hidden,
-                                   cl::desc("Run indirect-call promotion for "
-                                            "invoke instruction only"));
-
-// Dump the function level IR if the transformation happened in this
-// function. For debug use only.
-static cl::opt<bool>
-    ICPDUMPAFTER("icp-dumpafter", cl::init(false), cl::Hidden,
-                 cl::desc("Dump IR after transformation happens"));
-
-// Indirect call promotion pass will fall back to function-based comparison if
-// vtable-count / function-count is smaller than this threshold.
-static cl::opt<float> ICPVTablePercentageThreshold(
-    "icp-vtable-percentage-threshold", cl::init(0.995), cl::Hidden,
-    cl::desc("The percentage threshold of vtable-count / function-count for "
-             "cost-benefit analysis."));
-
-// Although comparing vtables can save a vtable load, we may need to compare
-// vtable pointer with multiple vtable address points due to class inheritance.
-// Comparing with multiple vtables inserts additional instructions on hot code
-// path, and doing so for an earlier candidate delays the comparisons for later
-// candidates. For the last candidate, only the fallback path is affected.
-// We allow multiple vtable comparison for the last function candidate and use
-// the option below to cap the number of vtables.
-static cl::opt<int> ICPMaxNumVTableLastCandidate(
-    "icp-max-num-vtable-last-candidate", cl::init(1), cl::Hidden,
-    cl::desc("The maximum number of vtable for the last candidate."));
-
-static cl::list<std::string> ICPIgnoredBaseTypes(
-    "icp-ignored-base-types", cl::Hidden,
-    cl::desc(
-        "A list of mangled vtable type info names. Classes specified by the "
-        "type info names and their derived ones will not be vtable-ICP'ed. "
-        "Useful when the profiled types and actual types in the optimized "
-        "binary could be different due to profiling limitations. Type info "
-        "names are those string literals used in LLVM type metadata"));
+} // namespace llvm
 
 namespace {
 
@@ -146,7 +68,7 @@ namespace {
 // In the inner map, the key represents address point offsets and the value is a
 // constant for this address point.
 using VTableAddressPointOffsetValMap =
-    SmallDenseMap<const GlobalVariable *, std::unordered_map<int, Constant *>>;
+    SmallDenseMap<const GlobalVariable *, DenseMap<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {
@@ -192,12 +114,11 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
                                              uint32_t AddressPointOffset) {
   Module &M = *VTable->getParent();
   LLVMContext &Context = M.getContext();
-  assert(AddressPointOffset <
-             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+  assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
-  return ConstantExpr::getInBoundsGetElementPtr(
-      Type::getInt8Ty(Context), VTable,
+  return ConstantExpr::getInBoundsPtrAdd(
+      VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
@@ -227,9 +148,6 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
     // Do checked cast since IR verifier guarantees that the user of an
     // instruction must be an instruction. See `Verifier::visitInstruction`.
     Instruction *UserInst = cast<Instruction>(User);
-    // We can sink debug or pseudo instructions together with Inst.
-    if (UserInst->isDebugOrPseudoInst())
-      continue;
     UserBB = getUserBasicBlock(Use, UserInst);
     // Do not sink if Inst is used in a basic block that is not DestBB.
     // TODO: Sink to the common dominator of all user blocks.
@@ -308,6 +226,7 @@ static int tryToSinkInstructions(BasicBlock *OriginalBB,
 // thresholds.
 class IndirectCallPromoter {
 private:
+  const InstrumentationOptions &Opts;
   Function &F;
   Module &M;
 
@@ -330,6 +249,7 @@ private:
   struct PromotionCandidate {
     Function *const TargetFunction;
     const uint64_t Count;
+    const uint32_t Index;
 
     // The following fields only exists for promotion candidates with vtable
     // information.
@@ -341,7 +261,8 @@ private:
     VTableGUIDCountsMap VTableGUIDAndCounts;
     SmallVector<Constant *> AddressPoints;
 
-    PromotionCandidate(Function *F, uint64_t C) : TargetFunction(F), Count(C) {}
+    PromotionCandidate(Function *F, uint64_t C, uint32_t I)
+        : TargetFunction(F), Count(C), Index(I) {}
   };
 
   // Check if the indirect-call call site should be promoted. Return the number
@@ -356,12 +277,10 @@ private:
   // Promote a list of targets for one indirect-call callsite by comparing
   // indirect callee with functions. Return true if there are IR
   // transformations and false otherwise.
-  bool tryToPromoteWithFuncCmp(CallBase &CB, Instruction *VPtr,
-                               ArrayRef<PromotionCandidate> Candidates,
-                               uint64_t TotalCount,
-                               ArrayRef<InstrProfValueData> ICallProfDataRef,
-                               uint32_t NumCandidates,
-                               VTableGUIDCountsMap &VTableGUIDCounts);
+  bool tryToPromoteWithFuncCmp(
+      CallBase &CB, Instruction *VPtr, ArrayRef<PromotionCandidate> Candidates,
+      uint64_t TotalCount, MutableArrayRef<InstrProfValueData> ICallProfDataRef,
+      uint32_t NumCandidates, VTableGUIDCountsMap &VTableGUIDCounts);
 
   // Promote a list of targets for one indirect call by comparing vtables with
   // functions. Return true if there are IR transformations and false
@@ -394,20 +313,24 @@ private:
   Constant *getOrCreateVTableAddressPointVar(GlobalVariable *GV,
                                              uint64_t AddressPointOffset);
 
-  void updateFuncValueProfiles(CallBase &CB, ArrayRef<InstrProfValueData> VDs,
+  void updateFuncValueProfiles(CallBase &CB,
+                               MutableArrayRef<InstrProfValueData> VDs,
                                uint64_t Sum, uint32_t MaxMDCount);
 
   void updateVPtrValueProfiles(Instruction *VPtr,
                                VTableGUIDCountsMap &VTableGUIDCounts);
 
+  bool isValidTarget(uint64_t, Function *, const CallBase &, uint64_t);
+
 public:
   IndirectCallPromoter(
-      Function &Func, Module &M, InstrProfSymtab *Symtab, bool SamplePGO,
+      const InstrumentationOptions &Opts, Function &Func, Module &M,
+      InstrProfSymtab *Symtab, bool SamplePGO,
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
       const DenseSet<StringRef> &IgnoredBaseTypes,
       OptimizationRemarkEmitter &ORE)
-      : F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
+      : Opts(Opts), F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
         VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE),
         IgnoredBaseTypes(IgnoredBaseTypes) {}
@@ -418,6 +341,53 @@ public:
 };
 
 } // end anonymous namespace
+
+bool IndirectCallPromoter::isValidTarget(uint64_t Target,
+                                         Function *TargetFunction,
+                                         const CallBase &CB, uint64_t Count) {
+  // Don't promote if the symbol is not defined in the module. This avoids
+  // creating a reference to a symbol that doesn't exist in the module
+  // This can happen when we compile with a sample profile collected from
+  // one binary but used for another, which may have profiled targets that
+  // aren't used in the new binary. We might have a declaration initially in
+  // the case where the symbol is globally dead in the binary and removed by
+  // ThinLTO.
+  using namespace ore;
+  if (TargetFunction == nullptr) {
+    LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", &CB)
+             << "Cannot promote indirect call: target with md5sum "
+             << NV("target md5sum", Target)
+             << " not found (count=" << NV("Count", Count) << ")";
+    });
+    return false;
+  }
+  if (!Opts.icp_allow_decls && TargetFunction->isDeclaration()) {
+    LLVM_DEBUG(dbgs() << " Not promote: target definition is not available\n");
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NoTargetDef", &CB)
+             << "Do not promote indirect call: target with md5sum "
+             << NV("target md5sum", Target)
+             << " definition not available (count=" << ore::NV("Count", Count)
+             << ")";
+    });
+    return false;
+  }
+
+  const char *Reason = nullptr;
+  if (!isLegalToPromote(CB, TargetFunction, &Reason)) {
+
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", &CB)
+             << "Cannot promote indirect call to "
+             << NV("TargetFunction", TargetFunction)
+             << " (count=" << NV("Count", Count) << "): " << Reason;
+    });
+    return false;
+  }
+  return true;
+}
 
 // Indirect-call promotion heuristic. The direct targets are sorted based on
 // the count. Stop at the first target that is not promoted.
@@ -431,7 +401,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
                     << " Num_targets: " << ValueDataRef.size()
                     << " Num_candidates: " << NumCandidates << "\n");
   NumOfPGOICallsites++;
-  if (ICPCSSkip != 0 && NumOfPGOICallsites <= ICPCSSkip) {
+  if (Opts.icp_csskip != 0 && NumOfPGOICallsites <= Opts.icp_csskip) {
     LLVM_DEBUG(dbgs() << " Skip: User options.\n");
     return Ret;
   }
@@ -444,7 +414,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
                       << "  Target_func: " << Target << "\n");
 
-    if (ICPInvokeOnly && isa<CallInst>(CB)) {
+    if (Opts.icp_invoke_only && isa<CallInst>(CB)) {
       LLVM_DEBUG(dbgs() << " Not promote: User options.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", &CB)
@@ -452,7 +422,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
       });
       break;
     }
-    if (ICPCallOnly && isa<InvokeInst>(CB)) {
+    if (Opts.icp_call_only && isa<InvokeInst>(CB)) {
       LLVM_DEBUG(dbgs() << " Not promote: User option.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", &CB)
@@ -460,7 +430,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
       });
       break;
     }
-    if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
+    if (Opts.icp_cutoff != 0 && NumOfPGOICallPromotion >= Opts.icp_cutoff) {
       LLVM_DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", &CB)
@@ -469,38 +439,15 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
       break;
     }
 
-    // Don't promote if the symbol is not defined in the module. This avoids
-    // creating a reference to a symbol that doesn't exist in the module
-    // This can happen when we compile with a sample profile collected from
-    // one binary but used for another, which may have profiled targets that
-    // aren't used in the new binary. We might have a declaration initially in
-    // the case where the symbol is globally dead in the binary and removed by
-    // ThinLTO.
     Function *TargetFunction = Symtab->getFunction(Target);
-    if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
-      LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", &CB)
-               << "Cannot promote indirect call: target with md5sum "
-               << ore::NV("target md5sum", Target) << " not found";
-      });
-      break;
+    if (!isValidTarget(Target, TargetFunction, CB, Count)) {
+      if (Opts.icp_allow_candidate_skip)
+        continue;
+      else
+        break;
     }
 
-    const char *Reason = nullptr;
-    if (!isLegalToPromote(CB, TargetFunction, &Reason)) {
-      using namespace ore;
-
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToPromote", &CB)
-               << "Cannot promote indirect call to "
-               << NV("TargetFunction", TargetFunction) << " with count of "
-               << NV("Count", Count) << ": " << Reason;
-      });
-      break;
-    }
-
-    Ret.push_back(PromotionCandidate(TargetFunction, Count));
+    Ret.push_back(PromotionCandidate(TargetFunction, Count, I));
     TotalCount -= Count;
   }
   return Ret;
@@ -594,9 +541,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
       continue;
 
     auto &Candidate = Candidates[CalleeIndexIter->second];
-    // There shouldn't be duplicate GUIDs in one !prof metadata (except
-    // duplicated zeros), so assign counters directly won't cause overwrite or
-    // counter loss.
+    // There should never be duplicate GUIDs in one !prof metdata, as this is
+    // an IR invariant enforced by the verifier. Assigning counters directly
+    // won't cause overwrite or counter loss.
     Candidate.VTableGUIDAndCounts[VTableVal] = V.Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));
@@ -624,8 +571,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
       createBranchWeights(CB.getContext(), Count, TotalCount - Count));
 
   if (AttachProfToDirectCall)
-    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)},
-                     /*IsExpected=*/false);
+    setFittedBranchWeights(NewInst, {Count},
+                           /*IsExpected=*/false);
 
   using namespace ore;
 
@@ -642,7 +589,7 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
 // Promote indirect-call to conditional direct-call for one callsite.
 bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
     CallBase &CB, Instruction *VPtr, ArrayRef<PromotionCandidate> Candidates,
-    uint64_t TotalCount, ArrayRef<InstrProfValueData> ICallProfDataRef,
+    uint64_t TotalCount, MutableArrayRef<InstrProfValueData> ICallProfDataRef,
     uint32_t NumCandidates, VTableGUIDCountsMap &VTableGUIDCounts) {
   uint32_t NumPromoted = 0;
 
@@ -655,6 +602,8 @@ bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
     NumOfPGOICallPromotion++;
     NumPromoted++;
 
+    // Update the count and this entry will be erased later.
+    ICallProfDataRef[C.Index].Count = 0;
     if (!EnableVTableProfileUse || C.VTableGUIDAndCounts.empty())
       continue;
 
@@ -679,21 +628,33 @@ bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
          "Number of promoted functions should not be greater than the number "
          "of values in profile metadata");
 
-  // Update value profiles on the indirect call.
-  updateFuncValueProfiles(CB, ICallProfDataRef.slice(NumPromoted), TotalCount,
-                          NumCandidates);
+  updateFuncValueProfiles(CB, ICallProfDataRef, TotalCount, NumCandidates);
   updateVPtrValueProfiles(VPtr, VTableGUIDCounts);
   return true;
 }
 
 void IndirectCallPromoter::updateFuncValueProfiles(
-    CallBase &CB, ArrayRef<InstrProfValueData> CallVDs, uint64_t TotalCount,
-    uint32_t MaxMDCount) {
+    CallBase &CB, MutableArrayRef<InstrProfValueData> CallVDs,
+    uint64_t TotalCount, uint32_t MaxMDCount) {
   // First clear the existing !prof.
   CB.setMetadata(LLVMContext::MD_prof, nullptr);
+
+  // Sort value profiles by count in descending order.
+  llvm::stable_sort(CallVDs, [](const InstrProfValueData &LHS,
+                                const InstrProfValueData &RHS) {
+    return LHS.Count > RHS.Count;
+  });
+  // Drop the <target-value, count> pair if count is zero.
+  ArrayRef<InstrProfValueData> VDs(
+      CallVDs.begin(),
+      llvm::upper_bound(CallVDs, 0U,
+                        [](uint64_t Count, const InstrProfValueData &ProfData) {
+                          return ProfData.Count <= Count;
+                        }));
+
   // Annotate the remaining value profiles if counter is not zero.
   if (TotalCount != 0)
-    annotateValueSite(M, CB, CallVDs, TotalCount, IPVK_IndirectCallTarget,
+    annotateValueSite(M, CB, VDs, TotalCount, IPVK_IndirectCallTarget,
                       MaxMDCount);
 }
 
@@ -726,7 +687,7 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     uint64_t TotalFuncCount, uint32_t NumCandidates,
     MutableArrayRef<InstrProfValueData> ICallProfDataRef,
     VTableGUIDCountsMap &VTableGUIDCounts) {
-  SmallVector<uint64_t, 4> PromotedFuncCount;
+  SmallVector<std::pair<uint32_t, uint64_t>, 4> PromotedFuncCount;
 
   for (const auto &Candidate : Candidates) {
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
@@ -771,7 +732,7 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
       return Remark;
     });
 
-    PromotedFuncCount.push_back(Candidate.Count);
+    PromotedFuncCount.push_back({Candidate.Index, Candidate.Count});
 
     assert(TotalFuncCount >= Candidate.Count &&
            "Within one prof metadata, total count is the sum of counts from "
@@ -792,22 +753,12 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
   // used to load multiple virtual functions. The vtable profiles needs to be
   // updated properly in that case (e.g, for each indirect call annotate both
   // type profiles and function profiles in one !prof).
-  for (size_t I = 0; I < PromotedFuncCount.size(); I++)
-    ICallProfDataRef[I].Count -=
-        std::max(PromotedFuncCount[I], ICallProfDataRef[I].Count);
-  // Sort value profiles by count in descending order.
-  llvm::stable_sort(ICallProfDataRef, [](const InstrProfValueData &LHS,
-                                         const InstrProfValueData &RHS) {
-    return LHS.Count > RHS.Count;
-  });
-  // Drop the <target-value, count> pair if count is zero.
-  ArrayRef<InstrProfValueData> VDs(
-      ICallProfDataRef.begin(),
-      llvm::upper_bound(ICallProfDataRef, 0U,
-                        [](uint64_t Count, const InstrProfValueData &ProfData) {
-                          return ProfData.Count <= Count;
-                        }));
-  updateFuncValueProfiles(CB, VDs, TotalFuncCount, NumCandidates);
+  for (size_t I = 0; I < PromotedFuncCount.size(); I++) {
+    uint32_t Index = PromotedFuncCount[I].first;
+    ICallProfDataRef[Index].Count -=
+        std::max(PromotedFuncCount[I].second, ICallProfDataRef[Index].Count);
+  }
+  updateFuncValueProfiles(CB, ICallProfDataRef, TotalFuncCount, NumCandidates);
   updateVPtrValueProfiles(VPtr, VTableGUIDCounts);
   return true;
 }
@@ -822,9 +773,28 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
     uint64_t TotalCount;
     auto ICallProfDataRef = ICallAnalysis.getPromotionCandidatesForInstruction(
         CB, TotalCount, NumCandidates);
-    if (!NumCandidates ||
-        (PSI && PSI->hasProfileSummary() && !PSI->isHotCount(TotalCount)))
+    if (!NumCandidates)
       continue;
+    if (PSI && PSI->hasProfileSummary()) {
+      // Don't promote cold candidates.
+      if (PSI->isColdCount(TotalCount)) {
+        LLVM_DEBUG(dbgs() << "Don't promote the cold candidate: TotalCount="
+                          << TotalCount << "\n");
+        continue;
+      }
+      // Only promote hot if -icp-allow-hot-only is true. ICP has its own cutoff
+      // threshold for hotness, which defaults to ProfileSummaryCutoffHot if
+      // unspecified.
+      if (Opts.icp_allow_hot_only &&
+          !PSI->isHotCountNthPercentile(Opts.hot_func_cutoff_for_icp == -1
+                                            ? ProfileSummaryCutoffHot
+                                            : Opts.hot_func_cutoff_for_icp,
+                                        TotalCount)) {
+        LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
+                          << TotalCount << "\n");
+        continue;
+      }
+    }
 
     auto PromotionCandidates = getPromotionCandidatesForCallSite(
         *CB, ICallProfDataRef, TotalCount, NumCandidates);
@@ -858,13 +828,14 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     auto &Candidate = Candidates[I];
     auto &VTableGUIDAndCounts = Candidate.VTableGUIDAndCounts;
 
-    LLVM_DEBUG(dbgs() << "  Candidate " << I << " FunctionCount: "
-                      << Candidate.Count << ", VTableCounts:");
-    // Add [[maybe_unused]] since <GUID, Count> are only used by LLVM_DEBUG.
-    for ([[maybe_unused]] auto &[GUID, Count] : VTableGUIDAndCounts)
-      LLVM_DEBUG(dbgs() << " {" << Symtab->getGlobalVariable(GUID)->getName()
-                        << ", " << Count << "}");
-    LLVM_DEBUG(dbgs() << "\n");
+    LLVM_DEBUG({
+      dbgs() << "  Candidate " << I << " FunctionCount: " << Candidate.Count
+             << ", VTableCounts:";
+      for (const auto &[GUID, Count] : VTableGUIDAndCounts)
+        dbgs() << " {" << Symtab->getGlobalVariable(GUID)->getName() << ", "
+               << Count << "}";
+      dbgs() << "\n";
+    });
 
     uint64_t CandidateVTableCount = 0;
 
@@ -875,7 +846,8 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
         return false;
     }
 
-    if (CandidateVTableCount < Candidate.Count * ICPVTablePercentageThreshold) {
+    if (CandidateVTableCount <
+        Candidate.Count * Opts.icp_vtable_percentage_threshold) {
       LLVM_DEBUG(
           dbgs() << "    function count " << Candidate.Count
                  << " and its vtable sum count " << CandidateVTableCount
@@ -891,7 +863,7 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     // candidate and allow option to override it for the last candidate.
     int MaxNumVTable = 1;
     if (I == CandidateSize - 1)
-      MaxNumVTable = ICPMaxNumVTableLastCandidate;
+      MaxNumVTable = Opts.icp_max_num_vtable_last_candidate;
 
     if ((int)Candidate.AddressPoints.size() > MaxNumVTable) {
       LLVM_DEBUG(dbgs() << "    allow at most " << MaxNumVTable << " and got "
@@ -985,9 +957,10 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
 }
 
 // A wrapper function that does the actual work.
-static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
+static bool promoteIndirectCalls(const InstrumentationOptions &Opts, Module &M,
+                                 ProfileSummaryInfo *PSI, bool InLTO,
                                  bool SamplePGO, ModuleAnalysisManager &MAM) {
-  if (DisableICP)
+  if (Opts.disable_icp)
     return false;
   InstrProfSymtab Symtab;
   if (Error E = Symtab.create(M, InLTO)) {
@@ -1003,8 +976,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   if (EnableVTableProfileUse) {
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
-    for (StringRef Str : ICPIgnoredBaseTypes)
-      IgnoredBaseTypes.insert(Str);
+    IgnoredBaseTypes.insert_range(Opts.icp_ignored_base_types);
   }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable
@@ -1024,16 +996,16 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    IndirectCallPromoter CallPromoter(F, M, &Symtab, SamplePGO, VirtualCSInfo,
-                                      VTableAddressPointOffsetVal,
-                                      IgnoredBaseTypes, ORE);
+    IndirectCallPromoter CallPromoter(
+        Opts, F, M, &Symtab, SamplePGO, VirtualCSInfo,
+        VTableAddressPointOffsetVal, IgnoredBaseTypes, ORE);
     bool FuncChanged = CallPromoter.processFunction(PSI);
-    if (ICPDUMPAFTER && FuncChanged) {
+    if (Opts.icp_dumpafter && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
     }
     Changed |= FuncChanged;
-    if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
+    if (Opts.icp_cutoff != 0 && NumOfPGOICallPromotion >= Opts.icp_cutoff) {
       LLVM_DEBUG(dbgs() << " Stop: Cutoff reached.\n");
       break;
     }
@@ -1045,8 +1017,9 @@ PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (!promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
-                            SamplePGO | ICPSamplePGOMode, MAM))
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  if (!promoteIndirectCalls(Opts, M, PSI, InLTO | Opts.icp_lto,
+                            SamplePGO | Opts.icp_samplepgo, MAM))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

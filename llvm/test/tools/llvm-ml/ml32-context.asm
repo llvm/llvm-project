@@ -1,4 +1,4 @@
-; RUN: llvm-ml -m32 -filetype=s %s /Fo - | FileCheck %s
+; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
 
 .386p
 .model flat

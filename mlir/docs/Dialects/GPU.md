@@ -28,13 +28,16 @@ is being used.
 ## GPU address spaces
 
 The GPU dialect exposes the `gpu.address_space` attribute, which currently has
-three values: `global`, `workgroup`, and `private`.
+four values: `global`, `workgroup`, `private`, and `constant`.
 
 These address spaces represent the types of buffer commonly seen in GPU compilation.
 `global` memory is memory that resides in the GPU's global memory. `workgroup`
 memory is a limited, per-workgroup resource: all threads in a workgroup/thread
-block access the same values in `workgroup` memory. Finally, `private` memory is
+block access the same values in `workgroup` memory. `private` memory is
 used to represent `alloca`-like buffers that are private to a single thread/workitem.
+`constant` memory is read-only memory residing in global address space, guaranteed
+not to change during kernel execution, allowing backend-specific optimizations
+(e.g., scalar reads on AMD GPUs).
 
 These address spaces may be used as the `memorySpace` attribute on `memref` values.
 The `gpu.module`/`gpu.func` compilation pipeline will lower such memory space
@@ -121,7 +124,7 @@ func.func @main() {
     gpu.launch
         blocks(%0, %1, %2) in (%3 = %c1, %4 = %c1, %5 = %c1)
         threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) {
-        gpu.printf "Hello from %d\n" %6 : index
+        gpu.printf "Hello from %d\n", %6 : index
         gpu.terminator
     }
     return
@@ -135,7 +138,7 @@ execution using `mlir-runner`. Alternatively, it can be translated into
 LLVM, expanding its utility within the system.
 
 ```
-mlir-opt example.mlir -gpu-lower-to-nvvm-pipeline = "cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
+mlir-opt example.mlir -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
 ```
 
 ### Module serialization
@@ -193,10 +196,25 @@ llvm.func @foo() {
 // mlir-translate --mlir-to-llvmir:
 @binary_bin_cst = internal constant [6 x i8] c"AMDGPU", align 8
 @binary_func_kernel_name = private unnamed_addr constant [7 x i8] c"func\00", align 1
+@binary_module = internal global ptr null
+@llvm.global_ctors = appending global [1 x {i32, ptr, ptr}] [{i32 123, ptr @binary_load, ptr null}]
+@llvm.global_dtors = appending global [1 x {i32, ptr, ptr}] [{i32 123, ptr @binary_unload, ptr null}]
+define internal void @binary_load() section ".text.startup" {
+entry:
+  %0 = call ptr @mgpuModuleLoad(ptr @binary_bin_cst)
+  store ptr %0, ptr @binary_module
+  ...
+}
+define internal void @binary_unload() section ".text.startup" {
+entry:
+  %0 = load ptr, ptr @binary_module, align 8
+  call void @mgpuModuleUnload(ptr %0)
+  ...
+}
 ...
 define void @foo() {
   ...
-  %module = call ptr @mgpuModuleLoad(ptr @binary_bin_cst)
+  %module = load ptr, ptr @binary_module, align 8
   %kernel = call ptr @mgpuModuleGetFunction(ptr %module, ptr @binary_func_kernel_name)
   call void @mgpuLaunchKernel(ptr %kernel, ...) ; Launch the kernel
   ...

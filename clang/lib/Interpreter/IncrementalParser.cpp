@@ -11,27 +11,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncrementalParser.h"
+#include "IncrementalAction.h"
 
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 
 #include <sstream>
+
+#define DEBUG_TYPE "clang-repl"
 
 namespace clang {
 
 // IncrementalParser::IncrementalParser() {}
 
 IncrementalParser::IncrementalParser(CompilerInstance &Instance,
-                                     llvm::Error &Err)
-    : S(Instance.getSema()) {
+                                     IncrementalAction *Act, llvm::Error &Err,
+                                     std::list<PartialTranslationUnit> &PTUs)
+    : S(Instance.getSema()), Act(Act), PTUs(PTUs) {
   llvm::ErrorAsOutParameter EAO(&Err);
   Consumer = &S.getASTConsumer();
   P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
+
+  if (ExternalASTSource *External = S.getASTContext().getExternalSource())
+    External->StartTranslationUnit(Consumer);
+
   P->Initialize();
 }
 
@@ -41,8 +56,9 @@ llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(&S);
-  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true);
-  Sema::LocalEagerInstantiationScope LocalInstantiations(S);
+  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true,
+                                                           /*AtEndOfTU=*/true);
+  Sema::LocalEagerInstantiationScope LocalInstantiations(S, /*AtEndOfTU=*/true);
 
   // Add a new PTU.
   ASTContext &C = S.getASTContext();
@@ -119,8 +135,17 @@ IncrementalParser::Parse(llvm::StringRef input) {
   SourceLocation NewLoc = SM.getLocForStartOfFile(SM.getMainFileID());
 
   // Create FileID for the current buffer.
-  FileID FID = SM.createFileID(std::move(MB), SrcMgr::C_User, /*LoadedID=*/0,
-                               /*LoadedOffset=*/0, NewLoc);
+  FileID FID;
+  // Create FileEntry and FileID for the current buffer.
+  FileEntryRef FE = SM.getFileManager().getVirtualFileRef(
+      SourceName.str(), InputSize, 0 /* mod time*/);
+  SM.overrideFileContents(FE, std::move(MB));
+
+  // Ensure HeaderFileInfo exists before lookup to prevent assertion
+  HeaderSearch &HS = PP.getHeaderSearchInfo();
+  HS.getFileInfo(FE);
+
+  FID = SM.createFileID(FE, NewLoc, SrcMgr::C_User);
 
   // NewLoc only used for diags.
   if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
@@ -151,37 +176,180 @@ IncrementalParser::Parse(llvm::StringRef input) {
   return PTU;
 }
 
-void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
-  if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
-    for (auto &&[Key, List] : *Map) {
-      DeclContextLookupResult R = List.getLookupResult();
-      std::vector<NamedDecl *> NamedDeclsToRemove;
-      bool RemoveAll = true;
-      for (NamedDecl *D : R) {
-        if (D->getTranslationUnitDecl() == MostRecentTU)
-          NamedDeclsToRemove.push_back(D);
-        else
-          RemoveAll = false;
-      }
-      if (LLVM_LIKELY(RemoveAll)) {
-        Map->erase(Key);
-      } else {
-        for (NamedDecl *D : NamedDeclsToRemove)
-          List.remove(D);
-      }
+void IncrementalParser::withdrawMostRecentTU(
+    TranslationUnitDecl *MostRecentTU) {
+  TranslationUnitDecl *Prev = MostRecentTU->getPreviousDecl();
+  if (!Prev)
+    return;
+  assert(MostRecentTU->getMostRecentDecl() == MostRecentTU &&
+         "Not the most recent translation unit!");
+
+  // Rebuild A -> ... -> Prev -> MostRecentTU as A -> ... -> Prev.
+  MostRecentTU->getFirstDecl()->RedeclLink.setLatest(Prev);
+
+  // getTranslationUnitDecl() requires the active unit to be the latest one.
+  ASTContext &C = S.getASTContext();
+  if (C.TraversalScope.size() == 1 && C.TraversalScope.back() == MostRecentTU)
+    C.TraversalScope = {Prev};
+  C.TUDecl = Prev;
+}
+
+/// Removes decls introduced in the discarding PTU and restores the
+/// redeclaration chain to previous state.
+class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
+  Sema &S;
+  TranslationUnitDecl *DiscardedTU;
+
+  template <typename DeclT> void withdraw(Redeclarable<DeclT> *DBase) {
+    if (NamedDecl *Prev = findSurvivor(static_cast<DeclT *>(DBase)))
+      unlinkRedeclChain(S.getASTContext(), DBase, Prev);
+  }
+
+  /// The newest declaration of whatever D redeclares that still lives outside
+  /// the DiscardedTU, or null if DiscardedTU introduced the name.
+  NamedDecl *findSurvivor(NamedDecl *D) const {
+    for (Decl *Prev = D->getPreviousDecl(); Prev;
+         Prev = Prev->getPreviousDecl())
+      if (Prev->getTranslationUnitDecl() != DiscardedTU)
+        return dyn_cast<NamedDecl>(Prev);
+    return nullptr;
+  }
+
+  template <typename DeclT>
+  void unlinkRedeclChain(ASTContext &C, Redeclarable<DeclT> *DBase,
+                         NamedDecl *PrevND) {
+    auto *Latest = static_cast<DeclT *>(DBase);
+    auto *Survivor = cast<DeclT>(PrevND);
+
+    // Rebuild First -> ... -> Survivor -> ... -> Latest as
+    // First -> ... -> Survivor.
+    Latest->getFirstDecl()->RedeclLink.setLatest(Survivor);
+
+    // The chain is circular: a withdrawn declaration still linked into it can
+    // never walk back around to itself, so redecls() on one would not
+    // terminate. Give each withdrawn declaration a chain of its own.
+    for (DeclT *Dead = Latest; Dead != Survivor;) {
+      DeclT *Next = Dead->getPreviousDecl();
+      Dead->First = Dead;
+      Dead->RedeclLink = Redeclarable<DeclT>::LatestDeclLink(C);
+      Dead = Next;
     }
   }
 
-  // FIXME: We should de-allocate MostRecentTU
-  for (Decl *D : MostRecentTU->decls()) {
-    auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND)
-      continue;
-    // Check if we need to clean up the IdResolver chain.
-    if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
-        !D->getLangOpts().CPlusPlus)
-      S.IdResolver.RemoveDecl(ND);
+  /// Remove entry from "C"'s lookup tables
+  void removeFromLookups(NamedDecl *D) {
+    if (D->getDeclName().isEmpty())
+      return;
+
+    if (D->getDeclName().isIdentifier() && D->getDeclName().getFETokenInfo() &&
+        !D->getLangOpts().ObjC && !D->getLangOpts().CPlusPlus)
+      S.IdResolver.RemoveDecl(D);
+
+    ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
+    if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
+      auto It = Map->find(D->getDeclName());
+      if (It != Map->end())
+        It->second.remove(D);
+    }
   }
+
+  /// Remove Decls defined in this DC from the lookup table
+  /// and restore the redeclaration chain to previous state
+  void VisitDeclContext(DeclContext *DC) {
+    llvm::SmallVector<Decl *, 8> Members(DC->decls());
+    llvm::SmallVector<NamedDecl *, 8> Survivors;
+    for (Decl *M : Members) {
+      if (auto *ND = dyn_cast<NamedDecl>(M))
+        if (NamedDecl *Prev = findSurvivor(ND))
+          Survivors.push_back(Prev);
+      Visit(M);          // restore redecls
+      DC->removeDecl(M); // remove from lookup
+      if (auto *ND = dyn_cast<NamedDecl>(M))
+        removeFromLookups(ND);
+    }
+
+    // Restore lookup for the surviving predecessor
+    // of any removed decl that had a surviving predecessor
+    DeclContext *Primary = DC->getPrimaryContext();
+    for (NamedDecl *Prev : Survivors)
+      Primary->makeDeclVisibleInContext(Prev);
+  }
+
+public:
+  ASTDeclUnmerger(Sema &S, TranslationUnitDecl *DiscardedTU)
+      : S(S), DiscardedTU(DiscardedTU) {}
+
+  void VisitDecl(Decl *D) {
+    if (auto *DC = dyn_cast<DeclContext>(D))
+      VisitDeclContext(DC);
+  }
+
+  void VisitFunctionDecl(FunctionDecl *D) { withdraw(D); }
+  void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) { withdraw(D); }
+  void VisitTypedefNameDecl(TypedefNameDecl *D) { withdraw(D); }
+  void VisitUsingShadowDecl(UsingShadowDecl *D) { withdraw(D); }
+  void VisitVarDecl(VarDecl *D) { withdraw(D); }
+
+  void VisitTagDecl(TagDecl *D) {
+    NamedDecl *Prev = findSurvivor(D);
+    if (!Prev)
+      return;
+    unlinkRedeclChain(S.getASTContext(), D, Prev);
+
+    // A class definition is kept in DefinitionData outside the
+    // redeclaration chain
+    auto *RD = dyn_cast<CXXRecordDecl>(Prev);
+    if (!RD)
+      return;
+    if (CXXRecordDecl *Def = RD->getDefinition();
+        Def && Def->getTranslationUnitDecl() == DiscardedTU)
+      for (auto *R : RD->redecls())
+        cast<CXXRecordDecl>(R)->DefinitionData = nullptr;
+  }
+
+  void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
+    withdraw(D);
+    Visit(D->getTemplatedDecl());
+  }
+
+  void VisitNamespaceDecl(NamespaceDecl *D) {
+    // Handle cases of nested redeclarations like:
+    // PTU1: namespace outer { namespace ns { class Foo; } }
+    // PTU2: namespace outer { namespace ns { class Foo { ... }; error; } }
+    // Foo's redeclaration needs to be restored
+    VisitDeclContext(D);
+    withdraw(D);
+  }
+
+  void VisitTranslationUnitDecl(TranslationUnitDecl *D) { VisitDeclContext(D); }
+};
+
+void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
+  ASTDeclUnmerger(S, MostRecentTU).Visit(MostRecentTU);
+
+  // Lookup alone is not enough: the redeclaration chain still reaches these.
+  withdrawMostRecentTU(MostRecentTU);
 }
 
+PartialTranslationUnit &
+IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
+                               std::unique_ptr<llvm::Module> M /*={}*/) {
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = TU;
+
+  if (!M)
+    M = Act->GenModule();
+
+  assert((!Act->getCodeGen() || M) && "Must have a llvm::Module at this point");
+
+  LastPTU.TheModule = std::move(M);
+  LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
+                          << ": [TU=" << LastPTU.TUPart);
+  if (LastPTU.TheModule)
+    LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
+                            << LastPTU.TheModule->getName() << ")");
+  LLVM_DEBUG(llvm::dbgs() << "]\n");
+  return LastPTU;
+}
 } // end namespace clang

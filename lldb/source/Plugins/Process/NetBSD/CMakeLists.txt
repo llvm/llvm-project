@@ -1,9 +1,11 @@
 add_lldb_library(lldbPluginProcessNetBSD
   NativeProcessNetBSD.cpp
   NativeRegisterContextNetBSD.cpp
-  NativeRegisterContextNetBSD_x86_64.cpp
+  NativeRegisterContextNetBSD_x86.cpp
   NativeThreadNetBSD.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbHost
     lldbSymbol
@@ -12,6 +14,4 @@ add_lldb_library(lldbPluginProcessNetBSD
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
     util
-  LINK_COMPONENTS
-    Support
   )

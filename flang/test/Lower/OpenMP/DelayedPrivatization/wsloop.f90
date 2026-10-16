@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization-staging \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization-staging -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp  -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine wsloop_private
@@ -13,12 +13,12 @@ subroutine wsloop_private
     end do
 end subroutine wsloop_private
 
-! CHECK: omp.private {type = private} @[[I_PRIVATIZER:.*i_private_ref_i32]]
-! CHECK: omp.private {type = firstprivate} @[[X_PRIVATIZER:.*x_firstprivate_ref_i32]]
+! CHECK: omp.private {type = private} @[[I_PRIVATIZER:.*i_private_i32]]
+! CHECK: omp.private {type = firstprivate} @[[X_PRIVATIZER:.*x_firstprivate_i32]]
 
 ! CHECK: func.func @{{.*}}() {
-! CHECK:   %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}i"}
-! CHECK:   %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x"}
+! CHECK:   %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}i")
+! CHECK:   %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}x")
 
 ! CHECK:   omp.parallel {
 ! CHECK:     omp.wsloop private(
@@ -26,9 +26,9 @@ end subroutine wsloop_private
 ! CHECK-SAME:  @[[I_PRIVATIZER]] %[[I_DECL]]#0 -> %[[I_ARG:.*]] : {{.*}}) {
 
 ! CHECK:       omp.loop_nest (%[[IV:.*]]) : i32 = {{.*}} {
-! CHECK:         %[[X_PRIV_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] {uniq_name = "{{.*}}x"}
-! CHECK:         %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]] {uniq_name = "{{.*}}i"}
-! CHECK:         fir.store %[[IV]] to %[[I_PRIV_DECL]]#1
+! CHECK:         %[[X_PRIV_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] uniq_name("{{.*}}x")
+! CHECK:         %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]] uniq_name("{{.*}}i")
+! CHECK:         hlfir.assign %[[IV]] to %[[I_PRIV_DECL]]#0
 ! CHECK:         %[[X_VAL:.*]] = fir.load %[[X_PRIV_DECL]]#0
 ! CHECK:         %[[I_VAL:.*]] = fir.load %[[I_PRIV_DECL]]#0
 ! CHECK:         %[[ADD_VAL:.*]] = arith.addi %[[X_VAL]], %[[I_VAL]]

@@ -35,14 +35,16 @@ struct IndexOpInterface
             .getPosition();
     // Find the `flatDimPos`-th operand dimension.
     int64_t flatDimCtr = 0;
-    for (Value operand : linalgOp->getOperands()) {
+    for (OpOperand &operand : linalgOp->getOpOperands()) {
       assert(flatDimPos >= flatDimCtr && "invalid pos");
-      auto shapedType = llvm::cast<ShapedType>(operand.getType());
-      if (flatDimPos < flatDimCtr + shapedType.getRank()) {
-        cstr.bound(value) < cstr.getExpr(operand, flatDimPos - flatDimCtr);
+      // Scalar operands do not contribute dimensions to the flattened shape.
+      int64_t rank = linalgOp.getRank(&operand);
+      if (flatDimPos < flatDimCtr + rank) {
+        cstr.bound(value) <
+            cstr.getExpr(operand.get(), flatDimPos - flatDimCtr);
         break;
       }
-      flatDimCtr += shapedType.getRank();
+      flatDimCtr += rank;
     }
   }
 };

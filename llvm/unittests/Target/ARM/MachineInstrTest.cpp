@@ -74,7 +74,7 @@ TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -88,7 +88,9 @@ TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
                              std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
-                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -230,7 +232,7 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -244,7 +246,9 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
                              std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
-                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -329,7 +333,7 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -343,7 +347,9 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
                              std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
-                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -1035,7 +1041,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -1049,7 +1055,9 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
                              std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
-                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
 
   auto MII = TM->getMCInstrInfo();
   for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
@@ -1178,7 +1186,7 @@ TEST(MachineInstr, HasSideEffects) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -1192,7 +1200,9 @@ TEST(MachineInstr, HasSideEffects) {
                              std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
-                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -2058,7 +2068,7 @@ TEST(MachineInstr, MVEVecSize) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
@@ -2072,7 +2082,9 @@ TEST(MachineInstr, MVEVecSize) {
                              std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
-                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
 
   auto MII = TM->getMCInstrInfo();
   for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {

@@ -23,8 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Anything that is returned from __func is ignored.
 
 template <class _SegmentedIterator, class _Functor>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Functor __func) {
+_LIBCPP_HIDE_FROM_ABI void __for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Functor __func) {
   using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 
   auto __sfirst = _Traits::__segment(__first);

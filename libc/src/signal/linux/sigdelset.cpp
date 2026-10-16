@@ -10,8 +10,8 @@
 
 #include "hdr/types/sigset_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

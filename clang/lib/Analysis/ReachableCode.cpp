@@ -25,7 +25,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 using namespace clang;
@@ -314,10 +313,10 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
   return isConfigurationValue(Cond, PP);
 }
 
-static unsigned scanFromBlock(const CFGBlock *Start,
-                              llvm::BitVector &Reachable,
+static unsigned scanFromBlock(const CFGBlock *Start, llvm::BitVector &Reachable,
                               Preprocessor *PP,
-                              bool IncludeSometimesUnreachableEdges) {
+                              bool IncludeSometimesUnreachableEdges,
+                              bool TreatAnalyzerNoReturnAsReturning = false) {
   unsigned count = 0;
 
   // Prep work queue
@@ -331,6 +330,15 @@ static unsigned scanFromBlock(const CFGBlock *Start,
   }
 
   WL.push_back(Start);
+
+  auto MarkReachable = [&](const CFGBlock *B) {
+    unsigned blockID = B->getBlockID();
+    if (!Reachable[blockID]) {
+      Reachable.set(blockID);
+      WL.push_back(B);
+      ++count;
+    }
+  };
 
   // Find the reachable blocks from 'Start'.
   while (!WL.empty()) {
@@ -346,9 +354,21 @@ static unsigned scanFromBlock(const CFGBlock *Start,
     if (!IncludeSometimesUnreachableEdges)
       TreatAllSuccessorsAsReachable = false;
 
+    // Some callers need to distinguish 'analyzer_noreturn' calls from
+    // 'noreturn' calls, since the code after an 'analyzer_noreturn' call isn't
+    // dead. For those callers (TreatAnalyzerNoReturnAsReturning is true),
+    // continue with the code that follows the call, which the CFG keeps as the
+    // alternate successor of the exit edge.
+    bool FollowAlternate = TreatAnalyzerNoReturnAsReturning &&
+                           item->hasOnlyAnalyzerNoReturnElement();
+
     for (CFGBlock::const_succ_iterator I = item->succ_begin(),
          E = item->succ_end(); I != E; ++I) {
       const CFGBlock *B = *I;
+      if (FollowAlternate) {
+        if (const CFGBlock *Alt = I->getPossiblyUnreachableBlock())
+          MarkReachable(Alt);
+      }
       if (!B) do {
         const CFGBlock *UB = I->getPossiblyUnreachableBlock();
         if (!UB)
@@ -367,14 +387,8 @@ static unsigned scanFromBlock(const CFGBlock *Start,
       }
       while (false);
 
-      if (B) {
-        unsigned blockID = B->getBlockID();
-        if (!Reachable[blockID]) {
-          Reachable.set(blockID);
-          WL.push_back(B);
-          ++count;
-        }
-      }
+      if (B)
+        MarkReachable(B);
     }
   }
   return count;
@@ -383,7 +397,8 @@ static unsigned scanFromBlock(const CFGBlock *Start,
 static unsigned scanMaybeReachableFromBlock(const CFGBlock *Start,
                                             Preprocessor &PP,
                                             llvm::BitVector &Reachable) {
-  return scanFromBlock(Start, Reachable, &PP, true);
+  return scanFromBlock(Start, Reachable, &PP, true,
+                       /*TreatAnalyzerNoReturnAsReturning=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -461,9 +476,8 @@ static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
   const Stmt *CoroStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
   bool AfterDeadStmt = false;
-  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
-       ++I)
-    if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+  for (const CFGElement &Elem : *Block)
+    if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
       if (S == DeadStmt)
         AfterDeadStmt = true;

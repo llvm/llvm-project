@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHASMPRINTER_H
 
 #include "LoongArchSubtarget.h"
+#include "MCTargetDesc/LoongArchTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCStreamer.h"
@@ -22,18 +23,27 @@
 namespace llvm {
 
 class LLVM_LIBRARY_VISIBILITY LoongArchAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const MCSubtargetInfo *STI;
+
+  LoongArchTargetStreamer &getTargetStreamer() const;
 
 public:
   explicit LoongArchAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), STI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), STI(&TM.getMCSubtargetInfo()) {
+  }
 
   StringRef getPassName() const override {
     return "LoongArch Assembly Printer";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void emitStartOfAsmFile(Module &M) override;
 
   void emitInstruction(const MachineInstr *MI) override;
 
@@ -56,6 +66,7 @@ public:
     return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);
   }
   void emitJumpTableInfo() override;
+  void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };
 
 } // end namespace llvm

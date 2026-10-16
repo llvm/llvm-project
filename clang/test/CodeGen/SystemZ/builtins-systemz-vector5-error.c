@@ -1,5 +1,5 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -target-cpu arch15 -triple s390x-unknown-unknown \
+// RUN: %clang_cc1 -target-cpu z17 -triple s390x-unknown-unknown \
 // RUN: -Wall -Wno-unused -Werror -fsyntax-only -verify %s
 
 typedef __attribute__((vector_size(16))) signed char vec_schar;

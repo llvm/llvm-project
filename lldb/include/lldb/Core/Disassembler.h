@@ -18,8 +18,8 @@
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -167,9 +167,11 @@ public:
 
   virtual bool IsLoad() = 0;
 
+  virtual bool IsBarrier() = 0;
+
   virtual bool IsAuthenticated() = 0;
 
-  bool CanSetBreakpoint ();
+  bool CanSetBreakpoint();
 
   virtual size_t Decode(const Disassembler &disassembler,
                         const DataExtractor &data,
@@ -208,13 +210,13 @@ public:
     } m_type = Type::Invalid;
     std::vector<Operand> m_children;
     lldb::addr_t m_immediate = 0;
-    ConstString m_register;
+    std::string m_register;
     bool m_negative = false;
     bool m_clobbered = false;
 
     bool IsValid() { return m_type != Type::Invalid; }
 
-    static Operand BuildRegister(ConstString &r);
+    static Operand BuildRegister(llvm::StringRef r);
     static Operand BuildImmediate(lldb::addr_t imm, bool neg);
     static Operand BuildImmediate(int64_t imm);
     static Operand BuildDereference(const Operand &ref);
@@ -230,6 +232,10 @@ public:
 
   static const char *GetNameForInstructionControlFlowKind(
       lldb::InstructionControlFlowKind instruction_control_flow_kind);
+
+  /// Get variable annotations for this instruction as structured data.
+  /// Returns an array of dictionaries to be used in SBInstruction class.
+  StructuredData::ArraySP GetVariableAnnotations();
 
 protected:
   Address m_address; // The section offset address of this instruction
@@ -274,7 +280,7 @@ MatchUnaryOp(std::function<bool(const Instruction::Operand &)> base,
 std::function<bool(const Instruction::Operand &)>
 MatchRegOp(const RegisterInfo &info);
 
-std::function<bool(const Instruction::Operand &)> FetchRegOp(ConstString &reg);
+std::function<bool(const Instruction::Operand &)> FetchRegOp(std::string &reg);
 
 std::function<bool(const Instruction::Operand &)> MatchImmOp(int64_t imm);
 
@@ -282,7 +288,7 @@ std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);
 
 std::function<bool(const Instruction::Operand &)>
 MatchOpType(Instruction::Operand::Type type);
-}
+} // namespace OperandMatchers
 
 class InstructionList {
 public:
@@ -291,9 +297,15 @@ public:
 
   size_t GetSize() const;
 
+  size_t GetTotalByteSize() const;
+
   uint32_t GetMaxOpcocdeByteSize() const;
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
+
+  llvm::ArrayRef<lldb::InstructionSP> Instructions() const {
+    return m_instructions;
+  }
 
   /// Get the instruction at the given address.
   ///
@@ -314,20 +326,19 @@ public:
   /// @param[in] ignore_calls
   ///     It true, then fine the first branch instruction that isn't
   ///     a function call (a branch that calls and returns to the next
-  ///     instruction). If false, find the instruction index of any 
+  ///     instruction). If false, find the instruction index of any
   ///     branch in the list.
-  ///     
+  ///
   /// @param[out] found_calls
-  ///     If non-null, this will be set to true if any calls were found in 
+  ///     If non-null, this will be set to true if any calls were found in
   ///     extending the range.
-  ///    
+  ///
   /// @return
   ///     The instruction index of the first branch that is at or past
-  ///     \a start. Returns UINT32_MAX if no matching branches are 
+  ///     \a start. Returns UINT32_MAX if no matching branches are
   ///     found.
   //------------------------------------------------------------------
-  uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
-                                           bool ignore_calls,
+  uint32_t GetIndexOfNextBranchInstruction(uint32_t start, bool ignore_calls,
                                            bool *found_calls) const;
 
   uint32_t GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
@@ -361,6 +372,8 @@ public:
   bool HasDelaySlot() override;
 
   bool IsLoad() override;
+
+  bool IsBarrier() override;
 
   bool IsAuthenticated() override;
 
@@ -397,6 +410,7 @@ public:
     eOptionMarkPCAddress =
         (1u << 3), // Mark the disassembly line the contains the PC
     eOptionShowControlFlowKind = (1u << 4),
+    eOptionVariableAnnotations = (1u << 5),
   };
 
   enum HexImmediateStyle {
@@ -562,6 +576,42 @@ private:
   // For Disassembler only
   Disassembler(const Disassembler &) = delete;
   const Disassembler &operator=(const Disassembler &) = delete;
+};
+
+/// Structured data for a single variable annotation.
+struct VariableAnnotation {
+  std::string variable_name;
+  /// Location description (e.g., "r15", "undef", "const_0").
+  std::string location_description;
+  /// Whether variable is live at this instruction.
+  bool is_live;
+  /// Register numbering scheme for location interpretation.
+  lldb::RegisterKind register_kind;
+  /// Where this annotation is valid.
+  std::optional<lldb_private::AddressRange> address_range;
+  /// Source file where variable was declared.
+  std::optional<std::string> decl_file;
+  /// Line number where variable was declared.
+  std::optional<uint32_t> decl_line;
+  /// Variable's type name.
+  std::optional<std::string> type_name;
+};
+
+/// Tracks live variable annotations across instructions and produces
+/// per-instruction "events" like `name = RDI` or `name = <undef>`.
+class VariableAnnotator {
+
+  // Live state from the previous instruction, keyed by Variable::GetID().
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> m_live_vars;
+
+public:
+  /// Compute annotation strings for a single instruction and update
+  /// `m_live_vars`. Returns only the events that should be printed *at this
+  /// instruction*.
+  std::vector<std::string> Annotate(Instruction &inst);
+
+  /// Returns structured data for all variables relevant at this instruction.
+  std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst);
 };
 
 } // namespace lldb_private

@@ -1,0 +1,374 @@
+; Generated with:
+; source.cl:
+; void foo(int x, int2 coord, uint c, short s, float f, size_t n,
+;          __global uint* p, read_write image2d_t image, uint4 v) {
+;   work_group_all(x);
+;   work_group_any(x);
+;   work_group_broadcast(x, n);
+;   sub_group_barrier(CLK_LOCAL_MEM_FENCE, memory_scope_sub_group);
+;   sub_group_all(x);
+;   sub_group_any(x);
+;   sub_group_broadcast(x, c);
+;   sub_group_reduce_add(x);
+;   sub_group_reduce_add(f);
+;   sub_group_reduce_min(x);
+;   sub_group_reduce_min(c);
+;   sub_group_reduce_min(f);
+;   sub_group_reduce_max(x);
+;   sub_group_reduce_max(c);
+;   sub_group_reduce_max(f);
+;   intel_sub_group_shuffle(x, c);
+;   intel_sub_group_shuffle_down(x, x, c);
+;   intel_sub_group_shuffle_up(x, x, c);
+;   intel_sub_group_shuffle_xor(x, c);
+;   intel_sub_group_block_read(p);
+;   intel_sub_group_block_write(p, c);
+;   intel_sub_group_block_read(image, coord);
+;   intel_sub_group_block_write(image, coord, c);
+;   sub_group_elect();
+;   sub_group_non_uniform_all(x);
+;   sub_group_non_uniform_any(x);
+;   sub_group_non_uniform_all_equal(x);
+;   sub_group_non_uniform_broadcast(x, c);
+;   sub_group_broadcast_first(x);
+;   sub_group_ballot(x);
+;   sub_group_inverse_ballot(v);
+;   sub_group_ballot_bit_extract(v, c);
+;   sub_group_ballot_bit_count(v);
+;   sub_group_ballot_inclusive_scan(v);
+;   sub_group_ballot_exclusive_scan(v);
+;   sub_group_ballot_find_lsb(v);
+;   sub_group_ballot_find_msb(v);
+;   sub_group_non_uniform_reduce_add(x);
+;   sub_group_non_uniform_reduce_add(f);
+;   sub_group_non_uniform_scan_inclusive_min(x);
+;   sub_group_non_uniform_scan_inclusive_min(c);
+;   sub_group_non_uniform_scan_inclusive_min(f);
+;   sub_group_non_uniform_scan_exclusive_max(x);
+;   sub_group_non_uniform_scan_exclusive_max(c);
+;   sub_group_non_uniform_scan_exclusive_max(f);
+;   sub_group_non_uniform_reduce_mul(x);
+;   sub_group_non_uniform_reduce_mul(f);
+;   sub_group_non_uniform_reduce_and(x);
+;   sub_group_non_uniform_scan_inclusive_or(x);
+;   sub_group_non_uniform_scan_exclusive_xor(x);
+;   sub_group_non_uniform_reduce_logical_and(x);
+;   sub_group_non_uniform_scan_inclusive_logical_or(x);
+;   sub_group_non_uniform_scan_exclusive_logical_xor(x);
+;   sub_group_rotate(c, x);
+; }
+
+; REQUIRES: spirv-dis
+; clang -cc1 -O2 -triple spir -cl-std=cl2.0 -finclude-default-header -cl-ext=+all source.cl -emit-llvm-bc -o tmp.bc
+; llvm-spirv tmp.bc --spirv-ext=+all,-SPV_KHR_untyped_pointers -o tmp.spv
+; spirv-dis tmp.spv -o llvm-spirv/test/GroupAndSubgroupInstructions.spvasm
+
+; REQUIRES: spirv-as
+; RUN: spirv-as %s --target-env spv1.3 -o %t.spv
+; RUN: spirv-val %t.spv
+; RUN: llvm-spirv -r %t.spv --spirv-target-env=CL1.2 -o %t.bc
+; RUN: llvm-dis %t.bc -o %t.ll
+; RUN: FileCheck < %t.ll %s --check-prefixes=CHECK-COMMON,CHECK-CL,CHECK-CL12
+
+; RUN: llvm-spirv -r %t.spv --spirv-target-env=CL2.0 -o %t.bc
+; RUN: llvm-dis %t.bc -o %t.ll
+; RUN: FileCheck < %t.ll %s --check-prefixes=CHECK-COMMON,CHECK-CL,CHECK-CL20
+
+; RUN: llvm-spirv -r %t.spv --spirv-target-env=SPV-IR -o %t.bc
+; RUN: llvm-dis %t.bc -o %t.ll
+; RUN: FileCheck < %t.ll %s --check-prefixes=CHECK-COMMON,CHECK-SPV-IR
+
+; RUN: llvm-spirv %t.bc --spirv-ext=+all,-SPV_KHR_untyped_pointers -o %t.rev.spv
+; RUN: spirv-val %t.rev.spv
+
+
+; CHECK-CL-DAG: declare spir_func i32 @_Z14work_group_alli(i32) #[[#Attrs:]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z14work_group_anyi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z20work_group_broadcastjj(i32, i32) #[[#Attrs]]
+; CHECK-CL12-DAG: declare spir_func void @_Z7barrierj(i32) #[[#Attrs]]
+; CHECK-CL20-DAG: declare spir_func void @_Z17sub_group_barrierj12memory_scope(i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z13sub_group_alli(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z13sub_group_anyi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z19sub_group_broadcastjj(i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z20sub_group_reduce_addi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z20sub_group_reduce_addf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z20sub_group_reduce_mini(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z20sub_group_reduce_minj(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z20sub_group_reduce_minf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z20sub_group_reduce_maxi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z20sub_group_reduce_maxj(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z20sub_group_reduce_maxf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z23intel_sub_group_shuffleij(i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z28intel_sub_group_shuffle_downiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z26intel_sub_group_shuffle_upiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z27intel_sub_group_shuffle_xorij(i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z26intel_sub_group_block_readPU3AS1Kj(ptr addrspace(1)) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func void @_Z27intel_sub_group_block_writePU3AS1jj(ptr addrspace(1), i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z26intel_sub_group_block_read14ocl_image2d_rwDv2_i(ptr addrspace(1), <2 x i32>) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func void @_Z27intel_sub_group_block_write14ocl_image2d_rwDv2_ij(ptr addrspace(1), <2 x i32>, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z15sub_group_electv() #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z25sub_group_non_uniform_alli(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z25sub_group_non_uniform_anyi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z31sub_group_non_uniform_all_equali(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z31sub_group_non_uniform_broadcastjj(i32, i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z25sub_group_broadcast_firstj(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func <4 x i32> @_Z16sub_group_balloti(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z31sub_group_ballot_inclusive_scanDv4_j(<4 x i32>) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z31sub_group_ballot_exclusive_scanDv4_j(<4 x i32>) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z25sub_group_ballot_find_lsbDv4_j(<4 x i32>) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z25sub_group_ballot_find_msbDv4_j(<4 x i32>) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z32sub_group_non_uniform_reduce_addi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z32sub_group_non_uniform_reduce_addf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z40sub_group_non_uniform_scan_inclusive_mini(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z40sub_group_non_uniform_scan_inclusive_minj(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z40sub_group_non_uniform_scan_inclusive_minf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z40sub_group_non_uniform_scan_exclusive_maxi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z40sub_group_non_uniform_scan_exclusive_maxj(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z40sub_group_non_uniform_scan_exclusive_maxf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z32sub_group_non_uniform_reduce_muli(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func float @_Z32sub_group_non_uniform_reduce_mulf(float) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z32sub_group_non_uniform_reduce_andi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z39sub_group_non_uniform_scan_inclusive_ori(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z40sub_group_non_uniform_scan_exclusive_xori(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z40sub_group_non_uniform_reduce_logical_andi(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z47sub_group_non_uniform_scan_inclusive_logical_ori(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z48sub_group_non_uniform_scan_exclusive_logical_xori(i32) #[[#Attrs]]
+; CHECK-CL-DAG: declare spir_func i32 @_Z16sub_group_rotateii(i32, i32) #[[#Attrs]]
+
+; CHECK-SPV-IR: declare spir_func i1 @_Z16__spirv_GroupAllib(i32, i1) #[[#Attrs:]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z16__spirv_GroupAnyib(i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z22__spirv_GroupBroadcastiii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func void @_Z22__spirv_ControlBarrieriii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z17__spirv_GroupIAddiii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z17__spirv_GroupFAddiif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z17__spirv_GroupSMiniii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z17__spirv_GroupUMiniij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z17__spirv_GroupFMiniif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z17__spirv_GroupSMaxiii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z17__spirv_GroupUMaxiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z17__spirv_GroupFMaxiif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z28__spirv_SubgroupShuffleINTELij(i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z32__spirv_SubgroupShuffleDownINTELiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z30__spirv_SubgroupShuffleUpINTELiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z31__spirv_SubgroupShuffleXorINTELij(i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z35__spirv_SubgroupBlockReadINTEL_RintPU3AS1Kj(ptr addrspace(1)) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func void @_Z31__spirv_SubgroupBlockWriteINTELPU3AS1jj(ptr addrspace(1), i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z40__spirv_SubgroupImageBlockReadINTEL_RintPU3AS133__spirv_Image__void_1_0_0_0_0_0_2Dv2_i(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 2), <2 x i32>) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func void @_Z36__spirv_SubgroupImageBlockWriteINTELPU3AS133__spirv_Image__void_1_0_0_0_0_0_2Dv2_ij(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 2), <2 x i32>, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z28__spirv_GroupNonUniformElecti(i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z26__spirv_GroupNonUniformAllib(i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z26__spirv_GroupNonUniformAnyib(i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z31__spirv_GroupNonUniformAllEqualii(i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z32__spirv_GroupNonUniformBroadcastiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z37__spirv_GroupNonUniformBroadcastFirstii(i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func <4 x i32> @_Z29__spirv_GroupNonUniformBallotib(i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z37__spirv_GroupNonUniformBallotBitCountiiDv4_j(i32, i32, <4 x i32>) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z36__spirv_GroupNonUniformBallotFindLSBiDv4_j(i32, <4 x i32>) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z36__spirv_GroupNonUniformBallotFindMSBiDv4_j(i32, <4 x i32>) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z27__spirv_GroupNonUniformIAddiii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z27__spirv_GroupNonUniformFAddiif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z27__spirv_GroupNonUniformSMiniii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z27__spirv_GroupNonUniformUMiniij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z27__spirv_GroupNonUniformFMiniif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z27__spirv_GroupNonUniformSMaxiii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z27__spirv_GroupNonUniformUMaxiij(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z27__spirv_GroupNonUniformFMaxiif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z27__spirv_GroupNonUniformIMuliii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func float @_Z27__spirv_GroupNonUniformFMuliif(i32, i32, float) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z33__spirv_GroupNonUniformBitwiseAndiii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z32__spirv_GroupNonUniformBitwiseOriii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z33__spirv_GroupNonUniformBitwiseXoriii(i32, i32, i32) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z33__spirv_GroupNonUniformLogicalAndiib(i32, i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z32__spirv_GroupNonUniformLogicalOriib(i32, i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i1 @_Z33__spirv_GroupNonUniformLogicalXoriib(i32, i32, i1) #[[#Attrs]]
+; CHECK-SPV-IR: declare spir_func i32 @_Z32__spirv_GroupNonUniformRotateKHRiii(i32, i32, i32) #[[#Attrs]]
+
+; CHECK-COMMON: attributes #[[#Attrs]] =
+; CHECK-COMMON-SAME: convergent
+
+; SPIR-V
+; Version: 1.3
+; Generator: Khronos LLVM/SPIR-V Translator; 14
+; Bound: 97
+; Schema: 0
+               OpCapability Addresses
+               OpCapability Linkage
+               OpCapability Kernel
+               OpCapability ImageBasic
+               OpCapability ImageReadWrite
+               OpCapability Groups
+               OpCapability Int16
+               OpCapability GroupNonUniform
+               OpCapability GroupNonUniformVote
+               OpCapability GroupNonUniformArithmetic
+               OpCapability GroupNonUniformBallot
+               OpCapability SubgroupShuffleINTEL
+               OpCapability SubgroupBufferBlockIOINTEL
+               OpCapability SubgroupImageBlockIOINTEL
+               OpCapability GroupNonUniformRotateKHR
+               OpExtension "SPV_INTEL_subgroups"
+               OpExtension "SPV_KHR_subgroup_rotate"
+          %1 = OpExtInstImport "OpenCL.std"
+               OpMemoryModel Physical32 OpenCL
+               OpSource OpenCL_C 200000
+               OpName %foo "foo"
+               OpName %x "x"
+               OpName %coord "coord"
+               OpName %c "c"
+               OpName %s "s"
+               OpName %f "f"
+               OpName %n "n"
+               OpName %p "p"
+               OpName %image "image"
+               OpName %v "v"
+               OpName %entry "entry"
+               OpName %call "call"
+               OpName %call1 "call1"
+               OpName %call2 "call2"
+               OpName %call3 "call3"
+               OpName %call4 "call4"
+               OpName %call5 "call5"
+               OpName %call6 "call6"
+               OpName %call7 "call7"
+               OpName %call8 "call8"
+               OpName %call9 "call9"
+               OpName %call10 "call10"
+               OpName %call11 "call11"
+               OpName %call12 "call12"
+               OpName %call13 "call13"
+               OpName %call14 "call14"
+               OpName %call15 "call15"
+               OpName %call16 "call16"
+               OpName %call17 "call17"
+               OpName %call18 "call18"
+               OpName %call19 "call19"
+               OpName %call20 "call20"
+               OpName %call21 "call21"
+               OpName %call22 "call22"
+               OpName %call23 "call23"
+               OpName %call24 "call24"
+               OpName %call25 "call25"
+               OpName %call26 "call26"
+               OpName %call30 "call30"
+               OpName %call31 "call31"
+               OpName %call32 "call32"
+               OpName %call33 "call33"
+               OpName %call34 "call34"
+               OpName %call35 "call35"
+               OpName %call36 "call36"
+               OpName %call37 "call37"
+               OpName %call38 "call38"
+               OpName %call39 "call39"
+               OpName %call40 "call40"
+               OpName %call41 "call41"
+               OpName %call42 "call42"
+               OpName %call43 "call43"
+               OpName %call44 "call44"
+               OpName %call45 "call45"
+               OpName %call46 "call46"
+               OpName %call47 "call47"
+               OpName %call48 "call48"
+               OpName %call49 "call49"
+               OpName %call50 "call50"
+               OpDecorate %foo LinkageAttributes "foo" Export
+               OpDecorate %s FuncParamAttr Sext
+       %uint = OpTypeInt 32 0
+     %ushort = OpTypeInt 16 0
+     %uint_0 = OpConstant %uint 0
+     %uint_2 = OpConstant %uint 2
+     %uint_1 = OpConstant %uint 1
+     %uint_3 = OpConstant %uint 3
+   %uint_272 = OpConstant %uint 272
+       %void = OpTypeVoid
+     %v2uint = OpTypeVector %uint 2
+      %float = OpTypeFloat 32
+%_ptr_CrossWorkgroup_uint = OpTypePointer CrossWorkgroup %uint
+          %8 = OpTypeImage %void 2D 0 0 0 0 Unknown ReadWrite
+     %v4uint = OpTypeVector %uint 4
+         %10 = OpTypeFunction %void %uint %v2uint %uint %ushort %float %uint %_ptr_CrossWorkgroup_uint %8 %v4uint
+       %bool = OpTypeBool
+        %foo = OpFunction %void None %10
+          %x = OpFunctionParameter %uint
+      %coord = OpFunctionParameter %v2uint
+          %c = OpFunctionParameter %uint
+          %s = OpFunctionParameter %ushort
+          %f = OpFunctionParameter %float
+          %n = OpFunctionParameter %uint
+          %p = OpFunctionParameter %_ptr_CrossWorkgroup_uint
+      %image = OpFunctionParameter %8
+          %v = OpFunctionParameter %v4uint
+      %entry = OpLabel
+         %24 = OpINotEqual %bool %x %uint_0
+         %26 = OpGroupAll %bool %uint_2 %24
+       %call = OpSelect %uint %26 %uint_1 %uint_0
+         %29 = OpINotEqual %bool %x %uint_0
+         %30 = OpGroupAny %bool %uint_2 %29
+      %call1 = OpSelect %uint %30 %uint_1 %uint_0
+      %call2 = OpGroupBroadcast %uint %uint_2 %x %n
+               OpControlBarrier %uint_3 %uint_3 %uint_272
+         %35 = OpINotEqual %bool %x %uint_0
+         %36 = OpGroupAll %bool %uint_3 %35
+      %call3 = OpSelect %uint %36 %uint_1 %uint_0
+         %38 = OpINotEqual %bool %x %uint_0
+         %39 = OpGroupAny %bool %uint_3 %38
+      %call4 = OpSelect %uint %39 %uint_1 %uint_0
+      %call5 = OpGroupBroadcast %uint %uint_3 %x %c
+      %call6 = OpGroupIAdd %uint %uint_3 Reduce %x
+      %call7 = OpGroupFAdd %float %uint_3 Reduce %f
+      %call8 = OpGroupSMin %uint %uint_3 Reduce %x
+      %call9 = OpGroupUMin %uint %uint_3 Reduce %c
+     %call10 = OpGroupFMin %float %uint_3 Reduce %f
+     %call11 = OpGroupSMax %uint %uint_3 Reduce %x
+     %call12 = OpGroupUMax %uint %uint_3 Reduce %c
+     %call13 = OpGroupFMax %float %uint_3 Reduce %f
+     %call14 = OpSubgroupShuffleINTEL %uint %x %c
+     %call15 = OpSubgroupShuffleDownINTEL %uint %x %x %c
+     %call16 = OpSubgroupShuffleUpINTEL %uint %x %x %c
+     %call17 = OpSubgroupShuffleXorINTEL %uint %x %c
+     %call18 = OpSubgroupBlockReadINTEL %uint %p
+               OpSubgroupBlockWriteINTEL %p %c
+     %call19 = OpSubgroupImageBlockReadINTEL %uint %image %coord
+               OpSubgroupImageBlockWriteINTEL %image %coord %c
+         %56 = OpGroupNonUniformElect %bool %uint_3
+     %call20 = OpSelect %uint %56 %uint_1 %uint_0
+         %58 = OpINotEqual %bool %x %uint_0
+         %59 = OpGroupNonUniformAll %bool %uint_3 %58
+     %call21 = OpSelect %uint %59 %uint_1 %uint_0
+         %61 = OpINotEqual %bool %x %uint_0
+         %62 = OpGroupNonUniformAny %bool %uint_3 %61
+     %call22 = OpSelect %uint %62 %uint_1 %uint_0
+         %64 = OpGroupNonUniformAllEqual %bool %uint_3 %x
+     %call23 = OpSelect %uint %64 %uint_1 %uint_0
+     %call24 = OpGroupNonUniformBroadcast %uint %uint_3 %x %uint_1
+     %call25 = OpGroupNonUniformBroadcastFirst %uint %uint_3 %x
+         %68 = OpINotEqual %bool %x %uint_0
+     %call26 = OpGroupNonUniformBallot %v4uint %uint_3 %68
+     %call30 = OpGroupNonUniformBallotBitCount %uint %uint_3 InclusiveScan %v
+     %call31 = OpGroupNonUniformBallotBitCount %uint %uint_3 ExclusiveScan %v
+     %call32 = OpGroupNonUniformBallotFindLSB %uint %uint_3 %v
+     %call33 = OpGroupNonUniformBallotFindMSB %uint %uint_3 %v
+     %call34 = OpGroupNonUniformIAdd %uint %uint_3 Reduce %x
+     %call35 = OpGroupNonUniformFAdd %float %uint_3 Reduce %f
+     %call36 = OpGroupNonUniformSMin %uint %uint_3 InclusiveScan %x
+     %call37 = OpGroupNonUniformUMin %uint %uint_3 InclusiveScan %c
+     %call38 = OpGroupNonUniformFMin %float %uint_3 InclusiveScan %f
+     %call39 = OpGroupNonUniformSMax %uint %uint_3 ExclusiveScan %x
+     %call40 = OpGroupNonUniformUMax %uint %uint_3 ExclusiveScan %c
+     %call41 = OpGroupNonUniformFMax %float %uint_3 ExclusiveScan %f
+     %call42 = OpGroupNonUniformIMul %uint %uint_3 Reduce %x
+     %call43 = OpGroupNonUniformFMul %float %uint_3 Reduce %f
+     %call44 = OpGroupNonUniformBitwiseAnd %uint %uint_3 Reduce %x
+     %call45 = OpGroupNonUniformBitwiseOr %uint %uint_3 InclusiveScan %x
+     %call46 = OpGroupNonUniformBitwiseXor %uint %uint_3 ExclusiveScan %x
+         %87 = OpINotEqual %bool %x %uint_0
+         %88 = OpGroupNonUniformLogicalAnd %bool %uint_3 Reduce %87
+     %call47 = OpSelect %uint %88 %uint_1 %uint_0
+         %90 = OpINotEqual %bool %x %uint_0
+         %91 = OpGroupNonUniformLogicalOr %bool %uint_3 InclusiveScan %90
+     %call48 = OpSelect %uint %91 %uint_1 %uint_0
+         %93 = OpINotEqual %bool %x %uint_0
+         %94 = OpGroupNonUniformLogicalXor %bool %uint_3 ExclusiveScan %93
+     %call49 = OpSelect %uint %94 %uint_1 %uint_0
+     %call50 = OpGroupNonUniformRotateKHR %uint %uint_3 %c %x
+               OpReturn
+               OpFunctionEnd

@@ -26,7 +26,6 @@ define i32 @add_z_shli8i32(i8 %v, i32 %lhs) minsize {
 define i64 @add_z_i8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_z_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, uxtb
 ; CHECK-NEXT:    ret
   %vz = zext i8 %v to i64
@@ -37,7 +36,6 @@ define i64 @add_z_i8i64(i8 %v, i64 %lhs) minsize {
 define i64 @add_z_shli8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_z_shli8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, uxtb #3
 ; CHECK-NEXT:    ret
   %vz = zext i8 %v to i64
@@ -70,7 +68,6 @@ define i32 @add_s_shli8i32(i8 %v, i32 %lhs) minsize {
 define i64 @add_s_i8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_s_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, sxtb
 ; CHECK-NEXT:    ret
   %vz = sext i8 %v to i64
@@ -81,7 +78,6 @@ define i64 @add_s_i8i64(i8 %v, i64 %lhs) minsize {
 define i64 @add_s_shli8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_s_shli8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, sxtb #3
 ; CHECK-NEXT:    ret
   %vz = sext i8 %v to i64
@@ -114,7 +110,6 @@ define i32 @add_z_shli16i32(i16 %v, i32 %lhs) minsize {
 define i64 @add_z_i16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_z_i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, uxth
 ; CHECK-NEXT:    ret
   %vz = zext i16 %v to i64
@@ -125,7 +120,6 @@ define i64 @add_z_i16i64(i16 %v, i64 %lhs) minsize {
 define i64 @add_z_shli16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_z_shli16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, uxth #3
 ; CHECK-NEXT:    ret
   %vz = zext i16 %v to i64
@@ -179,7 +173,6 @@ define i32 @add_s_shli16i32(i16 %v, i32 %lhs) minsize {
 define i64 @add_s_i16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_s_i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, sxth
 ; CHECK-NEXT:    ret
   %vz = sext i16 %v to i64
@@ -190,7 +183,6 @@ define i64 @add_s_i16i64(i16 %v, i64 %lhs) minsize {
 define i64 @add_s_shli16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: add_s_shli16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x0, x1, w0, sxth #3
 ; CHECK-NEXT:    ret
   %vz = sext i16 %v to i64
@@ -244,7 +236,6 @@ define i32 @sub_z_shli8i32(i8 %v, i32 %lhs) minsize {
 define i64 @sub_z_i8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_z_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, uxtb
 ; CHECK-NEXT:    ret
   %vz = zext i8 %v to i64
@@ -255,7 +246,6 @@ define i64 @sub_z_i8i64(i8 %v, i64 %lhs) minsize {
 define i64 @sub_z_shli8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_z_shli8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, uxtb #3
 ; CHECK-NEXT:    ret
   %vz = zext i8 %v to i64
@@ -288,7 +278,6 @@ define i32 @sub_s_shli8i32(i8 %v, i32 %lhs) minsize {
 define i64 @sub_s_i8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_s_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, sxtb
 ; CHECK-NEXT:    ret
   %vz = sext i8 %v to i64
@@ -299,7 +288,6 @@ define i64 @sub_s_i8i64(i8 %v, i64 %lhs) minsize {
 define i64 @sub_s_shli8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_s_shli8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, sxtb #3
 ; CHECK-NEXT:    ret
   %vz = sext i8 %v to i64
@@ -332,7 +320,6 @@ define i32 @sub_z_shli16i32(i16 %v, i32 %lhs) minsize {
 define i64 @sub_z_i16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_z_i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, uxth
 ; CHECK-NEXT:    ret
   %vz = zext i16 %v to i64
@@ -343,7 +330,6 @@ define i64 @sub_z_i16i64(i16 %v, i64 %lhs) minsize {
 define i64 @sub_z_shli16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_z_shli16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, uxth #3
 ; CHECK-NEXT:    ret
   %vz = zext i16 %v to i64
@@ -397,7 +383,6 @@ define i32 @sub_s_shli16i32(i16 %v, i32 %lhs) minsize {
 define i64 @sub_s_i16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_s_i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, sxth
 ; CHECK-NEXT:    ret
   %vz = sext i16 %v to i64
@@ -408,7 +393,6 @@ define i64 @sub_s_i16i64(i16 %v, i64 %lhs) minsize {
 define i64 @sub_s_shli16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: sub_s_shli16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x0, x1, w0, sxth #3
 ; CHECK-NEXT:    ret
   %vz = sext i16 %v to i64
@@ -444,7 +428,7 @@ define i32 @cmp_s_i8i32(i8 %v, i32 %lhs) minsize {
 ; CHECK-NEXT:    cmp w1, w0, uxtb
 ; CHECK-NEXT:    b.ge .LBB40_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB40_2: // %end
 ; CHECK-NEXT:    mov w0, w1
@@ -461,11 +445,10 @@ end:
 define i64 @cmp_s_i8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: cmp_s_i8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp x1, w0, sxtb
 ; CHECK-NEXT:    b.ge .LBB41_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB41_2: // %end
 ; CHECK-NEXT:    mov x0, x1
@@ -485,7 +468,7 @@ define i32 @cmp_s_i16i32(i16 %v, i32 %lhs) minsize {
 ; CHECK-NEXT:    cmp w1, w0, uxth
 ; CHECK-NEXT:    b.ge .LBB42_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB42_2: // %end
 ; CHECK-NEXT:    mov w0, w1
@@ -502,11 +485,10 @@ end:
 define i64 @cmp_s_i16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-LABEL: cmp_s_i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    cmp x1, w0, sxth
 ; CHECK-NEXT:    b.ge .LBB43_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB43_2: // %end
 ; CHECK-NEXT:    mov x0, x1

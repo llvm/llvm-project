@@ -16,8 +16,9 @@
 
 #include <cassert>
 #include <tuple>
+#include <utility>
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
 using ConstIterIncompatibleView = BasicView<forward_iterator<int*>, forward_iterator<int*>,
                                             random_access_iterator<const int*>, random_access_iterator<const int*>>;

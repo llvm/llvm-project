@@ -102,7 +102,7 @@ p:
         call o
         .size p, .-p
 
-# CHECK: Link graph "{{.*}}" before copy-and-fixup:
+# CHECK: Link graph before copy-and-fixup:
 # CHECK: section .text:
 # CHECK:   block 0x1000
 # CHECK:     symbols:

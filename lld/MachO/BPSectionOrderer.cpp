@@ -8,10 +8,13 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
+#include "Target.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
@@ -26,7 +29,7 @@ struct BPOrdererMachO;
 }
 template <> struct lld::BPOrdererTraits<struct BPOrdererMachO> {
   using Section = macho::InputSection;
-  using Symbol = macho::Symbol;
+  using Defined = macho::Defined;
 };
 namespace {
 struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
@@ -34,12 +37,14 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static bool isCodeSection(const Section &sec) {
     return macho::isCodeSection(&sec);
   }
-  static SmallVector<Symbol *, 0> getSymbols(const Section &sec) {
-    SmallVector<Symbol *, 0> symbols;
-    for (auto *sym : sec.symbols)
-      if (auto *d = llvm::dyn_cast_or_null<Defined>(sym))
-        symbols.emplace_back(d);
-    return symbols;
+  static std::string getSectionName(const Section &sec) {
+    return (sec.getSegName() + sec.getName()).str();
+  }
+  static std::string getCompressionSubgroupKey(const Section &sec) {
+    return sec.isCold ? ":cold" : "";
+  }
+  static ArrayRef<Defined *> getSymbols(const Section &sec) {
+    return sec.symbols;
   }
 
   // Linkage names can be prefixed with "_" or "l_" on Mach-O. See
@@ -65,36 +70,31 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
     // Calculate relocation hashes
     for (const auto &r : sec.relocs) {
-      if (r.length == 0 || r.referent.isNull() || r.offset >= data.size())
+      uint32_t relocLength = 1 << r.length;
+      if (r.referent.isNull() || r.offset + relocLength > data.size())
         continue;
 
       uint64_t relocHash = getRelocHash(r, sectionToIdx);
       uint32_t start = (r.offset < windowSize) ? 0 : r.offset - windowSize + 1;
-      for (uint32_t i = start; i < r.offset + r.length; i++) {
+      for (uint32_t i = start; i < r.offset + relocLength; i++) {
         auto window = data.drop_front(i).take_front(windowSize);
         hashes.push_back(xxh3_64bits(window) ^ relocHash);
       }
     }
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
-  static llvm::StringRef getSymName(const Symbol &sym) { return sym.getName(); }
-  static uint64_t getSymValue(const Symbol &sym) {
-    if (auto *d = dyn_cast<Defined>(&sym))
-      return d->value;
-    return 0;
+  static llvm::StringRef getSymName(const Defined &sym) {
+    return sym.getName();
   }
-  static uint64_t getSymSize(const Symbol &sym) {
-    if (auto *d = dyn_cast<Defined>(&sym))
-      return d->size;
-    return 0;
-  }
+  static uint64_t getSymValue(const Defined &sym) { return sym.value; }
+  static uint64_t getSymSize(const Defined &sym) { return sym.size; }
 
 private:
   static uint64_t
-  getRelocHash(const Reloc &reloc,
+  getRelocHash(const Relocation &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;
@@ -104,7 +104,7 @@ private:
     if (isec)
       kind = uint64_t(isec->kind());
 
-    if (auto *sym = reloc.referent.dyn_cast<Symbol *>()) {
+    if (auto *sym = dyn_cast<Symbol *>(reloc.referent)) {
       kind = (kind << 8) | uint8_t(sym->kind());
       if (auto *d = llvm::dyn_cast<Defined>(sym))
         value = d->value;
@@ -116,33 +116,76 @@ private:
 } // namespace
 
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
-    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
+    StringRef profilePath, ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
-  DenseMap<CachedHashStringRef, DenseSet<unsigned>> rootSymbolToSectionIdxs;
+  DenseMap<const InputSection *, unsigned> sectionToIdx;
+  DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
+  auto addSection = [&](InputSection *isec) {
+    if (!isec || isec->data.empty() || !isec->data.data())
+      return;
+    // CString section order is handled by
+    // {Deduplicated}CStringSection::finalizeContents()
+    if (isa<CStringInputSection>(isec) || isec->isFinal)
+      return;
+    // ConcatInputSections are entirely live or dead, so the offset is
+    // irrelevant.
+    if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
+      return;
+    unsigned idx = sections.size();
+    if (!sectionToIdx.try_emplace(isec, idx).second)
+      return;
+    sections.emplace_back(isec);
+    for (auto *sym : isec->symbols) {
+      auto rootName = lld::utils::getRootSymbol(sym->getName());
+      rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
+      if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
+        rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
+    }
+  };
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
+      if (sec->name == section_names::ehFrame &&
+          sec->segname == segment_names::text)
+        continue;
       for (auto &subsec : sec->subsections) {
-        auto *isec = subsec.isec;
-        if (!isec || isec->data.empty())
-          continue;
-        size_t idx = sections.size();
-        sections.emplace_back(isec);
-        for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-          auto rootName = getRootSymbol(sym->getName());
-          rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
-          if (auto linkageName =
-                  BPOrdererMachO::getResolvedLinkageName(rootName))
-            rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(
-                idx);
-        }
+        addSection(subsec.isec);
+        if (subsec.isec && subsec.isec->canonical() != subsec.isec)
+          addSection(subsec.isec->canonical());
       }
     }
   }
 
-  return BPOrdererMachO::computeOrder(profilePath, forFunctionCompression,
-                                      forDataCompression,
-                                      compressionSortStartupFunctions, verbose,
-                                      sections, rootSymbolToSectionIdxs);
+  // A temporal profile naming an ICF thunk describes execution of both the
+  // thunk and the shared body it branches to. Add the body to each name that
+  // resolves to a thunk.
+  for (auto &[symbol, sectionIdxs] : rootSymbolToSectionIdxs) {
+    for (unsigned idx : sectionIdxs) {
+      InputSection *isec = sections[idx];
+      if (!llvm::any_of(isec->symbols, [](Defined *sym) {
+            return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
+          }))
+        continue;
+      auto *bodySym = cast<Defined>(target->getThunkBranchTarget(isec));
+      auto bodyIdx = sectionToIdx.find(bodySym->isec());
+      if (bodyIdx != sectionToIdx.end())
+        sectionIdxs.insert(bodyIdx->second);
+    }
+  }
+
+  auto result = BPOrdererMachO().computeOrder(
+      profilePath, compressionSortSpecs, forFunctionCompression,
+      forDataCompression, compressionSortStartupFunctions, verbose, sections,
+      rootSymbolToSectionIdxs);
+  // BP already orders cold sections after non-cold via separate buckets.
+  // Unset isCold on sections that received a BP priority so Writer.cpp's
+  // stable_partition doesn't re-partition them. Sections without a BP priority
+  // (e.g. non-startup cold sections when only --bp-startup-sort is used) keep
+  // their isCold flag for Writer.cpp to handle.
+  for (auto *isec : sections)
+    if (result.contains(isec))
+      isec->isCold = false;
+  return result;
 }

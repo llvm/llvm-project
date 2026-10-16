@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -stop-after finalize-isel -o %t.mir %s
+; RUN: llc -mtriple=amdgpu10.10-mesa-mesa3d -stop-after finalize-isel -o %t.mir %s
 ; RUN: llc -run-pass=none -verify-machineinstrs %t.mir -o - | FileCheck %s
 
 ; Test that custom pseudo source values can be round trip serialized through MIR.
 
 ; CHECK-LABEL: {{^}}name: shader
-; CHECK: %[[#]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed %[[#]], %[[#]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.arg3, align 1, addrspace 8)
-; CHECK: IMAGE_STORE_V4_V3_nsa_gfx10 killed %[[#]], %[[#]], %[[#]], %[[#]], killed %[[#]], 15, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+; CHECK: %[[#]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %[[#]], %[[#]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.arg3, align 1, addrspace 8)
+; CHECK: IMAGE_STORE_V4_V3_nsa_gfx10 %[[#]], %[[#]], %[[#]], %[[#]], %[[#]], 15, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ; CHECK: DS_GWS_BARRIER %[[#]], 63, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource")
 define amdgpu_cs void @shader(i32 %arg0, i32 %arg1, <8 x i32> inreg %arg2, ptr addrspace(8) inreg %arg3) {
   %bload0 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %arg3, i32 4, i32 0, i32 0)
@@ -16,7 +16,7 @@ define amdgpu_cs void @shader(i32 %arg0, i32 %arg1, <8 x i32> inreg %arg2, ptr a
   %bload1.f = bitcast i32 %bload1 to float
   %bload2.f = bitcast i32 %bload2 to float
   %bload3.f = bitcast i32 %bload3 to float
-  %istore0 = insertelement <4 x float> undef, float %bload0.f, i32 0
+  %istore0 = insertelement <4 x float> poison, float %bload0.f, i32 0
   %istore1 = insertelement <4 x float> %istore0, float %bload0.f, i32 1
   %istore2 = insertelement <4 x float> %istore1, float %bload0.f, i32 2
   %istore3 = insertelement <4 x float> %istore2, float %bload0.f, i32 3

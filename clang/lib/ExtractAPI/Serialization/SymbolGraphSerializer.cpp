@@ -19,14 +19,12 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <optional>
-#include <type_traits>
 
 using namespace clang;
 using namespace clang::extractapi;
@@ -264,7 +262,11 @@ std::optional<Object> serializeDocComment(const DocComment &Comment) {
   Array LinesArray;
   for (const auto &CommentLine : Comment) {
     Object Line;
-    Line["text"] = CommentLine.Text;
+    // Comments in source files may contain invalid UTF-8. JSON values must be
+    // valid UTF-8, so replace any invalid sequences before serializing.
+    Line["text"] = json::isUTF8(CommentLine.Text)
+                       ? CommentLine.Text
+                       : json::fixUTF8(CommentLine.Text);
     serializeObject(Line, "range",
                     serializeSourceRange(CommentLine.Begin, CommentLine.End));
     LinesArray.emplace_back(std::move(Line));
@@ -343,6 +345,22 @@ Object serializeNames(const APIRecord *Record) {
   serializeArray(Names, "subHeading",
                  serializeDeclarationFragments(Record->SubHeading));
   DeclarationFragments NavigatorFragments;
+  // The +/- prefix for Objective-C methods is important information, and
+  // should be included in the navigator fragment. The entire subheading is
+  // not included as it can contain too much information for other records.
+  switch (Record->getKind()) {
+  case APIRecord::RK_ObjCClassMethod:
+    NavigatorFragments.append("+ ", DeclarationFragments::FragmentKind::Text,
+                              /*PreciseIdentifier*/ "");
+    break;
+  case APIRecord::RK_ObjCInstanceMethod:
+    NavigatorFragments.append("- ", DeclarationFragments::FragmentKind::Text,
+                              /*PreciseIdentifier*/ "");
+    break;
+  default:
+    break;
+  }
+
   NavigatorFragments.append(Record->Name,
                             DeclarationFragments::FragmentKind::Identifier,
                             /*PreciseIdentifier*/ "");

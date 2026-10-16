@@ -21,8 +21,8 @@ def TestClass : RegisterClass<"TestTarget", [i32], 32, (add TestReg)>;
 def HasFeat1 : Predicate<"Subtarget->hasFeat1()">;
 def HasFeat2 : Predicate<"Subtarget->hasFeat2()">;
 
-def TestMode1 : HwMode<"+feat1", [HasFeat1]>;
-def TestMode2 : HwMode<"+feat2", [HasFeat2]>;
+def TestMode1 : HwMode<[HasFeat1]>;
+def TestMode2 : HwMode<[HasFeat2]>;
 
 // CHECK: error: assertion failed: The Objects and Modes lists must be the same length
 // CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record

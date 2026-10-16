@@ -14,7 +14,6 @@
    into Bazel defines, but it is by no means complete, so if you see something
    that looks wrong, it probably is. */
 
-
 /* This file enumerates variables from the LLVM configuration so that they
    can be in exported headers and won't override package specific directives.
    This is a C header that can be included in the llvm-c headers. */
@@ -29,7 +28,7 @@
 /* LLVM_DEFAULT_TARGET_TRIPLE defined in Bazel */
 
 /* Define if threads enabled */
-#define LLVM_ENABLE_THREADS 1
+/* LLVM_ENABLE_THREADS defined in Bazel */
 
 /* Has gcc/MSVC atomic intrinsics */
 #define LLVM_HAS_ATOMICS 1
@@ -114,6 +113,12 @@
 /* Define if building LLVM with BUILD_SHARED_LIBS */
 /* #undef LLVM_BUILD_SHARED_LIBS */
 
+/* Define if exporting LLVM public interface for shared library */
+/* LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS defined in Bazel */
+
+/* Define if exporting LLVM-C public interface for shared library */
+/* LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS */
+
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 /* #undef LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN} */
 
@@ -121,7 +126,28 @@
  * in non assert builds */
 #define LLVM_UNREACHABLE_OPTIMIZE 1
 
+/* Define if building LLVM with LLVM_ENABLE_IO_SANDBOX */
+/* LLVM_ENABLE_IO_SANDBOX */
+
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
+// Allow -DLLVM_ENABLE_DIA_SDK=1 to override this default 0, which is set
+// otherwise.
+#ifndef LLVM_ENABLE_DIA_SDK
 #define LLVM_ENABLE_DIA_SDK 0
+#endif
+
+/* Define if plugins enabled */
+/* LLVM_ENABLE_PLUGINS defined in Bazel */
+
+/* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
+#define LLVM_ENABLE_TELEMETRY 1
+
+/* Define to 1 to enable expensive checks for debug location coverage checking,
+   and to 0 otherwise. */
+#define LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 0
+
+/* Define to 1 to enable expensive tracking of the origin of debug location
+   coverage bugs, and to 0 otherwise. */
+#define LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN 0
 
 #endif

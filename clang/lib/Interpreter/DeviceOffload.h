@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements classes required for offloading to CUDA devices.
+// This file defines the classes required for offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_INTERPRETER_DEVICE_OFFLOAD_H
 
 #include "IncrementalParser.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -22,35 +23,64 @@ struct PartialTranslationUnit;
 class CompilerInstance;
 class CodeGenOptions;
 class TargetOptions;
+class IncrementalAction;
 
-class IncrementalCUDADeviceParser : public IncrementalParser {
-  const std::list<PartialTranslationUnit> &PTUs;
+class IncrementalDeviceParser : public IncrementalParser {
+
+public:
+  IncrementalDeviceParser(
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+      IncrementalAction *DeviceAct,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
+
+  virtual llvm::Error GenerateOffloadBinary() = 0;
+
+  ~IncrementalDeviceParser() override;
+
+protected:
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
+  CodeGenOptions &CodeGenOpts;
+  const TargetOptions &TargetOpts;
+};
+
+class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
+
+public:
+  IncrementalHIPDeviceParser(
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+      IncrementalAction *DeviceAct,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
+
+  llvm::Error GenerateOffloadBinary() override;
+
+  ~IncrementalHIPDeviceParser() override;
+};
+
+class IncrementalCUDADeviceParser : public IncrementalDeviceParser {
 
 public:
   IncrementalCUDADeviceParser(
-      std::unique_ptr<CompilerInstance> DeviceInstance,
-      CompilerInstance &HostInstance,
+      CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+      IncrementalAction *DeviceAct,
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
-      llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs);
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
 
-  llvm::Expected<TranslationUnitDecl *> Parse(llvm::StringRef Input) override;
+  llvm::Error GenerateOffloadBinary() override;
 
+  ~IncrementalCUDADeviceParser() override;
+
+private:
   // Generate PTX for the last PTU.
   llvm::Expected<llvm::StringRef> GeneratePTX();
 
   // Generate fatbinary contents in memory
   llvm::Error GenerateFatbinary();
 
-  ~IncrementalCUDADeviceParser();
-
-protected:
-  std::unique_ptr<CompilerInstance> DeviceCI;
   int SMVersion;
   llvm::SmallString<1024> PTXCode;
   llvm::SmallVector<char, 1024> FatbinContent;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
-  CodeGenOptions &CodeGenOpts; // Intentionally a reference.
-  const TargetOptions &TargetOpts;
 };
 
 } // namespace clang

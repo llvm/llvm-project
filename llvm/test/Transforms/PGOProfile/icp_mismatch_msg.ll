@@ -1,8 +1,8 @@
 ; RUN: opt < %s -passes=pgo-icall-prom -pass-remarks-missed=pgo-icall-prom -S 2>& 1 | FileCheck %s
 
-; CHECK: remark: <unknown>:0:0: Cannot promote indirect call to func4 with count of 1234: The number of arguments mismatch
-; CHECK: remark: <unknown>:0:0: Cannot promote indirect call: target with md5sum{{.*}} not found
-; CHECK: remark: <unknown>:0:0: Cannot promote indirect call to func2 with count of 7890: Return type mismatch
+; CHECK: remark: <unknown>:0:0: Cannot promote indirect call to func4 (count=1234): The number of arguments mismatch
+; CHECK: remark: <unknown>:0:0: Cannot promote indirect call: target with md5sum {{.*}} not found (count=2345)
+; CHECK: remark: <unknown>:0:0: Cannot promote indirect call to func2 (count=7890): Return type mismatch
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

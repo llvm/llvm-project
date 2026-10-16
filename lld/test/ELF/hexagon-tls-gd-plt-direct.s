@@ -1,0 +1,31 @@
+# REQUIRES: hexagon
+# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %s -o %t.o
+# RUN: ld.lld -shared %t.o --gc-sections -o %t.so
+# RUN: llvm-readobj -r %t.so | FileCheck %s
+
+## This test verifies that a GD_PLT relocation on a TLS variable does not
+## create a spurious R_HEX_JMP_SLOT for that variable — only
+## __tls_get_addr should get a PLT entry.
+
+# CHECK:      Section ({{.*}}) .rela.dyn {
+# CHECK-NEXT:   R_HEX_DTPMOD_32 foo 0x0
+# CHECK-NEXT:   R_HEX_DTPREL_32 foo 0x0
+# CHECK-NEXT: }
+# CHECK:      Section ({{.*}}) .rela.plt {
+# CHECK-NEXT:   R_HEX_JMP_SLOT __tls_get_addr 0x0
+# CHECK-NEXT: }
+
+.globl _start
+.type _start, @function
+_start:
+  ## Use GD_GOT to set up TLS GOT entry for foo
+  r2 = add(pc, ##_GLOBAL_OFFSET_TABLE_@PCREL)
+  r0 = add(r2, ##foo@GDGOT)
+  call foo@GDPLT
+  jumpr r31
+
+.section .tdata,"awT",@progbits
+.globl foo
+.type foo, @object
+foo:
+  .word 0x11111111

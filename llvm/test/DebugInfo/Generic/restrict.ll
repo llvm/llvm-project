@@ -1,5 +1,6 @@
-; RUN: %llc_dwarf -dwarf-version=2 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V2 %s
 ; RUN: %llc_dwarf -dwarf-version=3 -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=CHECK --check-prefix=V3 %s
+
+; This file is also used by the dwarf-version=2 tests in restrict-dwarf2.ll.
 
 ; CHECK: DW_AT_name ("dst")
 ; V2: DW_AT_type ([[PTR:0x........]]
@@ -26,7 +27,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}

@@ -1167,7 +1167,6 @@ entry:
 define dso_local <8 x half> @test_vmulq_lane_f16(<8 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: test_vmulq_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d2 killed $d2 def $q1
 ; CHECK-NEXT:    vmul.f16 q0, q0, d2[3]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1389,7 +1388,6 @@ entry:
 define dso_local <8 x half> @test_vdupq_lane_f16(<4 x half> %a) {
 ; CHECK-LABEL: test_vdupq_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.16 q0, d0[3]
 ; CHECK-NEXT:    bx lr
 entry:

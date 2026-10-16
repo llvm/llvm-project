@@ -48,9 +48,9 @@ void UnqualifiedId::setConstructorTemplateId(TemplateIdAnnotation *TemplateId) {
   EndLocation = TemplateId->RAngleLoc;
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, SourceLocation TemplateKWLoc,
-                          TypeLoc TL, SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, TemplateKWLoc, TL, ColonColonLoc);
+void CXXScopeSpec::Make(ASTContext &Context, TypeLoc TL,
+                        SourceLocation ColonColonLoc) {
+  Builder.Make(Context, TL, ColonColonLoc);
   if (Range.getBegin().isInvalid())
     Range.setBegin(TL.getBeginLoc());
   Range.setEnd(ColonColonLoc);
@@ -59,39 +59,13 @@ void CXXScopeSpec::Extend(ASTContext &Context, SourceLocation TemplateKWLoc,
          "NestedNameSpecifierLoc range computation incorrect");
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, IdentifierInfo *Identifier,
-                          SourceLocation IdentifierLoc,
-                          SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, Identifier, IdentifierLoc, ColonColonLoc);
-
-  if (Range.getBegin().isInvalid())
-    Range.setBegin(IdentifierLoc);
-  Range.setEnd(ColonColonLoc);
-
-  assert(Range == Builder.getSourceRange() &&
-         "NestedNameSpecifierLoc range computation incorrect");
-}
-
-void CXXScopeSpec::Extend(ASTContext &Context, NamespaceDecl *Namespace,
+void CXXScopeSpec::Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
                           SourceLocation NamespaceLoc,
                           SourceLocation ColonColonLoc) {
   Builder.Extend(Context, Namespace, NamespaceLoc, ColonColonLoc);
 
   if (Range.getBegin().isInvalid())
     Range.setBegin(NamespaceLoc);
-  Range.setEnd(ColonColonLoc);
-
-  assert(Range == Builder.getSourceRange() &&
-         "NestedNameSpecifierLoc range computation incorrect");
-}
-
-void CXXScopeSpec::Extend(ASTContext &Context, NamespaceAliasDecl *Alias,
-                          SourceLocation AliasLoc,
-                          SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, Alias, AliasLoc, ColonColonLoc);
-
-  if (Range.getBegin().isInvalid())
-    Range.setBegin(AliasLoc);
   Range.setEnd(ColonColonLoc);
 
   assert(Range == Builder.getSourceRange() &&
@@ -108,10 +82,10 @@ void CXXScopeSpec::MakeGlobal(ASTContext &Context,
          "NestedNameSpecifierLoc range computation incorrect");
 }
 
-void CXXScopeSpec::MakeSuper(ASTContext &Context, CXXRecordDecl *RD,
-                             SourceLocation SuperLoc,
-                             SourceLocation ColonColonLoc) {
-  Builder.MakeSuper(Context, RD, SuperLoc, ColonColonLoc);
+void CXXScopeSpec::MakeMicrosoftSuper(ASTContext &Context, CXXRecordDecl *RD,
+                                      SourceLocation SuperLoc,
+                                      SourceLocation ColonColonLoc) {
+  Builder.MakeMicrosoftSuper(Context, RD, SuperLoc, ColonColonLoc);
 
   Range.setBegin(SuperLoc);
   Range.setEnd(ColonColonLoc);
@@ -121,7 +95,7 @@ void CXXScopeSpec::MakeSuper(ASTContext &Context, CXXRecordDecl *RD,
 }
 
 void CXXScopeSpec::MakeTrivial(ASTContext &Context,
-                               NestedNameSpecifier *Qualifier, SourceRange R) {
+                               NestedNameSpecifier Qualifier, SourceRange R) {
   Builder.MakeTrivial(Context, Qualifier, R);
   Range = R;
 }
@@ -223,7 +197,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
         [&](DeclSpec::TQ TypeQual, StringRef PrintName, SourceLocation SL) {
           I.Fun.MethodQualifiers->SetTypeQual(TypeQual, SL);
         });
-    I.Fun.MethodQualifiers->getAttributes().takeAllFrom(attrs);
+    I.Fun.MethodQualifiers->getAttributes().takeAllPrependingFrom(attrs);
     I.Fun.MethodQualifiers->getAttributePool().takeAllFrom(attrs.getPool());
   }
 
@@ -376,6 +350,8 @@ bool Declarator::isDeclarationOfFunction() const {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case TST_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -391,7 +367,7 @@ bool Declarator::isDeclarationOfFunction() const {
       return false;
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     case TST_typename:
     case TST_typeof_unqualType:
     case TST_typeofType: {
@@ -599,7 +575,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   case DeclSpec::TST_##Trait:                                                  \
     return "__" #Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_BFloat16: return "__bf16";
@@ -611,6 +587,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_##Name:                                                   \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case DeclSpec::TST_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/HLSLPackedTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -640,6 +620,18 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   case DeclSpec::TQ_unaligned:   return "__unaligned";
   }
   llvm_unreachable("Unknown typespec!");
+}
+
+const char *DeclSpec::getSpecifierName(OverflowBehaviorState S) {
+  switch (S) {
+  case OverflowBehaviorState::Unspecified:
+    return "unspecified";
+  case OverflowBehaviorState::Wrap:
+    return "__ob_wrap";
+  case OverflowBehaviorState::Trap:
+    return "__ob_trap";
+  }
+  llvm_unreachable("Unknown overflow behavior state!");
 }
 
 bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
@@ -782,15 +774,6 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   TSTLoc = TagKwLoc;
   TSTNameLoc = TagNameLoc;
   TypeSpecOwned = false;
-
-  if (T == TST_typename_pack_indexing) {
-    // we got there from a an annotation. Reconstruct the type
-    // Ugly...
-    QualType QT = Rep.get();
-    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
-    TypeRep = ParsedType::make(LIT->getPattern());
-    PackIndexingExpr = LIT->getIndexExpr();
-  }
   return false;
 }
 
@@ -1029,6 +1012,25 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   llvm_unreachable("Unknown type qualifier!");
 }
 
+bool DeclSpec::SetOverflowBehavior(
+    OverflowBehaviorType::OverflowBehaviorKind Kind, SourceLocation Loc,
+    const char *&PrevSpec, unsigned &DiagID) {
+  OverflowBehaviorState NewState =
+      (Kind == OverflowBehaviorType::OverflowBehaviorKind::Wrap)
+          ? OverflowBehaviorState::Wrap
+          : OverflowBehaviorState::Trap;
+
+  OverflowBehaviorState CurrentState = getOverflowBehaviorState();
+
+  if (CurrentState != OverflowBehaviorState::Unspecified) {
+    return BadSpecifier(NewState, CurrentState, PrevSpec, DiagID);
+  }
+
+  OB_state = static_cast<unsigned>(NewState);
+  OB_Loc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,
                                      unsigned &DiagID) {
   // 'inline inline' is ok.  However, since this is likely not what the user
@@ -1157,6 +1159,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   // Check the type specifier components first. No checking for an invalid
   // type.
+  CheckTypeSpec(S, Policy);
+
+  CheckFriendSpec(S, Policy);
+
+  assert(!TypeSpecOwned || isDeclRep((TST)TypeSpecType));
+
+  // Okay, now we can infer the real type.
+
+  // TODO: return "auto function" and other bad things based on the real type.
+
+  // 'data definition has no type or storage class'?
+}
+
+void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   if (TypeSpecType == TST_error)
     return;
 
@@ -1393,12 +1409,12 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     }
   }
 
-  if (S.getLangOpts().C23 &&
+  if (S.getLangOpts().C23 && getTypeSpecType() != DeclSpec::TST_unspecified &&
       getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
-      StorageClassSpec == SCS_extern) {
-    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-        << DeclSpec::getSpecifierName(getStorageClassSpec())
-        << SourceRange(getStorageClassSpecLoc());
+      (StorageClassSpec == SCS_extern || StorageClassSpec == SCS_auto)) {
+    S.Diag(getStorageClassSpecLoc(), diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getConstexprSpecifier())
+        << SourceRange(getConstexprSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where
@@ -1436,6 +1452,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
+}
+
+void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
   // C++ [class.friend]p6:
   //   No storage-class-specifier shall appear in the decl-specifier-seq
   //   of a friend declaration.
@@ -1493,14 +1512,6 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     FS_explicit_specifier = ExplicitSpecifier();
     FS_virtualLoc = FS_explicitLoc = SourceLocation();
   }
-
-  assert(!TypeSpecOwned || isDeclRep((TST) TypeSpecType));
-
-  // Okay, now we can infer the real type.
-
-  // TODO: return "auto function" and other bad things based on the real type.
-
-  // 'data definition has no type or storage class'?
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {

@@ -230,6 +230,21 @@ define <8 x float> @splat_idx_nxv4f32_v8f32_constant_7(<vscale x 4 x float> %v) 
   ret <8 x float> %splat
 }
 
+; This test shouldn't crash.
+define <vscale x 2 x float> @splat_idx_illegal_type(<3 x float> %v) {
+; CHECK-LABEL: splat_idx_illegal_type:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+entry:
+  %x = extractelement <3 x float> %v, i64 0
+  %ins = insertelement <vscale x 2 x float> poison, float %x, i64 0
+  %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x float> %splat
+}
+
 ; Negative test, vscale might be 4
 define <8 x float> @splat_idx_nxv4f32_v8f32_constant_8(<vscale x 4 x float> %v) {
 ; CHECK-LABEL: splat_idx_nxv4f32_v8f32_constant_8:

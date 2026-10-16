@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace codeview {
@@ -18,11 +19,11 @@ namespace codeview {
 /// Given an arbitrary codeview type, determine if it is an LF_STRUCTURE,
 /// LF_CLASS, LF_INTERFACE, LF_UNION, or LF_ENUM with the forward ref class
 /// option.
-bool isUdtForwardRef(CVType CVT);
+LLVM_ABI bool isUdtForwardRef(CVType CVT);
 
 /// Given a CVType which is assumed to be an LF_MODIFIER, return the
 /// TypeIndex of the type that the LF_MODIFIER modifies.
-TypeIndex getModifiedType(const CVType &CVT);
+LLVM_ABI TypeIndex getModifiedType(const CVType &CVT);
 
 /// Return true if this record should be in the IPI stream of a PDB. In an
 /// object file, these record kinds will appear mixed into the .debug$T section.
@@ -46,9 +47,13 @@ inline bool isIdRecord(TypeLeafKind K) {
 inline bool isAggregate(CVType CVT) {
   switch (CVT.kind()) {
   case LF_STRUCTURE:
+  case LF_STRUCTURE2:
   case LF_CLASS:
+  case LF_CLASS2:
   case LF_INTERFACE:
+  case LF_INTERFACE2:
   case LF_UNION:
+  case LF_UNION2:
     return true;
   default:
     return false;
@@ -56,11 +61,11 @@ inline bool isAggregate(CVType CVT) {
 }
 
 /// Given an arbitrary codeview type index, determine its size.
-uint64_t getSizeInBytesForTypeIndex(TypeIndex TI);
+LLVM_ABI uint64_t getSizeInBytesForTypeIndex(TypeIndex TI);
 
 /// Given an arbitrary codeview type, return the type's size in the case
 /// of aggregate (LF_STRUCTURE, LF_CLASS, LF_INTERFACE, LF_UNION).
-uint64_t getSizeInBytesForTypeRecord(CVType CVT);
+LLVM_ABI uint64_t getSizeInBytesForTypeRecord(CVType CVT);
 
 } // namespace codeview
 } // namespace llvm

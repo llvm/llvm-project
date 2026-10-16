@@ -125,9 +125,6 @@ __kernel void test__global() {
 // EXPL: call spir_func void @_ZNU3AS41CC1EOU3AS4S_(ptr addrspace(4) {{[^,]*}} [[C5GEN]], ptr addrspace(4) noundef align 4 dereferenceable(4) [[CALL]])
 // IMPL: call void @llvm.memcpy.p0.p4.i32(ptr {{.*}}%c5, ptr addrspace(4) {{.*}}[[CALL]]
 
-// Tests address space of inline members
-//COMMON: @_ZNU3AS41C3getEv(ptr addrspace(4) {{[^,]*}} %this)
-//COMMON: @_ZNU3AS41CplERU3AS4KS_(ptr dead_on_unwind noalias writable sret(%class.C) align 4 %agg.result, ptr addrspace(4) {{[^,]*}} %this
 #define TEST(AS)             \
   __kernel void test##AS() { \
     AS C c;                  \
@@ -189,6 +186,10 @@ TEST(__private)
 // COMMON: [[C2GEN:%[.a-z0-9]+]] = addrspacecast ptr %c2 to ptr addrspace(4)
 // EXPL: call spir_func noundef align 4 dereferenceable(4) ptr addrspace(4) @_ZNU3AS41CaSERU3AS4KS_(ptr addrspace(4) {{[^,]*}} [[C2GEN]], ptr addrspace(4) noundef align 4 dereferenceable(4) [[C1GEN]])
 // IMPL:  call void @llvm.memcpy.p4.p4.i32(ptr addrspace(4) {{.*}}[[C2GEN]], ptr addrspace(4) {{.*}}[[C1GEN]]
+
+// Tests address space of inline members
+//COMMON: @_ZNU3AS41C3getEv(ptr addrspace(4) {{[^,]*}} %this)
+//COMMON: @_ZNU3AS41CplERU3AS4KS_(ptr dead_on_unwind noalias writable sret(%class.C) align 4 %agg.result, ptr addrspace(4) {{[^,]*}} %this
 
 // Test that calling a const method from a non-const method does not crash Clang.
 class ConstAndNonConstMethod {

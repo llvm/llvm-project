@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,19 +9,21 @@ from lldbsuite.test import lldbutil
 
 
 class NSDictionarySyntheticTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number("main.m", "// Set break point at this line.")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar11988289_with_run_command(self):
         """Test that NSDictionary reports its synthetic children properly."""
         self.build()
         self.run_tests()
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar11988289_with_run_command_no_const(self):
         """Test that NSDictionary reports its synthetic children properly."""
         disable_constant_classes = {
@@ -120,6 +121,8 @@ class NSDictionarySyntheticTestCase(TestBase):
                 '@"2 elements"',
             ],
         )
+
+        self.runCmd("settings set target.max-children-depth 6")
         self.expect(
             "frame variable mutabledict --ptr-depth 3",
             substrs=[

@@ -31,96 +31,135 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
+
+#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTS
+#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
 
 using namespace mlir;
 
-/// Return the unique ReturnOp that terminates `funcOp`.
-/// Return nullptr if there is no such unique ReturnOp.
-static func::ReturnOp getAssumedUniqueReturnOp(func::FuncOp funcOp) {
-  func::ReturnOp returnOp;
+/// Get all the ReturnOp in the funcOp.
+static SmallVector<func::ReturnOp> getReturnOps(func::FuncOp funcOp) {
+  SmallVector<func::ReturnOp> returnOps;
   for (Block &b : funcOp.getBody()) {
     if (auto candidateOp = dyn_cast<func::ReturnOp>(b.getTerminator())) {
-      if (returnOp)
-        return nullptr;
-      returnOp = candidateOp;
+      returnOps.push_back(candidateOp);
     }
   }
-  return returnOp;
+  return returnOps;
 }
 
-/// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(CallOpInterface callOp) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<func::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+/// Get the operands at the specified position for all returnOps.
+static SmallVector<Value>
+getReturnOpsOperandInPos(ArrayRef<func::ReturnOp> returnOps, size_t pos) {
+  return llvm::map_to_vector(returnOps, [&](func::ReturnOp returnOp) {
+    return returnOp.getOperand(pos);
+  });
 }
 
-LogicalResult
-mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
+/// Check if all given values are the same buffer as the block argument (modulo
+/// cast ops).
+static bool operandsEqualFuncArgument(ArrayRef<Value> operands,
+                                      BlockArgument argument) {
+  for (Value val : operands) {
+    while (auto castOp = val.getDefiningOp<memref::CastOp>())
+      val = castOp.getSource();
+
+    if (val != argument)
+      return false;
+  }
+  return true;
+}
+
+LogicalResult mlir::bufferization::dropEquivalentBufferResults(
+    ModuleOp module, DropBufferResultsOpts options) {
   IRRewriter rewriter(module.getContext());
 
-  DenseMap<func::FuncOp, DenseSet<func::CallOp>> callerMap;
+  auto canModify = [&](func::FuncOp funcOp) {
+    return funcOp->getParentOp() == module.getOperation() &&
+           !funcOp.isExternal() &&
+           (!funcOp.isPublic() || options.modifyPublicFunctions);
+  };
+
+  DenseMap<func::FuncOp, SmallVector<func::CallOp>> callerMap;
   // Collect the mapping of functions to their call sites.
   module.walk([&](func::CallOp callOp) {
-    if (func::FuncOp calledFunc = getCalledFunction(callOp)) {
-      callerMap[calledFunc].insert(callOp);
+    if (func::FuncOp calledFunc =
+            dyn_cast_or_null<func::FuncOp>(callOp.resolveCallable())) {
+      if (canModify(calledFunc))
+        callerMap[calledFunc].push_back(callOp);
     }
+    return WalkResult::advance();
   });
 
-  for (auto funcOp : module.getOps<func::FuncOp>()) {
-    if (funcOp.isExternal())
-      continue;
-    func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
-    // TODO: Support functions with multiple blocks.
-    if (!returnOp)
+  // Dropping a callee result can make a caller result equivalent to one of the
+  // caller's arguments. Revisit such callers until no more results can be
+  // dropped. A SetVector avoids adding the same function to the worklist more
+  // than once. Every revisit is triggered by deleting a result, so the
+  // algorithm also terminates for recursive call graphs.
+  llvm::SetVector<func::FuncOp> worklist;
+  for (auto funcOp : module.getOps<func::FuncOp>())
+    if (canModify(funcOp))
+      worklist.insert(funcOp);
+
+  while (!worklist.empty()) {
+    func::FuncOp funcOp = worklist.pop_back_val();
+    SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+    if (returnOps.empty())
       continue;
 
     // Compute erased results.
-    SmallVector<Value> newReturnValues;
-    BitVector erasedResultIndices(funcOp.getFunctionType().getNumResults());
+    size_t numReturnOps = returnOps.size();
+    size_t numReturnValues = funcOp.getFunctionType().getNumResults();
+    SmallVector<SmallVector<Value>> newReturnValues(numReturnOps);
+    BitVector erasedResultIndices(numReturnValues);
     DenseMap<int64_t, int64_t> resultToArgs;
-    for (const auto &it : llvm::enumerate(returnOp.getOperands())) {
+    for (size_t i = 0; i < numReturnValues; ++i) {
       bool erased = false;
+      SmallVector<Value> returnOperands =
+          getReturnOpsOperandInPos(returnOps, i);
       for (BlockArgument bbArg : funcOp.getArguments()) {
-        Value val = it.value();
-        while (auto castOp = val.getDefiningOp<memref::CastOp>())
-          val = castOp.getSource();
-
-        if (val == bbArg) {
-          resultToArgs[it.index()] = bbArg.getArgNumber();
+        if (operandsEqualFuncArgument(returnOperands, bbArg)) {
+          resultToArgs[i] = bbArg.getArgNumber();
           erased = true;
           break;
         }
       }
 
       if (erased) {
-        erasedResultIndices.set(it.index());
+        erasedResultIndices.set(i);
       } else {
-        newReturnValues.push_back(it.value());
+        for (auto [newReturnValue, operand] :
+             llvm::zip(newReturnValues, returnOperands)) {
+          newReturnValue.push_back(operand);
+        }
       }
     }
 
+    if (erasedResultIndices.none())
+      continue;
+
     // Update function.
-    funcOp.eraseResults(erasedResultIndices);
-    returnOp.getOperandsMutable().assign(newReturnValues);
+    if (failed(funcOp.eraseResults(erasedResultIndices)))
+      return failure();
+
+    for (auto [returnOp, newReturnValue] :
+         llvm::zip(returnOps, newReturnValues))
+      returnOp.getOperandsMutable().assign(newReturnValue);
 
     // Update function calls.
-    for (func::CallOp callOp : callerMap[funcOp]) {
+    SmallVector<func::CallOp> callOps;
+    callOps.swap(callerMap[funcOp]);
+    for (func::CallOp callOp : callOps) {
+      func::FuncOp caller = callOp->getParentOfType<func::FuncOp>();
       rewriter.setInsertionPoint(callOp);
-      auto newCallOp = rewriter.create<func::CallOp>(callOp.getLoc(), funcOp,
-                                                     callOp.getOperands());
+      auto newCallOp = func::CallOp::create(rewriter, callOp.getLoc(), funcOp,
+                                            callOp.getOperands());
       SmallVector<Value> newResults;
       int64_t nextResult = 0;
       for (int64_t i = 0; i < callOp.getNumResults(); ++i) {
@@ -135,12 +174,15 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
         Type expectedType = callOp.getResult(i).getType();
         if (replacement.getType() != expectedType) {
           // A cast must be inserted at the call site.
-          replacement = rewriter.create<memref::CastOp>(
-              callOp.getLoc(), expectedType, replacement);
+          replacement = memref::CastOp::create(rewriter, callOp.getLoc(),
+                                               expectedType, replacement);
         }
         newResults.push_back(replacement);
       }
       rewriter.replaceOp(callOp, newResults);
+      callerMap[funcOp].push_back(newCallOp);
+      if (caller && canModify(caller))
+        worklist.insert(caller);
     }
   }
 
@@ -149,16 +191,20 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
 namespace {
 struct DropEquivalentBufferResultsPass
-    : bufferization::impl::DropEquivalentBufferResultsBase<
+    : bufferization::impl::DropEquivalentBufferResultsPassBase<
           DropEquivalentBufferResultsPass> {
+  using Base::Base;
+
   void runOnOperation() override {
-    if (failed(bufferization::dropEquivalentBufferResults(getOperation())))
+    // Convert pass options.
+    options.modifyPublicFunctions = modifyPublicFunctions;
+
+    if (failed(bufferization::dropEquivalentBufferResults(getOperation(),
+                                                          options)))
       return signalPassFailure();
   }
+
+private:
+  bufferization::DropBufferResultsOpts options;
 };
 } // namespace
-
-std::unique_ptr<Pass>
-mlir::bufferization::createDropEquivalentBufferResultsPass() {
-  return std::make_unique<DropEquivalentBufferResultsPass>();
-}

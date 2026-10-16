@@ -11,9 +11,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -98,6 +96,10 @@ struct TestSCFParallelLoopCollapsing
             << " iter args while this limited functionality testing pass was "
                "configured only for loops with exactly "
             << flattenedCombinedLoops.size() << " iter args.";
+        return;
+      }
+      if (op.getUnsignedCmp()) {
+        op.emitOpError("with unsigned bounds is not supported");
         return;
       }
       collapseParallelLoops(rewriter, op, combinedLoops);

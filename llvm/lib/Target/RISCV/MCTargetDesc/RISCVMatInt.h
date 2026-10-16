@@ -20,15 +20,15 @@ class APInt;
 namespace RISCVMatInt {
 
 enum OpndKind {
-  RegImm, // ADDI/ADDIW/SLLI/SRLI/BSETI/BCLRI
-  Imm,    // LUI
-  RegReg, // SH1ADD/SH2ADD/SH3ADD
+  RegImm, // ADDI/ADDIW/XORI/SLLI/SRLI/SLLI_UW/RORI/BSETI/BCLRI/TH_SRRI
+  Imm,    // LUI/QC_LI/QC_E_LI/PLI_B/PLI_H/PLI_W
+  RegReg, // SH1ADD/SH2ADD/SH3ADD/PACK
   RegX0,  // ADD_UW
 };
 
 class Inst {
   unsigned Opc;
-  int32_t Imm; // The largest value we need to store is 20 bits.
+  int32_t Imm; // The largest value we need to store is 32 bits for QC_E_LI.
 
 public:
   Inst(unsigned Opc, int64_t I) : Opc(Opc), Imm(I) {

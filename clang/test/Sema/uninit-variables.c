@@ -580,4 +580,6 @@ void aggregate() {
 
   struct with_explicit_flex_array f = {2}; // expected-warning {{field 'flex_arr' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_FLEX_ARR {{'flex_arr' declared here}}
   (void)f;
+
+  (void)sizeof({ struct with_explicit_field a; a; });  // no warning -- unevaluated operand
 }

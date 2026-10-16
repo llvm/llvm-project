@@ -11,7 +11,7 @@ target triple = "x86_64-pc-linux-gnux32"
 %"class.llvm::AttributeImpl.2.1802.3601.5914.6685.7456.8227.9255.9769.10026.18508" = type <{ ptr, %"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505", i8, [3 x i8] }>
 
 ; Function Attrs: nounwind uwtable
-define void @_ZNK4llvm11AttrBuilder13hasAttributesENS_12AttributeSetEy(i1 %arg) #0 align 2 {
+define void @_ZNK4llvm11AttrBuilder13hasAttributesENS_12AttributeSetEy(i1 %arg) align 2 {
 entry:
   br i1 %arg, label %cond.false, label %_ZNK4llvm12AttributeSet11getNumSlotsEv.exit
 
@@ -81,8 +81,6 @@ _ZNK4llvm9Attribute15getKindAsStringEv.exit:      ; preds = %_ZNK4llvm9Attribute
 return:                                           ; preds = %_ZNK4llvm9Attribute13getKindAsEnumEv.exit, %for.cond9, %_ZNK4llvm12AttributeSet3endEj.exit
   ret void
 }
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

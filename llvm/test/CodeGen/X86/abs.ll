@@ -144,31 +144,34 @@ define i128 @test_i128(i128 %a) nounwind {
 ;
 ; X86-LABEL: test_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    xorl %edx, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    xorl %edx, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    xorl %edx, %ebx
-; X86-NEXT:    subl %edx, %ebx
-; X86-NEXT:    sbbl %edx, %edi
-; X86-NEXT:    sbbl %edx, %esi
-; X86-NEXT:    sbbl %edx, %ecx
-; X86-NEXT:    movl %ebx, (%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl 36(%ebp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    movl 28(%ebp), %esi
+; X86-NEXT:    xorl %eax, %esi
+; X86-NEXT:    movl 24(%ebp), %edi
+; X86-NEXT:    xorl %eax, %edi
+; X86-NEXT:    subl %eax, %edi
+; X86-NEXT:    sbbl %eax, %esi
+; X86-NEXT:    sbbl %eax, %edx
+; X86-NEXT:    sbbl %eax, %ecx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %edi, (%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
   %r = call i128 @llvm.abs.i128(i128 %a, i1 false)
   ret i128 %r
@@ -688,13 +691,17 @@ define i128 @test_sextinreg_i128(i128 %a) nounwind {
 ;
 ; X86-LABEL: test_sextinreg_i128:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 28(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    xorl %edx, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl 24(%ebp), %esi
 ; X86-NEXT:    xorl %edx, %esi
 ; X86-NEXT:    subl %edx, %esi
 ; X86-NEXT:    sbbl %edx, %ecx
@@ -702,7 +709,9 @@ define i128 @test_sextinreg_i128(i128 %a) nounwind {
 ; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    leal -4(%ebp), %esp
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
   %shl = shl i128 %a, 64
   %ashr = ashr exact i128 %shl, 64

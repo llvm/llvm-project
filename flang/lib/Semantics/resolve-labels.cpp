@@ -10,8 +10,8 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/semantics.h"
-#include <cstdarg>
 #include <type_traits>
 
 namespace Fortran::semantics {
@@ -95,6 +95,13 @@ constexpr Legality IsLegalDoTerm(
   } else {
     return Legality::never;
   }
+}
+
+// Handles an assignment statement that might be wrapped by a construct
+// other than an ActionStmt.
+constexpr Legality IsLegalDoTerm(
+    const parser::Statement<parser::AssignmentStmt> &) {
+  return Legality::formerly;
 }
 
 template <typename A> constexpr bool IsFormat(const parser::Statement<A> &) {
@@ -214,7 +221,7 @@ public:
         auto targetFlags{ConstructBranchTargetFlags(endStmt)};
         AddTargetLabelDefinition(endStmt.label.value(), targetFlags,
             currentScope_,
-            /*isExecutableConstructEndStmt=*/false);
+            /*isExecutableConstructEndStmt=*/false, endStmt.source);
       }
     }
     return true;
@@ -242,19 +249,19 @@ public:
     auto targetFlags{ConstructBranchTargetFlags(statement)};
     if constexpr (common::HasMember<A, LabeledConstructStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(),
-          /*isExecutableConstructEndStmt=*/false);
+          /*isExecutableConstructEndStmt=*/false, currentPosition_);
     } else if constexpr (std::is_same_v<A, parser::EndIfStmt> ||
         std::is_same_v<A, parser::EndSelectStmt>) {
       // the label on an END IF/SELECT is not in the last part/case
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(),
-          /*isExecutableConstructEndStmt=*/true);
+          /*isExecutableConstructEndStmt=*/true, currentPosition_);
     } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
-          /*isExecutableConstructEndStmt=*/true);
+          /*isExecutableConstructEndStmt=*/true, currentPosition_);
     } else if constexpr (!common::HasMember<A, LabeledProgramUnitEndStmts>) {
       // Program unit END statements have already been processed.
       AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
-          /*isExecutableConstructEndStmt=*/false);
+          /*isExecutableConstructEndStmt=*/false, currentPosition_);
     }
     return true;
   }
@@ -280,6 +287,8 @@ public:
     return PushConstructName(criticalConstruct);
   }
   bool Pre(const parser::DoConstruct &doConstruct) {
+    if (IsNonBlockDoConstruct(doConstruct))
+      return PreNonBlockDoConstruct(doConstruct);
     const auto &optionalName{std::get<std::optional<parser::Name>>(
         std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
             .statement.t)};
@@ -489,15 +498,29 @@ public:
 
   // C1401
   void Post(const parser::MainProgram &mainProgram) {
+    // Uppercase the name of the main program, so that its symbol name
+    // would be unique from similarly named non-main-program symbols.
+    auto upperCaseCharBlock = [](const parser::CharBlock &cb) {
+      auto ch{const_cast<char *>(cb.begin())};
+      for (char *endCh{ch + cb.size()}; ch != endCh; ++ch) {
+        *ch = parser::ToUpperCaseLetter(*ch);
+      }
+    };
+    const parser::CharBlock *progName{nullptr};
+    if (const auto &program{
+            std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(
+                mainProgram.t)}) {
+      progName = &program->statement.v.source;
+      upperCaseCharBlock(*progName);
+    }
     if (const parser::CharBlock *
         endName{GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
             mainProgram.t))}) {
-      if (const auto &program{
-              std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(
-                  mainProgram.t)}) {
-        if (*endName != program->statement.v.source) {
+      upperCaseCharBlock(*endName);
+      if (progName) {
+        if (*endName != *progName) {
           context_.Say(*endName, "END PROGRAM name mismatch"_err_en_US)
-              .Attach(program->statement.v.source, "should be"_en_US);
+              .Attach(*progName, "should be"_en_US);
         }
       } else {
         context_.Say(*endName,
@@ -536,6 +559,14 @@ public:
         derivedTypeDef,
         std::get<parser::Statement<parser::EndTypeStmt>>(derivedTypeDef.t));
     PopDisposableMap();
+  }
+
+  // F2023 C7115
+  void Post(const parser::EnumerationTypeDef &enumTypeDef) {
+    CheckOptionalName<parser::EnumerationTypeStmt>(
+        "enumeration type definition", enumTypeDef,
+        std::get<parser::Statement<parser::EndEnumerationTypeStmt>>(
+            enumTypeDef.t));
   }
 
   void Post(const parser::LabelDoStmt &labelDoStmt) {
@@ -612,6 +643,34 @@ private:
   bool SwitchToNewScope() {
     PushScope(PopScope().isExteriorGotoFatal);
     return true;
+  }
+
+  // The parser builds a DO construct, with a synthesized END DO statement
+  // that has no source, from a non-block (labeled) DO loop associated with an
+  // OpenACC LOOP or combined construct.  Such a loop may share its terminating
+  // label with enclosing labeled DO statements that are only turned into DO
+  // constructs later by CanonicalizeDo.
+  static bool IsNonBlockDoConstruct(const parser::DoConstruct &doConstruct) {
+    return std::get<parser::Statement<parser::EndDoStmt>>(doConstruct.t)
+        .source.empty();
+  }
+
+  // Analyze a DO construct built from a non-block DO loop as the original
+  // labeled DO statement: it does not open a new scope, and it references
+  // its terminating label.
+  bool PreNonBlockDoConstruct(const parser::DoConstruct &doConstruct) {
+    const auto &doStmt{
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)};
+    currentPosition_ = doStmt.source;
+    if (doStmt.label)
+      AddTargetLabelDefinition(*doStmt.label,
+          ConstructBranchTargetFlags(doStmt), currentScope_,
+          /*isExecutableConstructEndStmt=*/false, currentPosition_);
+    const auto &block{std::get<parser::Block>(doConstruct.t)};
+    if (auto label{parser::GetFinalLabel(block)})
+      AddLabelReferenceFromDoStmt(*label);
+    Walk(block, *this);
+    return false;
   }
 
   template <typename A> bool PushConstructName(const A &a) {
@@ -829,19 +888,25 @@ private:
   }
 
   // 6.2.5., paragraph 2
+  //
+  // `position` is the source position of the labeled statement itself.  It is
+  // passed in rather than read from currentPosition_ because the END statement
+  // of a program unit is visited in advance, before the statement visitor has
+  // moved currentPosition_ onto it.
   void AddTargetLabelDefinition(parser::Label label,
       LabeledStmtClassificationSet labeledStmtClassificationSet,
-      ProxyForScope scope, bool isExecutableConstructEndStmt) {
+      ProxyForScope scope, bool isExecutableConstructEndStmt,
+      parser::CharBlock position) {
     CheckLabelInRange(label);
     TargetStmtMap &targetStmtMap{disposableMaps_.empty()
             ? programUnits_.back().targetStmts
             : disposableMaps_.back()};
     const auto pair{targetStmtMap.emplace(label,
-        LabeledStatementInfoTuplePOD{scope, currentPosition_,
+        LabeledStatementInfoTuplePOD{scope, position,
             labeledStmtClassificationSet, isExecutableConstructEndStmt})};
     if (!pair.second) {
-      context_.Say(currentPosition_, "Label '%u' is not distinct"_err_en_US,
-          SayLabel(label));
+      context_.Say(
+          position, "Label '%u' is not distinct"_err_en_US, SayLabel(label));
     }
   }
 
@@ -921,7 +986,7 @@ static LabeledStatementInfoTuplePOD GetLabel(
     const TargetStmtMap &labels, const parser::Label &label) {
   const auto iter{labels.find(label)};
   if (iter == labels.cend()) {
-    return {0u, nullptr, LabeledStmtClassificationSet{}, false};
+    return {0u, parser::CharBlock{}, LabeledStmtClassificationSet{}, false};
   } else {
     return iter->second;
   }
@@ -1023,8 +1088,10 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
           SayLabel(label));
     } else if (!doTarget.labeledStmtClassificationSet.test(
                    TargetStatementEnum::Do)) {
-      context.Say(doTarget.parserCharBlock,
-          "A DO loop should terminate with an END DO or CONTINUE"_err_en_US);
+      context
+          .Say(doTarget.parserCharBlock,
+              "This statement cannot terminate the DO loop"_err_en_US)
+          .Attach(position, "which begins at"_en_US);
     } else {
       loopBodies.emplace_back(SkipLabel(position), doTarget.parserCharBlock);
     }
@@ -1186,8 +1253,8 @@ void CheckAssignConstraints(const SourceStmtList &assigns,
   CheckAssignTargetConstraints(assigns, labels, context);
 }
 
-bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
-  auto &context{parseTreeAnalysis.ErrorHandler()};
+bool CheckConstraints(
+    const ParseTreeAnalyzer &parseTreeAnalysis, SemanticsContext &context) {
   for (const auto &programUnit : parseTreeAnalysis.ProgramUnits()) {
     const auto &dos{programUnit.doStmtSources};
     const auto &branches{programUnit.otherStmtSources};
@@ -1203,7 +1270,27 @@ bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
   return !context.AnyFatalError();
 }
 
-bool ValidateLabels(SemanticsContext &context, const parser::Program &program) {
-  return CheckConstraints(LabelAnalysis(context, program));
+// Record the statements that a branch may name, for lowering to consult when
+// it records the targets of a branch.  Statements are identified by source
+// position because a label is only unique within one program unit.
+static void RecordBranchTargets(
+    const ParseTreeAnalyzer &analysis, SemanticsContext &context) {
+  for (const auto &programUnit : analysis.ProgramUnits()) {
+    for (const auto &[label, info] : programUnit.targetStmts) {
+      if (info.labeledStmtClassificationSet.test(TargetStatementEnum::Branch)) {
+        context.RecordBranchTarget(info.parserCharBlock);
+      }
+    }
+  }
+}
+
+bool AnalyzeLabels(SemanticsContext &context, const parser::Program &program) {
+  ParseTreeAnalyzer analysis{LabelAnalysis(context, program)};
+  if (!CheckConstraints(analysis, context)) {
+    // The program will not be lowered, so there is nothing to record.
+    return false;
+  }
+  RecordBranchTargets(analysis, context);
+  return true;
 }
 } // namespace Fortran::semantics

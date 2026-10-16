@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
 
 ; Make sure the return value of the first call is not overwritten with
 ; a constant before the fadd use.
@@ -11,7 +11,7 @@
 ; CHECK:    s_swappc_b64
 define amdgpu_kernel void @vgpr_multi_use_imm_fold() {
 entry:
-  store double 0.0, ptr addrspace(1) undef, align 8
+  store double 0.0, ptr addrspace(1) poison, align 8
   %call0 = tail call fastcc double @__ocml_log_f64(double 2.0)
   %op = fadd double %call0, 0.0
   %call1 = tail call fastcc double @__ocml_sqrt_f64(double %op)

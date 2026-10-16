@@ -1,0 +1,226 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -run-pass=pipeliner -o - %s -aarch64-enable-pipeliner -pipeliner-enable-copytophi=1
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  
+  @glb = internal unnamed_addr global { [256 x i32], [256 x i32], [256 x i32] } zeroinitializer
+  
+  ; Function Attrs: nounwind vscale_range(1,16)
+  define internal void @f(i32 %0, i32 %1) #0 {
+  entry:
+    %reass.sub = sub i32 %1, %0
+    %invariant.op = add i32 %0, 1
+    %invariant.op3 = add i32 %0, 2
+    %omp_loop.cmp5.not = icmp eq i32 %reass.sub, -1
+    br i1 %omp_loop.cmp5.not, label %exit, label %preheader
+  
+  preheader:                                        ; preds = %entry
+    %2 = add i32 %1, 1
+    %3 = icmp slt i32 %2, %invariant.op
+    br i1 %3, label %body.preheader, label %vector.ph
+  
+  body.preheader:                                   ; preds = %preheader
+    %4 = add i32 %1, 1
+    %5 = sub i32 %4, %0
+    br label %body
+  
+  vector.ph:                                        ; preds = %preheader
+    %6 = add i32 %1, 1
+    %7 = sub i32 %6, %0
+    %8 = tail call i32 @llvm.vscale.i32()
+    %9 = shl nuw nsw i32 %8, 2
+    %10 = tail call i32 @llvm.vscale.i32()
+    %11 = shl nuw nsw i32 %10, 2
+    %12 = call i32 @llvm.usub.sat.i32(i32 %7, i32 %11)
+    %active.lane.mask.entry = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %7)
+    %13 = tail call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
+    %.splatinsert = insertelement <vscale x 4 x i32> poison, i32 %9, i64 0
+    %.splat = shufflevector <vscale x 4 x i32> %.splatinsert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+    %broadcast.splatinsert = insertelement <vscale x 4 x i32> poison, i32 %invariant.op, i64 0
+    %broadcast.splat = shufflevector <vscale x 4 x i32> %broadcast.splatinsert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+    %broadcast.splatinsert7 = insertelement <vscale x 4 x i32> poison, i32 %invariant.op3, i64 0
+    %broadcast.splat8 = shufflevector <vscale x 4 x i32> %broadcast.splatinsert7, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+    br label %vector.body
+  
+  vector.body:                                      ; preds = %vector.body, %vector.ph
+    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+    %active.lane.mask = phi <vscale x 4 x i1> [ %active.lane.mask.entry, %vector.ph ], [ %active.lane.mask.next, %vector.body ]
+    %vec.ind = phi <vscale x 4 x i32> [ %13, %vector.ph ], [ %vec.ind.next, %vector.body ]
+    %14 = add <vscale x 4 x i32> %vec.ind, %broadcast.splat
+    %15 = extractelement <vscale x 4 x i32> %14, i64 0
+    %16 = sext i32 %15 to i64
+    %17 = add nsw i64 %16, -1
+    %18 = getelementptr i32, ptr @glb, i64 %17
+    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %14, ptr %18, i32 4, <vscale x 4 x i1> %active.lane.mask)
+    %19 = add <vscale x 4 x i32> %vec.ind, %broadcast.splat8
+    %20 = mul <vscale x 4 x i32> %14, %19
+    %21 = sdiv <vscale x 4 x i32> %20, splat (i32 2)
+    %22 = getelementptr i32, ptr getelementptr inbounds nuw (i8, ptr @glb, i64 1024), i64 %17
+    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %21, ptr %22, i32 4, <vscale x 4 x i1> %active.lane.mask)
+    %23 = getelementptr i32, ptr getelementptr inbounds nuw (i8, ptr @glb, i64 2048), i64 %17
+    %wide.masked.load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %23, i32 4, <vscale x 4 x i1> %active.lane.mask, <vscale x 4 x i32> poison)
+    %24 = add <vscale x 4 x i32> %wide.masked.load, %21
+    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %24, ptr %23, i32 4, <vscale x 4 x i1> %active.lane.mask)
+    %25 = tail call i32 @llvm.vscale.i32()
+    %26 = shl nuw nsw i32 %25, 2
+    %index.next = add i32 %index, %26
+    %active.lane.mask.next = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 %index, i32 %12)
+    %vec.ind.next = add <vscale x 4 x i32> %vec.ind, %.splat
+    %27 = extractelement <vscale x 4 x i1> %active.lane.mask.next, i64 0
+    br i1 %27, label %vector.body, label %exit
+  
+  exit:                                             ; preds = %vector.body, %body, %entry
+    ret void
+  
+  body:                                             ; preds = %body.preheader, %body
+    %lsr.iv2 = phi i32 [ %invariant.op3, %body.preheader ], [ %lsr.iv.next3, %body ]
+    %lsr.iv = phi i32 [ %5, %body.preheader ], [ %lsr.iv.next, %body ]
+    %28 = add i32 %lsr.iv2, -1
+    %29 = sext i32 %28 to i64
+    %30 = add nsw i64 %29, -1
+    %31 = getelementptr i32, ptr @glb, i64 %30
+    store i32 %28, ptr %31, align 4
+    %32 = mul i32 %28, %lsr.iv2
+    %33 = sdiv i32 %32, 2
+    %34 = getelementptr i32, ptr getelementptr inbounds nuw (i8, ptr @glb, i64 1024), i64 %30
+    store i32 %33, ptr %34, align 4
+    %35 = getelementptr i32, ptr getelementptr inbounds nuw (i8, ptr @glb, i64 2048), i64 %30
+    %36 = load i32, ptr %35, align 4
+    %37 = add i32 %36, %33
+    store i32 %37, ptr %35, align 4
+    %lsr.iv.next = add i32 %lsr.iv, -1
+    %lsr.iv.next3 = add i32 %lsr.iv2, 1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    br i1 %exitcond.not, label %exit, label %body
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <vscale x 4 x i32> @llvm.stepvector.nxv4i32() #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare i32 @llvm.vscale.i32() #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32) #1
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
+  declare void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32>, ptr captures(none), i32 immarg, <vscale x 4 x i1>) #2
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
+  declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr captures(none), i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>) #3
+  
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare i32 @llvm.usub.sat.i32(i32, i32) #4
+  
+  attributes #0 = { nounwind vscale_range(1,16) "frame-pointer"="non-leaf" "target-cpu"="neoverse-v1" "target-features"="+sve" }
+  attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
+  attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+  attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+  attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.5(0x30000000), %bb.1(0x50000000)
+    liveins: $w0, $w1
+  
+    %20:gpr32common = COPY $w1
+    %19:gpr32common = COPY $w0
+    %21:gpr32common = SUBWrr %20, %19
+    dead $wzr = ADDSWri %21, 1, 0, implicit-def $nzcv
+    Bcc 0, %bb.5, implicit $nzcv
+    B %bb.1
+  
+  bb.1.preheader:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  
+    %22:gpr32common = ADDWri %19, 1, 0
+    %23:gpr32sp = ADDWri %19, 2, 0
+    %25:gpr32common = ADDWri %20, 1, 0
+    dead $wzr = SUBSWrr killed %25, %22, implicit-def $nzcv
+    Bcc 10, %bb.3, implicit $nzcv
+    B %bb.2
+  
+  bb.2.body.preheader:
+    successors: %bb.6(0x80000000)
+  
+    %1:gpr32sp = COPY %23
+    %55:gpr32sp = ADDWri %21, 1, 0
+    %2:gpr32all = COPY %55
+    %57:gpr64common = MOVaddr target-flags(aarch64-page) @glb, target-flags(aarch64-pageoff, aarch64-nc) @glb
+    B %bb.6
+  
+  bb.3.vector.ph:
+    successors: %bb.4(0x80000000)
+  
+    %29:gpr32common = ADDWri %21, 1, 0
+    %30:gpr64 = CNTW_XPiI 31, 1, implicit $vg
+    %31:gpr32common = COPY %30.sub_32
+    %32:gpr32 = SUBSWrr %29, %31, implicit-def $nzcv
+    %33:gpr32 = COPY $wzr
+    %34:gpr32 = CSELWr %33, killed %32, 3, implicit $nzcv
+    %4:ppr = WHILELO_PWW_S %33, %29, implicit-def dead $nzcv
+    %5:zpr = INDEX_II_S 0, 1, implicit $vg
+    %6:zpr = DUP_ZR_S %31
+    %7:zpr = DUP_ZR_S %22
+    %8:zpr = DUP_ZR_S %23
+    %27:gpr32all = COPY %33
+    %37:gpr64common = MOVaddr target-flags(aarch64-page) @glb, target-flags(aarch64-pageoff, aarch64-nc) @glb
+    %39:gpr64common = MOVi64imm -1
+    %41:ppr_3b = PTRUE_S 31, implicit $vg
+    %44:gpr64common = MOVi64imm 255
+    %45:gpr64common = MOVi64imm 511
+  
+  bb.4.vector.body:
+    successors: %bb.4(0x7c000000), %bb.5(0x04000000)
+  
+    %9:gpr32 = PHI %27, %bb.3, %12, %bb.4
+    %10:ppr_3b = PHI %4, %bb.3, %13, %bb.4
+    %11:zpr = PHI %5, %bb.3, %14, %bb.4
+    %35:zpr = ADD_ZZZ_S %11, %7
+    %36:gpr32 = COPY %35.ssub
+    %38:gpr64sp = ADDXrx %37, killed %36, 50
+    ST1W %35, %10, %38, %39 :: (store unknown-size into %ir.18, align 4)
+    %40:zpr = ADD_ZZZ_S %11, %8
+    %42:zpr = MUL_ZPZZ_S_UNDEF %41, %35, killed %40
+    %43:zpr = ASRD_ZPmI_S %41, %42, 1
+    ST1W %43, %10, %38, %44 :: (store unknown-size into %ir.22, align 4)
+    %46:zpr = LD1W %10, %38, %45 :: (load unknown-size from %ir.23, align 4)
+    %47:zpr = ADD_ZZZ_S killed %46, %43
+    ST1W killed %47, %10, %38, %45 :: (store unknown-size into %ir.23, align 4)
+    %50:gpr32 = ADDWrr %9, %31
+    %12:gpr32all = COPY %50
+    %13:ppr = WHILELO_PWW_S %9, %34, implicit-def $nzcv
+    %14:zpr = ADD_ZZZ_S %11, %6
+    Bcc 4, %bb.4, implicit $nzcv
+    B %bb.5
+  
+  bb.5.exit:
+    RET_ReallyLR
+  
+  bb.6.body:
+    successors: %bb.5(0x04000000), %bb.6(0x7c000000)
+  
+    %15:gpr32common = PHI %1, %bb.2, %18, %bb.6
+    %16:gpr32sp = PHI %2, %bb.2, %17, %bb.6
+    %56:gpr32common = SUBWri %15, 1, 0
+    %58:gpr64sp = ADDXrx %57, %56, 50
+    STURWi %56, %58, -4 :: (store (s32) into %ir.31)
+    %59:gpr32 = MADDWrrr %56, %15, $wzr
+    %60:gpr32 = ADDWrs %59, %59, 95
+    %61:gpr32 = SBFMWri killed %60, 1, 31
+    STRWui %61, %58, 255 :: (store (s32) into %ir.34)
+    %62:gpr32 = LDRWui %58, 511 :: (load (s32) from %ir.35)
+    %63:gpr32 = ADDWrr killed %62, %61
+    STRWui killed %63, %58, 511 :: (store (s32) into %ir.35)
+    %64:gpr32 = SUBSWri %16, 1, 0, implicit-def $nzcv
+    %17:gpr32all = COPY %64
+    %65:gpr32sp = ADDWri %15, 1, 0
+    %18:gpr32all = COPY %65
+    Bcc 0, %bb.5, implicit $nzcv
+    B %bb.6
+
+...

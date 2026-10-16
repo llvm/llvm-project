@@ -1,4 +1,4 @@
-//===--- SwappedArgumentsCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,10 +25,10 @@ void SwappedArgumentsCheck::registerMatchers(MatchFinder *Finder) {
 /// implicit conversions that have no effect on the input but block our view for
 /// other implicit casts.
 static const Expr *ignoreNoOpCasts(const Expr *E) {
-  if (auto *Cast = dyn_cast<CastExpr>(E))
-    if (Cast->getCastKind() == CK_LValueToRValue ||
-        Cast->getCastKind() == CK_NoOp)
-      return ignoreNoOpCasts(Cast->getSubExpr());
+  if (auto *Cast = dyn_cast<CastExpr>(E);
+      Cast && (Cast->getCastKind() == CK_LValueToRValue ||
+               Cast->getCastKind() == CK_NoOp))
+    return ignoreNoOpCasts(Cast->getSubExpr());
   return E;
 }
 
@@ -70,7 +70,7 @@ static bool areArgumentsPotentiallySwapped(const QualType LTo,
   if (LTo == RFrom && REq)
     return true;
 
-  bool LEq = areTypesSemiEqual(LTo, RFrom);
+  const bool LEq = areTypesSemiEqual(LTo, RFrom);
   if (RTo == LFrom && LEq)
     return true;
 
@@ -91,7 +91,7 @@ void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Only need to check RHS, as LHS has already been covered. We don't want to
     // emit two warnings for a single argument.
-    if (UsedArgs.count(RHS))
+    if (UsedArgs.contains(RHS))
       continue;
 
     const auto *LHSCast = dyn_cast<ImplicitCastExpr>(ignoreNoOpCasts(LHS));

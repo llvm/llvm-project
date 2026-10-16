@@ -10,10 +10,17 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class DominatorTree;
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class SCEVNAryExpr;
+class PredicatedScalarEvolution;
 } // namespace llvm
 
 namespace llvm {
@@ -25,52 +32,264 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
+/// Returns true if only scalar values of \p Def are used by all users.
+bool onlyScalarValuesUsed(const VPValue *Def);
+
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
 /// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                       ScalarEvolution &SE);
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+LLVM_ABI_FOR_TEST const SCEV *
+getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
+                      const Loop *L = nullptr);
 
-/// Returns true if \p VPV is uniform after vectorization.
-inline bool isUniformAfterVectorization(const VPValue *VPV) {
-  // A value defined outside the vector region must be uniform after
-  // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideLoopRegions())
-    return true;
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
-    return Rep->isUniform();
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(),
-                  isUniformAfterVectorization);
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           ((Instruction::isBinaryOp(VPI->getOpcode()) ||
-             VPI->getOpcode() == VPInstruction::PtrAdd) &&
-            all_of(VPI->operands(), isUniformAfterVectorization));
-  if (auto *IV = dyn_cast<VPDerivedIVRecipe>(VPV))
-    return all_of(IV->operands(), isUniformAfterVectorization);
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                         PredicatedScalarEvolution &PSE,
+                                         const Loop *L);
 
-  // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
-}
+/// Returns true if \p Addr is an address SCEV that can be passed to
+/// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
+/// affine AddRec (i.e. induction ), or an add expression of such operands or a
+/// sign-extended AddRec.
+bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 
-/// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, VPlan &Plan);
+/// Returns true if \p VPV is a single scalar, either because it produces the
+/// same value for all lanes or only has its first lane used.
+bool isSingleScalar(const VPValue *VPV);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
-/// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
-bool isUniformAcrossVFsAndUFs(VPValue *V);
+/// or its operands are known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or the canonical IV).
+LLVM_ABI_FOR_TEST bool isUniformAcrossVFsAndUFs(const VPValue *V);
+
+/// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
+bool isElementwise(const VPValue *V);
+
+/// Returns true if \p R produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPRecipeBase *R);
+
+/// Returns the header block of the first, top-level loop, or null if none
+/// exist.
+VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+unsigned getVFScaleFactor(VPRecipeBase *R);
+
+/// Return true if we do not know how to (mechanically) hoist or sink \p R.
+/// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+/// Returns true for recipes that access memory.
+bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
+
+/// Return the intrinsic ID underlying a call.
+template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
+  if (const auto *Intr = dyn_cast<VPWidenIntrinsicRecipe>(R))
+    return Intr->getVectorIntrinsicID();
+  if (const auto *Call = dyn_cast<VPWidenCallRecipe>(R))
+    return Call->getCalledScalarFunction()->getIntrinsicID();
+
+  auto GetCalleeIntrinsic = [&](VPValue *CalleeOp) -> Intrinsic::ID {
+    if (!isa<VPIRValue>(CalleeOp))
+      return Intrinsic::not_intrinsic;
+    auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+    return F->getIntrinsicID();
+  };
+  if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
+    if (Rep->getOpcode() == Instruction::Call)
+      // The callee is the last operand, excluding the mask if predicated.
+      return GetCalleeIntrinsic(
+          Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
+  if (const auto *VPI = dyn_cast<VPInstruction>(R)) {
+    if (VPI->getOpcode() == Instruction::Call)
+      // The callee is the last operand, excluding the mask if masked.
+      return GetCalleeIntrinsic(
+          VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
+    if (VPI->getOpcode() == VPInstruction::Intrinsic) {
+      return cast<VPConstantInt>(VPI->getLastOperand())->getZExtValue();
+    }
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+/// Return the instruction opcode for the recipe defining \p V or 0 for
+/// unsupported recipes and VPValues not defined by a recipe.
+unsigned getOpcode(const VPValue *V);
+
+/// Get the instruction opcode or intrinsic ID for the recipe defining \p V.
+/// Returns an optional pair, where the first element indicates whether it is an
+/// intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPValue *V);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
+/// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
+/// ID.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
+                               const VPPhi *PhiR);
+
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
+/// Find the canonical IV increment of \p Plan's vector loop region. Returns
+/// nullptr if not found.
+VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
+
+/// Returns the GEP nowrap flags for \p Ptr, looking through pointer casts
+/// mirroring Value::stripPointerCasts.
+GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
+
+/// Returns true if \p V is used as part of the address of another load or
+/// store.
+bool isUsedByLoadStoreAddress(const VPValue *V);
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
+
+/// Finds the incoming alias-mask within the vector preheader.
+VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Returns the (early exiting block, exit block) pairs of \p Plan, i.e. all
+/// edges to an exit block that do not come from \p MiddleVPBB.
+SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
+getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
+
+/// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
+/// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
+/// StartV and step \p Step, truncated to \p ResultTy, inserting recipes via \p
+/// Builder.
+VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, Type *ResultTy, VPValue *StartV,
+                    VPValue *Step, DebugLoc DL, VPBuilder &Builder,
+                    const VPIRFlags::WrapFlagsTy &Flags = {});
+
+/// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
+/// generates scalar values.
+VPValue *scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                          VPlan &Plan, VPBuilder &Builder);
+
+/// Returns true if \p R is dead, i.e. none of its defined values are used and
+/// it has no side effects (with the exception of conditional assumes, which are
+/// considered dead as their conditions may be flattened).
+bool isDeadRecipe(VPRecipeBase &R);
+
+/// Recursively delete \p V and any of its operands that become dead.
+void recursivelyDeleteDeadRecipes(VPValue *V);
+
+/// Collect all users of \p V, looking through recipes that define other values.
+SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
+
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
+                            const DataLayout &DL);
+
+/// Insert phis to reconstruct SSA for a single value starting from \p VPBB. \p
+/// Defs is a map of definitions at specific blocks. Returns the
+/// reconstructed value at VPBB. Use if the CFG has been modified such that a
+/// def no longer dominates all its uses. Every block leading to VPBB must be
+/// reachable from the entry and the plan must be plain-CFG (not contain any
+/// regions).
+LLVM_ABI_FOR_TEST VPValue *
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
+
+/// Returns \p Freq as a BranchProbability, relative to the full mass.
+BranchProbability getExecutionProbability(BlockFrequency Freq);
+
+/// Computes for each block in \p Blocks, which must be in reverse post-order,
+/// the frequency with which it executes relative to the first (header) block,
+/// and whether that frequency was composed using any estimated branch weights.
+/// The frequency of a block is the sum over its incoming edges, or std::nullopt
+/// if any edge on a path reaching it lacks branch weights. Edges to blocks
+/// outside \p Blocks are ignored.
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
+
+namespace detail {
+
+/// Template-independent implementation for pullOutPermutations.
+void pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> Perm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> Build);
+} // namespace detail
+
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  // Convert matcher to function returing the matched VPValue.
+  auto MatchPerm = [&Perm](VPValue *Op) -> VPValue * {
+    VPValue *X;
+    return match(Op, Perm(X)) ? X : nullptr;
+  };
+  detail::pullOutPermutationsImpl(Plan, MatchPerm, Build);
+}
 
 } // namespace vputils
 
+/// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
+/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
+/// VPExpandSCEVRecipe to be expanded to IR later.
+class VPSCEVExpander {
+  VPBuilder &Builder;
+  ScalarEvolution &SE;
+  DebugLoc DL;
+
+  /// When true, nested SCEVUDivExprs are expanded so that they cannot divide by
+  /// zero, matching SCEVExpander's SafeUDivMode.
+  bool SafeUDivMode = false;
+
+  /// Try to find a loop-invariant IR value in the plan's entry block whose
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
+  /// if none is found.
+  VPValue *tryToReuseIRValue(const SCEV *S);
+
+  /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
+  VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
+
+public:
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
+      : Builder(Builder), SE(SE), DL(DL) {}
+
+  /// Expand \p S into recipes and live-ins using the builder.
+  VPValue *expand(const SCEV *S);
+};
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
 //===----------------------------------------------------------------------===//
@@ -86,15 +305,10 @@ public:
   /// successors are moved from \p BlockPtr to \p NewBlock. \p NewBlock must
   /// have neither successors nor predecessors.
   static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      disconnectBlocks(BlockPtr, Succ);
-      connectBlocks(NewBlock, Succ);
-    }
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -103,14 +317,11 @@ public:
   /// NewBlock. Add \p NewBlock as predecessor of \p BlockPtr and \p BlockPtr as
   /// successor of \p NewBlock.
   static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      disconnectBlocks(Pred, BlockPtr);
-      connectBlocks(Pred, NewBlock);
-    }
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors()))
+      replaceSuccessor(Pred, BlockPtr, NewBlock);
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -122,9 +333,8 @@ public:
   /// predecessors.
   static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
                                    VPBlockBase *BlockPtr) {
-    assert(IfTrue->getSuccessors().empty() &&
-           "Can't insert IfTrue with successors.");
-    assert(IfFalse->getSuccessors().empty() &&
+    assert(!IfTrue->hasSuccessors() && "Can't insert IfTrue with successors.");
+    assert(!IfFalse->hasSuccessors() &&
            "Can't insert IfFalse with successors.");
     BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
     IfTrue->setPredecessors({BlockPtr});
@@ -143,8 +353,7 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
+
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else
@@ -164,12 +373,24 @@ public:
     To->removePredecessor(From);
   }
 
+  /// Redirect the edge from \p From to \p OldSucc to \p NewSucc, keeping \p
+  /// From's successor order. \p From is removed from \p OldSucc's predecessors
+  /// and appended to \p NewSucc's.
+  static void replaceSuccessor(VPBlockBase *From, VPBlockBase *OldSucc,
+                               VPBlockBase *NewSucc) {
+    From->replaceSuccessor(OldSucc, NewSucc);
+    OldSucc->removePredecessor(From);
+    NewSucc->appendPredecessor(From);
+  }
+
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
+    auto Preds = to_vector(Old->getPredecessors());
+    auto Succs = to_vector(Old->getSuccessors());
+    for (auto *Pred : Preds)
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
+    for (auto *Succ : Succs)
       Succ->replacePredecessor(Old, New);
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
@@ -177,24 +398,43 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
+    Old->clearSuccessors();
+  }
+
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T>
-  static auto blocksOnly(const T &Range) {
+  template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
+    return make_isa_range<BlockTy>(std::forward<T>(Range));
+  }
+
+  /// Return an iterator range over \p Range with each block cast to \p
+  /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
+  /// \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
     // Create BaseTy with correct const-ness based on BlockTy.
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
-
-    // We need to first create an iterator range over (const) BlocktTy & instead
-    // of (const) BlockTy * for filter_range to work properly.
-    auto Mapped =
-        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
-    auto Filter = make_filter_range(
-        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
+    return map_range(
+        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
   }
+
+  /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
+  /// to LastBB forms a single-sucessor chain.
+  static SmallVector<VPBasicBlock *>
+  blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                      VPBasicBlock *LastBB);
 
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's
@@ -203,16 +443,27 @@ public:
   /// single edge between \p From and \p To.
   static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
                            VPBlockBase *BlockPtr) {
-    auto &Successors = From->getSuccessors();
-    auto &Predecessors = To->getPredecessors();
-    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
-           "must have single between From and To");
-    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
-    unsigned PredIx =
-        std::distance(Predecessors.begin(), find(Predecessors, From));
+    unsigned SuccIdx = From->getIndexForSuccessor(To);
+    unsigned PredIx = To->getIndexForPredecessor(From);
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
+
+  /// Returns true if \p VPB is a loop header, based on regions or \p VPDT in
+  /// their absence.
+  static bool isHeader(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns true if \p VPB is a loop latch, using isHeader().
+  static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns the header and latch of the outermost loop of \p Plan in plain
+  /// CFG form (before regions are formed).
+  static std::pair<VPBasicBlock *, VPBasicBlock *>
+  getPlainCFGHeaderAndLatch(const VPlan &Plan);
+
+  /// Returns the middle block of \p Plan in plain CFG form (before regions
+  /// are formed).
+  static VPBasicBlock *getPlainCFGMiddleBlock(const VPlan &Plan);
 };
 
 } // namespace llvm

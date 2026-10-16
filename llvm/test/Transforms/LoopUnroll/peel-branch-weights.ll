@@ -15,9 +15,9 @@ define void @test() {
 ; CHECK:       loop.peel:
 ; CHECK-NEXT:    [[X_PEEL:%.*]] = call i32 @get.x()
 ; CHECK-NEXT:    switch i32 [[X_PEEL]], label [[LOOP_LATCH_PEEL:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOOP_LATCH_PEEL]]
-; CHECK-NEXT:    i32 1, label [[LOOP_EXIT:%.*]]
-; CHECK-NEXT:    i32 2, label [[LOOP_EXIT]]
+; CHECK-NEXT:      i32 0, label [[LOOP_LATCH_PEEL]]
+; CHECK-NEXT:      i32 1, label [[LOOP_EXIT:%.*]]
+; CHECK-NEXT:      i32 2, label [[LOOP_EXIT]]
 ; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
 ; CHECK:       loop.latch.peel:
 ; CHECK-NEXT:    br label [[LOOP_PEEL_NEXT:%.*]]
@@ -26,10 +26,10 @@ define void @test() {
 ; CHECK:       loop.peel2:
 ; CHECK-NEXT:    [[X_PEEL3:%.*]] = call i32 @get.x()
 ; CHECK-NEXT:    switch i32 [[X_PEEL3]], label [[LOOP_LATCH_PEEL4:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOOP_LATCH_PEEL4]]
-; CHECK-NEXT:    i32 1, label [[LOOP_EXIT]]
-; CHECK-NEXT:    i32 2, label [[LOOP_EXIT]]
-; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:      i32 0, label [[LOOP_LATCH_PEEL4]]
+; CHECK-NEXT:      i32 1, label [[LOOP_EXIT]]
+; CHECK-NEXT:      i32 2, label [[LOOP_EXIT]]
+; CHECK-NEXT:    ], !prof [[PROF0]]
 ; CHECK:       loop.latch.peel4:
 ; CHECK-NEXT:    br label [[LOOP_PEEL_NEXT1:%.*]]
 ; CHECK:       loop.peel.next1:
@@ -41,31 +41,33 @@ define void @test() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @get.x()
 ; CHECK-NEXT:    switch i32 [[X]], label [[LOOP_LATCH:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOOP_LATCH]]
-; CHECK-NEXT:    i32 1, label [[LOOP_EXIT_LOOPEXIT:%.*]]
-; CHECK-NEXT:    i32 2, label [[LOOP_EXIT_LOOPEXIT]]
-; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:      i32 0, label [[LOOP_LATCH]]
+; CHECK-NEXT:      i32 1, label [[LOOP_EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:      i32 2, label [[LOOP_EXIT_LOOPEXIT]]
+; CHECK-NEXT:    ], !prof [[PROF0]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    br label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       loop.exit.loopexit:
 ; CHECK-NEXT:    br label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    ret void
+;
+; DISABLEADV-LABEL: @test(
+; DISABLEADV-NEXT:  entry:
+; DISABLEADV-NEXT:    br label [[LOOP:%.*]]
+; DISABLEADV:       loop:
+; DISABLEADV-NEXT:    [[X:%.*]] = call i32 @get.x()
+; DISABLEADV-NEXT:    switch i32 [[X]], label [[LOOP_LATCH:%.*]] [
+; DISABLEADV-NEXT:      i32 0, label [[LOOP_LATCH]]
+; DISABLEADV-NEXT:      i32 1, label [[LOOP_EXIT:%.*]]
+; DISABLEADV-NEXT:      i32 2, label [[LOOP_EXIT]]
+; DISABLEADV-NEXT:    ], !prof [[PROF0:![0-9]+]]
+; DISABLEADV:       loop.latch:
+; DISABLEADV-NEXT:    br label [[LOOP]]
+; DISABLEADV:       loop.exit:
+; DISABLEADV-NEXT:    ret void
+;
 
-; DISABLEADV-LABEL: @test()
-; DISABLEADV-NEXT: entry:
-; DISABLEADV-NEXT:  br label %loop
-; DISABLEADV: loop
-; DISABLEADV-NEXT:  %x = call i32 @get.x()
-; DISABLEADV-NEXT:  switch i32 %x, label %loop.latch [
-; DISABLEADV-NEXT:    i32 0, label %loop.latch
-; DISABLEADV-NEXT:    i32 1, label %loop.exit
-; DISABLEADV-NEXT:    i32 2, label %loop.exit
-; DISABLEADV-NEXT:  ], !prof !0
-; DISABLEADV: loop.latch:
-; DISABLEADV-NEXT:  br label %loop
-; DISABLEADV: loop.exit:
-; DISABLEADV-NEXT:  ret void
 
 entry:
   br label %loop
@@ -89,9 +91,9 @@ loop.exit:
 
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 100, i32 200, i32 20, i32 10}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 90, i32 180, i32 20, i32 10}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 80, i32 160, i32 20, i32 10}
-; CHECK: [[LOOP3]] = distinct !{!3, !4, !5}
-; CHECK: [[META4:![0-9]+]] = !{!"llvm.loop.peeled.count", i32 2}
-; CHECK: [[META5:![0-9]+]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[META2]] = !{!"llvm.loop.peeled.count", i32 2}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.disable"}
+;.
+; DISABLEADV: [[PROF0]] = !{!"branch_weights", i32 100, i32 200, i32 20, i32 10}
 ;.

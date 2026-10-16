@@ -14,9 +14,12 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
@@ -42,8 +45,7 @@ public:
   static ShuffleMask getIdentity(unsigned Sz) {
     IndicesVecT Indices;
     Indices.reserve(Sz);
-    for (auto Idx : seq<int>(0, (int)Sz))
-      Indices.push_back(Idx);
+    llvm::append_range(Indices, seq<int>(0, (int)Sz));
     return ShuffleMask(std::move(Indices));
   }
   /// \Returns true if the mask is a perfect identity mask with consecutive
@@ -92,10 +94,13 @@ enum class ResultReason {
   DiffMathFlags,
   DiffWrapFlags,
   DiffBBs,
+  RepeatedInstrs,
   NotConsecutive,
+  AlignmentNotSupported,
   CantSchedule,
   Unimplemented,
   Infeasible,
+  ForcePackForDebugging,
 };
 
 #ifndef NDEBUG
@@ -130,14 +135,20 @@ struct ToStr {
       return "DiffWrapFlags";
     case ResultReason::DiffBBs:
       return "DiffBBs";
+    case ResultReason::RepeatedInstrs:
+      return "RepeatedInstrs";
     case ResultReason::NotConsecutive:
       return "NotConsecutive";
+    case ResultReason::AlignmentNotSupported:
+      return "AlignmentNotSupported";
     case ResultReason::CantSchedule:
       return "CantSchedule";
     case ResultReason::Unimplemented:
       return "Unimplemented";
     case ResultReason::Infeasible:
       return "Infeasible";
+    case ResultReason::ForcePackForDebugging:
+      return "ForcePackForDebugging";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }
@@ -160,7 +171,7 @@ protected:
   LegalityResult &operator=(const LegalityResult &) = delete;
 
 public:
-  virtual ~LegalityResult() {}
+  virtual ~LegalityResult() = default;
   LegalityResultID getSubclassID() const { return ID; }
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS) const {
@@ -176,7 +187,7 @@ public:
 
 /// Base class for results with reason.
 class LegalityResultWithReason : public LegalityResult {
-  [[maybe_unused]] ResultReason Reason;
+  ResultReason Reason;
   LegalityResultWithReason(LegalityResultID ID, ResultReason Reason)
       : LegalityResult(ID), Reason(Reason) {}
   friend class Pack; // For constructor.
@@ -203,22 +214,22 @@ public:
 
 class DiamondReuse final : public LegalityResult {
   friend class LegalityAnalysis;
-  Value *Vec;
-  DiamondReuse(Value *Vec)
+  Action *Vec;
+  DiamondReuse(Action *Vec)
       : LegalityResult(LegalityResultID::DiamondReuse), Vec(Vec) {}
 
 public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::DiamondReuse;
   }
-  Value *getVector() const { return Vec; }
+  Action *getVector() const { return Vec; }
 };
 
 class DiamondReuseWithShuffle final : public LegalityResult {
   friend class LegalityAnalysis;
-  Value *Vec;
+  Action *Vec;
   ShuffleMask Mask;
-  DiamondReuseWithShuffle(Value *Vec, const ShuffleMask &Mask)
+  DiamondReuseWithShuffle(Action *Vec, const ShuffleMask &Mask)
       : LegalityResult(LegalityResultID::DiamondReuseWithShuffle), Vec(Vec),
         Mask(Mask) {}
 
@@ -226,7 +237,7 @@ public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::DiamondReuseWithShuffle;
   }
-  Value *getVector() const { return Vec; }
+  Action *getVector() const { return Vec; }
   const ShuffleMask &getMask() const { return Mask; }
 };
 
@@ -247,18 +258,18 @@ public:
   /// Describes how to get a value element. If the value is a vector then it
   /// also provides the index to extract it from.
   class ExtractElementDescr {
-    Value *V;
+    PointerUnion<Action *, Value *> V = nullptr;
     /// The index in `V` that the value can be extracted from.
-    /// This is nullopt if we need to use `V` as a whole.
-    std::optional<int> ExtractIdx;
+    int ExtractIdx = 0;
 
   public:
-    ExtractElementDescr(Value *V, int ExtractIdx)
+    ExtractElementDescr(Action *V, int ExtractIdx)
         : V(V), ExtractIdx(ExtractIdx) {}
-    ExtractElementDescr(Value *V) : V(V), ExtractIdx(std::nullopt) {}
-    Value *getValue() const { return V; }
-    bool needsExtract() const { return ExtractIdx.has_value(); }
-    int getExtractIdx() const { return *ExtractIdx; }
+    ExtractElementDescr(Value *V) : V(V) {}
+    Action *getValue() const { return cast<Action *>(V); }
+    Value *getScalar() const { return cast<Value *>(V); }
+    bool needsExtract() const { return isa<Action *>(V); }
+    int getExtractIdx() const { return ExtractIdx; }
   };
 
   using DescrVecT = SmallVector<ExtractElementDescr, 4>;
@@ -269,11 +280,11 @@ public:
       : Descrs(std::move(Descrs)) {}
   /// If all elements come from a single vector input, then return that vector
   /// and also the shuffle mask required to get them in order.
-  std::optional<std::pair<Value *, ShuffleMask>> getSingleInput() const {
+  std::optional<std::pair<Action *, ShuffleMask>> getSingleInput() const {
     const auto &Descr0 = *Descrs.begin();
-    Value *V0 = Descr0.getValue();
     if (!Descr0.needsExtract())
       return std::nullopt;
+    auto *V0 = Descr0.getValue();
     ShuffleMask::IndicesVecT MaskIndices;
     MaskIndices.push_back(Descr0.getExtractIdx());
     for (const auto &Descr : drop_begin(Descrs)) {
@@ -315,21 +326,23 @@ class LegalityAnalysis {
   /// Checks opcodes, types and other IR-specifics and returns a ResultReason
   /// object if not vectorizable, or nullptr otherwise.
   std::optional<ResultReason>
-  notVectorizableBasedOnOpcodesAndTypes(ArrayRef<Value *> Bndl);
+  notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl);
 
   ScalarEvolution &SE;
   const DataLayout &DL;
+  TargetTransformInfo &TTI;
   InstrMaps &IMaps;
 
   /// Finds how we can collect the values in \p Bndl from the vectorized or
   /// non-vectorized code. It returns a map of the value we should extract from
   /// and the corresponding shuffle mask we need to use.
-  CollectDescr getHowToCollectValues(ArrayRef<Value *> Bndl) const;
+  CollectDescr getHowToCollectValues(BndlRef<Value *> Bndl) const;
 
 public:
   LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
-                   Context &Ctx, InstrMaps &IMaps)
-      : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
+                   TargetTransformInfo &TTI, Context &Ctx, InstrMaps &IMaps,
+                   SchedDirection Dir)
+      : Sched(AA, Ctx, Dir), SE(SE), DL(DL), TTI(TTI), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT &&...Args) {
@@ -337,13 +350,37 @@ public:
         std::unique_ptr<ResultT>(new ResultT(std::move(Args)...)));
     return cast<ResultT>(*ResultPool.back());
   }
+
+  /// \returns true if \p Instrs are in different blocks.
+  template <typename ValueT>
+  static bool differentBlock(BndlRef<ValueT *> Instrs) {
+    auto *BB0 = cast<Instruction>(Instrs[0])->getParent();
+    return any_of(drop_begin(Instrs), [BB0](auto *V) {
+      return cast<Instruction>(V)->getParent() != BB0;
+    });
+  }
+
+  /// \returns true if all values in \p Values are unique.
+  template <typename ValueT> static bool areUnique(BndlRef<ValueT *> Values) {
+    SmallPtrSet<Value *, 8> Unique(llvm::from_range, Values);
+    return Unique.size() == Values.size();
+  }
+
+  /// \returns true if the alignment of the vector composed of \p Values has
+  /// alignment that is supported by the target.
+  LLVM_ABI bool isAlignmentSupported(ArrayRef<Value *> Values) const;
+
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
   /// \p SkipScheduling skips the scheduler check and is only meant for testing.
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
-  const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
-                                     bool SkipScheduling = false);
-  void clear();
+  LLVM_ABI const LegalityResult &canVectorize(BndlRef<Value *> Bndl,
+                                              bool SkipScheduling = false);
+  /// \Returns a Pack with reason 'ForcePackForDebugging'.
+  const LegalityResult &getForcedPackForDebugging() {
+    return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);
+  }
+  LLVM_ABI void clear();
 };
 
 } // namespace llvm::sandboxir

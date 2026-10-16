@@ -19,51 +19,47 @@
 namespace llvm {
 class raw_ostream;
 
-/// This represents an "assembler immediate".
-///
-///  In its most general form, this can hold ":Kind:(SymbolA - SymbolB +
-///  imm64)".  Not all targets supports relocations of this general form, but we
-///  need to represent this anyway.
-///
-/// In general both SymbolA and SymbolB will also have a modifier
-/// analogous to the top-level Kind. Current targets are not expected
-/// to make use of both though. The choice comes down to whether
-/// relocation modifiers apply to the closest symbol or the whole
-/// expression.
-///
-/// Note that this class must remain a simple POD value class, because we need
-/// it to live in unions etc.
+// Represents a relocatable expression in its most general form:
+// relocation_specifier(SymA - SymB + imm64).
+//
+// Not all targets support SymB. For PC-relative relocations, a specifier is
+// typically used instead of setting SymB to DOT.
+//
+// This class must remain a simple POD value class, as it needs to reside in
+// unions and similar structures.
 class MCValue {
-  const MCSymbolRefExpr *SymA = nullptr, *SymB = nullptr;
+  const MCSymbol *SymA = nullptr, *SymB = nullptr;
   int64_t Cst = 0;
-  uint32_t RefKind = 0;
+  uint32_t Specifier = 0;
 
-public:
-  MCValue() = default;
-  int64_t getConstant() const { return Cst; }
-  const MCSymbolRefExpr *getSymA() const { return SymA; }
-  const MCSymbolRefExpr *getSymB() const { return SymB; }
-  uint32_t getRefKind() const { return RefKind; }
-
-  /// Is this an absolute (as opposed to relocatable) value.
-  bool isAbsolute() const { return !SymA && !SymB; }
-
-  /// Print the value to the stream \p OS.
   void print(raw_ostream &OS) const;
 
   /// Print the value to stderr.
   void dump() const;
 
-  MCSymbolRefExpr::VariantKind getAccessVariant() const;
+public:
+  friend class MCAssembler;
+  friend class MCExpr;
+  MCValue() = default;
+  int64_t getConstant() const { return Cst; }
+  void setConstant(int64_t C) { Cst = C; }
+  uint32_t getSpecifier() const { return Specifier; }
+  void setSpecifier(uint32_t S) { Specifier = S; }
 
-  static MCValue get(const MCSymbolRefExpr *SymA,
-                     const MCSymbolRefExpr *SymB = nullptr,
-                     int64_t Val = 0, uint32_t RefKind = 0) {
+  const MCSymbol *getAddSym() const { return SymA; }
+  void setAddSym(const MCSymbol *A) { SymA = A; }
+  const MCSymbol *getSubSym() const { return SymB; }
+
+  /// Is this an absolute (as opposed to relocatable) value.
+  bool isAbsolute() const { return !SymA && !SymB; }
+
+  static MCValue get(const MCSymbol *SymA, const MCSymbol *SymB = nullptr,
+                     int64_t Val = 0, uint32_t Specifier = 0) {
     MCValue R;
     R.Cst = Val;
     R.SymA = SymA;
     R.SymB = SymB;
-    R.RefKind = RefKind;
+    R.Specifier = Specifier;
     return R;
   }
 
@@ -72,7 +68,7 @@ public:
     R.Cst = Val;
     R.SymA = nullptr;
     R.SymB = nullptr;
-    R.RefKind = 0;
+    R.Specifier = 0;
     return R;
   }
 

@@ -12,6 +12,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -35,11 +36,10 @@ struct LegalityTest : public testing::Test {
   std::unique_ptr<ScalarEvolution> SE;
   std::unique_ptr<BasicAAResult> BAA;
   std::unique_ptr<AAResults> AA;
+  std::unique_ptr<TargetTransformInfo> TTI;
 
   void getAnalyses(llvm::Function &LLVMF) {
     DT = std::make_unique<DominatorTree>(LLVMF);
-    TLII = std::make_unique<TargetLibraryInfoImpl>();
-    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
     AC = std::make_unique<AssumptionCache>(LLVMF);
     LI = std::make_unique<LoopInfo>(*DT);
     SE = std::make_unique<ScalarEvolution>(LLVMF, *TLI, *AC, *DT, *LI);
@@ -52,8 +52,14 @@ struct LegalityTest : public testing::Test {
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    TTI = std::make_unique<TargetTransformInfo>(M->getDataLayout());
+    if (!M) {
       Err.print("LegalityTest", errs());
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
+    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
   }
 };
 
@@ -67,7 +73,7 @@ static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
 
 TEST_F(LegalityTest, LegalitySkipSchedule) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2) {
+define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2, i1 %c0, i1 %c1) {
 entry:
   %gep0 = getelementptr float, ptr %ptr, i32 0
   %gep1 = getelementptr float, ptr %ptr, i32 1
@@ -93,6 +99,8 @@ bb:
   %trunc32to8 = trunc i32 %v2 to i8
   %cmpSLT = icmp slt i64 %v0, %v1
   %cmpSGT = icmp sgt i64 %v0, %v1
+  %sel0 = select i1 %c0, <2 x float> %vec2, <2 x float> %vec2
+  %sel1 = select i1 %c1, <2 x float> %vec2, <2 x float> %vec2
   ret void
 }
 )IR");
@@ -128,9 +136,12 @@ bb:
   auto *Trunc32to8 = cast<sandboxir::TruncInst>(&*It++);
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
+  auto *Sel0 = cast<sandboxir::SelectInst>(&*It++);
+  auto *Sel1 = cast<sandboxir::SelectInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps(Ctx);
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
+  llvm::sandboxir::InstrMaps IMaps;
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, *TTI, Ctx, IMaps,
+                                       sandboxir::SchedDirection::BottomUp);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
@@ -225,6 +236,31 @@ bb:
         Legality.canVectorize({Ld0, Ld1}, /*SkipScheduling=*/true);
     EXPECT_TRUE(isa<sandboxir::Widen>(Result));
   }
+  {
+    // Check Repeated instructions (splat)
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld0}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::RepeatedInstrs);
+  }
+  {
+    // Check Repeated instructions (not splat)
+    const auto &Result =
+        Legality.canVectorize({Ld0, Ld1, Ld0}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::RepeatedInstrs);
+  }
+  {
+    // For now don't vectorize Selects when the number of elements of conditions
+    // doesn't match the operands.
+    const auto &Result =
+        Legality.canVectorize({Sel0, Sel1}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::Unimplemented);
+  }
 }
 
 TEST_F(LegalityTest, LegalitySchedule) {
@@ -256,8 +292,9 @@ define void @foo(ptr %ptr) {
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps(Ctx);
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
+  llvm::sandboxir::InstrMaps IMaps;
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, *TTI, Ctx, IMaps,
+                                       sandboxir::SchedDirection::BottomUp);
   {
     // Can vectorize St0,St1.
     const auto &Result = Legality.canVectorize({St0, St1});
@@ -292,8 +329,9 @@ define void @foo() {
   };
 
   sandboxir::Context Ctx(C);
-  llvm::sandboxir::InstrMaps IMaps(Ctx);
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
+  llvm::sandboxir::InstrMaps IMaps;
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, *TTI, Ctx, IMaps,
+                                       sandboxir::SchedDirection::BottomUp);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
@@ -339,32 +377,34 @@ define void @foo(ptr %ptr) {
 
   sandboxir::CollectDescr::DescrVecT Descrs;
   using EEDescr = sandboxir::CollectDescr::ExtractElementDescr;
-
+  SmallVector<sandboxir::Value *> Bndl({VLd});
+  SmallVector<sandboxir::Value *> UB;
+  sandboxir::Action VLdA(nullptr, Bndl, UB, 0);
   {
     // Check single input, no shuffle.
-    Descrs.push_back(EEDescr(VLd, 0));
-    Descrs.push_back(EEDescr(VLd, 1));
+    Descrs.push_back(EEDescr(&VLdA, 0));
+    Descrs.push_back(EEDescr(&VLdA, 1));
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_TRUE(CD.getSingleInput());
-    EXPECT_EQ(CD.getSingleInput()->first, VLd);
+    EXPECT_EQ(CD.getSingleInput()->first, &VLdA);
     EXPECT_THAT(CD.getSingleInput()->second, testing::ElementsAre(0, 1));
     EXPECT_TRUE(CD.hasVectorInputs());
   }
   {
     // Check single input, shuffle.
-    Descrs.push_back(EEDescr(VLd, 1));
-    Descrs.push_back(EEDescr(VLd, 0));
+    Descrs.push_back(EEDescr(&VLdA, 1));
+    Descrs.push_back(EEDescr(&VLdA, 0));
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_TRUE(CD.getSingleInput());
-    EXPECT_EQ(CD.getSingleInput()->first, VLd);
+    EXPECT_EQ(CD.getSingleInput()->first, &VLdA);
     EXPECT_THAT(CD.getSingleInput()->second, testing::ElementsAre(1, 0));
     EXPECT_TRUE(CD.hasVectorInputs());
   }
   {
     // Check multiple inputs.
     Descrs.push_back(EEDescr(Ld0));
-    Descrs.push_back(EEDescr(VLd, 0));
-    Descrs.push_back(EEDescr(VLd, 1));
+    Descrs.push_back(EEDescr(&VLdA, 0));
+    Descrs.push_back(EEDescr(&VLdA, 1));
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_FALSE(CD.getSingleInput());
     EXPECT_TRUE(CD.hasVectorInputs());

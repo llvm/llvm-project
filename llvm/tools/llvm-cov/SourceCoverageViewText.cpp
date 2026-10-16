@@ -186,8 +186,8 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
-    if ((!S->IsGapRegion || (Highlight && *Highlight == raw_ostream::RED)) &&
-        S->HasCount && S->Count == 0)
+    if ((!S->IsGapRegion || Highlight == raw_ostream::RED) && S->HasCount &&
+        S->Count == 0)
       Highlight = raw_ostream::RED;
     else if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;
@@ -337,6 +337,8 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
 
 void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
                                             unsigned ViewDepth) {
+  const bool ShowNonExecutedVectors = getOptions().ShowMCDCNonExecutedVectors;
+
   for (auto &Record : MRV.Records) {
     renderLinePrefix(OS, ViewDepth);
     OS << "---> MC/DC Decision Region (";
@@ -359,16 +361,53 @@ void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     renderLinePrefix(OS, ViewDepth);
     OS << "\n";
     renderLinePrefix(OS, ViewDepth);
-    OS << "  Executed MC/DC Test Vectors:\n";
+    OS << "  MC/DC Test Vectors:\n";
     renderLinePrefix(OS, ViewDepth);
     OS << "\n";
+
+    const unsigned NumExecuted = Record.getNumTestVectors();
+    const unsigned NumNotExecuted = Record.getNumNotExecutedTestVectors();
+
+    const std::string HeaderStr = Record.getTestVectorHeaderString();
+
     renderLinePrefix(OS, ViewDepth);
-    OS << "     ";
-    OS << Record.getTestVectorHeaderString();
-    for (unsigned i = 0; i < Record.getNumTestVectors(); i++) {
+    OS << "  Executed:\n";
+    renderLinePrefix(OS, ViewDepth);
+    OS << "\n";
+    if (NumExecuted == 0) {
       renderLinePrefix(OS, ViewDepth);
-      OS << Record.getTestVectorString(i);
+      OS << "     None.\n";
+    } else {
+      renderLinePrefix(OS, ViewDepth);
+      OS << "     ";
+      OS << HeaderStr;
+      for (unsigned k = 0; k < NumExecuted; k++) {
+        renderLinePrefix(OS, ViewDepth);
+        OS << Record.getTestVectorString(k);
+      }
     }
+
+    if (ShowNonExecutedVectors) {
+      renderLinePrefix(OS, ViewDepth);
+      OS << "\n";
+      renderLinePrefix(OS, ViewDepth);
+      OS << "  Not executed:\n";
+      renderLinePrefix(OS, ViewDepth);
+      OS << "\n";
+      if (NumNotExecuted == 0) {
+        renderLinePrefix(OS, ViewDepth);
+        OS << "     None.\n";
+      } else {
+        renderLinePrefix(OS, ViewDepth);
+        OS << "     ";
+        OS << HeaderStr;
+        for (unsigned k = 0; k < NumNotExecuted; k++) {
+          renderLinePrefix(OS, ViewDepth);
+          OS << Record.getNotExecutedTestVectorString(k);
+        }
+      }
+    }
+
     renderLinePrefix(OS, ViewDepth);
     OS << "\n";
     for (unsigned i = 0; i < Record.getNumConditions(); i++) {

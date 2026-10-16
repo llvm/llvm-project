@@ -1,4 +1,4 @@
-//===-- include/flang/Common/fast-int-set.h --------------------*- C++ -*-===//
+//===-- include/flang/Common/fast-int-set.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +24,7 @@
 #ifndef FORTRAN_COMMON_FAST_INT_SET_H_
 #define FORTRAN_COMMON_FAST_INT_SET_H_
 
-#include <optional>
+#include "optional.h"
 
 namespace Fortran::common {
 
@@ -83,9 +83,9 @@ public:
     }
   }
 
-  std::optional<int> PopValue() {
+  optional<int> PopValue() {
     if (IsEmpty()) {
-      return std::nullopt;
+      return nullopt;
     } else {
       return value_[--size_];
     }

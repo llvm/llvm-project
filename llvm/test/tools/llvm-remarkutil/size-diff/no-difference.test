@@ -1,4 +1,7 @@
 RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml | FileCheck -strict-whitespace %s
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml | FileCheck -strict-whitespace %s
+RUN: llvm-remarkutil yaml2bitstream -o %t.bitstream %p/Inputs/1-func-1-instr-1-stack.yaml
+RUN: llvm-remarkutil size-diff %t.bitstream %p/Inputs/1-func-1-instr-1-stack.yaml | FileCheck -strict-whitespace %s
 
 ; Same file passed twice -> no changes reported.
 

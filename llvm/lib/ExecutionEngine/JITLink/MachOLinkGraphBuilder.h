@@ -21,8 +21,6 @@
 #include "EHFrameSupportImpl.h"
 #include "JITLinkGeneric.h"
 
-#include <list>
-
 namespace llvm {
 namespace jitlink {
 
@@ -180,9 +178,6 @@ protected:
   }
 
 private:
-  static unsigned getPointerSize(const object::MachOObjectFile &Obj);
-  static llvm::endianness getEndianness(const object::MachOObjectFile &Obj);
-
   void setCanonicalSymbol(NormalizedSection &NSec, Symbol &Sym) {
     auto *&CanonicalSymEntry = NSec.CanonicalSymbols[Sym.getAddress()];
     // There should be no symbol at this address, or, if there is,
@@ -234,17 +229,6 @@ private:
 
   DenseMap<uint32_t, NormalizedSymbol *> IndexToSymbol;
   StringMap<SectionParserFunction> CustomSectionParserFunctions;
-};
-
-/// A pass to split up __LD,__compact_unwind sections.
-class CompactUnwindSplitter {
-public:
-  CompactUnwindSplitter(StringRef CompactUnwindSectionName)
-      : CompactUnwindSectionName(CompactUnwindSectionName) {}
-  Error operator()(LinkGraph &G);
-
-private:
-  StringRef CompactUnwindSectionName;
 };
 
 } // end namespace jitlink

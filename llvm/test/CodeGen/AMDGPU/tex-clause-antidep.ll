@@ -8,7 +8,7 @@ define amdgpu_vs void @test(<4 x float> inreg %reg0) {
   %2 = extractelement <4 x float> %reg0, i32 1
   %3 = extractelement <4 x float> %reg0, i32 2
   %4 = extractelement <4 x float> %reg0, i32 3
-  %5 = insertelement <4 x float> undef, float %1, i32 0
+  %5 = insertelement <4 x float> poison, float %1, i32 0
   %6 = insertelement <4 x float> %5, float %2, i32 1
   %7 = insertelement <4 x float> %6, float %3, i32 2
   %8 = insertelement <4 x float> %7, float %4, i32 3

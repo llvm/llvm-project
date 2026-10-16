@@ -9,13 +9,13 @@ define void @vp8_rd_pick_inter_mode() {
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    ldr r1, [r4]
-; CHECK-NEXT:    movs r2, #180
-; CHECK-NEXT:    str r0, [r2]
-; CHECK-NEXT:    movs r2, #188
+; CHECK-NEXT:    ldr r2, [r4]
+; CHECK-NEXT:    movs r1, #180
+; CHECK-NEXT:    str r0, [r1]
+; CHECK-NEXT:    movs r1, #188
 ; CHECK-NEXT:    sxth r0, r0
-; CHECK-NEXT:    str r1, [r2]
-; CHECK-NEXT:    sxth r1, r1
+; CHECK-NEXT:    str r2, [r1]
+; CHECK-NEXT:    sxth r1, r2
 ; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    it mi
 ; CHECK-NEXT:    rsbmi r0, r0, #0

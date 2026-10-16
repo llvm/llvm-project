@@ -1,6 +1,6 @@
 ## In this test case, we reproduce the behavior seen in gcc where the
 ## base address of a jump table is decremented by some number and ends up
-## at the exact addess of a jump table from another function. After
+## at the exact address of a jump table from another function. After
 ## linking, the instruction references another jump table and that
 ## confuses BOLT.
 ## We repro here the following issue:
@@ -28,7 +28,7 @@
 # ----
 # Func foo contains a jump table whose start is colocated with a
 # jump table reference in another function. However, the other function
-# does not use the first entries of it and is merely doing arithmetics
+# does not use the first entries of it and is merely doing arithmetic
 # to save the creation of unused first entries.
 # ----
   .globl foo

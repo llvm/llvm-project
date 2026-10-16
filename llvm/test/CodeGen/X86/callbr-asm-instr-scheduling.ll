@@ -36,7 +36,7 @@ define i64 @early_ioremap_pmd(i64 %addr) {
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    jmp .Ltmp1
 ; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    .zero (-(((.Ltmp3-.Ltmp4)-(.Ltmp2-.Ltmp0))>0))*((.Ltmp3-.Ltmp4)-(.Ltmp2-.Ltmp0)),144
+; CHECK-NEXT:    .zero -((.Ltmp3-.Ltmp4-(.Ltmp2-.Ltmp0))>0)*(.Ltmp3-.Ltmp4-(.Ltmp2-.Ltmp0)),144
 ; CHECK-NEXT:  .Ltmp5:
 entry:
   %0 = tail call i64 asm sideeffect "mov %cr3,$0\0A\09", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) nonnull @__force_order)

@@ -1,4 +1,4 @@
-//===--- InfiniteLoopCheck.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// not changed at all).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/infinite-loop.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/infinite-loop.html
 class InfiniteLoopCheck : public ClangTidyCheck {
 public:
   InfiniteLoopCheck(StringRef Name, ClangTidyContext *Context)

@@ -5,25 +5,23 @@
 ; prologue has a corresponding seh directive.
 ;
 ; CHECK-NOT: error: Incorrect size for
-; CHECK: foo:
-; CHECK: .seh_proc foo
-; CHECK: sub     sp, sp, #288
-; CHECK: .seh_stackalloc 288
-; CHECK: str     x19, [sp]                       // 8-byte Folded Spill
-; CHECK: .seh_save_reg   x19, 0
-; CHECK: str     x21, [sp, #8]                   // 8-byte Folded Spill
-; CHECK: .seh_save_reg   x21, 8
-; CHECK: stp     x23, x24, [sp, #16]             // 16-byte Folded Spill
-; CHECK: .seh_save_regp  x23, 16
-; CHECK: stp     x25, x26, [sp, #32]             // 16-byte Folded Spill
-; CHECK: .seh_save_regp  x25, 32
-; CHECK: stp     x27, x28, [sp, #48]             // 16-byte Folded Spill
-; CHECK: .seh_save_regp  x27, 48
-; CHECK: stp     x29, x30, [sp, #64]             // 16-byte Folded Spill
-; CHECK: .seh_save_fplr  64
-; CHECK: sub     sp, sp, #224
-; CHECK: .seh_stackalloc 224
-; CHECK: .seh_endprologue
+; CHECK-LABEL:  foo:
+; CHECK-NEXT:   .seh_proc foo
+; CHECK:        sub     sp, sp, #496
+; CHECK-NEXT:   .seh_stackalloc 496
+; CHECK-NEXT:   str     x19, [sp, #208]                 // 8-byte Spill
+; CHECK-NEXT:   .seh_save_reg   x19, 208
+; CHECK-NEXT:   str     x21, [sp, #216]                 // 8-byte Spill
+; CHECK-NEXT:   .seh_save_reg   x21, 216
+; CHECK-NEXT:   stp     x23, x24, [sp, #224]            // 16-byte Folded Spill
+; CHECK-NEXT:   .seh_save_regp  x23, 224
+; CHECK-NEXT:   stp     x25, x26, [sp, #240]            // 16-byte Folded Spill
+; CHECK-NEXT:   .seh_save_regp  x25, 240
+; CHECK-NEXT:   stp     x27, x28, [sp, #256]            // 16-byte Folded Spill
+; CHECK-NEXT:   .seh_save_regp  x27, 256
+; CHECK-NEXT:   str     x30, [sp, #272]                 // 8-byte Spill
+; CHECK-NEXT:   .seh_save_reg   x30, 272
+; CHECK-NEXT:   .seh_endprologue
 
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-windows-msvc19.42.34436"

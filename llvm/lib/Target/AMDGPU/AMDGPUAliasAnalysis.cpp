@@ -34,13 +34,7 @@ ImmutablePass *llvm::createAMDGPUAAWrapperPass() {
   return new AMDGPUAAWrapperPass();
 }
 
-ImmutablePass *llvm::createAMDGPUExternalAAWrapperPass() {
-  return new AMDGPUExternalAAWrapper();
-}
-
-AMDGPUAAWrapperPass::AMDGPUAAWrapperPass() : ImmutablePass(ID) {
-  initializeAMDGPUAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+AMDGPUAAWrapperPass::AMDGPUAAWrapperPass() : ImmutablePass(ID) {}
 
 void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

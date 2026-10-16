@@ -11,6 +11,7 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -116,7 +117,8 @@ void SBStream::RedirectToFile(const char *path, bool append) {
 
 void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_fh_ownership);
-  FileSP file = std::make_unique<NativeFile>(fh, transfer_fh_ownership);
+  FileSP file = std::make_unique<NativeFile>(fh, File::eOpenOptionReadWrite,
+                                             transfer_fh_ownership);
   return RedirectToFile(file);
 }
 
@@ -191,4 +193,15 @@ void SBStream::Clear() {
     else
       static_cast<StreamString *>(m_opaque_up.get())->Clear();
   }
+}
+
+/// Exists so friend classes can use the StringString's data without
+/// putting it in the ConstString pool.
+/// The return value only lives as long as the this SBStream class.
+const char *SBStream::GetString() const {
+  if (m_is_file || m_opaque_up == nullptr)
+    return nullptr;
+
+  const auto *stream_raw = static_cast<StreamString *>(m_opaque_up.get());
+  return stream_raw->GetString().data();
 }

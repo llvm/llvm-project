@@ -604,7 +604,7 @@ static unsigned short EncodeVersions(unsigned int MinVersion,
     MaxVersion = UINT_MAX;
   }
 
-  unsigned VersionIDs[] = {100, 110, 120, 200, 300};
+  unsigned VersionIDs[] = {100, 110, 120, 200, 300, 310};
   for (unsigned I = 0; I < std::size(VersionIDs); I++) {
     if (VersionIDs[I] >= MinVersion && VersionIDs[I] < MaxVersion) {
       Encoded |= 1 << I;
@@ -1175,9 +1175,7 @@ StringRef OpenCLBuiltinFileEmitterBase::emitTypeExtensionGuards(
       // The TypeExtensions are space-separated in the .td file.
       SmallVector<StringRef, 2> ExtVec;
       TypeExt.split(ExtVec, " ");
-      for (const auto Ext : ExtVec) {
-        ExtSet.insert(Ext);
-      }
+      ExtSet.insert_range(ExtVec);
     }
   }
 

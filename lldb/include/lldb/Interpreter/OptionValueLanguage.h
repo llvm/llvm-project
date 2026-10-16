@@ -33,16 +33,13 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override;
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-  }
+  bool IsDefault() const override { return m_current_value == m_default_value; }
 
   // Subclass specific functions
 
@@ -55,6 +52,11 @@ public:
   void SetDefaultValue(lldb::LanguageType value) { m_default_value = value; }
 
 protected:
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+  }
+
   lldb::LanguageType m_current_value;
   lldb::LanguageType m_default_value;
 };

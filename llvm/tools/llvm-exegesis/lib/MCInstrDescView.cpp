@@ -8,10 +8,11 @@
 
 #include "MCInstrDescView.h"
 
-#include <iterator>
 #include <tuple>
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/InterleavedRange.h"
 
 namespace llvm {
 namespace exegesis {
@@ -49,6 +50,8 @@ bool Operand::isReg() const { return Tracker; }
 bool Operand::isTied() const { return TiedToIndex.has_value(); }
 
 bool Operand::isVariable() const { return VariableIndex.has_value(); }
+
+bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
 
 bool Operand::isMemory() const {
   return isExplicit() &&
@@ -102,10 +105,9 @@ Instruction::Instruction(const MCInstrDesc *Description, StringRef Name,
       ImplUseRegs(*ImplUseRegs), AllDefRegs(*AllDefRegs),
       AllUseRegs(*AllUseRegs), NonMemoryRegs(*NonMemoryRegs) {}
 
-std::unique_ptr<Instruction>
-Instruction::create(const MCInstrInfo &InstrInfo,
-                    const RegisterAliasingTrackerCache &RATC,
-                    const BitVectorCache &BVC, unsigned Opcode) {
+std::unique_ptr<Instruction> Instruction::create(
+    const MCInstrInfo &InstrInfo, const RegisterAliasingTrackerCache &RATC,
+    const BitVectorCache &BVC, unsigned Opcode, const MCSubtargetInfo *STI) {
   const MCInstrDesc *const Description = &InstrInfo.get(Opcode);
   unsigned OpIndex = 0;
   SmallVector<Operand, 8> Operands;
@@ -115,9 +117,14 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
-    // TODO(gchatelet): Handle isLookupPtrRegClass.
-    if (OpInfo.RegClass >= 0)
-      Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
+    Operand.IsEarlyClobber =
+        (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
+    int16_t RegClass = OpInfo.RegClass;
+    if (OpInfo.isLookupRegClassByHwMode() && STI)
+      RegClass = InstrInfo.getOpRegClassID(
+          OpInfo, STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+    if (RegClass >= 0)
+      Operand.Tracker = &RATC.getRegisterClass(RegClass);
     int TiedToIndex = Description->getOperandConstraint(OpIndex, MCOI::TIED_TO);
     assert((TiedToIndex == -1 ||
             (0 <= TiedToIndex &&
@@ -289,15 +296,8 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
   }
   for (const auto &Var : Variables) {
     Stream << "- Var" << Var.getIndex();
-    Stream << " [";
-    bool IsFirst = true;
-    for (auto OperandIndex : Var.TiedOperands) {
-      if (!IsFirst)
-        Stream << ",";
-      Stream << "Op" << OperandIndex;
-      IsFirst = false;
-    }
-    Stream << "]";
+    Stream << " ";
+    Stream << llvm::interleaved_array(Var.TiedOperands, ",");
     Stream << "\n";
   }
   if (hasMemoryOperands())
@@ -311,13 +311,14 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
 }
 
 InstructionsCache::InstructionsCache(const MCInstrInfo &InstrInfo,
-                                     const RegisterAliasingTrackerCache &RATC)
-    : InstrInfo(InstrInfo), RATC(RATC), BVC() {}
+                                     const RegisterAliasingTrackerCache &RATC,
+                                     const MCSubtargetInfo *STI)
+    : InstrInfo(InstrInfo), RATC(RATC), STI(STI), BVC() {}
 
 const Instruction &InstructionsCache::getInstr(unsigned Opcode) const {
   auto &Found = Instructions[Opcode];
   if (!Found)
-    Found = Instruction::create(InstrInfo, RATC, BVC, Opcode);
+    Found = Instruction::create(InstrInfo, RATC, BVC, Opcode, STI);
   return *Found;
 }
 

@@ -9,6 +9,7 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include <string>
 
@@ -86,7 +87,7 @@ std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape) {
     CHECK(dim >= 0);
     uint64_t osize{size};
     size = osize * dim;
-    if (size > std::numeric_limits<decltype(dim)>::max() ||
+    if (size > common::numeric_limits<decltype(dim)>::max() ||
         (dim != 0 && size / dim != osize)) {
       return std::nullopt;
     }
@@ -390,6 +391,17 @@ std::size_t Constant<SomeDerived>::CopyFrom(const Constant<SomeDerived> &source,
 }
 
 bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
+  if (&x->owner() != &y->owner()) {
+    // Not components of the same derived type; put ancestors' components first.
+    if (auto xDepth{CountDerivedTypeAncestors(x->owner())}) {
+      if (auto yDepth{CountDerivedTypeAncestors(y->owner())}) {
+        if (*xDepth != *yDepth) {
+          return *xDepth < *yDepth;
+        }
+      }
+    }
+  }
+  // Same derived type, distinct instantiations, or error recovery.
   return semantics::SymbolSourcePositionCompare{}(x, y);
 }
 

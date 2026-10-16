@@ -15,7 +15,6 @@ submodule(m) submod1
  contains
   module subroutine separate
     !ERROR: Module 'm' cannot USE itself from its own submodule 'submod1'
-    !ERROR: Cannot use-associate 'separate'; it is already declared in this scope
     use m
   end
 end

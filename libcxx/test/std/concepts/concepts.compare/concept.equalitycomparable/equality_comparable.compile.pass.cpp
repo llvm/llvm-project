@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "compare_types.h"
+#include "test_macros.h"
 
 namespace fundamentals {
 static_assert(std::equality_comparable<int>);
@@ -43,7 +44,12 @@ static_assert(std::equality_comparable<unsigned char&&>);
 static_assert(std::equality_comparable<unsigned short const&&>);
 static_assert(std::equality_comparable<unsigned int volatile&&>);
 static_assert(std::equality_comparable<unsigned long const volatile&&>);
+// Array comparisons are ill-formed in C++26, but Clang doesn't implement this yet.
+#if TEST_STD_VER <= 23 || defined(TEST_COMPILER_CLANG)
 static_assert(std::equality_comparable<int[5]>);
+#else
+static_assert(!std::equality_comparable<int[5]>);
+#endif
 static_assert(std::equality_comparable<int (*)(int)>);
 static_assert(std::equality_comparable<int (&)(int)>);
 static_assert(std::equality_comparable<int (*)(int) noexcept>);

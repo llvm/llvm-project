@@ -1,5 +1,13 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
 // RUN:   -std=c++11 -DPEDANTIC -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN:   -std=c++11 -DPEDANTIC -verify %s -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 class UninitPointerTest {
   int *ptr; // expected-note{{uninitialized pointer 'this->ptr'}}
@@ -10,7 +18,7 @@ public:
 };
 
 void fUninitPointerTest() {
-  UninitPointerTest();
+  INIT(UninitPointerTest, ());
 }
 
 class UninitPointeeTest {
@@ -23,5 +31,5 @@ public:
 
 void fUninitPointeeTest() {
   int a;
-  UninitPointeeTest t(&a);
+  INIT(UninitPointeeTest, (&a));
 }

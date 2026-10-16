@@ -10,8 +10,13 @@
 #define LLVM_LIBC_HDR_FUNC_ALIGNED_ALLOC_H
 
 #ifdef LIBC_FULL_BUILD
+
 #include "hdr/types/size_t.h"
-extern "C" void *aligned_alloc(size_t, size_t);
+#include "include/__llvm-libc-common.h"
+
+__BEGIN_C_DECLS
+void *aligned_alloc(size_t, size_t) __NOEXCEPT;
+__END_C_DECLS
 
 #else // Overlay mode
 

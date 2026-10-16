@@ -114,7 +114,7 @@ void foo() {
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";x;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";fn;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
 // DEBUG: @{{[0-9]+}} = private unnamed_addr constant [{{[0-9]+}} x i8] c";s;{{.*}}.cpp;{{[0-9]+}};{{[0-9]+}};;\00"
-// DEBUG: @{{.+}} = private constant [7 x ptr] [ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}]
+// DEBUG: @{{.+}} = private constant [8 x ptr] [ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr @{{[0-9]+}}, ptr null]
 
 void bar(int N) {
   double B[10];

@@ -74,10 +74,229 @@ bool Xtensa::isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset) {
   return isValidAddrOffset(Scale, Offset);
 }
 
+// Verify Special Register
+bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
+                           RegisterAccessType RAType) {
+  switch (RegNo) {
+  case Xtensa::BREG:
+    return FeatureBits[Xtensa::FeatureBoolean];
+  case Xtensa::CCOUNT:
+  case Xtensa::CCOMPARE0:
+    if (FeatureBits[Xtensa::FeatureTimers1])
+      return true;
+    [[fallthrough]];
+  case Xtensa::CCOMPARE1:
+    if (FeatureBits[Xtensa::FeatureTimers2])
+      return true;
+    [[fallthrough]];
+  case Xtensa::CCOMPARE2:
+    if (FeatureBits[Xtensa::FeatureTimers3])
+      return true;
+    return false;
+  case Xtensa::CONFIGID0:
+    return RAType != Xtensa::REGISTER_EXCHANGE;
+  case Xtensa::CONFIGID1:
+    return RAType == Xtensa::REGISTER_READ;
+  case Xtensa::CPENABLE:
+    return FeatureBits[Xtensa::FeatureCoprocessor];
+  case Xtensa::DEBUGCAUSE:
+    return RAType == Xtensa::REGISTER_READ && FeatureBits[Xtensa::FeatureDebug];
+  case Xtensa::DEPC:
+  case Xtensa::EPC1:
+  case Xtensa::EXCCAUSE:
+  case Xtensa::EXCSAVE1:
+  case Xtensa::EXCVADDR:
+    return FeatureBits[Xtensa::FeatureException];
+    [[fallthrough]];
+  case Xtensa::EPC2:
+  case Xtensa::EPS2:
+  case Xtensa::EXCSAVE2:
+    if (FeatureBits[Xtensa::FeatureHighPriInterrupts])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC3:
+  case Xtensa::EPS3:
+  case Xtensa::EXCSAVE3:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel3])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC4:
+  case Xtensa::EPS4:
+  case Xtensa::EXCSAVE4:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel4])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC5:
+  case Xtensa::EPS5:
+  case Xtensa::EXCSAVE5:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel5])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC6:
+  case Xtensa::EPS6:
+  case Xtensa::EXCSAVE6:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel6])
+      return true;
+    [[fallthrough]];
+  case Xtensa::EPC7:
+  case Xtensa::EPS7:
+  case Xtensa::EXCSAVE7:
+    if (FeatureBits[Xtensa::FeatureHighPriInterruptsLevel7])
+      return true;
+    return false;
+  case Xtensa::INTENABLE:
+    return FeatureBits[Xtensa::FeatureInterrupt];
+  case Xtensa::INTERRUPT:
+    return RAType == Xtensa::REGISTER_READ &&
+           FeatureBits[Xtensa::FeatureInterrupt];
+  case Xtensa::INTSET:
+  case Xtensa::INTCLEAR:
+    return RAType == Xtensa::REGISTER_WRITE &&
+           FeatureBits[Xtensa::FeatureInterrupt];
+  case Xtensa::ICOUNT:
+  case Xtensa::ICOUNTLEVEL:
+  case Xtensa::IBREAKENABLE:
+  case Xtensa::DDR:
+  case Xtensa::IBREAKA0:
+  case Xtensa::IBREAKA1:
+  case Xtensa::DBREAKA0:
+  case Xtensa::DBREAKA1:
+  case Xtensa::DBREAKC0:
+  case Xtensa::DBREAKC1:
+    return FeatureBits[Xtensa::FeatureDebug];
+  case Xtensa::LBEG:
+  case Xtensa::LEND:
+  case Xtensa::LCOUNT:
+    return FeatureBits[Xtensa::FeatureLoop];
+  case Xtensa::LITBASE:
+    return FeatureBits[Xtensa::FeatureExtendedL32R];
+  case Xtensa::MEMCTL:
+    return FeatureBits[Xtensa::FeatureDataCache];
+  case Xtensa::ACCLO:
+  case Xtensa::ACCHI:
+  case Xtensa::M0:
+  case Xtensa::M1:
+  case Xtensa::M2:
+  case Xtensa::M3:
+    return FeatureBits[Xtensa::FeatureMAC16];
+  case Xtensa::MISC0:
+  case Xtensa::MISC1:
+  case Xtensa::MISC2:
+  case Xtensa::MISC3:
+    return FeatureBits[Xtensa::FeatureMiscSR];
+  case Xtensa::PRID:
+    return RAType == Xtensa::REGISTER_READ && FeatureBits[Xtensa::FeaturePRID];
+  case Xtensa::THREADPTR:
+    return FeatureBits[FeatureTHREADPTR];
+  case Xtensa::VECBASE:
+    return FeatureBits[Xtensa::FeatureRelocatableVector];
+  case Xtensa::FCR:
+  case Xtensa::FSR:
+    return FeatureBits[FeatureSingleFloat];
+  case Xtensa::F64R_LO:
+  case Xtensa::F64R_HI:
+  case Xtensa::F64S:
+    return FeatureBits[FeatureDFPAccel];
+  case Xtensa::WINDOWBASE:
+  case Xtensa::WINDOWSTART:
+    return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::ATOMCTL:
+  case Xtensa::SCOMPARE1:
+    return FeatureBits[Xtensa::FeatureS32C1I];
+    return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::GPIO_OUT_S2:
+    return FeatureBits[Xtensa::FeatureESP32S2Ops];
+  case Xtensa::ACCX_0:
+  case Xtensa::ACCX_1:
+  case Xtensa::QACC_H_0:
+  case Xtensa::QACC_H_1:
+  case Xtensa::QACC_H_2:
+  case Xtensa::QACC_H_3:
+  case Xtensa::QACC_H_4:
+  case Xtensa::QACC_L_0:
+  case Xtensa::QACC_L_1:
+  case Xtensa::QACC_L_2:
+  case Xtensa::QACC_L_3:
+  case Xtensa::QACC_L_4:
+  case Xtensa::GPIO_OUT_S3:
+  case Xtensa::FFT_BIT_WIDTH:
+  case Xtensa::UA_STATE_0:
+  case Xtensa::UA_STATE_1:
+  case Xtensa::UA_STATE_2:
+  case Xtensa::UA_STATE_3:
+    return FeatureBits[Xtensa::FeatureESP32S3Ops];
+  case Xtensa::NoRegister:
+    return false;
+  }
+
+  return true;
+}
+
+// Get Xtensa User Register by encoding value.
+MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
+  MCRegister UserReg = Xtensa::NoRegister;
+
+  if (MRI.getEncodingValue(Xtensa::FCR) == Code) {
+    UserReg = Xtensa::FCR;
+  } else if (MRI.getEncodingValue(Xtensa::FSR) == Code) {
+    UserReg = Xtensa::FSR;
+  } else if (MRI.getEncodingValue(Xtensa::F64R_LO) == Code) {
+    UserReg = Xtensa::F64R_LO;
+  } else if (MRI.getEncodingValue(Xtensa::F64R_HI) == Code) {
+    UserReg = Xtensa::F64R_HI;
+  } else if (MRI.getEncodingValue(Xtensa::F64S) == Code) {
+    UserReg = Xtensa::F64S;
+  } else if (MRI.getEncodingValue(Xtensa::THREADPTR) == Code) {
+    UserReg = Xtensa::THREADPTR;
+  } else if (MRI.getEncodingValue(Xtensa::GPIO_OUT_S2) == Code) {
+    UserReg = Xtensa::GPIO_OUT_S2;
+  } else if (MRI.getEncodingValue(Xtensa::GPIO_OUT_S3) == Code) {
+    UserReg = Xtensa::GPIO_OUT_S3;
+  } else if (MRI.getEncodingValue(Xtensa::ACCX_0) == Code) {
+    UserReg = Xtensa::ACCX_0;
+  } else if (MRI.getEncodingValue(Xtensa::ACCX_1) == Code) {
+    UserReg = Xtensa::ACCX_1;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_H_0) == Code) {
+    UserReg = Xtensa::QACC_H_0;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_H_1) == Code) {
+    UserReg = Xtensa::QACC_H_1;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_H_2) == Code) {
+    UserReg = Xtensa::QACC_H_2;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_H_3) == Code) {
+    UserReg = Xtensa::QACC_H_3;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_H_4) == Code) {
+    UserReg = Xtensa::QACC_H_4;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_L_0) == Code) {
+    UserReg = Xtensa::QACC_L_0;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_L_1) == Code) {
+    UserReg = Xtensa::QACC_L_1;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_L_2) == Code) {
+    UserReg = Xtensa::QACC_L_2;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_L_3) == Code) {
+    UserReg = Xtensa::QACC_L_3;
+  } else if (MRI.getEncodingValue(Xtensa::QACC_L_4) == Code) {
+    UserReg = Xtensa::QACC_L_4;
+  } else if (MRI.getEncodingValue(Xtensa::FFT_BIT_WIDTH) == Code) {
+    UserReg = Xtensa::FFT_BIT_WIDTH;
+  } else if (MRI.getEncodingValue(Xtensa::SAR_BYTE) == Code) {
+    UserReg = Xtensa::SAR_BYTE;
+  } else if (MRI.getEncodingValue(Xtensa::UA_STATE_0) == Code) {
+    UserReg = Xtensa::UA_STATE_0;
+  } else if (MRI.getEncodingValue(Xtensa::UA_STATE_1) == Code) {
+    UserReg = Xtensa::UA_STATE_1;
+  } else if (MRI.getEncodingValue(Xtensa::UA_STATE_2) == Code) {
+    UserReg = Xtensa::UA_STATE_2;
+  } else if (MRI.getEncodingValue(Xtensa::UA_STATE_3) == Code) {
+    UserReg = Xtensa::UA_STATE_3;
+  }
+
+  return UserReg;
+}
+
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT,
                                         const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new XtensaMCAsmInfo(TT);
+  MCAsmInfo *MAI = new XtensaMCAsmInfo(TT, Options);
   return MAI;
 }
 
@@ -117,6 +336,10 @@ createXtensaObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   return new XtensaTargetELFStreamer(S);
 }
 
+static MCTargetStreamer *createXtensaNullTargetStreamer(MCStreamer &S) {
+  return new XtensaTargetStreamer(S);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheXtensaTarget(),
@@ -144,7 +367,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
 
   // Register the MCAsmBackend.
   TargetRegistry::RegisterMCAsmBackend(getTheXtensaTarget(),
-                                       createXtensaMCAsmBackend);
+                                       createXtensaAsmBackend);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheXtensaTarget(),
@@ -153,4 +376,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
   // Register the ELF target streamer.
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheXtensaTarget(), createXtensaObjectTargetStreamer);
+
+  // Register the null target streamer.
+  TargetRegistry::RegisterNullTargetStreamer(getTheXtensaTarget(),
+                                             createXtensaNullTargetStreamer);
 }

@@ -198,9 +198,6 @@ the choice at each instruction, iteratively joining the results for each block.
 
 Outstanding improvements:
 
-* As mentioned in test llvm/test/DebugInfo/assignment-tracking/X86/diamond-3.ll,
-  the analysis should treat escaping calls like untagged stores.
-
 * The system expects locals to be backed by a local alloca. This isn't always
   the case - sometimes a pointer to storage is passed into a function
   (e.g. sret, byval). We need to be able to handle those cases. See

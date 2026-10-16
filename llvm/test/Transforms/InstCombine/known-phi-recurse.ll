@@ -158,7 +158,7 @@ define i32 @knownbits_phi_select_test1(ptr %p1, ptr %p2, i8 %x) {
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[INDVAR1]] to i64
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr [[P2:%.*]], i64 [[EXT]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[P2:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i16, ptr [[GEP1]], align 2
 ; CHECK-NEXT:    [[MASK:%.*]] = and i16 [[LOAD1]], 8192
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[MASK]], 0
@@ -261,14 +261,11 @@ define i8 @knownbits_umax_select_test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[CONTAIN:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COND0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    [[CONTAIN]] = call i8 @llvm.umax.i8(i8 [[INDVAR]], i8 1)
 ; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[BOOL:%.*]] = and i8 [[CONTAIN]], 1
-; CHECK-NEXT:    ret i8 [[BOOL]]
+; CHECK-NEXT:    ret i8 1
 ;
 entry:
   br label %loop

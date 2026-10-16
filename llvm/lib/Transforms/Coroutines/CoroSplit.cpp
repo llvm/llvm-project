@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -40,8 +41,8 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -54,7 +55,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -77,24 +80,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-split"
-
-namespace {
-/// Collect (a known) subset of global debug info metadata potentially used by
-/// the function \p F.
-///
-/// This metadata set can be used to avoid cloning debug info not owned by \p F
-/// and is shared among all potential clones \p F.
-MetadataSetTy collectCommonDebugInfo(Function &F) {
-  TimeTraceScope FunctionScope("CollectCommonDebugInfo");
-
-  DebugInfoFinder DIFinder;
-  DISubprogram *SPClonedWithinModule = CollectDebugInfoForCloning(
-      F, CloneFunctionChangeType::LocalChangesOnly, DIFinder);
-
-  return FindDebugInfoToIdentityMap(CloneFunctionChangeType::LocalChangesOnly,
-                                    DIFinder, SPClonedWithinModule);
-}
-} // end anonymous namespace
 
 // FIXME:
 // Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
@@ -153,7 +138,6 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
     FunctionType *ResumeTy = FunctionType::get(
         Type::getVoidTy(Ctx), PointerType::getUnqual(Ctx), false);
     auto *ResumeCall = Builder.CreateCall(ResumeTy, ResumeAddr, {NewCall});
-    ResumeCall->setCallingConv(CallingConv::Fast);
 
     // We can't insert the 'ret' instruction and adjust the cc until the
     // function has been split, so remember this for later.
@@ -167,7 +151,7 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
 }
 
 static void lowerAwaitSuspends(Function &F, coro::Shape &Shape) {
-  IRBuilder<> Builder(F.getContext());
+  IRBuilder<> Builder(*F.getParent());
   for (auto *AWS : Shape.CoroAwaitSuspends)
     lowerAwaitSuspend(Builder, AWS, Shape);
 }
@@ -180,6 +164,56 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder,
     return;
 
   Shape.emitDealloc(Builder, FramePtr, CG);
+}
+
+/// Create a pointer to the switch destroy function field in the coroutine
+/// frame.
+static Value *createSwitchDestroyPtr(const coro::Shape &Shape,
+                                     IRBuilder<> &Builder, Value *FramePtr) {
+  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
+                                  Shape.SwitchLowering.DestroyOffset);
+  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "destroy.addr");
+}
+
+/// Make resume-clone coro.free conditional on whether the frame is elided.
+///
+/// The destroy slot holds the cleanup clone for an elided frame and the destroy
+/// clone for a heap frame. Load it before user code can reentrantly destroy the
+/// enclosing caller frame, then use the cached comparison to suppress only the
+/// deallocation. The resume clone has already performed the shared coroutine
+/// cleanup, so calling either clone here would run that cleanup twice.
+static void replaceSwitchResumeCoroFree(const coro::Shape &Shape,
+                                        Function &Resume, Function &Cleanup) {
+  Value *FramePtr = Resume.getArg(0);
+  IRBuilder<> EntryBuilder(Resume.getEntryBlock().getTerminator());
+  Value *DestroyAddr = createSwitchDestroyPtr(Shape, EntryBuilder, FramePtr);
+  Value *DestroyFn = EntryBuilder.CreateLoad(Shape.getSwitchResumePointerType(),
+                                             DestroyAddr, "destroy");
+  Value *CleanupFn =
+      EntryBuilder.CreatePointerCast(&Cleanup, DestroyFn->getType());
+  Value *IsElided =
+      EntryBuilder.CreateICmpEQ(DestroyFn, CleanupFn, "is.elided");
+
+  SmallVector<CoroFreeInst *, 4> CoroFrees;
+  for (User *U : FramePtr->users()) {
+    if (auto *CF = dyn_cast<CoroFreeInst>(U))
+      CoroFrees.push_back(CF);
+  }
+
+  for (CoroFreeInst *CF : CoroFrees) {
+    IRBuilder<> Builder(CF);
+    auto *Null = ConstantPointerNull::get(cast<PointerType>(CF->getType()));
+    Value *Replacement =
+        Builder.CreateSelect(IsElided, Null, FramePtr, "coro.free");
+    // Add unknown branch weights to the select since whether the frame is
+    // heap-allocated or elided cannot be determined.
+    applyProfMetadataIfEnabled(Replacement, [&](Instruction *Inst) {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                  Inst->getFunction());
+    });
+    CF->replaceAllUsesWith(Replacement);
+    CF->eraseFromParent();
+  }
 }
 
 /// Replace an llvm.coro.end.async.
@@ -230,7 +264,7 @@ static bool replaceCoroEndAsync(AnyCoroEndInst *End) {
 /// Replace a non-unwind call to llvm.coro.end.
 static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
                                       const coro::Shape &Shape, Value *FramePtr,
-                                      bool InResume, CallGraph *CG) {
+                                      bool InRamp, CallGraph *CG) {
   // Start inserting right before the coro.end.
   IRBuilder<> Builder(End);
 
@@ -242,7 +276,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
            "switch coroutine should not return any values");
     // coro.end doesn't immediately end the coroutine in the main function
     // in this lowering, because we need to deallocate the coroutine.
-    if (!InResume)
+    if (InRamp)
       return;
     Builder.CreateRetVoid();
     break;
@@ -319,8 +353,16 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
   BB->getTerminator()->eraseFromParent();
 }
 
+/// Create a pointer to the switch index field in the coroutine frame.
+static Value *createSwitchIndexPtr(const coro::Shape &Shape,
+                                   IRBuilder<> &Builder, Value *FramePtr) {
+  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
+                                  Shape.SwitchLowering.IndexOffset);
+  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "index.addr");
+}
+
 // Mark a coroutine as done, which implies that the coroutine is finished and
-// never get resumed.
+// never gets resumed.
 //
 // In resume-switched ABI, the done state is represented by storing zero in
 // ResumeFnAddr.
@@ -332,12 +374,9 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
   assert(
       Shape.ABI == coro::ABI::Switch &&
       "markCoroutineAsDone is only supported for Switch-Resumed ABI for now.");
-  auto *GepIndex = Builder.CreateStructGEP(
-      Shape.FrameTy, FramePtr, coro::Shape::SwitchFieldIndex::Resume,
-      "ResumeFn.addr");
-  auto *NullPtr = ConstantPointerNull::get(cast<PointerType>(
-      Shape.FrameTy->getTypeAtIndex(coro::Shape::SwitchFieldIndex::Resume)));
-  Builder.CreateStore(NullPtr, GepIndex);
+  // Resume function pointer is always first
+  auto *NullPtr = ConstantPointerNull::get(Shape.getSwitchResumePointerType());
+  Builder.CreateStore(NullPtr, FramePtr);
 
   // If the coroutine don't have unwind coro end, we could omit the store to
   // the final suspend point since we could infer the coroutine is suspended
@@ -353,17 +392,14 @@ static void markCoroutineAsDone(IRBuilder<> &Builder, const coro::Shape &Shape,
            "The final suspend should only live in the last position of "
            "CoroSuspends.");
     ConstantInt *IndexVal = Shape.getIndex(Shape.CoroSuspends.size() - 1);
-    auto *FinalIndex = Builder.CreateStructGEP(
-        Shape.FrameTy, FramePtr, Shape.getSwitchIndexField(), "index.addr");
-
+    Value *FinalIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
     Builder.CreateStore(IndexVal, FinalIndex);
   }
 }
 
 /// Replace an unwind call to llvm.coro.end.
 static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
-                                 Value *FramePtr, bool InResume,
-                                 CallGraph *CG) {
+                                 Value *FramePtr, bool InRamp, CallGraph *CG) {
   IRBuilder<> Builder(End);
 
   switch (Shape.ABI) {
@@ -376,7 +412,7 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
     // FIXME: We should refactor this once there is other language
     // which uses Switch-Resumed style other than C++.
     markCoroutineAsDone(Builder, Shape, FramePtr);
-    if (!InResume)
+    if (InRamp)
       return;
     break;
   }
@@ -400,15 +436,11 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
 }
 
 static void replaceCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
-                           Value *FramePtr, bool InResume, CallGraph *CG) {
+                           Value *FramePtr, bool InRamp, CallGraph *CG) {
   if (End->isUnwind())
-    replaceUnwindCoroEnd(End, Shape, FramePtr, InResume, CG);
+    replaceUnwindCoroEnd(End, Shape, FramePtr, InRamp, CG);
   else
-    replaceFallthroughCoroEnd(End, Shape, FramePtr, InResume, CG);
-
-  auto &Context = End->getContext();
-  End->replaceAllUsesWith(InResume ? ConstantInt::getTrue(Context)
-                                   : ConstantInt::getFalse(Context));
+    replaceFallthroughCoroEnd(End, Shape, FramePtr, InRamp, CG);
   End->eraseFromParent();
 }
 
@@ -431,7 +463,11 @@ void coro::BaseCloner::handleFinalSuspend() {
   auto *Switch = cast<SwitchInst>(VMap[Shape.SwitchLowering.ResumeSwitch]);
   auto FinalCaseIt = std::prev(Switch->case_end());
   BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
-  Switch->removeCase(FinalCaseIt);
+
+  // Use SwitchInstProfUpdateWrapper to remove the case, keeping the profile
+  // branch weights in sync with the switch successors.
+  SwitchInstProfUpdateWrapper SwitchWrapper(*Switch);
+  SwitchWrapper.removeCase(FinalCaseIt);
   if (isSwitchDestroyFunction()) {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
@@ -442,13 +478,15 @@ void coro::BaseCloner::handleFinalSuspend() {
       // to generate code for other cases.
       Builder.CreateBr(ResumeBB);
     } else {
-      auto *GepIndex = Builder.CreateStructGEP(
-          Shape.FrameTy, NewFramePtr, coro::Shape::SwitchFieldIndex::Resume,
-          "ResumeFn.addr");
+      // Resume function pointer is always first
       auto *Load =
-          Builder.CreateLoad(Shape.getSwitchResumePointerType(), GepIndex);
+          Builder.CreateLoad(Shape.getSwitchResumePointerType(), NewFramePtr);
       auto *Cond = Builder.CreateIsNull(Load);
-      Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      auto *Br = Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+      applyProfMetadataIfEnabled(Br, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    Inst->getFunction());
+      });
     }
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
@@ -474,7 +512,7 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
 
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
-                       OrigF.getName() + Suffix);
+                       OrigF.getAddressSpace(), OrigF.getName() + Suffix);
 
   M->getFunctionList().insert(InsertBefore, NewF);
 
@@ -575,7 +613,16 @@ void coro::BaseCloner::replaceCoroEnds() {
     // We use a null call graph because there's no call graph node for
     // the cloned function yet.  We'll just be rebuilding that later.
     auto *NewCE = cast<AnyCoroEndInst>(VMap[CE]);
-    replaceCoroEnd(NewCE, Shape, NewFramePtr, /*in resume*/ true, nullptr);
+    replaceCoroEnd(NewCE, Shape, NewFramePtr, /*in ramp*/ false, nullptr);
+  }
+}
+
+void coro::BaseCloner::replaceCoroIsInRamp() {
+  auto &Ctx = OrigF.getContext();
+  for (auto *II : Shape.CoroIsInRampInsts) {
+    auto *NewII = cast<CoroIsInRampInst>(VMap[II]);
+    NewII->replaceAllUsesWith(ConstantInt::getFalse(Ctx));
+    NewII->eraseFromParent();
   }
 }
 
@@ -597,8 +644,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(&F.getEntryBlock(),
-                        F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -635,19 +681,15 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
   }
 }
 
-/// Returns all DbgVariableIntrinsic in F.
-static std::pair<SmallVector<DbgVariableIntrinsic *, 8>,
-                 SmallVector<DbgVariableRecord *>>
-collectDbgVariableIntrinsics(Function &F) {
-  SmallVector<DbgVariableIntrinsic *, 8> Intrinsics;
+/// Returns all debug records in F.
+static SmallVector<DbgVariableRecord *>
+collectDbgVariableRecords(Function &F) {
   SmallVector<DbgVariableRecord *> DbgVariableRecords;
   for (auto &I : instructions(F)) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
       DbgVariableRecords.push_back(&DVR);
-    if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-      Intrinsics.push_back(DVI);
   }
-  return {Intrinsics, DbgVariableRecords};
+  return DbgVariableRecords;
 }
 
 void coro::BaseCloner::replaceSwiftErrorOps() {
@@ -655,14 +697,11 @@ void coro::BaseCloner::replaceSwiftErrorOps() {
 }
 
 void coro::BaseCloner::salvageDebugInfo() {
-  auto [Worklist, DbgVariableRecords] = collectDbgVariableIntrinsics(*NewF);
+  auto DbgVariableRecords = collectDbgVariableRecords(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Only 64-bit ABIs have a register we can refer to with the entry value.
-  bool UseEntryValue =
-      llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
-  for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
+  bool UseEntryValue = OrigF.getParent()->getTargetTriple().isArch64Bit();
   for (DbgVariableRecord *DVR : DbgVariableRecords)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, UseEntryValue);
 
@@ -673,7 +712,7 @@ void coro::BaseCloner::salvageDebugInfo() {
     return !isPotentiallyReachable(&NewF->getEntryBlock(), BB, nullptr,
                                    &DomTree);
   };
-  auto RemoveOne = [&](auto *DVI) {
+  auto RemoveOne = [&](DbgVariableRecord *DVI) {
     if (IsUnreachableBlock(DVI->getParent()))
       DVI->eraseFromParent();
     else if (isa_and_nonnull<AllocaInst>(DVI->getVariableLocationOp(0))) {
@@ -687,7 +726,6 @@ void coro::BaseCloner::salvageDebugInfo() {
         DVI->eraseFromParent();
     }
   };
-  for_each(Worklist, RemoveOne);
   for_each(DbgVariableRecords, RemoveOne);
 }
 
@@ -707,8 +745,7 @@ void coro::BaseCloner::replaceEntryBlock() {
   // exactly one predecessor, which we created when splitting out
   // AllocaSpillBlock to begin with.
   assert(Entry->hasOneUse());
-  auto BranchToEntry = cast<BranchInst>(Entry->user_back());
-  assert(BranchToEntry->isUnconditional());
+  auto BranchToEntry = cast<UncondBrInst>(Entry->user_back());
   Builder.SetInsertPoint(BranchToEntry);
   Builder.CreateUnreachable();
   BranchToEntry->eraseFromParent();
@@ -722,6 +759,7 @@ void coro::BaseCloner::replaceEntryBlock() {
     auto *SwitchBB =
         cast<BasicBlock>(VMap[Shape.SwitchLowering.ResumeEntryBlock]);
     Builder.CreateBr(SwitchBB);
+    SwitchBB->moveAfter(Entry);
     break;
   }
   case coro::ABI::Async:
@@ -736,8 +774,7 @@ void coro::BaseCloner::replaceEntryBlock() {
              Shape.ABI == coro::ABI::RetconOnce) &&
             isa<CoroSuspendRetconInst>(ActiveSuspend)));
     auto *MappedCS = cast<AnyCoroSuspendInst>(VMap[ActiveSuspend]);
-    auto Branch = cast<BranchInst>(MappedCS->getNextNode());
-    assert(Branch->isUnconditional());
+    auto Branch = cast<UncondBrInst>(MappedCS->getNextNode());
     Builder.CreateBr(Branch->getSuccessor(0));
     break;
   }
@@ -756,6 +793,32 @@ void coro::BaseCloner::replaceEntryBlock() {
       continue;
     I.moveBefore(*Entry, Entry->getFirstInsertionPt());
   }
+}
+
+/// Returns the location of the first instruction after \p ActiveSuspend with a
+/// non-zero line, or an empty location if there is none.
+static DebugLoc getFirstNonZeroLocAfterSuspend(Instruction *ActiveSuspend) {
+  if (!ActiveSuspend->getNextNode())
+    return {};
+
+  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
+  // Corosplit splits the BB around ActiveSuspend, so the meaningful
+  // instructions are not in the same BB.
+  // FIXME: remove this hardcoded number of tries.
+  for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
+    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
+    if (!Branch)
+      break;
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
+  }
+
+  BasicBlock *PBB = Successor->getParent();
+  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
+    auto DL = Successor->getDebugLoc();
+    if (DL && DL.getLine() != 0)
+      return DL;
+  }
+  return {};
 }
 
 /// Derive the value of the new frame pointer.
@@ -777,8 +840,14 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
-    auto DbgLoc =
-        cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend])->getDebugLoc();
+    auto *NewSuspend = cast<CoroSuspendAsyncInst>(VMap[ActiveSuspend]);
+    DebugLoc DbgLoc = NewSuspend->getDebugLoc();
+    // The projection may update the async context slot of the frame. With a
+    // line 0 location, prologue_end is placed after that update, but debuggers
+    // expect the slot to be unchanged at prologue_end.
+    if (DbgLoc && DbgLoc.getLine() == 0)
+      if (DebugLoc NonZeroLoc = getFirstNonZeroLocAfterSuspend(NewSuspend))
+        DbgLoc = NonZeroLoc;
     // Calling i8* (i8*)
     auto *CallerContext = Builder.CreateCall(ProjectionFunc->getFunctionType(),
                                              ProjectionFunc, CalleeContext);
@@ -786,9 +855,11 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
     CallerContext->setDebugLoc(DbgLoc);
     // The frame is located after the async_context header.
     auto &Context = Builder.getContext();
-    auto *FramePtrAddr = Builder.CreateConstInBoundsGEP1_32(
-        Type::getInt8Ty(Context), CallerContext,
-        Shape.AsyncLowering.FrameOffset, "async.ctx.frameptr");
+    auto *FramePtrAddr = Builder.CreateInBoundsPtrAdd(
+        CallerContext,
+        ConstantInt::get(Type::getInt64Ty(Context),
+                         Shape.AsyncLowering.FrameOffset),
+        "async.ctx.frameptr");
     // Inline the projection function.
     InlineFunctionInfo InlineInfo;
     auto InlineRes = InlineFunction(*CallerContext, InlineInfo);
@@ -800,7 +871,7 @@ Value *coro::BaseCloner::deriveNewFramePointer() {
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     Argument *NewStorage = &*NewF->arg_begin();
-    auto FramePtrTy = PointerType::getUnqual(Shape.FrameTy->getContext());
+    auto FramePtrTy = PointerType::getUnqual(Shape.FramePtr->getContext());
 
     // If the storage is inline, just bitcast to the storage to the frame type.
     if (Shape.RetconLowering.IsFrameInlineInStorage)
@@ -824,43 +895,11 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   if (!ActiveSuspend)
     return;
 
-  // No subsequent instruction -> fallback to the location of ActiveSuspend.
-  if (!ActiveSuspend->getNextNonDebugInstruction()) {
-    if (auto DL = ActiveSuspend->getDebugLoc())
-      if (SPToUpdate.getFile() == DL->getFile())
-        SPToUpdate.setScopeLine(DL->getLine());
-    return;
-  }
-
-  BasicBlock::iterator Successor =
-      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
-  // Corosplit splits the BB around ActiveSuspend, so the meaningful
-  // instructions are not in the same BB.
-  if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
-      Branch && Branch->isUnconditional())
-    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
-
-  // Find the first successor of ActiveSuspend with a non-zero line location.
-  // If that matches the file of ActiveSuspend, use it.
-  BasicBlock *PBB = Successor->getParent();
-  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
-    Successor = skipDebugIntrinsics(Successor);
-    auto DL = Successor->getDebugLoc();
-    if (!DL || DL.getLine() == 0)
-      continue;
-
-    if (SPToUpdate.getFile() == DL->getFile()) {
-      SPToUpdate.setScopeLine(DL.getLine());
-      return;
-    }
-
-    break;
-  }
-
-  // If the search above failed, fallback to the location of ActiveSuspend.
-  if (auto DL = ActiveSuspend->getDebugLoc())
-    if (SPToUpdate.getFile() == DL->getFile())
-      SPToUpdate.setScopeLine(DL->getLine());
+  DebugLoc DL = getFirstNonZeroLocAfterSuspend(ActiveSuspend);
+  if (!DL || SPToUpdate.getFile() != DL->getFile())
+    DL = ActiveSuspend->getDebugLoc();
+  if (DL && SPToUpdate.getFile() == DL->getFile())
+    SPToUpdate.setScopeLine(DL.getLine());
 }
 
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
@@ -922,11 +961,8 @@ void coro::BaseCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
-  CloneFunctionAttributesInto(NewF, &OrigF, VMap, false);
-  CloneFunctionMetadataInto(*NewF, OrigF, VMap, RF_None, nullptr, nullptr,
-                            &CommonDebugInfo);
-  CloneFunctionBodyInto(*NewF, OrigF, VMap, RF_None, Returns, "", nullptr,
-                        nullptr, nullptr, &CommonDebugInfo);
+  CloneFunctionInto(NewF, &OrigF, VMap,
+                    CloneFunctionChangeType::LocalChangesOnly, Returns);
 
   auto &Context = NewF->getContext();
 
@@ -934,29 +970,14 @@ void coro::BaseCloner::create() {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
     updateScopeLine(ActiveSuspend, *SP);
 
-    // Update the linkage name to reflect the modified symbol name. It
-    // is necessary to update the linkage name in Swift, since the
-    // mangling changes for resume functions. It might also be the
-    // right thing to do in C++, but due to a limitation in LLVM's
-    // AsmPrinter we can only do this if the function doesn't have an
-    // abstract specification, since the DWARF backend expects the
-    // abstract specification to contain the linkage name and asserts
-    // that they are identical.
-    if (SP->getUnit() &&
-        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift) {
-      SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
-      if (auto *Decl = SP->getDeclaration()) {
-        auto *NewDecl = DISubprogram::get(
-            Decl->getContext(), Decl->getScope(), Decl->getName(),
-            NewF->getName(), Decl->getFile(), Decl->getLine(), Decl->getType(),
-            Decl->getScopeLine(), Decl->getContainingType(),
-            Decl->getVirtualIndex(), Decl->getThisAdjustment(),
-            Decl->getFlags(), Decl->getSPFlags(), Decl->getUnit(),
-            Decl->getTemplateParams(), nullptr, Decl->getRetainedNodes(),
-            Decl->getThrownTypes(), Decl->getAnnotations(),
-            Decl->getTargetFuncName());
-        SP->replaceDeclaration(NewDecl);
-      }
+    // Update the linkage name and the function name to reflect the modified
+    // name.
+    MDString *NewLinkageName = MDString::get(Context, NewF->getName());
+    SP->replaceLinkageName(NewLinkageName);
+    if (DISubprogram *Decl = SP->getDeclaration()) {
+      TempDISubprogram NewDecl = Decl->clone();
+      NewDecl->replaceLinkageName(NewLinkageName);
+      SP->replaceDeclaration(MDNode::replaceWithUniqued(std::move(NewDecl)));
     }
   }
 
@@ -1120,6 +1141,8 @@ void coro::BaseCloner::create() {
   // Remove coro.end intrinsics.
   replaceCoroEnds();
 
+  replaceCoroIsInRamp();
+
   // Salvage debug info that points into the coroutine frame.
   salvageDebugInfo();
 }
@@ -1132,10 +1155,16 @@ void coro::SwitchCloner::create() {
   // Clone the function
   coro::BaseCloner::create();
 
-  // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
-  // to suppress deallocation code.
-  coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                        /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
+  // Override EntryCount for the cloned resume function with the true sum of
+  // all suspension points profile counts.
+  if (FKind == coro::CloneKind::SwitchResume && OrigF.hasProfileData() &&
+      Shape.ResumeEntryCount.has_value()) {
+    NewF->setEntryCount(Shape.ResumeEntryCount.value());
+  }
+
+  // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
+  if (FKind == coro::CloneKind::SwitchCleanup)
+    elideCoroFree(NewFramePtr);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
@@ -1153,14 +1182,6 @@ static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
   Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
 }
 
-static TypeSize getFrameSizeForShape(coro::Shape &Shape) {
-  // In the same function all coro.sizes should have the same result type.
-  auto *SizeIntrin = Shape.CoroSizes.back();
-  Module *M = SizeIntrin->getModule();
-  const DataLayout &DL = M->getDataLayout();
-  return DL.getTypeAllocSize(Shape.FrameTy);
-}
-
 static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Async)
     updateAsyncFuncPointerContextSize(Shape);
@@ -1176,8 +1197,8 @@ static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
 
   // In the same function all coro.sizes should have the same result type.
   auto *SizeIntrin = Shape.CoroSizes.back();
-  auto *SizeConstant =
-      ConstantInt::get(SizeIntrin->getType(), getFrameSizeForShape(Shape));
+  auto *SizeConstant = ConstantInt::get(SizeIntrin->getType(),
+                                        TypeSize::getFixed(Shape.FrameSize));
 
   for (CoroSizeInst *CS : Shape.CoroSizes) {
     CS->replaceAllUsesWith(SizeConstant);
@@ -1203,12 +1224,15 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
   auto *CoroBegin = Shape.CoroBegin;
   switch (Shape.ABI) {
   case coro::ABI::Switch: {
-    auto SwitchId = Shape.getSwitchCoroId();
-    auto *AllocInst = SwitchId->getCoroAlloc();
-    coro::replaceCoroFree(SwitchId, /*Elide=*/AllocInst != nullptr);
-    if (AllocInst) {
+    if (auto *AllocInst = Shape.getSwitchCoroId()->getCoroAlloc()) {
+      coro::elideCoroFree(CoroBegin);
+
       IRBuilder<> Builder(AllocInst);
-      auto *Frame = Builder.CreateAlloca(Shape.FrameTy);
+      // Create an alloca for a byte array of the frame size
+      auto *FrameTy = ArrayType::get(Type::getInt8Ty(Builder.getContext()),
+                                     Shape.FrameSize);
+      auto *Frame = Builder.CreateAlloca(
+          FrameTy, nullptr, AllocInst->getFunction()->getName() + ".Frame");
       Frame->setAlignment(Shape.FrameAlign);
       AllocInst->replaceAllUsesWith(Builder.getFalse());
       AllocInst->eraseFromParent();
@@ -1341,7 +1365,7 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
 
   // No longer need a call to coro.resume or coro.destroy.
   if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
-    BranchInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
+    UncondBrInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
   }
 
   // Grab the CalledValue from CB before erasing the CallInstr.
@@ -1410,21 +1434,19 @@ struct SwitchCoroutineSplitter {
                     TargetTransformInfo &TTI) {
     assert(Shape.ABI == coro::ABI::Switch);
 
-    MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
-
     // Create a resume clone by cloning the body of the original function,
     // setting new entry block and replacing coro.suspend an appropriate value
     // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
     auto *ResumeClone = coro::SwitchCloner::createClone(
-        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI,
-        CommonDebugInfo);
+        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI);
     auto *DestroyClone = coro::SwitchCloner::createClone(
-        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI,
-        CommonDebugInfo);
+        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI);
     auto *CleanupClone = coro::SwitchCloner::createClone(
-        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI,
-        CommonDebugInfo);
+        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
+
+    if (Shape.SwitchLowering.HasCoroElideNoAllocVariant)
+      replaceSwitchResumeCoroFree(Shape, *ResumeClone, *CleanupClone);
 
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
@@ -1460,12 +1482,12 @@ struct SwitchCoroutineSplitter {
     SmallVector<Type *> NewParams;
     NewParams.reserve(OldParams.size() + 1);
     NewParams.append(OldParams.begin(), OldParams.end());
-    NewParams.push_back(PointerType::getUnqual(Shape.FrameTy->getContext()));
+    NewParams.push_back(PointerType::getUnqual(Shape.FramePtr->getContext()));
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());
-    Function *NoAllocF =
-        Function::Create(NewFnTy, F.getLinkage(), F.getName() + ".noalloc");
+    Function *NoAllocF = Function::Create(
+        NewFnTy, F.getLinkage(), F.getAddressSpace(), F.getName() + ".noalloc");
 
     ValueToValueMapTy VMap;
     unsigned int Idx = 0;
@@ -1482,9 +1504,8 @@ struct SwitchCoroutineSplitter {
     if (Shape.CoroBegin) {
       auto *NewCoroBegin =
           cast_if_present<CoroBeginInst>(VMap[Shape.CoroBegin]);
-      auto *NewCoroId = cast<CoroIdInst>(NewCoroBegin->getId());
-      coro::replaceCoroFree(NewCoroId, /*Elide=*/true);
-      coro::suppressCoroAllocs(NewCoroId);
+      coro::elideCoroFree(NewCoroBegin);
+      coro::suppressCoroAllocs(cast<CoroIdInst>(NewCoroBegin->getId()));
       NewCoroBegin->replaceAllUsesWith(NoAllocF->getArg(FrameIdx));
       NewCoroBegin->eraseFromParent();
     }
@@ -1519,6 +1540,15 @@ private:
   static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
     LLVMContext &C = F.getContext();
 
+    DIBuilder DBuilder(*F.getParent(), /*AllowUnresolved*/ false);
+    DISubprogram *DIS = F.getSubprogram();
+    // If there is no DISubprogram for F, it implies the function is compiled
+    // without debug info. So we also don't generate debug info for the
+    // suspension points.
+    bool AddDebugLabels = DIS && DIS->getUnit() &&
+                          (DIS->getUnit()->getEmissionKind() ==
+                           DICompileUnit::DebugEmissionKind::FullDebug);
+
     // resume.entry:
     //  %index.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32
     //  0, i32 2 % index = load i32, i32* %index.addr switch i32 %index, label
@@ -1533,15 +1563,18 @@ private:
 
     IRBuilder<> Builder(NewEntry);
     auto *FramePtr = Shape.FramePtr;
-    auto *FrameTy = Shape.FrameTy;
-    auto *GepIndex = Builder.CreateStructGEP(
-        FrameTy, FramePtr, Shape.getSwitchIndexField(), "index.addr");
+    Value *GepIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
     auto *Index = Builder.CreateLoad(Shape.getIndexType(), GepIndex, "index");
     auto *Switch =
         Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
     Shape.SwitchLowering.ResumeSwitch = Switch;
 
+    // Split all coro.suspend calls
     size_t SuspendIndex = 0;
+    SmallVector<uint64_t, 8> SwitchWeights64;
+    // Default destination (unreachable) has weight 0
+    SwitchWeights64.push_back(0);
+
     for (auto *AnyS : Shape.CoroSuspends) {
       auto *S = cast<CoroSuspendInst>(AnyS);
       ConstantInt *IndexVal = Shape.getIndex(SuspendIndex);
@@ -1556,8 +1589,7 @@ private:
         // point.
         markCoroutineAsDone(Builder, Shape, FramePtr);
       } else {
-        auto *GepIndex = Builder.CreateStructGEP(
-            FrameTy, FramePtr, Shape.getSwitchIndexField(), "index.addr");
+        Value *GepIndex = createSwitchIndexPtr(Shape, Builder, FramePtr);
         Builder.CreateStore(IndexVal, GepIndex);
       }
 
@@ -1579,6 +1611,7 @@ private:
       //     br label %resume.0.landing
       //
       //  resume.0: ; <--- jump from the switch in the resume.entry
+      //        #dbg_label(...)  ; <--- artificial label for debuggers
       //     %0 = tail call i8 @llvm.coro.suspend(token none, i1 false)
       //     br label %resume.0.landing
       //
@@ -1594,18 +1627,57 @@ private:
           S->getNextNode(), ResumeBB->getName() + Twine(".landing"));
       Switch->addCase(IndexVal, ResumeBB);
 
-      cast<BranchInst>(SuspendBB->getTerminator())->setSuccessor(0, LandingBB);
+      // Get pre-split frequency for this suspend point
+      uint64_t Weight = 1; // Default fallback weight
+      auto It = Shape.SuspendFreqs.find(AnyS);
+      if (It != Shape.SuspendFreqs.end()) {
+        Weight = It->second;
+      }
+      SwitchWeights64.push_back(Weight);
+
+      cast<UncondBrInst>(SuspendBB->getTerminator())->setSuccessor(LandingBB);
       auto *PN = PHINode::Create(Builder.getInt8Ty(), 2, "");
       PN->insertBefore(LandingBB->begin());
       S->replaceAllUsesWith(PN);
       PN->addIncoming(Builder.getInt8(-1), SuspendBB);
       PN->addIncoming(S, ResumeBB);
 
+      if (AddDebugLabels) {
+        if (DebugLoc SuspendLoc = S->getDebugLoc()) {
+          std::string LabelName =
+              ("__coro_resume_" + Twine(SuspendIndex)).str();
+          // Take the "inlined at" location recursively, if present. This is
+          // mandatory as the DILabel insertion checks that the scopes of label
+          // and the attached location match. This is not the case when the
+          // suspend location has been inlined due to pointing to the original
+          // scope.
+          DILocation *DILoc = SuspendLoc;
+          while (DILocation *InlinedAt = DILoc->getInlinedAt())
+            DILoc = InlinedAt;
+
+          DILabel *ResumeLabel =
+              DBuilder.createLabel(DIS, LabelName, DILoc->getFile(),
+                                   SuspendLoc.getLine(), SuspendLoc.getCol(),
+                                   /*IsArtificial=*/true,
+                                   /*CoroSuspendIdx=*/SuspendIndex,
+                                   /*AlwaysPreserve=*/false);
+          DBuilder.insertLabel(ResumeLabel, DILoc, ResumeBB->begin());
+        }
+      }
+
       ++SuspendIndex;
+    }
+
+    if (!Shape.SuspendFreqs.empty()) {
+      auto SwitchWeights32 = llvm::fitWeights(SwitchWeights64);
+      MDBuilder MDB(C);
+      Switch->setMetadata(LLVMContext::MD_prof,
+                          MDB.createBranchWeights(SwitchWeights32));
     }
 
     Builder.SetInsertPoint(UnreachBB);
     Builder.CreateUnreachable();
+    DBuilder.finalize();
 
     Shape.SwitchLowering.ResumeEntryBlock = NewEntry;
   }
@@ -1614,10 +1686,10 @@ private:
   static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
                               Function *DestroyFn, Function *CleanupFn) {
     IRBuilder<> Builder(&*Shape.getInsertPtAfterFramePtr());
+    LLVMContext &C = ResumeFn->getContext();
 
-    auto *ResumeAddr = Builder.CreateStructGEP(
-        Shape.FrameTy, Shape.FramePtr, coro::Shape::SwitchFieldIndex::Resume,
-        "resume.addr");
+    // Resume function pointer
+    Value *ResumeAddr = Shape.FramePtr;
     Builder.CreateStore(ResumeFn, ResumeAddr);
 
     Value *DestroyOrCleanupFn = DestroyFn;
@@ -1627,10 +1699,17 @@ private:
       // If there is a CoroAlloc and it returns false (meaning we elide the
       // allocation, use CleanupFn instead of DestroyFn).
       DestroyOrCleanupFn = Builder.CreateSelect(CA, DestroyFn, CleanupFn);
+      applyProfMetadataIfEnabled(DestroyOrCleanupFn, [&](Instruction *Inst) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE,
+                                                    CoroId->getFunction());
+      });
     }
 
-    auto *DestroyAddr = Builder.CreateStructGEP(
-        Shape.FrameTy, Shape.FramePtr, coro::Shape::SwitchFieldIndex::Destroy,
+    // Destroy function pointer
+    Value *DestroyAddr = Builder.CreateInBoundsPtrAdd(
+        Shape.FramePtr,
+        ConstantInt::get(Type::getInt64Ty(C),
+                         Shape.SwitchLowering.DestroyOffset),
         "destroy.addr");
     Builder.CreateStore(DestroyOrCleanupFn, DestroyAddr);
   }
@@ -1741,8 +1820,10 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   auto *FramePtr = Id->getStorage();
   FramePtr = Builder.CreateBitOrPointerCast(FramePtr, Int8PtrTy);
-  FramePtr = Builder.CreateConstInBoundsGEP1_32(
-      Type::getInt8Ty(Context), FramePtr, Shape.AsyncLowering.FrameOffset,
+  FramePtr = Builder.CreateInBoundsPtrAdd(
+      FramePtr,
+      ConstantInt::get(Type::getInt64Ty(Context),
+                       Shape.AsyncLowering.FrameOffset),
       "async.ctx.frameptr");
 
   // Map all uses of llvm.coro.begin to the allocated frame pointer.
@@ -1784,7 +1865,7 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // point.
     auto *SuspendBB = Suspend->getParent();
     auto *NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto *Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto *Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Place it before the first suspend.
     auto *ReturnBB =
@@ -1810,14 +1891,12 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   assert(Clones.size() == Shape.CoroSuspends.size());
 
-  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
-
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto *Suspend = CS;
     auto *Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI, CommonDebugInfo);
+                                  Suspend, TTI);
   }
 }
 
@@ -1841,14 +1920,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
   } else {
     IRBuilder<> Builder(Id);
 
-    // Determine the size of the frame.
-    const DataLayout &DL = F.getDataLayout();
-    auto Size = DL.getTypeAllocSize(Shape.FrameTy);
+    auto FrameSize = Builder.getInt64(Shape.FrameSize);
 
     // Allocate.  We don't need to update the call graph node because we're
     // going to recompute it from scratch after splitting.
     // FIXME: pass the required alignment
-    RawFramePtr = Shape.emitAlloc(Builder, Builder.getInt64(Size), nullptr);
+    RawFramePtr = Shape.emitAlloc(Builder, FrameSize, nullptr);
     RawFramePtr =
         Builder.CreateBitCast(RawFramePtr, Shape.CoroBegin->getType());
 
@@ -1886,7 +1963,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // the suspend point.
     auto SuspendBB = Suspend->getParent();
     auto NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Create the unified return block.
     if (!ReturnBB) {
@@ -1944,14 +2021,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   assert(Clones.size() == Shape.CoroSuspends.size());
 
-  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
-
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto Suspend = CS;
     auto Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI, CommonDebugInfo);
+                                  Suspend, TTI);
   }
 }
 
@@ -1973,14 +2048,19 @@ public:
 static void removeCoroEndsFromRampFunction(const coro::Shape &Shape) {
   if (Shape.ABI != coro::ABI::Switch) {
     for (auto *End : Shape.CoroEnds) {
-      replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
+      replaceCoroEnd(End, Shape, Shape.FramePtr, /*in ramp*/ true, nullptr);
     }
   } else {
-    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
-      auto &Context = End->getContext();
-      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
+    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds)
       End->eraseFromParent();
-    }
+  }
+}
+
+static void removeCoroIsInRampFromRampFunction(const coro::Shape &Shape) {
+  for (auto *II : Shape.CoroIsInRampInsts) {
+    auto &Ctx = II->getContext();
+    II->replaceAllUsesWith(ConstantInt::getTrue(Ctx));
+    II->eraseFromParent();
   }
 }
 
@@ -2023,6 +2103,9 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   bool shouldCreateNoAllocVariant =
       !isNoSuspendCoroutine && Shape.ABI == coro::ABI::Switch &&
       hasSafeElideCaller(F) && !F.hasFnAttribute(llvm::Attribute::NoInline);
+  if (Shape.ABI == coro::ABI::Switch)
+    Shape.SwitchLowering.HasCoroElideNoAllocVariant =
+        shouldCreateNoAllocVariant;
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.
@@ -2040,13 +2123,12 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   // original function. The Cloner has already salvaged debug info in the new
   // coroutine funclets.
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
-  auto [DbgInsts, DbgVariableRecords] = collectDbgVariableIntrinsics(F);
-  for (auto *DDI : DbgInsts)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
+  auto DbgVariableRecords = collectDbgVariableRecords(F);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
 
   removeCoroEndsFromRampFunction(Shape);
+  removeCoroIsInRampFromRampFunction(Shape);
 
   if (shouldCreateNoAllocVariant)
     SwitchCoroutineSplitter::createNoAllocVariant(F, Shape, Clones);
@@ -2062,10 +2144,22 @@ static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
   if (!Clones.empty()) {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
-      // Each clone in the Switch lowering is independent of the other clones.
-      // Let the LazyCallGraph know about each one separately.
-      for (Function *Clone : Clones)
-        CG.addSplitFunction(N.getFunction(), *Clone);
+      // The resume clone's elided-frame check holds a reference to the cleanup
+      // clone. Add the cleanup clone first, so populating the resume node does
+      // not materialize an unregistered cleanup node.
+      if (Shape.SwitchLowering.HasCoroElideNoAllocVariant) {
+        assert(Clones.size() >= 3 && "expected switch coroutine clones");
+        CG.addSplitFunction(N.getFunction(), *Clones[2]);
+        CG.addSplitFunction(N.getFunction(), *Clones[1]);
+        CG.addSplitFunction(N.getFunction(), *Clones[0]);
+        for (Function *Clone : drop_begin(Clones, 3))
+          CG.addSplitFunction(N.getFunction(), *Clone);
+      } else {
+        // Each clone in the Switch lowering is independent of the other
+        // clones. Let the LazyCallGraph know about each one separately.
+        for (Function *Clone : Clones)
+          CG.addSplitFunction(N.getFunction(), *Clone);
+      }
       break;
     case coro::ABI::Async:
     case coro::ABI::Retcon:
@@ -2258,6 +2352,28 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     F.setSplittedCoroutine();
 
+    // Query BFI and populate SuspendFreqs right before splitting.
+    auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+    for (auto *AnyS : Shape.CoroSuspends) {
+      BasicBlock *BB = AnyS->getParent();
+      uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
+      Shape.SuspendFreqs[AnyS] = Freq;
+
+      // Query BFI to get the actual estimated execution profile count of the
+      // basic block where this suspension point resides.
+      std::optional<uint64_t> Count = BFI.getBlockProfileCount(BB);
+      if (Count.has_value()) {
+        if (!Shape.ResumeEntryCount.has_value()) {
+          // For the first suspend point visited, initialize the total sum.
+          Shape.ResumeEntryCount = Count.value();
+        } else {
+          // Accumulate the absolute execution count of each subsequent suspend
+          // point into the total sum.
+          Shape.ResumeEntryCount.value() += Count.value();
+        }
+      }
+    }
+
     std::unique_ptr<coro::BaseABI> ABI = CreateAndInitABI(F, Shape);
 
     SmallVector<Function *, 4> Clones;
@@ -2279,6 +2395,10 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
       UR.CWorklist.insert(CurrentSCC);
       for (Function *Clone : Clones)
         UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
+    } else if (Shape.ABI == coro::ABI::Async) {
+      // Reprocess the function to inline the tail called return function of
+      // coro.async.end.
+      UR.CWorklist.insert(&C);
     }
   }
 

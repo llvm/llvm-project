@@ -1,4 +1,4 @@
-//===--- MacroUsageCheck.h - clang-tidy--------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ namespace tidy::cppcoreguidelines {
 /// constructs exist for the task.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/macro-usage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/macro-usage.html
 class MacroUsageCheck : public ClangTidyCheck {
 public:
   MacroUsageCheck(StringRef Name, ClangTidyContext *Context)

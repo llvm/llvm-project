@@ -177,6 +177,48 @@ exit:                               ; preds = %bb2, %bb3, %bb4
   ret void
 }
 
+; test5 is to check if .p2align can be correctly set on loops with a single
+; latch that's not the exiting block.
+; The test IR is generated from below simple C file:
+; $ clang -O0 -S -emit-llvm loop.c
+; $ cat loop.c
+; int test5(int n) {
+;     int i = 0;
+;     [[clang::code_align(64)]]
+;     while (i < n) {
+;         i++;
+;     }
+; }
+; CHECK-LABEL: test5:
+; ALIGN: .p2align 6
+; ALIGN-NEXT: .LBB4_1: # %while.cond
+define i32 @test5(i32 %n) #0 {
+entry:
+  %retval = alloca i32, align 4
+  %n.addr = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 %n, ptr %n.addr, align 4
+  store i32 0, ptr %i, align 4
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.body, %entry
+  %i.val = load i32, ptr %i, align 4
+  %n.val = load i32, ptr %n.addr, align 4
+  %cmp = icmp slt i32 %i.val, %n.val
+  br i1 %cmp, label %while.body, label %while.end
+
+while.body:                                       ; preds = %while.cond
+  %tmp = load i32, ptr %i, align 4
+  %inc = add nsw i32 %tmp, 1
+  store i32 %inc, ptr %i, align 4
+  br label %while.cond, !llvm.loop !0
+
+while.end:                                        ; preds = %while.cond
+  %val = load i32, ptr %retval, align 4
+  ret i32 %val
+}
+
+
 declare void @bar()
 declare void @var()
 

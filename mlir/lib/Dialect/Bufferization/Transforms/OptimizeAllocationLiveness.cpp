@@ -15,17 +15,17 @@
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/Support/Debug.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "optimize-allocation-liveness"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_OPTIMIZEALLOCATIONLIVENESS
+#define GEN_PASS_DEF_OPTIMIZEALLOCATIONLIVENESSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -64,8 +64,8 @@ Operation *findUserWithFreeSideEffect(Value value) {
       for (const auto &effect : effects) {
         if (isa<MemoryEffects::Free>(effect.getEffect())) {
           if (freeOpUser) {
-            LDBG("Multiple users with free effect found: " << *freeOpUser
-                                                           << " and " << *user);
+            LDBG() << "Multiple users with free effect found: " << *freeOpUser
+                   << " and " << *user;
             return nullptr;
           }
           freeOpUser = user;
@@ -88,11 +88,76 @@ static bool hasMemoryAllocEffect(MemoryEffectOpInterface memEffectOp) {
   return false;
 }
 
+/// Extracts OpResult's with Allocate effects from given op
+static SmallVector<OpResult>
+collectAllocations(MemoryEffectOpInterface allocOp) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  allocOp.getEffects(effects);
+  SmallVector<OpResult> allocResults;
+  for (const MemoryEffects::EffectInstance &it : effects)
+    if (isa<MemoryEffects::Allocate>(it.getEffect()))
+      if (auto val = it.getValue(); val && val.getDefiningOp() == allocOp)
+        allocResults.push_back(cast<OpResult>(val));
+  return allocResults;
+}
+
 struct OptimizeAllocationLiveness
-    : public bufferization::impl::OptimizeAllocationLivenessBase<
+    : public bufferization::impl::OptimizeAllocationLivenessPassBase<
           OptimizeAllocationLiveness> {
 public:
   OptimizeAllocationLiveness() = default;
+
+  /// When moving a dealloc operation to be closer to its companion alloc we
+  /// have to consider the following. The dealloc should be:
+  /// - After all the operand definitions that the dealloc uses
+  /// - Before any ops that consume the results produced by the dealloc
+  /// To do this, we first ensure the "target" position is after all the
+  /// operands. Then we ensure this target dominates all consumers of the
+  /// dealloc's results. If not, no valid position exists and nullptr is
+  /// returned.
+  static Operation *findValidInsertionPoint(DominanceInfo *domInfo,
+                                            Operation *allocOp,
+                                            Operation *deallocOp,
+                                            Operation *lastUser) {
+
+    auto *target = lastUser;
+
+    // Start at the last user of the buffer, then move later if an operand of
+    // the dealloc is defined after it. E.g. target starts at %x but moves to
+    // %w:
+    //   %x = memref.load %a[%c0]                          // lastUser
+    //   %w = gpu.wait async [%d]                          // target
+    //   %done = gpu.dealloc async [%w] %a : memref<8xf32> // deallocOp
+    for (Value operand : deallocOp->getOperands()) {
+      auto *definingOp = operand.getDefiningOp();
+      if (!definingOp)
+        continue;
+
+      if (!target || domInfo->properlyDominates(target, definingOp))
+        target = definingOp;
+    }
+
+    if (!target)
+      target = allocOp;
+
+    // Ensure target dominates all result users. Here the realloc is the
+    // deallocOp since it frees %a, and it also produces %b. The first loop
+    // leaves target at the memref.dealloc (the last user of the aliased
+    // buffer), but that op uses %b, so placing the realloc after it is invalid:
+    //   %a = memref.alloc() : memref<8xf32>
+    //   %b = memref.realloc %a : memref<8xf32> to memref<16xf32> // deallocOp
+    //   memref.dealloc %b : memref<16xf32>                       // target
+    // nullptr is returned as a result.
+    for (Value result : deallocOp->getResults()) {
+      for (Operation *user : result.getUsers()) {
+        if (user == target ||
+            !domInfo->properlyDominates(target, user, /*enclosingOpOk=*/false))
+          return nullptr;
+      }
+    }
+    // Return the op to insert before
+    return target->getNextNode();
+  }
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
@@ -101,15 +166,24 @@ public:
       return;
 
     BufferViewFlowAnalysis analysis = BufferViewFlowAnalysis(func);
+    auto domInfo = DominanceInfo();
 
     func.walk([&](MemoryEffectOpInterface memEffectOp) -> WalkResult {
       if (!hasMemoryAllocEffect(memEffectOp))
         return WalkResult::advance();
 
       auto allocOp = memEffectOp;
-      LDBG("Checking alloc op: " << allocOp);
+      LDBG() << "Checking alloc op: " << allocOp;
 
-      auto deallocOp = findUserWithFreeSideEffect(allocOp->getResult(0));
+      SmallVector<OpResult> allocationResults = collectAllocations(allocOp);
+      // Multiple allocations from a single op are not considered here yet.
+      if (allocationResults.size() != 1)
+        return WalkResult::advance();
+
+      OpResult allocResult = allocationResults[0];
+      LDBG() << "On allocation result: " << allocResult;
+
+      auto *deallocOp = findUserWithFreeSideEffect(allocResult);
       if (!deallocOp || (deallocOp->getBlock() != allocOp->getBlock())) {
         // The pass handles allocations that have a single dealloc op in the
         // same block. We also should not hoist the dealloc op out of
@@ -119,16 +193,16 @@ public:
 
       Operation *lastUser = nullptr;
       const BufferViewFlowAnalysis::ValueSetT &deps =
-          analysis.resolve(allocOp->getResult(0));
+          analysis.resolve(allocResult);
       for (auto dep : llvm::make_early_inc_range(deps)) {
-        for (auto user : dep.getUsers()) {
+        for (auto *user : dep.getUsers()) {
           // We are looking for a non dealloc op user.
           // check if user is the dealloc op itself.
           if (user == deallocOp)
             continue;
 
           // find the ancestor of user that is in the same block as the allocOp.
-          auto topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+          auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
           if (!lastUser || happensBefore(lastUser, topUser)) {
             lastUser = topUser;
           }
@@ -137,12 +211,19 @@ public:
       if (lastUser == nullptr) {
         return WalkResult::advance();
       }
-      LDBG("Last user found: " << *lastUser);
+      LDBG() << "Last user found: " << *lastUser;
       assert(lastUser->getBlock() == allocOp->getBlock());
       assert(lastUser->getBlock() == deallocOp->getBlock());
-      // Move the dealloc op after the last user.
-      deallocOp->moveAfter(lastUser);
-      LDBG("Moved dealloc op after: " << *lastUser);
+
+      Operation *target =
+          findValidInsertionPoint(&domInfo, allocOp, deallocOp, lastUser);
+      if (!target) {
+        LDBG() << "No valid insertion point found; skipping move";
+        return WalkResult::advance();
+      }
+
+      deallocOp->moveBefore(target);
+      LDBG() << "Moved dealloc op before: " << *target;
 
       return WalkResult::advance();
     });
@@ -150,12 +231,3 @@ public:
 };
 
 } // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
-// OptimizeAllocatinliveness construction
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<Pass>
-mlir::bufferization::createOptimizeAllocationLivenessPass() {
-  return std::make_unique<OptimizeAllocationLiveness>();
-}

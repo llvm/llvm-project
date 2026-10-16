@@ -34,8 +34,8 @@
 #include "SymbolFileDWARFDwo.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 extern int g_verbose;
 
 // Extract a debug info entry for a given DWARFUnit from the data
@@ -98,16 +98,17 @@ static void ExtractAttrAndFormValue(
     form_value.SetSigned(attr_spec.getImplicitConstValue());
 }
 
-// GetDIENamesAndRanges
-//
-// Gets the valid address ranges for a given DIE by looking for a
-// DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
-bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
-    DWARFUnit *cu, const char *&name, const char *&mangled,
+/// Helper for the public \ref DWARFDebugInfoEntry::GetDIENamesAndRanges API.
+/// Fills in the output parameters that aren't set yet from \c die and appends
+/// the DIEs it elaborates on to \c elaborating_dies.
+static void GetDIENamesAndRanges(
+    const DWARFDIE &die, const char *&name, const char *&mangled,
     llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
     std::optional<int> &decl_line, std::optional<int> &decl_column,
     std::optional<int> &call_file, std::optional<int> &call_line,
-    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
+    std::optional<int> &call_column, DWARFExpressionList *frame_base,
+    llvm::SmallVectorImpl<DWARFDIE> &elaborating_dies) {
+  DWARFUnit *cu = die.GetCU();
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
@@ -116,12 +117,13 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   SymbolFileDWARF &dwarf = cu->GetSymbolFileDWARF();
   lldb::ModuleSP module = dwarf.GetObjectFile()->GetModule();
 
-  if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
+  if (const auto *abbrevDecl =
+          die.GetDIE()->GetAbbreviationDeclarationPtr(cu)) {
     const DWARFDataExtractor &data = cu->GetData();
-    lldb::offset_t offset = GetFirstAttributeOffset();
+    lldb::offset_t offset = die.GetDIE()->GetFirstAttributeOffset();
 
     if (!data.ValidOffset(offset))
-      return false;
+      return;
 
     bool do_offset = false;
 
@@ -168,7 +170,8 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
                 "range extraction failed ({3}), please file a bug "
                 "and attach the file at the start of this error message",
-                GetOffset(), llvm::dwarf::FormEncodingString(form_value.Form()),
+                die.GetOffset(),
+                llvm::dwarf::FormEncodingString(form_value.Form()),
                 form_value.Unsigned(), fmt_consume(r.takeError()));
           }
           break;
@@ -240,7 +243,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  DWARFExpression::ParseDWARFLocationList(cu, data, frame_base);
+                  cu->ParseDWARFLocationList(data, *frame_base);
                   frame_base->SetFuncFileAddress(lo_pc);
                 } else
                   set_frame_base_loclist_addr = true;
@@ -270,13 +273,49 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 
   if (ranges.empty() || name == nullptr || mangled == nullptr) {
     for (const DWARFDIE &die : dies) {
-      if (die) {
-        die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
-                                           decl_file, decl_line, decl_column,
-                                           call_file, call_line, call_column);
-      }
+      if (die)
+        elaborating_dies.push_back(die);
     }
   }
+}
+
+// GetDIENamesAndRanges
+//
+// Gets the valid address ranges for a given DIE by looking for a
+// DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
+bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
+    DWARFUnit *cu, const char *&name, const char *&mangled,
+    llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
+  llvm::SmallVector<DWARFDIE, 3> worklist;
+  worklist.emplace_back(cu, this);
+
+  // Keep track of the DIEs already seen to catch cycles.
+  llvm::SmallPtrSet<DWARFDebugInfoEntry const *, 3> seen;
+  seen.insert(this);
+
+  // The frame base is only taken from the DIE itself, not from the DIEs it
+  // elaborates on.
+  DWARFExpressionList *die_frame_base = frame_base;
+
+  while (!worklist.empty()) {
+    DWARFDIE current = worklist.pop_back_val();
+
+    llvm::SmallVector<DWARFDIE, 3> elaborating_dies;
+    ::GetDIENamesAndRanges(current, name, mangled, ranges, decl_file, decl_line,
+                           decl_column, call_file, call_line, call_column,
+                           die_frame_base, elaborating_dies);
+    die_frame_base = nullptr;
+
+    // Push in reverse so that the worklist handles them in the order.
+    for (const DWARFDIE &die : llvm::reverse(elaborating_dies)) {
+      if (seen.insert(die.GetDIE()).second)
+        worklist.push_back(die);
+    }
+  }
+
   return !ranges.empty();
 }
 
@@ -284,9 +323,10 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 /// Adds all attributes of the DIE at the top of the \c worklist to the
 /// \c attributes list. Specifcations and abstract origins are added
 /// to the \c worklist if the referenced DIE has not been seen before.
-static bool GetAttributes(llvm::SmallVectorImpl<DWARFDIE> &worklist,
-                          llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
-                          DWARFAttributes &attributes) {
+static bool
+GetAttributes(llvm::SmallVectorImpl<DWARFDIE> &worklist,
+              llvm::SmallPtrSet<DWARFDebugInfoEntry const *, 3> &seen,
+              DWARFAttributes &attributes) {
   assert(!worklist.empty() && "Need at least one DIE to visit.");
   assert(seen.size() >= 1 &&
          "Need to have seen at least the currently visited entry.");
@@ -366,7 +406,7 @@ DWARFAttributes DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
   // Keep track if DIEs already seen to prevent infinite recursion.
   // Value of '3' was picked for the same reason that
   // DWARFDie::findRecursively does.
-  llvm::SmallSet<DWARFDebugInfoEntry const *, 3> seen;
+  llvm::SmallPtrSet<DWARFDebugInfoEntry const *, 3> seen;
   seen.insert(this);
 
   do {
@@ -403,6 +443,9 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
       const dw_offset_t attr_offset = offset;
       form_value.SetUnit(cu);
       form_value.SetForm(abbrevDecl->getFormByIndex(idx));
+      if (abbrevDecl->getAttrIsImplicitConstByIndex(idx))
+        form_value.SetValue(abbrevDecl->getAttrImplicitConstValueByIndex(idx));
+
       if (form_value.ExtractValue(data, &offset)) {
         if (end_attr_offset_ptr)
           *end_attr_offset_ptr = offset;
@@ -611,13 +654,18 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   Log *log = GetLog(DWARFLog::DebugInfo);
   if (m_tag) {
-    if (m_tag == DW_TAG_subprogram) {
+    // Subprogram forward declarations don't have
+    // DW_AT_ranges/DW_AT_low_pc/DW_AT_high_pc attributes, so don't even try
+    // getting address range information for them.
+    if (m_tag == DW_TAG_subprogram &&
+        !GetAttributeValueAsOptionalUnsigned(cu, DW_AT_declaration)) {
       if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
               GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true)) {
         for (const auto &r : *ranges)
           debug_aranges->AppendRange(GetOffset(), r.LowPC, r.HighPC);
       } else {
-        LLDB_LOG_ERROR(log, ranges.takeError(), "DIE({1:x}): {0}", GetOffset());
+        LLDB_LOG_ERRORV(log, ranges.takeError(), "DIE({1:x}): {0}",
+                        GetOffset());
       }
     }
 

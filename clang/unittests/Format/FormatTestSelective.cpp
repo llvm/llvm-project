@@ -41,6 +41,11 @@ TEST_F(FormatTestSelective, RemovesTrailingWhitespaceOfFormattedLine) {
   EXPECT_EQ("int a;", format("int a;         ", 0, 0));
   EXPECT_EQ("int a;\n", format("int a;  \n   \n   \n ", 0, 0));
   EXPECT_EQ("int a;\nint b;    ", format("int a;  \nint b;    ", 0, 0));
+
+  EXPECT_EQ("void f() {}", format("void f() {\n"
+                                  "  \n"
+                                  "}",
+                                  11, 0));
 }
 
 TEST_F(FormatTestSelective, FormatsCorrectRegionForLeadingWhitespace) {
@@ -401,6 +406,42 @@ TEST_F(FormatTestSelective, WrongIndent) {
                    1, 0));
 }
 
+TEST_F(FormatTestSelective, KeepsEmptyLineBeforeNamespaceClosingBrace) {
+  // The closing brace is not in the range, but its leading empty line is
+  // reformatted because the previous line (or the empty line itself) is.
+  StringRef Code = "namespace N {\n"
+                   "int i;\n"
+                   "\n"
+                   "}";
+  EXPECT_EQ(Code, format(Code, 14, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 21, 0)); // Format the empty line before `}`.
+
+  Style.NamespaceMacros.push_back("TESTSUITE");
+  Code = "TESTSUITE(N) {\n"
+         "int i;\n"
+         "\n"
+         "}";
+  EXPECT_EQ(Code, format(Code, 15, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 22, 0)); // Format the empty line before `}`.
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterNamespace = true;
+  Code = "namespace N\n"
+         "{\n"
+         "int i;\n"
+         "\n"
+         "}";
+  EXPECT_EQ(Code, format(Code, 14, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 21, 0)); // Format the empty line before `}`.
+  Code = "TESTSUITE(N)\n"
+         "{\n"
+         "int i;\n"
+         "\n"
+         "}";
+  EXPECT_EQ(Code, format(Code, 15, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 22, 0)); // Format the empty line before `}`.
+}
+
 TEST_F(FormatTestSelective, AlwaysFormatsEntireMacroDefinitions) {
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   EXPECT_EQ("int  i;\n"
@@ -667,15 +708,14 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
   // need to be adapted.
   Style = getLLVMStyle();
 
-  const StringRef Code{"      class Foo {\n"
-                       "            void test() {\n"
-                       "    #ifdef 1\n"
-                       "                #define some\n" // format this line
-                       "         #endif\n"
-                       "    }};"};
+  constexpr StringRef Code("      class Foo {\n"
+                           "            void test() {\n"
+                           "    #ifdef 1\n"
+                           "                #define some\n" // format this line
+                           "         #endif\n"
+                           "    }};");
 
-  EXPECT_EQ(Style.IndentPPDirectives,
-            FormatStyle::PPDirectiveIndentStyle::PPDIS_None);
+  EXPECT_EQ(Style.IndentPPDirectives, FormatStyle::PPDIS_None);
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -684,8 +724,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "            }};", // Ditto: Bug?
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_BeforeHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -694,8 +733,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "    }};",
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_AfterHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"

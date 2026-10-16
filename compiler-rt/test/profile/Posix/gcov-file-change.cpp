@@ -16,8 +16,8 @@ inline auto *const inl_var_main = // CHECK:      1: [[#]]:inline auto
 void foo(int x) {                 // CHECK-NEXT: 1: [[#]]:
   if (x) {                        // CHECK-NEXT: 1: [[#]]:
 #include "a.inc"
-  }
-}
+  } // CHECK:      1: [[#]]:
+} // CHECK-NEXT: 1: [[#]]:
 // CHECK-NOT:  {{^ +[0-9]+:}}
 
 int main(int argc, char *argv[]) { // CHECK:      1: [[#]]:int main
@@ -32,10 +32,8 @@ int main(int argc, char *argv[]) { // CHECK:      1: [[#]]:int main
 //--- a.h
 /// Apple targets doesn't enable -mconstructor-aliases by default and the count may be 4.
 struct A { A() { } };              // CHECK:      {{[24]}}: [[#]]:struct A
-inline auto *const inl_var_a =
-    new A;
-/// TODO a.inc:1 should have line execution.
-// CHECK-NOT:  {{^ +[0-9]+:}}
+inline auto *const inl_var_a =     // CHECK-NEXT: 1: [[#]]:
+    new A;                         // CHECK-NEXT: 1: [[#]]:
 
 //--- a.inc
-puts("");
+puts(""); // CHECK:      1: [[#]]:puts

@@ -15,9 +15,9 @@
 //
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include <optional>
 #include <queue>
 
 #define DEBUG_TYPE "si-mode-register"
@@ -98,6 +98,10 @@ public:
   // which is used in Phase 3 if we need to insert a mode change.
   MachineInstr *FirstInsertionPoint = nullptr;
 
+  // Call and return sites, each paired with the block local mode changes that
+  // precede it. Phase 3 merges the pair with Pred to get the mode at the site.
+  SmallVector<std::pair<MachineInstr *, Status>, 2> BoundarySites;
+
   // A flag to indicate whether an Exit value has been set (we can't tell by
   // examining the Exit value itself as all values may be valid results).
   bool ExitSet = false;
@@ -107,10 +111,8 @@ public:
 
 namespace {
 
-class SIModeRegister : public MachineFunctionPass {
+class SIModeRegister {
 public:
-  static char ID;
-
   std::vector<std::unique_ptr<BlockData>> BlockInfo;
   std::queue<MachineBasicBlock *> Phase2List;
 
@@ -125,15 +127,12 @@ public:
 
   bool Changed = false;
 
-public:
-  SIModeRegister() : MachineFunctionPass(ID) {}
+  // Set during Phase 1. A restore at a boundary would undo an explicit request,
+  // so the mixed case is not handled.
+  bool AnyNonDefaultMode = false;
+  bool AnyWritesRoundMode = false;
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  bool run(MachineFunction &MF);
 
   void processBlockPhase1(MachineBasicBlock &MBB, const SIInstrInfo *TII);
 
@@ -143,19 +142,92 @@ public:
 
   Status getInstructionMode(MachineInstr &MI, const SIInstrInfo *TII);
 
-  void insertSetreg(MachineBasicBlock &MBB, MachineInstr *I,
+  void insertSetreg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                     const SIInstrInfo *TII, Status InstrMode);
+};
+
+class SIModeRegisterLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SIModeRegisterLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIModeRegister, DEBUG_TYPE,
+INITIALIZE_PASS(SIModeRegisterLegacy, DEBUG_TYPE,
                 "Insert required mode register values", false, false)
 
-char SIModeRegister::ID = 0;
+char SIModeRegisterLegacy::ID = 0;
 
-char &llvm::SIModeRegisterID = SIModeRegister::ID;
+char &llvm::SIModeRegisterID = SIModeRegisterLegacy::ID;
 
-FunctionPass *llvm::createSIModeRegisterPass() { return new SIModeRegister(); }
+FunctionPass *llvm::createSIModeRegisterPass() {
+  return new SIModeRegisterLegacy();
+}
+
+static bool isFPTruncRoundPseudo(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO:
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32:
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64:
+  case AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO:
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// The opcodes for which getInstructionMode below returns a non-default Status.
+static bool mayNeedNonDefaultMode(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_INTERP_P1LL_F16:
+  case AMDGPU::V_INTERP_P1LV_F16:
+  case AMDGPU::V_INTERP_P2_F16:
+    return true;
+  default:
+    return isFPTruncRoundPseudo(MI);
+  }
+}
+
+// Returns the {offset, mask} of the mode field an explicit setreg writes.
+static std::optional<std::pair<unsigned, unsigned>>
+getModeSetregField(const MachineInstr &MI, const SIInstrInfo *TII) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_SETREG_B32:
+  case AMDGPU::S_SETREG_B32_mode:
+  case AMDGPU::S_SETREG_IMM32_B32:
+  case AMDGPU::S_SETREG_IMM32_B32_mode:
+    break;
+  default:
+    return std::nullopt;
+  }
+  using namespace AMDGPU::Hwreg;
+  unsigned Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
+  auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
+  if (Id != ID_MODE)
+    return std::nullopt;
+  return std::make_pair(Offset, maskTrailingOnes<unsigned>(Width) << Offset);
+}
+
+// The wave-ending opcodes are isReturn too, but have no caller to restore for.
+static bool isReturnToCaller(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED:
+  case AMDGPU::S_ENDPGM_ORDERED_PS_DONE:
+    return false;
+  default:
+    return MI.isReturn();
+  }
+}
 
 // Determine the Mode register setting required for this instruction.
 // Instructions which don't use the Mode register return a null Status.
@@ -164,9 +236,7 @@ FunctionPass *llvm::createSIModeRegisterPass() { return new SIModeRegister(); }
 Status SIModeRegister::getInstructionMode(MachineInstr &MI,
                                           const SIInstrInfo *TII) {
   unsigned Opcode = MI.getOpcode();
-  if (TII->usesFPDPRounding(MI) ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO) {
+  if (TII->usesFPDPRounding(MI) || isFPTruncRoundPseudo(MI)) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
     case AMDGPU::V_INTERP_P1LV_F16:
@@ -177,25 +247,31 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
     case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO: {
       unsigned Mode = MI.getOperand(2).getImm();
       MI.removeOperand(2);
-      // Replacing the pseudo by a real instruction in place
-      if (TII->getSubtarget().hasTrue16BitInsts()) {
-        MachineBasicBlock &MBB = *MI.getParent();
-        MachineInstrBuilder B(*MBB.getParent(), MI);
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_fake16_e64));
-        MachineOperand Src0 = MI.getOperand(1);
-        MI.removeOperand(1);
-        B.addImm(0); // src0_modifiers
-        B.add(Src0); // re-add src0 operand
-        B.addImm(0); // clamp
-        B.addImm(0); // omod
-      } else
-        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
+    }
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32: {
+      unsigned Mode = MI.getOperand(2).getImm();
+      MI.removeOperand(2);
+      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_fake16_e32));
+      return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
+    }
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64: {
+      unsigned Mode = MI.getOperand(6).getImm();
+      MI.removeOperand(6);
+      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     case AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO: {
       unsigned Mode = MI.getOperand(2).getImm();
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F32_F64_e32));
+      return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
+    }
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO: {
+      unsigned Mode = MI.getOperand(2).getImm();
+      MI.removeOperand(2);
+      MI.setDesc(TII->get(AMDGPU::S_CVT_F16_F32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     default:
@@ -210,14 +286,15 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
 // the value of disjoint parts of the Mode register when we don't know the
 // value of the intervening bits. In that case we need to use more than one
 // setreg instruction.
-void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
+void SIModeRegister::insertSetreg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator I,
                                   const SIInstrInfo *TII, Status InstrMode) {
   while (InstrMode.Mask) {
     unsigned Offset = llvm::countr_zero<unsigned>(InstrMode.Mask);
     unsigned Width = llvm::countr_one<unsigned>(InstrMode.Mask >> Offset);
     unsigned Value = (InstrMode.Mode >> Offset) & ((1 << Width) - 1);
     using namespace AMDGPU::Hwreg;
-    BuildMI(MBB, MI, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+    BuildMI(MBB, I, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
         .addImm(Value)
         .addImm(HwregEncoding::encode(ID_MODE, Offset, Width));
     ++NumSetregInserted;
@@ -257,21 +334,16 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   bool RequirePending = true;
   Status IPChange;
   for (MachineInstr &MI : MBB) {
+    // getInstructionMode rewrites the pseudos, so classify MI before the call.
+    AnyNonDefaultMode |= mayNeedNonDefaultMode(MI);
+    AnyWritesRoundMode |= MI.getOpcode() == AMDGPU::S_ROUND_MODE;
     Status InstrMode = getInstructionMode(MI, TII);
-    if (MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
-        MI.getOpcode() == AMDGPU::S_SETREG_B32_mode ||
-        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
-        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_mode) {
+    if (auto Field = getModeSetregField(MI, TII)) {
       // We preserve any explicit mode register setreg instruction we encounter,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).
-      unsigned Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
-      using namespace AMDGPU::Hwreg;
-      auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
-      if (Id != ID_MODE)
-        continue;
-
-      unsigned Mask = maskTrailingOnes<unsigned>(Width) << Offset;
+      auto [Offset, Mask] = *Field;
+      AnyWritesRoundMode |= (Mask & FP_ROUND_MODE_DP(0x3)) != 0;
 
       // If an InsertionPoint is set we will insert a setreg there.
       if (InsertionPoint) {
@@ -293,6 +365,11 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
       } else {
         NewInfo->Change = NewInfo->Change.mergeUnknown(Mask);
       }
+    } else if (MI.isCall() || isReturnToCaller(MI)) {
+      // Whether a restore is needed is a whole function property, so only
+      // record the site here. Change is unaffected: Phase 3 pairs any restore
+      // it inserts with a re-set after the call.
+      NewInfo->BoundarySites.emplace_back(&MI, NewInfo->Change);
     } else if (!NewInfo->Change.isCompatible(InstrMode)) {
       // This instruction uses the Mode register and its requirements aren't
       // compatible with the current mode.
@@ -418,9 +495,37 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
     else
       insertSetreg(MBB, &MBB.instr_front(), TII, Delta);
   }
+
+  // Restore the default at the sites recorded in Phase 1.
+  if (!AnyNonDefaultMode || AnyWritesRoundMode)
+    return;
+  for (auto &[MI, ChangeAtSite] : BlockInfo[ThisBlock]->BoundarySites) {
+    Status AtSite = BlockInfo[ThisBlock]->Pred.merge(ChangeAtSite);
+    if (AtSite.isCompatible(DefaultStatus))
+      continue;
+    insertSetreg(MBB, MI, TII, AtSite.delta(DefaultStatus));
+    // Phase 1 modelled the site as mode preserving, so put the mode back.
+    if (!MI->isTerminator()) {
+      insertSetreg(MBB, std::next(MI->getIterator()), TII,
+                   DefaultStatus.delta(AtSite));
+    }
+  }
 }
 
-bool SIModeRegister::runOnMachineFunction(MachineFunction &MF) {
+bool SIModeRegisterLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return SIModeRegister().run(MF);
+}
+
+PreservedAnalyses SIModeRegisterPass::run(MachineFunction &MF,
+                                          MachineFunctionAnalysisManager &AM) {
+  if (!SIModeRegister().run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool SIModeRegister::run(MachineFunction &MF) {
   // Constrained FP intrinsics are used to support non-default rounding modes.
   // strictfp attribute is required to mark functions with strict FP semantics
   // having constrained FP intrinsics. This pass fixes up operations that uses

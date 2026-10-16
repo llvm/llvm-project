@@ -7,6 +7,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 @CBV = external constant %"$Globals"
 
 define void @main() #0 {
+  %1 = load float, ptr @CBV, align 4
   ret void
 }
 

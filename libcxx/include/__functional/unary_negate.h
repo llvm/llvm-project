@@ -17,13 +17,12 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+
 template <class _Predicate>
-class _LIBCPP_TEMPLATE_VIS
-_LIBCPP_DEPRECATED_IN_CXX17 unary_negate : public __unary_function<typename _Predicate::argument_type, bool> {
+class _LIBCPP_DEPRECATED_IN_CXX17 unary_negate : public __unary_function<typename _Predicate::argument_type, bool> {
   _Predicate __pred_;
 
 public:
@@ -41,8 +40,8 @@ not1(const _Predicate& __pred) {
   return unary_negate<_Predicate>(__pred);
 }
 
-#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS)
 
 #endif // _LIBCPP___FUNCTIONAL_UNARY_NEGATE_H

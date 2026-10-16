@@ -141,10 +141,10 @@ TEST(IListIteratorTest, ReverseConstructor) {
   L.insert(L.end(), B);
 
   // Save typing.
-  typedef simple_ilist<Node>::iterator iterator;
-  typedef simple_ilist<Node>::reverse_iterator reverse_iterator;
-  typedef simple_ilist<Node>::const_iterator const_iterator;
-  typedef simple_ilist<Node>::const_reverse_iterator const_reverse_iterator;
+  using iterator = simple_ilist<Node>::iterator;
+  using reverse_iterator = simple_ilist<Node>::reverse_iterator;
+  using const_iterator = simple_ilist<Node>::const_iterator;
+  using const_reverse_iterator = simple_ilist<Node>::const_reverse_iterator;
 
   // Check conversion values.
   EXPECT_EQ(L.begin(), iterator(L.rend()));
@@ -189,10 +189,31 @@ TEST(IListIteratorTest, GetParent) {
   EXPECT_EQ(&P, L.rbegin().getNodeParent());
   EXPECT_EQ(&P, L.rend().getNodeParent());
 
+  // Check we can get the node parent from "const_iterator".
+  EXPECT_EQ(&P, CL.begin().getNodeParent());
+  EXPECT_EQ(&P, CL.end().getNodeParent());
+  EXPECT_EQ(&P, CL.rbegin().getNodeParent());
+  EXPECT_EQ(&P, CL.rend().getNodeParent());
+
+  // Check we can get the node parent from "const iterator".
+  const auto ConstBegin = L.begin();
+  EXPECT_EQ(&P, ConstBegin.getNodeParent());
+  const auto ConstEnd = L.end();
+  EXPECT_EQ(&P, ConstEnd.getNodeParent());
+  const auto ConstRBegin = L.rbegin();
+  EXPECT_EQ(&P, ConstRBegin.getNodeParent());
+  const auto ConstREnd = L.rend();
+  EXPECT_EQ(&P, ConstREnd.getNodeParent());
+
   using VarParentTy =
       std::remove_pointer_t<decltype(L.begin().getNodeParent())>;
+  using ConstVarParentTy =
+      std::remove_pointer_t<decltype(ConstBegin.getNodeParent())>;
   using ConstParentTy =
       std::remove_pointer_t<decltype(CL.begin().getNodeParent())>;
+  static_assert(
+      std::is_same_v<VarParentTy, ConstVarParentTy>,
+      "const iterator should behave like iterator, not const_iterator");
   static_assert(
       std::is_const_v<ConstParentTy> &&
           std::is_same_v<VarParentTy, std::remove_const_t<ConstParentTy>>,

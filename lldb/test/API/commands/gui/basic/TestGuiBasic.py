@@ -13,7 +13,7 @@ class BasicGuiCommandTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_gui(self):
         self.build()
 
@@ -51,4 +51,3 @@ class BasicGuiCommandTest(PExpectTest):
         self.child.send(escape_key)
 
         self.expect_prompt()
-        self.quit()

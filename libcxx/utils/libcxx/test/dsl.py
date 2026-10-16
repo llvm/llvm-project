@@ -9,7 +9,6 @@
 import os
 import pickle
 import platform
-import shlex
 import shutil
 import tempfile
 
@@ -31,6 +30,21 @@ class ConfigurationCompilationError(ConfigurationError):
 
 class ConfigurationRuntimeError(ConfigurationError):
     pass
+
+
+def _compilerFingerprint(config):
+    """
+    Returns an opaque value that changes whenever the compiler being tested is
+    rebuilt, even if it keeps the same path.
+    """
+    try:
+        cxx = _getSubstitution("%{cxx}", config.substitutions)
+        path = shutil.which(cxx) or cxx
+        path = os.path.realpath(path)
+        st = os.stat(path)
+        return (path, st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
 
 
 def _memoizeExpensiveOperation(extractCacheKey):
@@ -63,7 +77,12 @@ def _memoizeExpensiveOperation(extractCacheKey):
                 with open(persistentCache, "rb") as cacheFile:
                     cache = pickle.load(cacheFile)
 
-            cacheKey = pickle.dumps(extractCacheKey(config, *args, **kwargs))
+            # Mix in the compiler fingerprint so that rebuilding clang
+            # in-place invalidates any cached verdicts obtained against the
+            # previous build, instead of silently reusing them.
+            cacheKey = pickle.dumps(
+                (_compilerFingerprint(config), extractCacheKey(config, *args, **kwargs))
+            )
             if cacheKey not in cache:
                 cache[cacheKey] = function(config, *args, **kwargs)
                 # Update the persistent cache so it knows about the new key
@@ -84,12 +103,12 @@ def _memoizeExpensiveOperation(extractCacheKey):
 
 def _executeWithFakeConfig(test, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands, testUpdateOutput)
     """
     litConfig = lit.LitConfig.LitConfig(
         progname="lit",
         path=[],
-        quiet=False,
+        diagnostic_level="note",
         useValgrind=False,
         valgrindLeakCheck=False,
         valgrindArgs=[],
@@ -112,8 +131,8 @@ def _makeConfigTest(config):
             os.makedirs(supportDir)
 
     # Create a dummy test suite and single dummy test inside it. As part of
-    # the Lit configuration, automatically do the equivalent of 'mkdir %T'
-    # and 'rm -r %T' to avoid cluttering the build directory.
+    # the Lit configuration, automatically do the equivalent of 'mkdir %{temp}'
+    # and 'rm -r %{temp}' to avoid cluttering the build directory.
     suite = lit.Test.TestSuite("__config__", sourceRoot, execRoot, config)
     tmp = tempfile.NamedTemporaryFile(dir=sourceRoot, delete=False, suffix=".cpp")
     tmp.close()
@@ -145,7 +164,7 @@ def sourceBuilds(config, source, additionalFlags=[]):
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as sourceFile:
             sourceFile.write(source)
-        _, _, exitCode, _, _ = _executeWithFakeConfig(
+        _, _, exitCode, _, _, _ = _executeWithFakeConfig(
             test, ["%{{build}} {}".format(" ".join(additionalFlags))]
         )
         return exitCode == 0
@@ -168,7 +187,7 @@ def programOutput(config, program, args=None):
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as source:
             source.write(program)
-        _, err, exitCode, _, buildcmd = _executeWithFakeConfig(test, ["%{build}"])
+        _, err, exitCode, _, buildcmd, _ = _executeWithFakeConfig(test, ["%{build}"])
         if exitCode != 0:
             raise ConfigurationCompilationError(
                 "Failed to build program, cmd:\n{}\nstderr is:\n{}".format(
@@ -176,7 +195,7 @@ def programOutput(config, program, args=None):
                 )
             )
 
-        out, err, exitCode, _, runcmd = _executeWithFakeConfig(
+        out, err, exitCode, _, runcmd, _ = _executeWithFakeConfig(
             test, ["%{{run}} {}".format(" ".join(args))]
         )
         if exitCode != 0:
@@ -213,7 +232,7 @@ def tryCompileFlag(config, flag):
     """
     # fmt: off
     with _makeConfigTest(config) as test:
-        out, err, exitCode, timeoutInfo, _ = _executeWithFakeConfig(test, [
+        out, err, exitCode, timeoutInfo, _, _ = _executeWithFakeConfig(test, [
             "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
         ])
         return exitCode, out, err
@@ -240,7 +259,7 @@ def runScriptExitCode(config, script):
     could appear on the right-hand-side of a `RUN:` keyword.
     """
     with _makeConfigTest(config) as test:
-        _, _, exitCode, _, _ = _executeWithFakeConfig(test, script)
+        _, _, exitCode, _, _, _ = _executeWithFakeConfig(test, script)
         return exitCode
 
 
@@ -254,7 +273,7 @@ def commandOutput(config, command):
     could appear on the right-hand-side of a `RUN:` keyword.
     """
     with _makeConfigTest(config) as test:
-        out, err, exitCode, _, cmd = _executeWithFakeConfig(test, command)
+        out, err, exitCode, _, cmd, _ = _executeWithFakeConfig(test, command)
         if exitCode != 0:
             raise ConfigurationRuntimeError(
                 "Failed to run command: {}\nstderr is:\n{}".format(cmd, err)
@@ -274,23 +293,74 @@ def hasAnyLocale(config, locales):
     %{exec} -- this means that the command may be executed on a remote host
     depending on the %{exec} substitution.
     """
-    program = """
+
+    # Convert the locale names into C string literals. We expect all currently
+    # known locale names to be printable ASCII and not contain awkward
+    # characters like \ or ", so this should be trivial.
+    assert all(
+        0x20 <= ord(ch) <= 0x7E and ch not in {'"', "\\"}
+        for locale in locales
+        for ch in locale
+    )
+    name_string_literals = ", ".join('"' + locale + '"' for locale in locales)
+
+    program = (
+        """
     #include <stddef.h>
-    #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
+
+    #include "test_macros.h"
+
+    #ifdef TEST_HAS_NO_LOCALIZATION
       int main(int, char**) { return 1; }
     #else
       #include <locale.h>
-      int main(int argc, char** argv) {
-        for (int i = 1; i < argc; i++) {
-          if (::setlocale(LC_ALL, argv[i]) != NULL) {
+      static const char *const test_locale_names[] = {
+          """
+        + name_string_literals
+        + """, nullptr,
+      };
+      int main(int, char**) {
+        for (size_t i = 0; test_locale_names[i]; i++) {
+          if (::setlocale(LC_ALL, test_locale_names[i]) != NULL) {
             return 0;
           }
         }
         return 1;
       }
     #endif
-  """
-    return programSucceeds(config, program, args=[shlex.quote(l) for l in locales])
+    """
+    )
+    return programSucceeds(config, program)
+
+
+def _macrosFromSource(config, source, flags=""):
+    """
+    Preprocess the given source and return a dictionary of the macros it defines.
+
+    The keys are strings representing macros, and the values are strings
+    representing what each macro is defined to.
+    """
+    with _makeConfigTest(config) as test:
+        with open(test.getSourcePath(), "w") as sourceFile:
+            sourceFile.write(source)
+        unparsedOutput, err, exitCode, _, cmd, _ = _executeWithFakeConfig(
+            test, ["%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)]
+        )
+        if exitCode != 0:
+            raise ConfigurationCompilationError(
+                "Failed to retrieve macros, compiler invocation is:\n{}\nstderr is:\n{}".format(
+                    cmd, err
+                )
+            )
+        parsedMacros = dict()
+        defines = (
+            l.strip() for l in unparsedOutput.split("\n") if l.startswith("#define ")
+        )
+        for line in defines:
+            line = line[len("#define ") :]
+            macro, _, value = line.partition(" ")
+            parsedMacros[macro] = value
+        return parsedMacros
 
 
 @_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
@@ -304,33 +374,26 @@ def compilerMacros(config, flags=""):
     If the optional `flags` argument (a string) is provided, these flags will
     be added to the compiler invocation when generating the macros.
     """
-    with _makeConfigTest(config) as test:
-        with open(test.getSourcePath(), "w") as sourceFile:
-            sourceFile.write(
-                """
-      #if __has_include(<__config>)
-      #  include <__config>
-      #endif
-      """
-            )
-        unparsedOutput, err, exitCode, _, cmd = _executeWithFakeConfig(
-            test, ["%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)]
-        )
-        if exitCode != 0:
-            raise ConfigurationCompilationError(
-                "Failed to retrieve compiler macros, compiler invocation is:\n{}\nstderr is:\n{}".format(
-                    cmd, err
-                )
-            )
-        parsedMacros = dict()
-        defines = (
-            l.strip() for l in unparsedOutput.split("\n") if l.startswith("#define ")
-        )
-        for line in defines:
-            line = line[len("#define ") :]
-            macro, _, value = line.partition(" ")
-            parsedMacros[macro] = value
-        return parsedMacros
+    source = """
+    #if __has_include(<__config>)
+    #  include <__config>
+    #endif
+    """
+    return _macrosFromSource(config, source, flags)
+
+
+@_memoizeExpensiveOperation(lambda c, flags="": (c.substitutions, c.environment, flags))
+def testMacros(config, flags=""):
+    """
+    Return a dictionary of the macros defined by the test suite's <test_macros.h>.
+
+    The keys are strings representing macros, and the values are strings
+    representing what each macro is defined to.
+
+    If the optional `flags` argument (a string) is provided, these flags will
+    be added to the compiler invocation when generating the macros.
+    """
+    return _macrosFromSource(config, "#include <test_macros.h>\n", flags)
 
 
 def featureTestMacros(config, flags=""):
@@ -348,8 +411,8 @@ def featureTestMacros(config, flags=""):
     }
 
 
-def _getSubstitution(substitution, config):
-  for (orig, replacement) in config.substitutions:
+def _getSubstitution(substitution, all_substitutions):
+  for (orig, replacement) in all_substitutions:
     if orig == substitution:
       return replacement
   raise ValueError('Substitution {} is not in the config.'.format(substitution))

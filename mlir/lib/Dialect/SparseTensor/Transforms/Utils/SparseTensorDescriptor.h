@@ -231,7 +231,7 @@ public:
 /// Packs the given values as a "tuple" value.
 inline Value genTuple(OpBuilder &builder, Location loc, Type tp,
                       ValueRange values) {
-  return builder.create<UnrealizedConversionCastOp>(loc, TypeRange(tp), values)
+  return UnrealizedConversionCastOp::create(builder, loc, TypeRange(tp), values)
       .getResult(0);
 }
 

@@ -16,3 +16,9 @@ RUN: llvm-profdata merge --sample --binary -output=%t.4.profdata %S/Inputs/sampl
 RUN: llvm-profdata merge --sample --extbinary -output=%t.5.profdata %t.4.profdata
 RUN: llvm-profdata merge --sample --text -output=%t.4.proftext %t.5.profdata
 RUN: diff -b %t.4.proftext %S/Inputs/sample-profile.proftext
+# Round trip from text --> extbinary --> text.
+# The vtable profile is supported by ext-binary profile but not raw binary profile format,
+# so we don't use raw binary profile format in this roundtrip.
+RUN: llvm-profdata merge --sample --extbinary -extbinary-write-vtable-type-prof --output=%t.5.profdata %S/Inputs/sample-profile-ext.proftext
+RUN: llvm-profdata merge --sample --text --output=%t.5.proftext %t.5.profdata
+RUN: diff -b %t.5.proftext %S/Inputs/sample-profile-ext.proftext

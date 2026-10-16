@@ -8,8 +8,8 @@ _Atomic int ai = 0;
 // FIXME: &ai is an address constant, so this should be accepted as an
 // initializer, but the bit-cast inserted due to the pointer conversion is
 // tripping up the test for whether the initializer is a constant expression.
-// The warning is correct but the error is not.
-_Atomic(int *) aip3 = &ai; // both-warning {{incompatible pointer types initializing '_Atomic(int *)' with an expression of type '_Atomic(int) *'}} \
+// The first error is correct; the second is not.
+_Atomic(int *) aip3 = &ai; // both-error {{incompatible pointer types initializing '_Atomic(int *)' with an expression of type '_Atomic(int) *'}} \
                            // both-error {{initializer element is not a compile-time constant}}
 
 #include <stdatomic.h>
@@ -65,9 +65,23 @@ _Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
 _Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
 _Static_assert(__atomic_always_lock_free(4, (void*)4), "");
 _Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+_Static_assert(!__atomic_always_lock_free(2, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(2, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(8, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(8, (void*)8), "");
 
 _Static_assert(__atomic_always_lock_free(1, "string"), "");
 _Static_assert(!__atomic_always_lock_free(2, "string"), "");
 _Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
 void dummyfn();
 _Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
+
+// GH170139, GH120082
+_Static_assert(!__atomic_always_lock_free(0, 0), "");
+_Static_assert(!__atomic_always_lock_free(0, 1), ""); // both-error {{incompatible integer to pointer conversion}}
+_Static_assert(!__atomic_always_lock_free(0, (void*)4), "");
+_Static_assert(!__atomic_always_lock_free(0, &ai), "");
+_Static_assert(__atomic_is_lock_free(0, 0), ""); // both-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(0, (void*)4), ""); // both-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(0, &ai), ""); // both-error {{not an integral constant expression}}
+_Static_assert(__c11_atomic_is_lock_free(0), ""); // both-error {{not an integral constant expression}}

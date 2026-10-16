@@ -10,8 +10,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -23,7 +23,7 @@ using namespace mlir::tensor;
 static OpFoldResult getCollapsedOutputDimFromInputShape(
     OpBuilder &builder, Location loc, int64_t dimIndex, Value src,
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociationMap) {
-  if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
+  if (ShapedType::isStatic(dstStaticShape[dimIndex])) {
     // Static dimension: return Attribute.
     return builder.getIndexAttr(dstStaticShape[dimIndex]);
   }
@@ -51,11 +51,11 @@ static OpFoldResult getCollapsedOutputDimFromInputShape(
 static SmallVector<OpFoldResult, 4> getCollapsedOutputShapeFromInputShape(
     OpBuilder &builder, Location loc, Value src,
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation) {
-  return llvm::to_vector<4>(llvm::map_range(
+  return llvm::map_to_vector<4>(
       llvm::seq<int64_t>(0, dstStaticShape.size()), [&](int64_t dim) {
         return getCollapsedOutputDimFromInputShape(
             builder, loc, dim, src, dstStaticShape, reassociation);
-      }));
+      });
 }
 
 struct ReifyCollapseShapeOp
@@ -78,6 +78,9 @@ namespace {
 struct ReifyExpandShapeOp
     : public ReifyRankedShapedTypeOpInterface::ExternalModel<ReifyExpandShapeOp,
                                                              ExpandShapeOp> {
+  using Base =
+      ReifyRankedShapedTypeOpInterface::ExternalModel<ReifyExpandShapeOp,
+                                                      ExpandShapeOp>;
   LogicalResult
   reifyResultShapes(Operation *op, OpBuilder &b,
                     ReifiedRankedShapedTypeDims &reifyResultShapes) const {

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -35,7 +36,7 @@ using namespace llvm;
 
 static MCAsmInfo *createVEMCAsmInfo(const MCRegisterInfo &MRI, const Triple &TT,
                                     const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new VEELFMCAsmInfo(TT);
+  MCAsmInfo *MAI = new VEELFMCAsmInfo(TT, Options);
   unsigned Reg = MRI.getDwarfRegNum(VE::SX11, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0);
   MAI->addInitialFrameState(Inst);
@@ -84,7 +85,7 @@ static MCInstPrinter *createVEMCInstPrinter(const Triple &T,
   return new VEInstPrinter(MAI, MII, MRI);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheVETarget(), createVEMCAsmInfo);
 

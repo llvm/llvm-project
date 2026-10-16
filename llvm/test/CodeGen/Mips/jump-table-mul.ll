@@ -16,7 +16,7 @@ define i64 @test(i64 %arg) {
 ; CHECK-NEXT:    ld $3, %got_page(.LJTI0_0)($1)
 ; CHECK-NEXT:    daddu $2, $2, $3
 ; CHECK-NEXT:    ld $2, %got_ofst(.LJTI0_0)($2)
-; CHECK-NEXT:    daddu $1, $2, $1
+; CHECK-NEXT:    daddu $1, $1, $2
 ; CHECK-NEXT:    jr $1
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB0_2: # %sw.bb

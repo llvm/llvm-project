@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/target.h"
@@ -118,7 +119,7 @@ namespace Fortran::evaluate {
 
 DynamicType::DynamicType(int k, const semantics::ParamValue &pv)
     : category_{TypeCategory::Character}, kind_{k} {
-  CHECK(IsValidKindOfIntrinsicType(category_, kind_));
+  CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   if (auto n{ToInt64(pv.GetExplicit())}) {
     knownLength_ = *n > 0 ? *n : 0;
   } else {
@@ -161,6 +162,14 @@ std::size_t DynamicType::GetAlignment(
         return derived_->scope()->alignment().value_or(1);
       }
       break;
+
+    // EnumerationTypes skip normal instantiation and may not have scope set.
+    case semantics::DerivedTypeSpec::Category::EnumerationType:
+      if (derived_ && derived_->GetScope()) {
+        return derived_->GetScope()->alignment().value_or(1);
+      }
+      break;
+
     case semantics::DerivedTypeSpec::Category::IntrinsicVector:
     case semantics::DerivedTypeSpec::Category::PairVector:
     case semantics::DerivedTypeSpec::Category::QuadVector:
@@ -198,6 +207,21 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
+    // EnumerationTypes might not have scope set yet, so they need to use
+    // GetScope() instead of scope().  Since EnumerationTypes are an internal
+    // only type, they can never be polymorphic, so the check in the
+    // corresponding conditional below is unnecessary here.
+    if (derived_ &&
+        (GetDerivedTypeSpec().category() ==
+            semantics::DerivedTypeSpec::Category::EnumerationType) &&
+        derived_->GetScope()) {
+      auto size{derived_->GetScope()->size()};
+      auto align{aligned ? derived_->GetScope()->alignment().value_or(0) : 0};
+      auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
+      return Expr<SubscriptInteger>{
+          static_cast<ConstantSubscript>(alignedSize)};
+    }
+    // Regular derived type path.
     if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
@@ -252,6 +276,17 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &type) {
   }
 }
 
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(
+    const DynamicType &type) {
+  const semantics::DerivedTypeSpec *derived{GetDerivedTypeSpec(type)};
+  return derived && derived->IsEnumerationType() ? derived : nullptr;
+}
+
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(
+    const std::optional<DynamicType> &type) {
+  return type ? GetEnumerationTypeSpec(*type) : nullptr;
+}
+
 static const semantics::Symbol *FindParentComponent(
     const semantics::DerivedTypeSpec &derived) {
   const semantics::Symbol &typeSymbol{derived.typeSymbol()};
@@ -298,13 +333,18 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &,
 
 // F2023 7.5.3.2
 static bool AreSameComponent(const semantics::Symbol &x,
-    const semantics::Symbol &y, bool ignoreSequence,
+    const semantics::Symbol &y, bool ignoreSequence, bool sameModuleName,
     SetOfDerivedTypePairs &inProgress) {
   if (x.attrs() != y.attrs()) {
     return false;
   }
-  if (x.attrs().test(semantics::Attr::PRIVATE)) {
-    return false;
+  if (x.attrs().test(semantics::Attr::PRIVATE) ||
+      y.attrs().test(semantics::Attr::PRIVATE)) {
+    if (!sameModuleName ||
+        x.attrs().test(semantics::Attr::PRIVATE) !=
+            y.attrs().test(semantics::Attr::PRIVATE)) {
+      return false;
+    }
   }
   if (x.size() && y.size()) {
     if (x.offset() != y.offset() || x.size() != y.size()) {
@@ -481,9 +521,20 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
           ySymbol.attrs().test(semantics::Attr::BIND_C)) {
     return false;
   }
-  if (!ignoreSequence && !(xDetails.sequence() && yDetails.sequence()) &&
-      !(xSymbol.attrs().test(semantics::Attr::BIND_C) &&
-          ySymbol.attrs().test(semantics::Attr::BIND_C))) {
+  bool sameModuleName{false};
+  const semantics::Scope &xOwner{xSymbol.owner()};
+  const semantics::Scope &yOwner{ySymbol.owner()};
+  if (xOwner.IsModule() && yOwner.IsModule()) {
+    if (auto xModuleName{xOwner.GetName()}) {
+      if (auto yModuleName{yOwner.GetName()}) {
+        if (*xModuleName == *yModuleName) {
+          sameModuleName = true;
+        }
+      }
+    }
+  }
+  if (!sameModuleName && !ignoreSequence && !xDetails.sequence() &&
+      !xSymbol.attrs().test(semantics::Attr::BIND_C)) {
     // PGI does not enforce this requirement; all other Fortran
     // compilers do with a hard error when violations are caught.
     return false;
@@ -501,9 +552,10 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
     const auto xLookup{xSymbol.scope()->find(*xComponentName)};
     const auto yLookup{ySymbol.scope()->find(*yComponentName)};
     if (xLookup == xSymbol.scope()->end() ||
-        yLookup == ySymbol.scope()->end() ||
-        !AreSameComponent(
-            *xLookup->second, *yLookup->second, ignoreSequence, inProgress)) {
+        yLookup == ySymbol.scope()->end()) {
+      return false;
+    } else if (!AreSameComponent(*xLookup->second, *yLookup->second,
+                   ignoreSequence, sameModuleName, inProgress)) {
       return false;
     }
   }
@@ -520,6 +572,12 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
   return AreSameDerivedType(x, y, true, true, false, inProgress);
+}
+
+bool AreSameDerivedTypeIgnoringLengthParameters(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, false, true, false, inProgress);
 }
 
 bool AreSameDerivedTypeIgnoringSequence(
@@ -575,17 +633,15 @@ static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
     const auto yLen{y.knownLength()};
     return x.kind() == y.kind() &&
         (ignoreLengths || !xLen || !yLen || *xLen == *yLen);
-  } else if (x.category() != TypeCategory::Derived) {
-    if (x.IsTypelessIntrinsicArgument()) {
-      return y.IsTypelessIntrinsicArgument();
-    } else {
-      return !y.IsTypelessIntrinsicArgument() && x.kind() == y.kind();
-    }
-  } else {
+  } else if (x.category() == TypeCategory::Derived) {
     const auto *xdt{GetDerivedTypeSpec(x)};
     const auto *ydt{GetDerivedTypeSpec(y)};
     return AreCompatibleDerivedTypes(
         xdt, ydt, x.IsPolymorphic(), ignoreTypeParameterValues, false);
+  } else if (x.IsTypelessIntrinsicArgument()) {
+    return y.IsTypelessIntrinsicArgument();
+  } else {
+    return !y.IsTypelessIntrinsicArgument() && x.kind() == y.kind();
   }
 }
 
@@ -660,7 +716,7 @@ std::optional<DynamicType> DynamicType::From(
   if (const auto *intrinsic{type.AsIntrinsic()}) {
     if (auto kind{ToInt64(intrinsic->kind())}) {
       TypeCategory category{intrinsic->category()};
-      if (IsValidKindOfIntrinsicType(category, *kind)) {
+      if (common::IsValidKindOfIntrinsicType(category, *kind)) {
         if (category == TypeCategory::Character) {
           const auto &charType{type.characterTypeSpec()};
           return DynamicType{static_cast<int>(*kind), charType.length()};
@@ -760,6 +816,19 @@ bool DynamicType::HasDeferredTypeParameter() const {
   return charLengthParamValue_ && charLengthParamValue_->isDeferred();
 }
 
+bool DynamicType::HasDeferredOrAssumedTypeParameter() const {
+  if (derived_) {
+    for (const auto &pair : derived_->parameters()) {
+      if (pair.second.isDeferred() || pair.second.isAssumed()) {
+        return true;
+      }
+    }
+  }
+  return charLengthParamValue_ &&
+      (charLengthParamValue_->isDeferred() ||
+          charLengthParamValue_->isAssumed());
+}
+
 bool SomeKind<TypeCategory::Derived>::operator==(
     const SomeKind<TypeCategory::Derived> &that) const {
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
@@ -849,7 +918,10 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     return true;
   case TypeCategory::Real:
   case TypeCategory::Complex:
-    return type.kind() >= 4 /* not a short or half float */ || !features ||
+    // KIND=2 is IEEE-754 binary16, interoperable with C _Float16.
+    // KIND=3 (bfloat16) has no standard interoperable C type, so it is
+    // accepted only under CUDA (or when reading a module file).
+    return type.kind() == 2 || type.kind() >= 4 || !features ||
         features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL

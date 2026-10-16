@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-linux-gnueabihf -filetype=obj <%s | llvm-objdump --triple=armv7 --no-show-raw-insn -d - | FileCheck %s
+; RUN: llc -mtriple=arm-linux-gnueabi -filetype=obj <%s | llvm-objdump --triple=armv7 --no-show-raw-insn -d - | FileCheck %s
 
 ;; Expect architectural nop to be used between func2 and func3 but not func1
 ;; and func2 due to lack of subtarget support in func2.
@@ -18,7 +18,7 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { "target-cpu"="generic" "target-features"="+armv7-a,+dsp,+neon,+vfp3,-thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "target-cpu"="generic" "target-features"="+armv7-a,+dsp,+neon,+vfp3,-thumb-mode" "use-soft-float"="false" }
 attributes #1 = { "target-cpu"="arm7tdmi" "target-features"="+armv4t" "use-soft-float"="true" }
 
 

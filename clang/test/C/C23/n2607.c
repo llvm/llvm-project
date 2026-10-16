@@ -24,7 +24,7 @@ void test1(void) {
 void test2(void) {
   typedef int array[1];
   array reg_array;
-  const array const_array;
+  const array const_array = { 0 };
 
   // An array and its elements are identically qualified. We have to test this
   // using pointers to the array and element, because the controlling
@@ -50,7 +50,7 @@ void test2(void) {
 void test3(void) {
   // Validate that we pick the correct composite type for a conditional
   // operator in the presence of qualifiers.
-  const int const_array[1];
+  const int const_array[1] = { 0 };
   int array[1];
 
   // FIXME: the type here should be `const int (*)[1]`, but for some reason,

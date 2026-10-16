@@ -8,8 +8,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 
-#include "llvm/Support/Parallel.h"
-
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"

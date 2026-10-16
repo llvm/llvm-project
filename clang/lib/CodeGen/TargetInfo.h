@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 namespace llvm {
 class Constant;
@@ -32,13 +33,45 @@ class Value;
 }
 
 namespace clang {
+class CXXRecordDecl;
 class Decl;
+
+/// Collapses a clang sync scope onto the target-neutral llvm::AtomicScope.
+inline llvm::AtomicScope getAtomicScope(SyncScope S) {
+  switch (S) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return llvm::AtomicScope::Single;
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return llvm::AtomicScope::Wavefront;
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return llvm::AtomicScope::Workgroup;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    return llvm::AtomicScope::Cluster;
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return llvm::AtomicScope::Device;
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return llvm::AtomicScope::System;
+  }
+  llvm_unreachable("Invalid sync scope");
+}
 
 namespace CodeGen {
 class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
+class CGHLSLOffsetInfo;
 class CGBlockInfo;
+class CGHLSLOffsetInfo;
 class SwiftABIInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
@@ -70,6 +103,10 @@ public:
     assert(SwiftInfo && "Swift ABI info has not been initialized");
     return *SwiftInfo;
   }
+
+  /// supportsLibCall - Query to whether or not target supports all
+  /// lib calls.
+  virtual bool supportsLibCall() const { return true; }
 
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
@@ -294,8 +331,8 @@ public:
                                        llvm::StringRef Value,
                                        llvm::SmallString<32> &Opt) const {}
 
-  /// Get LLVM calling convention for OpenCL kernel.
-  virtual unsigned getOpenCLKernelCallingConv() const;
+  /// Get LLVM calling convention for device kernels.
+  virtual unsigned getDeviceKernelCallingConv() const;
 
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
@@ -312,45 +349,27 @@ public:
   virtual LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                           const VarDecl *D) const;
 
-  /// Get the AST address space for alloca.
-  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
-
-  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               LangAS SrcAddr, LangAS DestAddr,
-                               llvm::Type *DestTy,
-                               bool IsNonNull = false) const;
-
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the LLVM value to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
-                                            llvm::Value *V, LangAS SrcAddr,
-                                            LangAS DestAddr, llvm::Type *DestTy,
-                                            bool IsNonNull = false) const;
-
-  /// Perform address space cast of a constant expression of pointer type.
-  /// \param V is the LLVM constant to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
-                                               llvm::Constant *V,
-                                               LangAS SrcAddr, LangAS DestAddr,
-                                               llvm::Type *DestTy) const;
+  /// Get the address space for an indirect (sret) return of the given type.
+  /// The default falls back to the alloca AS.
+  virtual LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const {
+    return LangAS::Default;
+  }
 
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
     return LangAS::Default;
   }
 
-  /// Get the syncscope used in LLVM IR.
-  virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                                 SyncScope Scope,
-                                                 llvm::AtomicOrdering Ordering,
-                                                 llvm::LLVMContext &Ctx) const;
+  /// Get the syncscope used in LLVM IR as a string
+  virtual StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                        SyncScope Scope,
+                                        llvm::AtomicOrdering Ordering) const;
+
+  /// Get the syncscope used in LLVM IR as a SyncScope ID.
+  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                         SyncScope Scope,
+                                         llvm::AtomicOrdering Ordering,
+                                         llvm::LLVMContext &Ctx) const;
 
   /// Allow the target to apply other metadata to an atomic instruction
   virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
@@ -400,7 +419,7 @@ public:
   virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
+  virtual void setOCLKernelStubCallingConvention(const FunctionType *&FT) const;
   /// Return the device-side type for the CUDA device builtin surface type.
   virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
     // By default, no change from the original one.
@@ -439,9 +458,19 @@ public:
   }
 
   /// Return an LLVM type that corresponds to a HLSL type
-  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T,
+                                  const CGHLSLOffsetInfo &OffsetInfo) const {
     return nullptr;
   }
+
+  /// Return an LLVM type that corresponds to padding in HLSL types
+  virtual llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                                     CharUnits NumBytes) const {
+    return nullptr;
+  }
+
+  /// Return true if this is an HLSL padding type.
+  virtual bool isHLSLPadding(llvm::Type *Ty) const { return false; }
 
   // Set the Branch Protection Attributes of the Function accordingly to the
   // BPI. Remove attributes that contradict with current BPI.
@@ -454,12 +483,39 @@ public:
   initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                    llvm::AttrBuilder &FuncAttrs);
 
+  // Set the ptrauth-* attributes of the Function accordingly to the Opts.
+  // Remove attributes that contradict with current Opts.
+  static void setPointerAuthFnAttributes(const PointerAuthOptions &Opts,
+                                         llvm::Function &F);
+
+  // Add the ptrauth-* Attributes to the FuncAttrs.
+  static void initPointerAuthFnAttributes(const PointerAuthOptions &Opts,
+                                          llvm::AttrBuilder &FuncAttrs);
+
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
 
   void addStackProbeTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                                      CodeGen::CodeGenModule &CGM) const;
 };
+
+/// Attach `!atomic.ignore.denormal.mode` to \p AtomicInst, if it is an
+/// `atomicrmw` the metadata is meaningful for, i.e. an `fadd` on a type whose
+/// native atomic has a fixed denormal behavior that may disagree with the
+/// function's denormal mode.
+///
+/// `float` always qualifies. `half` only does when \p AllowHalf is set, since
+/// whether f16 denormals are observable is target specific: NVPTX exposes no
+/// FTZ control for f16 operations, so atom.add.f16 never flushes and the
+/// per-instruction opt-in is meaningful, whereas the AMDGPU backend only
+/// consults the metadata for f32.
+///
+/// This is shared by the targets whose backends honor the metadata; it does
+/// not itself check whether the user asked for it (see
+/// AtomicOptionKind::IgnoreDenormalMode).
+void addAtomicIgnoreDenormalModeMetadata(CodeGenFunction &CGF,
+                                         llvm::Instruction &AtomicInst,
+                                         bool AllowHalf = false);
 
 std::unique_ptr<TargetCodeGenInfo>
 createDefaultTargetCodeGenInfo(CodeGenModule &CGM);
@@ -469,7 +525,6 @@ enum class AArch64ABIKind {
   DarwinPCS,
   Win64,
   AAPCSSoft,
-  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>
@@ -531,9 +586,6 @@ createMSP430TargetCodeGenInfo(CodeGenModule &CGM);
 std::unique_ptr<TargetCodeGenInfo>
 createNVPTXTargetCodeGenInfo(CodeGenModule &CGM);
 
-std::unique_ptr<TargetCodeGenInfo>
-createPNaClTargetCodeGenInfo(CodeGenModule &CGM);
-
 enum class PPC64_SVR4_ABIKind {
   ELFv1 = 0,
   ELFv2,
@@ -571,6 +623,10 @@ createSparcV9TargetCodeGenInfo(CodeGenModule &CGM);
 std::unique_ptr<TargetCodeGenInfo>
 createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
                                bool SoftFloatABI);
+
+std::unique_ptr<TargetCodeGenInfo>
+createSystemZ_ZOS_TargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                                    bool SoftFloatABI);
 
 std::unique_ptr<TargetCodeGenInfo>
 createTCETargetCodeGenInfo(CodeGenModule &CGM);

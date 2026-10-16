@@ -15,21 +15,12 @@ class MultipleHitsTestCase(TestBase):
     @skipIf(
         bugnumber="llvm.org/pr30758",
         oslist=["linux"],
-        archs=["arm", "aarch64", "powerpc64le"],
+        archs=["arm$", "aarch64", "powerpc64le"],
     )
     @skipIfwatchOS
     def test(self):
         self.build()
-        target = self.createTestTarget()
-
-        bp = target.BreakpointCreateByName("main")
-        self.assertTrue(bp and bp.IsValid(), "Breakpoint is valid")
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertState(process.GetState(), lldb.eStateStopped)
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "main")
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame and frame.IsValid(), "Frame is valid")

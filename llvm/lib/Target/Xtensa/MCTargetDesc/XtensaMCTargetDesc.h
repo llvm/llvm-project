@@ -19,12 +19,14 @@
 
 namespace llvm {
 
+class FeatureBitset;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCRegister;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -38,10 +40,10 @@ extern Target TheXtensaTarget;
 MCCodeEmitter *createXtensaMCCodeEmitter(const MCInstrInfo &MCII,
                                          MCContext &Ctx);
 
-MCAsmBackend *createXtensaMCAsmBackend(const Target &T,
-                                       const MCSubtargetInfo &STI,
-                                       const MCRegisterInfo &MRI,
-                                       const MCTargetOptions &Options);
+MCAsmBackend *createXtensaAsmBackend(const Target &T,
+                                     const MCSubtargetInfo &STI,
+                                     const MCRegisterInfo &MRI,
+                                     const MCTargetOptions &Options);
 std::unique_ptr<MCObjectTargetWriter>
 createXtensaObjectWriter(uint8_t OSABI, bool IsLittleEndian);
 
@@ -52,6 +54,19 @@ bool isValidAddrOffset(int Scale, int64_t OffsetVal);
 
 // Check address offset for load/store instructions.
 bool isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset);
+
+enum RegisterAccessType {
+  REGISTER_WRITE = 1,
+  REGISTER_READ = 2,
+  REGISTER_EXCHANGE = 3
+};
+
+// Verify if it's correct to use a special register.
+bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
+                   RegisterAccessType RA);
+
+// Get Xtensa User Register by register encoding value.
+MCRegister getUserRegister(unsigned Code, const MCRegisterInfo &MRI);
 } // namespace Xtensa
 } // end namespace llvm
 

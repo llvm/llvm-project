@@ -38,15 +38,14 @@ define <vscale x 8 x bfloat> @bfmul_u(<vscale x 8 x bfloat> %a, <vscale x 8 x bf
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bfmul z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %elt = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmul.u.nxv8bf16(<vscale x 8 x i1> %elt, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmul.u.nxv8bf16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
   ret <vscale x 8 x bfloat> %res
 }
 
 define <vscale x 8 x bfloat> @bfmul_u_zeroing(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: bfmul_u_zeroing:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
 ; CHECK-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret

@@ -13,6 +13,7 @@
 #include "LanaiInstrInfo.h"
 #include "LanaiAluCode.h"
 #include "LanaiCondCode.h"
+#include "LanaiSubtarget.h"
 #include "MCTargetDesc/LanaiBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,15 +26,16 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "LanaiGenInstrInfo.inc"
 
-LanaiInstrInfo::LanaiInstrInfo()
-    : LanaiGenInstrInfo(Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
+LanaiInstrInfo::LanaiInstrInfo(const LanaiSubtarget &STI)
+    : LanaiGenInstrInfo(STI, RegisterInfo, Lanai::ADJCALLSTACKDOWN,
+                        Lanai::ADJCALLSTACKUP),
       RegisterInfo() {}
 
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator Position,
                                  const DebugLoc &DL,
-                                 MCRegister DestinationRegister,
-                                 MCRegister SourceRegister, bool KillSource,
+                                 Register DestinationRegister,
+                                 Register SourceRegister, bool KillSource,
                                  bool RenamableDest, bool RenamableSrc) const {
   if (!Lanai::GPRRegClass.contains(DestinationRegister, SourceRegister)) {
     llvm_unreachable("Impossible reg-to-reg copy");
@@ -47,8 +49,7 @@ void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register SourceRegister, bool IsKill, int FrameIndex,
-    const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
+    const TargetRegisterClass *RegisterClass, Register /*VReg*/,
     MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
@@ -68,9 +69,8 @@ void LanaiInstrInfo::storeRegToStackSlot(
 void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register DestinationRegister, int FrameIndex,
-    const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
-    MachineInstr::MIFlag /*Flags*/) const {
+    const TargetRegisterClass *RegisterClass, Register /*VReg*/,
+    unsigned /*SubReg*/, MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -99,12 +99,12 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(
   // base registers are identical, and the offset of a lower memory access +
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  LocationSize WidthA = 0, WidthB = 0;
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
+  LocationSize WidthA = LocationSize::precise(0),
+               WidthB = LocationSize::precise(0);
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
@@ -435,23 +435,6 @@ bool LanaiInstrInfo::optimizeCompareInstr(
   return false;
 }
 
-bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   unsigned &TrueOp, unsigned &FalseOp,
-                                   bool &Optimizable) const {
-  assert(MI.getOpcode() == Lanai::SELECT && "unknown select instruction");
-  // Select operands:
-  // 0: Def.
-  // 1: True use.
-  // 2: False use.
-  // 3: Condition code.
-  TrueOp = 1;
-  FalseOp = 2;
-  Cond.push_back(MI.getOperand(3));
-  Optimizable = true;
-  return false;
-}
-
 // Identify instructions that can be folded into a SELECT instruction, and
 // return the defining instruction.
 static MachineInstr *canFoldIntoSelect(Register Reg,
@@ -751,9 +734,10 @@ Register LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
-    const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
-    LocationSize &Width, const TargetRegisterInfo * /*TRI*/) const {
+bool LanaiInstrInfo::getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
+                                                  const MachineOperand *&BaseOp,
+                                                  int64_t &Offset,
+                                                  LocationSize &Width) const {
   // Handle only loads/stores with base register followed by immediate offset
   // and with add as ALU op.
   if (LdSt.getNumOperands() != 4)
@@ -769,17 +753,17 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
   case Lanai::LDW_RR:
   case Lanai::SW_RR:
   case Lanai::SW_RI:
-    Width = 4;
+    Width = LocationSize::precise(4);
     break;
   case Lanai::LDHs_RI:
   case Lanai::LDHz_RI:
   case Lanai::STH_RI:
-    Width = 2;
+    Width = LocationSize::precise(2);
     break;
   case Lanai::LDBs_RI:
   case Lanai::LDBz_RI:
   case Lanai::STB_RI:
-    Width = 1;
+    Width = LocationSize::precise(1);
     break;
   }
 
@@ -794,8 +778,7 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
 
 bool LanaiInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   switch (LdSt.getOpcode()) {
   default:
     return false;
@@ -810,7 +793,7 @@ bool LanaiInstrInfo::getMemOperandsWithOffsetWidth(
   case Lanai::LDBz_RI:
     const MachineOperand *BaseOp;
     OffsetIsScalable = false;
-    if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+    if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width))
       return false;
     BaseOps.push_back(BaseOp);
     return true;

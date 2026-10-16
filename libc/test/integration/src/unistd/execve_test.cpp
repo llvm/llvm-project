@@ -36,9 +36,9 @@ void fork_and_execv_normal_exit(char **envp) {
 void fork_and_execv_signal_exit(char **envp) {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {
-    const char *path = "libc_execv_test_signal_exit";
+    const char *path = "libc_exec_test_signal_exit";
     char *const argv[] = {
-        const_cast<char *>("execv_test_normal_exit"),
+        const_cast<char *>("exec_test_signal_exit"),
         nullptr,
     };
     LIBC_NAMESPACE::execve(path, argv, envp);
@@ -52,7 +52,8 @@ void fork_and_execv_signal_exit(char **envp) {
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
+          char **envp) {
   fork_and_execv_normal_exit(envp);
   fork_and_execv_signal_exit(envp);
   return 0;

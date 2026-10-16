@@ -239,7 +239,6 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       FunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<ScalarEvolutionWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
@@ -300,7 +299,8 @@ bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
   if (!Ld0 || !Ld1)
     return false;
 
-  if (!LoadPairs.count(Ld0) || LoadPairs[Ld0] != Ld1)
+  auto It = LoadPairs.find(Ld0);
+  if (It == LoadPairs.end() || It->second != Ld1)
     return false;
 
   LLVM_DEBUG(dbgs() << "Loads are sequential and valid:\n";
@@ -382,8 +382,8 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
     LoadInst *Dominator = BaseFirst ? Base : Offset;
     LoadInst *Dominated = BaseFirst ? Offset : Base;
 
-    if (RAWDeps.count(Dominated)) {
-      InstSet &WritesBefore = RAWDeps[Dominated];
+    if (auto It = RAWDeps.find(Dominated); It != RAWDeps.end()) {
+      InstSet &WritesBefore = It->second;
 
       for (auto *Before : WritesBefore) {
         // We can't move the second load backward, past a write, to merge
@@ -423,7 +423,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
 // Search recursively back through the operands to find a tree of values that
 // form a multiply-accumulate chain. The search records the Add and Mul
 // instructions that form the reduction and allows us to find a single value
-// to be used as the initial input to the accumlator.
+// to be used as the initial input to the accumulator.
 bool ARMParallelDSP::Search(Value *V, BasicBlock *BB, Reduction &R) {
   // If we find a non-instruction, try to use it as the initial accumulator
   // value. This may have already been found during the search in which case
@@ -533,7 +533,7 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
 
       InsertParallelMACs(R);
       Changed = true;
-      AllAdds.insert(R.getAdds().begin(), R.getAdds().end());
+      AllAdds.insert_range(R.getAdds());
       LLVM_DEBUG(dbgs() << "BB after inserting parallel MACs:\n" << BB);
     }
   }
@@ -638,8 +638,7 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
                   ? Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlad)
                   : Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlald);
 
-    IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
-                                BasicBlock::iterator(InsertAfter));
+    IRBuilder<NoFolder> Builder(InsertAfter->getIterator());
     Instruction *Call = Builder.CreateCall(SMLAD, Args);
     NumSMLAD++;
     return Call;
@@ -714,10 +713,14 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     MulCandidate *RHSMul = Pair.second;
     LoadInst *BaseLHS = LHSMul->getBaseLoad();
     LoadInst *BaseRHS = RHSMul->getBaseLoad();
-    LoadInst *WideLHS = WideLoads.count(BaseLHS) ?
-      WideLoads[BaseLHS]->getLoad() : CreateWideLoad(LHSMul->VecLd, Ty);
-    LoadInst *WideRHS = WideLoads.count(BaseRHS) ?
-      WideLoads[BaseRHS]->getLoad() : CreateWideLoad(RHSMul->VecLd, Ty);
+    auto LIt = WideLoads.find(BaseLHS);
+    LoadInst *WideLHS = LIt != WideLoads.end()
+                            ? LIt->second->getLoad()
+                            : CreateWideLoad(LHSMul->VecLd, Ty);
+    auto RIt = WideLoads.find(BaseRHS);
+    LoadInst *WideRHS = RIt != WideLoads.end()
+                            ? RIt->second->getLoad()
+                            : CreateWideLoad(RHSMul->VecLd, Ty);
 
     Instruction *InsertAfter = GetInsertPoint(WideLHS, WideRHS);
     InsertAfter = GetInsertPoint(InsertAfter, Acc);
@@ -759,8 +762,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
 
   // Insert the load at the point of the original dominating load.
   LoadInst *DomLoad = DT->dominates(Base, Offset) ? Base : Offset;
-  IRBuilder<NoFolder> IRB(DomLoad->getParent(),
-                          ++BasicBlock::iterator(DomLoad));
+  IRBuilder<NoFolder> IRB(++BasicBlock::iterator(DomLoad));
 
   // Create the wide load, while making sure to maintain the original alignment
   // as this prevents ldrd from being generated when it could be illegal due to

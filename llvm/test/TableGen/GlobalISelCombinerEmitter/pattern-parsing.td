@@ -325,7 +325,7 @@ def TypeOfTest : GICombineRule<
 // CHECK-NEXT:     <match_root>mi:(CodeGenInstructionPattern G_ZEXT operands:[<def>$dst, $src] (MIFlags (set MachineInstr::FmReassoc) (unset MachineInstr::FmNoNans, MachineInstr::FmArcp)))
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (ApplyPats
-// CHECK-NEXT:     <apply_root>__MIFlagsTest_apply_0:(CodeGenInstructionPattern G_MUL operands:[<def>$dst, $src, $src] (MIFlags (set MachineInstr::FmReassoc) (unset MachineInstr::FmNsz, MachineInstr::FmArcp) (copy mi)))
+// CHECK-NEXT:     <apply_root>__MIFlagsTest_apply_0:(CodeGenInstructionPattern G_MUL operands:[<def>$dst, $src, $src] (MIFlags (set MachineInstr::FmReassoc, MachineInstr::SameSign) (unset MachineInstr::FmNsz, MachineInstr::FmArcp) (copy mi)))
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (OperandTable MatchPats
 // CHECK-NEXT:     dst -> mi
@@ -339,7 +339,7 @@ def TypeOfTest : GICombineRule<
 def MIFlagsTest : GICombineRule<
   (defs root:$dst),
   (match (G_ZEXT $dst, $src, (MIFlags FmReassoc, (not FmNoNans, FmArcp))):$mi),
-  (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, (not FmNsz, FmArcp))))>;
+  (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, SameSign, (not FmNsz, FmArcp))))>;
 
 // CHECK-NEXT: (CombineRule name:IntrinTest0 id:12 root:a
 // CHECK-NEXT:   (MatchPats
@@ -383,6 +383,37 @@ def IntrinTest1 : GICombineRule<
   (match (int_convergent_1in_1out $a, $b)),
   (apply (int_convergent_sideeffects_1in_1out $a, $b))>;
 
+// CHECK:      (CombineRule name:CombineOperator0 id:14 root:d
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>d:(AnyOpcodePattern [G_TRUNC])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     __CombineOperator0_combine_1:(CXXPattern apply code:"return APPLY;")
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats <empty>)
+// CHECK-NEXT:   (OperandTable ApplyPats <empty>)
+// CHECK-NEXT: )
+def CombineOperator0 : GICombineRule<
+  (defs root:$d),
+  (combine (wip_match_opcode G_TRUNC):$d, "return APPLY;")>;
+
+// CHECK:      (CombineRule name:CombineOperator1 id:15 root:a
+// CHECK-NEXT:   (MatchPats
+// CHECK-NEXT:     <match_root>__CombineOperator1_combine_0:(CodeGenInstructionPattern G_TRUNC operands:[<def>$a, $b])
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (ApplyPats
+// CHECK-NEXT:     __CombineOperator1_combine_1:(CXXPattern apply code:"return APPLY ${a} ${b};")
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable MatchPats
+// CHECK-NEXT:     a -> __CombineOperator1_combine_0
+// CHECK-NEXT:     b -> <live-in>
+// CHECK-NEXT:   )
+// CHECK-NEXT:   (OperandTable ApplyPats <empty>)
+// CHECK-NEXT: )
+def CombineOperator1 : GICombineRule<
+  (defs root:$a),
+  (combine (G_TRUNC $a, $b), "return APPLY ${a} ${b};")>;
+
 def MyCombiner: GICombiner<"GenMyCombiner", [
   WipOpcodeTest0,
   WipOpcodeTest1,
@@ -397,5 +428,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   TypeOfTest,
   MIFlagsTest,
   IntrinTest0,
-  IntrinTest1
+  IntrinTest1,
+  CombineOperator0,
+  CombineOperator1
 ]>;

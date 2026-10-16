@@ -274,7 +274,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
   for (auto &FI : LocationInfo) {
     SmallString<128> FileName(FI.first);
     if (!InputRelDir.empty())
-      sys::fs::make_absolute(InputRelDir, FileName);
+      sys::path::make_absolute(InputRelDir, FileName);
 
     const auto &FileInfo = FI.second;
 

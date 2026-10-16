@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; Function Attrs: nounwind ssp uwtable
-define void @main(i1 %arg) #0 {
+define void @main(i1 %arg) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 %arg, label [[WHILE_BODY:%.*]], label [[WHILE_END:%.*]]
@@ -73,5 +73,3 @@ for.body267:                                      ; preds = %for.body267, %for.b
 for.end300:                                       ; preds = %for.body267, %for.end80
   unreachable
 }
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

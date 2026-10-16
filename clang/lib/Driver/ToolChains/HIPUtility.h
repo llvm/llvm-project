@@ -16,16 +16,13 @@ namespace driver {
 namespace tools {
 namespace HIP {
 
+const char *getTempFile(Compilation &C, StringRef Prefix, StringRef Extension);
+
 // Construct command for creating HIP fatbin.
 void constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
                                StringRef OutputFileName,
                                const InputInfoList &Inputs,
                                const llvm::opt::ArgList &TCArgs, const Tool &T);
-
-// Construct command for creating Object from HIP fatbin.
-void constructGenerateObjFileFromHIPFatBinary(
-    Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
-    const llvm::opt::ArgList &Args, const JobAction &JA, const Tool &T);
 
 } // namespace HIP
 } // namespace tools

@@ -53,7 +53,7 @@ protected:
   LanguageRuntime *m_language_runtime;
   lldb::SearchFilterSP m_filter_sp;
 
-  lldb::SearchFilterSP DoCreateCopy() override;
+  std::unique_ptr<SearchFilter> DoCreateCopy() override;
 
   void UpdateModuleListIfNeeded();
 };
@@ -105,12 +105,16 @@ public:
         "language doesn't support getting vtable information");
   }
 
-  // this call should return true if it could set the name and/or the type
-  virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
-                                        lldb::DynamicValueType use_dynamic,
-                                        TypeAndOrName &class_type_or_name,
-                                        Address &address,
-                                        Value::ValueType &value_type) = 0;
+  /// This call should return true if it could set the name and/or the type
+  /// Sets address to the address of the dynamic type if value_type is set to
+  /// a file or load address. Sets local_buffer to a buffer containing the data
+  /// of the dynamic type if value_type is set to a host address. Callers should
+  /// copy local_buffer over into their own buffer if they want to keep the data
+  /// alive.
+  virtual bool GetDynamicTypeAndAddress(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      TypeAndOrName &class_type_or_name, Address &address,
+      Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) = 0;
 
   // This call should return a CompilerType given a generic type name and an
   // ExecutionContextScope in which one can actually fetch any specialization
@@ -132,6 +136,13 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// This allows a language runtime to adjust the location of \p variable
+  /// computed from its debug info, for storage whose indirection is only
+  /// known at runtime.
+  virtual llvm::Error FixupVariableLocation(Variable &variable, Value &value) {
+    return llvm::Error::success();
+  }
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}
@@ -140,6 +151,17 @@ public:
 
   virtual bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) {
     return false;
+  }
+
+  /// Create a breakpoint that catches an error escaping an expression
+  /// that runs as top-level code, such as a REPL line, where no
+  /// handler encloses it.
+  virtual lldb::BreakpointSP CreateErrorBackstopBreakpoint() { return {}; }
+
+  /// Return the error value that reached the breakpoint from
+  /// CreateErrorBackstopBreakpoint, with \p frame stopped there.
+  virtual lldb::ValueObjectSP GetErrorValueAtBackstop(StackFrame &frame) {
+    return {};
   }
 
   static lldb::BreakpointSP
@@ -196,6 +218,8 @@ public:
   virtual bool GetIRPasses(LLVMUserExpression::IRPasses &custom_passes) {
     return false;
   }
+
+  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
 
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol

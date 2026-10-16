@@ -17,6 +17,6 @@
 #include <vector>
 
 void f() {
-    std::vector<bool> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::vector<bool> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

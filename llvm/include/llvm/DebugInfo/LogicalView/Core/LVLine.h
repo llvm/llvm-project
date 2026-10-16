@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVLINE_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {
@@ -37,7 +38,7 @@ using LVLineDispatch = std::map<LVLineKind, LVLineGetFunction>;
 using LVLineRequest = std::vector<LVLineGetFunction>;
 
 // Class to represent a logical line.
-class LVLine : public LVElement {
+class LLVM_ABI LVLine : public LVElement {
   // Typed bitvector with kinds for this line.
   LVProperties<LVLineKind> Kinds;
   static LVLineDispatch Dispatch;
@@ -52,7 +53,7 @@ public:
   }
   LVLine(const LVLine &) = delete;
   LVLine &operator=(const LVLine &) = delete;
-  virtual ~LVLine() = default;
+  ~LVLine() override = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_LINE;
@@ -104,14 +105,10 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override {}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 // Class to represent a DWARF line record object.
-class LVLineDebug final : public LVLine {
+class LLVM_ABI LVLineDebug final : public LVLine {
   // Discriminator value (DW_LNE_set_discriminator). The DWARF standard
   // defines the discriminator as an unsigned LEB128 integer.
   uint32_t Discriminator = 0;
@@ -120,7 +117,7 @@ public:
   LVLineDebug() : LVLine() { setIsLineDebug(); }
   LVLineDebug(const LVLineDebug &) = delete;
   LVLineDebug &operator=(const LVLineDebug &) = delete;
-  ~LVLineDebug() = default;
+  ~LVLineDebug() override = default;
 
   // Additional line information. It includes attributes that describes
   // states in the machine instructions (basic block, end prologue, etc).
@@ -140,12 +137,12 @@ public:
 };
 
 // Class to represent an assembler line extracted from the text section.
-class LVLineAssembler final : public LVLine {
+class LLVM_ABI LVLineAssembler final : public LVLine {
 public:
   LVLineAssembler() : LVLine() { setIsLineAssembler(); }
   LVLineAssembler(const LVLineAssembler &) = delete;
   LVLineAssembler &operator=(const LVLineAssembler &) = delete;
-  ~LVLineAssembler() = default;
+  ~LVLineAssembler() override = default;
 
   // Print blanks as the line number.
   std::string noLineAsString(bool ShowZero) const override {

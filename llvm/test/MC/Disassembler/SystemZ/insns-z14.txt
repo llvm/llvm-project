@@ -1,4 +1,4 @@
-# Test z14 instructions that don't have PC-relative operands.
+# Test z14 instructions.
 # RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu -mcpu=z14 \
 # RUN:   | FileCheck %s
 

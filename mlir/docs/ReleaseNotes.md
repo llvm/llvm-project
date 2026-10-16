@@ -8,6 +8,62 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 [TOC]
 
+## LLVM 24
+
+### Strict Property Assembly Formats
+
+Property-backed operations now use strict declarative assembly formats by
+default. Setting the dialect option `useStrictPropertiesInAssemblyFormat = 0`
+is deprecated and temporarily retains the legacy behavior. Dialects using
+this setting must migrate their declarative assembly formats to bind every
+inherent attribute and property directly or include `prop-dict`. Under the
+default rules, `attr-dict` contains only discardable attributes. See
+[the guide](DefiningDialects/_index.md/#strict-property-assembly-formats).
+
+### GPU/AMDGPU Changes
+
+- `mlir::amdgpu::Chipset` is deprecated in favour of `mlir::ROCDL::TargetInfo`,
+  which describes a target by its triple, subarch, and the resolved set of
+  target features from LLVM's own tables. Lowerings should ask whether a target
+  has a feature rather than inaccurately compare chipset versions.
+  `TargetInfo` also represents generic targets such as `gfx9-4-generic` and,
+  unlike `Chipset`, explicitly stores the wavesize for targets where it is
+  configurable.
+- The `chipset` option in AMDGPU passes is renamed to an `arch` option, which
+  uses Clang target naming syntax. It accepts a GPU name with optional
+  modifiers (`gfx942`, `gfx942:xnack+`, `gfx9-4-generic`), a triple
+  (`amdgpu9.42-amd-amdhsa`), or a full target ID
+  (`amdgpu9.0a-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo`
+  prints for a device's ISA). `chipset` or `chip` remain as compatibility
+  names. The default arch is `invalid`, so a target must be passed explicitly,
+  removing the old "fallback" `gfx000` GPU.
+- Wavefront size is not a target-ID feature, so `convert-gpu-to-rocdl` takes it
+  as a separate `wavesize` option (32, 64, or 0 for the architecture's
+  default). The `wave64` flag on `gpu-lower-to-rocdl-pipeline` and on
+  `rocdl-attach-target` is likewise replaced by the same `wavesize` option,
+  which has the same allowed values.
+- In keeping with broader LLVM changes, `xnack` and `sramecc` are no longer
+  architecture features but module flags. In keeping with Clang, the target
+  specifier still includes these xnack/sramecc flags where they're configurable,
+  but lowering passes now convert these to module flags. Downstream users should
+  call `migrateArchFeaturesToModuleFlags` to lower these attributes in custom
+  pipelines.
+- `rocdl-attach-target` gains `arch` alongside its existing `triple`, `chip` and
+  `features`. When `arch` is given, it overrides `triple` and `chip`, and
+  handles xnack/sramecc modifier migration.
+- `gpu-lower-to-rocdl-pipeline`, however, only supports `arch`/`chip` now, as
+  manually setting a triple/chipset/features combination is a low-level
+  operation that should require a manual `rocdl-attach-target` call.
+
+## LLVM 21
+
+### GPU/NVVM Changes
+
+- The default NVVM target architecture has been changed from `sm_50` to `sm_75`.
+  `sm_75` is the oldest GPU variant compatible with the widest range of recent
+  major CUDA Toolkit versions (11/12/13). This affects the `NVVMTargetAttr`,
+  `GpuNVVMAttachTarget` pass, and the `gpu-lower-to-nvvm-pipeline`.
+
 ## LLVM 20
 
 All the MLIR runners other than `mlir-cpu-runner` have been removed, as their functionality has been merged into it, and it has been renamed to `mlir-runner`.

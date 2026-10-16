@@ -30,7 +30,7 @@ namespace test2 {
   template<typename T> struct X0 {
     template<typename U> friend struct X0;
   };
-  
+
   template<typename T> struct X0<T*> {
     template<typename U> friend struct X0;
   };
@@ -111,18 +111,43 @@ namespace test5 {
   };
 }
 
+namespace GH104057 {
+template <class T>
+struct A { // #GH104057-A
+  template <class> struct B;
+
+private:
+  static void f(); // #GH104057-A-f
+  template <class U> friend struct A<U *>::B;
+};
+
+template <class T>
+template <class U> struct A<T>::B {
+  static void g() {
+    A<int>::f();
+    // expected-error@-1 {{'f' is a private member of 'GH104057::A<int>'}}
+    //   expected-note@#GH104057-A-f {{declared private here}}
+    //   expected-note@#GH104057-A {{candidate friend template ignored: could not match 'U *' against 'double'}}
+  }
+};
+
+void test() {
+  A<double>::B<int>::g(); // expected-note {{in instantiation of member function 'GH104057::A<double>::B<int>::g' requested here}}
+}
+}
+
 // PR6022
 namespace PR6022 {
   template <class T1, class T2 , class T3  > class A;
 
   namespace inner {
-    template<class T1, class T2, class T3, class T> 
+    template<class T1, class T2, class T3, class T>
     A<T1, T2, T3>& f0(A<T1, T2, T3>&, T);
-  } 
+  }
 
   template<class T1, class T2, class T3>
   class A {
-    template<class U1, class U2, class U3, class T>  
+    template<class U1, class U2, class U3, class T>
     friend A<U1, U2, U3>& inner::f0(A<U1, U2, U3>&, T);
   };
 }
@@ -235,20 +260,19 @@ namespace rdar11147355 {
   template <class T>
   struct A {
     template <class U> class B;
-    template <class S> template <class U> friend class A<S>::B; // expected-warning {{dependent nested name specifier 'A<S>::' for friend template declaration is not supported; ignoring this friend declaration}}
+    template <class S> template <class U> friend class A<S>::B;
   private:
-    int n; // expected-note {{here}}
+    int n;
   };
 
   template <class S> template <class U> class A<S>::B {
   public:
-    // FIXME: This should be permitted.
-    int f(A<S*> a) { return a.n; } // expected-error {{private}}
+    int f(A<S*> a) { return a.n; }
   };
 
   A<double>::B<double>  ab;
   A<double*> a;
-  int k = ab.f(a); // expected-note {{instantiation of}}
+  int k = ab.f(a);
 }
 
 namespace RedeclUnrelated {

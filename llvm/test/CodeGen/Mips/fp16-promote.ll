@@ -11,12 +11,12 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $16, $4
 ; MIPS32-NEXT:    lhu $4, 0($5)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lhu $4, 0($16)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    mov.s $f20, $f0
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    add.s $f12, $f0, $f20
 ; MIPS32-NEXT:    sh $2, 0($16)
 ; MIPS32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
@@ -33,12 +33,12 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; MIPS64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $16, $4
 ; MIPS64-NEXT:    lhu $4, 0($5)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    lhu $4, 0($16)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    mov.s $f24, $f0
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    add.s $f12, $f0, $f24
 ; MIPS64-NEXT:    sh $2, 0($16)
 ; MIPS64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
@@ -59,7 +59,7 @@ define float @test_fpext_float(ptr %p) nounwind {
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    lhu $4, 0($4)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
@@ -70,7 +70,7 @@ define float @test_fpext_float(ptr %p) nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    lhu $4, 0($4)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; MIPS64-NEXT:    jr $ra
@@ -86,7 +86,7 @@ define double @test_fpext_double(ptr %p) nounwind {
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    lhu $4, 0($4)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    cvt.d.s $f0, $f0
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -98,7 +98,7 @@ define double @test_fpext_double(ptr %p) nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    lhu $4, 0($4)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    cvt.d.s $f0, $f0
 ; MIPS64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
@@ -115,7 +115,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    move $16, $5
 ; MIPS32-NEXT:    sh $2, 0($16)
 ; MIPS32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
@@ -128,7 +128,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; MIPS64-NEXT:    daddiu $sp, $sp, -16
 ; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    move $16, $5
 ; MIPS64-NEXT:    sh $2, 0($16)
 ; MIPS64-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
@@ -180,18 +180,18 @@ define <4 x float> @test_vec_fpext_float(ptr %p) nounwind {
 ; MIPS32-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $17, $4
 ; MIPS32-NEXT:    lhu $4, 6($5)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    move $16, $5
 ; MIPS32-NEXT:    lhu $4, 4($16)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    swc1 $f0, 12($17)
 ; MIPS32-NEXT:    swc1 $f0, 8($17)
 ; MIPS32-NEXT:    lhu $4, 2($16)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    swc1 $f0, 4($17)
 ; MIPS32-NEXT:    lhu $4, 0($16)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    swc1 $f0, 0($17)
 ; MIPS32-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
@@ -209,21 +209,21 @@ define <4 x float> @test_vec_fpext_float(ptr %p) nounwind {
 ; MIPS64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $16, $4
 ; MIPS64-NEXT:    lhu $4, 2($4)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    lhu $4, 6($16)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    mfc1 $17, $f0
 ; MIPS64-NEXT:    mfc1 $18, $f0
 ; MIPS64-NEXT:    lhu $4, 0($16)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    dsll $17, $17, 32
 ; MIPS64-NEXT:    mfc1 $1, $f0
 ; MIPS64-NEXT:    dsll $1, $1, 32
 ; MIPS64-NEXT:    dsrl $1, $1, 32
 ; MIPS64-NEXT:    or $17, $1, $17
 ; MIPS64-NEXT:    lhu $4, 4($16)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    dsll $18, $18, 32
 ; MIPS64-NEXT:    mfc1 $1, $f0
 ; MIPS64-NEXT:    dsll $1, $1, 32
@@ -251,21 +251,21 @@ define <4 x double> @test_vec_fpext_double(ptr %p) nounwind {
 ; MIPS32-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $17, $4
 ; MIPS32-NEXT:    lhu $4, 6($5)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    move $16, $5
 ; MIPS32-NEXT:    lhu $4, 4($16)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    mov.s $f20, $f0
 ; MIPS32-NEXT:    lhu $4, 2($16)
 ; MIPS32-NEXT:    cvt.d.s $f0, $f0
 ; MIPS32-NEXT:    cvt.d.s $f2, $f20
 ; MIPS32-NEXT:    sdc1 $f2, 24($17)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    sdc1 $f0, 16($17)
 ; MIPS32-NEXT:    cvt.d.s $f0, $f0
 ; MIPS32-NEXT:    sdc1 $f0, 8($17)
 ; MIPS32-NEXT:    lhu $4, 0($16)
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    cvt.d.s $f0, $f0
 ; MIPS32-NEXT:    sdc1 $f0, 0($17)
@@ -285,21 +285,21 @@ define <4 x double> @test_vec_fpext_double(ptr %p) nounwind {
 ; MIPS64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $17, $4
 ; MIPS64-NEXT:    lhu $4, 6($5)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    move $16, $5
 ; MIPS64-NEXT:    lhu $4, 4($16)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    mov.s $f24, $f0
 ; MIPS64-NEXT:    lhu $4, 2($16)
 ; MIPS64-NEXT:    cvt.d.s $f0, $f0
 ; MIPS64-NEXT:    cvt.d.s $f1, $f24
 ; MIPS64-NEXT:    sdc1 $f1, 24($17)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    sdc1 $f0, 16($17)
 ; MIPS64-NEXT:    cvt.d.s $f0, $f0
 ; MIPS64-NEXT:    sdc1 $f0, 8($17)
 ; MIPS64-NEXT:    lhu $4, 0($16)
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:    cvt.d.s $f0, $f0
 ; MIPS64-NEXT:    sdc1 $f0, 0($17)
@@ -326,18 +326,18 @@ define void @test_vec_fptrunc_float(<4 x float> %a, ptr %p) nounwind {
 ; MIPS32-NEXT:    move $16, $7
 ; MIPS32-NEXT:    move $17, $5
 ; MIPS32-NEXT:    move $18, $4
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    mtc1 $6, $f12
 ; MIPS32-NEXT:    move $19, $2
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    mtc1 $16, $f12
 ; MIPS32-NEXT:    mtc1 $17, $f12
 ; MIPS32-NEXT:    lw $16, 56($sp)
 ; MIPS32-NEXT:    sh $2, 6($16)
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    sh $19, 4($16)
 ; MIPS32-NEXT:    sh $2, 2($16)
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    mtc1 $18, $f12
 ; MIPS32-NEXT:    sh $2, 0($16)
 ; MIPS32-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
@@ -360,22 +360,22 @@ define void @test_vec_fptrunc_float(<4 x float> %a, ptr %p) nounwind {
 ; MIPS64-NEXT:    move $17, $5
 ; MIPS64-NEXT:    move $18, $4
 ; MIPS64-NEXT:    sll $1, $18, 0
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    mtc1 $1, $f12
 ; MIPS64-NEXT:    move $19, $2
 ; MIPS64-NEXT:    sll $1, $17, 0
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    mtc1 $1, $f12
 ; MIPS64-NEXT:    dsrl $1, $17, 32
 ; MIPS64-NEXT:    sll $1, $1, 0
 ; MIPS64-NEXT:    mtc1 $1, $f12
 ; MIPS64-NEXT:    sh $2, 4($16)
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    sh $19, 0($16)
 ; MIPS64-NEXT:    sh $2, 6($16)
 ; MIPS64-NEXT:    dsrl $1, $18, 32
 ; MIPS64-NEXT:    sll $1, $1, 0
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    mtc1 $1, $f12
 ; MIPS64-NEXT:    sh $2, 2($16)
 ; MIPS64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
@@ -484,19 +484,19 @@ define half @test_fadd_fadd(half %a, half %b, half %c) nounwind {
 ; MIPS32-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $16, $6
 ; MIPS32-NEXT:    move $17, $4
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    move $4, $5
 ; MIPS32-NEXT:    mov.s $f20, $f0
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    move $4, $17
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    add.s $f12, $f0, $f20
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    move $4, $2
 ; MIPS32-NEXT:    mov.s $f20, $f0
-; MIPS32-NEXT:    jal __gnu_h2f_ieee
+; MIPS32-NEXT:    jal __extendhfsf2
 ; MIPS32-NEXT:    move $4, $16
-; MIPS32-NEXT:    jal __gnu_f2h_ieee
+; MIPS32-NEXT:    jal __truncsfhf2
 ; MIPS32-NEXT:    add.s $f12, $f20, $f0
 ; MIPS32-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
@@ -514,19 +514,19 @@ define half @test_fadd_fadd(half %a, half %b, half %c) nounwind {
 ; MIPS64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $16, $6
 ; MIPS64-NEXT:    move $17, $4
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    sll $4, $5, 0
 ; MIPS64-NEXT:    mov.s $f24, $f0
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    sll $4, $17, 0
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    add.s $f12, $f0, $f24
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    sll $4, $2, 0
 ; MIPS64-NEXT:    mov.s $f24, $f0
-; MIPS64-NEXT:    jal __gnu_h2f_ieee
+; MIPS64-NEXT:    jal __extendhfsf2
 ; MIPS64-NEXT:    sll $4, $16, 0
-; MIPS64-NEXT:    jal __gnu_f2h_ieee
+; MIPS64-NEXT:    jal __truncsfhf2
 ; MIPS64-NEXT:    add.s $f12, $f24, $f0
 ; MIPS64-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
 ; MIPS64-NEXT:    ld $17, 8($sp) # 8-byte Folded Reload

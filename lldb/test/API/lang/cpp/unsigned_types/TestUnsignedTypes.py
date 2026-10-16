@@ -10,6 +10,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class UnsignedTypesTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Test that variables with unsigned types display correctly."""
         self.build()
@@ -22,7 +23,7 @@ class UnsignedTypesTestCase(TestBase):
             "frame variable --show-types --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[
-                "\((short unsigned int|unsigned short)\) the_unsigned_short = 99"
+                r"\((short unsigned int|unsigned short)\) the_unsigned_short = 99"
             ],
             substrs=[
                 "(unsigned char) the_unsigned_char = 'c'",

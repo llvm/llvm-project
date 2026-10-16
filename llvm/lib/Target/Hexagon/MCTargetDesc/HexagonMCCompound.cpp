@@ -395,7 +395,7 @@ static bool lookForCompound(MCInstrInfo const &MCII, MCContext &Context,
 }
 
 /// tryCompound - Given a bundle check for compound insns when one
-/// is found update the contents fo the bundle with the compound insn.
+/// is found update the contents of the bundle with the compound insn.
 /// If a compound instruction is found then the bundle will have one
 /// additional slot.
 void HexagonMCInstrInfo::tryCompound(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,

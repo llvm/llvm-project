@@ -32,7 +32,7 @@ void f(void)
 _Complex float g16 = (1.0f + 1.0fi);
 
 // ?: in constant expressions.
-int g17[(3?:1) - 2]; 
+int g17[(3?:1) - 2];
 
 EVAL_EXPR(18, ((int)((void*)10 + 10)) == 20 ? 1 : -1);
 
@@ -138,7 +138,7 @@ EVAL_EXPR(52, &pr24622 == (void *)&PR24622);
 
 // We evaluate these by providing 2s' complement semantics in constant
 // expressions, like we do for integers.
-void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // expected-warning {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2305843009213693952 elements)}}
+void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // expected-warning {{the pointer incremented by 18'446'744'073'709'551'615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2'305'843'009'213'693'952 elements)}}
 void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;                  // expected-warning {{refers past the last possible element}}
 __int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c; // expected-warning {{refers past the last possible element}}
 void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1];                // expected-warning {{refers past the last possible element}}
@@ -150,3 +150,7 @@ struct PR35214_X {
 int PR35214_x;
 int PR35214_y = ((struct PR35214_X *)&PR35214_x)->arr[1]; // expected-error {{not a compile-time constant}}
 int *PR35214_z = &((struct PR35214_X *)&PR35214_x)->arr[1]; // ok, &PR35214_x + 2
+
+
+int * GH149500_p = &(*(int *)0x400);
+static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);

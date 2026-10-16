@@ -13,7 +13,7 @@ from lldbsuite.test import lldbutil
 class TestBreakpointIt(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(archs=no_match(["arm"]))
+    @skipIf(archs=no_match(["arm$"]))
     @skipIf(archs=["arm64", "arm64e", "arm64_32"])
     def test_false(self):
         self.build()
@@ -29,7 +29,7 @@ class TestBreakpointIt(TestBase):
             self.process().GetState(), lldb.eStateExited, "Breakpoint does not get hit"
         )
 
-    @skipIf(archs=no_match(["arm"]))
+    @skipIf(archs=no_match(["arm$"]))
     @skipIf(archs=["arm64", "arm64e", "arm64_32"])
     def test_true(self):
         self.build()

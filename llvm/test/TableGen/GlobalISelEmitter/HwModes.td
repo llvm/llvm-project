@@ -1,5 +1,5 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %T/hwmode-non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK -input-file=%T/hwmode-non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.hwmode-non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK -input-file=%t.hwmode-non-optimized.cpp
 
 include "llvm/Target/Target.td"
 
@@ -13,8 +13,8 @@ class MyTargetGenericInstruction : GenericInstruction {
 //def Has32 : Predicate<"Subtarget->has32()">;
 def Has64 : Predicate<"Subtarget->has64()">;
 
-//def Mode32 : HwMode<"+a", [Has32]>;
-def Mode64 : HwMode<"+b", [Has64]>;
+//def Mode32 : HwMode<[Has32]>;
+def Mode64 : HwMode<[Has64]>;
 
 def ModeVT : ValueTypeByHwMode<[DefaultMode, Mode64],
                                [i32,  i64]>;
@@ -43,6 +43,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK: using PredicateBitset = llvm::Bitset<MAX_SUBTARGET_PREDICATES>;
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr &, int) const;
@@ -54,28 +55,32 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const uint8_t *getMatchTable() const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
+// CHECK-NEXT:    bool testMOPredicate_MO(unsigned PredicateID, const MachineOperand &MO, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
 // CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
 // CHECK-NEXT:    , State(0),
 // CHECK-NEXT:    ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers)
-// CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_p0s32,
-// CHECK-NEXT:    GILLT_p0s64,
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:    GILLT_s64,
-// CHECK-NEXT:  }
+// CHECK-NEXT:    GILLT_p0s32,
+// CHECK-NEXT:    GILLT_p0s64,
+// CHECK-NEXT:  };
 // CHECK-NEXT:  const static size_t NumTypeObjects = 4;
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::pointer(0, 32),
-// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:    LLT::scalar(32),
 // CHECK-NEXT:    LLT::scalar(64),
+// CHECK-NEXT:    LLT::pointer(0, 32),
+// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
@@ -127,8 +132,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 //===- Test a simple pattern with inferred pointer operands. ---------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 0 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -145,8 +149,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    // GIR_Coverage, 0,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 1 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -169,8 +172,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 
 //===- Test a simple pattern with explicit pointer operands. ---------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 2 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -187,8 +189,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    // GIR_Coverage, 2,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 3 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,

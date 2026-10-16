@@ -7,10 +7,10 @@
 void *llvm_omp_target_alloc_host(size_t, int);
 void llvm_omp_target_free_host(void *, int);
 
-int main() {
+void run_test(int hostDev) {
   const int N = 64;
   const int device = omp_get_default_device();
-  const int host = omp_get_initial_device();
+  int host = hostDev;
 
   int *hst_ptr = llvm_omp_target_alloc_host(N * sizeof(int), device);
 
@@ -27,7 +27,13 @@ int main() {
     sum += hst_ptr[i];
 
   llvm_omp_target_free_host(hst_ptr, device);
-  // CHECK: PASS
   if (sum == N)
     printf("PASS\n");
+}
+
+int main() {
+  // CHECK: PASS
+  run_test(omp_get_initial_device());
+  // CHECK: PASS
+  run_test(omp_initial_device);
 }

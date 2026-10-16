@@ -10,18 +10,21 @@
 #define _LIBCPP___LOCALE_DIR_SUPPORT_NO_LOCALE_CHARACTERS_H
 
 #include <__config>
-#include <__cstddef/size_t.h>
-#include <cctype>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwctype>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+
+#  include <__cstddef/size_t.h>
+#  include <cctype>
+#  include <cstdlib>
+#  include <cstring>
+#  include <ctime>
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    include <cwchar>
+#    include <cwctype>
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
@@ -29,14 +32,6 @@ namespace __locale {
 //
 // Character manipulation functions
 //
-inline _LIBCPP_HIDE_FROM_ABI int __islower(int __c, __locale_t) { return std::islower(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isupper(int __c, __locale_t) { return std::isupper(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t) { return std::isdigit(__c); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t) { return std::isxdigit(__c); }
-
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t) { return std::toupper(__c); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __tolower(int __c, __locale_t) { return std::tolower(__c); }
@@ -49,7 +44,7 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, s
   return std::strxfrm(__dest, __src, __n);
 }
 
-#if _LIBCPP_HAS_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __c, wctype_t __type, __locale_t) {
   return std::iswctype(__c, __type);
 }
@@ -85,14 +80,15 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __ws1, const wchar_t* 
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t) {
   return std::wcsxfrm(__dest, __src, __n);
 }
-#endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI size_t
-__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_ATTRIBUTE_FORMAT(__strftime__, 3, 0) size_t
+    __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t) {
   return std::strftime(__s, __max, __format, __tm);
 }
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_BUILDING_LIBRARY
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_NO_LOCALE_CHARACTERS_H

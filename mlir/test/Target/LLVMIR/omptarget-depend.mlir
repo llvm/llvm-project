@@ -2,10 +2,10 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
-    %0 = llvm.mlir.constant(39 : index) : i64
-    %1 = llvm.mlir.constant(0 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = llvm.mlir.constant(40 : index) : i64
+    %0 = llvm.mlir.constant(39 : i64) : i64
+    %1 = llvm.mlir.constant(0 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.mlir.constant(40 : i64) : i64
     %4 = llvm.mlir.addressof @_QFEa : !llvm.ptr
     %5 = llvm.mlir.addressof @_QFEb : !llvm.ptr
     %6 = llvm.mlir.constant(1 : i64) : i64
@@ -43,15 +43,15 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
       omp.terminator
     }
     %9 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%0 : i64) extent(%3 : i64) stride(%2 : i64) start_idx(%2 : i64)
-    %10 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(to) capture(ByRef) bounds(%9) -> !llvm.ptr {name = "a"}
-    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%9) -> !llvm.ptr {name = "b"}
-    %12 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    %13 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-      %14 = llvm.mlir.constant(0 : index) : i64
+    %10 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(to) capture(ByRef) bounds(%9) name("a") -> !llvm.ptr
+    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%9) name("b") -> !llvm.ptr
+    %12 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr
+    %13 = omp.map.info var_ptr(%8 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("n") -> !llvm.ptr
+    omp.target kernel_type(generic) depend(taskdependin -> %4 : !llvm.ptr) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+      %14 = llvm.mlir.constant(0 : i64) : i64
       %15 = llvm.mlir.constant(10 : i32) : i32
-      %16 = llvm.mlir.constant(1 : index) : i64
-      %17 = llvm.mlir.constant(40 : index) : i64
+      %16 = llvm.mlir.constant(1 : i64) : i64
+      %17 = llvm.mlir.constant(40 : i64) : i64
       %18 = llvm.load %arg3 : !llvm.ptr -> i32
       %19 = llvm.sext %18 : i32 to i64
       %20 = llvm.trunc %16 : i64 to i32
@@ -124,6 +124,12 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: define void @_QQmain() {
 // CHECK-DAG: %[[STRUCTARG:.+]] = alloca { ptr, ptr, ptr }, align 8
 // CHECK-DAG:  %[[DEP_ARRAY:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+
+// CHECK: %[[TASKDATA:.+]] = call ptr @__kmpc_omp_task_alloc({{.+}}, ptr @.omp_target_task_proxy_func)
+// CHECK: %[[SHARED_PTR:.+]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TASKDATA]], i32 0, i32 0
+// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[SHARED_PTR]], align 8
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHARED_DATA]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
+
 // CHECK: %[[DEP_INFO:.+]]  = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARRAY]], i64 0, i64 0
 // CHECK: %[[PTR0:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 0
 // CHECK: store i64 ptrtoint (ptr @_QFEa to i64), ptr %[[PTR0]], align 4
@@ -132,9 +138,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[PTR2:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_INFO]], i32 0, i32 2
 // CHECK: store i8 1, ptr %[[PTR2]], align 1
 
-// CHECK: %[[TASKDATA:.+]] = call ptr @__kmpc_omp_task_alloc({{.+}}, ptr @.omp_target_task_proxy_func)
-// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[TASKDATA]], align 8
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHARED_DATA]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
 // CHECK: call void @__kmpc_omp_wait_deps({{.+}}, i32 1, ptr %[[DEP_ARRAY]], i32 0, ptr null)
 // CHECK: call void @__kmpc_omp_task_begin_if0({{.+}}, ptr  %[[TASKDATA]])
 // CHECK: call void @.omp_target_task_proxy_func({{.+}}, ptr %[[TASKDATA]])

@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/ldexpl.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/ldexpl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long double, ldexpl, (long double x, int exp)) {
-  return fputil::ldexp(x, exp);
+  return math::ldexpl(x, exp);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

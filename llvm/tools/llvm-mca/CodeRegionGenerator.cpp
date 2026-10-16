@@ -26,7 +26,7 @@ namespace llvm {
 namespace mca {
 
 // This virtual dtor serves as the anchor for the CodeRegionGenerator class.
-CodeRegionGenerator::~CodeRegionGenerator() {}
+CodeRegionGenerator::~CodeRegionGenerator() = default;
 
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
     const std::unique_ptr<MCInstPrinter> &IP, bool SkipFailures) {
@@ -47,14 +47,14 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // comments.
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(Regions.getSourceMgr(), Ctx, *Str, MAI));
-  MCAsmLexer &Lexer = Parser->getLexer();
+  AsmLexer &Lexer = Parser->getLexer();
   MCACommentConsumer *CCP = getCommentConsumer();
   Lexer.setCommentConsumer(CCP);
   // Enable support for MASM literal numbers (example: 05h, 101b).
   Lexer.setLexMasmIntegers(true);
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
+      TheTarget.createMCAsmParser(STI, *Parser, MCII));
   if (!TAP)
     return make_error<StringError>(
         "This target does not support assembly parsing.",
@@ -64,16 +64,17 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // were already shown to the user. SkipFailures implies continuing in the
   // presence of any kind of failure within the parser, in which case failing
   // input lines are not represented, but the rest of the input remains.
-  if (Parser->Run(false) && !SkipFailures) {
+  bool HadParseError = Parser->Run(false);
+  if (CCP->hadErr())
+    return make_error<StringError>("There was an error parsing comments.",
+                                   inconvertibleErrorCode());
+
+  if (HadParseError && !SkipFailures) {
     const char *Message = "Assembly input parsing had errors, use "
                           "-skip-unsupported-instructions=parse-failure "
                           "to drop failing lines from the input.";
     return make_error<StringError>(Message, inconvertibleErrorCode());
   }
-
-  if (CCP->hadErr())
-    return make_error<StringError>("There was an error parsing comments.",
-                                   inconvertibleErrorCode());
 
   // Set the assembler dialect from the input. llvm-mca will use this as the
   // default dialect when printing reports.

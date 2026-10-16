@@ -12,6 +12,6 @@ const char *foo(void) { return "asdf"; }
 
 // LINUX: @.str = private unnamed_addr constant [5 x i8] c"asdf\00", align 1
 
-// WINDOWS: @"??_C@_04JIHMPGLA@asdf?$AA@" = linkonce_odr dso_local unnamed_addr constant [5 x i8] c"asdf\00", comdat, align 1
+// WINDOWS: @"??_C@_04JIHMPGLA@asdf?$AA@" = linkonce_odr dso_local unnamed_addr constant [5 x i8] c"asdf\00", comdat, align 4
 
-// WINWRITE: @.str = private unnamed_addr global [5 x i8] c"asdf\00", align 1
+// WINWRITE: @.str = private unnamed_addr global [5 x i8] c"asdf\00", align 4

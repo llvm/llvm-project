@@ -19,10 +19,10 @@ class FoundationTestCaseNSArray(TestBase):
 
         self.runCmd("thread backtrace")
         self.expect(
-            "expression (int)[nil_mutable_array count]", patterns=["\(int\) \$.* = 0"]
+            "expression (int)[nil_mutable_array count]", patterns=[r"\(int\) \$.* = 0"]
         )
-        self.expect("expression (int)[array1 count]", patterns=["\(int\) \$.* = 3"])
-        self.expect("expression (int)[array2 count]", patterns=["\(int\) \$.* = 3"])
-        self.expect("expression (int)array1.count", patterns=["\(int\) \$.* = 3"])
-        self.expect("expression (int)array2.count", patterns=["\(int\) \$.* = 3"])
+        self.expect("expression (int)[array1 count]", patterns=[r"\(int\) \$.* = 3"])
+        self.expect("expression (int)[array2 count]", patterns=[r"\(int\) \$.* = 3"])
+        self.expect("expression (int)array1.count", patterns=[r"\(int\) \$.* = 3"])
+        self.expect("expression (int)array2.count", patterns=[r"\(int\) \$.* = 3"])
         self.runCmd("process continue")

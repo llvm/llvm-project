@@ -15,7 +15,7 @@ define i32 @vf2(ptr %this) readnone {
 }
 
 ; CHECK: define i32 @call
-define i32 @call(ptr %obj) personality ptr undef {
+define i32 @call(ptr %obj) personality ptr @__gxx_personality_v0 {
   %vtable = load ptr, ptr %obj
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
@@ -35,5 +35,6 @@ ret:
 
 declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
+declare i32 @__gxx_personality_v0(...)
 
 !0 = !{i32 0, !"typeid"}

@@ -18,11 +18,11 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!transform.any_op) -> !transform.any_op
     %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 4, 2]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    %2 = transform.get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.get_parent_op %1 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
     %b = transform.bufferization.one_shot_bufferize
         layout{IdentityLayoutMap} %module_op
-        {bufferize_function_boundaries = true, allow_return_allocs = true}
+        <bufferize_function_boundaries = true> {allow_return_allocs = true}
         : (!transform.any_op) -> !transform.any_op
 
     %f = transform.structured.match ops{["func.func"]} in %b
@@ -39,7 +39,9 @@ module attributes {transform.with_named_sequence} {
     } : !transform.any_op
 
     transform.apply_patterns to %f {
-      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
     } : !transform.any_op
 
     transform.apply_patterns to %f {
@@ -119,6 +121,13 @@ func.func @arith_to_outerproduct_trans_rhs_f32(%lhs: vector<16xf32>, %rhs: vecto
   %lhsBcast = vector.broadcast %lhs : vector<16xf32> to vector<8x16xf32>
   %mul = arith.mulf %lhsBcast, %rhsT : vector<8x16xf32>
   return %mul: vector<8x16xf32>
+}
+
+// See https://github.com/llvm/llvm-project/pull/152957
+// CHECK-LABEL: func.func @negative_non_vector_type
+func.func @negative_non_vector_type(%lhs: f32, %rhs: f32) -> f32 {
+  %mul = arith.mulf %lhs, %rhs : f32
+  return %mul: f32
 }
 
 module attributes {transform.with_named_sequence} {

@@ -28,12 +28,10 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UriParser.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatAdapters.h"
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
-#include <mutex>
 #include <optional>
 
 using namespace lldb;
@@ -43,11 +41,6 @@ using namespace lldb_private::platform_gdb_server;
 LLDB_PLUGIN_DEFINE_ADV(PlatformRemoteGDBServer, PlatformGDB)
 
 static bool g_initialized = false;
-// UnixSignals does not store the signal names or descriptions itself.
-// It holds onto StringRefs. Becaue we may get signal information dynamically
-// from the remote, these strings need persistent storage client-side.
-static std::mutex g_signal_string_mutex;
-static llvm::StringSet<> g_signal_string_storage;
 
 void PlatformRemoteGDBServer::Initialize() {
   Platform::Initialize();
@@ -206,11 +199,7 @@ bool PlatformRemoteGDBServer::SetRemoteWorkingDirectory(
 }
 
 bool PlatformRemoteGDBServer::IsConnected() const {
-  if (m_gdb_client_up) {
-    assert(m_gdb_client_up->IsConnected());
-    return true;
-  }
-  return false;
+  return m_gdb_client_up && m_gdb_client_up->IsConnected();
 }
 
 Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
@@ -420,10 +409,17 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
         error = Status::FromErrorStringWithFormat(
             "unable to launch a GDB server on '%s'", GetHostname());
       } else {
-        // The darwin always currently uses the GDB remote debugger plug-in
-        // so even when debugging locally we are debugging remotely!
+        // By default, we always use the GDB remote debugger plug-in.
+        // Even when debugging locally, we are debugging remotely.
+        llvm::StringRef process_plugin = GetDefaultProcessPluginName();
+
+        // However, if a process plugin is specified by the attach info, we
+        // should honor it.
+        if (!launch_info.GetProcessPluginName().empty())
+          process_plugin = launch_info.GetProcessPluginName();
+
         process_sp = target.CreateProcess(launch_info.GetListener(),
-                                          "gdb-remote", nullptr, true);
+                                          process_plugin, nullptr, true);
 
         if (process_sp) {
           process_sp->HijackProcessEvents(launch_info.GetHijackListener());
@@ -509,11 +505,18 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
           error.Clear();
 
         if (target && error.Success()) {
-          // The darwin always currently uses the GDB remote debugger plug-in
-          // so even when debugging locally we are debugging remotely!
+          // By default, we always use the GDB remote debugger plug-in.
+          // Even when debugging locally, we are debugging remotely.
+          llvm::StringRef process_plugin = GetDefaultProcessPluginName();
+
+          // However, if a process plugin is specified by the attach info, we
+          // should honor it.
+          if (!attach_info.GetProcessPluginName().empty())
+            process_plugin = attach_info.GetProcessPluginName();
+
           process_sp =
               target->CreateProcess(attach_info.GetListenerForProcess(debugger),
-                                    "gdb-remote", nullptr, true);
+                                    process_plugin, nullptr, true);
           if (process_sp) {
             error = process_sp->ConnectRemote(connect_url.c_str());
             if (error.Success()) {
@@ -674,12 +677,15 @@ Status PlatformRemoteGDBServer::RunShellCommand(
     int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
                      // process to exit
     std::string
-        *command_output, // Pass NULL if you don't want the command output
+        *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // error output
     const Timeout<std::micro> &timeout) {
   if (!IsConnected())
     return Status::FromErrorStringWithFormat("Not connected.");
   return m_gdb_client_up->RunShellCommand(command, working_dir, status_ptr,
-                                          signo_ptr, command_output, timeout);
+                                          signo_ptr, command_output,
+                                          separated_error_output, timeout);
 }
 
 llvm::ErrorOr<llvm::MD5::MD5Result>
@@ -691,94 +697,15 @@ PlatformRemoteGDBServer::CalculateMD5(const FileSpec &file_spec) {
 }
 
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   if (!IsConnected())
     return Platform::GetRemoteUnixSignals();
 
-  if (m_remote_signals_sp)
-    return m_remote_signals_sp;
-
-  // If packet not implemented or JSON failed to parse, we'll guess the signal
-  // set based on the remote architecture.
-  m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
-
-  StringExtractorGDBRemote response;
-  auto result =
-      m_gdb_client_up->SendPacketAndWaitForResponse("jSignalsInfo", response);
-
-  if (result != decltype(result)::Success ||
-      response.GetResponseType() != response.eResponse)
-    return m_remote_signals_sp;
-
-  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
-  if (!object_sp || !object_sp->IsValid())
-    return m_remote_signals_sp;
-
-  auto array_sp = object_sp->GetAsArray();
-  if (!array_sp || !array_sp->IsValid())
-    return m_remote_signals_sp;
-
-  auto remote_signals_sp = std::make_shared<lldb_private::GDBRemoteSignals>();
-
-  bool done = array_sp->ForEach(
-      [&remote_signals_sp](StructuredData::Object *object) -> bool {
-        if (!object || !object->IsValid())
-          return false;
-
-        auto dict = object->GetAsDictionary();
-        if (!dict || !dict->IsValid())
-          return false;
-
-        // Signal number and signal name are required.
-        uint64_t signo;
-        if (!dict->GetValueForKeyAsInteger("signo", signo))
-          return false;
-
-        llvm::StringRef name;
-        if (!dict->GetValueForKeyAsString("name", name))
-          return false;
-
-        // We can live without short_name, description, etc.
-        bool suppress{false};
-        auto object_sp = dict->GetValueForKey("suppress");
-        if (object_sp && object_sp->IsValid())
-          suppress = object_sp->GetBooleanValue();
-
-        bool stop{false};
-        object_sp = dict->GetValueForKey("stop");
-        if (object_sp && object_sp->IsValid())
-          stop = object_sp->GetBooleanValue();
-
-        bool notify{false};
-        object_sp = dict->GetValueForKey("notify");
-        if (object_sp && object_sp->IsValid())
-          notify = object_sp->GetBooleanValue();
-
-        std::string description;
-        object_sp = dict->GetValueForKey("description");
-        if (object_sp && object_sp->IsValid())
-          description = std::string(object_sp->GetStringValue());
-
-        llvm::StringRef name_backed, description_backed;
-        {
-          std::lock_guard<std::mutex> guard(g_signal_string_mutex);
-          name_backed =
-              g_signal_string_storage.insert(name).first->getKeyData();
-          if (!description.empty())
-            description_backed =
-                g_signal_string_storage.insert(description).first->getKeyData();
-        }
-
-        remote_signals_sp->AddSignal(signo, name_backed, suppress, stop, notify,
-                                     description_backed);
-        return true;
-      });
-
-  if (done)
-    m_remote_signals_sp = std::move(remote_signals_sp);
+  if (!m_remote_signals_sp)
+    m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   return m_remote_signals_sp;
 }
@@ -804,7 +731,10 @@ std::string PlatformRemoteGDBServer::MakeUrl(const char *scheme,
                                              const char *hostname,
                                              uint16_t port, const char *path) {
   StreamString result;
-  result.Printf("%s://[%s]", scheme, hostname);
+  result.Printf("%s://", scheme);
+  if (strlen(hostname) > 0)
+    result.Printf("[%s]", hostname);
+
   if (port != 0)
     result.Printf(":%u", port);
   if (path)
@@ -818,7 +748,8 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   GetPendingGdbServerList(connection_urls);
 
   for (size_t i = 0; i < connection_urls.size(); ++i) {
-    ConnectProcess(connection_urls[i].c_str(), "gdb-remote", debugger, nullptr, error);
+    ConnectProcess(connection_urls[i].c_str(), GetDefaultProcessPluginName(),
+                   debugger, nullptr, error);
     if (error.Fail())
       return i; // We already connected to i process successfully
   }

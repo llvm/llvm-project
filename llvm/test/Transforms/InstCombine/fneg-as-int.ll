@@ -291,8 +291,8 @@ define i128 @fneg_as_int_ppc_fp128_f64_mask(ppc_fp128 %x) {
 define i128 @fneg_as_int_ppc_fp128_f128_mask(ppc_fp128 %x) {
 ; CHECK-LABEL: define i128 @fneg_as_int_ppc_fp128_f128_mask
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast ppc_fp128 [[X]] to i128
-; CHECK-NEXT:    [[XOR:%.*]] = xor i128 [[BC]], -170141183460469231731687303715884105728
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg ppc_fp128 [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = bitcast ppc_fp128 [[TMP1]] to i128
 ; CHECK-NEXT:    ret i128 [[XOR]]
 ;
   %bc = bitcast ppc_fp128 %x to i128

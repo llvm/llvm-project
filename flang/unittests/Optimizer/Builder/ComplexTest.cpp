@@ -1,4 +1,4 @@
-//===- ComplexExprTest.cpp -- ComplexExpr unit tests ----------===//
+//===- ComplexTest.cpp -- ComplexExpr unit tests --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,10 +22,10 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    moduleOp = mlir::ModuleOp::create(builder, loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
-        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
+    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+        builder, loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
 

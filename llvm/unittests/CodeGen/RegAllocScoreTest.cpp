@@ -30,13 +30,12 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
-extern cl::opt<double> CopyWeight;
-extern cl::opt<double> LoadWeight;
-extern cl::opt<double> StoreWeight;
-extern cl::opt<double> CheapRematWeight;
-extern cl::opt<double> ExpensiveRematWeight;
 
 namespace {
+// Defaults of -regalloc-*-weight.
+constexpr double CopyWeight = 0.2, LoadWeight = 4.0, StoreWeight = 1.0,
+                 CheapRematWeight = 0.2, ExpensiveRematWeight = 1.0;
+
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 

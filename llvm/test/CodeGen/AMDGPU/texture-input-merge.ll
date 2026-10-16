@@ -11,11 +11,11 @@ define amdgpu_vs void @test(<4 x float> inreg %reg0) {
   %6 = fmul float %2, 3.0
   %7 = fmul float %3, 3.0
   %8 = fmul float %4, 3.0
-  %9 = insertelement <4 x float> undef, float %5, i32 0
+  %9 = insertelement <4 x float> poison, float %5, i32 0
   %10 = insertelement <4 x float> %9, float %6, i32 1
-  %11 = insertelement <4 x float> undef, float %7, i32 0
+  %11 = insertelement <4 x float> poison, float %7, i32 0
   %12 = insertelement <4 x float> %11, float %5, i32 1
-  %13 = insertelement <4 x float> undef, float %8, i32 0
+  %13 = insertelement <4 x float> poison, float %8, i32 0
   %14 = call <4 x float> @llvm.r600.tex(<4 x float> %10, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %15 = call <4 x float> @llvm.r600.tex(<4 x float> %12, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %16 = call <4 x float> @llvm.r600.tex(<4 x float> %13, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 %s
-// XFAIL: asserts
 
 template <class> struct Pair;
 template <class...> struct Tuple {

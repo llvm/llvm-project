@@ -8,14 +8,17 @@
 
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 DEFINE_PPC_REGCLASSES
 
@@ -50,7 +53,8 @@ static MCDisassembler *createPPCLEDisassembler(const Target &T,
   return new PPCDisassembler(STI, Ctx, /*IsLittleEndian=*/true);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getThePPC32Target(),
                                          createPPCDisassembler);
@@ -180,9 +184,6 @@ DecodeG8RC_NOX0RegisterClass(MCInst &Inst, uint64_t RegNo, uint64_t Address,
                              const MCDisassembler *Decoder) {
   return decodeRegisterClass(Inst, RegNo, XRegsNoX0);
 }
-
-#define DecodePointerLikeRegClass0 DecodeGPRCRegisterClass
-#define DecodePointerLikeRegClass1 DecodeGPRC_NOR0RegisterClass
 
 static DecodeStatus DecodeSPERCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                              uint64_t Address,

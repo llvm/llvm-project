@@ -22,7 +22,8 @@ class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class HexagonPacketizerList : public VLIWPacketizerList {
   // Vector of instructions assigned to the packet that has just been created.
@@ -97,7 +98,7 @@ public:
   // together.
   bool isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) override;
 
-  // isLegalToPruneDependencies - Is it legal to prune dependece between SUI
+  // isLegalToPruneDependencies - Is it legal to prune dependence between SUI
   // and SUJ.
   bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) override;
 
@@ -144,7 +145,6 @@ protected:
   bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
   bool restrictingDepExistInPacket(MachineInstr&, unsigned);
   bool isNewifiable(const MachineInstr &MI, const TargetRegisterClass *NewRC);
-  bool isCurifiable(MachineInstr &MI);
   bool cannotCoexist(const MachineInstr &MI, const MachineInstr &MJ);
 
   bool isPromotedToDotNew() const {

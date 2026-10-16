@@ -5,7 +5,6 @@
 ; RUN: llc -mtriple x86_64-pc-linux < %s | FileCheck --check-prefix=INIT-ARRAY %s
 ; RUN: llc -mtriple x86_64-unknown-freebsd < %s | FileCheck --check-prefix=INIT-ARRAY %s
 ; RUN: llc -mtriple x86_64-pc-solaris2.11 < %s | FileCheck --check-prefix=INIT-ARRAY %s
-; RUN: llc -mtriple x86_64-unknown-nacl < %s | FileCheck --check-prefix=NACL %s
 ; RUN: llc -mtriple i586-intel-elfiamcu -use-ctors < %s | FileCheck %s --check-prefix=MCU-CTORS
 ; RUN: llc -mtriple i586-intel-elfiamcu < %s | FileCheck %s --check-prefix=MCU-INIT-ARRAY
 ; RUN: llc -mtriple x86_64-win32-gnu < %s | FileCheck --check-prefix=COFF-CTOR %s
@@ -62,25 +61,13 @@ entry:
 ; INIT-ARRAY-NEXT:	.quad	i
 ; INIT-ARRAY-NEXT:	.quad	j
 
-; NACL:		.section	.init_array.15,"awG",@init_array,v,comdat
-; NACL-NEXT:	.p2align	2
-; NACL-NEXT:	.long	g
-; NACL-NEXT:	.section	.init_array.55555,"awG",@init_array,v,comdat
-; NACL-NEXT:	.p2align	2
-; NACL-NEXT:	.long	h
-; NACL-NEXT:	.section	.init_array,"aw",@init_array
-; NACL-NEXT:	.p2align	2
-; NACL-NEXT:	.long	f
-; NACL-NEXT:	.long	i
-; NACL-NEXT:	.long	j
-
 ; MCU-CTORS:         .section        .ctors,"aw",@progbits
 ; MCU-INIT-ARRAY:    .section        .init_array,"aw",@init_array
 
-; COFF-CTOR:		.section	.ctors.65520,"dw",associative,v
+; COFF-CTOR:		.section	.ctors.65520,"dw",associative,v,unique,0
 ; COFF-CTOR-NEXT:	.p2align	3
 ; COFF-CTOR-NEXT:	.quad	g
-; COFF-CTOR-NEXT:	.section	.ctors.09980,"dw",associative,v
+; COFF-CTOR-NEXT:	.section	.ctors.09980,"dw",associative,v,unique,0
 ; COFF-CTOR-NEXT:	.p2align	3
 ; COFF-CTOR-NEXT:	.quad	h
 ; COFF-CTOR-NEXT:	.section	.ctors,"dw"

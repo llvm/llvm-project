@@ -22,7 +22,6 @@
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include <iomanip>
-#include <set>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -33,7 +32,7 @@ using namespace llvm::MachO;
 using namespace llvm::MachO::DylibReader;
 
 using TripleVec = std::vector<Triple>;
-static typename TripleVec::iterator emplace(TripleVec &Container, Triple &&T) {
+static TripleVec::iterator emplace(TripleVec &Container, Triple &&T) {
   auto I = partition_point(Container, [=](const Triple &CT) {
     return std::forward_as_tuple(CT.getArch(), CT.getOS(),
                                  CT.getEnvironment()) <

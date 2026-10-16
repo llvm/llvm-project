@@ -40,12 +40,12 @@ void TemplUses() {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument to 'worker' clause not allowed on a 'kernels loop' construct that has a 'num_workers' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_workers' clause is here}}
 #pragma acc kernels loop num_workers(1) worker(num:I)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num_workers' clause not allowed on a 'kernels loop' construct that has a 'worker' clause with an argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc kernels loop worker(num:I) num_workers(1)
   for(int i = 0; i < 5; ++i);
 }
@@ -91,12 +91,12 @@ void NormalUses() {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument to 'worker' clause not allowed on a 'kernels loop' construct that has a 'num_workers' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_workers' clause is here}}
 #pragma acc kernels loop num_workers(1) worker(num:I)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num_workers' clause not allowed on a 'kernels loop' construct that has a 'worker' clause with an argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc kernels loop worker(num:I) num_workers(1)
   for(int i = 0; i < 5; ++i);
 
@@ -115,7 +115,7 @@ void NormalUses() {
 #pragma acc kernels loop num_workers(1)
   for(int i = 0; i < 5; ++i) {
   // expected-error@+2{{'num' argument to 'worker' clause not allowed on a 'loop' construct associated with a 'kernels loop' construct that has a 'num_workers' clause}}
-  // expected-note@-3{{previous clause is here}}
+  // expected-note@-3{{previous 'num_workers' clause is here}}
 #pragma acc loop worker(num:1)
   for(int i = 0; i < 5; ++i);
   }
@@ -123,27 +123,27 @@ void NormalUses() {
 #pragma acc parallel loop worker
   for(int i = 0; i < 5; ++i) {
     // expected-error@+4{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-3{{previous clause is here}}
+    // expected-note@-3{{previous 'worker' clause is here}}
     // expected-error@+2{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-5{{previous clause is here}}
+    // expected-note@-5{{previous 'worker' clause is here}}
 #pragma acc loop gang, worker, vector
   for(int i = 0; i < 5; ++i);
   }
 #pragma acc kernels loop worker
   for(int i = 0; i < 5; ++i) {
     // expected-error@+4{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-3{{previous clause is here}}
+    // expected-note@-3{{previous 'worker' clause is here}}
     // expected-error@+2{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-5{{previous clause is here}}
+    // expected-note@-5{{previous 'worker' clause is here}}
 #pragma acc loop gang, worker, vector
   for(int i = 0; i < 5; ++i);
   }
 #pragma acc serial loop worker
   for(int i = 0; i < 5; ++i) {
     // expected-error@+4{{loop with a 'gang' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-3{{previous clause is here}}
+    // expected-note@-3{{previous 'worker' clause is here}}
     // expected-error@+2{{loop with a 'worker' clause may not exist in the region of a 'worker' clause}}
-    // expected-note@-5{{previous clause is here}}
+    // expected-note@-5{{previous 'worker' clause is here}}
 #pragma acc loop gang, worker, vector
   for(int i = 0; i < 5; ++i);
   }

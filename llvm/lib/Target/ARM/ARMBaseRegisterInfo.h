@@ -88,11 +88,8 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                              unsigned PhysReg) const override;
+                              MCRegister PhysReg) const override;
 
-  const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
@@ -104,7 +101,7 @@ public:
                                MachineFunction &MF) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
@@ -128,6 +125,7 @@ public:
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getLocalAddressRegister(const MachineFunction &MF) const;
   Register getBaseRegister() const { return BasePtr; }
 
   /// emitLoadConstPool - Emits a load from constpool to materialize the
@@ -158,11 +156,6 @@ public:
                       unsigned DstSubReg,
                       const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
-
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 };

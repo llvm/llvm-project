@@ -79,7 +79,7 @@
 #  define ConvertUTF_RESTORE_WARNINGS \
     _Pragma("clang diagnostic pop")
 # endif
-#elif defined(__GNUC__) && __GNUC__ > 6
+#elif defined(__GNUC__)
 # define ConvertUTF_DISABLE_WARNINGS \
    _Pragma("GCC diagnostic push")    \
    _Pragma("GCC diagnostic ignored \"-Wimplicit-fallthrough\"")
@@ -445,9 +445,8 @@ unsigned getUTF8SequenceSize(const UTF8 *source, const UTF8 *sourceEnd) {
 
 /* --------------------------------------------------------------------- */
 
-static unsigned
-findMaximalSubpartOfIllFormedUTF8Sequence(const UTF8 *source,
-                                          const UTF8 *sourceEnd) {
+unsigned findMaximalSubpartOfIllFormedUTF8Sequence(const UTF8 *source,
+                                                   const UTF8 *sourceEnd) {
   UTF8 b1, b2, b3;
 
   assert(!isLegalUTF8Sequence(source, sourceEnd));

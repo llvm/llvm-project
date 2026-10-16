@@ -88,7 +88,7 @@ TEST(Immediates, Immediates) {
   LLVMInitializeAArch64TargetMC();
 
   std::string Error;
-  auto TT = Triple::normalize("aarch64");
+  Triple TT("aarch64");
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
 
   std::unique_ptr<TargetMachine> TM(T->createTargetMachine(

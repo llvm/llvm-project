@@ -1,0 +1,10 @@
+add_libc_test(
+  expr_test
+  SUITE
+    libc-support-tests
+  SRCS
+    expr_test.cpp
+  DEPENDS
+    libc.hdr.regex_macros
+    libc.src.__support.regex.regex_expr_pool
+)

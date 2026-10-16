@@ -18,7 +18,10 @@ class SignedTypesTestCase(TestBase):
         self.line = line_number(self.source, "// Set break point at this line.")
 
     @expectedFailureAll(
-        oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr24489"
+        oslist=["windows"],
+        debug_info=no_match(["pdb"]),
+        archs=["i[3-6]86", "x86_64", "aarch64"],
+        bugnumber="llvm.org/pr24489",
     )
     def test(self):
         """Test that variables with signed types display correctly."""
@@ -57,8 +60,8 @@ class SignedTypesTestCase(TestBase):
             "frame variable --show-types --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[
-                "\((short int|short)\) the_signed_short = 99",
-                "\((signed char|char)\) the_signed_char = 'c'",
+                r"\((signed char|char)\) the_signed_char = 'c'",
+                r"\((short int|short)\) the_signed_short = 99",
             ],
             substrs=[
                 "(int) the_signed_int = 99",

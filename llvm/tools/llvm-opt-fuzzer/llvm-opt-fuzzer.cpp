@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,6 +37,7 @@ static cl::opt<std::string> PassPipeline(
     cl::desc("A textual description of the pass pipeline for testing"));
 
 static std::unique_ptr<IRMutator> Mutator;
+static cl::LibraryOptionsContext LibraryOptions;
 static std::unique_ptr<TargetMachine> TM;
 
 std::unique_ptr<IRMutator> createOptMutator() {
@@ -124,10 +126,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // Set up target dependant options
   //
 
-  M->setTargetTriple(TM->getTargetTriple().normalize());
-  M->setDataLayout(TM->createDataLayout());
-  codegen::setFunctionAttributes(TM->getTargetCPU(),
-                                 TM->getTargetFeatureString(), *M);
+  M->setTargetTriple(TM->getTargetTriple());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
+  codegen::setFunctionAttributes(*M, TM->getTargetCPU(),
+                                 TM->getTargetFeatureString());
 
   // Create pass pipeline
   //
@@ -199,8 +201,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
   ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTripleStr)));
+
+  Triple TT(Triple::normalize(TargetTripleStr));
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(LibraryOptions, TT));
 
   // Check that pass pipeline is specified and correct
   //

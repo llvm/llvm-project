@@ -1678,10 +1678,7 @@ define i1 @icmp_slt_sext_ne_otherwise_nofold(i32 %a) {
 ; tests from PR59555
 define i1 @isFloat(i64 %0) {
 ; CHECK-LABEL: @isFloat(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP0:%.*]], 281474976710655
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], -281474976710656
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 281474976710656
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP0:%.*]], 562949953421311
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %2 = icmp ugt i64 %0, 281474976710655

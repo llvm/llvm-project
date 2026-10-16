@@ -1,8 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.taint,debug.TaintTest,unix.Malloc %s -verify -analyzer-output=sarif -o - | %normalize_sarif | diff -U1 -b %S/Inputs/expected-sarif/sarif-multi-diagnostic-test.c.sarif -
+// RUN: rm -rf %t && mkdir %t && %clang_analyze_cc1 -analyzer-checker=core,optin.taint,debug.TaintTest,unix.Malloc %s -verify -analyzer-output=sarif-html -o %t%{fs-sep}out.sarif
+// RUN: cat %t%{fs-sep}out.sarif | %normalize_sarif | diff -U1 -b %S/Inputs/expected-sarif/sarif-multi-diagnostic-test.c.sarif -
 #include "../Inputs/system-header-simulator.h"
 #include "../Inputs/system-header-simulator-for-malloc.h"
 #define ERR -1
-
 int atoi(const char *nptr);
 
 void f(void) {

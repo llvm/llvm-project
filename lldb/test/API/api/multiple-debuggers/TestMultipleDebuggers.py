@@ -9,13 +9,16 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireThreadSupport
 class TestMultipleSimultaneousDebuggers(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
-    # Sometimes times out on Linux, see https://github.com/llvm/llvm-project/issues/101162.
+    # Times out on heavily loaded Linux buildbots, don't want to get into tweaking
+    # the timeout per bot. Does work when run alone. See:
+    # https://github.com/llvm/llvm-project/issues/101162
     @skipIfLinux
     @skipIfNoSBHeaders
-    @skipIfWindows
     @skipIfHostIncompatibleWithTarget
     def test_multiple_debuggers(self):
         self.driver_exe = self.getBuildArtifact("multi-process-driver")

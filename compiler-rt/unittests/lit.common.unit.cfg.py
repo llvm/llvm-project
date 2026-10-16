@@ -42,7 +42,7 @@ if "TMP" in os.environ:
 if "TEMP" in os.environ:
     config.environment["TEMP"] = os.environ["TEMP"]
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     # Only run up to 3 processes that require shadow memory simultaneously on
     # 64-bit Darwin. Using more scales badly and hogs the system due to
     # inefficient handling of large mmap'd regions (terabytes) by the kernel.

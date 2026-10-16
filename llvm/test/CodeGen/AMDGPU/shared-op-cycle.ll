@@ -26,11 +26,11 @@ define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4
    %r1 = fadd float %sq1, 2.0
    %sq2 = fmul float %w2, %w2
    %r2 = fadd float %sq2, 2.0
-   %v0 = insertelement <4 x float> undef, float %r0, i32 0
+   %v0 = insertelement <4 x float> poison, float %r0, i32 0
    %v1 = insertelement <4 x float> %v0, float %r1, i32 1
    %v2 = insertelement <4 x float> %v1, float %r2, i32 2
    %res = call float @llvm.r600.dot4(<4 x float> %v2, <4 x float> %v2)
-   %vecres = insertelement <4 x float> undef, float %res, i32 0
+   %vecres = insertelement <4 x float> poison, float %res, i32 0
    call void @llvm.r600.store.swizzle(<4 x float> %vecres, i32 0, i32 2)
    ret void
 }

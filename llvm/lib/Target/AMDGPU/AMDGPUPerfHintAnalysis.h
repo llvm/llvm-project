@@ -48,7 +48,7 @@ private:
   FuncInfoMap FIM;
 
 public:
-  AMDGPUPerfHintAnalysis() {}
+  AMDGPUPerfHintAnalysis() = default;
 
   // OldPM
   bool runOnSCC(const GCNTargetMachine &TM, CallGraphSCC &SCC);
@@ -62,7 +62,7 @@ public:
 };
 
 struct AMDGPUPerfHintAnalysisPass
-    : public PassInfoMixin<AMDGPUPerfHintAnalysisPass> {
+    : public OptionalPassInfoMixin<AMDGPUPerfHintAnalysisPass> {
   const GCNTargetMachine &TM;
   std::unique_ptr<AMDGPUPerfHintAnalysis> Impl;
 

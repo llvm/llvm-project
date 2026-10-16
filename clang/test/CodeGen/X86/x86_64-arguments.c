@@ -551,6 +551,97 @@ struct s68 {
 void f68(struct s68 x) {
 }
 
+// CHECK-LABEL: define{{.*}} i128 @f69(i128 noundef %a)
+__int128_t f69(__int128_t a) {
+  return a;
+}
+
+// CHECK-LABEL: define{{.*}} i128 @f70(i128 noundef %a)
+__uint128_t f70(__uint128_t a) {
+  return a;
+}
+
+// check that registers are correctly counted for (u)int128_t arguments
+struct s71 {
+  long long a, b;
+};
+// CHECK-LABEL: define{{.*}} void @f71(i128 noundef %a, i128 noundef %b, i64 noundef %c, ptr noundef byval(%struct.s71) align 8 %d)
+void f71(__int128_t a, __int128_t b, long long c, struct s71 d) {
+}
+// CHECK-LABEL: define{{.*}} void @f72(i128 noundef %a, i128 noundef %b, i64 %d.coerce0, i64 %d.coerce1)
+void f72(__int128_t a, __int128_t b, struct s71 d) {
+}
+
+// check that structs containing (u)int128_t are passed correctly
+struct s73 {
+  struct inner {
+    __uint128_t a;
+  };
+  struct inner in;
+};
+// CHECK-LABEL: define{{.*}} i128 @f73(i128 %a.coerce)
+struct s73 f73(struct s73 a) {
+  return a;
+}
+
+// check that _BitInt(128) is still passed correctly on the stack
+// CHECK-LABEL: define{{.*}} i128 @f74(i128 noundef %b, i128 noundef %c, i128 noundef %d, i64 noundef %e, ptr noundef byval(i128) align 8 %0)
+_BitInt(128) f74(__uint128_t b, __uint128_t c, __uint128_t d, long e, _BitInt(128) a) {
+  return a;
+}
+
+// check that non-zero-width unnamed bit-fields classify INTEGER like named
+// ones, so a run of (u)int128_t bit-fields is passed and returned as an i128
+struct s75 {
+  __uint128_t : 124;
+  __uint128_t a : 4;
+};
+// CHECK-LABEL: define{{.*}} i128 @f75()
+struct s75 f75(void) {
+  return (struct s75){0};
+}
+// CHECK-LABEL: define{{.*}} void @f76(i128 %a.coerce)
+void f76(struct s75 a) {
+}
+
+struct s77 {
+  __uint128_t a : 4;
+  __uint128_t : 124;
+};
+// CHECK-LABEL: define{{.*}} i128 @f77()
+struct s77 f77(void) {
+  return (struct s77){0};
+}
+// CHECK-LABEL: define{{.*}} void @f78(i128 %a.coerce)
+void f78(struct s77 a) {
+}
+
+// an unnamed bit-field filling the low eightbyte makes it INTEGER
+struct s79 {
+  long : 64;
+  long a;
+};
+// CHECK-LABEL: define{{.*}} { i64, i64 } @f79()
+struct s79 f79(void) {
+  return (struct s79){0};
+}
+// CHECK-LABEL: define{{.*}} void @f80(i64 %a.coerce0, i64 %a.coerce1)
+void f80(struct s79 a) {
+}
+
+// an unnamed bit-field in the high eightbyte is INTEGER while the low is SSE
+struct s81 {
+  double d;
+  int : 32;
+};
+// CHECK-LABEL: define{{.*}} { double, i32 } @f81()
+struct s81 f81(void) {
+  return (struct s81){0};
+}
+// CHECK-LABEL: define{{.*}} void @f82(double %a.coerce0, i32 %a.coerce1)
+void f82(struct s81 a) {
+}
+
 /// The synthesized __va_list_tag does not have file/line fields.
 // CHECK:      = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__va_list_tag",
 // CHECK-NOT:  file:

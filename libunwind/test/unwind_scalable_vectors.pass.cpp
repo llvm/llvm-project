@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{riscv64-.+}}
+// REQUIRES: target={{riscv64-.+}}
 
 #undef NDEBUG
 #include <assert.h>
@@ -34,7 +34,10 @@ __attribute__((noinline)) static void foo() {
   asm volatile("" ::"vr"(v));  // Dummy inline asm to use v.
 }
 
-int main() { foo(); }
+int main(int, char **) {
+  foo();
+  return 0;
+}
 #else
-int main() { return 0; }
+int main(int, char **) { return 0; }
 #endif

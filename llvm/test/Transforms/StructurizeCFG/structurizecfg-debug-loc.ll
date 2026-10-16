@@ -5,7 +5,7 @@ define void @if_then_else(ptr addrspace(1) %out, i1 %arg) !dbg !7 {
 ; CHECK:  entry:
 ; CHECK:    br i1 {{.*}}, label %if.else, label %Flow, !dbg [[ITE_ENTRY_DL:![0-9]+]]
 ; CHECK:  Flow:
-; CHECK:    br i1 {{.*}}, label %if.then, label %exit, !dbg [[ITE_ENTRY_DL]]
+; CHECK:    br i1 {{.*}}, label %if.then, label %exit
 ; CHECK:  if.then:
 ; CHECK:    br label %exit, !dbg [[ITE_IFTHEN_DL:![0-9]+]]
 ; CHECK:  if.else:
@@ -36,7 +36,7 @@ define void @while_loop(ptr addrspace(1) %out) !dbg !14 {
 ; CHECK:  while.body:
 ; CHECK:    br label %Flow, !dbg [[WHILE_BODY_DL:![0-9]+]]
 ; CHECK:  Flow:
-; CHECK:    br i1 {{.*}}, label %exit, label %while.header, !dbg [[WHILE_HEADER_DL]]
+; CHECK:    br i1 {{.*}}, label %exit, label %while.header
 ; CHECK:  exit:
 ;
 entry:
@@ -63,7 +63,7 @@ define void @while_multiple_exits(ptr addrspace(1) %out) !dbg !21 {
 ; CHECK:  while.exiting:
 ; CHECK:    br label %Flow, !dbg [[WHILEME_EXITING_DL:![0-9]+]]
 ; CHECK:  Flow:
-; CHECK:    br i1 {{.*}}, label %exit, label %while.header, !dbg [[WHILEME_HEADER_DL]] 
+; CHECK:    br i1 {{.*}}, label %exit, label %while.header
 ; CHECK:  exit:
 ;
 entry:
@@ -86,11 +86,11 @@ define void @nested_if_then_else(ptr addrspace(1) %out, i1 %a, i1 %b) !dbg !28 {
 ; CHECK:  entry:
 ; CHECK:    br i1 {{.*}}, label %if.else, label %Flow4, !dbg [[NESTED_ENTRY_DL:![0-9]+]]
 ; CHECK:  Flow4:
-; CHECK:    br i1 {{.*}}, label %if.then, label %exit, !dbg [[NESTED_ENTRY_DL]]
+; CHECK:    br i1 {{.*}}, label %if.then, label %exit
 ; CHECK:  if.then:
 ; CHECK:    br i1 {{.*}}, label %if.then.else, label %Flow2, !dbg [[NESTED_IFTHEN_DL:![0-9]+]]
 ; CHECK:  Flow2:
-; CHECK:    br i1 {{.*}}, label %if.then.then, label %Flow3, !dbg [[NESTED_IFTHEN_DL]]
+; CHECK:    br i1 {{.*}}, label %if.then.then, label %Flow3
 ; CHECK:  if.then.then:
 ; CHECK:    br label %Flow3, !dbg [[NESTED_IFTHENTHEN_DL:![0-9]+]]
 ; CHECK:  if.then.else:
@@ -98,15 +98,15 @@ define void @nested_if_then_else(ptr addrspace(1) %out, i1 %a, i1 %b) !dbg !28 {
 ; CHECK:  if.else:
 ; CHECK:    br i1 {{.*}}, label %if.else.else, label %Flow, !dbg [[NESTED_IFELSE_DL:![0-9]+]]
 ; CHECK:  Flow:
-; CHECK:    br i1 {{.*}}, label %if.else.then, label %Flow1, !dbg [[NESTED_IFELSE_DL]]
+; CHECK:    br i1 {{.*}}, label %if.else.then, label %Flow1
 ; CHECK:  if.else.then:
 ; CHECK:    br label %Flow1, !dbg [[NESTED_IFELSETHEN_DL:![0-9]+]]
 ; CHECK:  if.else.else:
 ; CHECK:    br label %Flow, !dbg [[NESTED_IFELSEELSE_DL:![0-9]+]]
 ; CHECK:  Flow1:
-; CHECK:    br label %Flow4, !dbg [[NESTED_IFELSE_DL]]
+; CHECK:    br label %Flow4
 ; CHECK:  Flow3:
-; CHECK:    br label %exit, !dbg [[NESTED_IFTHEN_DL]]
+; CHECK:    br label %exit
 ; CHECK:  exit:
 ;
 entry:

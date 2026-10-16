@@ -12,8 +12,8 @@ define ptr @vector_splat_indices_v2i64_ext0(ptr %a) {
   ret ptr %res
 }
 
-define ptr @vector_splat_indices_nxv2i64_ext0(ptr %a) {
-; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0(
+define ptr @vector_splat_indices_nxv2i64_ext0_inbounds(ptr %a) {
+; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_inbounds(
 ; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
@@ -24,10 +24,34 @@ define ptr @vector_splat_indices_nxv2i64_ext0(ptr %a) {
   ret ptr %res
 }
 
+define ptr @vector_splat_indices_nxv2i64_ext0_nuw(ptr %a) {
+; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_nuw(
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr nuw i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
+  %splatof4 = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %gep = getelementptr nuw i32, ptr %a, <vscale x 2 x i64> %splatof4
+  %res = extractelement <vscale x 2 x ptr> %gep, i32 0
+  ret ptr %res
+}
+
+define ptr @vector_splat_indices_nxv2i64_ext0_nusw(ptr %a) {
+; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_nusw(
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr nusw nuw i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
+  %splatof4 = shufflevector <vscale x 2 x i64> %tmp, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %gep = getelementptr nusw i32, ptr %a, <vscale x 2 x i64> %splatof4
+  %res = extractelement <vscale x 2 x ptr> %gep, i32 0
+  ret ptr %res
+}
+
 define ptr @vector_indices_v2i64_ext0(ptr %a, <2 x i64> %indices) {
 ; CHECK-LABEL: @vector_indices_v2i64_ext0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[INDICES:%.*]], i64 0
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %gep = getelementptr i32, ptr %a, <2 x i64> %indices
@@ -38,7 +62,7 @@ define ptr @vector_indices_v2i64_ext0(ptr %a, <2 x i64> %indices) {
 define ptr @vector_indices_nxv1i64_ext0(ptr %a, <vscale x 1 x i64> %indices) {
 ; CHECK-LABEL: @vector_indices_nxv1i64_ext0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 1 x i64> [[INDICES:%.*]], i64 0
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %gep = getelementptr i32, ptr %a, <vscale x 1 x i64> %indices
@@ -49,7 +73,7 @@ define ptr @vector_indices_nxv1i64_ext0(ptr %a, <vscale x 1 x i64> %indices) {
 
 define ptr @vector_splat_ptrs_v2i64_ext0(ptr %a, i64 %index) {
 ; CHECK-LABEL: @vector_splat_ptrs_v2i64_ext0(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %tmp = insertelement <2 x ptr> poison, ptr %a, i32 0
@@ -62,7 +86,7 @@ define ptr @vector_splat_ptrs_v2i64_ext0(ptr %a, i64 %index) {
 
 define ptr @vector_splat_ptrs_nxv2i64_ext0(ptr %a, i64 %index) {
 ; CHECK-LABEL: @vector_splat_ptrs_nxv2i64_ext0(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x ptr> poison, ptr %a, i32 0
@@ -99,7 +123,7 @@ define ptr @vector_struct2_splat_indices_v4i64_ext1(ptr %a) {
 
 define ptr @vector_indices_nxv2i64_ext3(ptr %a, <vscale x 2 x i64> %indices) {
 ; CHECK-LABEL: @vector_indices_nxv2i64_ext3(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], <vscale x 2 x i64> [[INDICES:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = extractelement <vscale x 2 x ptr> [[GEP]], i64 3
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
@@ -110,7 +134,7 @@ define ptr @vector_indices_nxv2i64_ext3(ptr %a, <vscale x 2 x i64> %indices) {
 
 define ptr @vector_indices_nxv2i64_extN(ptr %a, <vscale x 2 x i64> %indices, i32 %N) {
 ; CHECK-LABEL: @vector_indices_nxv2i64_extN(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], <vscale x 2 x i64> [[INDICES:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = extractelement <vscale x 2 x ptr> [[GEP]], i32 [[N:%.*]]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
@@ -121,7 +145,7 @@ define ptr @vector_indices_nxv2i64_extN(ptr %a, <vscale x 2 x i64> %indices, i32
 
 define void @vector_indices_nxv2i64_mulitple_use(ptr %a, <vscale x 2 x i64> %indices, ptr %b, ptr %c) {
 ; CHECK-LABEL: @vector_indices_nxv2i64_mulitple_use(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], <vscale x 2 x i64> [[INDICES:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[LANE0:%.*]] = extractelement <vscale x 2 x ptr> [[GEP]], i64 0
 ; CHECK-NEXT:    [[LANE1:%.*]] = extractelement <vscale x 2 x ptr> [[GEP]], i64 1
 ; CHECK-NEXT:    store ptr [[LANE0]], ptr [[B:%.*]], align 8
@@ -138,7 +162,7 @@ define void @vector_indices_nxv2i64_mulitple_use(ptr %a, <vscale x 2 x i64> %ind
 
 define ptr @vector_ptrs_and_indices_ext0(<vscale x 4 x ptr> %a, <vscale x 4 x i64> %indices) {
 ; CHECK-LABEL: @vector_ptrs_and_indices_ext0(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <vscale x 4 x ptr> [[A:%.*]], <vscale x 4 x i64> [[INDICES:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], <vscale x 4 x ptr> [[A:%.*]], <vscale x 4 x i64> [[INDICES:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = extractelement <vscale x 4 x ptr> [[GEP]], i64 0
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;

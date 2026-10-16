@@ -43,18 +43,18 @@ foo:
 
 
 # DEFAULT:      Contents of section build_id:
-# DEFAULT-NEXT: 0079 10299168 1e3c845a 3c8f80ae 2f16cc22  .).h.<.Z<.../.."
-# DEFAULT-NEXT: 0089 2d
+# DEFAULT-NEXT: 005b 104d7593 76cce050 6db31eff 76e5f762 .Mu.v..Pm...v..b
+# DEFAULT-NEXT: 006b e0                                 .
 
 # SHA1:      Contents of section build_id:
-# SHA1-NEXT: 0079 145abdda 387a9bc4 e3aed3c3 3319cd37  .Z..8z......3..7
-# SHA1-NEXT: 0089 0212237c e4                          ..#|.
+# SHA1-NEXT: 005b 14b1ac8d 72e31051 2facff88 ff9b81cc ....r..Q/.......
+# SHA1-NEXT: 006b f332c211 7e                          .2..~
 
 # UUID:      Contents of section build_id:
-# UUID-NEXT: 0079 10
+# UUID-NEXT: 005b 10
 
 # HEX:      Contents of section build_id:
-# HEX-NEXT:  0079 04123456 78                          ..4Vx
+# HEX-NEXT:  005b 04123456 78                          ..4Vx
 
 
 # NONE-NOT: Contents of section build_id:

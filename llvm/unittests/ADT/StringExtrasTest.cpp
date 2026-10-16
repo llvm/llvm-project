@@ -144,6 +144,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
 }
 
 TEST(StringExtrasTest, UINT64ToHex) {
+  EXPECT_EQ(utohexstr(0x0u, false, 2), "00");
   EXPECT_EQ(utohexstr(0xA0u), "A0");
   EXPECT_EQ(utohexstr(0xA0u, false, 4), "00A0");
   EXPECT_EQ(utohexstr(0xA0u, false, 8), "000000A0");
@@ -186,6 +187,27 @@ TEST(StringExtrasTest, printHTMLEscaped) {
   raw_string_ostream OS(str);
   printHTMLEscaped("ABCdef123&<>\"'", OS);
   EXPECT_EQ("ABCdef123&amp;&lt;&gt;&quot;&apos;", OS.str());
+}
+
+TEST(StringExtrasTest, printPercentEncoded) {
+  auto encode = [](StringRef In) {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    printPercentEncoded(In, OS);
+    return Str;
+  };
+
+  // Unreserved characters pass through unchanged.
+  EXPECT_EQ("AZaz09-_.~", encode("AZaz09-_.~"));
+  // Reserved characters are percent-encoded with uppercase hex.
+  EXPECT_EQ("a%20b%26c%3Dd", encode("a b&c=d"));
+  EXPECT_EQ("%2F%3F%23", encode("/?#"));
+  // Multi-byte UTF-8 is encoded byte by byte.
+  EXPECT_EQ("%C3%A9", encode("\xC3\xA9"));
+  // High bytes must not sign-extend into an over-long escape.
+  EXPECT_EQ("%80", encode("\x80"));
+  // The empty string maps to the empty string.
+  EXPECT_EQ("", encode(""));
 }
 
 TEST(StringExtrasTest, ConvertToSnakeFromCamelCase) {
@@ -289,6 +311,12 @@ TEST(StringExtrasTest, ListSeparator) {
   EXPECT_EQ(S, "");
   S = LS2;
   EXPECT_EQ(S, " ");
+
+  ListSeparator LS3(",", "{");
+  S = LS3;
+  EXPECT_EQ(S, "{");
+  S = LS3;
+  EXPECT_EQ(S, ",");
 }
 
 TEST(StringExtrasTest, toStringAPInt) {

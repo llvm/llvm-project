@@ -557,6 +557,12 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     return make_error<StringError>(ErrStream.str());
   }
 
+  ORC_RT_DEBUG({
+    printdbg("  UnwindInfo: %s, UseCallbackStyleUnwindInfo: %s\n",
+             UnwindInfo ? "true" : "false",
+             UseCallbackStyleUnwindInfo ? "true" : "false");
+  });
+
   if (UnwindInfo && UseCallbackStyleUnwindInfo) {
     ORC_RT_DEBUG({
       printdbg("  Registering new-style unwind info for:\n"
@@ -1343,7 +1349,7 @@ Error runWrapperFunctionCalls(std::vector<WrapperFunctionCall> WFCs) {
 //                             JIT entry points
 //------------------------------------------------------------------------------
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_platform_bootstrap(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError()>::handle(
              ArgData, ArgSize,
@@ -1351,7 +1357,7 @@ __orc_rt_macho_platform_bootstrap(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_platform_shutdown(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError()>::handle(
              ArgData, ArgSize,
@@ -1359,7 +1365,7 @@ __orc_rt_macho_platform_shutdown(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_register_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSString, SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -1370,7 +1376,7 @@ __orc_rt_macho_register_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_deregister_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -1381,7 +1387,7 @@ __orc_rt_macho_deregister_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_register_object_platform_sections(char *ArgData,
                                                  size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr,
@@ -1398,7 +1404,7 @@ __orc_rt_macho_register_object_platform_sections(char *ArgData,
           .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_register_object_symbol_table(char *ArgData, size_t ArgSize) {
   using SymtabContainer = std::vector<
       std::tuple<ExecutorAddr, ExecutorAddr,
@@ -1414,7 +1420,7 @@ __orc_rt_macho_register_object_symbol_table(char *ArgData, size_t ArgSize) {
           .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_deregister_object_symbol_table(char *ArgData, size_t ArgSize) {
   using SymtabContainer = std::vector<
       std::tuple<ExecutorAddr, ExecutorAddr,
@@ -1430,7 +1436,7 @@ __orc_rt_macho_deregister_object_symbol_table(char *ArgData, size_t ArgSize) {
           .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_deregister_object_platform_sections(char *ArgData,
                                                    size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr,
@@ -1447,7 +1453,7 @@ __orc_rt_macho_deregister_object_platform_sections(char *ArgData,
           .release();
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_run_wrapper_function_calls(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSSequence<SPSWrapperFunctionCall>)>::handle(
              ArgData, ArgSize, runWrapperFunctionCalls)
@@ -1473,7 +1479,7 @@ ORC_RT_INTERFACE void *__orc_rt_macho_tlv_get_addr_impl(TLVDescriptor *D) {
       reinterpret_cast<char *>(static_cast<uintptr_t>(D->DataAddress)));
 }
 
-ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_macho_create_pthread_key(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSExpected<uint64_t>(void)>::handle(
              ArgData, ArgSize,

@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ScalarOptions.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,13 +32,11 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -46,44 +45,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "simplifycfg"
-
-static cl::opt<unsigned> UserBonusInstThreshold(
-    "bonus-inst-threshold", cl::Hidden, cl::init(1),
-    cl::desc("Control the number of bonus instructions (default = 1)"));
-
-static cl::opt<bool> UserKeepLoops(
-    "keep-loops", cl::Hidden, cl::init(true),
-    cl::desc("Preserve canonical loop structure (default = true)"));
-
-static cl::opt<bool> UserSwitchRangeToICmp(
-    "switch-range-to-icmp", cl::Hidden, cl::init(false),
-    cl::desc(
-        "Convert switches into an integer range comparison (default = false)"));
-
-static cl::opt<bool> UserSwitchToLookup(
-    "switch-to-lookup", cl::Hidden, cl::init(false),
-    cl::desc("Convert switches to lookup tables (default = false)"));
-
-static cl::opt<bool> UserForwardSwitchCond(
-    "forward-switch-cond", cl::Hidden, cl::init(false),
-    cl::desc("Forward switch condition to phi ops (default = false)"));
-
-static cl::opt<bool> UserHoistCommonInsts(
-    "hoist-common-insts", cl::Hidden, cl::init(false),
-    cl::desc("hoist common instructions (default = false)"));
-
-static cl::opt<bool> UserHoistLoadsStoresWithCondFaulting(
-    "hoist-loads-stores-with-cond-faulting", cl::Hidden, cl::init(false),
-    cl::desc("Hoist loads/stores if the target supports conditional faulting "
-             "(default = false)"));
-
-static cl::opt<bool> UserSinkCommonInsts(
-    "sink-common-insts", cl::Hidden, cl::init(false),
-    cl::desc("Sink common instructions (default = false)"));
-
-static cl::opt<bool> UserSpeculateUnpredictables(
-    "speculate-unpredictables", cl::Hidden, cl::init(false),
-    cl::desc("Speculate unpredictable branches (default = false)"));
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
@@ -128,7 +89,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  DILocation *CommonDebugLoc = nullptr;
+  DebugLoc CommonDebugLoc;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
@@ -145,11 +106,11 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
       CommonDebugLoc = Term->getDebugLoc();
     else
       CommonDebugLoc =
-          DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
+          DebugLoc::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
 
     // And turn BB into a block that just unconditionally branches
     // to the canonical block.
-    Instruction *BI = BranchInst::Create(CanonicalBB, BB);
+    Instruction *BI = UncondBrInst::Create(CanonicalBB, BB);
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -195,8 +156,7 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
     // Calls to experimental_deoptimize must be followed by a return
     // of the value computed by experimental_deoptimize.
     // I.e., we can not change `ret` to `br` for this block.
-    if (auto *CI =
-            dyn_cast_or_null<CallInst>(Term->getPrevNonDebugInstruction())) {
+    if (auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode())) {
       if (Function *F = CI->getCalledFunction())
         if (Intrinsic::ID ID = F->getIntrinsicID())
           if (ID == Intrinsic::experimental_deoptimize)
@@ -246,7 +206,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   unsigned IterCnt = 0;
   (void)IterCnt;
   while (LocalChange) {
-    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
+    assert(IterCnt++ < 2000 && "Iterative simplification didn't converge!");
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
@@ -289,12 +249,16 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   // iterate between the two optimizations.  We structure the code like this to
   // avoid rerunning iterativelySimplifyCFG if the second pass of
   // removeUnreachableBlocks doesn't do anything.
-  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr))
+  // Avoid scanning instructions to reduce compile-time.
+  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                               /*FoldInstsToUnreachable=*/false))
     return true;
 
   do {
     EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
-    EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
+    EverChanged |=
+        removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                                /*FoldInstsToUnreachable=*/false);
   } while (EverChanged);
 
   return true;
@@ -318,25 +282,26 @@ static bool simplifyFunctionCFG(Function &F, const TargetTransformInfo &TTI,
 
 // Command-line settings override compile-time settings.
 static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
-  if (UserBonusInstThreshold.getNumOccurrences())
-    Options.BonusInstThreshold = UserBonusInstThreshold;
-  if (UserForwardSwitchCond.getNumOccurrences())
-    Options.ForwardSwitchCondToPhi = UserForwardSwitchCond;
-  if (UserSwitchRangeToICmp.getNumOccurrences())
-    Options.ConvertSwitchRangeToICmp = UserSwitchRangeToICmp;
-  if (UserSwitchToLookup.getNumOccurrences())
-    Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
-  if (UserKeepLoops.getNumOccurrences())
-    Options.NeedCanonicalLoop = UserKeepLoops;
-  if (UserHoistCommonInsts.getNumOccurrences())
-    Options.HoistCommonInsts = UserHoistCommonInsts;
-  if (UserHoistLoadsStoresWithCondFaulting.getNumOccurrences())
-    Options.HoistLoadsStoresWithCondFaulting =
-        UserHoistLoadsStoresWithCondFaulting;
-  if (UserSinkCommonInsts.getNumOccurrences())
-    Options.SinkCommonInsts = UserSinkCommonInsts;
-  if (UserSpeculateUnpredictables.getNumOccurrences())
-    Options.SpeculateUnpredictables = UserSpeculateUnpredictables;
+  const ScalarOptions &Opts = ScalarOptions::Global;
+  if (Opts.bonus_inst_threshold)
+    Options.BonusInstThreshold = *Opts.bonus_inst_threshold;
+  Options.ForwardSwitchCondToPhi =
+      valueOr(Opts.forward_switch_cond, Options.ForwardSwitchCondToPhi);
+  Options.ConvertSwitchRangeToICmp =
+      valueOr(Opts.switch_range_to_icmp, Options.ConvertSwitchRangeToICmp);
+  Options.ConvertSwitchToLookupTable =
+      valueOr(Opts.switch_to_lookup, Options.ConvertSwitchToLookupTable);
+  Options.NeedCanonicalLoop =
+      valueOr(Opts.keep_loops, Options.NeedCanonicalLoop);
+  Options.HoistCommonInsts =
+      valueOr(Opts.hoist_common_insts, Options.HoistCommonInsts);
+  Options.HoistLoadsStoresWithCondFaulting =
+      valueOr(Opts.hoist_loads_stores_with_cond_faulting,
+              Options.HoistLoadsStoresWithCondFaulting);
+  Options.SinkCommonInsts =
+      valueOr(Opts.sink_common_insts, Options.SinkCommonInsts);
+  Options.SpeculateUnpredictables =
+      valueOr(Opts.speculate_unpredictables, Options.SpeculateUnpredictables);
 }
 
 SimplifyCFGPass::SimplifyCFGPass() {
@@ -357,6 +322,8 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
   OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
      << "switch-range-to-icmp;";
+  OS << (Options.ConvertSwitchToArithmetic ? "" : "no-")
+     << "switch-to-arithmetic;";
   OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
@@ -380,9 +347,13 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
   if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
+  // If we removed some blocks, update block numbers to keep dense numbering.
+  F.renumberBlocks();
   PreservedAnalyses PA;
-  if (RequireAndPreserveDomTree)
+  if (RequireAndPreserveDomTree) {
+    DT->updateBlockNumbers();
     PA.preserve<DominatorTreeAnalysis>();
+  }
   return PA;
 }
 

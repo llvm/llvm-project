@@ -16,15 +16,20 @@
 
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -33,6 +38,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -41,14 +47,12 @@ namespace llvm {
 class Error;
 class raw_ostream;
 class MemoryBuffer;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
 
 class DeclContext;
+class Diagnostic;
 class DiagnosticBuilder;
 class DiagnosticConsumer;
 class IdentifierInfo;
@@ -92,18 +96,15 @@ public:
   /// modification is known.
   FixItHint() = default;
 
-  bool isNull() const {
-    return !RemoveRange.isValid();
-  }
+  bool isNull() const { return !RemoveRange.isValid(); }
 
   /// Create a code modification hint that inserts the given
   /// code string at a specific location.
-  static FixItHint CreateInsertion(SourceLocation InsertionLoc,
-                                   StringRef Code,
+  static FixItHint CreateInsertion(SourceLocation InsertionLoc, StringRef Code,
                                    bool BeforePreviousInsertions = false) {
     FixItHint Hint;
     Hint.RemoveRange =
-      CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
+        CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
     Hint.CodeToInsert = std::string(Code);
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
@@ -111,12 +112,13 @@ public:
 
   /// Create a code modification hint that inserts the given
   /// code from \p FromRange at a specific location.
-  static FixItHint CreateInsertionFromRange(SourceLocation InsertionLoc,
-                                            CharSourceRange FromRange,
-                                        bool BeforePreviousInsertions = false) {
+  static FixItHint
+  CreateInsertionFromRange(SourceLocation InsertionLoc,
+                           CharSourceRange FromRange,
+                           bool BeforePreviousInsertions = false) {
     FixItHint Hint;
     Hint.RemoveRange =
-      CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
+        CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
     Hint.InsertFromRange = FromRange;
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
@@ -143,8 +145,7 @@ public:
     return Hint;
   }
 
-  static FixItHint CreateReplacement(SourceRange RemoveRange,
-                                     StringRef Code) {
+  static FixItHint CreateReplacement(SourceRange RemoveRange, StringRef Code) {
     return CreateReplacement(CharSourceRange::getTokenRange(RemoveRange), Code);
   }
 };
@@ -222,6 +223,15 @@ public:
   }
 };
 
+/// Whether a source location is in a system header and/or a system macro.
+enum class DiagStateSystemClass : unsigned {
+  UserCode = 0,
+  SystemMacro = 1 << 0,
+  SystemHeader = 1 << 1,
+  SystemHeaderAndMacro = SystemHeader | SystemMacro,
+  NUM_CLASSES
+};
+
 /// Concrete class used by the front-end to report problems and issues.
 ///
 /// This massages the diagnostics (e.g. handling things like "report warnings
@@ -231,6 +241,8 @@ public:
 class DiagnosticsEngine : public RefCountedBase<DiagnosticsEngine> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
+  // FIXME: Make this an alias for DiagnosticIDs::Level as soon as
+  // we can use 'using enum'.
   enum Level {
     Ignored = DiagnosticIDs::Ignored,
     Note = DiagnosticIDs::Note,
@@ -284,7 +296,13 @@ public:
     ak_qualtype_pair,
 
     /// Attr *
-    ak_attr
+    ak_attr,
+
+    /// Expr *
+    ak_expr,
+
+    /// AttributeCommonInfo *
+    ak_attr_info,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -300,6 +318,11 @@ private:
 
   // Suppress all diagnostics.
   bool SuppressAllDiagnostics = false;
+
+  // Force system warnings to be shown, regardless of the current
+  // diagnostic state. This is used for temporary overrides and is not
+  // stored as location-specific state in modules.
+  bool ForceSystemWarnings = false;
 
   // Elide common types of templates.
   bool ElideType = true;
@@ -330,7 +353,7 @@ private:
   unsigned ConstexprBacktraceLimit = 0;
 
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions &DiagOpts;
   DiagnosticConsumer *Client = nullptr;
   std::unique_ptr<DiagnosticConsumer> Owner;
   SourceManager *SourceMgr = nullptr;
@@ -420,10 +443,14 @@ private:
     bool empty() const { return Files.empty(); }
 
     /// Clear out this map.
-    void clear() {
+    void clear(bool Soft) {
+      // Just clear the cache when in soft mode.
       Files.clear();
-      FirstDiagState = CurDiagState = nullptr;
-      CurDiagStateLoc = SourceLocation();
+      LastLookupFileID = FileID::getSentinel();
+      if (!Soft) {
+        FirstDiagState = CurDiagState = nullptr;
+        CurDiagStateLoc = SourceLocation();
+      }
     }
 
     /// Produce a debugging dump of the diagnostic state.
@@ -478,6 +505,11 @@ private:
     /// The diagnostic states for each file.
     mutable std::map<FileID, File> Files;
 
+    /// One-entry cache for getFile(): Files gets large, and most
+    /// lookups are for the same FileID as the previous one.
+    mutable FileID LastLookupFileID = FileID::getSentinel();
+    mutable File *LastLookupFile = nullptr;
+
     /// The initial diagnostic state.
     DiagState *FirstDiagState;
 
@@ -489,6 +521,7 @@ private:
 
     /// Get the diagnostic state information for a file.
     File *getFile(SourceManager &SrcMgr, FileID ID) const;
+    File *getFileUncached(SourceManager &SrcMgr, FileID ID) const;
   };
 
   DiagStateMap DiagStatesByLoc;
@@ -532,7 +565,7 @@ private:
   ///
   /// This is used to emit continuation diagnostics with the same level as the
   /// diagnostic that they follow.
-  DiagnosticIDs::Level LastDiagLevel;
+  Level LastDiagLevel;
 
   /// Number of warnings reported
   unsigned NumWarnings;
@@ -550,13 +583,11 @@ private:
   /// avoid redundancy across arguments.
   ///
   /// This is a hack to avoid a layering violation between libbasic and libsema.
-  using ArgToStringFnTy = void (*)(
-      ArgumentKind Kind, intptr_t Val,
-      StringRef Modifier, StringRef Argument,
-      ArrayRef<ArgumentValue> PrevArgs,
-      SmallVectorImpl<char> &Output,
-      void *Cookie,
-      ArrayRef<intptr_t> QualTypeVals);
+  using ArgToStringFnTy = void (*)(ArgumentKind Kind, intptr_t Val,
+                                   StringRef Modifier, StringRef Argument,
+                                   ArrayRef<ArgumentValue> PrevArgs,
+                                   SmallVectorImpl<char> &Output, void *Cookie,
+                                   ArrayRef<intptr_t> QualTypeVals);
 
   void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
@@ -567,8 +598,25 @@ private:
       DiagSuppressionMapping;
 
 public:
+  /// Returns a cache key representing the diagnostic state at \p Loc.
+  const void *getDiagStateKeyForLoc(SourceLocation Loc) const {
+    return GetDiagStateForLoc(Loc);
+  }
+
+  /// Returns whether \p Loc is in a system header and/or a system macro.
+  /// Severity depends on this through
+  /// DiagnosticIDs::shouldSuppressAsSystemWarning(), so a cache keyed on
+  /// getDiagStateKeyForLoc() must take it into account as well.
+  DiagStateSystemClass getDiagStateSystemClassForLoc(SourceLocation Loc) const;
+
+  /// True if an active diagnostic suppression mapping makes severity dependent
+  /// on the file path.
+  bool hasDiagSuppressionMapping() const {
+    return static_cast<bool>(DiagSuppressionMapping);
+  }
+
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
-                             IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+                             DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
                              bool ShouldOwnClient = true);
   DiagnosticsEngine(const DiagnosticsEngine &) = delete;
@@ -584,7 +632,7 @@ public:
   }
 
   /// Retrieve the diagnostic options.
-  DiagnosticOptions &getDiagnosticOptions() const { return *DiagOpts; }
+  DiagnosticOptions &getDiagnosticOptions() const { return DiagOpts; }
 
   using diag_mapping_range = llvm::iterator_range<DiagState::const_iterator>;
 
@@ -653,9 +701,7 @@ public:
 
   /// Retrieve the maximum number of template instantiation
   /// notes to emit along with a given diagnostic.
-  unsigned getTemplateBacktraceLimit() const {
-    return TemplateBacktraceLimit;
-  }
+  unsigned getTemplateBacktraceLimit() const { return TemplateBacktraceLimit; }
 
   /// Specify the maximum number of constexpr evaluation
   /// notes to emit along with a given diagnostic.
@@ -722,6 +768,9 @@ public:
   void setSuppressAllDiagnostics(bool Val) { SuppressAllDiagnostics = Val; }
   bool getSuppressAllDiagnostics() const { return SuppressAllDiagnostics; }
 
+  void setForceSystemWarnings(bool Val) { ForceSystemWarnings = Val; }
+  bool getForceSystemWarnings() const { return ForceSystemWarnings; }
+
   /// Set type eliding, to skip outputting same types occurring in
   /// template types.
   void setElideType(bool Val) { ElideType = Val; }
@@ -741,9 +790,7 @@ public:
   /// fails.
   ///
   /// By default, we show all candidates.
-  void setShowOverloads(OverloadsShown Val) {
-    ShowOverloads = Val;
-  }
+  void setShowOverloads(OverloadsShown Val) { ShowOverloads = Val; }
   OverloadsShown getShowOverloads() const { return ShowOverloads; }
 
   /// When a call or operator fails, print out up to this many candidate
@@ -783,18 +830,16 @@ public:
   /// the middle of another diagnostic.
   ///
   /// This can be used by clients who suppress diagnostics themselves.
-  void setLastDiagnosticIgnored(bool Ignored) {
-    if (LastDiagLevel == DiagnosticIDs::Fatal)
+  void setLastDiagnosticIgnored(bool IsIgnored) {
+    if (LastDiagLevel == Fatal)
       FatalErrorOccurred = true;
-    LastDiagLevel = Ignored ? DiagnosticIDs::Ignored : DiagnosticIDs::Warning;
+    LastDiagLevel = IsIgnored ? Ignored : Warning;
   }
 
   /// Determine whether the previous diagnostic was ignored. This can
   /// be used by clients that want to determine whether notes attached to a
   /// diagnostic will be suppressed.
-  bool isLastDiagnosticIgnored() const {
-    return LastDiagLevel == DiagnosticIDs::Ignored;
-  }
+  bool isLastDiagnosticIgnored() const { return LastDiagLevel == Ignored; }
 
   /// Controls whether otherwise-unmapped extension diagnostics are
   /// mapped onto ignore/warning/error.
@@ -882,9 +927,7 @@ public:
   unsigned getNumErrors() const { return NumErrors; }
   unsigned getNumWarnings() const { return NumWarnings; }
 
-  void setNumWarnings(unsigned NumWarnings) {
-    this->NumWarnings = NumWarnings;
-  }
+  void setNumWarnings(unsigned NumWarnings) { this->NumWarnings = NumWarnings; }
 
   /// Return an ID for a diagnostic with the specified format string and
   /// level.
@@ -895,7 +938,10 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // TODO: Deprecate this once all uses are removed from Clang.
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
@@ -904,9 +950,8 @@ public:
 
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.
-  void ConvertArgToString(ArgumentKind Kind, intptr_t Val,
-                          StringRef Modifier, StringRef Argument,
-                          ArrayRef<ArgumentValue> PrevArgs,
+  void ConvertArgToString(ArgumentKind Kind, intptr_t Val, StringRef Modifier,
+                          StringRef Argument, ArrayRef<ArgumentValue> PrevArgs,
                           SmallVectorImpl<char> &Output,
                           ArrayRef<intptr_t> QualTypeVals) const {
     ArgToStringFn(Kind, Val, Modifier, Argument, PrevArgs, Output,
@@ -927,6 +972,10 @@ public:
   /// Reset the state of the diagnostic object to its initial configuration.
   /// \param[in] soft - if true, doesn't reset the diagnostic mappings and state
   void Reset(bool soft = false);
+  /// We keep a cache of FileIDs for diagnostics mapped by pragmas. These might
+  /// get invalidated when diagnostics engine is shared across different
+  /// compilations. Provide users with a way to reset that.
+  void ResetPragmas();
 
   //===--------------------------------------------------------------------===//
   // DiagnosticsEngine classification and reporting interfaces.
@@ -942,6 +991,16 @@ public:
   /// diagnostic state. Can be null in order to query the latest state.
   bool isIgnored(unsigned DiagID, SourceLocation Loc) const {
     return Diags->getDiagnosticSeverity(DiagID, Loc, *this) ==
+           diag::Severity::Ignored;
+  }
+
+  bool areAllIgnored(StringRef Group, SourceLocation Loc) const {
+    llvm::SmallVector<diag::kind> diagsInGroup;
+    bool Failed = Diags->getDiagnosticsInGroup(diag::Flavor::WarningOrError,
+                                               Group, diagsInGroup);
+    assert(!Failed && "Incorrect group name?");
+    (void)Failed;
+    return Diags->getDiagnosticListHighestSeverity(diagsInGroup, Loc, *this) ==
            diag::Severity::Ignored;
   }
 
@@ -963,7 +1022,7 @@ public:
   /// diagnostics in specific files.
   /// Mapping file is expected to be a special case list with sections denoting
   /// diagnostic groups and `src` entries for globs to suppress. `emit` category
-  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// can be used to disable suppression. The last glob that matches a filepath
   /// takes precedence. For example:
   ///   [unused]
   ///   src:clang/*
@@ -1033,9 +1092,10 @@ private:
   /// Used to report a diagnostic that is finally fully formed.
   ///
   /// \returns true if the diagnostic was emitted, false if it was suppressed.
-  bool ProcessDiag(const DiagnosticBuilder &DiagBuilder) {
-    return Diags->ProcessDiag(*this, DiagBuilder);
-  }
+  bool ProcessDiag(const DiagnosticBuilder &DiagBuilder);
+
+  /// Forward a diagnostic to the DiagnosticConsumer.
+  void Report(Level DiagLevel, const Diagnostic &Info);
 
   /// @name Diagnostic Emission
   /// @{
@@ -1071,8 +1131,9 @@ class DiagnosticErrorTrap {
   unsigned NumUnrecoverableErrors;
 
 public:
-  explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag)
-      : Diag(Diag) { reset(); }
+  explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag) : Diag(Diag) {
+    reset();
+  }
 
   /// Determine whether any errors have occurred since this
   /// object instance was created.
@@ -1091,6 +1152,39 @@ public:
     NumErrors = Diag.TrapNumErrorsOccurred;
     NumUnrecoverableErrors = Diag.TrapNumUnrecoverableErrorsOccurred;
   }
+};
+
+/// RAII class that temporarily sets the "ignore all warnings" state on a
+/// DiagnosticsEngine and restores the previous state on destruction.  Use it to
+/// silence warnings around a self-contained region of diagnostics, such as a
+/// compiler-synthesized call whose arguments are known to be correct.
+class IgnoreAllWarningDiagRAII {
+  DiagnosticsEngine &Diag;
+  bool OldValue;
+
+public:
+  explicit IgnoreAllWarningDiagRAII(DiagnosticsEngine &Diag)
+      : Diag(Diag), OldValue(Diag.getIgnoreAllWarnings()) {
+    Diag.setIgnoreAllWarnings(true);
+  }
+  ~IgnoreAllWarningDiagRAII() { Diag.setIgnoreAllWarnings(OldValue); }
+};
+
+/// RAII class that temporarily forces warnings in system headers and system
+/// macros to be shown on a DiagnosticsEngine and restores the previous state on
+/// destruction.  Use it to ask what a diagnostic's severity would be if the
+/// location were not in a system header.
+class ForceSystemWarningsRAII {
+  DiagnosticsEngine &Diag;
+  bool OldValue;
+
+public:
+  explicit ForceSystemWarningsRAII(DiagnosticsEngine &Diag, bool Force = true)
+      : Diag(Diag), OldValue(Diag.getForceSystemWarnings()) {
+    if (Force)
+      Diag.setForceSystemWarnings(true);
+  }
+  ~ForceSystemWarningsRAII() { Diag.setForceSystemWarnings(OldValue); }
 };
 
 /// The streaming interface shared between DiagnosticBuilder and
@@ -1251,10 +1345,13 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
+protected:
   DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation DiagLoc,
                     unsigned DiagID);
 
-protected:
+  DiagnosticsEngine *getDiagnosticsEngine() const { return DiagObj; }
+  unsigned getDiagID() const { return DiagID; }
+
   /// Clear out the current diagnostic.
   void Clear() const {
     DiagObj = nullptr;
@@ -1275,7 +1372,8 @@ protected:
   bool Emit() {
     // If this diagnostic is inactive, then its soul was stolen by the copy ctor
     // (or by a subclass, as in SemaDiagnosticBuilder).
-    if (!isActive()) return false;
+    if (!isActive())
+      return false;
 
     // Process the diagnostic.
     bool Result = DiagObj->EmitDiagnostic(*this, IsForceEmit);
@@ -1347,9 +1445,50 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::Twine &S) {
+  DB.AddString(S.str());
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             std::string_view S) {
+  DB.AddString(S);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const std::string &S) {
+  DB.AddString(S);
+  return DB;
+}
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB,
+           const llvm::SmallVectorImpl<char> &S) {
+  DB.AddString(llvm::StringRef(S.data(), S.size()));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APSInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, Int.isSigned(),
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, /*Signed=*/false,
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
   return DB;
 }
 
@@ -1423,6 +1562,25 @@ inline std::enable_if_t<
 operator<<(const StreamingDiagnostic &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);
+  return DB;
+}
+
+// Convert scoped enums to their underlying type, so that we don't have
+// clutter the emitting code with `llvm::to_underlying()`.
+// We also need to disable implicit conversion for the first argument,
+// because classes that derive from StreamingDiagnostic define their own
+// templated operator<< that accept a wide variety of types, leading
+// to ambiguity.
+template <typename T, typename U,
+          typename UnderlyingU = typename std::enable_if_t<
+              std::is_enum_v<std::remove_reference_t<U>>,
+              std::underlying_type<std::remove_reference_t<U>>>::type>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, StreamingDiagnostic> &&
+        !std::is_convertible_v<U, UnderlyingU>,
+    const StreamingDiagnostic &>
+operator<<(const T &DB, U &&SE) {
+  DB << llvm::to_underlying(SE);
   return DB;
 }
 
@@ -1531,7 +1689,9 @@ public:
   unsigned getID() const { return DiagID; }
   const SourceLocation &getLocation() const { return DiagLoc; }
   bool hasSourceManager() const { return DiagObj->hasSourceManager(); }
-  SourceManager &getSourceManager() const { return DiagObj->getSourceManager();}
+  SourceManager &getSourceManager() const {
+    return DiagObj->getSourceManager();
+  }
 
   unsigned getNumArgs() const { return DiagStorage.NumDiagArgs; }
 
@@ -1684,11 +1844,12 @@ public:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 /// Abstract interface, implemented by clients of the front-end, which
-/// formats and prints fully processed diagnostics.
+/// formats and prints fully processed diagnostics. The destructor must be
+/// called even with -disable-free.
 class DiagnosticConsumer {
 protected:
-  unsigned NumWarnings = 0;       ///< Number of warnings reported
-  unsigned NumErrors = 0;         ///< Number of errors reported
+  unsigned NumWarnings = 0; ///< Number of warnings reported
+  unsigned NumErrors = 0;   ///< Number of errors reported
 
 public:
   DiagnosticConsumer() = default;
@@ -1718,10 +1879,6 @@ public:
   /// The diagnostic client should assume that any objects made available via
   /// BeginSourceFile() are inaccessible.
   virtual void EndSourceFile() {}
-
-  /// Callback to inform the diagnostic client that processing of all
-  /// source files has ended.
-  virtual void finish() {}
 
   /// Indicates whether the diagnostics handled by this
   /// DiagnosticConsumer should be included in the number of diagnostics
@@ -1794,6 +1951,8 @@ void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
+SmallString<16> EscapeSingleCodepointForDiagnostic(StringRef Str);
+SmallString<16> EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

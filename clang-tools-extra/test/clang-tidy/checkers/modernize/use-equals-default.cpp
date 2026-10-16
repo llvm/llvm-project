@@ -127,7 +127,7 @@ Priv::Priv() {}
 struct SemiColon {
   SemiColon() {};
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: SemiColon() = default;{{$}}
+  // CHECK-FIXES: SemiColon() = default;
 };
 
 struct SemiColonOutOfLine {
@@ -136,16 +136,16 @@ struct SemiColonOutOfLine {
 
 SemiColonOutOfLine::SemiColonOutOfLine() {};
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use '= default'
-// CHECK-FIXES: SemiColonOutOfLine::SemiColonOutOfLine() = default;{{$}}
+// CHECK-FIXES: SemiColonOutOfLine::SemiColonOutOfLine() = default;
 
 // struct.
 struct ST {
   ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;{{$}}
+  // CHECK-FIXES: ST() = default;
   ~ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;{{$}}
+  // CHECK-FIXES: ~ST() = default;
 };
 
 // Deleted constructor/destructor.
@@ -236,15 +236,43 @@ ODef::~ODef() = default;
 // Delegating constructor and overriden destructor.
 struct DC : KW {
   DC() : KW() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DC() = default;
   ~DC() override {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ~DC() override = default;{{$}}
+  // CHECK-FIXES: ~DC() override = default;
+};
+
+// Delegating constructor with multiple initializers.
+struct DCM : KW, N {
+  DCM() : KW(), N() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DCM() = default;
+};
+
+struct dummy {};
+
+// Delegating constructor with field initializer.
+struct DCF : KW {
+
+  DCF() : KW(), d() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DCF() = default;
+
+  dummy d;
+};
+
+// Delegating constructor with noexcept.
+struct DCNE : KW {
+  DCNE() noexcept : KW() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DCNE() noexcept = default;
 };
 
 struct OverrideWithSemiColon : KW {
   ~OverrideWithSemiColon() override {};
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ~OverrideWithSemiColon() override = default;{{$}}
+  // CHECK-FIXES: ~OverrideWithSemiColon() override = default;
 };
 
 struct Comments {

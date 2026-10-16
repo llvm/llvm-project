@@ -12,7 +12,7 @@
 
 // class map
 
-// map(initializer_list<value_type> il);
+// map(initializer_list<value_type> il); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -20,48 +20,33 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
     typedef std::pair<const int, double> V;
-    std::map<int, double> m =
-                            {
-                                {1, 1},
-                                {1, 1.5},
-                                {1, 2},
-                                {2, 1},
-                                {2, 1.5},
-                                {2, 2},
-                                {3, 1},
-                                {3, 1.5},
-                                {3, 2}
-                            };
+    std::map<int, double> m = {{1, 1}, {1, 1.5}, {1, 2}, {2, 1}, {2, 1.5}, {2, 2}, {3, 1}, {3, 1.5}, {3, 2}};
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
-    }
-    {
+  }
+  {
     typedef std::pair<const int, double> V;
-    std::map<int, double, std::less<int>, min_allocator<V>> m =
-                            {
-                                {1, 1},
-                                {1, 1.5},
-                                {1, 2},
-                                {2, 1},
-                                {2, 1.5},
-                                {2, 2},
-                                {3, 1},
-                                {3, 1.5},
-                                {3, 2}
-                            };
+    std::map<int, double, std::less<int>, min_allocator<V>> m = {
+        {1, 1}, {1, 1.5}, {1, 2}, {2, 1}, {2, 1.5}, {2, 2}, {3, 1}, {3, 1.5}, {3, 2}};
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
-    }
+  }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

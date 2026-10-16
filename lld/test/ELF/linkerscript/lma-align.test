@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: echo '.globl _start; _start: ret; .data.rel.ro; .balign 16; .byte 0; \
+# RUN: echo '.globl _start; _start: ret; .section .data.rel.ro,"aw"; .balign 16; .byte 0; \
 # RUN:   .data; .balign 32; .byte 0; .bss; .byte 0' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
 # RUN: ld.lld -T %s %t.o -o %t 2>&1 | FileCheck --check-prefix=WARN %s --implicit-check-not=warning:

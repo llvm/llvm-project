@@ -1,34 +1,44 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_flang_library(FlangOpenMPTransforms
-  FunctionFiltering.cpp
+  AutomapToTargetData.cpp
+  DoConcurrentConversion.cpp
   GenericLoopConversion.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
-  MarkDeclareTarget.cpp
+  LowerWorkdistribute.cpp
   LowerWorkshare.cpp
+  LowerNontemporal.cpp
+  SimdOnly.cpp
+  UnimplementedDeviceCheck.cpp
 
   DEPENDS
   FIRDialect
   HLFIROpsIncGen
   FlangOpenMPPassesIncGen
-  ${dialect_libs}
 
   LINK_LIBS
   FIRAnalysis
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranCommon
+  FortranSupport
   HLFIRDialect
+  FortranUtils
+
+  MLIR_DEPS
+  ${dialect_libs}
 
   MLIR_LIBS
   MLIRFuncDialect
   MLIROpenMPDialect
+  MLIROpenMPTransforms
   MLIRIR
   MLIRPass
   MLIRTransformUtils
   ${dialect_libs}
 )
+
+add_subdirectory(Support)

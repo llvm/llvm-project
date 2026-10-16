@@ -92,42 +92,13 @@ public:
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
 
+  /// Only the ConstantRange kinds are uniqued by profile; every other kind
+  /// has a pool with a typed key.
   void Profile(FoldingSetNodeID &ID) const {
-    if (isEnumAttribute())
-      Profile(ID, getKindAsEnum());
-    else if (isIntAttribute())
-      Profile(ID, getKindAsEnum(), getValueAsInt());
-    else if (isStringAttribute())
-      Profile(ID, getKindAsString(), getValueAsString());
-    else if (isTypeAttribute())
-      Profile(ID, getKindAsEnum(), getValueAsType());
-    else if (isConstantRangeAttribute())
+    if (isConstantRangeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsConstantRange());
     else
       Profile(ID, getKindAsEnum(), getValueAsConstantRangeList());
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
-    assert(Attribute::isEnumAttrKind(Kind) && "Expected enum attribute");
-    ID.AddInteger(Kind);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      uint64_t Val) {
-    assert(Attribute::isIntAttrKind(Kind) && "Expected int attribute");
-    ID.AddInteger(Kind);
-    ID.AddInteger(Val);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, StringRef Kind, StringRef Values) {
-    ID.AddString(Kind);
-    if (!Values.empty()) ID.AddString(Values);
-  }
-
-  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      Type *Ty) {
-    ID.AddInteger(Kind);
-    ID.AddPointer(Ty);
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
@@ -186,6 +157,8 @@ public:
   }
 
   uint64_t getValue() const { return Val; }
+
+  std::pair<unsigned, uint64_t> getKey() const { return {getEnumKind(), Val}; }
 };
 
 class StringAttributeImpl final
@@ -195,15 +168,12 @@ class StringAttributeImpl final
 
   unsigned KindSize;
   unsigned ValSize;
-  size_t numTrailingObjects(OverloadToken<char>) const {
-    return KindSize + 1 + ValSize + 1;
-  }
 
 public:
   StringAttributeImpl(StringRef Kind, StringRef Val = StringRef())
       : AttributeImpl(StringAttrEntry), KindSize(Kind.size()),
         ValSize(Val.size()) {
-    char *TrailingString = getTrailingObjects<char>();
+    char *TrailingString = getTrailingObjects();
     // Some users rely on zero-termination.
     llvm::copy(Kind, TrailingString);
     TrailingString[KindSize] = '\0';
@@ -212,10 +182,14 @@ public:
   }
 
   StringRef getStringKind() const {
-    return StringRef(getTrailingObjects<char>(), KindSize);
+    return StringRef(getTrailingObjects(), KindSize);
   }
   StringRef getStringValue() const {
-    return StringRef(getTrailingObjects<char>() + KindSize + 1, ValSize);
+    return StringRef(getTrailingObjects() + KindSize + 1, ValSize);
+  }
+
+  std::pair<StringRef, StringRef> getKey() const {
+    return {getStringKind(), getStringValue()};
   }
 
   static size_t totalSizeToAlloc(StringRef Kind, StringRef Val) {
@@ -232,6 +206,8 @@ public:
       : EnumAttributeImpl(TypeAttrEntry, Kind), Ty(Ty) {}
 
   Type *getTypeValue() const { return Ty; }
+
+  std::pair<unsigned, Type *> getKey() const { return {getEnumKind(), Ty}; }
 };
 
 class ConstantRangeAttributeImpl : public EnumAttributeImpl {
@@ -250,25 +226,22 @@ class ConstantRangeListAttributeImpl final
   friend TrailingObjects;
 
   unsigned Size;
-  size_t numTrailingObjects(OverloadToken<ConstantRange>) const { return Size; }
 
 public:
   ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
                                  ArrayRef<ConstantRange> Val)
       : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
     assert(Size > 0);
-    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    std::uninitialized_copy(Val.begin(), Val.end(), TrailingCR);
+    llvm::uninitialized_copy(Val, getTrailingObjects());
   }
 
   ~ConstantRangeListAttributeImpl() {
-    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    for (unsigned I = 0; I != Size; ++I)
-      TrailingCR[I].~ConstantRange();
+    for (ConstantRange &CR : getTrailingObjects(Size))
+      CR.~ConstantRange();
   }
 
   ArrayRef<ConstantRange> getConstantRangeListValue() const {
-    return ArrayRef(getTrailingObjects<ConstantRange>(), Size);
+    return getTrailingObjects(Size);
   }
 
   static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
@@ -338,6 +311,7 @@ public:
   MaybeAlign getAlignment() const;
   MaybeAlign getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
+  DeadOnReturnInfo getDeadOnReturnInfo() const;
   uint64_t getDereferenceableOrNullBytes() const;
   std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
       const;
@@ -353,17 +327,10 @@ public:
 
   using iterator = const Attribute *;
 
-  iterator begin() const { return getTrailingObjects<Attribute>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrs; }
 
-  void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, ArrayRef(begin(), end()));
-  }
-
-  static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {
-    for (const auto &Attr : AttrList)
-      Attr.Profile(ID);
-  }
+  ArrayRef<Attribute> getKey() const { return getTrailingObjects(NumAttrs); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -382,9 +349,6 @@ private:
   AttributeBitSet AvailableFunctionAttrs;
   /// Union of enum attributes available at any index.
   AttributeBitSet AvailableSomewhereAttrs;
-
-  // Helper fn for TrailingObjects class.
-  size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
 
 public:
   AttributeListImpl(ArrayRef<AttributeSet> Sets);
@@ -407,11 +371,12 @@ public:
 
   using iterator = const AttributeSet *;
 
-  iterator begin() const { return getTrailingObjects<AttributeSet>(); }
+  iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrSets; }
 
-  void Profile(FoldingSetNodeID &ID) const;
-  static void Profile(FoldingSetNodeID &ID, ArrayRef<AttributeSet> Nodes);
+  ArrayRef<AttributeSet> getKey() const {
+    return getTrailingObjects(NumAttrSets);
+  }
 
   void dump() const;
 };

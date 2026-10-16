@@ -63,6 +63,9 @@ def IsTensorTypePred : CPred<"::llvm::isa<::mlir::TensorType>($_self)">;
 // Whether a type is a MemRefType.
 def IsMemRefTypePred : CPred<"::llvm::isa<::mlir::MemRefType>($_self)">;
 
+// Whether a type is a TensorType or a MemRefType.
+def IsTensorOrMemRefTypePred : Or<[IsTensorTypePred, IsMemRefTypePred]>;
+
 // Whether a type is an UnrankedMemRefType
 def IsUnrankedMemRefTypePred
         : CPred<"::llvm::isa<::mlir::UnrankedMemRefType>($_self)">;
@@ -124,7 +127,6 @@ class Variadic<Type type> : TypeConstraint<type.predicate,
                                            "variadic of " # type.summary,
                                            type.cppType> {
   Type baseType = type;
-  int minSize = 0;
 }
 
 // A nested variadic type constraint. It expands to zero or more variadic ranges
@@ -162,8 +164,17 @@ class SameBuildabilityAs<Type type, code builder> {
   code builderCall = !if(!empty(type.builderCall), "", builder);
 }
 
-// Any type at all.
-def AnyType : Type<CPred<"true">, "any type">;
+// Whether a type is the builtin `TokenType`.
+def IsTokenTypePred : CPred<"::llvm::isa<::mlir::TokenType>($_self)">;
+
+// Any non-token type. Tokens are excluded by default to prevent ops that
+// accept arbitrary types from accidentally accepting tokens as operands /
+// results, since a token must not be value-forwarded.
+def AnyType : Type<Neg<IsTokenTypePred>, "any non-token type">;
+
+// The builtin token type.
+def Token : Type<IsTokenTypePred, "token", "::mlir::TokenType">,
+            BuildableType<"$_builder.getType<::mlir::TokenType>()">;
 
 // None type
 def NoneType : Type<CPred<"::llvm::isa<::mlir::NoneType>($_self)">, "none type",
@@ -305,6 +316,17 @@ def Index : Type<CPred<"::llvm::isa<::mlir::IndexType>($_self)">, "index",
 def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
                                      "signless integer or index">;
 
+// A signless integer type with a non-zero bitwidth (excludes i0).
+def AnyNonZeroBitwidthSignlessInteger : ConfinedType<
+    AnySignlessInteger, [CPred<"!$_self.isInteger(0)">],
+    "non-zero-bitwidth signless integer">;
+
+// A non-zero-bitwidth signless integer or index type.
+def AnyNonZeroBitwidthSignlessIntegerOrIndex : Type<
+    Or<[AnyNonZeroBitwidthSignlessInteger.predicate,
+        Index.predicate]>,
+    "non-zero-bitwidth signless integer or index">;
+
 // Floating point types.
 
 // Any float type irrespective of its width.
@@ -355,6 +377,8 @@ def F6E3M2FN : Type<CPred<"::llvm::isa<::mlir::Float6E3M2FNType>($_self)">, "f6E
                BuildableType<"$_builder.getType<Float6E3M2FNType>()">;
 def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f8E8M0FNU type">,
                 BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
+def F8E5M3FNU : Type<CPred<"::llvm::isa<::mlir::Float8E5M3FNUType>($_self)">, "f8E5M3FNU type">,
+                BuildableType<"$_builder.getType<Float8E5M3FNUType>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
@@ -384,6 +408,12 @@ class OpaqueType<string dialect, string name, string summary>
 def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
                               "function type", "::mlir::FunctionType">;
 
+// Graph Type.
+
+// Any graph type.
+def GraphType : Type<CPred<"::llvm::isa<::mlir::GraphType>($_self)">,
+                              "graph type", "::mlir::GraphType">;
+
 // A container type is a type that has another type embedded within it.
 class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
                     string descr, string cppType = "::mlir::Type"> :
@@ -396,13 +426,14 @@ class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
 
 class ShapedContainerType<list<Type> allowedTypes,
                           Pred containerPred, string descr,
-                          string cppType = "::mlir::Type"> :
+                          string cppType = "::mlir::Type",
+                          string summary = ""> :
     Type<And<[containerPred,
               Concat<"[](::mlir::Type elementType) { return ",
                 SubstLeaves<"$_self", "elementType",
                 AnyTypeOf<allowedTypes>.predicate>,
                 "; }(::llvm::cast<::mlir::ShapedType>($_self).getElementType())">]>,
-         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values", cppType>;
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values" # summary, cppType>;
 
 // Whether a shaped type is ranked.
 def HasRankPred : CPred<"::llvm::cast<::mlir::ShapedType>($_self).hasRank()">;
@@ -426,7 +457,9 @@ class ValueSemanticsContainerOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, HasValueSemanticsPred,
   "container with value semantics">;
 
+//===----------------------------------------------------------------------===//
 // Vector types.
+//===----------------------------------------------------------------------===//
 
 class VectorOfNonZeroRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfNonZeroRankTypePred, "vector",
@@ -526,6 +559,18 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
+// Whether the number of elements of a vector is greater than
+// or equal to `minLength`.
+class IsVectorOfMinLengthPred<int minLength> :
+  And<[IsVectorOfNonZeroRankTypePred,
+       CPred<"::llvm::cast<::mlir::VectorType>($_self).getNumElements() >= " # minLength>]>;
+
+// Whether the number of elements of a vector is less than
+// or equal to `maxLength`.
+class IsVectorOfMaxLengthPred<int maxLength> :
+  And<[IsVectorOfNonZeroRankTypePred,
+       CPred<"::llvm::cast<::mlir::VectorType>($_self).getNumElements() <= " # maxLength>]>;
+
 // Whether the number of elements of a fixed-length vector is from the given
 // `allowedLengths` list
 class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
@@ -571,7 +616,7 @@ class NormalizeIndex<int value> {
 class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
   : And<[
       CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # NormalizeIndex<n>.ret>,
-      CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
+      CPred<"::llvm::is_contained(::llvm::ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
         # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
         #   !if(!lt(n, 0),
               "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
@@ -580,13 +625,27 @@ class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
 
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>
-  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
+  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ::llvm::ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
 class VectorOfLength<list<int> allowedLengths> : Type<
   IsVectorOfLengthPred<allowedLengths>,
   " of length " # !interleave(allowedLengths, "/"),
+  "::mlir::VectorType">;
+
+// Any vector where the number of elements is more than
+// or equal to minLength.
+class VectorOfMinLength<int minLength> : Type<
+  IsVectorOfMinLengthPred<minLength>,
+  " of at least length " # minLength,
+  "::mlir::VectorType">;
+
+// Any vector where the number of elements is less than
+// or equal to maxLength.
+class VectorOfMaxLength<int maxLength> : Type<
+  IsVectorOfMaxLengthPred<maxLength>,
+  " of at most length " # maxLength,
   "::mlir::VectorType">;
 
 // Any fixed-length vector where the number of elements is from the given
@@ -612,6 +671,32 @@ class VectorOfLengthAndType<list<int> allowedLengths,
    VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes`
+// list and the rank is from the given `allowedRanks` list
+class VectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                   list<int> allowedLengths,
+                                   list<Type> allowedTypes> : AllOfType<
+  [VectorOfRank<allowedRanks>, VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary # VectorOfRank<allowedRanks>.summary,
+  "::mlir::VectorType">;
+
+// Any vector where the number of elements is between
+// `minLength` and `maxLength` (inclusive).
+class VectorOfMinMaxLengthAndType<int minLength, int maxLength,
+                                  list<Type> allowedTypes> : AllOfType<
+  [VectorOfNonZeroRankOf<allowedTypes>, VectorOfMinLength<minLength>, VectorOfMaxLength<maxLength>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfMinLength<minLength>.summary # VectorOfMaxLength<maxLength>.summary,
+  "::mlir::VectorType">;
+
+class FixedVectorOfShapeAndType<list<int> shape, Type elType>: ShapedContainerType<
+  [elType],
+  And<[IsVectorOfShape<shape>, IsFixedVectorOfAnyRankTypePred]>,
+  "vector<" # !interleave(shape, "x") # "x" # elType # ">",
+  "::mlir::VectorType">,
+  BuildableType<"::mlir::VectorType::get({" # !interleave(shape, " ,") # "} , " # elType.builderCall # " );">;
+
+
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
@@ -619,6 +704,18 @@ class FixedVectorOfLengthAndType<list<int> allowedLengths,
   [FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOfAnyRank<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+// as the rank is from the given `allowedRanks` list
+class FixedVectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                        list<int> allowedLengths,
+                                        list<Type> allowedTypes> : AllOfType<
+  [VectorOfRank<allowedRanks>, FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
+  FixedVectorOfAnyRank<allowedTypes>.summary #
+  FixedVectorOfLength<allowedLengths>.summary #
+  VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Any scalable vector where the number of elements is from the given
@@ -679,6 +776,7 @@ def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped",
 
 //===----------------------------------------------------------------------===//
 // Tensor types.
+//===----------------------------------------------------------------------===//
 
 // Unranked tensor type whose element type is from the given `allowedTypes`
 // list, and which additionally satisfies an optional list of predicates.
@@ -754,7 +852,8 @@ class StaticShapeTensorOf<list<Type> allowedTypes>
 def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 
 //===----------------------------------------------------------------------===//
-// Memref type.
+// Memref types.
+//===----------------------------------------------------------------------===//
 
 // Any unranked memref whose element type is from the given `allowedTypes` list.
 class UnrankedMemRefOf<list<Type> allowedTypes> :
@@ -833,8 +932,8 @@ class AnyStridedMemRefOfRank<int rank> :
        AnyStridedMemRef.summary # " of rank " # rank>;
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
-    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>],
-         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
+    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>, HasStridesPred],
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " strided " #
          MemRefOf<allowedTypes>.summary>;
 
 // This represents a generic tuple without any constraints on element type.
@@ -877,53 +976,42 @@ class NestedTupleOf<list<Type> allowedTypes> :
                        "nested tuple">;
 
 //===----------------------------------------------------------------------===//
+// Mixed types
+//===----------------------------------------------------------------------===//
+
+class TensorOrMemRef<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsTensorOrMemRefTypePred, "Tensor or MemRef",
+                      "::mlir::ShapedType">;
+
+//===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
-// Type constraint for types that are "like" some type or set of types T, that is
-// they're either a T, a vector of Ts, or a tensor of Ts.
-class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate,
-  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
-  name>;
 
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
 class TypeOrValueSemanticsContainer<Type allowedType, string name>
-    : TypeConstraint<Or<[
+    : Type<Or<[
   allowedType.predicate,
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
-  TensorOf<[allowedType]>.predicate]>,
-  name>;
-
-
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeOrContainer<I1, "bool-like">;
+def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
 
-def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
-
-// Type constraint for signless-integer-like types: signless integers, 
-// vectors of signless integers or tensors of signless integers.
+// Type constraint for signless-integer-like types: signless integers or
+// value-semantics containers of signless integers.
 def SignlessIntegerLike : TypeOrValueSemanticsContainer<
     AnySignlessInteger, "signless-integer">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
-// vectors of signless integers or indices, tensors of signless integers.
+// or value-semantics containers of signless integers or indices.
 def SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
     AnySignlessIntegerOrIndex, "signless-integer-like">;
 
-def SignlessIntegerOrIndexLikeOfAnyRank : TypeOrContainerOfAnyRank<
-    AnySignlessIntegerOrIndex,
-    "signless-integer-like">;
-
-// Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
+// Type constraint for float-like types: floats or value-semantics containers
+// of floats.
+def FloatLike : TypeOrValueSemanticsContainer<AnyFloat, "floating-point-like">;
 
 // Type constraint for signless-integer-or-index-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[

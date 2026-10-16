@@ -18,8 +18,7 @@
 
 #include "llvm/Support/DataTypes.h"
 
-namespace llvm {
-namespace X86Disassembler {
+namespace llvm::X86Disassembler {
 
 #define INSTRUCTIONS_SYM x86DisassemblerInstrSpecifiers
 #define CONTEXTS_SYM x86DisassemblerContexts
@@ -27,14 +26,9 @@ namespace X86Disassembler {
 #define TWOBYTE_SYM x86DisassemblerTwoByteOpcodes
 #define THREEBYTE38_SYM x86DisassemblerThreeByte38Opcodes
 #define THREEBYTE3A_SYM x86DisassemblerThreeByte3AOpcodes
-#define XOP8_MAP_SYM x86DisassemblerXOP8Opcodes
-#define XOP9_MAP_SYM x86DisassemblerXOP9Opcodes
-#define XOPA_MAP_SYM x86DisassemblerXOPAOpcodes
-#define THREEDNOW_MAP_SYM x86Disassembler3DNowOpcodes
-#define MAP4_SYM x86DisassemblerMap4Opcodes
-#define MAP5_SYM x86DisassemblerMap5Opcodes
-#define MAP6_SYM x86DisassemblerMap6Opcodes
-#define MAP7_SYM x86DisassemblerMap7Opcodes
+#define SPARSE_OPCODE_DECISIONS_SYM x86DisassemblerSparseOpcodeDecisions
+#define SPARSE_OPCODE_DECISION_INDICES_SYM                                     \
+  x86DisassemblerSparseOpcodeDecisionIndices
 
 #define INSTRUCTIONS_STR "x86DisassemblerInstrSpecifiers"
 #define CONTEXTS_STR "x86DisassemblerContexts"
@@ -42,14 +36,9 @@ namespace X86Disassembler {
 #define TWOBYTE_STR "x86DisassemblerTwoByteOpcodes"
 #define THREEBYTE38_STR "x86DisassemblerThreeByte38Opcodes"
 #define THREEBYTE3A_STR "x86DisassemblerThreeByte3AOpcodes"
-#define XOP8_MAP_STR "x86DisassemblerXOP8Opcodes"
-#define XOP9_MAP_STR "x86DisassemblerXOP9Opcodes"
-#define XOPA_MAP_STR "x86DisassemblerXOPAOpcodes"
-#define THREEDNOW_MAP_STR "x86Disassembler3DNowOpcodes"
-#define MAP4_STR "x86DisassemblerMap4Opcodes"
-#define MAP5_STR "x86DisassemblerMap5Opcodes"
-#define MAP6_STR "x86DisassemblerMap6Opcodes"
-#define MAP7_STR "x86DisassemblerMap7Opcodes"
+#define SPARSE_OPCODE_DECISIONS_STR "x86DisassemblerSparseOpcodeDecisions"
+#define SPARSE_OPCODE_DECISION_INDICES_STR                                     \
+  "x86DisassemblerSparseOpcodeDecisionIndices"
 
 // Attributes of an instruction that must be known before the opcode can be
 // processed correctly.  Most of these indicate the presence of particular
@@ -122,6 +111,7 @@ enum attributeBits {
              "The Dynamic Duo!  Prefer over all else because this changes "    \
              "most operands' meaning")                                         \
   ENUM_ENTRY(IC_64BIT_REX2, 2, "requires a REX2 prefix")                       \
+  ENUM_ENTRY(IC_64BIT_REX2_REXW, 3, "requires a REX2 and the W prefix")        \
   ENUM_ENTRY(IC_VEX, 1, "requires a VEX prefix")                               \
   ENUM_ENTRY(IC_VEX_XS, 2, "requires VEX and the XS prefix")                   \
   ENUM_ENTRY(IC_VEX_XD, 2, "requires VEX and the XD prefix")                   \
@@ -511,7 +501,6 @@ enum OperandEncoding { ENCODINGS ENCODING_max };
   ENUM_ENTRY(TYPE_VK, "mask register")                                         \
   ENUM_ENTRY(TYPE_VK_PAIR, "mask register pair")                               \
   ENUM_ENTRY(TYPE_TMM, "tile")                                                 \
-  ENUM_ENTRY(TYPE_TMM_PAIR, "tile pair")                                       \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG, "Debug register operand")                          \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \
@@ -541,7 +530,6 @@ static const unsigned X86_MAX_OPERANDS = 6;
 /// respectively.
 enum DisassemblerMode { MODE_16BIT, MODE_32BIT, MODE_64BIT };
 
-} // namespace X86Disassembler
-} // namespace llvm
+} // namespace llvm::X86Disassembler
 
 #endif

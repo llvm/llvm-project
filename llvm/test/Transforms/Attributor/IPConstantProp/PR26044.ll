@@ -8,7 +8,7 @@ define void @fn2(ptr %P, i1 %C) {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@fn2
-; TUNIT-SAME: (ptr nocapture nofree [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree captures(none) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[IF_END:%.*]]
 ; TUNIT:       for.cond1:
@@ -23,7 +23,7 @@ define void @fn2(ptr %P, i1 %C) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@fn2
-; CGSCC-SAME: (ptr nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[IF_END:%.*]]
 ; CGSCC:       for.cond1:
@@ -70,7 +70,7 @@ define void @fn_no_null_opt(ptr %P, i1 %C) null_pointer_is_valid {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
 ; TUNIT-LABEL: define {{[^@]+}}@fn_no_null_opt
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[P:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[IF_END:%.*]]
 ; TUNIT:       for.cond1:
@@ -85,7 +85,7 @@ define void @fn_no_null_opt(ptr %P, i1 %C) null_pointer_is_valid {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind null_pointer_is_valid
 ; CGSCC-LABEL: define {{[^@]+}}@fn_no_null_opt
-; CGSCC-SAME: (ptr nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree writeonly align 4 captures(none) dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[IF_END:%.*]]
 ; CGSCC:       for.cond1:

@@ -6,7 +6,8 @@
 namespace test1 {
 template <bool> struct S {};
 template <typename> concept C = true;
-template <typename T = int> S<C<T>> f0() { return S<C<T>>{}; }
+template <typename T = int>
+S<C<T>> f0() { return S<C<T>>{}; }
 template S<C<int>> f0<>();
 // CHECK: @_ZN5test12f0IiEENS_1SIX1CIT_EEEEv(
 // CLANG17: @_ZN5test12f0IiEENS_1SIL_ZNS_1CIT_EEEEEv(
@@ -243,4 +244,16 @@ namespace gh67356 {
   template<typename T> void g(T t, C<auto (T u) -> decltype(f(t, u))> auto) {}
   // CHECK: define {{.*}} @_ZN7gh673561gIiTkNS_1CIFDTcl1ffL0p_fp_EET_EEEiEEvS3_T0_(
   template void g(int, int);
+}
+
+namespace gh204178 {
+  // Like gh67356::f, but the return type carries an ABI tag.
+  inline namespace [[gnu::abi_tag("n")]] n {
+    class s {};
+  }
+  template<typename, typename> concept c = true;
+  template<typename T> auto f(T t, c<decltype(t)> auto) -> s;
+  // CHECK: call {{.*}} @_ZN8gh2041781fIiTkNS_1cIDtfL0p_EEEiEENS_1n1sET_T0_(
+  // CLANG17: call {{.*}} @_ZN8gh2041781fIiiEENS_1n1sET_T0_(
+  void g() { f(0, 0); }
 }

@@ -11,6 +11,7 @@
 
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -19,6 +20,8 @@
 #include "lldb/Target/ThreadPlanTracer.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -283,6 +286,15 @@ namespace lldb_private {
 //  report_run_vote argument to the constructor works like report_stop_vote, and
 //  is a way for a plan to instruct a sub-plan on how to respond to
 //  ShouldReportStop.
+//
+//  Reverse execution:
+//
+//  Every thread plan has an associated RunDirection (forward or backward).
+//  For ThreadPlanBase, this direction is the Process's base direction.
+//  Whenever we resume the target, we need to ensure that the topmost thread
+//  plans for each runnable thread all agree on their direction. This is
+//  ensured in ThreadList::WillResume(), which chooses a direction and then
+//  discards thread plans incompatible with that direction.
 
 class ThreadPlan : public std::enable_shared_from_this<ThreadPlan>,
                    public UserID {
@@ -304,6 +316,7 @@ public:
     eKindStepThrough,
     eKindStepUntil,
     eKindSingleThreadTimeout,
+    eKindRunToBreakpoint
   };
 
   virtual ~ThreadPlan();
@@ -371,8 +384,8 @@ public:
   /// subsequently processed plans.
   ///
   /// When processing the thread plan stack, this function gives plans the
-  /// ability to continue - even when subsequent plans return true from
-  /// `ShouldStop`. \see Thread::ShouldStop
+  /// ability to continue. If it returns true, the `ShouldStop` of
+  /// subsequently processed plans is not consulted. \see Thread::ShouldStop
   virtual bool ShouldAutoContinue(Event *event_ptr) { return false; }
 
   // Whether a "stop class" event should be reported to the "outside world".
@@ -497,6 +510,10 @@ public:
 
   virtual lldb::StateType GetPlanRunState() = 0;
 
+  virtual lldb::RunDirection GetDirection() const {
+    return lldb::RunDirection::eRunForward;
+  }
+
 protected:
   // Constructors and Destructors
   ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
@@ -609,6 +626,15 @@ protected:
   ThreadPlanNull(const ThreadPlanNull &) = delete;
   const ThreadPlanNull &operator=(const ThreadPlanNull &) = delete;
 };
+
+/// Returns the load addresses of the line table entries for \p lines in
+/// \p file, and of \p addresses, that are in the scope of \p frame. A
+/// line without entries resolves to the nearest following line with
+/// entries. Fails if no address is left.
+llvm::Expected<std::vector<lldb::addr_t>>
+GetStepUntilAddresses(StackFrame &frame, const FileSpec &file,
+                      llvm::ArrayRef<uint32_t> lines,
+                      llvm::ArrayRef<lldb::addr_t> requested_addresses);
 
 } // namespace lldb_private
 

@@ -14,9 +14,6 @@
 // Test to make sure that the streams only get initialized once
 // Taken from https://llvm.org/PR43300
 
-// This test requires the fix for PR43300 (7b81a13bfcd1).
-// XFAIL: using-built-library-before-llvm-9
-
 int main(int, char**)
 {
 

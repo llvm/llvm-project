@@ -80,16 +80,10 @@ public:
   void Schedule() override;
 
   /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  void AddPred(SUnit *SU, const SDep &D) {
-    SU->addPred(D);
-  }
+  void AddPred(SUnit *SU, const SDep &D) { SU->addPred(D); }
 
   /// RemovePred - removes a predecessor edge from SUnit SU.
-  /// This returns true if an edge was removed.
-  void RemovePred(SUnit *SU, const SDep &D) {
-    SU->removePred(D);
-  }
+  void RemovePred(SUnit *SU, const SDep &D) { SU->removePred(D); }
 
 private:
   void ReleasePred(SUnit *SU, SDep *PredEdge);
@@ -231,20 +225,26 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
       return nullptr;
 
-    LLVM_DEBUG(dbgs() << "Unfolding SU # " << SU->NodeNum << "\n");
     assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
     N = NewNodes[1];
     SDNode *LoadNode = NewNodes[0];
     unsigned NumVals = N->getNumValues();
     unsigned OldNumVals = SU->getNode()->getNumValues();
+
+    // Give up if LoadNode already exists, see ScheduleDAGRRList::TryUnfoldSU.
+    if (LoadNode->getNodeId() != -1)
+      return nullptr;
+    assert(N->getNodeId() == -1 && "Node using a new load can't exist yet!");
+
+    LLVM_DEBUG(dbgs() << "Unfolding " << *SU << "\n");
+
     for (unsigned i = 0; i != NumVals; ++i)
       DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
-    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals-1),
+    DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals - 1),
                                    SDValue(LoadNode, 1));
 
     SUnit *NewSU = newSUnit(N);
-    assert(N->getNodeId() == -1 && "Node already inserted!");
     N->setNodeId(NewSU->NodeNum);
 
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
@@ -257,18 +257,8 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     if (MCID.isCommutable())
       NewSU->isCommutable = true;
 
-    // LoadNode may already exist. This can happen when there is another
-    // load from the same location and producing the same type of value
-    // but it has different alignment or volatileness.
-    bool isNewLoad = true;
-    SUnit *LoadSU;
-    if (LoadNode->getNodeId() != -1) {
-      LoadSU = &SUnits[LoadNode->getNodeId()];
-      isNewLoad = false;
-    } else {
-      LoadSU = newSUnit(LoadNode);
-      LoadNode->setNodeId(LoadSU->NodeNum);
-    }
+    SUnit *LoadSU = newSUnit(LoadNode);
+    LoadNode->setNodeId(LoadSU->NodeNum);
 
     SDep ChainPred;
     SmallVector<SDep, 4> ChainSuccs;
@@ -293,14 +283,11 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
 
     if (ChainPred.getSUnit()) {
       RemovePred(SU, ChainPred);
-      if (isNewLoad)
-        AddPred(LoadSU, ChainPred);
+      AddPred(LoadSU, ChainPred);
     }
     for (const SDep &Pred : LoadPreds) {
       RemovePred(SU, Pred);
-      if (isNewLoad) {
-        AddPred(LoadSU, Pred);
-      }
+      AddPred(LoadSU, Pred);
     }
     for (const SDep &Pred : NodePreds) {
       RemovePred(SU, Pred);
@@ -317,16 +304,12 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       SUnit *SuccDep = D.getSUnit();
       D.setSUnit(SU);
       RemovePred(SuccDep, D);
-      if (isNewLoad) {
-        D.setSUnit(LoadSU);
-        AddPred(SuccDep, D);
-      }
+      D.setSUnit(LoadSU);
+      AddPred(SuccDep, D);
     }
-    if (isNewLoad) {
-      SDep D(LoadSU, SDep::Barrier);
-      D.setLatency(LoadSU->Latency);
-      AddPred(NewSU, D);
-    }
+    SDep D(LoadSU, SDep::Barrier);
+    D.setLatency(LoadSU->Latency);
+    AddPred(NewSU, D);
 
     ++NumUnfolds;
 
@@ -337,7 +320,7 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     SU = NewSU;
   }
 
-  LLVM_DEBUG(dbgs() << "Duplicating SU # " << SU->NodeNum << "\n");
+  LLVM_DEBUG(dbgs() << "Duplicating " << *SU << "\n");
   NewSU = Clone(SU);
 
   // New SUnit has the exact same predecessors.
@@ -360,8 +343,8 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       DelDeps.push_back(std::make_pair(SuccSU, D));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i)
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
 
   ++NumDups;
   return NewSU;
@@ -395,9 +378,8 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
       DelDeps.push_back(std::make_pair(SuccSU, Succ));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i) {
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
-  }
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
   SDep FromDep(SU, SDep::Data, Reg);
   FromDep.setLatency(SU->Latency);
   AddPred(CopyFromSU, FromDep);
@@ -411,32 +393,9 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
   ++NumPRCopies;
 }
 
-/// getPhysicalRegisterVT - Returns the ValueType of the physical register
-/// definition of the specified node.
-/// FIXME: Move to SelectionDAG?
-static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
-                                 const TargetInstrInfo *TII) {
-  unsigned NumRes;
-  if (N->getOpcode() == ISD::CopyFromReg) {
-    // CopyFromReg has: "chain, Val, glue" so operand 1 gives the type.
-    NumRes = 1;
-  } else {
-    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(!MCID.implicit_defs().empty() &&
-           "Physical reg def must be in implicit def list!");
-    NumRes = MCID.getNumDefs();
-    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
-      if (Reg == ImpDef)
-        break;
-      ++NumRes;
-    }
-  }
-  return N->getSimpleValueType(NumRes);
-}
-
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static bool CheckForLiveRegDef(SUnit *SU, unsigned Reg,
+static bool CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
                                std::vector<SUnit *> &LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
@@ -501,8 +460,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
             F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
-            unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-            if (Register::isPhysicalRegister(Reg))
+            Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+            if (Reg.isPhysical())
               CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
           }
         } else
@@ -579,9 +538,7 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
         assert(LRegs.size() == 1 && "Can't handle this yet!");
         unsigned Reg = LRegs[0];
         SUnit *LRDef = LiveRegDefs[Reg];
-        MVT VT = getPhysicalRegisterVT(LRDef->getNode(), Reg, TII);
-        const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, VT);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
         // If cross copy register class is the same as RC, then it must be
@@ -602,14 +559,14 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
           // Issue copies, these can be expensive cross register class copies.
           SmallVector<SUnit*, 2> Copies;
           InsertCopiesAndMoveSuccs(LRDef, Reg, DestRC, RC, Copies);
-          LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << TrySU->NodeNum
-                            << " to SU #" << Copies.front()->NodeNum << "\n");
+          LLVM_DEBUG(dbgs() << "Adding an edge from " << *TrySU << " to "
+                            << *Copies.front() << "\n");
           AddPred(TrySU, SDep(Copies.front(), SDep::Artificial));
           NewDef = Copies.back();
         }
 
-        LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << NewDef->NodeNum
-                          << " to SU #" << TrySU->NodeNum << "\n");
+        LLVM_DEBUG(dbgs() << "Adding an edge from " << *NewDef << " to "
+                          << *TrySU << "\n");
         LiveRegDefs[Reg] = NewDef;
         AddPred(NewDef, SDep(TrySU, SDep::Artificial));
         TrySU->isAvailable = false;
@@ -700,7 +657,7 @@ void ScheduleDAGLinearize::ScheduleNode(SDNode *N) {
         // Glue operand is already scheduled.
         continue;
 
-      DenseMap<SDNode*, SDNode*>::iterator DI = GluedMap.find(OpN);
+      auto DI = GluedMap.find(OpN);
       if (DI != GluedMap.end() && DI->second != N)
         // Users of glues are counted against the glued users.
         OpN = DI->second;

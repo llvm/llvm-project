@@ -1,3 +1,5 @@
+// REQUIRES: arm-emulator
+
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule  \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
@@ -82,9 +84,13 @@ module attributes {transform.with_named_sequence} {
       : !transform.any_op
 
     // Step 3: Bufferize ahead of TransferReadDropUnitDimsPattern, which
-    // currently only supports memrefs.
-    %bufferize = transform.bufferization.one_shot_bufferize %module
-      {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+    // currently only supports memrefs. Force an identity (contiguous) layout
+    // map at function boundaries: the default inferred layout is fully
+    // dynamic for function arguments, which later fails vector-to-ArmSME
+    // lowering's requirement that the tile memref have unit stride on its
+    // most minor dimension.
+    %bufferize = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
     %func = transform.structured.match ops{["func.func"]} in %bufferize
       : (!transform.any_op) -> !transform.any_op
@@ -94,6 +100,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.lower_masked_transfers
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.reduction_to_contract
+      transform.apply_patterns.vector.sink_ops
     } : !transform.any_op
 
     // Step 5: Lower vector.contract to vector.outerproduct. Also drop unit

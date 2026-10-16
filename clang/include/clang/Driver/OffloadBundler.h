@@ -17,12 +17,12 @@
 #ifndef LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 #define LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <llvm/Support/MemoryBuffer.h>
 #include <string>
-#include <vector>
 
 namespace clang {
 
@@ -47,10 +47,9 @@ public:
   std::string FilesType;
   std::string ObjcopyPath;
 
-  // TODO: Convert these to llvm::SmallVector
-  std::vector<std::string> TargetNames;
-  std::vector<std::string> InputFileNames;
-  std::vector<std::string> OutputFileNames;
+  llvm::SmallVector<std::string, 4> TargetNames;
+  llvm::SmallVector<std::string, 4> InputFileNames;
+  llvm::SmallVector<std::string, 4> OutputFileNames;
 };
 
 class OffloadBundler {
@@ -93,71 +92,10 @@ struct OffloadTargetInfo {
   std::string str() const;
 };
 
-// CompressedOffloadBundle represents the format for the compressed offload
-// bundles.
-//
-// The format is as follows:
-// - Magic Number (4 bytes) - A constant "CCOB".
-// - Version (2 bytes)
-// - Compression Method (2 bytes) - Uses the values from
-// llvm::compression::Format.
-// - Total file size (4 bytes in V2, 8 bytes in V3).
-// - Uncompressed Size (4 bytes in V1/V2, 8 bytes in V3).
-// - Truncated MD5 Hash (8 bytes).
-// - Compressed Data (variable length).
-class CompressedOffloadBundle {
-private:
-  static inline const size_t MagicSize = 4;
-  static inline const size_t VersionFieldSize = sizeof(uint16_t);
-  static inline const size_t MethodFieldSize = sizeof(uint16_t);
-  // Legacy size fields for V1/V2
-  static inline const size_t FileSizeFieldSizeV2 = sizeof(uint32_t);
-  static inline const size_t UncompressedSizeFieldSizeV2 = sizeof(uint32_t);
-  // New size fields for V3
-  static inline const size_t FileSizeFieldSizeV3 = sizeof(uint64_t);
-  static inline const size_t UncompressedSizeFieldSizeV3 = sizeof(uint64_t);
-  static inline const size_t HashFieldSize = sizeof(uint64_t);
-
-  // Keep V1 header size for backward compatibility
-  static inline const size_t V1HeaderSize =
-      MagicSize + VersionFieldSize + MethodFieldSize +
-      UncompressedSizeFieldSizeV2 + HashFieldSize;
-
-  // Keep V2 header size for backward compatibility
-  static inline const size_t V2HeaderSize =
-      MagicSize + VersionFieldSize + FileSizeFieldSizeV2 + MethodFieldSize +
-      UncompressedSizeFieldSizeV2 + HashFieldSize;
-
-  // Add V3 header size with 64-bit fields
-  static inline const size_t V3HeaderSize =
-      MagicSize + VersionFieldSize + FileSizeFieldSizeV3 + MethodFieldSize +
-      UncompressedSizeFieldSizeV3 + HashFieldSize;
-
-  static inline const llvm::StringRef MagicNumber = "CCOB";
-
-public:
-  static inline const uint16_t DefaultVersion = 2;
-
-  // Helper method to get header size based on version
-  static size_t getHeaderSize(uint16_t Version) {
-    switch (Version) {
-    case 1:
-      return V1HeaderSize;
-    case 2:
-      return V2HeaderSize;
-    case 3:
-      return V3HeaderSize;
-    default:
-      llvm_unreachable("Unsupported version");
-    }
-  }
-
-  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,
-           uint16_t Version, bool Verbose = false);
-  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  decompress(const llvm::MemoryBuffer &Input, bool Verbose = false);
-};
+/// Check whether the bundle id is in the following format:
+/// <kind>-<triple>[-<target id>[:target features]]
+/// <triple> := <arch>-<vendor>-<os>-<env>
+bool checkOffloadBundleID(const llvm::StringRef Str);
 } // namespace clang
 
 #endif // LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H

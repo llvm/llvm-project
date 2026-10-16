@@ -7,7 +7,7 @@ import re
 import lit.formats
 
 # Only run the tests on supported OSs.
-if config.host_os not in ["Linux"]:
+if config.target_os not in ["Linux"]:
     config.unsupported = True
 
 

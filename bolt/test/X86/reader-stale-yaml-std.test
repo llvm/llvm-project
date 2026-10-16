@@ -24,7 +24,7 @@ CHECK:   Section     : .text
 CHECK:   IsSimple    : 1
 CHECK:   BB Count    : 18
 CHECK:   Exec Count  : 151
-CHECK:   Branch Count: 552
+CHECK:   Sample Count: 552
 CHECK: }
 ## Verify block counts.
 CHECK: .LBB00 (43 instructions, align : 1)
@@ -51,7 +51,7 @@ CHECK:   Section     : .text
 CHECK:   IsSimple    : 1
 CHECK:   BB Count    : 5
 CHECK:   Exec Count  : 20
-CHECK:   Branch Count: 640
+CHECK:   Sample Count: 640
 CHECK: }
 ## Verify block counts.
 CHECK: .LBB01 (4 instructions, align : 1)

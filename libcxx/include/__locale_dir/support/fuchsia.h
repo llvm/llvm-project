@@ -14,7 +14,9 @@
 #include <clocale> // uselocale & friends
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <cwchar>
+#include <langinfo.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
     if (__old_loc_)
@@ -49,8 +51,10 @@ struct __locale_guard {
 #define _LIBCPP_ALL_MASK LC_ALL_MASK
 #define _LIBCPP_LC_ALL LC_ALL
 
-using __locale_t = locale_t;
-using __lconv_t  = std::lconv;
+using __locale_t _LIBCPP_NODEBUG = locale_t;
+
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return ::newlocale(__category_mask, __name, __loc);
@@ -67,6 +71,10 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
   return std::localeconv();
 }
 
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
+
 //
 // Other functions
 //
@@ -74,7 +82,7 @@ inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_len_max(__locale_t __loc)
   __locale_guard __current(__loc);
   return MB_CUR_MAX;
 }
-#if _LIBCPP_HAS_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 inline _LIBCPP_HIDE_FROM_ABI wint_t __btowc(int __ch, __locale_t __loc) {
   __locale_guard __current(__loc);
   return std::btowc(__ch);
@@ -115,7 +123,8 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   __locale_guard __current(__loc);
   return ::mbsrtowcs(__dest, __src, __len, __ps);
 }
-#endif
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#endif   // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
@@ -138,20 +147,16 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __
   __locale_guard __current(__loc);
   return ::asprintf(__s, __format, std::forward<_Args>(__args)...); // non-standard
 }
-template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, _Args&&... __args) {
-  __locale_guard __current(__loc);
-  return std::sscanf(__s, __format, std::forward<_Args>(__args)...);
-}
-
 _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#include <__locale_dir/support/default/get_c_locale.h>
 #include <__locale_dir/support/no_locale/characters.h>
 #include <__locale_dir/support/no_locale/strtonum.h>
+
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H

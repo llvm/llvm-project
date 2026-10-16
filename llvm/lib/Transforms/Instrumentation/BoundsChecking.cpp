@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -25,7 +26,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -34,20 +34,26 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bounds-checking"
 
-static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
-                                  cl::desc("Use one trap block per function"));
-
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-class BuilderTy : public IRBuilder<TargetFolder> {
+class NoSanitizeInserter final : public IRBuilderDefaultInserter {
+  mutable MDNode *NoSanitizeMD = nullptr;
+
 public:
-  BuilderTy(BasicBlock *TheBB, BasicBlock::iterator IP, TargetFolder Folder)
-      : IRBuilder<TargetFolder>(TheBB, IP, Folder) {
-    SetNoSanitizeMetadata();
+  NoSanitizeInserter() = default;
+
+  void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock::iterator InsertPt) const {
+    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+    if (!NoSanitizeMD)
+      NoSanitizeMD = MDNode::get(I->getContext(), {});
+    I->setMetadata(LLVMContext::MD_nosanitize, NoSanitizeMD);
   }
 };
+
+using BuilderTy = IRBuilder<TargetFolder, NoSanitizeInserter>;
 
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///
@@ -111,14 +117,18 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
                             std::optional<int8_t> GuardKind) {
   if (!DebugTrapBB)
-    return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
+    return IRB.CreateIntrinsicWithoutFolding(Intrinsic::trap, {});
 
-  return IRB.CreateIntrinsic(
-      Intrinsic::ubsantrap, {},
-      ConstantInt::get(IRB.getInt8Ty(),
-                       GuardKind.has_value()
-                           ? GuardKind.value()
-                           : IRB.GetInsertBlock()->getParent()->size()));
+  uint64_t ImmArg = GuardKind.has_value()
+                        ? GuardKind.value()
+                        : IRB.GetInsertBlock()->getParent()->size();
+  // Ensure we constrain ImmArg to fitting within a 8-but unsigned integer to
+  // prevent overflow.
+  if (ImmArg > 255)
+    ImmArg = 255;
+
+  return IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::ubsantrap, ConstantInt::get(IRB.getInt8Ty(), ImmArg));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {
@@ -163,12 +173,12 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
     // If we have a constant zero, unconditionally branch.
     // FIXME: We should really handle this differently to bypass the splitting
     // the block.
-    BranchInst::Create(TrapBB, OldBB);
+    UncondBrInst::Create(TrapBB, OldBB);
     return;
   }
 
   // Create the conditional branch.
-  BranchInst::Create(TrapBB, Cont, Or, OldBB);
+  CondBrInst::Create(Or, TrapBB, Cont, OldBB);
 }
 
 static std::string
@@ -178,6 +188,8 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
     Name += "_minimal";
   if (!Opts.MayReturn)
     Name += "_abort";
+  else if (Opts.HandlerPreserveAllRegs)
+    Name += "_preserve";
   return Name;
 }
 
@@ -191,14 +203,14 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
+  ObjectSizeOffsetEvaluator ObjSizeEval(*F.getParent(), &TLI, EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
   SmallVector<std::pair<Instruction *, Value *>, 4> TrapInfo;
   for (Instruction &I : instructions(F)) {
     Value *Or = nullptr;
-    BuilderTy IRB(I.getParent(), BasicBlock::iterator(&I), TargetFolder(DL));
+    BuilderTy IRB(I.getIterator(), TargetFolder(DL));
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       if (!LI->isVolatile())
         Or = getBoundsCheckCond(LI->getPointerOperand(), LI, DL, TLI,
@@ -267,8 +279,13 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
       TrapCall->setDoesNotReturn();
       IRB.CreateUnreachable();
     }
-
-    if (!MayReturn && SingleTrapBB && !DebugTrapBB)
+    // The preserve-all logic is somewhat duplicated in CGExpr.cpp for
+    // local-bounds. Make sure to change that too.
+    if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
+      TrapCall->setCallingConv(CallingConv::PreserveAll);
+    if (!MayReturn &&
+        InstrumentationOptions::Global.bounds_checking_single_trap &&
+        !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 
     return TrapBB;
@@ -276,7 +293,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
   for (const auto &Entry : TrapInfo) {
     Instruction *Inst = Entry.first;
-    BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst), TargetFolder(DL));
+    BuilderTy IRB(Inst->getIterator(), TargetFolder(DL));
     insertBoundsCheck(Entry.second, IRB, GetTrapBB);
   }
 

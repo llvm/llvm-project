@@ -1,4 +1,4 @@
-//===--- UniqueptrResetReleaseCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,20 +53,19 @@ void UniqueptrResetReleaseCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-namespace {
-const Type *getDeleterForUniquePtr(const MatchFinder::MatchResult &Result,
-                                   StringRef ID) {
+static const Type *
+getDeleterForUniquePtr(const MatchFinder::MatchResult &Result, StringRef ID) {
   const auto *Class =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>(ID);
   if (!Class)
     return nullptr;
-  auto DeleterArgument = Class->getTemplateArgs()[1];
+  const auto DeleterArgument = Class->getTemplateArgs()[1];
   if (DeleterArgument.getKind() != TemplateArgument::Type)
     return nullptr;
   return DeleterArgument.getAsType().getTypePtr();
 }
 
-bool areDeletersCompatible(const MatchFinder::MatchResult &Result) {
+static bool areDeletersCompatible(const MatchFinder::MatchResult &Result) {
   const Type *LeftDeleterType = getDeleterForUniquePtr(Result, "left_class");
   const Type *RightDeleterType = getDeleterForUniquePtr(Result, "right_class");
 
@@ -103,8 +102,6 @@ bool areDeletersCompatible(const MatchFinder::MatchResult &Result) {
   return false;
 }
 
-} // namespace
-
 void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
   if (!areDeletersCompatible(Result))
     return;
@@ -129,8 +126,9 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
     NeedsUtilityInclude = true;
   }
 
-  auto D = diag(ResetMember->getExprLoc(),
-                "prefer 'unique_ptr<>' assignment over 'release' and 'reset'");
+  const auto D =
+      diag(ResetMember->getExprLoc(),
+           "prefer 'unique_ptr<>' assignment over 'release' and 'reset'");
   if (ResetMember->isArrow())
     D << FixItHint::CreateInsertion(ResetMember->getBeginLoc(), "*");
   D << FixItHint::CreateReplacement(

@@ -11,16 +11,19 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
+#include "llvm/ExecutionEngine/Orc/DlfcnSPS.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -57,8 +60,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   std::vector<Type *> HelperArgTypes;
   for (auto *Arg : HelperPrefixArgs)
     HelperArgTypes.push_back(Arg->getType());
-  for (auto *T : WrapperFnType->params())
-    HelperArgTypes.push_back(T);
+  llvm::append_range(HelperArgTypes, WrapperFnType->params());
   auto *HelperFnType =
       FunctionType::get(WrapperFnType->getReturnType(), HelperArgTypes, false);
   auto *HelperFn = Function::Create(HelperFnType, GlobalValue::ExternalLinkage,
@@ -72,8 +74,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   IRBuilder<> IB(EntryBlock);
 
   std::vector<Value *> HelperArgs;
-  for (auto *Arg : HelperPrefixArgs)
-    HelperArgs.push_back(Arg);
+  llvm::append_range(HelperArgs, HelperPrefixArgs);
   for (auto &Arg : WrapperFn->args())
     HelperArgs.push_back(&Arg);
   auto *HelperResult = IB.CreateCall(HelperFn, HelperArgs);
@@ -271,9 +272,8 @@ public:
   }
 
   void registerInitFunc(JITDylib &JD, SymbolStringPtr InitName) {
-    getExecutionSession().runSessionLocked([&]() {
-        InitFunctions[&JD].add(InitName);
-      });
+    getExecutionSession().runSessionLocked(
+        [&]() { InitFunctions[&JD].add(InitName); });
   }
 
   void registerDeInitFunc(JITDylib &JD, SymbolStringPtr DeInitName) {
@@ -603,10 +603,6 @@ namespace llvm {
 namespace orc {
 
 Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
-  using llvm::orc::shared::SPSExecutorAddr;
-  using llvm::orc::shared::SPSString;
-  using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
-  using SPSDLUpdateSig = int32_t(SPSExecutorAddr);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -617,57 +613,52 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
-  StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
-  bool dlupdate = false;
-  const Triple &TT = ES.getTargetTriple();
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
-    if (InitializedDylib.contains(&JD)) {
-      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-      dlupdate = true;
-    } else
-      InitializedDylib.insert(&JD);
+
+  if (InitializedDylib.contains(&JD)) {
+    // Already initialized: re-run initializers via dlupdate.
+    DlfcnUpdateProxy Update;
+    if (auto Err =
+            lookupAndApply(LookupKind::Static, MainSearchOrder,
+                           {recordProxy<sps::DlfcnUpdateProxySpec>(&Update)}))
+      return Err;
+    auto Result = Update(ES, DSOHandles[&JD]);
+    if (!Result)
+      return Result.takeError();
+    if (*Result)
+      return make_error<StringError>("dlupdate failed",
+                                     inconvertibleErrorCode());
+    return Error::success();
   }
 
-  if (auto WrapperAddr =
-          ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
-    if (dlupdate) {
-      int32_t result;
-      auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
-                                                 result, DSOHandles[&JD]);
-      if (result)
-        return make_error<StringError>("dlupdate failed",
-                                       inconvertibleErrorCode());
-      return E;
-    }
-    return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
-                                           DSOHandles[&JD], JD.getName(),
-                                           int32_t(ORC_RT_RTLD_LAZY));
-  } else
-    return WrapperAddr.takeError();
+  InitializedDylib.insert(&JD);
+  DlfcnOpenProxy Open;
+  if (auto Err = lookupAndApply(LookupKind::Static, MainSearchOrder,
+                                {recordProxy<sps::DlfcnOpenProxySpec>(&Open)}))
+    return Err;
+  auto H = Open(ES, JD.getName(), int32_t(ORC_RT_RTLD_LAZY));
+  if (!H)
+    return H.takeError();
+  DSOHandles[&JD] = *H;
+  return Error::success();
 }
 
 Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
-  using llvm::orc::shared::SPSExecutorAddr;
-  using SPSDLCloseSig = int32_t(SPSExecutorAddr);
-
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
 
-  if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlclose_wrapper"))) {
-    int32_t result;
-    auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
-        WrapperAddr->getAddress(), result, DSOHandles[&JD]);
-    if (E)
-      return E;
-    else if (result)
-      return make_error<StringError>("dlclose failed",
-                                     inconvertibleErrorCode());
-    DSOHandles.erase(&JD);
-    InitializedDylib.erase(&JD);
-  } else
-    return WrapperAddr.takeError();
+  DlfcnCloseProxy Close;
+  if (auto Err =
+          lookupAndApply(LookupKind::Static, MainSearchOrder,
+                         {recordProxy<sps::DlfcnCloseProxySpec>(&Close)}))
+    return Err;
+  auto Result = Close(ES, DSOHandles[&JD]);
+  if (!Result)
+    return Result.takeError();
+  if (*Result)
+    return make_error<StringError>("dlclose failed", inconvertibleErrorCode());
+  DSOHandles.erase(&JD);
+  InitializedDylib.erase(&JD);
   return Error::success();
 }
 
@@ -779,7 +770,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       D = std::make_unique<InPlaceTaskDispatcher>();
 #endif // LLVM_ENABLE_THREADS
     if (auto EPCOrErr =
-            SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
+            SelfExecutorProcessControl::Create(nullptr, std::move(D)))
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
@@ -823,6 +814,9 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::ppc64le:
       UseJITLink = TT.isOSBinFormatELF();
       break;
+    case Triple::systemz:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -830,10 +824,10 @@ Error LLJITBuilderState::prepareForConstruction() {
       if (!JTMB->getCodeModel())
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      CreateObjectLinkingLayer =
-          [](ExecutionSession &ES,
-             const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
-        return std::make_unique<ObjectLinkingLayer>(ES);
+      CreateObjectLinkingLayer = [](ExecutionSession &ES,
+                                    jitlink::JITLinkMemoryManager &MemMgr)
+          -> Expected<std::unique_ptr<ObjectLayer>> {
+        return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
       };
     }
   }
@@ -846,7 +840,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          J.getExecutionSession());
+          J.getExecutionSession(), J.getDylibMgr());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
@@ -876,7 +870,7 @@ Expected<JITDylib &> LLJIT::createJITDylib(std::string Name) {
 }
 
 Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
-  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, Path);
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, *DylibMgr, Path);
   if (!G)
     return G.takeError();
 
@@ -914,7 +908,7 @@ Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
-          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
+          TSM.withModuleDo([&](Module &M) { return applyTargetConfig(M); }))
     return Err;
 
   return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
@@ -938,23 +932,33 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
 Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                   SymbolStringPtr Name) {
   if (auto Sym = ES->lookup(
-        makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
-        Name))
+          makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
+          Name))
     return Sym->getAddress();
   else
     return Sym.takeError();
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+LLJIT::createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES) {
+  if (S.CreateMemoryManager)
+    return S.CreateMemoryManager(ES);
+  return ES.getExecutorProcessControl().createDefaultMemoryManager();
+}
+
 Expected<std::unique_ptr<ObjectLayer>>
-LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
+LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                                jitlink::JITLinkMemoryManager &MemMgr) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
+    return S.CreateObjectLinkingLayer(ES, MemMgr);
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
-  auto GetMemMgr = []() { return std::make_unique<SectionMemoryManager>(); };
+  auto GetMemMgr = [](const MemoryBuffer &) {
+    return std::make_unique<SectionMemoryManager>();
+  };
   auto Layer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
@@ -1013,7 +1017,21 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
-  auto ObjLayer = createObjectLinkingLayer(S, *ES);
+  if (auto MM = createMemoryManager(S, *ES))
+    MemMgr = std::move(*MM);
+  else {
+    Err = MM.takeError();
+    return;
+  }
+
+  if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
+
+  auto ObjLayer = createObjectLinkingLayer(S, *ES, *MemMgr);
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;
@@ -1080,12 +1098,15 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   std::string MangledName;
   {
     raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
+    llvm::Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
   }
   return MangledName;
 }
 
-Error LLJIT::applyDataLayout(Module &M) {
+Error LLJIT::applyTargetConfig(Module &M) {
+  if (M.getTargetTriple().empty())
+    M.setTargetTriple(TT);
+
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
@@ -1220,12 +1241,44 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
 
-    auto &ES = J.getExecutionSession();
-    if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-      OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, std::move(*EHFrameRegistrar)));
-    else
-      return EHFrameRegistrar.takeError();
+    bool UseEHFrames = true;
+
+    // Enable compact-unwind support if possible.
+    if (J.getTargetTriple().isOSDarwin() ||
+        J.getTargetTriple().isOSBinFormatMachO()) {
+
+      // Check if the bootstrap map says that we should force eh-frames:
+      // Older libunwinds require this as they don't have a dynamic
+      // registration API for compact-unwind.
+      std::optional<bool> ForceEHFrames;
+      if (auto Err = J.getExecutionSession().getBootstrapMapValue<bool, bool>(
+              "darwin-use-ehframes-only", ForceEHFrames))
+        return Err;
+      if (ForceEHFrames.has_value())
+        UseEHFrames = *ForceEHFrames;
+      else
+        UseEHFrames = false;
+
+      // If UseEHFrames hasn't been set then we're good to use compact-unwind.
+      if (!UseEHFrames) {
+        if (auto UIRP =
+                UnwindInfoRegistrationPlugin::Create(J.getExecutionSession())) {
+          OLL->addPlugin(std::move(*UIRP));
+          LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
+        } else
+          return UIRP.takeError();
+      }
+    }
+
+    // Otherwise fall back to standard unwind registration.
+    if (UseEHFrames) {
+      auto &ES = J.getExecutionSession();
+      if (auto EHFP = EHFrameRegistrationPlugin::Create(ES)) {
+        OLL->addPlugin(std::move(*EHFP));
+        LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
+      } else
+        return EHFP.takeError();
+    }
   }
 
   J.setPlatformSupport(
@@ -1252,10 +1305,18 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err = TSM.withModuleDo(
-          [&](Module &M) -> Error { return applyDataLayout(M); }))
+          [&](Module &M) -> Error { return applyTargetConfig(M); }))
     return Err;
 
   return CODLayer->add(JD, std::move(TSM));
+}
+
+// End the session before this class's members (CODLayer, IPLayer, LCTMgr) are
+// destroyed: endSession joins the compile threads, and those threads may still
+// be operating on the CompileOnDemandLayer's per-dylib IndirectStubsManagers.
+LLLazyJIT::~LLLazyJIT() {
+  if (auto Err = ES->endSession())
+    ES->reportError(std::move(Err));
 }
 
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
@@ -1309,8 +1370,8 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 // In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
 // them to be linked in.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction;
 }
 
 } // End namespace orc.

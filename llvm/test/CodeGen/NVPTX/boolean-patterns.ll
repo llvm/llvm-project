@@ -3,7 +3,7 @@
 
 ; CHECK-LABEL: m2and_rr
 define i1 @m2and_rr(i1 %a, i1 %b) {
-; CHECK: and.pred %p{{[0-9]+}}, %p{{[0-9]+}}, %p{{[0-9]+}}
+; CHECK: and.b16 %rs{{[0-9]+}}, %rs{{[0-9]+}}, %rs{{[0-9]+}}
 ; CHECK-NOT: mul
   %r = mul i1 %a, %b
   ret i1 %r

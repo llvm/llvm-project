@@ -19,7 +19,7 @@ config.name = "lld"
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".ll", ".s", ".test", ".yaml", ".objtxt"]
@@ -36,6 +36,7 @@ config.test_exec_root = os.path.join(config.lld_obj_root, "test")
 
 llvm_config.use_default_substitutions()
 llvm_config.use_lld()
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 
 tool_patterns = [
     "llc",
@@ -170,3 +171,6 @@ if tar_executable:
 # ELF tests expect the default target for ld.lld to be ELF.
 if config.ld_lld_default_mingw:
     config.excludes.append("ELF")
+
+if config.enable_threads:
+    config.available_features.add("thread_support")

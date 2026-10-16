@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements offloading to CUDA devices.
+
+// This file implements offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,20 +22,58 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 
-IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
-    std::unique_ptr<CompilerInstance> DeviceInstance,
-    CompilerInstance &HostInstance,
+IncrementalDeviceParser::IncrementalDeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
-    llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs)
-    : IncrementalParser(*DeviceInstance, Err), PTUs(PTUs), VFS(FS),
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
-      TargetOpts(HostInstance.getTargetOpts()) {
+      TargetOpts(DeviceInstance.getTargetOpts()) {}
+
+IncrementalDeviceParser::~IncrementalDeviceParser() {}
+
+IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
   if (Err)
     return;
-  DeviceCI = std::move(DeviceInstance);
+  if (!llvm::Triple(TargetOpts.Triple).isAMDGCN()) {
+    Err = llvm::joinErrors(
+        std::move(Err),
+        llvm::make_error<llvm::StringError>(
+            "Invalid HIP architecture for target '" + TargetOpts.Triple + "'",
+            llvm::inconvertibleErrorCode()));
+    return;
+  }
+}
+
+llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
+  // FIXME: Generate the HSACO and bundle it for the host compilation.
+  return llvm::make_error<llvm::StringError>(
+      "HIP offload binary generation is not supported yet.",
+      llvm::inconvertibleErrorCode());
+}
+
+IncrementalHIPDeviceParser::~IncrementalHIPDeviceParser() {}
+
+IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
+  if (Err)
+    return;
   StringRef Arch = TargetOpts.CPU;
   if (!Arch.starts_with("sm_") || Arch.substr(3).getAsInteger(10, SMVersion)) {
     Err = llvm::joinErrors(std::move(Err), llvm::make_error<llvm::StringError>(
@@ -42,34 +81,6 @@ IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
                                                llvm::inconvertibleErrorCode()));
     return;
   }
-}
-
-llvm::Expected<TranslationUnitDecl *>
-IncrementalCUDADeviceParser::Parse(llvm::StringRef Input) {
-  auto PTU = IncrementalParser::Parse(Input);
-  if (!PTU)
-    return PTU.takeError();
-
-  auto PTX = GeneratePTX();
-  if (!PTX)
-    return PTX.takeError();
-
-  auto Err = GenerateFatbinary();
-  if (Err)
-    return std::move(Err);
-
-  std::string FatbinFileName =
-      "/incr_module_" + std::to_string(PTUs.size()) + ".fatbin";
-  VFS->addFile(FatbinFileName, 0,
-               llvm::MemoryBuffer::getMemBuffer(
-                   llvm::StringRef(FatbinContent.data(), FatbinContent.size()),
-                   "", false));
-
-  CodeGenOpts.CudaGpuBinaryFileName = FatbinFileName;
-
-  FatbinContent.clear();
-
-  return PTU;
 }
 
 llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
@@ -82,25 +93,22 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
+  std::unique_ptr<llvm::TargetMachine> TM(Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
+      llvm::Reloc::Model::PIC_));
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, dest, nullptr,
-                                         llvm::CodeGenFileType::AssemblyFile)) {
+  if (TM->addPassesToEmitFile(PM, dest, nullptr,
+                              llvm::CodeGenFileType::AssemblyFile)) {
     return llvm::make_error<llvm::StringError>(
         "NVPTX backend cannot produce PTX code.",
         llvm::inconvertibleErrorCode());
   }
 
-  if (!PM.run(*PTU.TheModule))
-    return llvm::make_error<llvm::StringError>("Failed to emit PTX code.",
-                                               llvm::inconvertibleErrorCode());
+  PM.run(*PTU.TheModule);
 
   PTXCode += '\0';
   while (PTXCode.size() % 8)
@@ -172,7 +180,28 @@ llvm::Error IncrementalCUDADeviceParser::GenerateFatbinary() {
 
   FatbinContent.append(PTXCode.begin(), PTXCode.end());
 
+  const PartialTranslationUnit &PTU = PTUs.back();
+
+  std::string FatbinFileName = "/" + PTU.TheModule->getName().str() + ".fatbin";
+
+  VFS->addFile(FatbinFileName, 0,
+               llvm::MemoryBuffer::getMemBuffer(
+                   llvm::StringRef(FatbinContent.data(), FatbinContent.size()),
+                   "", false));
+
+  CodeGenOpts.OffloadBinaryToEmbedFile = std::move(FatbinFileName);
+
+  FatbinContent.clear();
+
   return llvm::Error::success();
+}
+
+llvm::Error IncrementalCUDADeviceParser::GenerateOffloadBinary() {
+  llvm::Expected<llvm::StringRef> PTX = GeneratePTX();
+  if (!PTX)
+    return PTX.takeError();
+
+  return GenerateFatbinary();
 }
 
 IncrementalCUDADeviceParser::~IncrementalCUDADeviceParser() {}

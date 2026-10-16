@@ -48,8 +48,8 @@ private:
 
   /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
   /// implicit physical register output.
-  void EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
-                       Register SrcReg, VRBaseMapType &VRBaseMap);
+  void EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
+                       VRBaseMapType &VRBaseMap);
 
   void CreateVirtualRegisters(SDNode *Node,
                               MachineInstrBuilder &MIB,
@@ -64,12 +64,9 @@ private:
   /// AddRegisterOperand - Add the specified register as an operand to the
   /// specified machine instr. Insert register copies if the register is
   /// not in the required register class.
-  void AddRegisterOperand(MachineInstrBuilder &MIB,
-                          SDValue Op,
-                          unsigned IIOpNum,
-                          const MCInstrDesc *II,
-                          VRBaseMapType &VRBaseMap,
-                          bool IsDebug, bool IsClone, bool IsCloned);
+  void AddRegisterOperand(MachineInstrBuilder &MIB, SDValue Op,
+                          unsigned IIOpNum, const MCInstrDesc *II,
+                          VRBaseMapType &VRBaseMap, bool IsDebug);
 
   /// AddOperand - Add the specified operand to the specified machine instr.  II
   /// specifies the instruction information for the node, and IIOpNum is the

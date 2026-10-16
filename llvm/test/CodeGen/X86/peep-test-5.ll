@@ -51,3 +51,54 @@ end:
 }
 
 declare void @free_object()
+
+; Check TEST instruction would not be combined with CMP.
+define i1 @pr155586(i8 %0) {
+; CHECK-LABEL: pr155586:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpb $1, %dil
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    retq
+entry:
+  %cmp88.not = icmp eq i8 %0, 1
+  %1 = and i8 %0, 1
+  %tobool161.not = icmp eq i8 %1, 0
+  %common.ret.op = select i1 %cmp88.not, i1 false, i1 %tobool161.not
+  ret i1 %common.ret.op
+}
+
+; Check TEST8rr instruction would not be combined with TEST8ri.
+define i32 @pr155828() {
+; CHECK-LABEL: pr155828:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB2_1: # %func_188.exit.i.i
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    jne .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %if.else.i.i.i
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    retq
+entry:
+  br label %func_188.exit.i.i
+
+func_188.exit.i.i:                                ; preds = %func_188.exit.i.i, %entry
+  %or659.i167180.i.i = phi i32 [ 0, %entry ], [ 1, %func_188.exit.i.i ]
+  %conv48.i.i = trunc i32 %or659.i167180.i.i to i8
+  %and.i.i.i = and i32 %or659.i167180.i.i, 1
+  %tobool80.not.i.i.i = icmp eq i32 %and.i.i.i, 0
+  br i1 %tobool80.not.i.i.i, label %if.else.i.i.i, label %func_188.exit.i.i
+
+if.else.i.i.i:                                    ; preds = %func_188.exit.i.i
+  %cmp183.i.i.i = icmp sgt i8 %conv48.i.i, 0
+  %ext = zext i1 %cmp183.i.i.i to i32
+  ret i32 %ext
+}

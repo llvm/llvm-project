@@ -1,10 +1,18 @@
-//===-- Exhaustive test template for math functions -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains exhaustive test template for math functions.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -40,7 +48,7 @@ template <typename OutType, typename InType = OutType>
 using UnaryOp = OutType(InType);
 
 template <typename OutType, typename InType, mpfr::Operation Op,
-          UnaryOp<OutType, InType> Func>
+          UnaryOp<OutType, InType> Func, unsigned Tolerance = 0>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
@@ -57,12 +65,68 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
     do {
       FPBits xbits(bits);
       FloatType x = xbits.get_val();
-      bool correct =
-          TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, Func(x), 0.5, rounding);
+      bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
+          Op, x, Func(x), static_cast<double>(Tolerance) + 0.5, rounding);
       failed += (!correct);
       // Uncomment to print out failed values.
       if (!correct) {
         EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
+      }
+    } while (bits++ < stop);
+    return failed;
+  }
+};
+
+template <typename OutType, typename InType,
+          UnaryOp<OutType, InType> BaselineFunc, UnaryOp<OutType, InType> Func,
+          unsigned Tolerance = 0>
+struct UnaryOpAgainstBaselineChecker
+    : public virtual LIBC_NAMESPACE::testing::Test {
+  using FloatType = InType;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
+  using StorageType = typename FPBits::StorageType;
+
+  // Check in a range, return the number of failures.
+  uint64_t check(StorageType start, StorageType stop,
+                 mpfr::RoundingMode rounding) {
+    mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return (stop > start);
+    StorageType bits = start;
+    uint64_t failed = 0;
+    do {
+      FPBits xbits(bits);
+      FloatType x = xbits.get_val();
+      OutType result = Func(x);
+      OutType expected = BaselineFunc(x);
+      using OutFPBits = LIBC_NAMESPACE::fputil::FPBits<OutType>;
+      using OutStorageType = typename OutFPBits::StorageType;
+      OutFPBits result_bits(result);
+      OutFPBits expected_bits(expected);
+
+      bool correct = false;
+      if (expected_bits.is_nan()) {
+        correct = result_bits.is_nan();
+      } else if (result_bits.is_nan()) {
+        correct = false;
+      } else if (Tolerance == 0) {
+        correct = (result_bits.uintval() == expected_bits.uintval());
+      } else {
+        OutStorageType diff = 0;
+        if (expected_bits.sign() == result_bits.sign()) {
+          OutStorageType u1 = expected_bits.uintval();
+          OutStorageType u2 = result_bits.uintval();
+          diff = (u1 > u2) ? (u1 - u2) : (u2 - u1);
+        } else {
+          diff = (expected_bits.uintval() & OutFPBits::EXP_SIG_MASK) +
+                 (result_bits.uintval() & OutFPBits::EXP_SIG_MASK);
+        }
+        correct = (diff <= Tolerance);
+      }
+      failed += (!correct);
+      // Uncomment to print out failed values.
+      if (!correct) {
+        EXPECT_FP_EQ(expected, result);
       }
     } while (bits++ < stop);
     return failed;
@@ -146,6 +210,12 @@ struct LlvmLibcExhaustiveMathTest
   void test_full_range(mpfr::RoundingMode rounding, StorageType start,
                        StorageType stop, T... extra_range_bounds) {
     int n_threads = std::thread::hardware_concurrency();
+#ifdef LIBC_TEST_MAX_CONCURRENCY
+    if (n_threads <= 0 || n_threads > LIBC_TEST_MAX_CONCURRENCY)
+      n_threads = LIBC_TEST_MAX_CONCURRENCY;
+#endif
+    if (n_threads < 1)
+      n_threads = 1;
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
     int current_percent = -1;
@@ -164,12 +234,13 @@ struct LlvmLibcExhaustiveMathTest
 
             range_begin = current_value;
             if (stop >= Increment && stop - Increment >= current_value) {
-              range_end = current_value + Increment;
+              range_end = static_cast<StorageType>(current_value + Increment);
             } else {
               range_end = stop;
             }
             current_value = range_end;
-            int pc = 100.0 * (range_end - start) / (stop - start);
+            int pc =
+                static_cast<int>(100.0 * (range_end - start) / (stop - start));
             if (current_percent != pc) {
               new_percent = pc;
               current_percent = pc;
@@ -255,9 +326,16 @@ struct LlvmLibcExhaustiveMathTest
   }
 };
 
-template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func>
-using LlvmLibcUnaryOpExhaustiveMathTest =
-    LlvmLibcExhaustiveMathTest<UnaryOpChecker<FloatType, FloatType, Op, Func>>;
+template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func,
+          unsigned Tolerance = 0>
+using LlvmLibcUnaryOpExhaustiveMathTest = LlvmLibcExhaustiveMathTest<
+    UnaryOpChecker<FloatType, FloatType, Op, Func, Tolerance>>;
+
+template <typename FloatType, UnaryOp<FloatType> BaselineFunc,
+          UnaryOp<FloatType> Func, unsigned Tolerance = 0>
+using LlvmLibcUnaryOpAgainstBaselineExhaustiveMathTest =
+    LlvmLibcExhaustiveMathTest<UnaryOpAgainstBaselineChecker<
+        FloatType, FloatType, BaselineFunc, Func, Tolerance>>;
 
 template <typename OutType, typename InType, mpfr::Operation Op,
           UnaryOp<OutType, InType> Func>
@@ -268,3 +346,5 @@ template <typename FloatType, mpfr::Operation Op, BinaryOp<FloatType> Func>
 using LlvmLibcBinaryOpExhaustiveMathTest =
     LlvmLibcExhaustiveMathTest<BinaryOpChecker<FloatType, FloatType, Op, Func>,
                                1 << 2>;
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_H

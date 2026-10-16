@@ -23,5 +23,5 @@ bfadd za.h[w8, 3], {z20.h-z21.h}
 .arch_extension ssve-aes
 .arch_extension nossve-aes
 aesdimc {z0.b-z3.b}, {z0.b-z3.b}, z0.q[0]
-// CHECK: error: instruction requires: sve2p1 or ssve-aes
+// CHECK: error: instruction requires: sve or ssve-aes
 // CHECK: aesdimc {z0.b-z3.b}, {z0.b-z3.b}, z0.q[0]

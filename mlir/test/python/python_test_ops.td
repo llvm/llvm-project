@@ -33,7 +33,8 @@ class TestAttr<string name, string attrMnemonic>
 
 class TestOp<string mnemonic, list<Trait> traits = []>
     : Op<Python_Test_Dialect, mnemonic, traits> {
-  let assemblyFormat = "operands attr-dict functional-type(operands, results)";
+  let assemblyFormat =
+      "operands prop-dict attr-dict functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -135,7 +136,7 @@ def InferResultsOp : TestOp<"infer_results_op", [InferTypeOpInterface]> {
     static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-      ::mlir::OpaqueProperties,
+      ::mlir::PropertyRef,
       ::mlir::RegionRange regions,
       ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::Builder b(context);
@@ -158,7 +159,7 @@ def InferResultsVariadicInputsOp : TestOp<"infer_results_variadic_inputs_op",
     static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-      ::mlir::OpaqueProperties,
+      ::mlir::PropertyRef,
       ::mlir::RegionRange regions,
       ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::Builder b(context);
@@ -187,7 +188,7 @@ def InferShapedTypeComponentsOp : TestOp<"infer_shaped_type_components_op",
     ::llvm::LogicalResult $cppClass::inferReturnTypeComponents(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
-      ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+      ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
       ::llvm::SmallVectorImpl<
         ::mlir::ShapedTypeComponents>& inferredShapedTypeComponents) {
       $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
@@ -263,6 +264,15 @@ def SameVariadicResultSizeOpFVFVF : TestOp<"same_variadic_result_fvfvf",
   let results = (outs AnyType:$non_variadic1, Variadic<AnyType>:$variadic1,
                  AnyType:$non_variadic2, Variadic<AnyType>:$variadic2,
                  AnyType:$non_variadic3);
+}
+
+def ResultsVariadicOp : TestOp<"results_variadic"> {
+  let results = (outs Variadic<AnyType>:$res);
+}
+
+def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
+  let regions = (region AnyRegion:$region, VariadicRegion<AnyRegion>:$variadic);
+  let assemblyFormat = "$region $variadic attr-dict";
 }
 
 #endif // PYTHON_TEST_OPS

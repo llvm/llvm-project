@@ -6,7 +6,8 @@ tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler
+              -ignore-non-decodable-operands)
 tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM MipsGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM MipsGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
@@ -16,8 +17,15 @@ tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MipsGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM MipsGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM MipsGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM MipsGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM MipsGenExegesis.inc -gen-exegesis)
+
+set(LLVM_TARGET_DEFINITIONS MipsOptions.td)
+tablegen(LLVM MipsOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/MipsMCOptions.td)
+tablegen(LLVM MipsMCOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(MipsCommonTableGen)
 
@@ -46,7 +54,6 @@ add_llvm_target(MipsCodeGen
   MipsBranchExpansion.cpp
   MipsMCInstLower.cpp
   MipsMachineFunction.cpp
-  MipsModuleISelDAGToDAG.cpp
   MipsOptimizePICCall.cpp
   MipsOs16.cpp
   MipsPreLegalizerCombiner.cpp
@@ -76,6 +83,7 @@ add_llvm_target(MipsCodeGen
   MC
   MipsDesc
   MipsInfo
+  Option
   SelectionDAG
   Support
   Target

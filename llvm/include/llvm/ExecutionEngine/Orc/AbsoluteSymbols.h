@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_ABSOLUTESYMBOLS_H
 
 #include "llvm/ExecutionEngine/Orc/MaterializationUnit.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 
@@ -21,7 +22,7 @@ namespace llvm::orc {
 ///
 /// All symbols will be resolved and marked ready as soon as the unit is
 /// materialized.
-class AbsoluteSymbolsMaterializationUnit : public MaterializationUnit {
+class LLVM_ABI AbsoluteSymbolsMaterializationUnit : public MaterializationUnit {
 public:
   AbsoluteSymbolsMaterializationUnit(SymbolMap Symbols);
 

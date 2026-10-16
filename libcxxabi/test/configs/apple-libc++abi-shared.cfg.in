@@ -36,7 +36,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ %{apple-system-shims}'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
+    '%{executor} --execdir %{temp} --env DYLD_LIBRARY_PATH=%{lib} -- '
 ))
 
 config.stdlib = 'apple-libc++'

@@ -34,7 +34,7 @@ body: |
 
     liveins: $arguments
     %0:i32 = CONST_I32 0, implicit-def $arguments
-    %1:i32 = MEMORY_ATOMIC_NOTIFY_A32 2, 0, %0:i32, %0:i32, implicit-def $arguments
+    %1:i32 = MEMORY_ATOMIC_NOTIFY_A32 0, 2, 0, %0:i32, %0:i32, implicit-def $arguments
     COMPILER_FENCE implicit-def $arguments
     %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
     CALL @foo, %2:i32, %1:i32, implicit-def $arguments
@@ -58,7 +58,7 @@ body: |
 
     liveins: $arguments
     %0:i32 = CONST_I32 0, implicit-def $arguments
-    %1:i32 = MEMORY_ATOMIC_NOTIFY_A32 2, 0, %0:i32, %0:i32, implicit-def $arguments
+    %1:i32 = MEMORY_ATOMIC_NOTIFY_A32 0, 2, 0, %0:i32, %0:i32, implicit-def $arguments
     ATOMIC_FENCE 0, implicit-def $arguments
     %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
     CALL @foo, %2:i32, %1:i32, implicit-def $arguments

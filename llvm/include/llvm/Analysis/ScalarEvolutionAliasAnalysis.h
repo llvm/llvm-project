@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -31,11 +32,12 @@ public:
   explicit SCEVAAResult(ScalarEvolution &SE) : SE(SE) {}
   SCEVAAResult(SCEVAAResult &&Arg) : AAResultBase(std::move(Arg)), SE(Arg.SE) {}
 
-  AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI, const Instruction *CtxI);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI);
 
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &Inv);
 
 private:
   Value *GetBaseValue(const SCEV *S);
@@ -44,16 +46,16 @@ private:
 /// Analysis pass providing a never-invalidated alias analysis result.
 class SCEVAA : public AnalysisInfoMixin<SCEVAA> {
   friend AnalysisInfoMixin<SCEVAA>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   typedef SCEVAAResult Result;
 
-  SCEVAAResult run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI SCEVAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy wrapper pass to provide the SCEVAAResult object.
-class SCEVAAWrapperPass : public FunctionPass {
+class LLVM_ABI SCEVAAWrapperPass : public FunctionPass {
   std::unique_ptr<SCEVAAResult> Result;
 
 public:
@@ -69,8 +71,7 @@ public:
 };
 
 /// Creates an instance of \c SCEVAAWrapperPass.
-FunctionPass *createSCEVAAWrapperPass();
-
+LLVM_ABI FunctionPass *createSCEVAAWrapperPass();
 }
 
 #endif

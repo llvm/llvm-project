@@ -44,7 +44,7 @@ public:
   UnpackTagsData(const std::vector<uint8_t> &tags,
                  size_t granules = 0) const override;
 
-  std::vector<lldb::addr_t>
+  llvm::Expected<std::vector<lldb::addr_t>>
   UnpackTagsFromCoreFileSegment(CoreReaderFn reader,
                                 lldb::addr_t tag_segment_virtual_address,
                                 lldb::addr_t tag_segment_data_address,

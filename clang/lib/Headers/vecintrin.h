@@ -7,6 +7,9 @@
  *===-----------------------------------------------------------------------===
  */
 
+#ifndef _VECINTRIN_H
+#define _VECINTRIN_H
+
 #if defined(__s390x__) && defined(__VEC__)
 
 #define __ATTRS_ai __attribute__((__always_inline__))
@@ -204,7 +207,7 @@ vec_insert(unsigned long long __scalar, __vector unsigned long long __vec,
 #if __ARCH__ >= 12
 static inline __ATTRS_o_ai __vector float
 vec_insert(float __scalar, __vector float __vec, int __index) {
-  __vec[__index & 1] = __scalar;
+  __vec[__index & 3] = __scalar;
   return __vec;
 }
 #endif
@@ -12861,3 +12864,5 @@ vec_search_string_until_zero_cc(__vector unsigned int __a,
 #error "Use -fzvector to enable vector extensions"
 
 #endif
+
+#endif /* _VECINTRIN_H */

@@ -16,11 +16,11 @@ define void @pass_byval(ptr byval(i32) %b) {
 ; ABI-LABEL: @pass_byval(
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_BYVAL_VARARG:%.*]], align 16
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_BYVAL_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP0]], ptr [[B:%.*]], i64 4, i1 false)
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -41,13 +41,13 @@ define void @i32_libcS_byval(i32 %x, ptr noundef byval(%struct.libcS) align 8 %y
 ; ABI-NEXT:    [[INDIRECTALLOCA:%.*]] = alloca [[STRUCT_LIBCS:%.*]], align 8
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[I32_LIBCS_BYVAL_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[INDIRECTALLOCA]], ptr [[Y:%.*]], i64 24, i1 false)
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[I32_LIBCS_BYVAL_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[X:%.*]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[I32_LIBCS_BYVAL_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -66,13 +66,13 @@ define void @libcS_i32_byval(ptr byval(%struct.libcS) align 8 %x, i32 %y) {
 ; ABI-NEXT:    [[INDIRECTALLOCA:%.*]] = alloca [[STRUCT_LIBCS:%.*]], align 8
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[LIBCS_I32_BYVAL_VARARG:%.*]], align 16
 ; ABI-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[INDIRECTALLOCA]], ptr [[X:%.*]], i64 24, i1 false)
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[LIBCS_I32_BYVAL_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[LIBCS_I32_BYVAL_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i32 [[Y:%.*]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -90,11 +90,11 @@ define void @pass_byref(ptr byref(i32) %b) {
 ; ABI-LABEL: @pass_byref(
 ; ABI-NEXT:  entry:
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[PASS_BYREF_VARARG:%.*]], align 16
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[PASS_BYREF_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store ptr [[B:%.*]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -113,13 +113,13 @@ define void @i32_libcS_byref(i32 %x, ptr noundef byref(%struct.libcS) align 8 %y
 ; ABI-NEXT:    [[INDIRECTALLOCA:%.*]] = alloca [[STRUCT_LIBCS:%.*]], align 8
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[I32_LIBCS_BYREF_VARARG:%.*]], align 16
 ; ABI-NEXT:    store ptr [[Y:%.*]], ptr [[INDIRECTALLOCA]], align 4
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[I32_LIBCS_BYREF_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store i32 [[X:%.*]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[I32_LIBCS_BYREF_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:
@@ -138,13 +138,13 @@ define void @libcS_i32_byref(ptr byref(%struct.libcS) align 8 %x, i32 %y) {
 ; ABI-NEXT:    [[INDIRECTALLOCA:%.*]] = alloca [[STRUCT_LIBCS:%.*]], align 8
 ; ABI-NEXT:    [[VARARG_BUFFER:%.*]] = alloca [[LIBCS_I32_BYREF_VARARG:%.*]], align 16
 ; ABI-NEXT:    store ptr [[X:%.*]], ptr [[INDIRECTALLOCA]], align 4
-; ABI-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[LIBCS_I32_BYREF_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 0
 ; ABI-NEXT:    store ptr [[INDIRECTALLOCA]], ptr [[TMP0]], align 4
 ; ABI-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[LIBCS_I32_BYREF_VARARG]], ptr [[VARARG_BUFFER]], i32 0, i32 1
 ; ABI-NEXT:    store i32 [[Y:%.*]], ptr [[TMP1]], align 4
 ; ABI-NEXT:    call void @sink(ptr [[VARARG_BUFFER]])
-; ABI-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[VARARG_BUFFER]])
+; ABI-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VARARG_BUFFER]])
 ; ABI-NEXT:    ret void
 ;
 entry:

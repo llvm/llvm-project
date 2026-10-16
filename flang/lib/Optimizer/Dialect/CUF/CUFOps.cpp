@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
-#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -24,6 +23,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVector.h"
 
 //===----------------------------------------------------------------------===//
@@ -57,7 +57,8 @@ static llvm::LogicalResult checkCudaAttr(Op op) {
   if (op.getDataAttr() == cuf::DataAttribute::Device ||
       op.getDataAttr() == cuf::DataAttribute::Managed ||
       op.getDataAttr() == cuf::DataAttribute::Unified ||
-      op.getDataAttr() == cuf::DataAttribute::Pinned)
+      op.getDataAttr() == cuf::DataAttribute::Pinned ||
+      op.getDataAttr() == cuf::DataAttribute::Shared)
     return mlir::success();
   return op.emitOpError()
          << "expect device, managed, pinned or unified cuda attribute";
@@ -75,6 +76,16 @@ llvm::LogicalResult cuf::FreeOp::verify() { return checkCudaAttr(*this); }
 // AllocateOp
 //===----------------------------------------------------------------------===//
 
+template <typename OpTy>
+static llvm::LogicalResult checkStreamType(OpTy op) {
+  if (!op.getStream())
+    return mlir::success();
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(op.getStream().getType()))
+    if (!refTy.getEleTy().isInteger(64))
+      return op.emitOpError("stream is expected to be an i64 reference");
+  return mlir::success();
+}
+
 llvm::LogicalResult cuf::AllocateOp::verify() {
   if (getPinned() && getStream())
     return emitOpError("pinned and stream cannot appears at the same time");
@@ -91,7 +102,7 @@ llvm::LogicalResult cuf::AllocateOp::verify() {
         "expect errmsg to be a reference to/or a box type value");
   if (getErrmsg() && !getHasStat())
     return emitOpError("expect stat attribute when errmsg is provided");
-  return mlir::success();
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,6 +147,14 @@ llvm::LogicalResult cuf::DeallocateOp::verify() {
   if (getErrmsg() && !getHasStat())
     return emitOpError("expect stat attribute when errmsg is provided");
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// KernelLaunchOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::KernelLaunchOp::verify() {
+  return checkStreamType(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -252,7 +271,37 @@ llvm::LogicalResult cuf::KernelOp::verify() {
         return emitOpError("expect reduce attributes to be ReduceAttr");
     }
   }
-  return mlir::success();
+  return checkStreamType(*this);
+}
+
+bool cuf::KernelOp::canMoveFromDescendant(mlir::Operation *descendant,
+                                          mlir::Operation *candidate) {
+  // Moving operations out of loops inside cuf.kernel is always legal.
+  return true;
+}
+
+bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
+  // In general, some movement of operations out of cuf.kernel is allowed.
+  if (!candidate)
+    return true;
+
+  // Operations that have !fir.ref operands cannot be moved
+  // out of cuf.kernel, because this may break implicit data mapping
+  // passes that may run after LICM.
+  if (llvm::any_of(candidate->getOperands(), [&](mlir::Value operand) {
+        return fir::isa_ref_type(operand.getType());
+      }))
+    return false;
+
+  // Same is true for symbol operands (this has to be revisited,
+  // because this may indicate an issue in ordering between
+  // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
+  bool hasSymbolRefAttr = false;
+  candidate->getName().walkInherentAttrs(
+      candidate, [&](llvm::StringRef, mlir::Attribute &attr) {
+        hasSymbolRefAttr |= mlir::isa_and_present<mlir::SymbolRefAttr>(attr);
+      });
+  return !hasSymbolRefAttr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -271,32 +320,68 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
   if (getKernelName() == getKernelModuleName())
     return emitOpError("expect a module and a kernel name");
 
-  auto mod = getOperation()->getParentOfType<mlir::ModuleOp>();
-  if (!mod)
+  if (!getOperation()->getParentOfType<mlir::ModuleOp>())
     return emitOpError("expect to be in a module");
 
-  mlir::SymbolTable symTab(mod);
-  auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
-  if (!gpuMod) {
-    // If already a gpu.binary then stop the check here.
-    if (symTab.lookup<mlir::gpu::BinaryOp>(getKernelModuleName()))
+  return mlir::success();
+}
+
+mlir::LogicalResult cuf::RegisterKernelOp::verifySymbolUses(
+    mlir::SymbolTableCollection &symbolTables) {
+  auto module = getOperation()->getParentOfType<mlir::ModuleOp>();
+  auto gpuModule = symbolTables.lookupSymbolIn<mlir::gpu::GPUModuleOp>(
+      module, getKernelModuleName());
+  if (!gpuModule) {
+    if (symbolTables.lookupSymbolIn<mlir::gpu::BinaryOp>(module,
+                                                         getKernelModuleName()))
       return mlir::success();
     return emitOpError("gpu module not found");
   }
 
-  mlir::SymbolTable gpuSymTab(gpuMod);
-  if (auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName())) {
-    if (!func.isKernel())
+  if (auto function = symbolTables.lookupSymbolIn<mlir::gpu::GPUFuncOp>(
+          gpuModule, getKernelName())) {
+    if (!function.isKernel())
       return emitOpError("only kernel gpu.func can be registered");
     return mlir::success();
-  } else if (auto func =
-                 gpuSymTab.lookup<mlir::LLVM::LLVMFuncOp>(getKernelName())) {
-    if (!func->getAttrOfType<mlir::UnitAttr>(
+  }
+
+  if (auto function = symbolTables.lookupSymbolIn<mlir::LLVM::LLVMFuncOp>(
+          gpuModule, getKernelName())) {
+    if (!function->getAttrOfType<mlir::UnitAttr>(
             mlir::gpu::GPUDialect::getKernelFuncAttrName()))
       return emitOpError("only gpu.kernel llvm.func can be registered");
     return mlir::success();
   }
+
   return emitOpError("device function not found");
+}
+
+//===----------------------------------------------------------------------===//
+// SharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+void cuf::SharedMemoryOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    mlir::ValueRange typeparams, mlir::ValueRange shape,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        /*offset=*/mlir::Value{}, /*alignment=*/mlir::IntegerAttr{},
+        /*isStatic=*/nullptr);
+  result.addAttributes(attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// StreamCastOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult cuf::StreamCastOp::verify() {
+  return checkStreamType(*this);
 }
 
 // Tablegen operators

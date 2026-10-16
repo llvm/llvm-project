@@ -19,7 +19,7 @@
 // This class does not depend on the instruction size.
 //
 class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
-                        InstrItinClass itin, Format f> : Instruction,
+                        Format f> : Instruction,
                         PredicateControl {
   let Namespace = "Mips";
   let DecoderNamespace = "MicroMips";
@@ -29,8 +29,6 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   let AsmString   = asmstr;
   let Pattern     = pattern;
-  let Itinerary   = itin;
-
   let EncodingPredicates = [InMicroMips];
 
   Format Form = f;
@@ -40,12 +38,11 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
 // Base class for MicroMIPS 16-bit instructions.
 //
 class MicroMipsInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
-               InstrItinClass itin, Format f> :
-  MicroMipsInstBase<outs, ins, asmstr, pattern, itin, f>
+               Format f> :
+  MicroMipsInstBase<outs, ins, asmstr, pattern, f>
 {
   let Size = 2;
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
   bits<6> Opcode = 0x0;
 }
 
@@ -869,6 +866,21 @@ class CMov_I_F_FM_MM<bits<8> funct, bits<2> fmt> : MMArch {
   let Inst{15-11} = fd;
   let Inst{9-8}   = fmt;
   let Inst{7-0}   = funct;
+}
+
+class MFC0_FM_MM<bits<11> funct> : MMArch {
+  bits<5> rt;
+  bits<5> rd;
+  bits<3> sel;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rd;
+  let Inst{15-14} = 0;
+  let Inst{13-11} = sel;
+  let Inst{10-0} = funct;
 }
 
 class MFC1_FM_MM<bits<8> funct> : MMArch {

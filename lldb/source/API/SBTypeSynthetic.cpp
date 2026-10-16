@@ -24,8 +24,8 @@ SBTypeSynthetic SBTypeSynthetic::CreateWithClassName(const char *data,
 
   if (!data || data[0] == 0)
     return SBTypeSynthetic();
-  return SBTypeSynthetic(ScriptedSyntheticChildrenSP(
-      new ScriptedSyntheticChildren(options, data, "")));
+  return SBTypeSynthetic(
+      std::make_shared<ScriptedSyntheticChildren>(options, data, ""));
 }
 
 SBTypeSynthetic SBTypeSynthetic::CreateWithScriptCode(const char *data,
@@ -34,8 +34,8 @@ SBTypeSynthetic SBTypeSynthetic::CreateWithScriptCode(const char *data,
 
   if (!data || data[0] == 0)
     return SBTypeSynthetic();
-  return SBTypeSynthetic(ScriptedSyntheticChildrenSP(
-      new ScriptedSyntheticChildren(options, "", data)));
+  return SBTypeSynthetic(
+      std::make_shared<ScriptedSyntheticChildren>(options, "", data));
 }
 
 SBTypeSynthetic::SBTypeSynthetic(const lldb::SBTypeSynthetic &rhs)

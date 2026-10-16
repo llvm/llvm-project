@@ -116,6 +116,9 @@ ASAN_FLAG(bool, poison_partial, true,
           "stack buffers.")
 ASAN_FLAG(bool, poison_array_cookie, true,
           "Poison (or not) the array cookie after operator new[].")
+ASAN_FLAG(int, poison_history_size, 0,
+          "[EXPERIMENTAL] Number of most recent memory poisoning calls for "
+          "which the stack traces will be recorded.")
 
 // Turn off alloc/dealloc mismatch checker on Mac and Windows for now.
 // https://github.com/google/sanitizers/issues/131
@@ -127,6 +130,9 @@ ASAN_FLAG(bool, alloc_dealloc_mismatch,
 
 ASAN_FLAG(bool, new_delete_type_mismatch, true,
           "Report errors on mismatch between size of new and delete.")
+ASAN_FLAG(bool, free_size_mismatch, true,
+          "Report errors on mismatch between size of malloc and "
+          "free_sized/free_aligned_sized.")
 ASAN_FLAG(
     bool, strict_init_order, false,
     "If true, assume that dynamic initializers can never access globals from "

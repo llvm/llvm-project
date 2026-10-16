@@ -539,8 +539,7 @@ unsigned CodeCompleteConsumer::OverloadCandidate::getNumParams() const {
     return Template->getTemplateParameters()->size();
 
   if (Kind == CK_Aggregate) {
-    unsigned Count =
-        std::distance(AggregateType->field_begin(), AggregateType->field_end());
+    unsigned Count = AggregateType->getNumFields();
     if (const auto *CRD = dyn_cast<CXXRecordDecl>(AggregateType))
       Count += CRD->getNumBases();
     return Count;
@@ -700,8 +699,8 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
       const SourceLocation ELoc = FixIt.RemoveRange.getEnd();
 
       SourceManager &SM = SemaRef.SourceMgr;
-      std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
-      std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
+      FileIDAndOffset BInfo = SM.getDecomposedLoc(BLoc);
+      FileIDAndOffset EInfo = SM.getDecomposedLoc(ELoc);
       // Adjust for token ranges.
       if (FixIt.RemoveRange.isTokenRange())
         EInfo.second += Lexer::MeasureTokenLength(ELoc, SM, SemaRef.LangOpts);

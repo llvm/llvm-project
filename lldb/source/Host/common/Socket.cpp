@@ -24,9 +24,9 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WindowsError.h"
 
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/DomainSocket.h"
 
+#if LLDB_ENABLE_POSIX
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -69,7 +69,7 @@ SharedSocket::SharedSocket(const Socket *socket, Status &error) {
   m_fd = kInvalidFD;
 
   // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
-  error = m_socket_pipe.CreateNew(true);
+  error = m_socket_pipe.CreateNew();
   if (error.Fail())
     return;
 
@@ -93,15 +93,14 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
         "WSADuplicateSocket() failed, error: %d", last_error);
   }
 
-  size_t num_bytes;
-  Status error =
-      m_socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
-                                     std::chrono::seconds(10), num_bytes);
-  if (error.Fail())
-    return error;
-  if (num_bytes != sizeof(protocol_info))
+  llvm::Expected<size_t> num_bytes = m_socket_pipe.Write(
+      &protocol_info, sizeof(protocol_info), std::chrono::seconds(10));
+  if (!num_bytes)
+    return Status::FromError(num_bytes.takeError());
+  if (*num_bytes != sizeof(protocol_info))
     return Status::FromErrorStringWithFormatv(
-        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes", num_bytes);
+        "Write(WSAPROTOCOL_INFO) failed: wrote {0}/{1} bytes", *num_bytes,
+        sizeof(protocol_info));
 #endif
   return Status();
 }
@@ -113,16 +112,14 @@ Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
   WSAPROTOCOL_INFO protocol_info;
   {
     Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
-    size_t num_bytes;
-    Status error =
-        socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
-                                    std::chrono::seconds(10), num_bytes);
-    if (error.Fail())
-      return error;
-    if (num_bytes != sizeof(protocol_info)) {
+    llvm::Expected<size_t> num_bytes = socket_pipe.Read(
+        &protocol_info, sizeof(protocol_info), std::chrono::seconds(10));
+    if (!num_bytes)
+      return Status::FromError(num_bytes.takeError());
+    if (*num_bytes != sizeof(protocol_info)) {
       return Status::FromErrorStringWithFormatv(
-          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes",
-          num_bytes);
+          "Read(WSAPROTOCOL_INFO) failed: read {0}/{1} bytes", *num_bytes,
+          sizeof(protocol_info));
     }
   }
   socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
@@ -184,7 +181,7 @@ llvm::Error Socket::Initialize() {
   if (err == 0) {
     if (wsaData.wVersion < wVersion) {
       WSACleanup();
-      return llvm::createStringError("WSASock version is not expected.");
+      return llvm::createStringError("WSASock version is not expected");
     }
   } else {
     return llvm::errorCodeToError(llvm::mapWindowsError(::WSAGetLastError()));
@@ -214,7 +211,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up = std::make_unique<UDPSocket>(should_close);
     break;
   case ProtocolUnixDomain:
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
     socket_up = std::make_unique<DomainSocket>(should_close);
 #else
     error = Status::FromErrorString(
@@ -235,6 +232,30 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up.reset();
 
   return socket_up;
+}
+
+llvm::Expected<Socket::Pair>
+Socket::CreatePair(std::optional<SocketProtocol> protocol) {
+  constexpr SocketProtocol kBestProtocol =
+      LLDB_ENABLE_POSIX ? ProtocolUnixDomain : ProtocolTcp;
+  switch (protocol.value_or(kBestProtocol)) {
+  case ProtocolTcp:
+    return TCPSocket::CreatePair();
+  case ProtocolUnixDomain:
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
+#endif
+  case ProtocolUnixAbstract:
+#if LLDB_ENABLE_POSIX
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
+#endif
+  default:
+    return llvm::createStringError("unsupported protocol");
+  }
 }
 
 llvm::Expected<std::unique_ptr<Socket>>
@@ -274,8 +295,14 @@ Socket::UdpConnect(llvm::StringRef host_and_port) {
   return UDPSocket::CreateConnected(host_and_port);
 }
 
-llvm::Expected<Socket::HostAndPort> Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
-  static llvm::Regex g_regex("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)");
+llvm::Expected<Socket::HostAndPort>
+Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
+  // This regex parses host:port combinations, supporting:
+  // - IPv4 sockets (e.g., "127.0.0.1:8080")
+  // - IPv6 sockets with host part in square brackets (e.g., "[::1]:80")
+  // Group 1: Address (IPv4, hostname, or IPv6 in [])
+  // Group 2: Port number (digits only)
+  static llvm::Regex g_regex("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+$)");
   HostAndPort ret;
   llvm::SmallVector<llvm::StringRef, 3> matches;
   if (g_regex.match(host_and_port, &matches)) {
@@ -285,21 +312,17 @@ llvm::Expected<Socket::HostAndPort> Socket::DecodeHostAndPort(llvm::StringRef ho
       ret.hostname = ret.hostname.substr(1, ret.hostname.size() - 2);
     if (to_integer(matches[2], ret.port, 10))
       return ret;
-  } else {
-    // If this was unsuccessful, then check if it's simply an unsigned 16-bit
-    // integer, representing a port with an empty host.
-    if (to_integer(host_and_port, ret.port, 10))
-      return ret;
   }
 
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "invalid host:port specification: '%s'",
-                                 host_and_port.str().c_str());
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid host:port specification: '%s', both IPv4 (e.g., localhost:8080) "
+      "or IPv6 (e.g, [2001:db8::1]:8080) formats are supported",
+      host_and_port.str().c_str());
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
-  // TODO: On Windows, use WSAEventSelect
-  return m_socket;
+  return (IOObject::WaitableHandle)m_socket;
 }
 
 Status Socket::Read(void *buf, size_t &num_bytes) {
@@ -315,16 +338,13 @@ Status Socket::Read(void *buf, size_t &num_bytes) {
   } else
     num_bytes = bytes_received;
 
-  Log *log = GetLog(LLDBLog::Communication);
-  if (log) {
-    LLDB_LOGF(log,
-              "%p Socket::Read() (socket = %" PRIu64
-              ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
-              " (error = %s)",
-              static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-              static_cast<uint64_t>(num_bytes),
-              static_cast<int64_t>(bytes_received), error.AsCString());
-  }
+  LLDB_LOGF(GetLog(LLDBLog::Communication),
+            "%p Socket::Read() (socket = %" PRIu64
+            ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
+            " (error = %s)",
+            static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
+            static_cast<uint64_t>(num_bytes),
+            static_cast<int64_t>(bytes_received), error.AsCString());
 
   return error;
 }
@@ -343,16 +363,13 @@ Status Socket::Write(const void *buf, size_t &num_bytes) {
   } else
     num_bytes = bytes_sent;
 
-  Log *log = GetLog(LLDBLog::Communication);
-  if (log) {
-    LLDB_LOGF(log,
-              "%p Socket::Write() (socket = %" PRIu64
-              ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
-              " (error = %s)",
-              static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-              static_cast<uint64_t>(src_len),
-              static_cast<int64_t>(bytes_sent), error.AsCString());
-  }
+  LLDB_LOGF(GetLog(LLDBLog::Communication),
+            "%p Socket::Write() (socket = %" PRIu64
+            ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
+            " (error = %s)",
+            static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
+            static_cast<uint64_t>(src_len), static_cast<int64_t>(bytes_sent),
+            error.AsCString());
 
   return error;
 }
@@ -393,8 +410,12 @@ int Socket::SetOption(NativeSocket sockfd, int level, int option_name,
                       sizeof(option_value));
 }
 
-size_t Socket::Send(const void *buf, const size_t num_bytes) {
-  return ::send(m_socket, static_cast<const char *>(buf), num_bytes, 0);
+ssize_t Socket::Send(const void *buf, const size_t num_bytes) {
+  int flags = 0;
+#if defined(MSG_NOSIGNAL)
+  flags |= MSG_NOSIGNAL;
+#endif
+  return ::send(m_socket, static_cast<const char *>(buf), num_bytes, flags);
 }
 
 void Socket::SetLastError(Status &error) {
@@ -433,6 +454,12 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
   auto sock = ::socket(domain, socket_type, protocol);
   if (sock == kInvalidSocketValue)
     SetLastError(error);
+
+#if defined(SO_NOSIGPIPE)
+  if (Socket::SetOption(sock, SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(GetLog(LLDBLog::Host), "failed to set SO_NOSIGPIPE on fd {0}: {1}",
+             sock, llvm::sys::StrError());
+#endif
 
   return sock;
 }
@@ -478,4 +505,29 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                                             const Socket::HostAndPort &HP) {
   return OS << '[' << HP.hostname << ']' << ':' << HP.port;
+}
+
+std::optional<Socket::ProtocolModePair>
+Socket::GetProtocolAndMode(llvm::StringRef scheme) {
+  // Keep in sync with ConnectionFileDescriptor::Connect.
+  return llvm::StringSwitch<std::optional<ProtocolModePair>>(scheme)
+      .Case("listen", ProtocolModePair{SocketProtocol::ProtocolTcp,
+                                       SocketMode::ModeAccept})
+      .Cases({"accept", "unix-accept"},
+             ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
+                              SocketMode::ModeAccept})
+      .Case("unix-abstract-accept",
+            ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
+                             SocketMode::ModeAccept})
+      .Cases({"connect", "tcp-connect", "connection"},
+             ProtocolModePair{SocketProtocol::ProtocolTcp,
+                              SocketMode::ModeConnect})
+      .Case("udp", ProtocolModePair{SocketProtocol::ProtocolTcp,
+                                    SocketMode::ModeConnect})
+      .Case("unix-connect", ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
+                                             SocketMode::ModeConnect})
+      .Case("unix-abstract-connect",
+            ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
+                             SocketMode::ModeConnect})
+      .Default(std::nullopt);
 }

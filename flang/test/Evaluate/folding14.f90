@@ -4,9 +4,9 @@ module m1
   logical, parameter :: results(*) = isnan([ &
     0., &
     -0., &
-!WARN: warning: division by zero
+!WARN: warning: division by zero [-Wfolding-exception]
     1./0., &
-!WARN: warning: invalid argument on division
+!WARN: warning: invalid argument on division [-Wfolding-exception]
     0./0., &
     real(z'7ff80001',kind=4), &
     real(z'fff80001',kind=4), &

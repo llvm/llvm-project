@@ -171,7 +171,7 @@ kmp_uint64 distributedBarrier::go_release() {
 void distributedBarrier::go_reset() {
   for (size_t j = 0; j < max_threads; ++j) {
     for (size_t i = 0; i < distributedBarrier::MAX_ITERS; ++i) {
-      flags[i][j].stillNeed = 1;
+      flags[i][j].stillNeed.store(1, std::memory_order_relaxed);
     }
     go[j].go.store(0);
     iter[j].iter = 0;
@@ -188,7 +188,7 @@ void distributedBarrier::init(size_t nthr) {
 
   for (size_t i = 0; i < max_threads; i++) {
     for (size_t j = 0; j < distributedBarrier::MAX_ITERS; j++) {
-      flags[j][i].stillNeed = 1;
+      flags[j][i].stillNeed.store(1, std::memory_order_relaxed);
     }
     go[i].go.store(0);
     iter[i].iter = 0;
@@ -203,6 +203,31 @@ void distributedBarrier::init(size_t nthr) {
 
   if (team_icvs == NULL)
     team_icvs = __kmp_allocate(sizeof(kmp_internal_control_t));
+}
+
+void distributedBarrier::deallocate(distributedBarrier *db) {
+  for (int i = 0; i < MAX_ITERS; ++i) {
+    if (db->flags[i])
+      KMP_INTERNAL_FREE(db->flags[i]);
+    db->flags[i] = NULL;
+  }
+  if (db->go) {
+    KMP_INTERNAL_FREE(db->go);
+    db->go = NULL;
+  }
+  if (db->iter) {
+    KMP_INTERNAL_FREE(db->iter);
+    db->iter = NULL;
+  }
+  if (db->sleep) {
+    KMP_INTERNAL_FREE(db->sleep);
+    db->sleep = NULL;
+  }
+  if (db->team_icvs) {
+    __kmp_free(db->team_icvs);
+    db->team_icvs = NULL;
+  }
+  KMP_ALIGNED_FREE(db);
 }
 
 // This function is used only when KMP_BLOCKTIME is not infinite.
@@ -266,8 +291,11 @@ static void __kmp_dist_barrier_gather(
       threads_pending = 0;
       // Check all the flags every time to avoid branch misspredict
       for (size_t thr = group_start; thr < group_end; thr++) {
-        // Each thread uses a different cache line
-        threads_pending += b->flags[my_current_iter][thr].stillNeed;
+        // Each thread uses a different cache line. Use relaxed loads while
+        // polling; the acquire is performed once after the loop observes that
+        // all threads have arrived.
+        threads_pending += b->flags[my_current_iter][thr].stillNeed.load(
+            std::memory_order_relaxed);
       }
       // Execute tasks here
       if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -295,6 +323,9 @@ static void __kmp_dist_barrier_gather(
         this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
       }
     } while (threads_pending > 0);
+    // Acquire: now that all monitored stillNeed=0 stores are observed, make the
+    // arrived threads' pre-barrier writes (incl. reduce_data) visible here.
+    std::atomic_thread_fence(std::memory_order_acquire);
 
     if (reduce) { // Perform reduction if needed
       OMPT_REDUCTION_DECL(this_thr, gtid);
@@ -308,15 +339,18 @@ static void __kmp_dist_barrier_gather(
     }
 
     // Set flag for next iteration
-    b->flags[my_next_iter][tid].stillNeed = 1;
+    b->flags[my_next_iter][tid].stillNeed.store(1, std::memory_order_relaxed);
     // Each thread uses a different cache line; resets stillNeed to 0 to
-    // indicate it has reached the barrier
-    b->flags[my_current_iter][tid].stillNeed = 0;
+    // indicate it has reached the barrier. Release so that this thread's
+    // pre-barrier writes are visible to whoever observes the 0.
+    b->flags[my_current_iter][tid].stillNeed.store(0,
+                                                   std::memory_order_release);
 
     do { // wait for all group leaders
       threads_pending = 0;
       for (size_t thr = 0; thr < nproc; thr += b->threads_per_group) {
-        threads_pending += b->flags[my_current_iter][thr].stillNeed;
+        threads_pending += b->flags[my_current_iter][thr].stillNeed.load(
+            std::memory_order_relaxed);
       }
       // Execute tasks here
       if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -344,6 +378,8 @@ static void __kmp_dist_barrier_gather(
         this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
       }
     } while (threads_pending > 0);
+    // Acquire: pair with the group leaders' releasing stillNeed=0 stores.
+    std::atomic_thread_fence(std::memory_order_acquire);
 
     if (reduce) { // Perform reduction if needed
       if (KMP_MASTER_TID(tid)) { // Master reduces over group leaders
@@ -359,10 +395,12 @@ static void __kmp_dist_barrier_gather(
     }
   } else {
     // Set flag for next iteration
-    b->flags[my_next_iter][tid].stillNeed = 1;
+    b->flags[my_next_iter][tid].stillNeed.store(1, std::memory_order_relaxed);
     // Each thread uses a different cache line; resets stillNeed to 0 to
-    // indicate it has reached the barrier
-    b->flags[my_current_iter][tid].stillNeed = 0;
+    // indicate it has reached the barrier. Release so that this thread's
+    // pre-barrier writes are visible to whoever observes the 0.
+    b->flags[my_current_iter][tid].stillNeed.store(0,
+                                                   std::memory_order_release);
   }
 
   KMP_MFENCE();
@@ -1292,6 +1330,15 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
                                                    kmp_bstate_t *thr_bar,
                                                    kmp_uint32 nproc, int gtid,
                                                    int tid, kmp_team_t *team) {
+  // Helper macro to identify bytes in a kmp_uint64 in an endian-independent
+  // way.  Input 0 results in the byte address of the MSB, input 7 results
+  // in the byte address of the LSB.
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define __kmp_msb_byteoffset(offset) (offset)
+#else
+#define __kmp_msb_byteoffset(offset) (7 - (offset))
+#endif
+
   // Checks to determine if (re-)initialization is needed
   bool uninitialized = thr_bar->team == NULL;
   bool team_changed = team != thr_bar->team;
@@ -1306,6 +1353,7 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
   if (uninitialized || team_sz_changed || tid_changed) {
     thr_bar->my_level = thr_bar->depth - 1; // default for primary thread
     thr_bar->parent_tid = -1; // default for primary thread
+    thr_bar->offset = -1; // unused for primary thread
     if (!KMP_MASTER_TID(tid)) {
       // if not primary thread, find parent thread in hierarchy
       kmp_uint32 d = 0;
@@ -1325,10 +1373,14 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
         }
         ++d;
       }
+
+      kmp_uint32 offset = ((kmp_uint32)tid - thr_bar->parent_tid) /
+                          thr_bar->skip_per_level[thr_bar->my_level];
+      offset = offset - 1;
+      KMP_ASSERT(offset < 7);
+      __kmp_type_convert(__kmp_msb_byteoffset(offset), &(thr_bar->offset));
     }
-    __kmp_type_convert(7 - ((tid - thr_bar->parent_tid) /
-                            (thr_bar->skip_per_level[thr_bar->my_level])),
-                       &(thr_bar->offset));
+
     thr_bar->old_tid = tid;
     thr_bar->wait_flag = KMP_BARRIER_NOT_WAITING;
     thr_bar->team = team;
@@ -1350,9 +1402,11 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
       __kmp_type_convert(nproc - tid - 1, &(thr_bar->leaf_kids));
     thr_bar->leaf_state = 0;
     for (int i = 0; i < thr_bar->leaf_kids; ++i)
-      ((char *)&(thr_bar->leaf_state))[7 - i] = 1;
+      ((char *)&(thr_bar->leaf_state))[__kmp_msb_byteoffset(i)] = 1;
   }
   return retval;
+
+#undef __kmp_msb_byteoffset
 }
 
 static void __kmp_hierarchical_barrier_gather(
@@ -1506,8 +1560,7 @@ static void __kmp_hierarchical_barrier_gather(
     } else {
       // Leaf does special release on "offset" bits of parent's b_arrived flag
       thr_bar->b_arrived = team->t.t_bar[bt].b_arrived + KMP_BARRIER_STATE_BUMP;
-      kmp_flag_oncore flag(&thr_bar->parent_bar->b_arrived,
-                           thr_bar->offset + 1);
+      kmp_flag_oncore flag(&thr_bar->parent_bar->b_arrived, thr_bar->offset);
       flag.set_waiter(other_threads[thr_bar->parent_tid]);
       flag.release();
     }
@@ -1555,7 +1608,7 @@ static void __kmp_hierarchical_barrier_release(
       // Wait on my "offset" bits on parent's b_go flag
       thr_bar->wait_flag = KMP_BARRIER_PARENT_FLAG;
       kmp_flag_oncore flag(&thr_bar->parent_bar->b_go, KMP_BARRIER_STATE_BUMP,
-                           thr_bar->offset + 1, bt,
+                           thr_bar->offset, bt,
                            this_thr USE_ITT_BUILD_ARG(itt_sync_obj));
       flag.wait(this_thr, TRUE);
       if (thr_bar->wait_flag ==
@@ -1564,7 +1617,7 @@ static void __kmp_hierarchical_barrier_release(
               KMP_INIT_BARRIER_STATE); // Reset my b_go flag for next time
       } else { // Reset my bits on parent's b_go flag
         (RCAST(volatile char *,
-               &(thr_bar->parent_bar->b_go)))[thr_bar->offset + 1] = 0;
+               &(thr_bar->parent_bar->b_go)))[thr_bar->offset] = 0;
       }
     }
     thr_bar->wait_flag = KMP_BARRIER_NOT_WAITING;
@@ -1828,6 +1881,14 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
   }
 #endif
 
+#if ENABLE_LIBOMPTARGET
+  // Give an opportunity to the offload runtime to make progress and create
+  // proxy tasks if necessary
+  if (UNLIKELY(kmp_target_sync_cb != NULL))
+    (*kmp_target_sync_cb)(
+        NULL, gtid, KMP_TASKDATA_TO_TASK(this_thr->th.th_current_task), NULL);
+#endif
+
   if (!team->t.t_serialized) {
 #if USE_ITT_BUILD
     // This value will be used in itt notify events below.
@@ -1890,8 +1951,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         break;
       }
       case bp_hyper_bar: {
-        // don't set branch bits to 0; use linear
-        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
         __kmp_hyper_barrier_gather(bt, this_thr, gtid, tid,
                                    reduce USE_ITT_BUILD_ARG(itt_sync_obj));
         break;
@@ -1902,8 +1961,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         break;
       }
       case bp_tree_bar: {
-        // don't set branch bits to 0; use linear
-        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
         __kmp_tree_barrier_gather(bt, this_thr, gtid, tid,
                                   reduce USE_ITT_BUILD_ARG(itt_sync_obj));
         break;
@@ -2297,7 +2354,6 @@ void __kmp_join_barrier(int gtid) {
     break;
   }
   case bp_hyper_bar: {
-    KMP_ASSERT(__kmp_barrier_gather_branch_bits[bs_forkjoin_barrier]);
     __kmp_hyper_barrier_gather(bs_forkjoin_barrier, this_thr, gtid, tid,
                                NULL USE_ITT_BUILD_ARG(itt_sync_obj));
     break;
@@ -2308,7 +2364,6 @@ void __kmp_join_barrier(int gtid) {
     break;
   }
   case bp_tree_bar: {
-    KMP_ASSERT(__kmp_barrier_gather_branch_bits[bs_forkjoin_barrier]);
     __kmp_tree_barrier_gather(bs_forkjoin_barrier, this_thr, gtid, tid,
                               NULL USE_ITT_BUILD_ARG(itt_sync_obj));
     break;

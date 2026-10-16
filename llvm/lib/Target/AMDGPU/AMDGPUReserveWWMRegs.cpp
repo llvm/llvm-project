@@ -14,10 +14,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
@@ -27,13 +28,11 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUReserveWWMRegs : public MachineFunctionPass {
+class AMDGPUReserveWWMRegsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUReserveWWMRegs() : MachineFunctionPass(ID) {
-    initializeAMDGPUReserveWWMRegsPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPUReserveWWMRegsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -42,21 +41,48 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
+class AMDGPUReserveWWMRegs {
+  RegisterClassInfo &RCI;
+
+public:
+  explicit AMDGPUReserveWWMRegs(RegisterClassInfo &RCI) : RCI(RCI) {}
+
+  bool run(MachineFunction &MF);
+};
+
 } // End anonymous namespace.
 
-INITIALIZE_PASS(AMDGPUReserveWWMRegs, DEBUG_TYPE,
-                "AMDGPU Reserve WWM Registers", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+                      "AMDGPU Reserve WWM Registers", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+                    "AMDGPU Reserve WWM Registers", false, false)
 
-char AMDGPUReserveWWMRegs::ID = 0;
+char AMDGPUReserveWWMRegsLegacy::ID = 0;
 
-char &llvm::AMDGPUReserveWWMRegsID = AMDGPUReserveWWMRegs::ID;
+char &llvm::AMDGPUReserveWWMRegsLegacyID = AMDGPUReserveWWMRegsLegacy::ID;
 
-bool AMDGPUReserveWWMRegs::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUReserveWWMRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  return AMDGPUReserveWWMRegs(RCI).run(MF);
+}
+
+PreservedAnalyses
+AMDGPUReserveWWMRegsPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  AMDGPUReserveWWMRegs(RCI).run(MF);
+  // RegisterClassInfo was updated in place, so it need not be abandoned.
+  return PreservedAnalyses::all();
+}
+
+bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   bool Changed = false;
@@ -88,8 +114,17 @@ bool AMDGPUReserveWWMRegs::runOnMachineFunction(MachineFunction &MF) {
       MO.setIsRenamable(false);
   }
 
-  // Now clear the NonWWMRegMask earlier set during wwm-regalloc.
-  MFI->clearNonWWMRegAllocMask();
+  // Now clear the PerLaneVGPRMask earlier set during wwm-regalloc.
+  MFI->clearPerLaneVGPRAllocMask();
+
+  // reserveWWMRegister() and clearPerLaneVGPRAllocMask() both feed
+  // getReservedRegs(): the WWM registers are now reserved, the per-lane VGPRs
+  // no longer are. Refresh the shared RegisterClassInfo, as the register
+  // allocator refreshes only its own copy. Do not freeze the set into MRI:
+  // LiveIntervals does not extend a reserved register's unit ranges to its
+  // uses, so unreserving the per-lane VGPRs here would fail verification.
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  RCI.updateReservedRegs(TRI->getReservedRegs(MF));
 
   return Changed;
 }

@@ -65,10 +65,6 @@ lldb_plugins += [
     "ObjCPlusPlusLanguage",
   ],
   [
-    "//lldb/source/Plugins/LanguageRuntime/CPlusPlus/ItaniumABI",
-    "CXXItaniumABI",
-  ],
-  [
     "//lldb/source/Plugins/LanguageRuntime/ObjC/AppleObjCRuntime",
     "AppleObjCRuntime",
   ],

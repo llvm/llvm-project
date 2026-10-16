@@ -2,6 +2,7 @@
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-3 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER3
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-4 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER4
 // RUN: %clang -target x86_64-linux-gnu -gdwarf-5 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
+// RUN: %clang -target x86_64-linux-gnu -gdwarf-6 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER6
 // RUN: %clang -target x86_64-linux-gnu -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
 // RUN: %clang -target x86_64-linux-gnu -gdwarf -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
 // RUN: %clang --target=i386-pc-solaris -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER5
@@ -34,8 +35,10 @@
 // RUN: %clang -target i686-pc-windows-msvc -gdwarf -gcodeview -S -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=VER4,CODEVIEW
 
-// Check what version of dwarf is used for MinGW targets.
+// Check what version of dwarf is used for MinGW/Cygwin targets.
 // RUN: %clang -target i686-pc-windows-gnu -g -S -emit-llvm -o - %s | \
+// RUN:   FileCheck %s --check-prefixes=VER4
+// RUN: %clang -target i686-pc-windows-cygnus -g -S -emit-llvm -o - %s | \
 // RUN:   FileCheck %s --check-prefixes=VER4
 
 // RUN: %clang -target powerpc-ibm-aix-xcoff -g -S -emit-llvm -o - %s | \
@@ -61,6 +64,7 @@ int main (void) {
 // VER3: !{i32 7, !"Dwarf Version", i32 3}
 // VER4: !{i32 7, !"Dwarf Version", i32 4}
 // VER5: !{i32 7, !"Dwarf Version", i32 5}
+// VER6: !{i32 7, !"Dwarf Version", i32 6}
 // UNSUPPORTED-VER5: error: unsupported option '-gdwarf-5'
 
 // NODWARF-NOT: !"Dwarf Version"

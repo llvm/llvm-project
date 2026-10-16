@@ -1,0 +1,50 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
+# RUN: llvm-pdbutil dump --symbols --sym-data %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB,CHECK-YAML2PDB-SYMDATA %s
+
+# RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s
+
+# CHECK-YAML2PDB:                                   Symbols
+# CHECK-YAML2PDB:         ============================================================
+# CHECK-YAML2PDB:           Mod 0000 | `F:\Dev\testing\test.obj`:
+# CHECK-YAML2PDB:                4 | S_OBJNAME [size = 32] sig=0, `F:\Dev\testing\test.obj`
+# CHECK-YAML2PDB-SYMDATA:            bytes (
+# CHECK-YAML2PDB-SYMDATA:              0000: 00000000 463A5C44 65765C74 65737469 6E675C74 6573742E 6F626A00           |....F:\Dev\testing\test.obj.|
+# CHECK-YAML2PDB-SYMDATA:            )
+# CHECK-YAML2PDB:               36 | unknown (64188) [size = 36]
+# CHECK-YAML2PDB:                    bytes (
+# CHECK-YAML2PDB:                      0000: 20000000 12100000 00000000 4F015F5F 636F726F 5F667261 6D655F70 74720000  | ...........O.__coro_frame_ptr..|
+# CHECK-YAML2PDB:                    )
+
+# CHECK-PDB2YAML: DbiStream:
+# CHECK-PDB2YAML:   Modules:
+# CHECK-PDB2YAML:     - Module:          'F:\Dev\testing\test.obj'
+# CHECK-PDB2YAML:       ObjFile:         'F:\Dev\testing\test.obj'
+# CHECK-PDB2YAML:       Modi:
+# CHECK-PDB2YAML:         Signature:       4
+# CHECK-PDB2YAML:         Records:
+# CHECK-PDB2YAML:           - Kind:            S_OBJNAME
+# CHECK-PDB2YAML:             ObjNameSym:
+# CHECK-PDB2YAML:               Signature:       0
+# CHECK-PDB2YAML:               ObjectName:      'F:\Dev\testing\test.obj'
+# CHECK-PDB2YAML:           - Kind:            0xFABC
+# CHECK-PDB2YAML:             UnknownSym:
+# CHECK-PDB2YAML:               Data:            2000000012100000000000004F015F5F636F726F5F6672616D655F7074720000
+
+---
+DbiStream:
+  Modules:
+    - Module:          'F:\Dev\testing\test.obj'
+      ObjFile:         'F:\Dev\testing\test.obj'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'F:\Dev\testing\test.obj'
+          - Kind:            0xFABC
+            UnknownSym:
+              Data:            2000000012100000000000004F015F5F636F726F5F6672616D655F7074720000
+...

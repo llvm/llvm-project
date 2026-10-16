@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430.h"
+#include "MSP430SelectionDAGInfo.h"
 #include "MSP430TargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -132,6 +133,11 @@ INITIALIZE_PASS(MSP430DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 FunctionPass *llvm::createMSP430ISelDag(MSP430TargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {
   return new MSP430DAGToDAGISelLegacy(TM, OptLevel);
+}
+
+MSP430ISelDAGToDAGPass::MSP430ISelDAGToDAGPass(MSP430TargetMachine &TM,
+                                               CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<MSP430DAGToDAGISel>(TM, OptLevel)) {
 }
 
 /// MatchWrapper - Try to match MSP430ISD::Wrapper node into an addressing mode.

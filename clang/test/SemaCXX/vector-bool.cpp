@@ -112,3 +112,7 @@ void Sizeof() {
   static_assert(sizeof(Bool195) == 32);
   static_assert(sizeof(Bool257) == 64);
 }
+
+#if !__has_feature(ext_vector_type_boolean)
+#error "FAIL"
+#endif

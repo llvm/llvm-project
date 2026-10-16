@@ -18,6 +18,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/Support/MathExtras.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
@@ -268,7 +269,7 @@ public:
                   semantics::IsAssumedSizeArray(symbol)) {
                 // last dimension of assumed-size dummy array: don't worry
                 // about handling an empty dimension
-                ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound);
+                ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound, context_);
               } else if (lbValue.value_or(0) == 1) {
                 // Lower bound is 1, regardless of extent
                 ok = true;
@@ -300,6 +301,16 @@ public:
                   } else {
                     ok = false;
                   }
+                }
+              } else if (IsImpliedShape(symbol) && object->init()) {
+                // Implied-shape named constant: there is no explicit upper
+                // bound, but the extent is known from the initializer.
+                if (auto extent{
+                        ToInt64(GetExtent(base, dimension_, invariantOnly_))}) {
+                  if (*extent <= 0) {
+                    return Result{1};
+                  }
+                  ok = true;
                 }
               }
               return ok ? *lbound : Result{};
@@ -464,7 +475,15 @@ static MaybeExtentExpr GetNonNegativeExtent(
     if (*uval < *lval) {
       return ExtentExpr{0};
     } else {
-      return ExtentExpr{*uval - *lval + 1};
+      // The extent of an oversized dimension, e.g. integer(1)::a(0:huge(0_8)),
+      // does not fit and wraps around; storage sequences that are too large
+      // are diagnosed later, where the original bounds distinguish a wrapped
+      // extent from an empty one.  Compute the same two's complement result
+      // here without signed integer overflow.
+      ConstantSubscript extent;
+      (void)llvm::SubOverflow(*uval, *lval, extent);
+      (void)llvm::AddOverflow(extent, ConstantSubscript{1}, extent);
+      return ExtentExpr{extent};
     }
   } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||
@@ -623,7 +642,7 @@ MaybeExtentExpr GetRawUpperBound(
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
         return std::nullopt;
-      } else {
+      } else if (IsSafelyCopyable(base, /*admitPureCall=*/true)) {
         return ComputeUpperBound(
             GetRawLowerBound(base, dimension), GetExtent(base, dimension));
       }
@@ -651,7 +670,7 @@ static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
     const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   if (ubound && ubound->Rank() == 0 &&
-      (!invariantOnly || IsScopeInvariantExpr(*ubound))) {
+      (!invariantOnly || IsScopeInvariantExpr(*ubound, context))) {
     if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
       if (auto cstExtent{ToInt64(
               context ? Fold(*context, std::move(*extent)) : *extent)}) {
@@ -678,9 +697,11 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
         return std::nullopt; // UBOUND() folding replaces with -1
-      } else if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
-        return ComputeUpperBound(
-            std::move(*lb), GetExtent(base, dimension, invariantOnly));
+      } else if (IsSafelyCopyable(base, /*admitPureCall=*/true)) {
+        if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
+          return ComputeUpperBound(
+              std::move(*lb), GetExtent(base, dimension, invariantOnly));
+        }
       }
     }
   } else if (const auto *assoc{
@@ -891,24 +912,51 @@ auto GetShapeHelper::operator()(const ArrayRef &arrayRef) const -> Result {
 }
 
 auto GetShapeHelper::operator()(const CoarrayRef &coarrayRef) const -> Result {
-  NamedEntity base{coarrayRef.GetBase()};
-  if (coarrayRef.subscript().empty()) {
-    return (*this)(base);
-  } else {
-    Shape shape;
-    int dimension{0};
-    for (const Subscript &ss : coarrayRef.subscript()) {
-      if (ss.Rank() > 0) {
-        shape.emplace_back(GetExtent(ss, base, dimension));
-      }
-      ++dimension;
-    }
-    return shape;
-  }
+  return (*this)(coarrayRef.base());
 }
 
 auto GetShapeHelper::operator()(const Substring &substring) const -> Result {
   return (*this)(substring.parent());
+}
+
+auto GetShapeHelper::operator()(const ActualArgument &arg) const -> Result {
+  // For ConditionalArg, compare shapes of all non-.NIL. consequent-args.
+  // C1539 requires the same rank.  If all branches also have the same
+  // static extents, return the common concrete shape; this preserves
+  // useful compile-time checks (e.g. elemental cross-argument conformance,
+  // intrinsic result derivation).  Otherwise return Shape(rank, nullopt) —
+  // correct rank, deferred extents.  Per-consequent checking in
+  // CheckExplicitDataArg handles the primary dummy-vs-actual conformance
+  // regardless.
+  if (const auto *condArg{arg.GetConditionalArg()}) {
+    const auto *firstExpr{condArg->FirstNonNilConsequent()};
+    if (!firstExpr) {
+      return std::nullopt;
+    }
+    Result commonShape{(*this)(*firstExpr)};
+    bool allMatch{true};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (!cons || !allMatch) {
+            return;
+          }
+          Result thisShape{(*this)(cons->value())};
+          if (commonShape != thisShape) {
+            allMatch = false;
+          }
+        });
+    if (allMatch && commonShape) {
+      return commonShape;
+    }
+    return Shape(firstExpr->Rank(), std::nullopt);
+  }
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    return (*this)(*expr);
+  }
+  if (const auto *assumed{arg.GetAssumedTypeDummy()}) {
+    return (*this)(*assumed);
+  }
+  return std::nullopt;
 }
 
 auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
@@ -960,7 +1008,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        if (IsAssumedRank(*call.arguments().front())) {
+        if (semantics::IsAssumedRank(*call.arguments().front())) {
           return Shape{MaybeExtentExpr{}};
         } else {
           return Shape{
@@ -1086,8 +1134,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         }
       }
     } else if (intrinsic->name == "spread") {
-      // SHAPE(SPREAD(ARRAY,DIM,NCOPIES)) = SHAPE(ARRAY) with NCOPIES inserted
-      // at position DIM.
+      // SHAPE(SPREAD(ARRAY,DIM,NCOPIES)) = SHAPE(ARRAY) with MAX(0,NCOPIES)
+      // inserted at position DIM.
       if (call.arguments().size() == 3) {
         auto arrayShape{
             (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))};
@@ -1099,7 +1147,8 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             if (*dim >= 1 &&
                 static_cast<std::size_t>(*dim) <= arrayShape->size() + 1) {
               arrayShape->emplace(arrayShape->begin() + *dim - 1,
-                  ConvertToType<ExtentType>(common::Clone(*nCopies)));
+                  Extremum<SubscriptInteger>{Ordering::Greater, ExtentExpr{0},
+                      ConvertToType<ExtentType>(common::Clone(*nCopies))});
               return std::move(*arrayShape);
             }
           }
@@ -1173,8 +1222,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (call.arguments().size() >= 2) {
         return (*this)(call.arguments()[1]); // MASK=
       }
-    } else if (intrinsic->characteristics.value().attrs.test(characteristics::
-                       Procedure::Attr::NullPointer)) { // NULL(MOLD=)
+    } else if (intrinsic->characteristics.value().attrs.test(
+                   characteristics::Procedure::Attr::NullPointer) ||
+        intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullAllocatable)) { // NULL(MOLD=)
       return (*this)(call.arguments());
     } else {
       // TODO: shapes of other non-elemental intrinsic results

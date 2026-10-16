@@ -9,12 +9,13 @@
 // number of instructions, set the prefLoopAlignment to 32 bytes (5).
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-loop-align"
-
+#include "Hexagon.h"
 #include "HexagonTargetMachine.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "hexagon-loop-align"
 
 using namespace llvm;
 
@@ -49,12 +50,7 @@ static cl::opt<uint32_t> TinyLoopBndlAlignLimit(
 
 static cl::opt<uint32_t>
     LoopEdgeThreshold("hexagon-loop-edge-threshold", cl::Hidden, cl::init(7500),
-                      cl::desc("Set hexagon loop align edge theshold"));
-
-namespace llvm {
-FunctionPass *createHexagonLoopAlign();
-void initializeHexagonLoopAlignPass(PassRegistry &);
-} // namespace llvm
+                      cl::desc("Set hexagon loop align edge threshold"));
 
 namespace {
 
@@ -65,9 +61,7 @@ class HexagonLoopAlign : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonLoopAlign() : MachineFunctionPass(ID) {
-    initializeHexagonLoopAlignPass(*PassRegistry::getPassRegistry());
-  }
+  HexagonLoopAlign() : MachineFunctionPass(ID) {}
   bool shouldBalignLoop(MachineBasicBlock &BB, bool AboveThres);
   bool isSingleLoop(MachineBasicBlock &MBB);
   bool attemptToBalignSmallLoop(MachineFunction &MF, MachineBasicBlock &MBB);

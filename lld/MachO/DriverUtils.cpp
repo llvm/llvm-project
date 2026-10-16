@@ -9,8 +9,6 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputFiles.h"
-#include "ObjC.h"
-#include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -34,40 +32,10 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-// Create prefix string literals used in Options.td
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr OptTable::Info optInfo[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES},
-#include "Options.inc"
-#undef OPTION
-};
-
-MachOOptTable::MachOOptTable()
-    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
+MachOOptTable::MachOOptTable() : OptTable(optionTables()) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -135,6 +103,26 @@ void MachOOptTable::printHelp(CommonLinkerContext &ctx, const char *argv0,
   outs << '\n';
 }
 
+// If any SDK contains the directory, use those directories in SDK order
+// instead of falling back to the host.
+SmallVector<StringRef>
+macho::getRerootedSearchPaths(StringRef searchPath, ArrayRef<StringRef> roots) {
+  SmallVector<StringRef> paths;
+  // NOTE: only absolute paths are re-rooted to syslibroot(s)
+  if (path::is_absolute(searchPath, path::Style::posix)) {
+    for (StringRef root : roots) {
+      SmallString<261> buffer(root);
+      path::append(buffer, searchPath);
+      // Do not warn about paths that are computed via the syslib roots
+      if (fs::is_directory(buffer))
+        paths.push_back(saver().save(buffer.str()));
+    }
+  }
+  if (paths.empty())
+    paths.push_back(searchPath);
+  return paths;
+}
+
 static std::string rewritePath(StringRef s) {
   if (fs::exists(s))
     return relativeToRoot(s);
@@ -179,6 +167,14 @@ std::string macho::createResponseFile(const InputArgList &args) {
       break;
     case OPT_F:
     case OPT_L:
+      // Resolve SDK prefixes before making search paths relative: relative
+      // search paths are not rerooted when the reproducer is replayed.
+      for (StringRef path :
+           getRerootedSearchPaths(arg->getValue(), config->systemLibraryRoots))
+        os << arg->getSpelling() << " " << quote(rewritePath(path)) << "\n";
+      break;
+    case OPT_non_global_symbols_strip_list:
+    case OPT_non_global_symbols_no_strip_list:
     case OPT_bundle_loader:
     case OPT_exported_symbols_list:
     case OPT_order_file:
@@ -227,6 +223,18 @@ std::optional<StringRef> macho::resolveDylibPath(StringRef dylibPath) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
+static StringRef realPathIfDifferent(StringRef path) {
+  SmallString<128> realPathBuf;
+  if (fs::real_path(path, realPathBuf))
+    return StringRef();
+
+  SmallString<128> absPathBuf = path;
+  if (!fs::make_absolute(absPathBuf) && realPathBuf == absPathBuf)
+    return StringRef();
+
+  return uniqueSaver().save(StringRef(realPathBuf));
+}
+
 DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
                             bool isBundleLoader, bool explicitlyLinked) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
@@ -235,6 +243,22 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     if (explicitlyLinked)
       file->setExplicitlyLinked();
     return file;
+  }
+
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks and look up in the dylib cache.
+  CachedHashStringRef realPath(
+      realPathIfDifferent(mbref.getBufferIdentifier()));
+  if (!realPath.val().empty()) {
+    // Avoid map insertions here so that we do not invalidate the "file"
+    // reference.
+    auto it = loadedDylibs.find(realPath);
+    if (it != loadedDylibs.end()) {
+      DylibFile *realfile = it->second;
+      if (explicitlyLinked)
+        realfile->setExplicitlyLinked();
+      return realfile;
+    }
   }
 
   DylibFile *newFile;
@@ -272,9 +296,8 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   }
 
   if (explicitlyLinked && !newFile->allowableClients.empty()) {
-    bool allowed = std::any_of(
-        newFile->allowableClients.begin(), newFile->allowableClients.end(),
-        [&](StringRef allowableClient) {
+    bool allowed =
+        llvm::any_of(newFile->allowableClients, [&](StringRef allowableClient) {
           // We only do a prefix match to match LD64's behaviour.
           return allowableClient.starts_with(config->clientName);
         });
@@ -290,6 +313,11 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
             sys::path::filename(newFile->installName) + "' because " +
             config->clientName + " is not an allowed client");
   }
+
+  // If the load path was a symlink, cache the real path too.
+  if (!realPath.val().empty())
+    loadedDylibs[realPath] = newFile;
+
   return newFile;
 }
 

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm64-windows -start-after=prologepilog -show-mc-encoding \
+# RUN: llc -mtriple=arm64-windows -start-after=prolog-epilog -show-mc-encoding \
 # RUN: -o - %s | FileCheck %s
 
 --- |

@@ -13,6 +13,7 @@
 #include "MipsInstPrinter.h"
 #include "Mips.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -138,7 +139,7 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand kind in printOperand");
-  Op.getExpr()->print(O, &MAI, true);
+  MAI.printExpr(O, *Op.getExpr());
 }
 
 void MipsInstPrinter::printJumpOperand(const MCInst *MI, unsigned OpNo,
@@ -273,26 +274,26 @@ bool MipsInstPrinter::printAlias(const MCInst &MI, uint64_t Address,
   case Mips::BEQ_MM:
     // beq $zero, $zero, $L2 => b $L2
     // beq $r0, $zero, $L2 => beqz $r0, $L2
-    return (isReg<Mips::ZERO>(MI, 0) && isReg<Mips::ZERO>(MI, 1) &&
+    return (isReg<Mips::R0>(MI, 0) && isReg<Mips::R0>(MI, 1) &&
             printAlias("b", MI, Address, 2, STI, OS, true)) ||
-           (isReg<Mips::ZERO>(MI, 1) &&
+           (isReg<Mips::R0>(MI, 1) &&
             printAlias("beqz", MI, Address, 0, 2, STI, OS, true));
   case Mips::BEQ64:
     // beq $r0, $zero, $L2 => beqz $r0, $L2
-    return isReg<Mips::ZERO_64>(MI, 1) &&
+    return isReg<Mips::R0_64>(MI, 1) &&
            printAlias("beqz", MI, Address, 0, 2, STI, OS, true);
   case Mips::BNE:
   case Mips::BNE_MM:
     // bne $r0, $zero, $L2 => bnez $r0, $L2
-    return isReg<Mips::ZERO>(MI, 1) &&
+    return isReg<Mips::R0>(MI, 1) &&
            printAlias("bnez", MI, Address, 0, 2, STI, OS, true);
   case Mips::BNE64:
     // bne $r0, $zero, $L2 => bnez $r0, $L2
-    return isReg<Mips::ZERO_64>(MI, 1) &&
+    return isReg<Mips::R0_64>(MI, 1) &&
            printAlias("bnez", MI, Address, 0, 2, STI, OS, true);
   case Mips::BGEZAL:
     // bgezal $zero, $L1 => bal $L1
-    return isReg<Mips::ZERO>(MI, 0) &&
+    return isReg<Mips::R0>(MI, 0) &&
            printAlias("bal", MI, Address, 1, STI, OS, true);
   case Mips::BC1T:
     // bc1t $fcc0, $L1 => bc1t $L1
@@ -305,14 +306,14 @@ bool MipsInstPrinter::printAlias(const MCInst &MI, uint64_t Address,
   case Mips::JALR:
     // jalr $zero, $r1 => jr $r1
     // jalr $ra, $r1 => jalr $r1
-    return (isReg<Mips::ZERO>(MI, 0) &&
+    return (isReg<Mips::R0>(MI, 0) &&
             printAlias("jr", MI, Address, 1, STI, OS)) ||
            (isReg<Mips::RA>(MI, 0) &&
             printAlias("jalr", MI, Address, 1, STI, OS));
   case Mips::JALR64:
     // jalr $zero, $r1 => jr $r1
     // jalr $ra, $r1 => jalr $r1
-    return (isReg<Mips::ZERO_64>(MI, 0) &&
+    return (isReg<Mips::R0_64>(MI, 0) &&
             printAlias("jr", MI, Address, 1, STI, OS)) ||
            (isReg<Mips::RA_64>(MI, 0) &&
             printAlias("jalr", MI, Address, 1, STI, OS));
@@ -320,17 +321,17 @@ bool MipsInstPrinter::printAlias(const MCInst &MI, uint64_t Address,
   case Mips::NOR_MM:
   case Mips::NOR_MMR6:
     // nor $r0, $r1, $zero => not $r0, $r1
-    return isReg<Mips::ZERO>(MI, 2) &&
+    return isReg<Mips::R0>(MI, 2) &&
            printAlias("not", MI, Address, 0, 1, STI, OS);
   case Mips::NOR64:
     // nor $r0, $r1, $zero => not $r0, $r1
-    return isReg<Mips::ZERO_64>(MI, 2) &&
+    return isReg<Mips::R0_64>(MI, 2) &&
            printAlias("not", MI, Address, 0, 1, STI, OS);
   case Mips::OR:
   case Mips::ADDu:
     // or $r0, $r1, $zero => move $r0, $r1
     // addu $r0, $r1, $zero => move $r0, $r1
-    return isReg<Mips::ZERO>(MI, 2) &&
+    return isReg<Mips::R0>(MI, 2) &&
            printAlias("move", MI, Address, 0, 1, STI, OS);
   default:
     return false;

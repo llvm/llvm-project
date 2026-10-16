@@ -2,6 +2,7 @@
 
 // Parsing external resources does not work on big-endian platforms currently
 // XFAIL: target={{(s390x|sparc.*)-.*}}
+// XFAIL: system-aix
 
 // This test contains various `ElementsAttr` attributes, and tests the support
 // for iterating the values of these attributes using various native C++ types.

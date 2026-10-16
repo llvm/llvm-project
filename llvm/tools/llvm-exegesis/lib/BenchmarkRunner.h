@@ -73,8 +73,8 @@ public:
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
-    static constexpr const size_t kAlignment = 1024;
-    static constexpr const size_t kSize = 1 << 20; // 1MB.
+    static constexpr size_t kAlignment = 1024;
+    static constexpr size_t kSize = 1 << 20; // 1MB.
     ScratchSpace()
         : UnalignedPtr(std::make_unique<char[]>(kSize + kAlignment)),
           AlignedPtr(

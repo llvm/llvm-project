@@ -22,7 +22,6 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPrinter.h"
-#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
@@ -69,6 +68,9 @@ struct DOTGraphTraits<polly::ScopDetection *> : DOTGraphTraits<RegionNode *> {
 } // end namespace llvm
 
 namespace polly {
+
+extern std::string ViewFilter;
+extern bool ViewAll;
 
 struct ScopViewer final : llvm::DOTGraphTraitsViewer<ScopAnalysis, false> {
   ScopViewer() : llvm::DOTGraphTraitsViewer<ScopAnalysis, false>("scops") {}

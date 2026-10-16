@@ -30,7 +30,7 @@
 ; emits both typedefs at the same lexical scope (3), which is wrong.
 ; GCC and MSVC emit correct lexical scope for both typedefs.
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,format,producer \
 ; RUN:                         --output-sort=kind \
 ; RUN:                         --print=symbols,types,lines \
 ; RUN:                         %p/Inputs/pr-44884-codeview-clang.o \
@@ -42,6 +42,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-44884.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Function} extern not_inlined 'bar' -> 'int'
 ; ONE-NEXT: [003]                 {Parameter} 'Input' -> 'float'
 ; ONE-NEXT: [003]     1           {Line}
@@ -63,6 +64,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-44884.cpp'
 ; ONE-NEXT: [002]               {Producer} 'Microsoft (R) Optimizing Compiler'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Function} extern not_inlined 'bar' -> 'int'
 ; ONE-NEXT: [003]                 {Variable} 'Input' -> 'float'
 ; ONE-NEXT: [003]     1           {Line}

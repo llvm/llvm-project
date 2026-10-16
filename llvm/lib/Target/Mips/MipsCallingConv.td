@@ -20,34 +20,25 @@ class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 /// Match if the original argument (before lowering) was a float.
 /// For example, this is true for i32's that were lowered from soft-float.
-class CCIfOrigArgWasFloat<CCAction A>
-    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
-           A>;
+class CCIfOrigArgWasFloat<CCAction A> : CCIf<"OrigTy->isFloatingPointTy()", A>;
 
 /// Match if the original argument (before lowering) was a 128-bit float (i.e.
 /// long double).
-class CCIfOrigArgWasF128<CCAction A>
-    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)", A>;
+class CCIfOrigArgWasF128<CCAction A> : CCIf<"OrigTy->isFP128Ty()", A>;
 
-/// Match if this specific argument is a vararg.
-/// This is slightly different fro CCIfIsVarArg which matches if any argument is
-/// a vararg.
-class CCIfArgIsVarArg<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
-
-/// Match if the return was a floating point vector.
+/// Match if the return was not a floating point vector.
 class CCIfOrigArgWasNotVectorFloat<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)"
-                "->WasOriginalRetVectorFloat(ValNo)", A>;
+    : CCIf<"!OrigTy->isVectorTy() || !OrigTy->isFPOrFPVectorTy()", A>;
 
 /// Match if the special calling conv is the specified value.
 class CCIfSpecialCallingConv<string CC, CCAction A>
     : CCIf<"static_cast<MipsCCState *>(&State)->getSpecialCallingConv() == "
                "MipsCCState::" # CC, A>;
 
-// For soft-float, f128 values are returned in A0_64 rather than V1_64.
+// For soft-float, f128 values are returned in R2_64 and R4_64 rather than
+// R2_64 and R3_64.
 def RetCC_F128SoftFloat : CallingConv<[
-  CCAssignToReg<[V0_64, A0_64]>
+  CCAssignToReg<[R2_64, R4_64]>
 ]>;
 
 // For hard-float, f128 values are returned as a pair of f64's rather than a
@@ -95,10 +86,10 @@ def RetCC_MipsO32 : CallingConv<[
   // Promote i1/i8/i16 return values to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
-  // i32 are returned in registers V0, V1, A0, A1, unless the original return
+  // i32 are returned in registers R2, R3, R4, R5, unless the original return
   // type was a vector of floats.
   CCIfOrigArgWasNotVectorFloat<CCIfType<[i32],
-                                        CCAssignToReg<[V0, V1, A0, A1]>>>,
+                                        CCAssignToReg<[R2, R3, R4, R5]>>>,
 
   // f32 are returned in registers F0, F2
   CCIfType<[f32], CCAssignToReg<[F0, F2]>>,
@@ -122,8 +113,8 @@ def CC_MipsO32_FP : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CC_MipsN_SoftFloat : CallingConv<[
-  CCAssignToRegWithShadow<[A0, A1, A2, A3,
-                           T0, T1, T2, T3],
+  CCAssignToRegWithShadow<[R4, R5, R6, R7,
+                           R8, R9, R10, R11],
                           [D12_64, D13_64, D14_64, D15_64,
                            D16_64, D17_64, D18_64, D19_64]>,
   CCAssignToStack<4, 8>
@@ -143,22 +134,25 @@ def CC_MipsN : CallingConv<[
   CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
 
   // Integer arguments are passed in integer registers.
-  CCIfType<[i64], CCAssignToRegWithShadow<[A0_64, A1_64, A2_64, A3_64,
-                                           T0_64, T1_64, T2_64, T3_64],
+  CCIfType<[i64], CCAssignToRegWithShadow<[R4_64, R5_64, R6_64, R7_64,
+                                           R8_64, R9_64, R10_64,
+                                           R11_64],
                                           [D12_64, D13_64, D14_64, D15_64,
                                            D16_64, D17_64, D18_64, D19_64]>>,
 
   // f32 arguments are passed in single precision FP registers.
   CCIfType<[f32], CCAssignToRegWithShadow<[F12, F13, F14, F15,
                                            F16, F17, F18, F19],
-                                          [A0_64, A1_64, A2_64, A3_64,
-                                           T0_64, T1_64, T2_64, T3_64]>>,
+                                          [R4_64, R5_64, R6_64, R7_64,
+                                           R8_64, R9_64, R10_64,
+                                           R11_64]>>,
 
   // f64 arguments are passed in double precision FP registers.
   CCIfType<[f64], CCAssignToRegWithShadow<[D12_64, D13_64, D14_64, D15_64,
                                            D16_64, D17_64, D18_64, D19_64],
-                                          [A0_64, A1_64, A2_64, A3_64,
-                                           T0_64, T1_64, T2_64, T3_64]>>,
+                                          [R4_64, R5_64, R6_64, R7_64,
+                                           R8_64, R9_64, R10_64,
+                                           R11_64]>>,
 
   // All stack parameter slots become 64-bit doublewords and are 8-byte aligned.
   CCIfType<[f32], CCAssignToStack<4, 8>>,
@@ -175,10 +169,10 @@ def CC_MipsN_VarArg : CallingConv<[
   // All integers are promoted to 64-bit.
   CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
 
-  CCIfType<[f32], CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3]>>,
+  CCIfType<[f32], CCAssignToReg<[R4, R5, R6, R7, R8, R9, R10, R11]>>,
 
-  CCIfType<[i64, f64], CCAssignToReg<[A0_64, A1_64, A2_64, A3_64,
-                                      T0_64, T1_64, T2_64, T3_64]>>,
+  CCIfType<[i64, f64], CCAssignToReg<[R4_64, R5_64, R6_64, R7_64,
+                                      R8_64, R9_64, R10_64, R11_64]>>,
 
   // All stack parameter slots become 64-bit doublewords and are 8-byte aligned.
   CCIfType<[f32], CCAssignToStack<4, 8>>,
@@ -196,7 +190,8 @@ def RetCC_MipsN : CallingConv<[
   //
   // f128 should only occur for the N64 ABI where long double is 128-bit. On
   // N32, long double is equivalent to double.
-  CCIfType<[i64], CCIfOrigArgWasF128<CCDelegateTo<RetCC_F128>>>,
+  CCIfSubtargetNot<"isSingleFloat()",
+      CCIfType<[i64], CCIfOrigArgWasF128<CCDelegateTo<RetCC_F128>>>>,
 
   // Aggregate returns are positioned at the lowest address in the slot for
   // both little and big-endian targets. When passing in registers, this
@@ -207,8 +202,8 @@ def RetCC_MipsN : CallingConv<[
       CCIfType<[i8, i16, i32, i64],
           CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
-  // i64 are returned in registers V0_64, V1_64
-  CCIfType<[i64], CCAssignToReg<[V0_64, V1_64]>>,
+  // i64 are returned in registers R2_64, R3_64
+  CCIfType<[i64], CCAssignToReg<[R2_64, R3_64]>>,
 
   // f32 are returned in registers F0, F2
   CCIfType<[f32], CCAssignToReg<[F0, F2]>>,
@@ -243,9 +238,9 @@ def CC_MipsO32_FastCC : CallingConv<[
 
 def CC_MipsN_FastCC : CallingConv<[
   // Integer arguments are passed in integer registers.
-  CCIfType<[i64], CCAssignToReg<[A0_64, A1_64, A2_64, A3_64, T0_64, T1_64,
-                                 T2_64, T3_64, T4_64, T5_64, T6_64, T7_64,
-                                 T8_64, V1_64]>>,
+  CCIfType<[i64], CCAssignToReg<[R4_64, R5_64, R6_64, R7_64, R8_64,
+                                 R9_64, R10_64, R11_64, R12_64, R13_64,
+                                 R14_64, R15_64, R24_64, R3_64]>>,
 
   // f64 arguments are passed in double-precision floating pointer registers.
   CCIfType<[f64], CCAssignToReg<[D0_64, D1_64, D2_64, D3_64, D4_64, D5_64,
@@ -266,16 +261,10 @@ def CC_Mips_FastCC : CallingConv<[
   CCIfType<[i8, i16], CCPromoteToType<i32>>,
 
   // Integer arguments are passed in integer registers. All scratch registers,
-  // except for AT, V0 and T9, are available to be used as argument registers.
-  CCIfType<[i32], CCIfSubtargetNot<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>>,
-
-  // In NaCl, T6, T7 and T8 are reserved and not available as argument
-  // registers for fastcc.  T6 contains the mask for sandboxing control flow
-  // (indirect jumps and calls).  T7 contains the mask for sandboxing memory
-  // accesses (loads and stores).  T8 contains the thread pointer.
-  CCIfType<[i32], CCIfSubtarget<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, V1]>>>,
+  // except for R1, R2 and R25, are available to be used as argument registers.
+  CCIfType<[i32],
+      CCAssignToReg<[R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R24,
+                     R3]>>,
 
   // f32 arguments are passed in single-precision floating pointer registers.
   CCIfType<[f32], CCIfSubtarget<"useOddSPReg()",
@@ -312,7 +301,7 @@ def CC_Mips16RetHelper : CallingConv<[
   CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
 
   // Integer arguments are passed in integer registers.
-  CCIfType<[i32], CCAssignToReg<[V0, V1, A0, A1]>>
+  CCIfType<[i32], CCAssignToReg<[R2, R3, R4, R5]>>
 ]>;
 
 def CC_Mips_FixedArg : CallingConv<[
@@ -333,13 +322,14 @@ def CC_Mips_FixedArg : CallingConv<[
   //
   // f128 should only occur for the N64 ABI where long double is 128-bit. On
   // N32, long double is equivalent to double.
-  CCIfType<[i64],
-      CCIfSubtargetNot<"useSoftFloat()",
-          CCIfOrigArgWasF128<CCBitConvertToType<f64>>>>,
+  CCIfType<[i64], 
+      CCIfSubtargetNot<"isSingleFloat()",
+          CCIfSubtargetNot<"useSoftFloat()", 
+              CCIfOrigArgWasF128<CCBitConvertToType<f64>>>>>,
 
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
-  CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCIfSubtarget<"isABI_O32()", CCIfSubtargetNot<"isGP64bit()", CCDelegateTo<CC_MipsO32_FP>>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 
@@ -351,7 +341,7 @@ def CC_Mips_VarArg : CallingConv<[
 ]>;
 
 def CC_Mips : CallingConv<[
-  CCIfVarArg<CCIfArgIsVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
+  CCIfVarArg<CCIfArgVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
   CCDelegateTo<CC_Mips_FixedArg>
 ]>;
 
@@ -359,54 +349,77 @@ def CC_Mips : CallingConv<[
 // Callee-saved register lists.
 //===----------------------------------------------------------------------===//
 
-def CSR_SingleFloatOnly : CalleeSavedRegs<(add (sequence "F%u", 31, 20), RA, FP,
-                                               (sequence "S%u", 7, 0))>;
+def CSR_O32_SingleFloat : CalleeSavedRegs<(add(sequence "F%u", 31, 20), R31, R30,
+                              (sequence "R%u", 23, 16))>;
 
-def CSR_O32_FPXX : CalleeSavedRegs<(add (sequence "D%u", 15, 10), RA, FP,
-                                        (sequence "S%u", 7, 0))> {
+def CSR_O32_FPXX : CalleeSavedRegs<(add (sequence "D%u", 15, 10), R31, R30,
+                                        (sequence "R%u", 23, 16))> {
   let OtherPreserved = (add (decimate (sequence "F%u", 30, 20), 2));
 }
 
-def CSR_O32 : CalleeSavedRegs<(add (sequence "D%u", 15, 10), RA, FP,
-                                   (sequence "S%u", 7, 0))>;
+def CSR_O32 : CalleeSavedRegs<(add (sequence "D%u", 15, 10), R31, R30,
+                                   (sequence "R%u", 23, 16))>;
 
 def CSR_O32_FP64 :
-  CalleeSavedRegs<(add (decimate (sequence "D%u_64", 30, 20), 2), RA, FP,
-                       (sequence "S%u", 7, 0))>;
+  CalleeSavedRegs<(add (decimate (sequence "D%u_64", 30, 20), 2), R31, R30,
+                       (sequence "R%u", 23, 16))>;
 
-def CSR_N32 : CalleeSavedRegs<(add D20_64, D22_64, D24_64, D26_64, D28_64,
-                                   D30_64, RA_64, FP_64, GP_64,
-                                   (sequence "S%u_64", 7, 0))>;
+def CSR_N32 : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
+                  R31_64, R30_64, R28_64, (sequence "R%u_64", 23, 16))>;
 
-def CSR_N64 : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
-                                   GP_64, (sequence "S%u_64", 7, 0))>;
+def CSR_N32_NoGP : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
+                  R31_64, R30_64, (sequence "R%u_64", 23, 16))>;
+
+def CSR_N32_SingleFloat
+    : CalleeSavedRegs<(add(decimate(sequence "F%u", 30, 20), 2), R31_64, R30_64,
+          R28_64, (sequence "R%u_64", 23, 16))>;
+
+def CSR_N32_SingleFloat_NoGP
+    : CalleeSavedRegs<(add(decimate(sequence "F%u", 30, 20), 2), R31_64, R30_64,
+          (sequence "R%u_64", 23, 16))>;
+
+def CSR_N64 : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), R31_64, R30_64,
+                                   R28_64, (sequence "R%u_64", 23, 16))>;
+
+def CSR_N64_NoGP : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), R31_64, R30_64,
+                                   (sequence "R%u_64", 23, 16))>;
+
+def CSR_N64_SingleFloat : CalleeSavedRegs<(add(sequence "F%u", 31, 24), R31_64,
+                              R30_64, R28_64, (sequence "R%u_64", 23, 16))>;
+
+def CSR_N64_SingleFloat_NoGP : CalleeSavedRegs<(add(sequence "F%u", 31, 24), R31_64,
+                              R30_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_Mips16RetHelper :
-  CalleeSavedRegs<(add V0, V1, FP,
-                   (sequence "A%u", 3, 0), (sequence "S%u", 7, 0),
+  CalleeSavedRegs<(add R2, R3, R30,
+                   (sequence "R%u", 7, 4), (sequence "R%u", 23, 16),
                    (sequence "D%u", 15, 10))>;
 
-def CSR_Interrupt_32R6 : CalleeSavedRegs<(add (sequence "A%u", 3, 0),
-                                              (sequence "S%u", 7, 0),
-                                              (sequence "V%u", 1, 0),
-                                              (sequence "T%u", 9, 0),
-                                              RA, FP, GP, AT)>;
+def CSR_Interrupt_32R6 : CalleeSavedRegs<(add (sequence "R%u", 7, 4),
+                                              (sequence "R%u", 23, 16),
+                                              (sequence "R%u", 3, 2),
+                                              R25, R24,
+                                              (sequence "R%u", 15, 8),
+                                              R31, R30, R28, R1)>;
 
-def CSR_Interrupt_32 : CalleeSavedRegs<(add (sequence "A%u", 3, 0),
-                                            (sequence "S%u", 7, 0),
-                                            (sequence "V%u", 1, 0),
-                                            (sequence "T%u", 9, 0),
-                                            RA, FP, GP, AT, LO0, HI0)>;
+def CSR_Interrupt_32 : CalleeSavedRegs<(add (sequence "R%u", 7, 4),
+                                            (sequence "R%u", 23, 16),
+                                            (sequence "R%u", 3, 2),
+                                            R25, R24,
+                                            (sequence "R%u", 15, 8),
+                                            R31, R30, R28, R1, LO0, HI0)>;
 
-def CSR_Interrupt_64R6 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
-                                              (sequence "V%u_64", 1, 0),
-                                              (sequence "S%u_64", 7, 0),
-                                              (sequence "T%u_64", 9, 0),
-                                              RA_64, FP_64, GP_64, AT_64)>;
+def CSR_Interrupt_64R6 : CalleeSavedRegs<(add (sequence "R%u_64", 7, 4),
+                                              (sequence "R%u_64", 3, 2),
+                                              (sequence "R%u_64", 23, 16),
+                                              R25_64, R24_64,
+                                              (sequence "R%u_64", 15, 8),
+                                              R31_64, R30_64, R28_64, R1_64)>;
 
-def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
-                                            (sequence "S%u_64", 7, 0),
-                                            (sequence "T%u_64", 9, 0),
-                                            (sequence "V%u_64", 1, 0),
-                                            RA_64, FP_64, GP_64, AT_64,
+def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "R%u_64", 7, 4),
+                                            (sequence "R%u_64", 23, 16),
+                                            R25_64, R24_64,
+                                            (sequence "R%u_64", 15, 8),
+                                            (sequence "R%u_64", 3, 2),
+                                            R31_64, R30_64, R28_64, R1_64,
                                             LO0_64, HI0_64)>;

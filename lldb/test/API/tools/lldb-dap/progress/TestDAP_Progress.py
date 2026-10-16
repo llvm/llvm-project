@@ -1,49 +1,82 @@
 """
-Test lldb-dap output events
+Test lldb-dap progress events (smoke test).
+
+This test only verifies that `ProgressReport` events sent actually reaches the client
+from lldb.
+
+The throttling check is covered by `lldb/unittests/DAP/ProgressEventTest.cpp`.
 """
 
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-import os
-import time
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
+from lldbsuite.test.tools.lldb_dap.types import *
 
-import lldbdap_testcase
+_ProgressEvent = Union[ProgressStartEvent, ProgressUpdateEvent, ProgressEndEvent]
 
 
-class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_Progress(DAPTestCaseBase):
+    def collect_progress_events(self, session: DAPTestSession, *, after):
+        """Collect ProgressXXXX events between `after` and the next ProgressEndEvent."""
+        events: List[_ProgressEvent] = []
+
+        def matches_progress_end(evt) -> bool:
+            events.append(evt)
+            return isinstance(evt, ProgressEndEvent)
+
+        session.wait_for_any_event(
+            (ProgressStartEvent, ProgressUpdateEvent, ProgressEndEvent),
+            after=after,
+            until=matches_progress_end,
+            timeout_msg="Collecting ProgressXXXXEvents until ProgressEndEvent",
+        )
+        return events
+
+    def verify_progress_events(
+        self,
+        events: List[_ProgressEvent],
+        *,
+        expected_title: str,
+        expected_message: Optional[str] = None,
+        expected_message_regex: Optional[str] = None,
+        expected_not_in_message: Optional[str] = None,
+    ):
+        # A progress group is shaped: [ProgressStart, ProgressUpdate*, ProgressEnd].
+        self.assertGreaterEqual(
+            len(events), 3, "expected at least start + one update + end"
+        )
+        [start, *updates, end] = events
+
+        self.assertIsInstance(start, ProgressStartEvent)
+        self.assertIn(expected_title, start.body.title)
+        self.assertIsInstance(end, ProgressEndEvent)
+
+        for update in updates:
+            self.assertIsInstance(update, ProgressUpdateEvent)
+            message = update.body.message or ""
+
+            if expected_message is not None:
+                self.assertIn(expected_message, message)
+            if expected_message_regex is not None:
+                self.assertTrue(re.match(expected_message_regex, message))
+            if expected_not_in_message is not None:
+                self.assertNotIn(expected_not_in_message, message)
+
     @skipIfWindows
-    def test_output(self):
+    def test_progress(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        print(f"Progress emitter path: {progress_emitter}")
-        source = "main.cpp"
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [line_number(source, "// break here")]
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
-        self.dap_server.request_evaluate(
-            f"`command script import {progress_emitter}", context="repl"
-        )
-        self.dap_server.request_evaluate(
-            "`test-progress --total 3 --seconds 1", context="repl"
-        )
+        session = self.build_and_create_session()
+        process_event = session.launch(LaunchArgs(program, stopOnEntry=True))
+        stopped = session.verify_stopped_on_entry(after=process_event)
 
-        self.dap_server.wait_for_event("progressEnd", 15)
-        # Expect at least a start, an update, and end event
-        # However because the underlying Progress instance is an RAII object and we can't guaruntee
-        # it's deterministic destruction in the python API, we verify just start and update
-        # otherwise this test could be flakey.
-        self.assertTrue(len(self.dap_server.progress_events) > 0)
-        start_found = False
-        update_found = False
-        for event in self.dap_server.progress_events:
-            event_type = event["event"]
-            if "progressStart" in event_type:
-                start_found = True
-            if "progressUpdate" in event_type:
-                update_found = True
+        progress_emitter = self.getSourcePath("Progress_emitter.py")
+        session.evaluate(f"`command script import {progress_emitter}", context="repl")
 
-        self.assertTrue(start_found)
-        self.assertTrue(update_found)
+        # Test details.
+        # 1 progress every 200ms, 10 times = 2s.
+        session.evaluate("`send-progress --total 10 --seconds 0.2", context="repl")
+        events = self.collect_progress_events(session, after=stopped)
+        self.verify_progress_events(
+            events,
+            expected_title="Progress tester",
+            expected_not_in_message="Progress tester",
+        )

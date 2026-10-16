@@ -33,12 +33,16 @@ struct ContainerAdaptor : public Adaptor {
 
 template <class Deque>
 static void print(const Deque& d) {
-  std::printf("%zu : __front_spare() == %zu"
-              " : __back_spare() == %zu"
-              " : __capacity() == %zu"
-              " : bytes allocated == %zu\n",
-              d.size(), d.__front_spare(), d.__back_spare(), d.__capacity(),
-              malloc_allocator_base::outstanding_bytes);
+  std::printf(
+      "%zu : __front_spare() == %zu"
+      " : __back_spare() == %zu"
+      " : __capacity() == %zu"
+      " : bytes allocated == %zu\n",
+      std::size_t(d.size()),
+      std::size_t(d.__front_spare()),
+      std::size_t(d.__back_spare()),
+      std::size_t(d.__capacity()),
+      malloc_allocator_base::outstanding_bytes);
 }
 
 template <class T>
@@ -48,23 +52,27 @@ template <class T>
 using BlockSize = std::__deque_block_size<T, std::ptrdiff_t>;
 
 struct LargeT {
-  LargeT() = default;
+  LargeT()       = default;
   char buff[256] = {};
 };
+#ifdef _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE
+static_assert(BlockSize<LargeT>::value == 4, "");
+#else
 static_assert(BlockSize<LargeT>::value == 16, "");
+#endif
 
 const auto& AllocBytes = malloc_allocator_base::outstanding_bytes;
 
 template <class Deque>
 struct PrintOnFailure {
-   explicit PrintOnFailure(Deque const& deque) : deque_(&deque) {}
-   void operator()() const { print(*deque_); }
+  explicit PrintOnFailure(Deque const& deque) : deque_(&deque) {}
+  void operator()() const { print(*deque_); }
+
 private:
   const Deque* deque_;
 
   PrintOnFailure(PrintOnFailure const&) = delete;
 };
-
 
 static void push_back() {
   const auto BS = BlockSize<LargeT>::value;
@@ -83,7 +91,7 @@ static void push_back() {
   {
     TEST_REQUIRE(d.size() == 1, on_fail);
     TEST_REQUIRE(d.__front_spare() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 14, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS - 2, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__capacity() == BS - 1, on_fail);
     TEST_REQUIRE(d.__block_count() == 1, on_fail);
@@ -93,7 +101,7 @@ static void push_back() {
   {
     TEST_REQUIRE(d.size() == 2, on_fail);
     TEST_REQUIRE(d.__front_spare() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 13, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS - 3, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
   }
   // Push back until we need a new block.
@@ -103,7 +111,7 @@ static void push_back() {
     TEST_REQUIRE(d.__block_count() == 2, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 15, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS - 1, on_fail);
   }
 
   // Remove the only element in the new block. Test that we keep the empty
@@ -113,7 +121,7 @@ static void push_back() {
     TEST_REQUIRE(d.__block_count() == 2, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 1, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 16, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS, on_fail);
   }
 
   // Pop back again, keep the spare.
@@ -121,7 +129,7 @@ static void push_back() {
   {
     TEST_REQUIRE(d.__block_count() == 2, on_fail);
     TEST_REQUIRE(d.__front_spare() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 17, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS + 1, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 1, on_fail);
   }
 
@@ -130,6 +138,7 @@ static void push_back() {
 }
 
 static void push_front() {
+  const auto BS = BlockSize<LargeT>::value;
   std::unique_ptr<Deque<LargeT>> dp(new Deque<LargeT>);
   auto& d = *dp;
   PrintOnFailure<Deque<LargeT>> on_fail(d);
@@ -145,8 +154,8 @@ static void push_front() {
   d.push_front({});
   {
     TEST_REQUIRE(d.size() == 1, on_fail);
-    TEST_REQUIRE(d.__front_spare() == 7, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 7, on_fail);
+    TEST_REQUIRE(d.__front_spare() == BS / 2 - 1, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS / 2 - 1, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__block_count() == 1, on_fail);
@@ -155,8 +164,8 @@ static void push_front() {
   d.push_front({});
   {
     TEST_REQUIRE(d.size() == 2, on_fail);
-    TEST_REQUIRE(d.__front_spare() == 6, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 7, on_fail);
+    TEST_REQUIRE(d.__front_spare() == BS / 2 - 2, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS / 2 - 1, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
   }
@@ -165,8 +174,8 @@ static void push_front() {
     d.push_front({});
   {
     TEST_REQUIRE(d.__block_count() == 2, on_fail);
-    TEST_REQUIRE(d.__front_spare() == 15, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 7, on_fail);
+    TEST_REQUIRE(d.__front_spare() == BS - 1, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS / 2 - 1, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
   }
@@ -178,7 +187,7 @@ static void push_front() {
     TEST_REQUIRE(d.__block_count() == 2, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 1, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 7, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS / 2 - 1, on_fail);
   }
 
   // Pop back again, keep the spare.
@@ -186,7 +195,7 @@ static void push_front() {
   {
     TEST_REQUIRE(d.__block_count() == 2, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 1, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 7, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS / 2 - 1, on_fail);
   }
 
   dp.reset();
@@ -194,19 +203,20 @@ static void push_front() {
 }
 
 static void std_queue() {
-  using D = Deque<LargeT>;
+  using D     = Deque<LargeT>;
   using Queue = std::queue<LargeT, D>;
   ContainerAdaptor<Queue> CA;
   const D& d = CA.GetContainer();
-  Queue &q = CA;
+  Queue& q   = CA;
   PrintOnFailure<Deque<LargeT>> on_fail(d);
 
+  const auto BS = BlockSize<LargeT>::value;
   while (d.__block_count() < 4)
     q.push({});
   {
     TEST_REQUIRE(d.__block_count() == 4, on_fail);
     TEST_REQUIRE(d.__front_spare() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 15, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS - 1, on_fail);
     TEST_REQUIRE(d.__back_spare_blocks() == 0, on_fail);
   }
   while (d.__back_spare()) {
@@ -225,13 +235,13 @@ static void std_queue() {
   }
 
   // Pop until we create a spare block at the front.
-  while (d.__front_spare() <= 15)
+  while (d.__front_spare() <= BS - 1)
     q.pop();
 
   {
     TEST_REQUIRE(d.__block_count() == 4, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 1, on_fail);
-    TEST_REQUIRE(d.__front_spare() == 16, on_fail);
+    TEST_REQUIRE(d.__front_spare() == BS, on_fail);
     TEST_REQUIRE(d.__back_spare() == 0, on_fail);
   }
 
@@ -242,7 +252,7 @@ static void std_queue() {
     TEST_REQUIRE(d.__block_count() == 4, on_fail);
     TEST_REQUIRE(d.__front_spare_blocks() == 0, on_fail);
     TEST_REQUIRE(d.__front_spare() == 0, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 15, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS - 1, on_fail);
   }
   while (!q.empty()) {
     q.pop();
@@ -251,9 +261,9 @@ static void std_queue() {
 
   // The empty state has two blocks
   {
-    TEST_REQUIRE(d.__front_spare() == 16, on_fail);
-    TEST_REQUIRE(d.__back_spare() == 15, on_fail);
-    TEST_REQUIRE(d.__capacity() == 31, on_fail);
+    TEST_REQUIRE(d.__front_spare() == BS, on_fail);
+    TEST_REQUIRE(d.__back_spare() == BS - 1, on_fail);
+    TEST_REQUIRE(d.__capacity() == BS * 2 - 1, on_fail);
   }
 }
 

@@ -23,12 +23,12 @@ class TestFrameSelect(TestBase):
         self.expect(
             "frame select -r -1",
             error=True,
-            substrs=["Already at the bottom of the stack."],
+            substrs=["already at the bottom of the stack"],
         )
         self.expect(
             "frame select -r -2147483647",
             error=True,
-            substrs=["Already at the bottom of the stack."],
+            substrs=["already at the bottom of the stack"],
         )
         self.expect(
             "frame select -r -2147483648",
@@ -61,7 +61,7 @@ class TestFrameSelect(TestBase):
         self.expect(
             "frame select -r 1",
             error=True,
-            substrs=["Already at the top of the stack."],
+            substrs=["already at the top of the stack"],
         )
 
     @no_debug_info_test

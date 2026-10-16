@@ -12,64 +12,43 @@
 
 #include "RISCVSubtarget.h"
 #include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVInlineAsmLowering.h"
 #include "GISel/RISCVLegalizerInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
+#define DEBUG_TYPE "riscv-macro-fusion"
+
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
+
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
-#define GET_RISCV_MACRO_FUSION_PRED_IMPL
-#include "RISCVGenMacroFusion.inc"
+#define OPTIONS_STRUCT_DEFS
+#include "RISCVOptions.inc"
 
 namespace llvm::RISCVTuneInfoTable {
 
 #define GET_RISCVTuneInfoTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
-
-static cl::opt<unsigned> RVVVectorLMULMax(
-    "riscv-v-fixed-length-vector-lmul-max",
-    cl::desc("The maximum LMUL value to use for fixed length vectors. "
-             "Fractional LMUL values are not supported."),
-    cl::init(8), cl::Hidden);
-
-static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
-    "riscv-disable-using-constant-pool-for-large-ints",
-    cl::desc("Disable using constant pool for large integers."),
-    cl::init(false), cl::Hidden);
-
-static cl::opt<unsigned> RISCVMaxBuildIntsCost(
-    "riscv-max-build-ints-cost",
-    cl::desc("The maximum cost used for building integers."), cl::init(0),
-    cl::Hidden);
-
-static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
-                           cl::desc("Enable the use of AA during codegen."));
-
-static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
-    "riscv-min-jump-table-entries", cl::Hidden,
-    cl::desc("Set minimum number of entries to use a jump table on RISCV"));
-
-static cl::opt<bool>
-    UseMIPSLoadStorePairsOpt("mips-riscv-load-store-pairs",
-                             cl::desc("RISCV: Optimize for load-store bonding"),
-                             cl::init(false), cl::Hidden);
-
-static cl::opt<bool>
-    UseCCMovInsn("riscv-ccmov", cl::desc("RISCV: Use 'mips.ccmov' instruction"),
-                 cl::init(true), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -84,6 +63,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
+  if (TuneCPU == "generic")
+    TuneCPU = Is64Bit ? "generic-rv64" : "generic-rv32";
 
   TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
   // If there is no TuneInfo for this CPU, we fail back to generic.
@@ -92,7 +73,25 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
-  TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
+
+  RISCV::updateCZceFeatureImplications(*this);
+
+  // Re-sync the flags.
+  HasStdExtZcd = hasFeature(RISCV::FeatureStdExtZcd);
+  HasStdExtZcf = hasFeature(RISCV::FeatureStdExtZcf);
+  HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
+  HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
+
+  // Can't be fatal: per-function subtargets mean this one may just be the
+  // module-level default with no matching function, e.g. -target-abi ilp32f
+  // with no global -mattr=+f but all functions have their own "+f" attribute.
+  if (auto ABIOrErr = RISCVABI::computeTargetABI(*this, ABIName)) {
+    TargetABI = *ABIOrErr;
+  } else {
+    errs() << "note: " << toString(ABIOrErr.takeError())
+           << " (ignoring target-abi)\n";
+    TargetABI = cantFail(RISCVABI::computeTargetABI(*this, ""));
+  }
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }
@@ -103,10 +102,12 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                unsigned RVVVectorBitsMax,
                                const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      CLOpts(static_cast<const RISCVTargetMachine &>(TM).getCLOpts()),
+      IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
+      RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+      InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
 }
 
@@ -114,6 +115,13 @@ RISCVSubtarget::~RISCVSubtarget() = default;
 
 const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
+}
+
+const InlineAsmLowering *RISCVSubtarget::getInlineAsmLowering() const {
+  if (!InlineAsmLoweringInfo)
+    InlineAsmLoweringInfo.reset(
+        new RISCVInlineAsmLowering(getTargetLowering()));
+  return InlineAsmLoweringInfo.get();
 }
 
 const CallLowering *RISCVSubtarget::getCallLowering() const {
@@ -144,7 +152,27 @@ const RISCVRegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
 }
 
 bool RISCVSubtarget::useConstantPoolForLargeInts() const {
-  return !RISCVDisableUsingConstantPoolForLargeInts;
+  return CLOpts.constant_pool_for_large_ints;
+}
+
+// Returns true if VT is a P extension packed SIMD type.
+bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
+  if (!HasStdExtP)
+    return false;
+
+  // RV32 supports 32-bit and 64-bit vectors. RV64 only support 64-bit vectors.
+  if (!is64Bit() && (VT == MVT::v4i8 || VT == MVT::v2i16))
+    return true;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+}
+
+// Returns true if VT is a P extension packed double-wide SIMD type.
+bool RISCVSubtarget::isPExtPackedDoubleType(MVT VT) const {
+  if (!HasStdExtP || is64Bit())
+    return false;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
@@ -153,9 +181,18 @@ unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
   // instruction. Usually, address calculation and instructions used for
   // building integers (addi, slli, etc.) can be done in one cycle, so here we
   // set the default cost to (LoadLatency + 1) if no threshold is provided.
-  return RISCVMaxBuildIntsCost == 0
-             ? getSchedModel().LoadLatency + 1
-             : std::max<unsigned>(2, RISCVMaxBuildIntsCost);
+  return CLOpts.max_build_ints_cost == 0
+             ? getLoadLatency() + 1
+             : std::max<unsigned>(2, CLOpts.max_build_ints_cost);
+}
+
+unsigned RISCVSubtarget::getMispredictionPenalty() const {
+  return CLOpts.sched_mispredict_penalty.value_or(
+      getSchedModel().MispredictPenalty);
+}
+
+unsigned RISCVSubtarget::getLoadLatency() const {
+  return CLOpts.sched_load_latency.value_or(getSchedModel().LoadLatency);
 }
 
 unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
@@ -187,15 +224,6 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
   return RVVVectorBitsMin;
 }
 
-unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 &&
-         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
-         "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
-}
-
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
   return hasVInstructions() &&
          getMinRVVVectorSizeInBits() >= RISCV::RVVBitsPerBlock;
@@ -207,18 +235,27 @@ bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
 
+void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
+}
+
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
-bool RISCVSubtarget::useAA() const { return UseAA; }
+bool RISCVSubtarget::useAA() const { return CLOpts.use_aa; }
 
 unsigned RISCVSubtarget::getMinimumJumpTableEntries() const {
-  return RISCVMinimumJumpTableEntries.getNumOccurrences() > 0
-             ? RISCVMinimumJumpTableEntries
-             : TuneInfo->MinimumJumpTableEntries;
+  return CLOpts.min_jump_table_entries.value_or(
+      TuneInfo->MinimumJumpTableEntries);
 }
 
 void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                         unsigned NumRegionInstrs) const {
+                                         const SchedRegion &Region) const {
   // Do bidirectional scheduling since it provides a more balanced scheduling
   // leading to better performance. This will increase compile time.
   Policy.OnlyTopDown = false;
@@ -233,8 +270,8 @@ void RISCVSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.ShouldTrackPressure = true;
 }
 
-void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                               unsigned NumRegionInstrs) const {
+void RISCVSubtarget::overridePostRASchedPolicy(
+    MachineSchedPolicy &Policy, const SchedRegion &Region) const {
   MISched::Direction PostRASchedDirection = getPostRASchedDirection();
   if (PostRASchedDirection == MISched::TopDown) {
     Policy.OnlyTopDown = true;
@@ -248,6 +285,10 @@ void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
   }
 }
 
-bool RISCVSubtarget::useCCMovInsn() const {
-  return UseCCMovInsn && HasVendorXMIPSCMove;
+bool RISCVSubtarget::useMIPSLoadStorePairs() const {
+  return CLOpts.mips_load_store_pairs && HasVendorXMIPSLSP;
+}
+
+bool RISCVSubtarget::useMIPSCCMovInsn() const {
+  return CLOpts.mips_ccmov && HasVendorXMIPSCMov;
 }

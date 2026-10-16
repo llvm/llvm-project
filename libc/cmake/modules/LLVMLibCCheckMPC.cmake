@@ -1,7 +1,7 @@
 if(LIBC_TESTS_CAN_USE_MPFR)
-  set(LLVM_LIBC_MPC_INSTALL_PATH "" CACHE PATH "Path to where MPC is installed (e.g. C:/src/install or ~/src/install)")
+  set(LIBC_MPC_INSTALL_PATH "" CACHE PATH "Path to where MPC is installed (e.g. C:/src/install or ~/src/install)")
 
-  if(LLVM_LIBC_MPC_INSTALL_PATH)
+  if(LIBC_MPC_INSTALL_PATH)
     set(LIBC_TESTS_CAN_USE_MPC TRUE)
   elseif(LIBC_TARGET_OS_IS_GPU OR LLVM_LIBC_FULL_BUILD)
     # In full build mode, the MPC library should be built using our own facilities,

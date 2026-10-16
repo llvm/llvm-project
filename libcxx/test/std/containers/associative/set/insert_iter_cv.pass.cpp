@@ -10,7 +10,7 @@
 
 // class set
 
-// iterator insert(const_iterator position, const value_type& v);
+// constexpr iterator insert(const_iterator position, const value_type& v); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -18,58 +18,65 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::set<int> M;
-        typedef M::iterator R;
-        M m;
-        R r = m.insert(m.cend(), M::value_type(2));
-        assert(r == m.begin());
-        assert(m.size() == 1);
-        assert(*r == 2);
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    typedef std::set<int> M;
+    typedef M::iterator R;
+    M m;
+    R r = m.insert(m.cend(), M::value_type(2));
+    assert(r == m.begin());
+    assert(m.size() == 1);
+    assert(*r == 2);
 
-        r = m.insert(m.cend(), M::value_type(1));
-        assert(r == m.begin());
-        assert(m.size() == 2);
-        assert(*r == 1);
+    r = m.insert(m.cend(), M::value_type(1));
+    assert(r == m.begin());
+    assert(m.size() == 2);
+    assert(*r == 1);
 
-        r = m.insert(m.cend(), M::value_type(3));
-        assert(r == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r == 3);
+    r = m.insert(m.cend(), M::value_type(3));
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r == 3);
 
-        r = m.insert(m.cend(), M::value_type(3));
-        assert(r == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r == 3);
-    }
+    r = m.insert(m.cend(), M::value_type(3));
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r == 3);
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::set<int, std::less<int>, min_allocator<int>> M;
-        typedef M::iterator R;
-        M m;
-        R r = m.insert(m.cend(), M::value_type(2));
-        assert(r == m.begin());
-        assert(m.size() == 1);
-        assert(*r == 2);
+  {
+    typedef std::set<int, std::less<int>, min_allocator<int>> M;
+    typedef M::iterator R;
+    M m;
+    R r = m.insert(m.cend(), M::value_type(2));
+    assert(r == m.begin());
+    assert(m.size() == 1);
+    assert(*r == 2);
 
-        r = m.insert(m.cend(), M::value_type(1));
-        assert(r == m.begin());
-        assert(m.size() == 2);
-        assert(*r == 1);
+    r = m.insert(m.cend(), M::value_type(1));
+    assert(r == m.begin());
+    assert(m.size() == 2);
+    assert(*r == 1);
 
-        r = m.insert(m.cend(), M::value_type(3));
-        assert(r == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r == 3);
+    r = m.insert(m.cend(), M::value_type(3));
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r == 3);
 
-        r = m.insert(m.cend(), M::value_type(3));
-        assert(r == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r == 3);
-    }
+    r = m.insert(m.cend(), M::value_type(3));
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r == 3);
+  }
 #endif
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

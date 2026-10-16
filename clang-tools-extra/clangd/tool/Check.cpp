@@ -25,7 +25,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "../clang-tidy/ClangTidyModule.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "../clang-tidy/GlobList.h"
 #include "ClangdLSPServer.h"
@@ -143,7 +142,7 @@ std::vector<std::string> listTidyChecks(llvm::StringRef Glob) {
 class Checker {
   // from constructor
   std::string File;
-  ClangdLSPServer::Options Opts;
+  const ClangdLSPServer::Options &Opts;
   // from buildCommand
   tooling::CompileCommand Cmd;
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
@@ -169,6 +168,8 @@ public:
   bool buildCommand(const ThreadsafeFS &TFS) {
     log("Loading compilation database...");
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
+    if (Opts.StrongWorkspaceMode)
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
     BaseCDB =
@@ -178,8 +179,10 @@ public:
         getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
+
     CDB = std::make_unique<OverlayCDB>(
-        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
+        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler),
+        CDBOpts.FallbackWorkingDirectory);
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
@@ -460,7 +463,7 @@ public:
 } // namespace
 
 bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts) {
+           ClangdLSPServer::Options &&Opts) {
   std::optional<Range> LineRange;
   if (!CheckFileLines.empty()) {
     uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
@@ -502,14 +505,16 @@ bool check(llvm::StringRef File, const ThreadsafeFS &TFS,
                  config::DiagnosticCallback Diag) const override {
       config::Fragment F;
       // If we're timing clang-tidy checks, implicitly disabling the slow ones
-      // is counterproductive! 
+      // is counterproductive!
       if (CheckTidyTime.getNumOccurrences())
         F.Diagnostics.ClangTidy.FastCheckFilter.emplace("None");
       return {std::move(F).compile(Diag)};
     }
-  } OverrideConfig;
-  auto ConfigProvider =
-      config::Provider::combine({Opts.ConfigProvider, &OverrideConfig});
+  };
+  std::vector<std::unique_ptr<config::Provider>> ConfigProviders;
+  ConfigProviders.push_back(std::move(Opts.ConfigProvider));
+  ConfigProviders.push_back(std::make_unique<OverrideConfigProvider>());
+  auto ConfigProvider = config::Provider::combine(std::move(ConfigProviders));
 
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
       ConfigProvider.get(), nullptr);

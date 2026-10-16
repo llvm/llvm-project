@@ -32,7 +32,7 @@ module transitive {
 }]
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-name=root > %t/result.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
@@ -43,6 +43,10 @@ module transitive {
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Frameworks",
+// CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/Framework.framework/Headers/Framework.h"

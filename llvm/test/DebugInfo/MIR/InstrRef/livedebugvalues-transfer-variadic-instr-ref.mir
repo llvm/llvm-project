@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations=true \
-# RUN:     -run-pass=livedebugvalues  | \
+# RUN:     -run-pass=live-debug-values  | \
 # RUN: FileCheck %s --implicit-check-not=DBG_VALUE
 #
 ## Check that LiveDebugValues can track and join DBG_INSTR_REFs that use
@@ -169,8 +169,8 @@ frameInfo:
   stackProtector:  ''
   functionContext: ''
   cvBytesOfCalleeSavedRegisters: 48
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default, 
       callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 

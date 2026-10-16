@@ -31,7 +31,8 @@ class Builtin_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def ModuleOp : Builtin_Op<"module", [
-    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, SymbolName,
+    SymbolVisibility, Symbol,
     OpAsmOpInterface
   ] # GraphRegionNoTerminator.traits> {
   let summary = "A top level container operation";
@@ -40,7 +41,7 @@ def ModuleOp : Builtin_Op<"module", [
     [graph region](../LangRef.md#control-flow-and-ssacfg-regions) containing a single block
     which can contain any operations and does not have a terminator. Operations
     within this region cannot implicitly capture values defined outside the module,
-    i.e. Modules are [IsolatedFromAbove](../Traits.md#isolatedfromabove). Modules have
+    i.e. Modules are [IsolatedFromAbove](../Traits#isolatedfromabove). Modules have
     an optional [symbol name](../SymbolsAndSymbolTables.md) which can be used to refer
     to them in operations.
 
@@ -51,13 +52,19 @@ def ModuleOp : Builtin_Op<"module", [
       func.func @foo()
     }
     ```
+
+    A module may have an inherent `dlti` attribute implementing
+    `DLTIQueryInterface`, for example `dlti = #dlti.map<"chip" = "sm_90">`.
+    When the DLTI dialect is loaded, the module implements
+    `DLTIQueryOpInterface` and provides values for scoped DLTI queries.
   }];
 
   let arguments = (ins OptionalAttr<SymbolNameAttr>:$sym_name,
-                       OptionalAttr<StrAttr>:$sym_visibility);
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       OptionalAttr<DLTIQueryAttr>:$dlti);
   let regions = (region SizedRegion<1>:$bodyRegion);
 
-  let assemblyFormat = "($sym_name^)? attr-dict-with-keyword $bodyRegion";
+  let assemblyFormat = "($sym_name^)? prop-dict attr-dict-with-keyword $bodyRegion";
   let builders = [OpBuilder<(ins CArg<"std::optional<StringRef>", "{}">:$name)>];
   let extraClassDeclaration = [{
     /// Construct a module from the given location with an optional name.
@@ -89,6 +96,7 @@ def ModuleOp : Builtin_Op<"module", [
     }
   }];
   let hasVerifier = 1;
+  let useCustomPropertiesEncoding = 1;
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.

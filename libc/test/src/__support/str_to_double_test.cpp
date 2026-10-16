@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
@@ -27,8 +28,17 @@ TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64ExtendedExp) {
 
 TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64NegativeExp) {
   clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989,
+                         internal::RoundDirection::Up);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989,
+                         internal::RoundDirection::Down);
+  clinger_fast_path_test(295851801554362, -12, 0x127da0faaaaaab, 1031,
+                         internal::RoundDirection::Up);
+  clinger_fast_path_test(295851801554362, -12, 0x127da0faaaaaab, 1031,
+                         internal::RoundDirection::Down);
   clinger_fast_path_test(1, -20, 0x179ca10c924223, 956);
   clinger_fast_path_fails_test(1, -25);
+  clinger_fast_path_fails_test(1, INT32_MIN);
 }
 
 TEST_F(LlvmLibcStrToDblTest, EiselLemireFloat64Simple) {
@@ -99,12 +109,11 @@ TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
   uint64_t double_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  LIBC_NAMESPACE::libc_errno = 0;
   auto double_result =
       internal::simple_decimal_conversion<double>("123456789012345678900");
 
   double_output_mantissa = double_result.num.mantissa;
-  output_exp2 = double_result.num.exponent;
+  output_exp2 = static_cast<uint32_t>(double_result.num.exponent);
 
   EXPECT_EQ(double_output_mantissa, uint64_t(0x1AC53A7E04BCDA));
   EXPECT_EQ(output_exp2, uint32_t(1089));

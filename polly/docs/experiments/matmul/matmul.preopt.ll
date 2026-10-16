@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str.1 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @init_array() #0 {
+define dso_local void @init_array() {
 entry:
   br label %entry.split
 
@@ -52,7 +52,7 @@ for.end19:                                        ; preds = %for.inc17
 }
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @print_array() #0 {
+define dso_local void @print_array() {
 entry:
   br label %entry.split
 
@@ -70,7 +70,7 @@ for.body3:                                        ; preds = %for.cond1.preheader
   %arrayidx5 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %indvars.iv6, i64 %indvars.iv
   %2 = load float, float* %arrayidx5, align 4
   %conv = fpext float %2 to double
-  %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv) #2
+  %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv)
   %3 = trunc i64 %indvars.iv to i32
   %rem = urem i32 %3, 80
   %cmp6 = icmp eq i32 %rem, 79
@@ -98,10 +98,10 @@ for.end12:                                        ; preds = %for.end
   ret void
 }
 
-declare dso_local i32 @fprintf(%struct._IO_FILE*, i8*, ...) #1
+declare dso_local i32 @fprintf(%struct._IO_FILE*, i8*, ...)
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local i32 @main() #0 {
+define dso_local i32 @main() {
 entry:
   br label %entry.split
 
@@ -148,14 +148,10 @@ for.end30:                                        ; preds = %for.inc28
 }
 
 ; Function Attrs: nounwind
-declare i64 @fwrite(i8* nocapture, i64, i64, %struct._IO_FILE* nocapture) #2
+declare i64 @fwrite(i8* nocapture, i64, i64, %struct._IO_FILE* nocapture)
 
 ; Function Attrs: nounwind
-declare i32 @fputc(i32, %struct._IO_FILE* nocapture) #2
-
-attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
+declare i32 @fputc(i32, %struct._IO_FILE* nocapture)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

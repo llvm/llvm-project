@@ -1,4 +1,5 @@
 add_subdirectory(Dialect)
+add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   ConvertFromLLVMIR.cpp
@@ -8,6 +9,7 @@ set(LLVM_OPTIONAL_SOURCES
   DebugImporter.cpp
   LoopAnnotationImporter.cpp
   LoopAnnotationTranslation.cpp
+  LLVMImportInterface.cpp
   ModuleTranslation.cpp
   ModuleImport.cpp
   TypeToLLVM.cpp
@@ -27,8 +29,10 @@ add_mlir_translation_library(MLIRTargetLLVMIRExport
 
   DEPENDS
   intrinsics_gen
+  MLIRLLVMTranslationDialectInterfaceIncGen
 
   LINK_COMPONENTS
+  Analysis
   Core
   FrontendOpenMP
   TransformUtils
@@ -49,17 +53,16 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   MLIRArmNeonToLLVMIRTranslation
   MLIRArmSMEToLLVMIRTranslation
   MLIRArmSVEToLLVMIRTranslation
-  MLIRAMXToLLVMIRTranslation
   MLIRBuiltinToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
-  MLIRX86VectorToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRNVVMToLLVMIRTranslation
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRROCDLToLLVMIRTranslation
+  MLIRPtrToLLVMIRTranslation
   MLIRSPIRVToLLVMIRTranslation
   MLIRVCIXToLLVMIRTranslation
+  MLIRXeVMToLLVMIRTranslation
   )
 
 add_mlir_translation_library(MLIRTargetLLVMIRImport
@@ -67,10 +70,14 @@ add_mlir_translation_library(MLIRTargetLLVMIRImport
   DebugImporter.cpp
   LoopAnnotationImporter.cpp
   ModuleImport.cpp
+  LLVMImportInterface.cpp
   TypeFromLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
+
+  DEPENDS
+  MLIRLLVMImportDialectInterfaceIncGen
 
   LINK_COMPONENTS
   Core

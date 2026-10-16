@@ -44,6 +44,7 @@ public:
   std::unique_ptr<MachineFunction> MF;
   DICompileUnit *OurCU;
   DIFile *OurFile;
+  DISubroutineType *OurSubT;
   DISubprogram *OurFunc;
   DILexicalBlock *OurBlock, *AnotherBlock;
   DISubprogram *ToInlineFunc;
@@ -67,7 +68,7 @@ public:
     BeanInst.Opcode = 1;
     BeanInst.Size = 1;
 
-    memset(&DbgValueInst, 0, sizeof(DbgValueInst));
+    memset(&DbgValueInst, 0, sizeof(MCInstrDesc));
     DbgValueInst.Opcode = TargetOpcode::DBG_VALUE;
     DbgValueInst.Size = 1;
     DbgValueInst.Flags = 1U << MCID::Meta;
@@ -101,9 +102,9 @@ public:
     // scope.
     DIBuilder DIB(Mod);
     OurFile = DIB.createFile("xyzzy.c", "/cave");
-    OurCU =
-        DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
-    auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+    OurCU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C99),
+                                  OurFile, "nou", false, "", 0);
+    OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     OurFunc =
         DIB.createFunction(OurCU, "bees", "", OurFile, 1, OurSubT, 1,
                            DINode::FlagZero, DISubprogram::SPFlagDefinition);
@@ -136,10 +137,10 @@ TEST_F(LexicalScopesTest, FlatLayout) {
 
   LexicalScopes LS;
   EXPECT_TRUE(LS.empty());
-  LS.reset();
+  LS.resetFunction();
   EXPECT_EQ(LS.getCurrentFunctionScope(), nullptr);
 
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   EXPECT_FALSE(LS.empty());
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   EXPECT_EQ(FuncScope->getParent(), nullptr);
@@ -182,7 +183,7 @@ TEST_F(LexicalScopesTest, BlockScopes) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   EXPECT_EQ(FuncScope->getDesc(), OurFunc);
   auto &Children = FuncScope->getChildren();
@@ -217,7 +218,7 @@ TEST_F(LexicalScopesTest, InlinedScopes) {
   BuildMI(*MBB4, MBB4->end(), InlinedLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   auto &Children = FuncScope->getChildren();
   ASSERT_EQ(Children.size(), 1u);
@@ -252,7 +253,7 @@ TEST_F(LexicalScopesTest, FuncWithEmptyGap) {
   BuildMI(*MBB4, MBB4->end(), OutermostLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
 
   // A gap in a range that contains no other location, is not actually a
@@ -273,7 +274,7 @@ TEST_F(LexicalScopesTest, FuncWithRealGap) {
   MachineInstr *LastI = BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
   ASSERT_NE(BlockScope, nullptr);
 
@@ -306,7 +307,7 @@ TEST_F(LexicalScopesTest, NotNested) {
   MachineInstr *FourthI = BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
   LexicalScope *OtherBlockScope = LS.findLexicalScope(NotNestedBlockLoc.get());
@@ -344,7 +345,7 @@ TEST_F(LexicalScopesTest, TestDominates) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
   LexicalScope *OtherBlockScope = LS.findLexicalScope(NotNestedBlockLoc.get());
@@ -386,7 +387,7 @@ TEST_F(LexicalScopesTest, TestGetBlocks) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
   LexicalScope *OtherBlockScope = LS.findLexicalScope(NotNestedBlockLoc.get());
@@ -443,7 +444,7 @@ TEST_F(LexicalScopesTest, TestMetaInst) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
   ASSERT_NE(FuncScope, nullptr);
@@ -457,6 +458,26 @@ TEST_F(LexicalScopesTest, TestMetaInst) {
   EXPECT_FALSE(LS.dominates(InBlockLoc.get(), MBB2));
   EXPECT_FALSE(LS.dominates(InBlockLoc.get(), MBB3));
   EXPECT_TRUE(LS.dominates(InBlockLoc.get(), MBB4));
+}
+
+// Test function map creation.
+TEST_F(LexicalScopesTest, TestFunctionScan) {
+  auto MF2 = createMachineFunction(Ctx, Mod, "Test2");
+  DIBuilder DIB(Mod, false, OurCU);
+  DISubprogram *Func2 =
+      DIB.createFunction(OurCU, "Func2", "", OurFile, 1, OurSubT, 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *UnattachedFunc =
+      DIB.createFunction(OurCU, "UnattachedFunc", "", OurFile, 1, OurSubT, 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  MF2->getFunction().setSubprogram(Func2);
+  DIB.finalize();
+
+  LexicalScopes LS;
+  LS.initialize(Mod);
+  ASSERT_EQ(LS.getFunction(OurFunc), &MF->getFunction());
+  ASSERT_EQ(LS.getFunction(Func2), &MF2->getFunction());
+  ASSERT_EQ(LS.getFunction(UnattachedFunc), nullptr);
 }
 
 } // anonymous namespace

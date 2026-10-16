@@ -48,6 +48,11 @@ std::optional<BlockFrequency> BlockFrequency::mul(uint64_t Factor) const {
   return BlockFrequency(ResultFrequency);
 }
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, BlockFrequency Freq) {
+  OS << Freq.getFrequency();
+  return OS;
+}
+
 void llvm::printRelativeBlockFreq(raw_ostream &OS, BlockFrequency EntryFreq,
                                   BlockFrequency Freq) {
   if (Freq == BlockFrequency(0)) {

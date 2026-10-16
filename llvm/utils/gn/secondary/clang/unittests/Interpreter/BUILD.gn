@@ -14,11 +14,17 @@ unittest("ClangReplInterpreterTests") {
   ]
   sources = [
     "CodeCompletionTest.cpp",
+    "DeviceOffloadTest.cpp",
     "IncrementalCompilerBuilderTest.cpp",
     "IncrementalProcessingTest.cpp",
     "InterpreterExtensionsTest.cpp",
     "InterpreterTest.cpp",
+    "OutOfProcessInterpreterTests.cpp",
   ]
+
+  # FIXME: Workaround for
+  # https://github.com/llvm/llvm-project/pull/175435#discussion_r2683756402
+  defines = [ "CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT" ]
 
   # Support plugins.
   # FIXME: Disable dead stripping once other binaries are dead-stripped.
@@ -26,4 +32,5 @@ unittest("ClangReplInterpreterTests") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
 }

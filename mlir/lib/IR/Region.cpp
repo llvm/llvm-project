@@ -87,7 +87,7 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
   // of the blocks or operation results contained within this region as that
   // would lead to a write in their use-def list. This is unavoidable for
   // 'Value's from outside the region however, in which case it is not read
-  // only. Using the BlockAndValueMapper it is possible to remap such 'Value's
+  // only. Using the IRMapper it is possible to remap such 'Value's
   // to ones owned by the calling thread however, making it read only once
   // again.
 
@@ -194,7 +194,9 @@ Region *llvm::ilist_traits<::mlir::Block>::getParentRegion() {
 /// We keep the region pointer up to date.
 void llvm::ilist_traits<::mlir::Block>::addNodeToList(Block *block) {
   assert(!block->getParent() && "already in a region!");
-  block->parentValidOpOrderPair.setPointer(getParentRegion());
+  Region *region = getParentRegion();
+  block->parentValidOpOrderPair.setPointer(region);
+  block->blockID = region->nextBlockID++;
 }
 
 /// This is a trait method invoked when an operation is removed from a
@@ -202,6 +204,8 @@ void llvm::ilist_traits<::mlir::Block>::addNodeToList(Block *block) {
 void llvm::ilist_traits<::mlir::Block>::removeNodeFromList(Block *block) {
   assert(block->getParent() && "not already in a region!");
   block->parentValidOpOrderPair.setPointer(nullptr);
+  // The ID is invalid until the block is added to a region again.
+  block->blockID = -1u;
 }
 
 /// This is a trait method invoked when an operation is moved from one block
@@ -214,9 +218,12 @@ void llvm::ilist_traits<::mlir::Block>::transferNodesFromList(
   if (curParent == otherList.getParentRegion())
     return;
 
-  // Update the 'parent' member of each Block.
-  for (; first != last; ++first)
+  // Update the 'parent' member of each Block and give it an ID in its new
+  // region.
+  for (; first != last; ++first) {
     first->parentValidOpOrderPair.setPointer(curParent);
+    first->blockID = curParent->nextBlockID++;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -251,6 +258,21 @@ void Region::OpIterator::skipOverBlocksWithNoOps() {
     operation = {};
   else
     operation = block->begin();
+}
+
+llvm::raw_ostream &mlir::operator<<(llvm::raw_ostream &os, Region &region) {
+  if (!region.getParentOp()) {
+    os << "Region has no parent op";
+  } else {
+    os << "Region #" << region.getRegionNumber() << " in operation "
+       << region.getParentOp()->getName();
+  }
+  for (auto it : llvm::enumerate(region.getBlocks())) {
+    os << "\n  Block #" << it.index() << ":";
+    for (Operation &op : it.value().getOperations())
+      os << "\n    " << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+  }
+  return os;
 }
 
 //===----------------------------------------------------------------------===//

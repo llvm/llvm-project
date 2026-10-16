@@ -11,7 +11,7 @@
 //   - verify that "image dump objfile" will dump the dynamic section of the
 //     memory elf file and find the .dynamic string table.
 
-// RUN: %clang_host %p/Inputs/memory-elf.cpp -g -O0 -o %t
+// RUN: %clangxx_host %p/Inputs/memory-elf.cpp -g -O0 -o %t
 
 // RUN: %lldb %t -b \
 // RUN:   -o "b main" \

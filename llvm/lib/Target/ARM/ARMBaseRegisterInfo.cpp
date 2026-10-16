@@ -43,7 +43,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <utility>
 
@@ -80,6 +79,25 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                        ? CSR_ATPCS_SplitPush_SwiftTail_SaveList
                                        : CSR_AAPCS_SwiftTail_SaveList);
   } else if (F.hasFnAttribute("interrupt")) {
+
+    // Don't save the floating point registers if target does not have floating
+    // point registers.
+    if (STI.hasFPRegs() && F.hasFnAttribute("save-fp")) {
+      bool HasNEON = STI.hasNEON();
+
+      if (STI.isMClass()) {
+        assert(!HasNEON && "NEON is only for Cortex-R/A");
+        return PushPopSplit == ARMSubtarget::SplitR7
+                   ? CSR_ATPCS_SplitPush_FP_SaveList
+                   : CSR_AAPCS_FP_SaveList;
+      }
+      if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
+        return HasNEON ? CSR_FIQ_FP_NEON_SaveList : CSR_FIQ_FP_SaveList;
+      }
+      return HasNEON ? CSR_GenericInt_FP_NEON_SaveList
+                     : CSR_GenericInt_FP_SaveList;
+    }
+
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
@@ -213,6 +231,7 @@ getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, ARM::SP);
   markSuperRegs(Reserved, ARM::PC);
   markSuperRegs(Reserved, ARM::FPSCR);
+  markSuperRegs(Reserved, ARM::FPSCR_RM);
   markSuperRegs(Reserved, ARM::APSR_NZCV);
   if (TFI->isFPReserved(MF))
     markSuperRegs(Reserved, STI.getFramePointerReg());
@@ -241,11 +260,22 @@ getReservedRegs(const MachineFunction &MF) const {
 
 bool ARMBaseRegisterInfo::
 isAsmClobberable(const MachineFunction &MF, MCRegister PhysReg) const {
+  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
+  if (!STI.hasD32())
+    // D16-D31 are only reserved because they don't exist without d32, but a
+    // function without d32 can be inlined into a function with d32.
+    //
+    // It is safe for frontends to mark these registers as clobbered.
+    // The Arm ABI does not require D16-D31 to be preserved across a function
+    // call. When the registers don't exist, the clobber is just ignored.
+    for (unsigned R = 0; R < 16; ++R)
+      if (regsOverlap(PhysReg, ARM::D16 + R))
+        return true;
   return !getReservedRegs(MF).test(PhysReg);
 }
 
 bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                                 unsigned PhysReg) const {
+                                                 MCRegister PhysReg) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
@@ -256,7 +286,7 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);
   assert(checkAllSuperRegsMarked(Reserved));
-  return Reserved.test(PhysReg);
+  return Reserved.test(PhysReg.id());
 }
 
 const TargetRegisterClass *
@@ -288,12 +318,6 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     SuperID = (I != E) ? *I++ : ~0U;
   } while (SuperID != ~0U);
   return RC;
-}
-
-const TargetRegisterClass *
-ARMBaseRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
-                                                                         const {
-  return &ARM::GPRRegClass;
 }
 
 const TargetRegisterClass *
@@ -345,7 +369,7 @@ static MCRegister getPairedGPR(MCRegister Reg, bool Odd,
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
 bool ARMBaseRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
@@ -361,7 +385,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
   case ARMRI::RegLR:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
     if (MRI.getRegClass(VirtReg)->contains(ARM::LR))
-      Hints.push_back(ARM::LR);
+      Hints.insert(ARM::LR);
     return false;
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
@@ -383,7 +407,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
 
   // First prefer the paired physreg.
   if (PairedPhys && is_contained(Order, PairedPhys))
-    Hints.push_back(PairedPhys);
+    Hints.insert(PairedPhys);
 
   // Then prefer even or odd registers.
   for (MCPhysReg Reg : Order) {
@@ -393,7 +417,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     MCRegister Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
-    Hints.push_back(Reg);
+    Hints.insert(Reg);
   }
   return false;
 }
@@ -427,6 +451,12 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
+
+  // For Windows SEH, the runtime does not preserve SP or R11 for EH funclets.
+  // Fortunately, R4-R10 are always preserved.
+  // Therefore, we force these functions to set up a base pointer.
+  if (MF.hasEHFunclets())
+    return true;
 
   // If we have stack realignment and VLAs, we have no pointer to use to
   // access the stack. If we have stack realignment, and a large call frame,
@@ -485,7 +515,7 @@ bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 bool ARMBaseRegisterInfo::
 cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
+  if (MF.disableFramePointerElim() && MFI.adjustsStack())
     return true;
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
          hasStackRealignment(MF);
@@ -499,6 +529,16 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   if (TFI->hasFP(MF))
     return STI.getFramePointerReg();
   return ARM::SP;
+}
+
+unsigned
+ARMBaseRegisterInfo::getLocalAddressRegister(const MachineFunction &MF) const {
+  const auto &MFI = MF.getFrameInfo();
+  if (!MF.hasEHFunclets() && !MFI.hasVarSizedObjects())
+    return ARM::SP;
+  else if (MF.hasEHFunclets() || hasStackRealignment(MF))
+    return getBaseRegister();
+  return getFrameRegister(MF);
 }
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the
@@ -689,7 +729,7 @@ ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
   Register BaseReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
-  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
+  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0));
 
   MachineInstrBuilder MIB = BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);
@@ -814,6 +854,13 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   int Offset = TFI->ResolveFrameIndexReference(MF, FrameIndex, FrameReg, SPAdj);
 
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    StackOffset Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
+    FI.ChangeToImmediate(Offset.getFixed());
+    return false;
+  }
+
   // PEI::scavengeFrameVirtualRegs() cannot accurately track SPAdj because the
   // call frame setup/destroy instructions have already been eliminated.  That
   // means the stack pointer cannot be used to access the emergency spill slot
@@ -862,8 +909,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register PredReg = (PIdx == -1) ? Register() : MI.getOperand(PIdx+1).getReg();
 
   const MCInstrDesc &MCID = MI.getDesc();
-  const TargetRegisterClass *RegClass =
-      TII.getRegClass(MCID, FIOperandNum, this, *MI.getParent()->getParent());
+  const TargetRegisterClass *RegClass = TII.getRegClass(MCID, FIOperandNum);
 
   if (Offset == 0 && (FrameReg.isVirtual() || RegClass->contains(FrameReg)))
     // Must be addrmode4/6.
@@ -941,18 +987,4 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
     return true;
   }
   return false;
-}
-
-bool ARMBaseRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                               unsigned DefSubReg,
-                                               const TargetRegisterClass *SrcRC,
-                                               unsigned SrcSubReg) const {
-  // We can't extract an SPR from an arbitary DPR (as opposed to a DPR_VFP2).
-  if (DefRC == &ARM::SPRRegClass && DefSubReg == 0 &&
-      SrcRC == &ARM::DPRRegClass &&
-      (SrcSubReg == ARM::ssub_0 || SrcSubReg == ARM::ssub_1))
-    return false;
-
-  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
-                                                  SrcRC, SrcSubReg);
 }

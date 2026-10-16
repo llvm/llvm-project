@@ -177,10 +177,9 @@ public:
   unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
-
-  unsigned getMSAMemEncoding(const MCInst &MI, unsigned OpNo,
-                             SmallVectorImpl<MCFixup> &Fixups,
-                             const MCSubtargetInfo &STI) const;
+  unsigned getImmOpValue(const MCInst &MI, const MCOperand &MO,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI) const;
 
   template <unsigned ShiftAmount = 0>
   unsigned getMemEncoding(const MCInst &MI, unsigned OpNo,

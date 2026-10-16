@@ -182,7 +182,7 @@ void KernelsTempl() {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num_gangs' clause not allowed on a 'kernels loop' construct that has a 'gang' clause with a 'num' argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc kernels loop gang(t) num_gangs(t)
   for(int i = 0; i < 5; ++i);
 
@@ -192,17 +192,17 @@ void KernelsTempl() {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument to 'gang' clause not allowed on a 'kernels loop' construct that has a 'num_gangs' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc kernels loop num_gangs(t) gang(t)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num_gangs' clause not allowed on a 'kernels loop' construct that has a 'gang' clause with a 'num' argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc kernels loop gang(num:t) num_gangs(t)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument to 'gang' clause not allowed on a 'kernels loop' construct that has a 'num_gangs' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc kernels loop num_gangs(t) gang(num:t)
   for(int i = 0; i < 5; ++i);
 }
@@ -219,22 +219,22 @@ void Kernels() {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num_gangs' clause not allowed on a 'kernels loop' construct that has a 'gang' clause with a 'num' argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc kernels loop gang(t) num_gangs(t)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument to 'gang' clause not allowed on a 'kernels loop' construct that has a 'num_gangs' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc kernels loop num_gangs(t) gang(t)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num_gangs' clause not allowed on a 'kernels loop' construct that has a 'gang' clause with a 'num' argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc kernels loop gang(num:t) num_gangs(t)
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{'num' argument to 'gang' clause not allowed on a 'kernels loop' construct that has a 'num_gangs' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc kernels loop num_gangs(t) gang(num:t)
   for(int i = 0; i < 5; ++i);
 
@@ -260,7 +260,7 @@ void Kernels() {
 #pragma acc kernels loop gang(num:1)
   for(int i = 0; i < 5; ++i) {
     // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'gang' clause on a 'kernels loop' construct}}
-    // expected-note@-3{{previous clause is here}}
+    // expected-note@-3{{previous 'gang' clause is here}}
 #pragma acc loop gang(static:1)
     for(int i = 0; i < 5; ++i);
   }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-branch-clone %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-branch-clone %t --
 
 void handle(int);
 

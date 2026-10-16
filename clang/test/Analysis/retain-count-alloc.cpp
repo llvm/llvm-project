@@ -33,5 +33,5 @@ void useAfterFree(__isl_take Object *A) {
   freeObj(B);
 
   A->Ref = 13;
-  // no-warning: 'Use of memory after it is freed' was here.
+  // no-warning: 'Use of memory after it is released' was here.
 }

@@ -62,7 +62,7 @@ program test_event_post
   event post(occurrences)
 
   !ERROR: Must be a scalar value, but is a rank-1 array
-  event post(occurrences[1])
+  event post(occurrences(:)[1])
 
   !______ invalid sync-stat-lists: invalid stat= ____________
 

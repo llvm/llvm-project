@@ -297,6 +297,37 @@ class CommandLineExprCompletionTestCase(TestBase):
             enforce_order=True,
         )
 
+    def test_expr_completion_max_results(self):
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.createTestTarget()
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+
+        expected_completions = [
+            "some_expr.~Expr()",
+            "some_expr.operator=(",  # Copy operator
+            "some_expr.operator=(",  # Move operator
+            "some_expr.MemberVariableBar",
+            "some_expr.StaticMemberMethodBar()",
+            "some_expr.Self()",
+            "some_expr.FooNoArgsBar()",
+            "some_expr.FooWithArgsBar(",
+            "some_expr.FooNumbersBar1()",
+            "some_expr.FooUnderscoreBar_()",
+            "some_expr.FooWithMultipleArgsBar(",
+        ]
+
+        for i in range(1, len(expected_completions)):
+            self.completions_match(
+                "expr some_expr.",
+                expected_completions[:i],
+                max_completions=i,
+            )
+
     def assume_no_completions(self, str_input, cursor_pos=None):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()

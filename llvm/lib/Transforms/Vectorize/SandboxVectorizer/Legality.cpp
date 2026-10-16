@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Operator.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
@@ -16,8 +17,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm::sandboxir {
-
-#define DEBUG_TYPE "SBVec:Legality"
 
 #ifndef NDEBUG
 void ShuffleMask::dump() const {
@@ -32,8 +31,7 @@ void LegalityResult::dump() const {
 #endif // NDEBUG
 
 std::optional<ResultReason>
-LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
-    ArrayRef<Value *> Bndl) {
+LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl) {
   auto *I0 = cast<Instruction>(Bndl[0]);
   auto Opcode = I0->getOpcode();
   // If they have different opcodes, then we cannot form a vector (for now).
@@ -83,6 +81,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::FPToUI:
   case Instruction::Opcode::FPToSI:
   case Instruction::Opcode::FPExt:
+  case Instruction::Opcode::PtrToAddr:
   case Instruction::Opcode::PtrToInt:
   case Instruction::Opcode::IntToPtr:
   case Instruction::Opcode::SIToFP:
@@ -107,16 +106,27 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   }
   case Instruction::Opcode::FCmp:
   case Instruction::Opcode::ICmp: {
-    // We need the same predicate..
+    // We need the same predicate and the same operand type.
     auto Pred0 = cast<CmpInst>(I0)->getPredicate();
-    bool Same = all_of(Bndl, [Pred0](Value *V) {
-      return cast<CmpInst>(V)->getPredicate() == Pred0;
+    Type *Ty0 = cast<CmpInst>(I0)->getOperand(0)->getType();
+    bool Same = all_of(Bndl, [Pred0, Ty0](Value *V) {
+      auto *CmpI = cast<CmpInst>(V);
+      return CmpI->getPredicate() == Pred0 &&
+             CmpI->getOperand(0)->getType() == Ty0;
     });
     if (Same)
       return std::nullopt;
     return ResultReason::DiffOpcodes;
   }
-  case Instruction::Opcode::Select:
+  case Instruction::Opcode::Select: {
+    auto *Sel0 = cast<SelectInst>(Bndl[0]);
+    auto *Cond0 = Sel0->getCondition();
+    if (VecUtils::getNumLanes(Cond0) != VecUtils::getNumLanes(Sel0))
+      // TODO: For now we don't vectorize if the lanes in the condition don't
+      // match those of the select instruction.
+      return ResultReason::Unimplemented;
+    return std::nullopt;
+  }
   case Instruction::Opcode::FNeg:
   case Instruction::Opcode::Add:
   case Instruction::Opcode::FAdd:
@@ -149,7 +159,8 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
     return ResultReason::Unimplemented;
   case Instruction::Opcode::Opaque:
     return ResultReason::Unimplemented;
-  case Instruction::Opcode::Br:
+  case Instruction::Opcode::UncondBr:
+  case Instruction::Opcode::CondBr:
   case Instruction::Opcode::Ret:
   case Instruction::Opcode::AddrSpaceCast:
   case Instruction::Opcode::InsertElement:
@@ -160,6 +171,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::Call:
   case Instruction::Opcode::GetElementPtr:
   case Instruction::Opcode::Switch:
+  case Instruction::Opcode::Pack:
     return ResultReason::Unimplemented;
   case Instruction::Opcode::VAArg:
   case Instruction::Opcode::Freeze:
@@ -183,22 +195,18 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   return std::nullopt;
 }
 
-#ifndef NDEBUG
-static void dumpBndl(ArrayRef<Value *> Bndl) {
-  for (auto *V : Bndl)
-    dbgs() << *V << "\n";
-}
-#endif // NDEBUG
-
 CollectDescr
-LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
+LegalityAnalysis::getHowToCollectValues(BndlRef<Value *> Bndl) const {
   SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
   Vec.reserve(Bndl.size());
-  for (auto [Lane, V] : enumerate(Bndl)) {
+  for (auto [Elm, V] : enumerate(Bndl)) {
     if (auto *VecOp = IMaps.getVectorForOrig(V)) {
       // If there is a vector containing `V`, then get the lane it came from.
       std::optional<int> ExtractIdxOpt = IMaps.getOrigLane(VecOp, V);
-      Vec.emplace_back(VecOp, ExtractIdxOpt ? *ExtractIdxOpt : -1);
+      // This could be a vector, like <2 x float> in which case the mask needs
+      // to enumerate all lanes.
+      for (unsigned Ln = 0, Lanes = VecUtils::getNumLanes(V); Ln != Lanes; ++Ln)
+        Vec.emplace_back(VecOp, ExtractIdxOpt ? *ExtractIdxOpt + Ln : -1);
     } else {
       Vec.emplace_back(V);
     }
@@ -206,19 +214,39 @@ LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
   return CollectDescr(std::move(Vec));
 }
 
-const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
+bool LegalityAnalysis::isAlignmentSupported(ArrayRef<Value *> Values) const {
+  Value *V0 = Values[0];
+  if (!isa<LoadInst>(V0) && !isa<StoreInst>(V0))
+    return true;
+  Instruction *I0 = cast<Instruction>(V0);
+  // If the target is not set, just return true. This helps simplify
+  // target-independent lit tests.
+  if (I0->getParent()->getParent()->getParent()->getTargetTriple().empty())
+    return true;
+  Align Alignment = getLoadStoreAlignment(I0);
+  unsigned VecSizeBits =
+      Utils::getNumBits(Utils::getExpectedType(I0), DL) * Values.size();
+  unsigned AS = getLoadStoreAddressSpace(I0);
+  unsigned Fast = 0;
+  bool Supported = Utils::TTIAllowsMisalignedMemoryAccesses(
+      TTI, I0->getContext(), VecSizeBits, AS, Alignment, &Fast);
+  return Supported;
+}
+
+const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
-  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); })) {
-    LLVM_DEBUG(dbgs() << "Not vectorizing: Not Instructions:\n";
-               dumpBndl(Bndl););
+  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
-  }
   // Pack if not in the same BB.
-  auto *BB = cast<Instruction>(Bndl[0])->getParent();
-  if (any_of(drop_begin(Bndl),
-             [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
+  if (LegalityAnalysis::differentBlock(Bndl))
     return createLegalityResult<Pack>(ResultReason::DiffBBs);
+  // Pack if instructions repeat, i.e., require some sort of broadcast.
+  if (!LegalityAnalysis::areUnique(Bndl))
+    return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
+  // Check if the target supports the alignment of the generated vector.
+  if (!isAlignmentSupported(Bndl))
+    return createLegalityResult<Pack>(ResultReason::AlignmentNotSupported);
 
   auto CollectDescrs = getHowToCollectValues(Bndl);
   if (CollectDescrs.hasVectorInputs()) {

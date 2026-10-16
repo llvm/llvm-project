@@ -311,13 +311,13 @@ mlir::Value fir::runtime::genExponent(fir::FirOpBuilder &builder,
     else if (resultType.isInteger(64))
       func = fir::runtime::getRuntimeFunc<ForcedExponent16_8>(loc, builder);
   } else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "EXPONENT");
+    fir::intrinsicTypeTODO(fltTy, loc, "EXPONENT");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Fraction intrinsic runtime routine.
@@ -334,13 +334,13 @@ mlir::Value fir::runtime::genFraction(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedFraction16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "FRACTION");
+    fir::intrinsicTypeTODO(fltTy, loc, "FRACTION");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Mod intrinsic runtime routine.
@@ -361,7 +361,7 @@ mlir::Value fir::runtime::genMod(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedMod16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "MOD");
+    fir::intrinsicTypeTODO(fltTy, loc, "MOD");
 
   auto funcTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -370,7 +370,7 @@ mlir::Value fir::runtime::genMod(fir::FirOpBuilder &builder, mlir::Location loc,
   auto args = fir::runtime::createArguments(builder, loc, funcTy, a, p,
                                             sourceFile, sourceLine);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Modulo intrinsic runtime routine.
@@ -394,7 +394,7 @@ mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedModulo16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "MODULO");
+    fir::intrinsicTypeTODO(fltTy, loc, "MODULO");
 
   auto funcTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -403,7 +403,7 @@ mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, funcTy, a, p,
                                             sourceFile, sourceLine);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Nearest intrinsic or a "Next" intrinsic module procedure.
@@ -422,12 +422,12 @@ mlir::Value fir::runtime::genNearest(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedNearest16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "NEAREST");
+    fir::intrinsicTypeTODO(fltTy, loc, "NEAREST");
 
   auto funcTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcTy, x, valueUp);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to RRSpacing intrinsic runtime routine.
@@ -445,13 +445,13 @@ mlir::Value fir::runtime::genRRSpacing(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedRRSpacing16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "RRSPACING");
+    fir::intrinsicTypeTODO(fltTy, loc, "RRSPACING");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to ErfcScaled intrinsic runtime routine.
@@ -469,13 +469,13 @@ mlir::Value fir::runtime::genErfcScaled(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedErfcScaled16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "ERFC_SCALED");
+    fir::intrinsicTypeTODO(fltTy, loc, "ERFC_SCALED");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Scale intrinsic runtime routine.
@@ -494,12 +494,12 @@ mlir::Value fir::runtime::genScale(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedScale16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "SCALE");
+    fir::intrinsicTypeTODO(fltTy, loc, "SCALE");
 
   auto funcTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcTy, x, i);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Selected_char_kind intrinsic runtime routine.
@@ -519,7 +519,7 @@ mlir::Value fir::runtime::genSelectedCharKind(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
                                             sourceLine, name, length);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Selected_int_kind intrinsic runtime routine.
@@ -540,7 +540,7 @@ mlir::Value fir::runtime::genSelectedIntKind(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
                                             sourceLine, x, xKind);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Selected_logical_kind intrinsic runtime routine.
@@ -561,7 +561,7 @@ mlir::Value fir::runtime::genSelectedLogicalKind(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
                                             sourceLine, x, xKind);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Selected_real_kind intrinsic runtime routine.
@@ -593,7 +593,7 @@ mlir::Value fir::runtime::genSelectedRealKind(fir::FirOpBuilder &builder,
                                             sourceLine, precision, pKind, range,
                                             rKind, radix, dKind);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Set_exponent intrinsic runtime routine.
@@ -612,12 +612,12 @@ mlir::Value fir::runtime::genSetExponent(fir::FirOpBuilder &builder,
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedSetExponent16>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "SET_EXPONENT");
+    fir::intrinsicTypeTODO(fltTy, loc, "SET_EXPONENT");
 
   auto funcTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, funcTy, x, i);
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 /// Generate call to Spacing intrinsic runtime routine.
@@ -643,12 +643,12 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
   else if (fltTy.isBF16())
     func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing3By4)>(loc, builder);
   else
-    fir::intrinsicTypeTODO(builder, fltTy, loc, "SPACING");
+    fir::intrinsicTypeTODO(fltTy, loc, "SPACING");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  mlir::Value res = builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  mlir::Value res = fir::CallOp::create(builder, loc, func, args).getResult(0);
   return builder.createConvert(loc, fltTy, res);
 }

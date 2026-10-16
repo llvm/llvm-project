@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVTARGETSTREAMER_H
 
 #include "RISCV.h"
+#include "RISCVMCOptions.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -32,6 +33,7 @@ struct RISCVOptionArchArg {
 };
 
 class RISCVTargetStreamer : public MCTargetStreamer {
+  const RISCVMCOptions &CLOpts;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   bool HasRVC = false;
   bool HasTSO = false;
@@ -41,15 +43,18 @@ public:
   void finish() override;
   virtual void reset();
 
-  virtual void emitDirectiveOptionPush();
-  virtual void emitDirectiveOptionPop();
+  virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
+  virtual void emitDirectiveOptionExact();
+  virtual void emitDirectiveOptionNoExact();
   virtual void emitDirectiveOptionPIC();
   virtual void emitDirectiveOptionNoPIC();
-  virtual void emitDirectiveOptionRVC();
-  virtual void emitDirectiveOptionNoRVC();
+  virtual void emitDirectiveOptionPop();
+  virtual void emitDirectiveOptionPush();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
-  virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
+  virtual void emitDirectiveOptionRVC();
+  virtual void emitDirectiveOptionNoRVC();
+  virtual void setArchString(StringRef Arch) {}
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
@@ -60,7 +65,8 @@ public:
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
-  void setFlagsFromFeatures(const MCSubtargetInfo &STI);
+  bool hasTargetABI() const { return TargetABI != RISCVABI::ABI_Unknown; }
+  virtual void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }
 };
@@ -78,15 +84,17 @@ class RISCVTargetAsmStreamer : public RISCVTargetStreamer {
 public:
   RISCVTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 
-  void emitDirectiveOptionPush() override;
-  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
+  void emitDirectiveOptionExact() override;
+  void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionPIC() override;
   void emitDirectiveOptionNoPIC() override;
-  void emitDirectiveOptionRVC() override;
-  void emitDirectiveOptionNoRVC() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionPush() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
-  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
+  void emitDirectiveOptionRVC() override;
+  void emitDirectiveOptionNoRVC() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 };
 

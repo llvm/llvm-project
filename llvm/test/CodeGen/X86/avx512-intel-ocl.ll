@@ -19,7 +19,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-64, %esp
-; X32-NEXT:    subl $192, %esp
+; X32-NEXT:    addl $-128, %esp
 ; X32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, (%esp)
@@ -34,7 +34,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-64, %esp
-; WIN32-NEXT:    subl $128, %esp
+; WIN32-NEXT:    subl $64, %esp
 ; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    movl %esp, %eax
 ; WIN32-NEXT:    pushl %eax
@@ -67,7 +67,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    pushq %r13
 ; X64-NEXT:    pushq %r12
 ; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    pushq %rbp
@@ -97,7 +97,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X32-NEXT:    pushl %ebp
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    andl $-64, %esp
-; X32-NEXT:    subl $256, %esp ## imm = 0x100
+; X32-NEXT:    subl $192, %esp
 ; X32-NEXT:    vmovaps %zmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
 ; X32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -114,7 +114,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-64, %esp
-; WIN32-NEXT:    subl $192, %esp
+; WIN32-NEXT:    addl $-128, %esp
 ; WIN32-NEXT:    vmovaps %zmm1, (%esp) # 64-byte Spill
 ; WIN32-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
@@ -150,7 +150,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; X64-NEXT:    pushq %r13
 ; X64-NEXT:    pushq %r12
 ; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    vmovaps %zmm1, %zmm16
 ; X64-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    movq %rsp, %rdi
@@ -429,7 +429,9 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; WIN64-KNL-NEXT:    kmovw %edx, %k1
 ; WIN64-KNL-NEXT:    callq func_float16_mask
 ; WIN64-KNL-NEXT:    nop
+; WIN64-KNL-NEXT:    .seh_startepilogue
 ; WIN64-KNL-NEXT:    addq $40, %rsp
+; WIN64-KNL-NEXT:    .seh_endepilogue
 ; WIN64-KNL-NEXT:    retq
 ; WIN64-KNL-NEXT:    .seh_endproc
 ;
@@ -443,7 +445,9 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; WIN64-SKX-NEXT:    kmovd %edx, %k1
 ; WIN64-SKX-NEXT:    callq func_float16_mask
 ; WIN64-SKX-NEXT:    nop
+; WIN64-SKX-NEXT:    .seh_startepilogue
 ; WIN64-SKX-NEXT:    addq $40, %rsp
+; WIN64-SKX-NEXT:    .seh_endepilogue
 ; WIN64-SKX-NEXT:    retq
 ; WIN64-SKX-NEXT:    .seh_endproc
 ;

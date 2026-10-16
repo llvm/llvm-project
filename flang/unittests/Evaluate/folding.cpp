@@ -1,4 +1,11 @@
-#include "testing.h"
+//===-- unittests/Evaluate/folding.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "../../lib/Evaluate/host.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
@@ -7,6 +14,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Testing/testing.h"
 #include <tuple>
 
 using namespace Fortran::evaluate;

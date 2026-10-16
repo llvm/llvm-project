@@ -50,9 +50,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFlatten.h"
+#include "ScalarOptions.h"
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -82,26 +84,6 @@ using namespace llvm::PatternMatch;
 
 STATISTIC(NumFlattened, "Number of loops flattened");
 
-static cl::opt<unsigned> RepeatedInstructionThreshold(
-    "loop-flatten-cost-threshold", cl::Hidden, cl::init(2),
-    cl::desc("Limit on the cost of instructions that can be repeated due to "
-             "loop flattening"));
-
-static cl::opt<bool>
-    AssumeNoOverflow("loop-flatten-assume-no-overflow", cl::Hidden,
-                     cl::init(false),
-                     cl::desc("Assume that the product of the two iteration "
-                              "trip counts will never overflow"));
-
-static cl::opt<bool>
-    WidenIV("loop-flatten-widen-iv", cl::Hidden, cl::init(true),
-            cl::desc("Widen the loop induction variables, if possible, so "
-                     "overflow checks won't reject flattening"));
-
-static cl::opt<bool>
-    VersionLoops("loop-flatten-version-loops", cl::Hidden, cl::init(true),
-                 cl::desc("Version loops if flattened loop could overflow"));
-
 namespace {
 // We require all uses of both induction variables to match this pattern:
 //
@@ -112,6 +94,7 @@ namespace {
 // checks will be performed in this bookkeeping struct.
 //
 struct FlattenInfo {
+  const ScalarOptions &Opts;
   Loop *OuterLoop = nullptr;  // The loop pair to be flattened.
   Loop *InnerLoop = nullptr;
 
@@ -131,9 +114,9 @@ struct FlattenInfo {
 
   BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
   BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
-  BranchInst *InnerBranch = nullptr;         // are safe to ignore.
+  CondBrInst *InnerBranch = nullptr;         // are safe to ignore.
 
-  BranchInst *OuterBranch = nullptr; // The instruction that needs to be
+  CondBrInst *OuterBranch = nullptr; // The instruction that needs to be
                                      // updated with new tripcount.
 
   SmallPtrSet<PHINode *, 4> InnerPHIsToTransform;
@@ -148,7 +131,8 @@ struct FlattenInfo {
 
   Value *NewTripCount = nullptr; // The tripcount of the flattened loop.
 
-  FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
+  FlattenInfo(Loop *OL, Loop *IL)
+      : Opts(ScalarOptions::Global), OuterLoop(OL), InnerLoop(IL) {}
 
   bool isNarrowInductionPhi(PHINode *Phi) {
     // This can't be the narrow phi if we haven't widened the IV first.
@@ -318,10 +302,10 @@ setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,
 // complicated now. It is therefore worth revisiting what the additional
 // benefits are of this (compared to relying on canonical loops and pattern
 // matching).
-static bool verifyTripCount(Value *RHS, Loop *L,
-     SmallPtrSetImpl<Instruction *> &IterationInstructions,
+static bool verifyTripCount(
+    Value *RHS, Loop *L, SmallPtrSetImpl<Instruction *> &IterationInstructions,
     PHINode *&InductionPHI, Value *&TripCount, BinaryOperator *&Increment,
-    BranchInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
+    CondBrInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BackedgeTakenCount)) {
     LLVM_DEBUG(dbgs() << "Backedge-taken count is not predictable\n");
@@ -345,7 +329,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
       const SCEV *SCEVTripCountExt;
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
-      BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
+      BackedgeTCExt =
+          SE->getNoopOrZeroExtend(BackedgeTakenCount, RHS->getType());
       SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt,
                                                        RHS->getType(), L);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
@@ -388,7 +373,7 @@ static bool verifyTripCount(Value *RHS, Loop *L,
 static bool findLoopComponents(
     Loop *L, SmallPtrSetImpl<Instruction *> &IterationInstructions,
     PHINode *&InductionPHI, Value *&TripCount, BinaryOperator *&Increment,
-    BranchInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
+    CondBrInst *&BackBranch, ScalarEvolution *SE, bool IsWidened) {
   LLVM_DEBUG(dbgs() << "Finding components of loop: " << L->getName() << "\n");
 
   if (!L->isLoopSimplifyForm()) {
@@ -437,7 +422,7 @@ static bool findLoopComponents(
     LLVM_DEBUG(dbgs() << "Could not find valid comparison\n");
     return false;
   }
-  BackBranch = cast<BranchInst>(Latch->getTerminator());
+  BackBranch = cast<CondBrInst>(Latch->getTerminator());
   IterationInstructions.insert(BackBranch);
   LLVM_DEBUG(dbgs() << "Found back branch: "; BackBranch->dump());
   IterationInstructions.insert(Compare);
@@ -579,9 +564,8 @@ checkOuterLoopInsts(FlattenInfo &FI,
         continue;
       // The unconditional branch to the inner loop's header will turn into
       // a fall-through, so adds no cost.
-      BranchInst *Br = dyn_cast<BranchInst>(&I);
-      if (Br && Br->isUnconditional() &&
-          Br->getSuccessor(0) == FI.InnerLoop->getHeader())
+      UncondBrInst *Br = dyn_cast<UncondBrInst>(&I);
+      if (Br && Br->getSuccessor() == FI.InnerLoop->getHeader())
         continue;
       // Multiplies of the outer iteration variable and inner iteration
       // count will be optimised out.
@@ -599,7 +583,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
                     << RepeatedInstrCost << "\n");
   // Bail out if flattening the loops would cause instructions in the outer
   // loop but not in the inner loop to be executed extra times.
-  if (RepeatedInstrCost > RepeatedInstructionThreshold) {
+  if (RepeatedInstrCost > FI.Opts.loop_flatten_cost_threshold) {
     LLVM_DEBUG(dbgs() << "checkOuterLoopInsts: not profitable, bailing.\n");
     return false;
   }
@@ -647,7 +631,7 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   const DataLayout &DL = F->getDataLayout();
 
   // For debugging/testing.
-  if (AssumeNoOverflow)
+  if (FI.Opts.loop_flatten_assume_no_overflow)
     return OverflowResult::NeverOverflows;
 
   // Check if the multiply could not overflow due to known ranges of the
@@ -784,7 +768,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   BasicBlock *InnerExitBlock = FI.InnerLoop->getExitBlock();
   BasicBlock *InnerExitingBlock = FI.InnerLoop->getExitingBlock();
   Instruction *Term = InnerExitingBlock->getTerminator();
-  Instruction *BI = BranchInst::Create(InnerExitBlock, InnerExitingBlock);
+  Instruction *BI = UncondBrInst::Create(InnerExitBlock, InnerExitingBlock);
   BI->setDebugLoc(Term->getDebugLoc());
   Term->eraseFromParent();
 
@@ -838,7 +822,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                        ScalarEvolution *SE, AssumptionCache *AC,
                        const TargetTransformInfo *TTI) {
-  if (!WidenIV) {
+  if (!FI.Opts.loop_flatten_widen_iv) {
     LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
     return false;
   }
@@ -862,7 +846,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  SCEVExpander Rewriter(*SE, DL, "loopflatten");
+  SCEVExpander Rewriter(*SE, "loopflatten");
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   unsigned ElimExt = 0;
   unsigned Widened = 0;
@@ -873,6 +857,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                      true /* HasGuards */, true /* UsePostIncrementRanges */);
     if (!WidePhi)
       return false;
+    SE->forgetLoop(FI.OuterLoop);
     LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());
     LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIV.NarrowIV->dump());
     Deleted = RecursivelyDeleteDeadPHINode(WideIV.NarrowIV);
@@ -948,7 +933,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   } else if (OR == OverflowResult::MayOverflow) {
     Module *M = FI.OuterLoop->getHeader()->getParent()->getParent();
     const DataLayout &DL = M->getDataLayout();
-    if (!VersionLoops) {
+    if (!FI.Opts.loop_flatten_version_loops) {
       LLVM_DEBUG(dbgs() << "Multiply might overflow, not flattening\n");
       return false;
     } else if (!DL.isLegalInteger(
@@ -967,14 +952,12 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     // emit 'false' as the branch condition, and add our own check afterwards.
     BasicBlock *CheckBlock = FI.OuterLoop->getLoopPreheader();
     ArrayRef<RuntimePointerCheck> Checks(nullptr, nullptr);
-    LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE);
+    LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE, MSSAU);
     LVer.versionLoop();
 
     // Check for overflow by calculating the new tripcount using
     // umul_with_overflow and then checking if it overflowed.
-    BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
-    assert(Br->isConditional() &&
-           "Expected LoopVersioning to generate a conditional branch");
+    CondBrInst *Br = cast<CondBrInst>(CheckBlock->getTerminator());
     assert(match(Br->getCondition(), m_Zero()) &&
            "Expected branch condition to be false");
     IRBuilder<> Builder(Br);
@@ -1009,7 +992,8 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr,
+                             &AR.AC);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)

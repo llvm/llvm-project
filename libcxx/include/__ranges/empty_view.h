@@ -20,20 +20,20 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 template <class _Tp>
   requires is_object_v<_Tp>
 class empty_view : public view_interface<empty_view<_Tp>> {
 public:
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* begin() noexcept { return nullptr; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* end() noexcept { return nullptr; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* data() noexcept { return nullptr; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 0; }
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return true; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* begin() noexcept { return nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* end() noexcept { return nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr _Tp* data() noexcept { return nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 0; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return true; }
 };
 
 template <class _Tp>
@@ -47,8 +47,8 @@ inline constexpr empty_view<_Tp> empty{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_EMPTY_VIEW_H

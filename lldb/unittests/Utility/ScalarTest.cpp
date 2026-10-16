@@ -118,11 +118,40 @@ TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;
   int c = 4;
+  unsigned d = 0xFFFFFFFF;
+  unsigned short e = 0xFFFF;
   Scalar a_scalar(a);
   Scalar b_scalar(b);
   Scalar c_scalar(c);
+  Scalar d_scalar(d);
+  Scalar e_scalar(e);
   ASSERT_EQ(a >> c, a_scalar >> c_scalar);
   ASSERT_EQ(b >> c, b_scalar >> c_scalar);
+  ASSERT_EQ(d >> c, d_scalar >> c_scalar);
+  ASSERT_EQ(e >> c, e_scalar >> c_scalar);
+}
+
+TEST(ScalarTest, RightShiftOutOfRange) {
+  // A shift of exactly the width is a sign fill for a signed value. This is
+  // in range for the APSInt shift, which asserts only past the width.
+  Scalar a(static_cast<int32_t>(-1));
+  a >>= Scalar(static_cast<uint32_t>(32));
+  EXPECT_EQ(a, Scalar(static_cast<int32_t>(-1)));
+
+  // A shift past the width fills the same way.
+  Scalar b(static_cast<int32_t>(0x12345678));
+  b >>= Scalar(static_cast<uint32_t>(1000));
+  EXPECT_EQ(b, Scalar(static_cast<int32_t>(0)));
+
+  // An unsigned value is zero filled instead.
+  Scalar c(static_cast<uint32_t>(0xFFFFFFFF));
+  c >>= Scalar(static_cast<uint32_t>(33));
+  EXPECT_EQ(c, Scalar(static_cast<uint32_t>(0)));
+
+  // The shift amount itself can need more than 64 bits to represent.
+  Scalar d(static_cast<int32_t>(-1));
+  d >>= Scalar(APInt::getOneBitSet(128, 70));
+  EXPECT_EQ(d, Scalar(static_cast<int32_t>(-1)));
 }
 
 TEST(ScalarTest, GetBytes) {
@@ -191,6 +220,24 @@ TEST(ScalarTest, GetData) {
   EXPECT_THAT(
       get_data(llvm::APSInt::getMaxValue(/*numBits=*/9, /*Unsigned=*/true)),
       vec({0x01, 0xff}));
+
+  auto get_data_with_size = [](llvm::APInt v, size_t size) {
+    DataExtractor data;
+    Scalar(v).GetData(data, size);
+    return data.GetData().vec();
+  };
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(16, 0x0123), 8),
+              vec({0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x23}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(32, 0x01234567), 4),
+              vec({0x01, 0x23, 0x45, 0x67}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(48, 0xABCD01234567UL), 4),
+              vec({0x01, 0x23, 0x45, 0x67}));
+
+  EXPECT_THAT(get_data_with_size(llvm::APInt(64, 0xABCDEF0123456789UL), 2),
+              vec({0x67, 0x89}));
 }
 
 TEST(ScalarTest, SetValueFromData) {
@@ -269,6 +316,26 @@ TEST(ScalarTest, ExtractBitfield) {
   EXPECT_EQ(u_scalar, b2);
 }
 
+TEST(ScalarTest, ExtractBitfieldOutOfRange) {
+  uint32_t len = sizeof(int32_t) * 8;
+
+  // A bit offset of exactly the width is a sign fill for a signed value. This
+  // is in range for the APSInt shift, which asserts only past the width.
+  Scalar s_scalar(static_cast<int32_t>(-1));
+  ASSERT_TRUE(s_scalar.ExtractBitfield(len, len));
+  EXPECT_EQ(s_scalar, Scalar(static_cast<int32_t>(-1)));
+
+  // A bit offset past the width fills the same way.
+  Scalar s_far_scalar(static_cast<int32_t>(-1));
+  ASSERT_TRUE(s_far_scalar.ExtractBitfield(len, 1000));
+  EXPECT_EQ(s_far_scalar, Scalar(static_cast<int32_t>(-1)));
+
+  // An unsigned value is zero filled instead.
+  Scalar u_scalar(static_cast<uint32_t>(0xFFFFFFFF));
+  ASSERT_TRUE(u_scalar.ExtractBitfield(len, 1000));
+  EXPECT_EQ(u_scalar, Scalar(static_cast<uint32_t>(0)));
+}
+
 template <typename T> static std::string ScalarGetValue(T value) {
   StreamString stream;
   Scalar(value).GetValue(stream, false);
@@ -303,7 +370,7 @@ TEST(ScalarTest, GetValue) {
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
 }
 
-TEST(ScalarTest, LongLongAssigmentOperator) {
+TEST(ScalarTest, LongLongAssignmentOperator) {
   Scalar ull;
   ull = std::numeric_limits<unsigned long long>::max();
   EXPECT_EQ(std::numeric_limits<unsigned long long>::max(), ull.ULongLong());
@@ -319,6 +386,12 @@ TEST(ScalarTest, Division) {
   Scalar r = lhs / rhs;
   EXPECT_TRUE(r.IsValid());
   EXPECT_EQ(r, Scalar(2.5));
+
+  Scalar inf = Scalar(1) / Scalar(0.0f);
+  Scalar int0 = Scalar(1) / Scalar(0);
+  Scalar ref_inf = llvm::APFloat::getInf(llvm::APFloat::IEEEsingle());
+  EXPECT_EQ(inf, ref_inf);
+  EXPECT_FALSE(int0.IsValid());
 }
 
 TEST(ScalarTest, Promotion) {

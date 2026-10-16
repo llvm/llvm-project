@@ -1,18 +1,19 @@
-set(LLVM_LINK_COMPONENTS nativecodegen)
-
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+set(LLVM_LINK_COMPONENTS nativecodegen AsmParser BitReader Core)
 
 add_mlir_unittest(MLIRTargetLLVMTests
+  ImportGEPInRange.cpp
   SerializeNVVMTarget.cpp
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
 DEPENDS
-  ${dialect_libs}
+  MLIRRegisterAllDialects
 )
 
 mlir_target_link_libraries(MLIRTargetLLVMTests
   PRIVATE
   MLIRTargetLLVM
+  MLIRTargetLLVMIRImport
+  MLIRDLTIDialect
   MLIRNVVMTarget
   MLIRROCDLTarget
   MLIRGPUDialect

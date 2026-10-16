@@ -1,17 +1,25 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS InstrumentationOptions.td)
+tablegen(LLVM InstrumentationOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(InstrumentationOptionsTableGen)
+
 add_llvm_component_library(LLVMInstrumentation
   AddressSanitizer.cpp
+  AllocToken.cpp
   BoundsChecking.cpp
   CGProfile.cpp
   ControlHeightReduction.cpp
+  CopyProf.cpp
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
   BlockCoverageInference.cpp
-  MemProfiler.cpp
+  MemProfInstrumentation.cpp
+  MemProfUse.cpp
   MemorySanitizer.cpp
   NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
-  InstrOrderFile.cpp
   InstrProfiling.cpp
+  InstrumentationOptions.cpp
   KCFI.cpp
   LowerAllowCheckPass.cpp
   PGOCtxProfFlattening.cpp
@@ -31,6 +39,7 @@ add_llvm_component_library(LLVMInstrumentation
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
 
   DEPENDS
+  InstrumentationOptionsTableGen
   intrinsics_gen
 
   LINK_COMPONENTS
@@ -38,6 +47,7 @@ add_llvm_component_library(LLVMInstrumentation
   Core
   Demangle
   MC
+  Option
   Support
   TargetParser
   TransformUtils

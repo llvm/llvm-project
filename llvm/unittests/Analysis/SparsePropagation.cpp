@@ -232,8 +232,7 @@ protected:
   SparseSolver<TestLatticeKey, TestLatticeVal> Solver;
 
 public:
-  SparsePropagationTest()
-      : M("", Context), Builder(Context), Solver(&Lattice) {}
+  SparsePropagationTest() : M("", Context), Builder(M), Solver(&Lattice) {}
 };
 } // namespace
 
@@ -278,12 +277,12 @@ TEST_F(SparsePropagationTest, MarkBlockExecutable) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -319,12 +318,12 @@ TEST_F(SparsePropagationTest, GlobalVariableConstant) {
 /// @gv = internal global i64
 ///
 /// define internal void @f() {
-///   store i64 0, i64* @gv
+///   store i64 0, ptr @gv
 ///   ret void
 /// }
 ///
 /// define internal void @g() {
-///   store i64 1, i64* @gv
+///   store i64 1, ptr @gv
 ///   ret void
 /// }
 ///
@@ -357,9 +356,9 @@ TEST_F(SparsePropagationTest, GlobalVariableOverDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:
@@ -397,9 +396,9 @@ TEST_F(SparsePropagationTest, FunctionDefined) {
 
 /// Test that we propagate information through function returns.
 ///
-/// define internal i64 @f(i1* %cond) {
+/// define internal i64 @f(ptr %cond) {
 /// if:
-///   %0 = load i1, i1* %cond
+///   %0 = load i1, ptr %cond
 ///   br i1 %0, label %then, label %else
 ///
 /// then:

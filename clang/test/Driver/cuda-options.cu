@@ -141,7 +141,13 @@
 
 
 // Verify that --[no-]cuda-include-ptx arguments are handled correctly.
-// a) by default we're not including PTX for all GPUs.
+// a) by default we're not including PTX for any GPU.
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
+// RUN:   --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
+// RUN:   -c %s 2>&1 \
+// RUN: | FileCheck -check-prefixes FATBIN-COMMON,NOPTX-SM60,NOPTX-SM52 %s
+
+// a2) --cuda-include-ptx=all includes PTX for all GPUs.
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
 // RUN:   --cuda-include-ptx=all --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
 // RUN:   -c %s 2>&1 \
@@ -243,10 +249,10 @@
 
 // INCLUDES-DEVICE:fatbinary
 // INCLUDES-DEVICE-DAG: "--create" "[[FATBINARY:[^"]*]]"
-// INCLUDES-DEVICE-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE]]"
-// INCLUDES-DEVICE-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE]]"
-// INCLUDES-DEVICE2-DAG: "--image=profile=sm_{{[0-9]+}},file=[[CUBINFILE2]]"
-// INCLUDES-DEVICE2-DAG: "--image=profile=compute_{{[0-9]+}},file=[[PTXFILE2]]"
+// INCLUDES-DEVICE-DAG: "--image3=kind=elf,sm={{[0-9]+}},file=[[CUBINFILE]]"
+// INCLUDES-DEVICE-DAG: "--image3=kind=ptx,sm={{[0-9]+}},file=[[PTXFILE]]"
+// INCLUDES-DEVICE2-DAG: "--image3=kind=elf,sm={{[0-9]+}},file=[[CUBINFILE2]]"
+// INCLUDES-DEVICE2-DAG: "--image3=kind=ptx,sm={{[0-9]+}},file=[[PTXFILE2]]"
 
 // Match host-side preprocessor job with -save-temps.
 // HOST-SAVE: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -260,10 +266,10 @@
 // THINLTOWPD-SAME: "-flto=thin"
 // HOST-NOT: "-fcuda-is-device"
 // There is only one GPU binary after combining it with fatbinary!
-// INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
-// INCLUDES-DEVICE-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
+// INCLUDES-DEVICE2-NOT: "-foffload-include-binary"
+// INCLUDES-DEVICE-SAME: "-foffload-include-binary" "[[FATBINARY]]"
 // There is only one GPU binary after combining it with fatbinary.
-// INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
+// INCLUDES-DEVICE2-NOT: "-foffload-include-binary"
 // THINLTOWPD-SAME: "-fwhole-program-vtables"
 // HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
 // HOST-NOSAVE-SAME: "-x" "cuda"
@@ -273,7 +279,7 @@
 // HOST-AS: "-o" "{{.*}}.o" "[[HOSTOUTPUT]]"
 
 // Match no GPU code inclusion.
-// NOINCLUDES-DEVICE-NOT: "-fcuda-include-gpubinary"
+// NOINCLUDES-DEVICE-NOT: "-foffload-include-binary"
 
 // Match no host compilation.
 // NOHOST-NOT: "-cc1" "-triple"
@@ -288,9 +294,9 @@
 
 // FATBIN-COMMON:fatbinary
 // FATBIN-COMMON: "--create" "[[FATBINARY:[^"]*]]"
-// FATBIN-COMMON: "--image=profile=sm_52,file=
-// PTX-SM52: "--image=profile=compute_52,file=
-// NOPTX-SM52-NOT: "--image=profile=compute_52,file=
-// FATBIN-COMMON: "--image=profile=sm_60,file=
-// PTX-SM60: "--image=profile=compute_60,file=
-// NOPTX-SM60-NOT: "--image=profile=compute_60,file=
+// FATBIN-COMMON: "--image3=kind=elf,sm=52,file=
+// PTX-SM52: "--image3=kind=ptx,sm=52,file=
+// NOPTX-SM52-NOT: "--image3=kind=ptx,sm=52,file=
+// FATBIN-COMMON: "--image3=kind=elf,sm=60,file=
+// PTX-SM60: "--image3=kind=ptx,sm=60,file=
+// NOPTX-SM60-NOT: "--image3=kind=ptx,sm=60,file=

@@ -17,11 +17,13 @@
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RPC_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Error.h"
 
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <thread>
 
@@ -34,21 +36,23 @@ class DeviceImageTy;
 } // namespace plugin
 
 /// A generic class implementing the interface between the RPC server provided
-/// by the 'libc' project and 'libomptarget'. If the RPC server is not availible
+/// by the 'libc' project and 'libomptarget'. If the RPC server is not available
 /// these routines will perform no action.
 struct RPCServerTy {
 public:
+  using RPCServerCallbackTy = uint32_t (*)(void *, uint32_t);
+
   /// Initializes the handles to the number of devices we may need to service.
   RPCServerTy(plugin::GenericPluginTy &Plugin);
 
   /// Deinitialize the associated memory and resources.
-  llvm::Error shutDown();
+  llvm::Error shutDown(plugin::GenericPluginTy &Plugin);
 
   /// Initialize the worker thread.
   llvm::Error startThread();
 
   /// Check if this device image is using an RPC server. This checks for the
-  /// precense of an externally visible symbol in the device image that will
+  /// presence of an externally visible symbol in the device image that will
   /// be present whenever RPC code is called.
   llvm::Expected<bool> isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
                                         plugin::GenericGlobalHandlerTy &Handler,
@@ -65,12 +69,28 @@ public:
   /// memory associated with the k
   llvm::Error deinitDevice(plugin::GenericDeviceTy &Device);
 
+  /// Drain any pending requests the device pushed without freeing the server.
+  void flushDevice(plugin::GenericDeviceTy &Device);
+
+  /// Register a custom callback for the RPC server to manage.
+  void registerCallback(RPCServerCallbackTy FnPtr);
+
+  /// Set the sleep/wake functions for interrupt-driven RPC serving.
+  void setSleepFunction(std::function<void()> Sleep,
+                        std::function<void()> Wake);
+
 private:
   /// Array from this device's identifier to its attached devices.
   std::unique_ptr<void *[]> Buffers;
 
   /// Array of associated devices. These must be alive as long as the server is.
   std::unique_ptr<plugin::GenericDeviceTy *[]> Devices;
+
+  /// Mutex that guards accesses to the buffers and device array.
+  std::mutex BufferMutex{};
+
+  /// A list of callbacks the server will attempt to handle.
+  llvm::SmallSetVector<RPCServerCallbackTy, 0> Callbacks;
 
   /// A helper class for running the user thread that handles the RPC interface.
   /// Because we only need to check the RPC server while any kernels are
@@ -80,7 +100,7 @@ private:
     std::thread Worker;
 
     /// A boolean indicating whether or not the worker thread should continue.
-    std::atomic<bool> Running;
+    std::atomic<uint32_t> Running;
 
     /// The number of currently executing kernels across all devices that need
     /// the server thread to be running.
@@ -90,17 +110,32 @@ private:
     std::condition_variable CV;
     std::mutex Mutex;
 
+    /// A reference to the main server's mutex.
+    std::mutex &BufferMutex;
+
+    /// A reference to the main server's callbacks.
+    llvm::SmallSetVector<RPCServerCallbackTy, 0> &Callbacks;
+
     /// A reference to all the RPC interfaces that the server is handling.
     llvm::ArrayRef<void *> Buffers;
 
     /// A reference to the associated generic device for the buffer.
     llvm::ArrayRef<plugin::GenericDeviceTy *> Devices;
 
+    // Sleep and wake functions to handle when the server is idle.
+    std::function<void()> SleepFunction;
+    std::function<void()> WakeFunction;
+
     /// Initialize the worker thread to run in the background.
     ServerThread(void *Buffers[], plugin::GenericDeviceTy *Devices[],
-                 size_t Length)
-        : Running(false), NumUsers(0), CV(), Mutex(), Buffers(Buffers, Length),
-          Devices(Devices, Length) {}
+                 size_t Length, std::mutex &BufferMutex,
+                 llvm::SmallSetVector<RPCServerCallbackTy, 0> &Callbacks)
+        : Running(false), NumUsers(0), CV(), Mutex(), BufferMutex(BufferMutex),
+          Callbacks(Callbacks), Buffers(Buffers, Length),
+          Devices(Devices, Length), SleepFunction([]() {
+            std::this_thread::sleep_for(std::chrono::microseconds(250));
+          }),
+          WakeFunction([]() {}) {}
 
     ~ServerThread() { assert(!Running && "Thread not shut down explicitly\n"); }
 

@@ -10,10 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class SkipSummaryDataFormatterTestCase(TestBase):
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24462, Data formatters have problems on Windows",
-    )
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()

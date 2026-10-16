@@ -7,6 +7,7 @@ add_header_library(
   HDRS
     file_actions.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.spawn
 )
 

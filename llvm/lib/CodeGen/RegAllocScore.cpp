@@ -23,13 +23,18 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-cl::opt<double> CopyWeight("regalloc-copy-weight", cl::init(0.2), cl::Hidden);
-cl::opt<double> LoadWeight("regalloc-load-weight", cl::init(4.0), cl::Hidden);
-cl::opt<double> StoreWeight("regalloc-store-weight", cl::init(1.0), cl::Hidden);
-cl::opt<double> CheapRematWeight("regalloc-cheap-remat-weight", cl::init(0.2),
-                                 cl::Hidden);
-cl::opt<double> ExpensiveRematWeight("regalloc-expensive-remat-weight",
-                                     cl::init(1.0), cl::Hidden);
+
+static cl::opt<double> CopyWeight("regalloc-copy-weight", cl::init(0.2),
+                                  cl::Hidden);
+static cl::opt<double> LoadWeight("regalloc-load-weight", cl::init(4.0),
+                                  cl::Hidden);
+static cl::opt<double> StoreWeight("regalloc-store-weight", cl::init(1.0),
+                                   cl::Hidden);
+static cl::opt<double> CheapRematWeight("regalloc-cheap-remat-weight",
+                                        cl::init(0.2), cl::Hidden);
+static cl::opt<double> ExpensiveRematWeight("regalloc-expensive-remat-weight",
+                                            cl::init(1.0), cl::Hidden);
+
 #define DEBUG_TYPE "regalloc-score"
 
 RegAllocScore &RegAllocScore::operator+=(const RegAllocScore &Other) {
@@ -76,8 +81,7 @@ llvm::calculateRegAllocScore(const MachineFunction &MF,
         return MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
       },
       [&](const MachineInstr &MI) {
-        return MF.getSubtarget().getInstrInfo()->isTriviallyReMaterializable(
-            MI);
+        return MF.getSubtarget().getInstrInfo()->isReMaterializable(MI);
       });
 }
 

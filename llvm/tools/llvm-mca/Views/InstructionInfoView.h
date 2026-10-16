@@ -56,6 +56,7 @@ class InstructionInfoView : public InstructionView {
   CodeEmitter &CE;
   bool PrintEncodings;
   bool PrintBarriers;
+  bool PrintFullInfo;
   using UniqueInst = std::unique_ptr<Instruction>;
   ArrayRef<UniqueInst> LoweredInsts;
   const InstrumentManager &IM;
@@ -65,16 +66,25 @@ class InstructionInfoView : public InstructionView {
 
   struct InstructionInfoViewData {
     unsigned NumMicroOpcodes = 0;
+    // Latency + ForwardingDelayCycles: negative ReadAdvance
     unsigned Latency = 0;
+    // ReadAvance Bypasses cycles: Latency - ReadAdvance (positive value)
+    unsigned Bypass = 0;
     std::optional<double> RThroughput = 0.0;
     bool mayLoad = false;
     bool mayStore = false;
     bool hasUnmodeledSideEffects = false;
+    StringRef OpcodeName = "";
+    std::string Resources = "";
   };
   using IIVDVec = SmallVector<InstructionInfoViewData, 16>;
 
   /// Place the data into the array of InstructionInfoViewData IIVD.
   void collectData(MutableArrayRef<InstructionInfoViewData> IIVD) const;
+
+  /// Extract comment (//, /* */) from the source assembly placed just after
+  /// instruction.
+  void getComment(raw_ostream &OS, const llvm::MCInst &Inst) const;
 
 public:
   InstructionInfoView(const llvm::MCSubtargetInfo &ST,
@@ -82,11 +92,13 @@ public:
                       bool ShouldPrintEncodings, llvm::ArrayRef<llvm::MCInst> S,
                       llvm::MCInstPrinter &IP,
                       ArrayRef<UniqueInst> LoweredInsts,
-                      bool ShouldPrintBarriers, const InstrumentManager &IM,
+                      bool ShouldPrintBarriers, bool ShouldPrintFullInfo,
+                      const InstrumentManager &IM,
                       const InstToInstrumentsT &InstToInstruments)
       : InstructionView(ST, IP, S), MCII(II), CE(C),
         PrintEncodings(ShouldPrintEncodings),
-        PrintBarriers(ShouldPrintBarriers), LoweredInsts(LoweredInsts), IM(IM),
+        PrintBarriers(ShouldPrintBarriers), PrintFullInfo(ShouldPrintFullInfo),
+        LoweredInsts(LoweredInsts), IM(IM),
         InstToInstruments(InstToInstruments) {}
 
   void printView(llvm::raw_ostream &OS) const override;

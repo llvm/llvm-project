@@ -18,13 +18,14 @@
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
 namespace orc {
 
-class ReOptimizeLayer : public IRLayer, public ResourceManager {
+class LLVM_ABI ReOptimizeLayer : public IRLayer, public ResourceManager {
 public:
   using ReOptMaterializationUnitID = uint64_t;
 
@@ -59,10 +60,19 @@ public:
     this->ProfilerFunc = std::move(ProfilerFunc);
   }
 
+  /// Add ORC Runtime-lite support for reoptimization to PlatformJD.
+  ///
+  /// This allows reoptimization to be used without the ORC runtime.
+  ///
+  /// WARNING: For use with in-process JITs only.
+  /// WARNING: Do not use if the ORC runtime is loaded, as this will introduce
+  ///          duplicate definitions.
+  Error addOrcRTLiteSupport(JITDylib &PlatformJD, const DataLayout &DL);
+
   /// Registers reoptimize runtime dispatch handlers to given PlatformJD. The
   /// reoptimization request will not be handled if dispatch handler is not
   /// registered by using this function.
-  Error reigsterRuntimeFunctions(JITDylib &PlatformJD);
+  Error registerRuntimeFunctions(JITDylib &PlatformJD);
 
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
@@ -86,7 +96,8 @@ public:
 
   // Create IR reoptimize request fucntion call.
   static void createReoptimizeCall(Module &M, Instruction &IP,
-                                   GlobalVariable *ArgBuffer);
+                                   ReOptMaterializationUnitID MUID,
+                                   unsigned CurVersion);
 
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstK,
@@ -123,9 +134,9 @@ private:
       return CurVersion;
     }
 
-    bool tryStartReoptimize();
-    void reoptimizeSucceeded();
-    void reoptimizeFailed();
+    LLVM_ABI bool tryStartReoptimize();
+    LLVM_ABI void reoptimizeSucceeded();
+    LLVM_ABI void reoptimizeFailed();
 
   private:
     std::mutex Mutex;
@@ -146,10 +157,6 @@ private:
 
   void rt_reoptimize(SendErrorFn SendResult, ReOptMaterializationUnitID MUID,
                      uint32_t CurVersion);
-
-  static Expected<Constant *>
-  createReoptimizeArgBuffer(Module &M, ReOptMaterializationUnitID MUID,
-                            uint32_t CurVersion);
 
   ReOptMaterializationUnitState &
   createMaterializationUnitState(const ThreadSafeModule &TSM);

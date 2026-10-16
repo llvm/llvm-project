@@ -8,7 +8,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireThreadSupport
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TlsGlobalTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
 
@@ -35,25 +39,26 @@ class TlsGlobalTestCase(TestBase):
                 lambda: self.runCmd("settings remove target.env-vars " + self.dylibPath)
             )
 
-    # TLS works differently on Windows, this would need to be implemented
-    # separately.
-    @skipIfWindows
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
-    @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
+    @skipIf(oslist=["linux"], archs=["aarch64"])
+    @skipIf(
+        oslist=["windows"], debug_info=["dwarf"], bugnumber="https://llvm.org/PR196083"
+    )
+    @skipIf(
+        oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux", "windows"])
+    )
     @expectedFailureIf(lldbplatformutil.xcode15LinkerBug())
     def test(self):
         """Test thread-local storage."""
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
-        if self.platformIsDarwin():
-            self.registerSharedLibrariesWithTarget(target, ["liba.dylib"])
+        env = self.registerSharedLibrariesWithTarget(target, ["a_dylib"])
 
         line1 = line_number("main.c", "// thread breakpoint")
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", line1, num_expected_locations=1, loc_exact=True
         )
-        self.runCmd("run", RUN_SUCCEEDED)
+        target.LaunchSimple(None, env, self.get_process_working_directory())
 
         # The stop reason of the thread should be breakpoint.
         self.runCmd("process status", "Get process status")
@@ -65,18 +70,29 @@ class TlsGlobalTestCase(TestBase):
 
         # BUG: sometimes lldb doesn't change threads to the stopped thread.
         # (unrelated to this test).
-        self.runCmd("thread select 2", "Change thread")
+        is_second_thread = lambda thread: "fn_static" in (
+            thread.GetFrameAtIndex(0).GetFunctionName() or ""
+        )
+        if not is_second_thread(self.thread()):
+            thread = next((t for t in self.process() if is_second_thread(t)), None)
+            self.assertIsNotNone(thread, "could not find the fn_static thread")
+            self.runCmd(f"thread select {thread.GetIndexID()}", "Change thread")
 
         # Check that TLS evaluates correctly within the thread.
         self.expect(
             "expr var_static",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 88"],
+            patterns=[r"\(int\) \$.* = 88"],
+        )
+        self.expect(
+            "expr var_static2",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=[r"\(int\) \$.* = 66"],
         )
         self.expect(
             "expr var_shared",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 66"],
+            patterns=[r"\(int\) \$.* = 66"],
         )
 
         # Continue on the main thread
@@ -102,10 +118,15 @@ class TlsGlobalTestCase(TestBase):
         self.expect(
             "expr var_static",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 44"],
+            patterns=[r"\(int\) \$.* = 44"],
+        )
+        self.expect(
+            "expr var_static2",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=[r"\(int\) \$.* = 22"],
         )
         self.expect(
             "expr var_shared",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 33"],
+            patterns=[r"\(int\) \$.* = 33"],
         )

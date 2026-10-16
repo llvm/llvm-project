@@ -119,16 +119,14 @@ define void @legal_vzmovl_2i32_8i32(ptr %in, ptr %out) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2i32_8i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -169,7 +167,7 @@ define void @legal_vzmovl_2f32_8f32(ptr %in, ptr %out) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -178,7 +176,7 @@ define void @legal_vzmovl_2f32_8f32(ptr %in, ptr %out) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

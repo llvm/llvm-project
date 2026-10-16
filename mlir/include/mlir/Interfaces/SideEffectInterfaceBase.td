@@ -22,9 +22,12 @@ include "mlir/IR/OpBase.td"
 //===----------------------------------------------------------------------===//
 
 // A generic resource that can be attached to a general base side effect.
-class Resource<string resourceName> {
+class Resource<string resourceName, code resourceParameters = [{}]> {
   /// The resource that the associated effect is being applied to.
   string name = resourceName;
+
+  /// The optional effect parameters attribute.
+  code parameters = resourceParameters;
 }
 
 // An intrinsic resource that lives in the ::mlir::SideEffects namespace.
@@ -140,7 +143,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
               }] # baseEffect # [{>> & effects) {
       getEffects(effects);
       ::llvm::erase_if(effects, [&](auto &it) {
-        return it.getResource() != resource;
+        return it.getResource()->getResourceID() != resource->getResourceID();
       });
     }
   }];
@@ -176,6 +179,9 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
 
   /// The resource that the effect is being applied to.
   string resource = resourceReference.name;
+
+  /// The optional effect parameters attribute.
+  code parameters = resourceReference.parameters;
 
   /// The stage of side effects, we use it to describe the sequence in which
   /// effects occur.

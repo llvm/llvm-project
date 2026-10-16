@@ -22,7 +22,7 @@
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 1-byte data relocations not supported
   .byte undef-.
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Unsupported pc-relative fixup kind
+// CHECK: :[[@LINE+1]]:16: error: expected relocatable expression
   ldr x0, [x1, :lo12:undef-.]
 
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid fixup for 8-bit load/store instruction
@@ -31,7 +31,7 @@
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid fixup for 16-bit load/store instruction
   ldrh w0, [x1, :gottprel_lo12:undef]
 
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: LP64 32-bit load/store relocation not supported (ILP32 eqv: TLSIE_LD32_GOTTPREL_LO12_NC)
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 32-bit load/store relocation is not supported in LP64
   ldr w0, [x1, :gottprel_lo12:undef]
 
 

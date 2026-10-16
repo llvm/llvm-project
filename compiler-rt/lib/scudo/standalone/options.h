@@ -19,6 +19,7 @@ enum class OptionBit {
   MayReturnNull,
   FillContents0of2,
   FillContents1of2,
+  DeallocAlignMismatch,
   DeallocTypeMismatch,
   DeleteSizeMismatch,
   TrackAllocationStacks,

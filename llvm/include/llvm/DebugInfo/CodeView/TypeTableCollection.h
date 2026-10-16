@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLECOLLECTION_H
 
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/StringSaver.h"
 
 #include <vector>
@@ -17,7 +18,7 @@
 namespace llvm {
 namespace codeview {
 
-class TypeTableCollection : public TypeCollection {
+class LLVM_ABI TypeTableCollection : public TypeCollection {
 public:
   explicit TypeTableCollection(ArrayRef<ArrayRef<uint8_t>> Records);
 

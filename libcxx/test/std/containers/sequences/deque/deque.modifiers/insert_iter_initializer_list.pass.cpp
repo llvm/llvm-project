@@ -19,9 +19,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::deque<int> d(10, 1);
     std::deque<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
     assert(d.size() == 14);
@@ -41,8 +40,8 @@ int main(int, char**)
     assert(d[12] == 1);
     assert(d[13] == 1);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-    }
-    {
+  }
+  {
     std::deque<int, min_allocator<int>> d(10, 1);
     std::deque<int, min_allocator<int>>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
     assert(d.size() == 14);
@@ -62,7 +61,7 @@ int main(int, char**)
     assert(d[12] == 1);
     assert(d[13] == 1);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-    }
+  }
 
   return 0;
 }

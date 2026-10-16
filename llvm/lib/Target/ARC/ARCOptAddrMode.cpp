@@ -45,7 +45,6 @@ static cl::opt<unsigned> ArcKillAddrMode("arc-kill-addr-mode", cl::init(0),
 #define KILL_PASS() ((ArcKillAddrMode & 0x0010) != 0)
 
 FunctionPass *createARCOptAddrMode();
-void initializeARCOptAddrModePass(PassRegistry &);
 } // end namespace llvm
 
 namespace {
@@ -61,7 +60,6 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -117,11 +115,6 @@ private:
 } // end anonymous namespace
 
 char ARCOptAddrMode::ID = 0;
-INITIALIZE_PASS_BEGIN(ARCOptAddrMode, OPTADDRMODE_NAME, OPTADDRMODE_DESC, false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ARCOptAddrMode, OPTADDRMODE_NAME, OPTADDRMODE_DESC, false,
-                    false)
 
 // Return true if \p Off can be used as immediate offset
 // operand of load/store instruction (S9 literal)
@@ -216,7 +209,7 @@ MachineInstr *ARCOptAddrMode::tryToCombine(MachineInstr &Ldst) {
   }
 
   Register B = Base.getReg();
-  if (Register::isStackSlot(B) || !Register::isVirtualRegister(B)) {
+  if (!Register::isVirtualRegister(B)) {
     LLVM_DEBUG(dbgs() << "[ABAW] Base is not VReg\n");
     return nullptr;
   }

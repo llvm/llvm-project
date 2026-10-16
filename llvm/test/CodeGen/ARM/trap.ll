@@ -4,16 +4,8 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin | FileCheck %s -check-prefix=DARWIN
 ; RUN: llc < %s -mtriple=arm-apple-darwin -trap-func=_trap | FileCheck %s -check-prefix=FUNC
 ; RUN: llc < %s -mtriple=arm-apple-darwin -trap-func=_trap -O0 | FileCheck %s -check-prefix=FUNC
-; RUN: llc < %s -mtriple=armv7 -mattr=+nacl-trap | FileCheck %s -check-prefix=NACL
 ; RUN: llc < %s -mtriple=armv7 | FileCheck %s -check-prefix=ARM
 ; RUN: llc < %s -mtriple=thumbv7 | FileCheck %s -check-prefix=THUMB
-
-; RUN: llc -mtriple=armv7 -mattr=+nacl-trap -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -d --triple=armv7 --mattr=+nacl-trap - \
-; RUN:  | FileCheck %s -check-prefix=ENCODING-NACL
-; RUN: llc -verify-machineinstrs -fast-isel -mtriple=armv7 -mattr=+nacl-trap -filetype=obj %s -o - \
-; RUN:  | llvm-objdump -d --triple=armv7 --mattr=+nacl-trap - \
-; RUN:  | FileCheck %s -check-prefix=ENCODING-NACL
 
 ; RUN: llc -mtriple=armv7 -filetype=obj %s -o - \
 ; RUN:  | llvm-objdump -d --triple=armv7 - \
@@ -46,10 +38,6 @@ entry:
 ; FUNC:      bl __trap
 ; FUNC-NEXT: add sp, sp, #4
 
-; NACL-LABEL: t:
-; NACL:      .inst 0xe7fedef0
-; NACL-NEXT: add sp, sp, #4
-
 ; ARM-LABEL: t:
 ; ARM:      .inst 0xe7ffdefe
 ; ARM-NEXT: add sp, sp, #4
@@ -57,8 +45,6 @@ entry:
 ; THUMB-LABEL: t:
 ; THUMB:      .inst.n 0xdefe
 ; THUMB-NEXT: add sp, #4
-
-; ENCODING-NACL: e7fedef0    trap
 
 ; ENCODING-ARM: e7ffdefe    trap
 
@@ -82,10 +68,6 @@ entry:
 ; FUNC:      bl __trap
 ; FUNC-NEXT: add sp, sp, #4
 
-; NACL-LABEL: t2:
-; NACL:      bkpt #0
-; NACL-NEXT: add sp, sp, #4
-
 ; ARM-LABEL: t2:
 ; ARM:      bkpt #0
 ; ARM-NEXT: add sp, sp, #4
@@ -93,8 +75,6 @@ entry:
 ; THUMB-LABEL: t2:
 ; THUMB:      bkpt #0
 ; THUMB-NEXT: add sp, #4
-
-; ENCODING-NACL: e1200070    bkpt #0
 
 ; ENCODING-ARM: e1200070    bkpt #0
 

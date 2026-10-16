@@ -29,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -52,13 +51,12 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &TuneCPU, const std::string &FS,
+PPCSubtarget::PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
+                           StringRef FS, StringRef ABIName,
                            const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), TargetTriple(TT),
-      IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
-              TargetTriple.getArch() == Triple::ppc64le),
-      TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS),
+      TargetABI(PPCTargetMachine::computeABI(TT, ABIName)), TM(TM),
+      FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<PPCSelectionDAGInfo>();
 
@@ -87,10 +85,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
-    if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+    if (getTargetTriple().getSubArch() == Triple::PPCSubArch_spe)
       CPUName = "e500";
     else
-      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(TargetTriple));
+      CPUName = std::string(PPC::getNormalizedPPCTargetCPU(getTargetTriple()));
   }
 
   // Determine the CPU to schedule for.
@@ -107,7 +105,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (IsPPC64 && has64BitSupport())
     Use64BitRegs = true;
 
-  if (TargetTriple.isPPC32SecurePlt())
+  if (getTargetTriple().isPPC32SecurePlt())
     IsSecurePlt = true;
 
   if (HasSPE && IsPPC64)
@@ -126,7 +124,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   IsLittleEndian = TM.isLittleEndian();
 
   if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
-    if (!TargetTriple.isOSAIX() || !IsPPC64)
+    if (!getTargetTriple().isOSAIX() || !IsPPC64)
       report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute is "
                          "only supported on AIX in "
                          "64-bit mode.\n",
@@ -143,9 +141,13 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
                          false);
   }
 
-  if (HasAIXShLibTLSModelOpt && (!TargetTriple.isOSAIX() || !IsPPC64))
+  if (HasAIXShLibTLSModelOpt && (!getTargetTriple().isOSAIX() || !IsPPC64))
     report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
                        "is only supported on AIX in 64-bit mode.\n",
+                       false);
+
+  if (UsePointerGlueHelper && !getTargetTriple().isOSAIX())
+    report_fatal_error("use-ptrgl-helper feature is only supported on AIX\n",
                        false);
 }
 
@@ -171,7 +173,7 @@ void PPCSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
 }
 
 void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                       unsigned NumRegionInstrs) const {
+                                       const SchedRegion &Region) const {
   // The GenericScheduler that we use defaults to scheduling bottom up only.
   // We want to schedule from both the top and the bottom and so we set
   // OnlyBottomUp to false.
@@ -247,8 +249,7 @@ CodeModel::Model PPCSubtarget::getCodeModel(const TargetMachine &TM,
   return ModuleModel;
 }
 
-bool PPCSubtarget::isELFv2ABI() const { return TM.isELFv2ABI(); }
-bool PPCSubtarget::isPPC64() const { return TM.isPPC64(); }
+bool PPCSubtarget::isELFv2ABI() const { return TargetABI == PPC_ABI_ELFv2; }
 
 bool PPCSubtarget::isUsingPCRelativeCalls() const {
   return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&

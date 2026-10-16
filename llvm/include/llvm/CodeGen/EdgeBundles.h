@@ -56,14 +56,14 @@ public:
   const MachineFunction *getMachineFunction() const { return MF; }
 
   /// view - Visualize the annotated bipartite CFG with Graphviz.
-  void view() const;
+  LLVM_ABI void view() const;
 
   // Handle invalidation for the new pass manager
-  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
-                  MachineFunctionAnalysisManager::Invalidator &Inv);
+  LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &Inv);
 };
 
-class EdgeBundlesWrapperLegacy : public MachineFunctionPass {
+class LLVM_ABI EdgeBundlesWrapperLegacy : public MachineFunctionPass {
 public:
   static char ID;
   EdgeBundlesWrapperLegacy() : MachineFunctionPass(ID) {}
@@ -83,7 +83,8 @@ class EdgeBundlesAnalysis : public AnalysisInfoMixin<EdgeBundlesAnalysis> {
 
 public:
   using Result = EdgeBundles;
-  EdgeBundles run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI EdgeBundles run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

@@ -15,12 +15,12 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Frontend/ParserActions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Parser/provenance.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/StringOstream.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -60,6 +60,9 @@ class CompilerInstance {
   std::unique_ptr<Fortran::semantics::SemanticsContext> semaContext;
 
   std::unique_ptr<llvm::TargetMachine> targetMachine;
+
+  /// LLVM pass plugins.
+  std::vector<std::unique_ptr<llvm::PassPlugin>> passPlugins;
 
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream = &llvm::errs();
@@ -108,20 +111,15 @@ class CompilerInstance {
   /// @}
 
 public:
-  explicit CompilerInstance();
+  CompilerInstance();
+  explicit CompilerInstance(std::shared_ptr<CompilerInvocation> invocation);
 
   ~CompilerInstance();
 
   /// @name Compiler Invocation
   /// {
 
-  CompilerInvocation &getInvocation() {
-    assert(invocation && "Compiler instance has no invocation!");
-    return *invocation;
-  };
-
-  /// Replace the current invocation.
-  void setInvocation(std::shared_ptr<CompilerInvocation> value);
+  CompilerInvocation &getInvocation() { return *invocation; };
 
   /// }
   /// @name File manager
@@ -147,6 +145,12 @@ public:
   /// }
   /// @name Semantic analysis
   /// {
+
+  Fortran::semantics::SemanticsContext &createNewSemanticsContext() {
+    semaContext =
+        getInvocation().getSemanticsCtx(*allCookedSources, getTargetMachine());
+    return *semaContext;
+  }
 
   Fortran::semantics::SemanticsContext &getSemanticsContext() {
     return *semaContext;
@@ -256,7 +260,19 @@ public:
   createDefaultOutputFile(bool binary = true, llvm::StringRef baseInput = "",
                           llvm::StringRef extension = "");
 
-  /// {
+  /// }
+  /// @name LLVM Pass Plugins
+  /// @{
+
+  void addPassPlugin(std::unique_ptr<llvm::PassPlugin> plugin) {
+    passPlugins.emplace_back(std::move(plugin));
+  }
+
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return passPlugins;
+  }
+
+  /// }
   /// @name Target Machine
   /// {
 
@@ -342,7 +358,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-  createDiagnostics(clang::DiagnosticOptions *opts,
+  createDiagnostics(clang::DiagnosticOptions &opts,
                     clang::DiagnosticConsumer *client = nullptr,
                     bool shouldOwnClient = true);
   void createDiagnostics(clang::DiagnosticConsumer *client = nullptr,

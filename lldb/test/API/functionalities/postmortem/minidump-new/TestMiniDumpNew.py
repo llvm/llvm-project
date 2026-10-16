@@ -117,7 +117,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertIn("SIGSEGV", stop_description)
 
     @skipIfLLVMTargetMissing("X86")
@@ -153,7 +153,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
 
     def test_snapshot_minidump_null_exn_code(self):
@@ -164,7 +164,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
 
     def check_register_unsigned(self, set, name, expected):
@@ -198,7 +198,7 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
         registers = thread.GetFrameAtIndex(0).GetRegisters()
         # Verify the GPR registers are all correct
@@ -245,8 +245,8 @@ class MiniDumpNewTestCase(TestBase):
             self.check_register_string_value(fpr, "d%i" % (i), d, lldb.eFormatHex)
             self.check_register_string_value(fpr, "s%i" % (i), s, lldb.eFormatHex)
             self.check_register_string_value(fpr, "h%i" % (i), h, lldb.eFormatHex)
-        self.check_register_unsigned(gpr, "fpsr", 0x55667788)
-        self.check_register_unsigned(gpr, "fpcr", 0x99AABBCC)
+        self.check_register_unsigned(fpr, "fpsr", 0x55667788)
+        self.check_register_unsigned(fpr, "fpcr", 0x99AABBCC)
 
     def verify_arm_registers(self, apple=False):
         """
@@ -261,11 +261,11 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
         registers = thread.GetFrameAtIndex(0).GetRegisters()
         # Verify the GPR registers are all correct
-        # Verify x0 - x31 register values
+        # Verify r0 - r15 register values
         gpr = registers.GetValueAtIndex(0)
         for i in range(1, 16):
             self.check_register_unsigned(gpr, "r%i" % (i), i + 1)
@@ -284,7 +284,7 @@ class MiniDumpNewTestCase(TestBase):
         # Verify the FPR registers are all correct
         fpr = registers.GetValueAtIndex(1)
         # Check d0 - d31
-        self.check_register_unsigned(gpr, "fpscr", 0x55667788AABBCCDD)
+        self.check_register_unsigned(fpr, "fpscr", 0x55667788AABBCCDD)
         for i in range(32):
             value = (i + 1) | (i + 1) << 8 | (i + 1) << 32 | (i + 1) << 48
             self.check_register_unsigned(fpr, "d%i" % (i), value)
@@ -522,7 +522,7 @@ class MiniDumpNewTestCase(TestBase):
         for i in range(2):
             thread = self.process.GetThreadAtIndex(i)
             self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
-            stop_description = thread.GetStopDescription(256)
+            stop_description = thread.stop_description
             self.assertIn("SIGSEGV", stop_description)
 
     def test_breakpoint_on_minidump(self):
@@ -539,7 +539,7 @@ class MiniDumpNewTestCase(TestBase):
             process = target.LoadCore(core)
             self.assertTrue(process, VALID_PROCESS)
             thread = process.GetThreadAtIndex(0)
-            stop_reason = thread.GetStopDescription(256)
+            stop_reason = thread.stop_description
             self.assertIn("breakpoint 1.1", stop_reason)
         finally:
             if os.path.isfile(core):

@@ -16,6 +16,9 @@ function(cxx_abi_list_identifier result triple abi_library abi_version unstable 
   elseif("${triple}" MATCHES "freebsd")
     # Ignore the major and minor versions of freebsd targets.
     string(REGEX REPLACE "freebsd[0-9]+\\.[0-9]+" "freebsd" triple "${triple}")
+  elseif("${triple}" MATCHES "aix")
+    # Ignore the V.R.M.F version string of aix targets.
+    string(REGEX REPLACE "aix[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+" "aix" triple "${triple}")
   endif()
   list(APPEND abi_properties "${triple}")
   list(APPEND abi_properties "${abi_library}")

@@ -18,6 +18,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -41,13 +42,13 @@ namespace classic {
 ///
 /// All interactions with the MC layer that is used to build the debug
 /// information binary representation are handled in this class.
-class DwarfStreamer : public DwarfEmitter {
+class LLVM_ABI DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(DWARFLinkerBase::OutputFileType OutFileType,
                 raw_pwrite_stream &OutFile,
                 DWARFLinkerBase::MessageHandlerTy Warning)
       : OutFile(OutFile), OutFileType(OutFileType), WarningHandler(Warning) {}
-  virtual ~DwarfStreamer() = default;
+  ~DwarfStreamer() override = default;
 
   static Expected<std::unique_ptr<DwarfStreamer>> createStreamer(
       const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
@@ -105,10 +106,10 @@ public:
   MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) override;
 
   /// Emit debug ranges(.debug_ranges, .debug_rnglists) fragment.
-  void emitDwarfDebugRangeListFragment(const CompileUnit &Unit,
-                                       const AddressRanges &LinkedRanges,
-                                       PatchLocation Patch,
-                                       DebugDieValuePool &AddrPool) override;
+  Error emitDwarfDebugRangeListFragment(const CompileUnit &Unit,
+                                        const AddressRanges &LinkedRanges,
+                                        PatchLocation Patch,
+                                        DebugDieValuePool &AddrPool) override;
 
   /// Emit debug ranges(.debug_ranges, .debug_rnglists) footer.
   void emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
@@ -129,7 +130,7 @@ public:
                                  MCSymbol *EndLabel) override;
 
   /// Emit debug ranges(.debug_loc, .debug_loclists) fragment.
-  void emitDwarfDebugLocListFragment(
+  Error emitDwarfDebugLocListFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
       PatchLocation Patch, DebugDieValuePool &AddrPool) override;
@@ -149,10 +150,13 @@ public:
   }
 
   /// Emit .debug_line table entry for specified \p LineTable
-  void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
-                            const CompileUnit &Unit,
-                            OffsetsStringPool &DebugStrPool,
-                            OffsetsStringPool &DebugLineStrPool) override;
+  /// The optional parameter RowOffsets, if provided, will be populated with the
+  /// offsets of each line table row in the output .debug_line section.
+  void
+  emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                       const CompileUnit &Unit, OffsetsStringPool &DebugStrPool,
+                       OffsetsStringPool &DebugLineStrPool,
+                       std::vector<uint64_t> *RowOffsets = nullptr) override;
 
   uint64_t getLineSectionSize() const override { return LineSectionSize; }
 
@@ -218,6 +222,15 @@ private:
       WarningHandler(Warning, Context, nullptr);
   }
 
+  Expected<uint64_t> clampSecOffset(uint64_t Offset, dwarf::FormParams FP,
+                                    StringRef Section) {
+    if (Offset <= FP.getDwarfMaxOffset())
+      return Offset;
+    return createStringError(Section + " section offset 0x" +
+                             Twine::utohexstr(Offset) + " exceeds the " +
+                             dwarf::FormatString(FP.Format) + " limit");
+  }
+
   MCSection *getMCSection(DebugSectionKind SecKind);
 
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
@@ -225,24 +238,24 @@ private:
                           OffsetsStringPool &StringPool, uint64_t &OutOffset);
 
   /// Emit piece of .debug_ranges for \p LinkedRanges.
-  void emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
-                                         const AddressRanges &LinkedRanges,
-                                         PatchLocation Patch);
+  Error emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
+                                          const AddressRanges &LinkedRanges,
+                                          PatchLocation Patch);
 
   /// Emit piece of .debug_rnglists for \p LinkedRanges.
-  void emitDwarfDebugRngListsTableFragment(const CompileUnit &Unit,
-                                           const AddressRanges &LinkedRanges,
-                                           PatchLocation Patch,
-                                           DebugDieValuePool &AddrPool);
+  Error emitDwarfDebugRngListsTableFragment(const CompileUnit &Unit,
+                                            const AddressRanges &LinkedRanges,
+                                            PatchLocation Patch,
+                                            DebugDieValuePool &AddrPool);
 
   /// Emit piece of .debug_loc for \p LinkedRanges.
-  void emitDwarfDebugLocTableFragment(
+  Error emitDwarfDebugLocTableFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
       PatchLocation Patch);
 
   /// Emit piece of .debug_loclists for \p LinkedRanges.
-  void emitDwarfDebugLocListsTableFragment(
+  Error emitDwarfDebugLocListsTableFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
       PatchLocation Patch, DebugDieValuePool &AddrPool);
@@ -266,7 +279,8 @@ private:
       const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
       OffsetsStringPool &DebugLineStrPool);
   void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
-                         MCSymbol *LineEndSym, unsigned AddressByteSize);
+                         MCSymbol *LineEndSym, unsigned AddressByteSize,
+                         std::vector<uint64_t> *RowOffsets = nullptr);
   void emitIntOffset(uint64_t Offset, dwarf::DwarfFormat Format,
                      uint64_t &SectionSize);
   void emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
@@ -275,6 +289,7 @@ private:
 
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCObjectFileInfo> MOFI;
@@ -282,7 +297,6 @@ private:
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
   std::unique_ptr<MCSubtargetInfo> MSTI;
-  MCInstPrinter *MIP; // Owned by AsmPrinter
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;

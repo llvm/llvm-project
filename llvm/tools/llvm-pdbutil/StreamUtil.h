@@ -26,6 +26,7 @@ enum class StreamPurpose {
   DBI,
   TPI,
   IPI,
+  DXContainer,
   GlobalHash,
   PublicHash,
   TpiHash,
@@ -35,7 +36,7 @@ enum class StreamPurpose {
 
 struct StreamInfo {
 public:
-  StreamInfo() {}
+  StreamInfo() = default;
 
   uint32_t getModuleIndex() const { return *ModuleIndex; }
   StreamPurpose getPurpose() const { return Purpose; }

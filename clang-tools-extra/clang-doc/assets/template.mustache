@@ -1,0 +1,52 @@
+{{! 
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    
+    This file defines the template for generating Namespaces
+}}
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8"/>
+        <title>{{NamespaceTitle}}</title>
+    </head>
+    <h1>{{NamespaceTitle}}</h1>
+    {{#NamespaceComments}}
+    <p>Namespace Comment</p>
+    {{/NamespaceComments}}
+    {{#Namespace}}
+    <h2 id="Namespace">Namespace</h2>
+    <ul>
+        {{#Links}}
+        <li>
+            <a href="{{Link}}">{{Name}}</a>
+        </li>
+        {{/Links}}
+    </ul>
+    {{/Namespace}}
+    {{#Record}}
+    <h2 id="Class">Class</h2>
+    <ul>
+        {{#Links}}
+        <li>
+            <a href="{{Link}}">{{Name}}</a>
+        </li>
+        {{/Links}}
+    </ul>
+    {{/Record}}
+    {{#Function}}
+    <h2 id="Function">Function</h2>
+    <div>
+        {{#Obj}}
+        {{/Obj}}
+    </div>
+    {{/Function}}
+    {{#Enums}}
+    <h2 id="Enums">Enums</h2>
+    <div>
+        {{#Obj}}
+        {{/Obj}}
+    </div>
+    {{/Enums}}
+</html>

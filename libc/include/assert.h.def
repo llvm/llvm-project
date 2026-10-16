@@ -19,14 +19,14 @@
 
 #undef assert
 #ifdef NDEBUG
-#define assert(e) (void)0
+#define assert(...) ((void)0)
 #else
 #ifdef __cplusplus
 extern "C"
 #endif
 _Noreturn void __assert_fail(const char *, const char *, unsigned, const char *) __NOEXCEPT;
-#define assert(e)  \
-  ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
+#define assert(...)  \
+  ((__VA_ARGS__) ? ((void)0) : __assert_fail(#__VA_ARGS__, __FILE__, __LINE__, __PRETTY_FUNCTION__))
 #endif
 
 %%public_api()

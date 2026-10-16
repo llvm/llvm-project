@@ -10,8 +10,7 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -24,7 +23,8 @@ using namespace MIPatternMatch;
 
 std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                                  GISelKnownBits *KnownBits, bool CheckNUW) {
+                                  GISelValueTracking *ValueTracking,
+                                  bool CheckNUW) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT) {
     unsigned Offset;
@@ -55,15 +55,24 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   Register Base;
-  if (KnownBits && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      KnownBits->maskedValueIsZero(Base, APInt(32, Offset, /*isSigned=*/true)))
+  if (mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
+      (Def->getFlag(MachineInstr::Disjoint) ||
+       (ValueTracking && ValueTracking->maskedValueIsZero(
+                             Base, APInt(32, Offset, /*isSigned=*/true)))))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
   if (Def->getOpcode() == TargetOpcode::G_PTRTOINT) {
     MachineInstr *Base;
-    if (mi_match(Def->getOperand(1).getReg(), MRI,
-                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset)))) {
+    Register PtrAdd = Def->getOperand(1).getReg();
+    uint32_t Flags;
+    if (mi_match(PtrAdd, MRI,
+                 m_GPtrAdd(m_MInstr(Base), m_ICst(Offset), m_MIFlags(Flags)))) {
+      // Same check as for G_ADD; nuw comes from getelementptr inbounds.
+      if (CheckNUW && !(Flags & MachineInstr::NoUWrap)) {
+        assert(MRI.getType(Reg).getScalarSizeInBits() == 32);
+        return std::pair(Reg, 0);
+      }
       // If Base was int converted to pointer, simply return int and offset.
       if (Base->getOpcode() == TargetOpcode::G_INTTOPTR)
         return std::pair(Base->getOperand(1).getReg(), Offset);
@@ -91,22 +100,14 @@ void IntrinsicLaneMaskAnalyzer::initLaneMaskIntrinsics(MachineFunction &MF) {
       GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI);
       if (GI && GI->is(Intrinsic::amdgcn_if_break)) {
         S32S64LaneMask.insert(MI.getOperand(3).getReg());
-        findLCSSAPhi(MI.getOperand(0).getReg());
+        S32S64LaneMask.insert(MI.getOperand(0).getReg());
       }
 
       if (MI.getOpcode() == AMDGPU::SI_IF ||
           MI.getOpcode() == AMDGPU::SI_ELSE) {
-        findLCSSAPhi(MI.getOperand(0).getReg());
+        S32S64LaneMask.insert(MI.getOperand(0).getReg());
       }
     }
-  }
-}
-
-void IntrinsicLaneMaskAnalyzer::findLCSSAPhi(Register Reg) {
-  S32S64LaneMask.insert(Reg);
-  for (const MachineInstr &LCSSAPhi : MRI.use_instructions(Reg)) {
-    if (LCSSAPhi.isPHI())
-      S32S64LaneMask.insert(LCSSAPhi.getOperand(0).getReg());
   }
 }
 
@@ -120,48 +121,75 @@ static LLT getReadAnyLaneSplitTy(LLT Ty) {
   }
 
   // Large scalars and 64-bit pointers
-  return LLT::scalar(32);
+  return LLT::integer(32);
 }
 
-static Register buildReadAnyLane(MachineIRBuilder &B, Register VgprSrc,
-                                 const RegisterBankInfo &RBI);
+template <typename ReadLaneFnTy>
+static Register buildReadLane(MachineIRBuilder &, Register,
+                              const RegisterBankInfo &, ReadLaneFnTy);
 
-static void unmergeReadAnyLane(MachineIRBuilder &B,
-                               SmallVectorImpl<Register> &SgprDstParts,
-                               LLT UnmergeTy, Register VgprSrc,
-                               const RegisterBankInfo &RBI) {
+template <typename ReadLaneFnTy>
+static void
+unmergeReadAnyLane(MachineIRBuilder &B, SmallVectorImpl<Register> &SgprDstParts,
+                   LLT UnmergeTy, Register VgprSrc, const RegisterBankInfo &RBI,
+                   ReadLaneFnTy BuildRL) {
   const RegisterBank *VgprRB = &RBI.getRegBank(AMDGPU::VGPRRegBankID);
   auto Unmerge = B.buildUnmerge({VgprRB, UnmergeTy}, VgprSrc);
   for (unsigned i = 0; i < Unmerge->getNumOperands() - 1; ++i) {
-    SgprDstParts.push_back(buildReadAnyLane(B, Unmerge.getReg(i), RBI));
+    SgprDstParts.push_back(buildReadLane(B, Unmerge.getReg(i), RBI, BuildRL));
   }
 }
 
-static Register buildReadAnyLane(MachineIRBuilder &B, Register VgprSrc,
-                                 const RegisterBankInfo &RBI) {
+template <typename ReadLaneFnTy>
+static Register buildReadLane(MachineIRBuilder &B, Register VgprSrc,
+                              const RegisterBankInfo &RBI,
+                              ReadLaneFnTy BuildRL) {
   LLT Ty = B.getMRI()->getType(VgprSrc);
   const RegisterBank *SgprRB = &RBI.getRegBank(AMDGPU::SGPRRegBankID);
   if (Ty.getSizeInBits() == 32) {
-    return B.buildInstr(AMDGPU::G_AMDGPU_READANYLANE, {{SgprRB, Ty}}, {VgprSrc})
-        .getReg(0);
+    Register SgprDst = B.getMRI()->createVirtualRegister({SgprRB, Ty});
+    return BuildRL(B, SgprDst, VgprSrc).getReg(0);
   }
 
   SmallVector<Register, 8> SgprDstParts;
-  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI);
+  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI,
+                     BuildRL);
 
   return B.buildMergeLikeInstr({SgprRB, Ty}, SgprDstParts).getReg(0);
 }
 
-void AMDGPU::buildReadAnyLane(MachineIRBuilder &B, Register SgprDst,
-                              Register VgprSrc, const RegisterBankInfo &RBI) {
+template <typename ReadLaneFnTy>
+static void buildReadLane(MachineIRBuilder &B, Register SgprDst,
+                          Register VgprSrc, const RegisterBankInfo &RBI,
+                          ReadLaneFnTy BuildReadLane) {
   LLT Ty = B.getMRI()->getType(VgprSrc);
   if (Ty.getSizeInBits() == 32) {
-    B.buildInstr(AMDGPU::G_AMDGPU_READANYLANE, {SgprDst}, {VgprSrc});
+    BuildReadLane(B, SgprDst, VgprSrc);
     return;
   }
 
   SmallVector<Register, 8> SgprDstParts;
-  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI);
+  unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI,
+                     BuildReadLane);
 
   B.buildMergeLikeInstr(SgprDst, SgprDstParts).getReg(0);
+}
+
+void AMDGPU::buildReadAnyLane(MachineIRBuilder &B, Register SgprDst,
+                              Register VgprSrc, const RegisterBankInfo &RBI) {
+  return buildReadLane(
+      B, SgprDst, VgprSrc, RBI,
+      [](MachineIRBuilder &B, Register SgprDst, Register VgprSrc) {
+        return B.buildInstr(AMDGPU::G_AMDGPU_READANYLANE, {SgprDst}, {VgprSrc});
+      });
+}
+
+void AMDGPU::buildReadFirstLane(MachineIRBuilder &B, Register SgprDst,
+                                Register VgprSrc, const RegisterBankInfo &RBI) {
+  return buildReadLane(
+      B, SgprDst, VgprSrc, RBI,
+      [](MachineIRBuilder &B, Register SgprDst, Register VgprSrc) {
+        return B.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, SgprDst)
+            .addReg(VgprSrc);
+      });
 }

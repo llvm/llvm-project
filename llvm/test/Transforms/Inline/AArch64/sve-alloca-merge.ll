@@ -14,8 +14,8 @@ entry:
 
 define i64 @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK: call void @llvm.lifetime.start.p0(i64 -1, ptr %{{.*}})
-; CHECK: call void @llvm.lifetime.end.p0(i64 -1, ptr %{{.*}})
+; CHECK: call void @llvm.lifetime.start.p0(ptr %{{.*}})
+; CHECK: call void @llvm.lifetime.end.p0(ptr %{{.*}})
 entry:
   %a = alloca <vscale x 2 x i64>, align 16
   store <vscale x 2 x i64> zeroinitializer, ptr %a, align 16

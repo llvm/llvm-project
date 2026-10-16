@@ -59,7 +59,7 @@ public:
   struct InitOptions;
   void Init(const InitOptions *options = nullptr);
 
-  thread_return_t ThreadStart(tid_t os_id,
+  thread_return_t ThreadStart(ThreadID os_id,
                               atomic_uintptr_t *signal_thread_is_registered);
 
   uptr stack_top();

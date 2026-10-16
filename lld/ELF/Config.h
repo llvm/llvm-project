@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -52,28 +53,36 @@ class OutputSection;
 class LinkerScript;
 class TargetInfo;
 struct Ctx;
-struct Partition;
 struct PhdrEntry;
 
+class ARMExidxSyntheticSection;
 class BssSection;
+class BuildIdSection;
+class EhFrameHeader;
+class EhFrameSection;
 class GdbIndexSection;
+class GnuHashTableSection;
 class GotPltSection;
 class GotSection;
-class IBTPltSection;
+class HashTableSection;
 class IgotPltSection;
 class InputSection;
 class IpltSection;
+class MemtagAndroidNote;
+class MemtagGlobalDescriptors;
 class MipsGotSection;
-class MipsRldMapSection;
-class PPC32Got2Section;
 class PPC64LongBranchTargetSection;
+class PackageMetadataNote;
 class PltSection;
 class RelocationBaseSection;
+class RelrBaseSection;
 class RelroPaddingSection;
 class StringTableSection;
 class SymbolTableBaseSection;
 class SymtabShndxSection;
 class SyntheticSection;
+class VersionDefinitionSection;
+class VersionTableSection;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -136,6 +145,32 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
+// For -z zicfilp=
+enum class ZicfilpPolicy { Implicit, Never, Unlabeled, FuncSig };
+
+// For -z zicfiss=
+enum class ZicfissPolicy { Implicit, Never, Always };
+
+// For some options that resemble -z bti-report={none,warning,error}
+enum class ReportPolicy { None, Warning, Error };
+
+// Describes the signing schema for a file using the PAuth ABI extension.
+// Two files are considered compatible when both `platform` and `version` match.
+// The pair (0, 0) is reserved to indicate incompatibility with the PAuth ABI.
+struct AArch64PauthAbiCoreInfo {
+  uint64_t platform;
+  uint64_t version;
+  // Returns true if the core info is not the reserved (0, 0) value.
+  bool isValid() const { return platform || version; }
+  static constexpr size_t size() { return sizeof(platform) + sizeof(version); }
+  bool operator==(const AArch64PauthAbiCoreInfo &other) const {
+    return platform == other.platform && version == other.version;
+  }
+  bool operator!=(const AArch64PauthAbiCoreInfo &other) const {
+    return !(*this == other);
+  }
+};
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -151,27 +186,48 @@ struct VersionDefinition {
   SmallVector<SymbolVersion, 0> localPatterns;
 };
 
+// Deferred file-load job: one per input, expanded by loadFiles().
+struct LoadJob {
+  enum Kind : uint8_t { Obj, Bitcode, Archive, Shared, Binary };
+  llvm::MemoryBufferRef mbref;
+  llvm::StringRef path;
+  Kind kind;
+  bool inWholeArchive;
+  bool lazy;
+  bool asNeeded;
+  bool withLOption;
+  uint32_t groupId;
+  SmallVector<std::unique_ptr<InputFile>, 0> out;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> thinBufs;
+  SmallVector<std::pair<std::string, llvm::StringRef>, 0> tarEntries;
+};
+
 class LinkerDriver {
 public:
   LinkerDriver(Ctx &ctx);
   LinkerDriver(LinkerDriver &) = delete;
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
+  void addFile(std::unique_ptr<ELFFileBase> ef);
   void addLibrary(StringRef name);
 
 private:
   Ctx &ctx;
   void createFiles(llvm::opt::InputArgList &args);
+  void loadFiles();
   void inferMachineType();
+  void waitForLTOCleanup();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
-  bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
-                        uint64_t offsetInArchive, bool lazy);
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
 
   // True if we are in --start-lib and --end-lib.
   bool inLib = false;
+
+  // True inside createFiles(): defers to loadFiles().
+  bool deferLoad = false;
+  SmallVector<LoadJob, 0> loadJobs;
 
   std::unique_ptr<BitcodeCompiler> lto;
   SmallVector<std::unique_ptr<InputFile>, 0> files, ltoObjectFiles;
@@ -223,12 +279,20 @@ struct Config {
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
   llvm::StringRef whyExtract;
+  llvm::SmallVector<llvm::GlobPattern, 0> whyLive;
   llvm::StringRef cmseInputLib;
   llvm::StringRef cmseOutputLib;
-  StringRef zBtiReport = "none";
-  StringRef zCetReport = "none";
-  StringRef zPauthReport = "none";
-  StringRef zGcsReport = "none";
+  ReportPolicy zBtiReport = ReportPolicy::None;
+  llvm::StringRef zBtiReportSource;
+  ReportPolicy zCetReport = ReportPolicy::None;
+  ReportPolicy zPauthReport = ReportPolicy::None;
+  ReportPolicy zGcsReport = ReportPolicy::None;
+  llvm::StringRef zGcsReportSource;
+  ReportPolicy zGcsReportDynamic = ReportPolicy::None;
+  ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
+  ReportPolicy zZicfilpUnlabeledReport = ReportPolicy::None;
+  ReportPolicy zZicfilpFuncSigReport = ReportPolicy::None;
+  ReportPolicy zZicfissReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -237,12 +301,18 @@ struct Config {
   llvm::StringRef thinLTOPrefixReplaceNativeObject;
   std::string rpath;
   llvm::SmallVector<VersionDefinition, 0> versionDefinitions;
+  std::optional<llvm::DenseSet<llvm::StringRef>> retainSymbols;
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;
+  llvm::StringRef dtltoDistributor;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+  llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
@@ -264,6 +334,14 @@ struct Config {
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
   CGProfileSortKind callGraphProfileSort;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
+  bool bpVerboseSectionOrderer = false;
+  bool branchToBranch = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
@@ -287,12 +365,10 @@ struct Config {
   bool fixCortexA53Errata843419;
   bool fixCortexA8;
   bool formatBinary = false;
-  bool fortranCommon;
   bool gcSections;
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
-  bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
@@ -306,7 +382,6 @@ struct Config {
   bool mipsN32Abi = false;
   bool mmapOutputFile;
   bool nmagic;
-  bool noDynamicLinker = false;
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;
@@ -317,7 +392,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
-  bool printGcSections;
+  llvm::StringRef printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
   std::optional<uint64_t> randomizeSectionPadding;
@@ -331,6 +406,7 @@ struct Config {
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
+  bool singleXoRx;
   bool shared;
   bool symbolic;
   bool isStatic = false;
@@ -354,6 +430,7 @@ struct Config {
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
+  bool zDynamicUndefined;
   bool zForceBti;
   bool zForceIbt;
   bool zGlobal;
@@ -361,8 +438,10 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
+  bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
+  bool zMarkPlt;
   bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;
@@ -379,6 +458,8 @@ struct Config {
   bool zText;
   bool zRetpolineplt;
   bool zWxneeded;
+  ZicfilpPolicy zZicfilp;
+  ZicfissPolicy zZicfiss;
   DiscardPolicy discard;
   GnuStackKind zGnustack;
   ICFLevel icf;
@@ -407,7 +488,7 @@ struct Config {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
-  StringRef packageMetadata;
+  SmallVector<uint8_t, 0> packageMetadata;
 
   // The following config options do not directly correspond to any
   // particular command line options.
@@ -439,11 +520,6 @@ struct Config {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to set the DF_STATIC_TLS flag to an output file, which
-  // works as a hint to the dynamic loader that the shared object contains code
-  // compiled with the initial-exec TLS model.
-  bool hasTlsIe = false;
-
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;
 
@@ -469,17 +545,18 @@ struct Config {
   // 4 for ELF32, 8 for ELF64.
   int wordsize;
 
-  // Mode of MTE to write to the ELF note. Should be one of NT_MEMTAG_ASYNC (for
-  // async), NT_MEMTAG_SYNC (for sync), or NT_MEMTAG_LEVEL_NONE (for none). If
-  // async or sync is enabled, write the ELF note specifying the default MTE
-  // mode.
-  int androidMemtagMode;
+  // Mode of MTE to write to the dynamic array. Should be one of NT_MEMTAG_ASYNC
+  // (for async), NT_MEMTAG_SYNC (for sync), or NT_MEMTAG_LEVEL_NONE (for none).
+  // If async or sync is enabled, write the tag specifying the default MTE mode.
+  int memtagMode;
   // Signal to the dynamic loader to enable heap MTE.
-  bool androidMemtagHeap;
+  bool memtagHeap;
   // Signal to the dynamic loader that this binary expects stack MTE. Generally,
   // this means to map the primary and thread stacks as PROT_MTE. Note: This is
   // not supported on Android 11 & 12.
-  bool androidMemtagStack;
+  bool memtagStack;
+  // Whether to emit the Android-specific legacy memtag note.
+  bool memtagAndroidNote;
 
   // When using a unified pre-link LTO pipeline, specify the backend LTO mode.
   LtoKind ltoKind = LtoKind::Default;
@@ -519,33 +596,48 @@ struct UndefinedDiag {
   bool isWarning;
 };
 
-// Linker generated sections which can be used as inputs and are not specific to
-// a partition.
+// Linker generated sections which can be used as inputs.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
-  std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
+  std::unique_ptr<BuildIdSection> buildId;
+  std::unique_ptr<EhFrameHeader> ehFrameHdr;
+  std::unique_ptr<EhFrameSection> ehFrame;
+  std::unique_ptr<GnuHashTableSection> gnuHashTab;
+  std::unique_ptr<GotPltSection> gotPlt;
+  std::unique_ptr<GotSection> got;
+  std::unique_ptr<HashTableSection> hashTab;
+  std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<IpltSection> iplt;
+  std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
+  std::unique_ptr<MemtagGlobalDescriptors> memtagGlobalDescriptors;
+  std::unique_ptr<PackageMetadataNote> packageMetadataNote;
+  std::unique_ptr<PltSection> plt;
+  std::unique_ptr<RelocationBaseSection> relaDyn;
+  std::unique_ptr<RelocationBaseSection> relaPlt;
+  std::unique_ptr<RelrBaseSection> relrAuthDyn;
+  std::unique_ptr<RelrBaseSection> relrDyn;
+  std::unique_ptr<RelroPaddingSection> relroPadding;
+  std::unique_ptr<StringTableSection> dynStrTab;
+  std::unique_ptr<SymbolTableBaseSection> dynSymTab;
+  std::unique_ptr<SyntheticSection> dynamic;
   std::unique_ptr<SyntheticSection> gnuProperty;
   std::unique_ptr<SyntheticSection> gnuStack;
-  std::unique_ptr<GotSection> got;
-  std::unique_ptr<GotPltSection> gotPlt;
-  std::unique_ptr<IgotPltSection> igotPlt;
-  std::unique_ptr<RelroPaddingSection> relroPadding;
+  std::unique_ptr<SyntheticSection> ibtPlt;
+  std::unique_ptr<SyntheticSection> verNeed;
+  std::unique_ptr<VersionDefinitionSection> verDef;
+  std::unique_ptr<VersionTableSection> verSym;
+
   std::unique_ptr<SyntheticSection> armCmseSGSection;
+  std::unique_ptr<ARMExidxSyntheticSection> armExidx;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;
   std::unique_ptr<SyntheticSection> mipsReginfo;
-  std::unique_ptr<MipsRldMapSection> mipsRldMap;
-  std::unique_ptr<SyntheticSection> partEnd;
-  std::unique_ptr<SyntheticSection> partIndex;
-  std::unique_ptr<PltSection> plt;
-  std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
-  std::unique_ptr<RelocationBaseSection> relaPlt;
+  std::unique_ptr<SyntheticSection> mipsRldMap;
+  std::unique_ptr<SyntheticSection> ppc32Got2;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;
   std::unique_ptr<GdbIndexSection> gdbIndex;
@@ -553,6 +645,10 @@ struct InStruct {
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;
   std::unique_ptr<SymtabShndxSection> symTabShndx;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
+  std::unique_ptr<SyntheticSection> riscvAttributes;
+  std::unique_ptr<SyntheticSection> dynDbg;
+  std::unique_ptr<SyntheticSection> dynDbgNote;
 };
 
 struct Ctx : CommonLinkerContext {
@@ -564,8 +660,8 @@ struct Ctx : CommonLinkerContext {
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart = nullptr;
-  Partition *mainPart = nullptr;
   PhdrEntry *tlsPhdr = nullptr;
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
   struct OutSections {
     std::unique_ptr<OutputSection> elfHeader;
     std::unique_ptr<OutputSection> programHeaders;
@@ -575,7 +671,6 @@ struct Ctx : CommonLinkerContext {
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
-  std::vector<Partition> partitions;
 
   InStruct in;
 
@@ -620,6 +715,9 @@ struct Ctx : CommonLinkerContext {
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
   SmallVector<Symbol *, 0> synthesizedSymbols;
+  // ifunc resolver symbol clones for IRELATIVE. Linker relaxation adjusts
+  // these.
+  SmallVector<Defined *, 0> irelativeSyms;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -655,10 +753,10 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // Dummy Undefined for relocations without a symbol.
+  Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
   bool hasDynsym = false;
-  // True if SHT_LLVM_SYMPART is used.
-  std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
   std::atomic<bool> hasTlsIe{false};
   // True if we need to reserve two .got entries for local-dynamic TLS model.
@@ -675,6 +773,10 @@ struct Ctx : CommonLinkerContext {
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
 
+  // Used to assert removeUnusedSyntheticSections-removed sections cannot become
+  // needed again.
+  SmallVector<SyntheticSection *, 0> removedSyntheticSections;
+
   // The set of TOC entries (.toc + addend) for which we should not apply
   // toc-indirect to toc-relative relaxation. const Symbol * refers to the
   // STT_SECTION symbol associated to the .toc input section.
@@ -684,7 +786,19 @@ struct Ctx : CommonLinkerContext {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
+
+  // True if performing the embedded unoptimized dynamic debugging relocatable
+  // link.
+  bool inDynDbgLink = false;
+  // True if performing dynamic debugging style relocatable link rather than a
+  // regular relocatable link.
+  bool dynDbgRelocatable = false;
+  // True if the link contains dynamic debugging.
+  bool hasDynDbg = false;
+  // Pointer to the output of the embedded unoptimized dynamic debugging
+  // relocatable link.
+  std::unique_ptr<llvm::FileOutputBuffer> dynDbgOutput;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
@@ -742,6 +856,14 @@ uint64_t errCount(Ctx &ctx);
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
+
+inline DiagLevel toDiagLevel(ReportPolicy policy) {
+  if (policy == ReportPolicy::Error)
+    return DiagLevel::Err;
+  else if (policy == ReportPolicy::Warning)
+    return DiagLevel::Warn;
+  return DiagLevel::None;
+}
 
 } // namespace lld::elf
 

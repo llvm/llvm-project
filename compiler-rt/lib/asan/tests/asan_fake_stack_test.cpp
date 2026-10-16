@@ -59,6 +59,9 @@ TEST(FakeStack, FlagsOffset) {
 }
 
 #if !defined(_WIN32)  // FIXME: Fails due to OOM on Windows.
+// Flaky on AArch64 Linux. See
+// https://github.com/llvm/llvm-project/issues/231115.
+#  if !(defined(__linux__) && defined(__aarch64__))
 TEST(FakeStack, CreateDestroy) {
   for (int i = 0; i < 1000; i++) {
     for (uptr stack_size_log = 20; stack_size_log <= 22; stack_size_log++) {
@@ -67,6 +70,7 @@ TEST(FakeStack, CreateDestroy) {
     }
   }
 }
+#endif
 #endif
 
 TEST(FakeStack, ModuloNumberOfFrames) {
@@ -113,6 +117,7 @@ TEST(FakeStack, Allocate) {
       uptr bytes_in_class = FakeStack::BytesInSizeClass(cid);
       for (uptr j = 0; j < n; j++) {
         FakeFrame *ff = fs->Allocate(stack_size_log, cid, 0);
+        EXPECT_EQ(reinterpret_cast<uptr>(ff) % bytes_in_class, 0U);
         uptr x = reinterpret_cast<uptr>(ff);
         EXPECT_TRUE(s.insert(std::make_pair(ff, cid)).second);
         EXPECT_EQ(x, fs->AddrIsInFakeStack(x));

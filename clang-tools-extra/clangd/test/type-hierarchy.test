@@ -22,6 +22,7 @@
 # CHECK-NEXT:        ],
 # CHECK-NEXT:        "symbolID": "8A991335E4E67D08"
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "detail": "Child2",
 # CHECK-NEXT:       "kind": 23,
 # CHECK-NEXT:       "name": "Child2",
 # CHECK-NEXT:       "range": {
@@ -44,6 +45,10 @@
 # CHECK-NEXT:           "line": 2
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         18,
+# CHECK-NEXT:         19
+# CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
@@ -62,7 +67,7 @@
 # CHECK-NEXT:         ],
 # CHECK-NEXT:         "symbolID": "ECDC0C46D75120F4"
 # CHECK-NEXT:       },
-# CHECK-NEXT:       "detail": "Child1",
+# CHECK-NEXT:       "detail": "",
 # CHECK-NEXT:       "kind": 23,
 # CHECK-NEXT:       "name": "Child1",
 # CHECK-NEXT:       "range": {
@@ -85,6 +90,10 @@
 # CHECK-NEXT:           "line": 1
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         18,
+# CHECK-NEXT:         19
+# CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:     }
 # CHECK-NEXT:  ]
@@ -113,7 +122,7 @@
 # CHECK-NEXT:        ],
 # CHECK-NEXT:        "symbolID": "A6576FE083F2949A"
 # CHECK-NEXT:       },
-# CHECK-NEXT:       "detail": "Child3",
+# CHECK-NEXT:       "detail": "",
 # CHECK-NEXT:       "kind": 23,
 # CHECK-NEXT:       "name": "Child3",
 # CHECK-NEXT:       "range": {
@@ -136,6 +145,10 @@
 # CHECK-NEXT:           "line": 3
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         18,
+# CHECK-NEXT:         19
+# CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:     }
 # CHECK-NEXT:  ]

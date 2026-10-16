@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=riscv32 -o - -run-pass=none -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -mtriple=riscv32 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: riscv-registered-target
 
 # This test checks that the G_BRJT is an indirect branch by leveraging RISCV's
@@ -6,15 +6,14 @@
 # test would crash.
 
 ---
-name:            test_jump_table
-legalized:       true
+name: test_jump_table
 tracksRegLiveness: true
 jumpTable:
-  kind:            block-address
+  kind: block-address
   entries:
-    - id:              0
-      blocks:          [ '%bb.0' ]
-body:             |
+    - id: 0
+      blocks: [ '%bb.0' ]
+body: |
   bb.0:
     liveins: $x0
     %0:_(s32) = COPY $x0
@@ -22,5 +21,4 @@ body:             |
 
     ; CHECK-NOT: Branch instruction is missing a basic block operand or isIndirectBranch property
     G_BRJT %1, %jump-table.0, %0
-
 ...

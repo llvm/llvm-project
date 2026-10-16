@@ -140,6 +140,12 @@ std::optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
   return std::nullopt;
 }
 
+/// The SDK is the directory where the system C headers, libraries, can be
+/// found. On POSIX platforms this is simply the root directory.
+llvm::Expected<llvm::StringRef> HostInfoPosix::GetSDKRoot(SDKOptions options) {
+  return "/";
+}
+
 static llvm::ManagedStatic<PosixUserIDResolver> g_user_id_resolver;
 
 UserIDResolver &HostInfoPosix::GetUserIDResolver() {
@@ -167,7 +173,7 @@ bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
       file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
     return true;
   file_spec.SetDirectory(HostInfo::GetProgramFileSpec().GetDirectory());
-  return !file_spec.GetDirectory().IsEmpty();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoPosix::ComputeSystemPluginsDirectory(FileSpec &file_spec) {

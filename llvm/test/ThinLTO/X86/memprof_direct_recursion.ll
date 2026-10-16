@@ -33,6 +33,7 @@
 ; RUN: llvm-lto2 run %t/b.o %t/a.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
+; RUN:  -combined-index-memprof-context \
 ; RUN:  -r=%t/b.o,_Z3fooi,plx \
 ; RUN:  -r=%t/b.o,aliasee,plx \
 ; RUN:  -r=%t/b.o,a \

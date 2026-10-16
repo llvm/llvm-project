@@ -10,9 +10,8 @@
 define float @f(float %a) {
 ; ILP32D-LABEL: f:
 ; ILP32D:       # %bb.0:
-; ILP32D-NEXT:    addi.w $a0, $zero, 1
+; ILP32D-NEXT:    lu12i.w $a0, 260096
 ; ILP32D-NEXT:    movgr2fr.w $fa1, $a0
-; ILP32D-NEXT:    ffint.s.w $fa1, $fa1
 ; ILP32D-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; ILP32D-NEXT:    ret
 ;
@@ -28,10 +27,9 @@ define float @f(float %a) {
 define double @g(double %a) {
 ; ILP32D-LABEL: g:
 ; ILP32D:       # %bb.0:
-; ILP32D-NEXT:    addi.w $a0, $zero, 1
-; ILP32D-NEXT:    movgr2fr.w $fa1, $a0
-; ILP32D-NEXT:    ffint.s.w $fa1, $fa1
-; ILP32D-NEXT:    fcvt.d.s $fa1, $fa1
+; ILP32D-NEXT:    movgr2fr.w $fa1, $zero
+; ILP32D-NEXT:    lu12i.w $a0, 261888
+; ILP32D-NEXT:    movgr2frh.w $fa1, $a0
 ; ILP32D-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; ILP32D-NEXT:    ret
 ;

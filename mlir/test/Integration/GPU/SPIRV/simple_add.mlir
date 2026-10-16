@@ -3,7 +3,16 @@
 // RUN: | FileCheck %s
 
 // CHECK: data =
-// CHECK-RAW: [[[7.7,    0,    0], [7.7,    0,    0], [7.7,    0,    0]], [[0,    7.7,    0], [0,    7.7,    0], [0,    7.7,    0]], [[0,    0,    7.7], [0,    0,    7.7], [0,    0,    7.7]]]
+// CHECK{LITERAL}: [[[7.7,    0,    0],
+// CHECK{LITERAL}: [7.7,    0,    0],
+// CHECK{LITERAL}: [7.7,    0,    0]],
+// CHECK{LITERAL}: [[0,    7.7,    0],
+// CHECK{LITERAL}: [0,    7.7,    0],
+// CHECK{LITERAL}: [0,    7.7,    0]],
+// CHECK{LITERAL}: [[0,    0,    7.7],
+// CHECK{LITERAL}: [0,    0,    7.7],
+// CHECK{LITERAL}: [0,    0,    7.7]]]
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<

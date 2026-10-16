@@ -1,0 +1,39 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --all %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s
+
+# CHECK-YAML2PDB: 4 | S_INLINESITE [size = 24]
+# CHECK-YAML2PDB:     inlinee = 0x1000 (<unknown UDT>), parent = 268, end = 508
+# CHECK-YAML2PDB:       0602      line 1 (+1)
+# CHECK-YAML2PDB:       0315      code 0x15 (+0x15)
+# CHECK-YAML2PDB:       040B      code end 0x20 (+0xB)
+# CHECK-YAML2PDB:       0000
+
+# CHECK-PDB2YAML: Modi:
+# CHECK-PDB2YAML:   Records:
+# CHECK-PDB2YAML:     - Kind:            S_INLINESITE
+# CHECK-PDB2YAML:       InlineSiteSym:
+# CHECK-PDB2YAML:         PtrParent:       268
+# CHECK-PDB2YAML:         PtrEnd:          508
+# CHECK-PDB2YAML:         Inlinee:         4096
+# CHECK-PDB2YAML:         AnnotationData:  [ 6, 2, 3, 21, 4, 11, 0, 0 ]
+
+---
+DbiStream:
+  Modules:
+    - Module:          'C:\Users\johannes\AppData\Local\Temp\inline_sites_live-2a62f2.o'
+      Modi:
+        Records:
+          - Kind:            S_INLINESITE
+            InlineSiteSym:
+              PtrParent:       268
+              PtrEnd:          508
+              Inlinee:         4096
+              AnnotationData:  [ 6, 2, 3, 21, 4, 11, 0, 0 ]
+  SectionHeaders:
+    - Name:            .text
+    - Name:            .rdata
+    - Name:            .pdata
+...

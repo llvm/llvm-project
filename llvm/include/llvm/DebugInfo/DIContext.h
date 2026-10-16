@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_DICONTEXT_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -209,9 +210,18 @@ struct DIDumpOptions {
   bool IsEH = false;
   bool DumpNonSkeleton = false;
   bool ShowAggregateErrors = false;
+  bool PrintRegisterOnly = false;
   std::string JsonErrSummaryFile;
+  /// List of DWARF tags to filter children by.
+  llvm::SmallVector<unsigned, 0> FilterChildTag;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
+  /// The target of the object being dumped.
+  Triple TT;
+
+  StringRef getNameForDWARFAddressSpace(uint64_t AS) const {
+    return dwarf::AddressSpaceString(AS, TT);
+  }
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {
@@ -238,7 +248,7 @@ struct DIDumpOptions {
 
 class DIContext {
 public:
-  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF };
+  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF, CK_GSYM };
 
   DIContext(DIContextKind K) : Kind(K) {}
   virtual ~DIContext() = default;
@@ -252,10 +262,12 @@ public:
     return true;
   }
 
-  virtual DILineInfo getLineInfoForAddress(
+  // For getLineInfoForAddress and getLineInfoForDataAddress, std::nullopt is
+  // returned when debug info is missing for the given address.
+  virtual std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DILineInfo
+  virtual std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) = 0;
   virtual DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,

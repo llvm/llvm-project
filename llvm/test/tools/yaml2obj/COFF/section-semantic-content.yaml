@@ -1,0 +1,16 @@
+## Check that a semantic section content key is not recognized on an unrelated
+## section.
+# RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
+
+# CHECK: error: unknown key 'Entries'
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE ]
+    Entries:
+      - Version: 3
+symbols: []
+...

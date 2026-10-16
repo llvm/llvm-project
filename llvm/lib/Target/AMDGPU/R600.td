@@ -8,15 +8,6 @@
 
 include "llvm/Target/Target.td"
 
-def R600InstrInfo : InstrInfo {
-  let guessInstructionProperties = 1;
-}
-
-def R600 : Target {
-  let InstructionSet = R600InstrInfo;
-  let AllowRegisterRenaming = 1;
-}
-
 let Namespace = "R600" in {
 
 foreach Index = 0-15 in {
@@ -27,11 +18,20 @@ include "R600RegisterInfo.td"
 
 }
 
-def NullALU : InstrItinClass;
-def ALU_NULL : FuncUnit;
+defm : RemapAllTargetPseudoPointerOperands<R600_Addr>;
+
+def R600InstrInfo : InstrInfo {
+  let guessInstructionProperties = 1;
+}
+
+def R600 : Target {
+  let InstructionSet = R600InstrInfo;
+  let AllowRegisterRenaming = 1;
+}
 
 include "AMDGPUFeatures.td"
 include "R600Schedule.td"
+include "R600Features.td"
 include "R600Processors.td"
 include "R600InstrInfo.td"
 include "AMDGPUInstrInfo.td"

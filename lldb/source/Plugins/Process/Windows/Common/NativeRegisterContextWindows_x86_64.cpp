@@ -11,8 +11,8 @@
 #include "NativeRegisterContextWindows_x86_64.h"
 #include "NativeRegisterContextWindows_WoW64.h"
 #include "NativeThreadWindows.h"
-#include "Plugins/Process/Utility/RegisterContextWindows_i386.h"
-#include "Plugins/Process/Utility/RegisterContextWindows_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoWindows_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoWindows_x86_64.h"
 #include "ProcessWindowsLog.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
@@ -61,7 +61,7 @@ static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
          "Register setting path assumes this is a 64-bit host");
-  return new RegisterContextWindows_x86_64(target_arch);
+  return new RegisterInfoWindows_x86_64(target_arch);
 }
 
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
@@ -110,8 +110,8 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 
 NativeRegisterContextWindows_x86_64::NativeRegisterContextWindows_x86_64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextWindows(native_thread,
-                                   CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {}
 
 bool NativeRegisterContextWindows_x86_64::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_x86_64 && reg_index < k_first_alias_x86_64);

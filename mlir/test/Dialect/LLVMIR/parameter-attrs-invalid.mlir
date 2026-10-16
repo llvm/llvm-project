@@ -132,6 +132,16 @@ llvm.func @invalid_nofree_attr_type(%0 : !llvm.ptr {llvm.nofree = f32})
 
 // -----
 
+// expected-error@below {{"llvm.nofreeobj" attribute attached to non-pointer LLVM type}}
+llvm.func @invalid_nofreeobj_arg_type(%0 : f32 {llvm.nofreeobj})
+
+// -----
+
+// expected-error@below {{"llvm.nofreeobj" should be a unit attribute}}
+llvm.func @invalid_nofreeobj_attr_type(%0 : !llvm.ptr {llvm.nofreeobj = f32})
+
+// -----
+
 // expected-error@below {{"llvm.nonnull" attribute attached to non-pointer LLVM type}}
 llvm.func @invalid_nonnull_arg_type(%0 : f32 {llvm.nonnull})
 
@@ -154,11 +164,6 @@ llvm.func @invalid_preallocated_attr_type(%0 : !llvm.ptr {llvm.preallocated})
 
 // expected-error@below {{"llvm.returned" should be a unit attribute}}
 llvm.func @invalid_returned_attr_type(%0 : i32 {llvm.returned = !llvm.ptr})
-
-// -----
-
-// expected-error@below {{"llvm.alignstack" attribute attached to non-pointer LLVM type}}
-llvm.func @invalid_alignstack_arg_type(%0 : i32 {llvm.alignstack = 10 : i32})
 
 // -----
 

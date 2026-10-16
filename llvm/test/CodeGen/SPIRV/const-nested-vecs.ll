@@ -25,8 +25,8 @@
 ; CHECK-SPIRV-DAG: %[[#IntZero:]] = OpConstantNull %[[#IntTy]]
 ; CHECK-SPIRV-DAG: %[[#LongZero:]] = OpConstantNull %[[#LongTy]]
 ; CHECK-SPIRV64-DAG: %[[#ConstLong2:]] = OpConstant %[[#LongTy]] 2
-; CHECK-SPIRV64-DAG: %[[#PvarInit:]] = OpSpecConstantOp %[[#PtrCharTy]] 70 %[[#VarV2Char:]] %[[#IntZero]] %[[#ConstLong2]]
-; CHECK-SPIRV32-DAG: %[[#PvarInit:]] = OpSpecConstantOp %[[#PtrCharTy]] 70 %[[#VarV2Char:]] %[[#IntZero]] %[[#Const2]]
+; CHECK-SPIRV64-DAG: %[[#PvarInit:]] = OpSpecConstantOp %[[#PtrCharTy]] InBoundsPtrAccessChain %[[#VarV2Char:]] %[[#IntZero]] %[[#ConstLong2]]
+; CHECK-SPIRV32-DAG: %[[#PvarInit:]] = OpSpecConstantOp %[[#PtrCharTy]] InBoundsPtrAccessChain %[[#VarV2Char:]] %[[#IntZero]] %[[#Const2]]
 ; CHECK-SPIRV-DAG: %[[#PtrPtrCharTy:]] = OpTypePointer CrossWorkgroup %[[#PtrCharTy]]
 ; CHECK-SPIRV-DAG: %[[#AVar]] = OpVariable %[[#PtrArr2V2CharTy]] CrossWorkgroup %[[#Arr2V2Char]]
 ; CHECK-SPIRV-DAG: %[[#PVar]] = OpVariable %[[#PtrPtrCharTy]] CrossWorkgroup %[[#PvarInit]]

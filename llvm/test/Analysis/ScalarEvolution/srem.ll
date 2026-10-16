@@ -28,7 +28,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:    %add = add nsw i32 %2, %call
 ; CHECK-NEXT:    --> (%2 + %call) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %inc = add nsw i32 %i.0, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%for.cond> U: [1,0) S: [1,0) Exits: (1 + %width) LoopDispositions: { %for.cond: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%for.cond> U: [1,0) S: [1,0) Exits: (1 + %width)<u nuw> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @_Z4loopi
 ; CHECK-NEXT:  Loop %for.cond: backedge-taken count is %width
 ; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is i32 -1
@@ -38,7 +38,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 entry:
   %storage = alloca [2 x i32], align 4
   %0 = bitcast ptr %storage to ptr
-  call void @llvm.lifetime.start.p0(i64 8, ptr %0) #4
+  call void @llvm.lifetime.start.p0(ptr %storage) #4
   call void @llvm.memset.p0.i64(ptr align 4 %0, i8 0, i64 8, i1 false)
   br label %for.cond
 
@@ -48,7 +48,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 8, ptr %0) #4
+  call void @llvm.lifetime.end.p0(ptr %storage) #4
   ret void
 
 for.body:
@@ -64,10 +64,10 @@ for.body:
   br label %for.cond
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 
 declare dso_local i32 @_Z3adji(i32) local_unnamed_addr #3
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1

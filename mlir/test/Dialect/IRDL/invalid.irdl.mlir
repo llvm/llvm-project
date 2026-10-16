@@ -25,7 +25,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.type @type {
     %0 = irdl.any
-    // expected-error@+1 {{name of parameter #0 must contain only letters, digits and underscores}}
+    // expected-error@+1 {{name of parameter #0 must contain only lowercase letters, digits and underscores}}
     irdl.parameters(test$test: %0)
   }
 }
@@ -35,7 +35,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of result #0 must contain only letters, digits and underscores}}
+    // expected-error@+1 {{name of result #0 must contain only lowercase letters, digits and underscores}}
     irdl.results(test$test: %0)
   }
 }
@@ -45,7 +45,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of operand #0 must contain only letters, digits and underscores}}
+    // expected-error@+1 {{name of operand #0 must contain only lowercase letters, digits and underscores}}
     irdl.operands(test$test: %0)
   }
 }
@@ -179,3 +179,23 @@ irdl.dialect @invalid_parametric {
     irdl.results(foo: %param)
   }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/159673
+// A self-referencing IRDL parametric type combined with duplicate function
+// symbols in the enclosing module used to crash with a SymbolTable assertion
+// instead of producing a proper "redefinition of symbol" diagnostic.
+
+irdl.dialect @testd {
+  irdl.type @self_referencing {
+    %0 = irdl.any
+    %1 = irdl.parametric @testd::@self_referencing<%0>
+    irdl.parameters(foo: %1)
+  }
+}
+
+// expected-note@+1 {{see existing symbol definition here}}
+func.func @test() { return }
+// expected-error@+1 {{redefinition of symbol named 'test'}}
+func.func @test() { return }

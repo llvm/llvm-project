@@ -70,10 +70,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvbf16ger2(<16 x i8>, <16 x i8>, i32, i32, i3
 define dso_local void @test52(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test52:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvbf16ger2pp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -85,10 +85,10 @@ define dso_local void @test52(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test52:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvbf16ger2pp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -111,10 +111,10 @@ declare <512 x i1> @llvm.ppc.mma.xvbf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test53(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test53:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvbf16ger2pn acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -126,10 +126,10 @@ define dso_local void @test53(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test53:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvbf16ger2pn acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -152,10 +152,10 @@ declare <512 x i1> @llvm.ppc.mma.xvbf16ger2pn(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test54(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test54:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvbf16ger2np acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -167,10 +167,10 @@ define dso_local void @test54(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test54:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvbf16ger2np acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -193,10 +193,10 @@ declare <512 x i1> @llvm.ppc.mma.xvbf16ger2np(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test55(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test55:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvbf16ger2nn acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -208,10 +208,10 @@ define dso_local void @test55(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test55:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvbf16ger2nn acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -234,10 +234,10 @@ declare <512 x i1> @llvm.ppc.mma.xvbf16ger2nn(<512 x i1>, <16 x i8>, <16 x i8>)
 define dso_local void @test56(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test56:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvbf16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -249,10 +249,10 @@ define dso_local void @test56(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test56:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvbf16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -275,10 +275,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvbf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>
 define dso_local void @test57(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test57:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvbf16ger2pn acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -290,10 +290,10 @@ define dso_local void @test57(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test57:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvbf16ger2pn acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -316,10 +316,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvbf16ger2pn(<512 x i1>, <16 x i8>, <16 x i8>
 define dso_local void @test58(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test58:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvbf16ger2np acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -331,10 +331,10 @@ define dso_local void @test58(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test58:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvbf16ger2np acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -357,10 +357,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvbf16ger2np(<512 x i1>, <16 x i8>, <16 x i8>
 define dso_local void @test59(ptr nocapture readonly %vqp, ptr nocapture readnone %vpp, <16 x i8> %vc, ptr nocapture %resp) {
 ; CHECK-LABEL: test59:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvbf16ger2nn acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -372,10 +372,10 @@ define dso_local void @test59(ptr nocapture readonly %vqp, ptr nocapture readnon
 ;
 ; CHECK-BE-LABEL: test59:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvbf16ger2nn acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0

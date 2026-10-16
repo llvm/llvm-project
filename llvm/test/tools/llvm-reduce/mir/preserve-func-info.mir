@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgpu9.00-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: V_MOV_B32
@@ -20,7 +20,7 @@
 # RESULT-NEXT: hasFakeUses: true
 # RESULT-NEXT: callsEHReturn: true
 # RESULT-NEXT: callsUnwindInit: true
-# RESULT-NEXT: hasEHCatchret: true
+# RESULT-NEXT: hasEHContTarget: true
 # RESULT-NEXT: hasEHScopes: true
 # RESULT-NEXT: hasEHFunclets: true
 # RESULT-NEXT: failsVerification: true
@@ -53,7 +53,7 @@ failsVerification: true
 tracksDebugUserValues: true
 callsEHReturn: true
 callsUnwindInit: true
-hasEHCatchret: true
+hasEHContTarget: true
 hasEHScopes: true
 hasEHFunclets: true
 

@@ -93,7 +93,7 @@ void InterferenceCache::Entry::revalidate(LiveIntervalUnion *LIUArray,
   PrevPos = SlotIndex();
   unsigned i = 0;
   for (MCRegUnit Unit : TRI->regunits(PhysReg))
-    RegUnits[i++].VirtTag = LIUArray[Unit].getTag();
+    RegUnits[i++].VirtTag = LIUArray[static_cast<unsigned>(Unit)].getTag();
 }
 
 void InterferenceCache::Entry::reset(MCRegister physReg,
@@ -110,7 +110,7 @@ void InterferenceCache::Entry::reset(MCRegister physReg,
   PrevPos = SlotIndex();
   RegUnits.clear();
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-    RegUnits.push_back(LIUArray[Unit]);
+    RegUnits.push_back(LIUArray[static_cast<unsigned>(Unit)]);
     RegUnits.back().Fixed = &LIS->getRegUnit(Unit);
   }
 }
@@ -121,7 +121,7 @@ bool InterferenceCache::Entry::valid(LiveIntervalUnion *LIUArray,
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     if (i == e)
       return false;
-    if (LIUArray[Unit].changedSince(RegUnits[i].VirtTag))
+    if (LIUArray[static_cast<unsigned>(Unit)].changedSince(RegUnits[i].VirtTag))
       return false;
     ++i;
   }
@@ -129,8 +129,9 @@ bool InterferenceCache::Entry::valid(LiveIntervalUnion *LIUArray,
 }
 
 void InterferenceCache::Entry::update(unsigned MBBNum) {
+  MachineBasicBlock *MBB = MF->getBlockNumbered(MBBNum);
   SlotIndex Start, Stop;
-  std::tie(Start, Stop) = Indexes->getMBBRange(MBBNum);
+  std::tie(Start, Stop) = Indexes->getMBBRange(MBB);
 
   // Use advanceTo only when possible.
   if (PrevPos != Start) {
@@ -149,8 +150,7 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
     PrevPos = Start;
   }
 
-  MachineFunction::const_iterator MFI =
-      MF->getBlockNumbered(MBBNum)->getIterator();
+  MachineFunction::const_iterator MFI = MBB->getIterator();
   BlockInterference *BI = &Blocks[MBBNum];
   ArrayRef<SlotIndex> RegMaskSlots;
   ArrayRef<const uint32_t*> RegMaskBits;
@@ -206,7 +206,7 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
     BI = &Blocks[MBBNum];
     if (BI->Tag == Tag)
       return;
-    std::tie(Start, Stop) = Indexes->getMBBRange(MBBNum);
+    std::tie(Start, Stop) = Indexes->getMBBRange(&*MFI);
   }
 
   // Check for last interference in block.

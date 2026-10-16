@@ -233,7 +233,7 @@ struct FooBarHashTraits {
 
   uint32_t lookupKeyToStorageKey(StringRef S) {
     uint32_t N = Buffer.size();
-    Buffer.insert(Buffer.end(), S.begin(), S.end());
+    llvm::append_range(Buffer, S);
     Buffer.push_back('\0');
     return N;
   }

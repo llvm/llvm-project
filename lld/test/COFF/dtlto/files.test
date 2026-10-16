@@ -1,0 +1,71 @@
+REQUIRES: x86
+
+## Test that the LLD options /lldsavetemps and -thinlto-emit-imports-files
+## function correctly with DTLTO we also check that index files 
+## (-thinlto-emit-index-files) are not emitted with DTLTO.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: sed 's/@t1/@t2/g' t1.ll > t2.ll
+
+## Generate ThinLTO bitcode files. Note that t3.bc will not be used by the
+## linker.
+RUN: opt -thinlto-bc t1.ll -o t1.bc
+RUN: opt -thinlto-bc t2.ll -o t2.bc
+RUN: cp t1.bc t3.bc
+
+## Generate object files for mock.py to return.
+RUN: llc t1.ll --filetype=obj -o t1.obj
+RUN: llc t2.ll --filetype=obj -o t2.obj
+
+## Create response file containing shared ThinLTO linker arguments.
+## -start-lib/-end-lib is used to test the special case where unused lazy
+## bitcode inputs result in empty index/imports files.
+## Note that mock.py does not do any compilation; instead, it simply writes
+## the contents of the object files supplied on the command line into the
+## output object files in job order.
+RUN: echo "/entry:t1 /subsystem:console \
+RUN:   t1.bc t2.bc -start-lib t3.bc -end-lib /out:my.exe \
+RUN:   -thinlto-distributor:\"%python\" \
+RUN:   -thinlto-distributor-arg:\"%llvm_src_root/utils/dtlto/mock.py\" \
+RUN:   -thinlto-distributor-arg:t1.obj \
+RUN:   -thinlto-distributor-arg:t2.obj \
+RUN:   -thinlto-remote-compiler:fake.exe" > l.rsp
+
+## Check that without extra flags, no index/imports files are produced and
+## backend temp files are removed.
+RUN: lld-link @l.rsp
+RUN: ls | FileCheck %s \
+RUN:   --check-prefixes=NOBACKEND,NOOTHERS
+
+## Check that with /lldsavetemps and -thinlto-emit-imports-files backend 
+## tempoary files are retained and no index/imports files are produced.
+RUN: rm -f *.imports *.thinlto.bc
+RUN: lld-link @l.rsp  /lldsavetemps -thinlto-emit-imports-files
+RUN: ls | sort | FileCheck %s \
+RUN:   --check-prefixes=BACKEND,NOOTHERS
+
+## JSON jobs description, retained with --save-temps.
+## Note that DTLTO temporary files include a PID component.
+NOBACKEND-NOT: {{^}}my.[[#]].dist-file.json{{$}}
+BACKEND:       {{^}}my.[[#]].dist-file.json{{$}}
+
+## Index/imports files for t1.bc.
+NOOTHERS-NOT: {{^}}t1.bc.imports{{$}}
+NOOTHERS-NOT: {{^}}t1.bc.thinlto.bc{{$}}
+
+## Index/imports files for t2.bc.
+NOOTHERS-NOT: {{^}}t2.bc.imports{{$}}
+NOOTHERS-NOT: {{^}}t2.bc.thinlto.bc{{$}}
+
+## Empty index/imports files for unused t3.bc.
+NOOTHERS-NOT: {{^}}t3.bc.imports{{$}}
+NOOTHERS-NOT: {{^}}t3.bc.thinlto.bc{{$}}
+
+#--- t1.ll
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+define void @t1() {
+  ret void
+}

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -30,11 +31,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -43,6 +44,8 @@ using namespace llvm;
 
 const char SanCovTracePCIndirName[] = "__sanitizer_cov_trace_pc_indir";
 const char SanCovTracePCName[] = "__sanitizer_cov_trace_pc";
+const char SanCovTracePCEntryName[] = "__sanitizer_cov_trace_pc_entry";
+const char SanCovTracePCExitName[] = "__sanitizer_cov_trace_pc_exit";
 const char SanCovTraceCmp1[] = "__sanitizer_cov_trace_cmp1";
 const char SanCovTraceCmp2[] = "__sanitizer_cov_trace_cmp2";
 const char SanCovTraceCmp4[] = "__sanitizer_cov_trace_cmp4";
@@ -86,81 +89,9 @@ const char SanCovPCsSectionName[] = "sancov_pcs";
 const char SanCovCFsSectionName[] = "sancov_cfs";
 const char SanCovCallbackGateSectionName[] = "sancov_gate";
 
+const char SanCovStackDepthCallbackName[] = "__sanitizer_cov_stack_depth";
 const char SanCovLowestStackName[] = "__sancov_lowest_stack";
 const char SanCovCallbackGateName[] = "__sancov_should_track";
-
-static cl::opt<int> ClCoverageLevel(
-    "sanitizer-coverage-level",
-    cl::desc("Sanitizer Coverage. 0: none, 1: entry block, 2: all blocks, "
-             "3: all blocks and critical edges"),
-    cl::Hidden);
-
-static cl::opt<bool> ClTracePC("sanitizer-coverage-trace-pc",
-                               cl::desc("Experimental pc tracing"), cl::Hidden);
-
-static cl::opt<bool> ClTracePCGuard("sanitizer-coverage-trace-pc-guard",
-                                    cl::desc("pc tracing with a guard"),
-                                    cl::Hidden);
-
-// If true, we create a global variable that contains PCs of all instrumented
-// BBs, put this global into a named section, and pass this section's bounds
-// to __sanitizer_cov_pcs_init.
-// This way the coverage instrumentation does not need to acquire the PCs
-// at run-time. Works with trace-pc-guard, inline-8bit-counters, and
-// inline-bool-flag.
-static cl::opt<bool> ClCreatePCTable("sanitizer-coverage-pc-table",
-                                     cl::desc("create a static PC table"),
-                                     cl::Hidden);
-
-static cl::opt<bool>
-    ClInline8bitCounters("sanitizer-coverage-inline-8bit-counters",
-                         cl::desc("increments 8-bit counter for every edge"),
-                         cl::Hidden);
-
-static cl::opt<bool>
-    ClInlineBoolFlag("sanitizer-coverage-inline-bool-flag",
-                     cl::desc("sets a boolean flag for every edge"),
-                     cl::Hidden);
-
-static cl::opt<bool>
-    ClCMPTracing("sanitizer-coverage-trace-compares",
-                 cl::desc("Tracing of CMP and similar instructions"),
-                 cl::Hidden);
-
-static cl::opt<bool> ClDIVTracing("sanitizer-coverage-trace-divs",
-                                  cl::desc("Tracing of DIV instructions"),
-                                  cl::Hidden);
-
-static cl::opt<bool> ClLoadTracing("sanitizer-coverage-trace-loads",
-                                   cl::desc("Tracing of load instructions"),
-                                   cl::Hidden);
-
-static cl::opt<bool> ClStoreTracing("sanitizer-coverage-trace-stores",
-                                    cl::desc("Tracing of store instructions"),
-                                    cl::Hidden);
-
-static cl::opt<bool> ClGEPTracing("sanitizer-coverage-trace-geps",
-                                  cl::desc("Tracing of GEP instructions"),
-                                  cl::Hidden);
-
-static cl::opt<bool>
-    ClPruneBlocks("sanitizer-coverage-prune-blocks",
-                  cl::desc("Reduce the number of instrumented blocks"),
-                  cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClStackDepth("sanitizer-coverage-stack-depth",
-                                  cl::desc("max stack depth tracing"),
-                                  cl::Hidden);
-
-static cl::opt<bool>
-    ClCollectCF("sanitizer-coverage-control-flow",
-                cl::desc("collect control flow for each function"), cl::Hidden);
-
-static cl::opt<bool> ClGatedCallbacks(
-    "sanitizer-coverage-gated-trace-callbacks",
-    cl::desc("Gate the invocation of the tracing callbacks on a global variable"
-             ". Currently only supported for trace-pc-guard and trace-cmp."),
-    cl::Hidden, cl::init(false));
 
 namespace {
 
@@ -187,29 +118,34 @@ SanitizerCoverageOptions getOptions(int LegacyCoverageLevel) {
   return Res;
 }
 
-SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
+SanitizerCoverageOptions overrideFromCL(const InstrumentationOptions &Opts,
+                                        SanitizerCoverageOptions Options) {
   // Sets CoverageType and IndirectCalls.
-  SanitizerCoverageOptions CLOpts = getOptions(ClCoverageLevel);
+  SanitizerCoverageOptions CLOpts = getOptions(Opts.sanitizer_coverage_level);
   Options.CoverageType = std::max(Options.CoverageType, CLOpts.CoverageType);
   Options.IndirectCalls |= CLOpts.IndirectCalls;
-  Options.TraceCmp |= ClCMPTracing;
-  Options.TraceDiv |= ClDIVTracing;
-  Options.TraceGep |= ClGEPTracing;
-  Options.TracePC |= ClTracePC;
-  Options.TracePCGuard |= ClTracePCGuard;
-  Options.Inline8bitCounters |= ClInline8bitCounters;
-  Options.InlineBoolFlag |= ClInlineBoolFlag;
-  Options.PCTable |= ClCreatePCTable;
-  Options.NoPrune |= !ClPruneBlocks;
-  Options.StackDepth |= ClStackDepth;
-  Options.TraceLoads |= ClLoadTracing;
-  Options.TraceStores |= ClStoreTracing;
-  Options.GatedCallbacks |= ClGatedCallbacks;
-  if (!Options.TracePCGuard && !Options.TracePC &&
+  Options.TraceCmp |= Opts.sanitizer_coverage_trace_compares;
+  Options.TraceDiv |= Opts.sanitizer_coverage_trace_divs;
+  Options.TraceGep |= Opts.sanitizer_coverage_trace_geps;
+  Options.TracePC |= Opts.sanitizer_coverage_trace_pc;
+  Options.TracePCEntryExit |= Opts.sanitizer_coverage_trace_pc_entry_exit;
+  Options.TracePCGuard |= Opts.sanitizer_coverage_trace_pc_guard;
+  Options.Inline8bitCounters |= Opts.sanitizer_coverage_inline_8bit_counters;
+  Options.InlineBoolFlag |= Opts.sanitizer_coverage_inline_bool_flag;
+  Options.PCTable |= Opts.sanitizer_coverage_pc_table;
+  Options.NoPrune |= !Opts.sanitizer_coverage_prune_blocks;
+  Options.StackDepth |= Opts.sanitizer_coverage_stack_depth;
+  Options.StackDepthCallbackMin =
+      std::max(Options.StackDepthCallbackMin,
+               Opts.sanitizer_coverage_stack_depth_callback_min);
+  Options.TraceLoads |= Opts.sanitizer_coverage_trace_loads;
+  Options.TraceStores |= Opts.sanitizer_coverage_trace_stores;
+  Options.GatedCallbacks |= Opts.sanitizer_coverage_gated_trace_callbacks;
+  if (!Options.TracePCGuard && !Options.TracePC && !Options.TracePCEntryExit &&
       !Options.Inline8bitCounters && !Options.StackDepth &&
       !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores)
     Options.TracePCGuard = true; // TracePCGuard is default.
-  Options.CollectControlFlow |= ClCollectCF;
+  Options.CollectControlFlow |= Opts.sanitizer_coverage_control_flow;
   return Options;
 }
 
@@ -219,12 +155,13 @@ public:
   using PostDomTreeCallback =
       function_ref<const PostDominatorTree &(Function &F)>;
 
-  ModuleSanitizerCoverage(Module &M, DomTreeCallback DTCallback,
+  ModuleSanitizerCoverage(const InstrumentationOptions &Opts, Module &M,
+                          DomTreeCallback DTCallback,
                           PostDomTreeCallback PDTCallback,
                           const SanitizerCoverageOptions &Options,
                           const SpecialCaseList *Allowlist,
                           const SpecialCaseList *Blocklist)
-      : M(M), DTCallback(DTCallback), PDTCallback(PDTCallback),
+      : Opts(Opts), M(M), DTCallback(DTCallback), PDTCallback(PDTCallback),
         Options(Options), Allowlist(Allowlist), Blocklist(Blocklist) {}
 
   bool instrumentModule();
@@ -242,6 +179,7 @@ private:
                          ArrayRef<GetElementPtrInst *> GepTraceTargets);
   void InjectTraceForLoadsAndStores(Function &F, ArrayRef<LoadInst *> Loads,
                                     ArrayRef<StoreInst *> Stores);
+  void InjectTraceForExits(Function &F);
   void InjectTraceForSwitch(Function &F,
                             ArrayRef<Instruction *> SwitchTraceTargets,
                             Value *&FunctionGateCmp);
@@ -267,12 +205,15 @@ private:
   std::string getSectionStart(const std::string &Section) const;
   std::string getSectionEnd(const std::string &Section) const;
 
+  const InstrumentationOptions &Opts;
   Module &M;
   DomTreeCallback DTCallback;
   PostDomTreeCallback PDTCallback;
 
+  FunctionCallee SanCovStackDepthCallback;
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
+  FunctionCallee SanCovTracePCEntry, SanCovTracePCExit;
   std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
   std::array<FunctionCallee, 4> SanCovTraceConstCmpFunction;
   std::array<FunctionCallee, 5> SanCovLoadFunction;
@@ -284,16 +225,15 @@ private:
   GlobalVariable *SanCovCallbackGate;
   Type *PtrTy, *IntptrTy, *Int64Ty, *Int32Ty, *Int16Ty, *Int8Ty, *Int1Ty;
   Module *CurModule;
-  std::string CurModuleUniqueId;
   Triple TargetTriple;
   LLVMContext *C;
   const DataLayout *DL;
 
-  GlobalVariable *FunctionGuardArray;  // for trace-pc-guard.
-  GlobalVariable *Function8bitCounterArray;  // for inline-8bit-counters.
-  GlobalVariable *FunctionBoolArray;         // for inline-bool-flag.
-  GlobalVariable *FunctionPCsArray;  // for pc-table.
-  GlobalVariable *FunctionCFsArray;  // for control flow table
+  GlobalVariable *FunctionGuardArray;       // for trace-pc-guard.
+  GlobalVariable *Function8bitCounterArray; // for inline-8bit-counters.
+  GlobalVariable *FunctionBoolArray;        // for inline-bool-flag.
+  GlobalVariable *FunctionPCsArray;         // for pc-table.
+  GlobalVariable *FunctionCFsArray;         // for control flow table
   SmallVector<GlobalValue *, 20> GlobalsToAppendToUsed;
   SmallVector<GlobalValue *, 20> GlobalsToAppendToCompilerUsed;
 
@@ -304,6 +244,18 @@ private:
 };
 } // namespace
 
+SanitizerCoveragePass::SanitizerCoveragePass(
+    SanitizerCoverageOptions Options, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    const std::vector<std::string> &AllowlistFiles,
+    const std::vector<std::string> &BlocklistFiles)
+    : Options(std::move(Options)),
+      VFS(VFS ? std::move(VFS) : vfs::getRealFileSystem()) {
+  if (AllowlistFiles.size() > 0)
+    Allowlist = SpecialCaseList::createOrDie(AllowlistFiles, *this->VFS);
+  if (BlocklistFiles.size() > 0)
+    Blocklist = SpecialCaseList::createOrDie(BlocklistFiles, *this->VFS);
+}
+
 PreservedAnalyses SanitizerCoveragePass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -313,9 +265,10 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
   auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree & {
     return FAM.getResult<PostDominatorTreeAnalysis>(F);
   };
-  ModuleSanitizerCoverage ModuleSancov(M, DTCallback, PDTCallback,
-                                       OverrideFromCL(Options), Allowlist.get(),
-                                       Blocklist.get());
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  ModuleSanitizerCoverage ModuleSancov(Opts, M, DTCallback, PDTCallback,
+                                       overrideFromCL(Opts, Options),
+                                       Allowlist.get(), Blocklist.get());
   if (!ModuleSancov.instrumentModule())
     return PreservedAnalyses::all();
 
@@ -337,28 +290,27 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
   GlobalValue::LinkageTypes Linkage = TargetTriple.isOSBinFormatCOFF()
                                           ? GlobalVariable::ExternalLinkage
                                           : GlobalVariable::ExternalWeakLinkage;
-  GlobalVariable *SecStart =
-      new GlobalVariable(M, Ty, false, Linkage, nullptr,
-                         getSectionStart(Section));
+  GlobalVariable *SecStart = new GlobalVariable(M, Ty, false, Linkage, nullptr,
+                                                getSectionStart(Section));
   SecStart->setVisibility(GlobalValue::HiddenVisibility);
-  GlobalVariable *SecEnd =
-      new GlobalVariable(M, Ty, false, Linkage, nullptr,
-                         getSectionEnd(Section));
+  GlobalVariable *SecEnd = new GlobalVariable(M, Ty, false, Linkage, nullptr,
+                                              getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
-  IRBuilder<> IRB(M.getContext());
   if (!TargetTriple.isOSBinFormatCOFF())
     return std::make_pair(SecStart, SecEnd);
 
   // Account for the fact that on windows-msvc __start_* symbols actually
   // point to a uint64_t before the start of the array.
-  auto GEP =
-      IRB.CreatePtrAdd(SecStart, ConstantInt::get(IntptrTy, sizeof(uint64_t)));
+  auto *GEP = ConstantExpr::getPtrAdd(
+      SecStart, ConstantInt::get(IntptrTy, sizeof(uint64_t)));
   return std::make_pair(GEP, SecEnd);
 }
 
 Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
     Module &M, const char *CtorName, const char *InitFunctionName, Type *Ty,
     const char *Section) {
+  if (Opts.sanitizer_coverage_drop_ctors)
+    return nullptr;
   auto SecStartEnd = CreateSecStartEnd(M, Section, Ty);
   auto SecStart = SecStartEnd.first;
   auto SecEnd = SecStartEnd.second;
@@ -399,8 +351,7 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   C = &(M.getContext());
   DL = &M.getDataLayout();
   CurModule = &M;
-  CurModuleUniqueId = getUniqueModuleId(CurModule);
-  TargetTriple = Triple(M.getTargetTriple());
+  TargetTriple = M.getTargetTriple();
   FunctionGuardArray = nullptr;
   Function8bitCounterArray = nullptr;
   FunctionBoolArray = nullptr;
@@ -409,7 +360,7 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   PtrTy = PointerType::getUnqual(*C);
   Type *VoidTy = Type::getVoidTy(*C);
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   Int64Ty = IRB.getInt64Ty();
   Int32Ty = IRB.getInt32Ty();
   Int16Ty = IRB.getInt16Ty();
@@ -449,25 +400,16 @@ bool ModuleSanitizerCoverage::instrumentModule() {
 
   // Loads.
   SanCovLoadFunction[0] = M.getOrInsertFunction(SanCovLoad1, VoidTy, PtrTy);
-  SanCovLoadFunction[1] =
-      M.getOrInsertFunction(SanCovLoad2, VoidTy, PtrTy);
-  SanCovLoadFunction[2] =
-      M.getOrInsertFunction(SanCovLoad4, VoidTy, PtrTy);
-  SanCovLoadFunction[3] =
-      M.getOrInsertFunction(SanCovLoad8, VoidTy, PtrTy);
-  SanCovLoadFunction[4] =
-      M.getOrInsertFunction(SanCovLoad16, VoidTy, PtrTy);
+  SanCovLoadFunction[1] = M.getOrInsertFunction(SanCovLoad2, VoidTy, PtrTy);
+  SanCovLoadFunction[2] = M.getOrInsertFunction(SanCovLoad4, VoidTy, PtrTy);
+  SanCovLoadFunction[3] = M.getOrInsertFunction(SanCovLoad8, VoidTy, PtrTy);
+  SanCovLoadFunction[4] = M.getOrInsertFunction(SanCovLoad16, VoidTy, PtrTy);
   // Stores.
-  SanCovStoreFunction[0] =
-      M.getOrInsertFunction(SanCovStore1, VoidTy, PtrTy);
-  SanCovStoreFunction[1] =
-      M.getOrInsertFunction(SanCovStore2, VoidTy, PtrTy);
-  SanCovStoreFunction[2] =
-      M.getOrInsertFunction(SanCovStore4, VoidTy, PtrTy);
-  SanCovStoreFunction[3] =
-      M.getOrInsertFunction(SanCovStore8, VoidTy, PtrTy);
-  SanCovStoreFunction[4] =
-      M.getOrInsertFunction(SanCovStore16, VoidTy, PtrTy);
+  SanCovStoreFunction[0] = M.getOrInsertFunction(SanCovStore1, VoidTy, PtrTy);
+  SanCovStoreFunction[1] = M.getOrInsertFunction(SanCovStore2, VoidTy, PtrTy);
+  SanCovStoreFunction[2] = M.getOrInsertFunction(SanCovStore4, VoidTy, PtrTy);
+  SanCovStoreFunction[3] = M.getOrInsertFunction(SanCovStore8, VoidTy, PtrTy);
+  SanCovStoreFunction[4] = M.getOrInsertFunction(SanCovStore16, VoidTy, PtrTy);
 
   {
     AttributeList AL;
@@ -482,10 +424,8 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   SanCovTraceSwitchFunction =
       M.getOrInsertFunction(SanCovTraceSwitchName, VoidTy, Int64Ty, PtrTy);
 
-  Constant *SanCovLowestStackConstant =
-      M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
-  SanCovLowestStack = dyn_cast<GlobalVariable>(SanCovLowestStackConstant);
-  if (!SanCovLowestStack || SanCovLowestStack->getValueType() != IntptrTy) {
+  SanCovLowestStack = M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
+  if (SanCovLowestStack->getValueType() != IntptrTy) {
     C->emitError(StringRef("'") + SanCovLowestStackName +
                  "' should not be declared by the user");
     return true;
@@ -497,8 +437,8 @@ bool ModuleSanitizerCoverage::instrumentModule() {
 
   if (Options.GatedCallbacks) {
     if (!Options.TracePCGuard && !Options.TraceCmp) {
-      C->emitError(StringRef("'") + ClGatedCallbacks.ArgStr +
-                   "' is only supported with trace-pc-guard or trace-cmp");
+      C->emitError("'sanitizer-coverage-gated-trace-callbacks' is only "
+                   "supported with trace-pc-guard or trace-cmp");
       return true;
     }
 
@@ -513,8 +453,13 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   }
 
   SanCovTracePC = M.getOrInsertFunction(SanCovTracePCName, VoidTy);
+  SanCovTracePCEntry = M.getOrInsertFunction(SanCovTracePCEntryName, VoidTy);
+  SanCovTracePCExit = M.getOrInsertFunction(SanCovTracePCExitName, VoidTy);
   SanCovTracePCGuard =
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, PtrTy);
+
+  SanCovStackDepthCallback =
+      M.getOrInsertFunction(SanCovStackDepthCallbackName, VoidTy);
 
   for (auto &F : M)
     instrumentFunction(F);
@@ -536,16 +481,16 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   }
   if (Ctor && Options.PCTable) {
     auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, IntptrTy);
-    FunctionCallee InitFunction = declareSanitizerInitFunction(
-        M, SanCovPCsInitName, {PtrTy, PtrTy});
+    FunctionCallee InitFunction =
+        declareSanitizerInitFunction(M, SanCovPCsInitName, {PtrTy, PtrTy});
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(InitFunction, {SecStartEnd.first, SecStartEnd.second});
   }
 
   if (Ctor && Options.CollectControlFlow) {
     auto SecStartEnd = CreateSecStartEnd(M, SanCovCFsSectionName, IntptrTy);
-    FunctionCallee InitFunction = declareSanitizerInitFunction(
-        M, SanCovCFsInitName, {PtrTy, PtrTy});
+    FunctionCallee InitFunction =
+        declareSanitizerInitFunction(M, SanCovCFsInitName, {PtrTy, PtrTy});
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(InitFunction, {SecStartEnd.first, SecStartEnd.second});
   }
@@ -602,8 +547,8 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
 
   // Do not instrument full dominators, or full post-dominators with multiple
   // predecessors.
-  return !isFullDominator(BB, DT)
-    && !(isFullPostDominator(BB, PDT) && !BB->getSinglePredecessor());
+  return !isFullDominator(BB, DT) &&
+         !(isFullPostDominator(BB, PDT) && !BB->getSinglePredecessor());
 }
 
 // Returns true iff From->To is a backedge.
@@ -629,7 +574,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
                              const SanitizerCoverageOptions &Options) {
   if (!Options.NoPrune)
     if (CMP->hasOneUse())
-      if (auto BR = dyn_cast<BranchInst>(CMP->user_back()))
+      if (auto BR = dyn_cast<CondBrInst>(CMP->user_back()))
         for (BasicBlock *B : BR->successors())
           if (IsBackEdge(BR->getParent(), B, DT))
             return false;
@@ -735,6 +680,9 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   InjectTraceForDiv(F, DivTraceTargets);
   InjectTraceForGep(F, GepTraceTargets);
   InjectTraceForLoadsAndStores(F, Loads, Stores);
+
+  if (Options.TracePCEntryExit)
+    InjectTraceForExits(F);
 }
 
 GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
@@ -744,22 +692,22 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
+  // sancov_pcs parallels the other arrays, so they must be retained or
+  // discarded together. Put them in F's comdat to tie them to F for linker GC
+  // benefit. Outside ELF (nodeduplicate), a new comdat for an interposable F
+  // could prevail over a strong definition (COFF: the weak external becomes a
+  // COMDAT definition; Wasm: comdats deduplicate first). noipa doesn't affect
+  // symbol resolution.
   if (TargetTriple.supportsCOMDAT() &&
-      (TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
+      (F.hasComdat() || TargetTriple.isOSBinFormatELF() ||
+       !F.isInterposable(/*CheckNoIPA=*/false)))
     if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Align(DL->getTypeStoreSize(Ty).getFixedValue()));
 
-  // sancov_pcs parallels the other metadata section(s). Optimizers (e.g.
-  // GlobalOpt/ConstantMerge) may not discard sancov_pcs and the other
-  // section(s) as a unit, so we conservatively retain all unconditionally in
-  // the compiler.
-  //
-  // With comdat (COFF/ELF), the linker can guarantee the associated sections
-  // will be retained or discarded as a unit, so llvm.compiler.used is
-  // sufficient. Otherwise, conservatively make all of them retained by the
-  // linker.
+  // Optimizers (e.g. GlobalOpt/ConstantMerge) may not discard the arrays as a
+  // unit, so retain them in the compiler; without a comdat, in the linker too.
   if (Array->hasComdat())
     GlobalsToAppendToCompilerUsed.push_back(Array);
   else
@@ -778,16 +726,16 @@ ModuleSanitizerCoverage::CreatePCArray(Function &F,
   for (size_t i = 0; i < N; i++) {
     if (&F.getEntryBlock() == AllBlocks[i]) {
       PCs.push_back((Constant *)IRB.CreatePointerCast(&F, PtrTy));
-      PCs.push_back((Constant *)IRB.CreateIntToPtr(
-          ConstantInt::get(IntptrTy, 1), PtrTy));
+      PCs.push_back(
+          (Constant *)IRB.CreateIntToPtr(ConstantInt::get(IntptrTy, 1), PtrTy));
     } else {
       PCs.push_back((Constant *)IRB.CreatePointerCast(
           BlockAddress::get(AllBlocks[i]), PtrTy));
       PCs.push_back(Constant::getNullValue(PtrTy));
     }
   }
-  auto *PCArray = CreateFunctionLocalArrayInSection(N * 2, F, PtrTy,
-                                                    SanCovPCsSectionName);
+  auto *PCArray =
+      CreateFunctionLocalArrayInSection(N * 2, F, PtrTy, SanCovPCsSectionName);
   PCArray->setInitializer(
       ConstantArray::get(ArrayType::get(PtrTy, N * 2), PCs));
   PCArray->setConstant(true);
@@ -842,10 +790,12 @@ bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks,
                                              Value *&FunctionGateCmp,
                                              bool IsLeafFunc) {
-  if (AllBlocks.empty()) return false;
+  if (AllBlocks.empty())
+    return false;
   CreateFunctionLocalArrays(F, AllBlocks);
   for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
     InjectCoverageAtBlock(F, *AllBlocks[i], i, FunctionGateCmp, IsLeafFunc);
+
   return true;
 }
 
@@ -860,7 +810,7 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
     Function &F, ArrayRef<Instruction *> IndirCalls) {
   if (IndirCalls.empty())
     return;
-  assert(Options.TracePC || Options.TracePCGuard ||
+  assert(Options.TracePC || Options.TracePCEntryExit || Options.TracePCGuard ||
          Options.Inline8bitCounters || Options.InlineBoolFlag);
   for (auto *I : IndirCalls) {
     InstrumentationIRBuilder IRB(I);
@@ -925,13 +875,14 @@ void ModuleSanitizerCoverage::InjectTraceForDiv(
   for (auto *BO : DivTraceTargets) {
     InstrumentationIRBuilder IRB(BO);
     Value *A1 = BO->getOperand(1);
-    if (isa<ConstantInt>(A1)) continue;
+    if (isa<ConstantInt>(A1))
+      continue;
     if (!A1->getType()->isIntegerTy())
       continue;
     uint64_t TypeSize = DL->getTypeStoreSizeInBits(A1->getType());
-    int CallbackIdx = TypeSize == 32 ? 0 :
-        TypeSize == 64 ? 1 : -1;
-    if (CallbackIdx < 0) continue;
+    int CallbackIdx = TypeSize == 32 ? 0 : TypeSize == 64 ? 1 : -1;
+    if (CallbackIdx < 0)
+      continue;
     auto Ty = Type::getIntNTy(*C, TypeSize);
     IRB.CreateCall(SanCovTraceDivFunction[CallbackIdx],
                    {IRB.CreateIntCast(A1, Ty, true)});
@@ -978,6 +929,15 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
   }
 }
 
+void ModuleSanitizerCoverage::InjectTraceForExits(Function &F) {
+  EscapeEnumerator EE(F, "sancov_exit");
+  while (IRBuilder<> *AtExit = EE.Next()) {
+    InstrumentationIRBuilder::ensureDebugInfo(*AtExit, F);
+    AtExit->CreateCall(SanCovTracePCExit, {})
+        ->setTailCallKind(CallInst::TCK_NoTail);
+  }
+}
+
 void ModuleSanitizerCoverage::InjectTraceForCmp(
     Function &F, ArrayRef<Instruction *> CmpTraceTargets,
     Value *&FunctionGateCmp) {
@@ -989,17 +949,20 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       if (!A0->getType()->isIntegerTy())
         continue;
       uint64_t TypeSize = DL->getTypeStoreSizeInBits(A0->getType());
-      int CallbackIdx = TypeSize == 8 ? 0 :
-                        TypeSize == 16 ? 1 :
-                        TypeSize == 32 ? 2 :
-                        TypeSize == 64 ? 3 : -1;
-      if (CallbackIdx < 0) continue;
+      int CallbackIdx = TypeSize == 8    ? 0
+                        : TypeSize == 16 ? 1
+                        : TypeSize == 32 ? 2
+                        : TypeSize == 64 ? 3
+                                         : -1;
+      if (CallbackIdx < 0)
+        continue;
       // __sanitizer_cov_trace_cmp((type_size << 32) | predicate, A0, A1);
       auto CallbackFunc = SanCovTraceCmpFunction[CallbackIdx];
       bool FirstIsConst = isa<ConstantInt>(A0);
       bool SecondIsConst = isa<ConstantInt>(A1);
       // If both are const, then we don't need such a comparison.
-      if (FirstIsConst && SecondIsConst) continue;
+      if (FirstIsConst && SecondIsConst)
+        continue;
       // If only one is const, then make it the first callback argument.
       if (FirstIsConst || SecondIsConst) {
         CallbackFunc = SanCovTraceConstCmpFunction[CallbackIdx];
@@ -1040,8 +1003,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   InstrumentationIRBuilder IRB(&*IP);
   if (EntryLoc)
     IRB.SetCurrentDebugLocation(EntryLoc);
-  if (Options.TracePC) {
-    IRB.CreateCall(SanCovTracePC)
+  if (Options.TracePC || (IsEntryBB && Options.TracePCEntryExit)) {
+    FunctionCallee Callee = IsEntryBB && Options.TracePCEntryExit
+                                ? SanCovTracePCEntry
+                                : SanCovTracePC;
+    IRB.CreateCall(Callee)
         ->setCannotMerge(); // gets the PC using GET_CALLER_PC.
   }
   if (Options.TracePCGuard) {
@@ -1074,28 +1040,72 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto ThenTerm = SplitBlockAndInsertIfThen(
         IRB.CreateIsNull(Load), &*IP, false,
         MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-    IRBuilder<> ThenIRB(ThenTerm);
+    InstrumentationIRBuilder ThenIRB(ThenTerm);
     auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    if (EntryLoc)
+      Store->setDebugLoc(EntryLoc);
     Load->setNoSanitizeMetadata();
     Store->setNoSanitizeMetadata();
   }
   if (Options.StackDepth && IsEntryBB && !IsLeafFunc) {
-    // Check stack depth.  If it's the deepest so far, record it.
     Module *M = F.getParent();
-    auto FrameAddrPtr = IRB.CreateIntrinsic(
-        Intrinsic::frameaddress,
-        IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
-        {Constant::getNullValue(Int32Ty)});
-    auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
-    auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
-    auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
-    auto ThenTerm = SplitBlockAndInsertIfThen(
-        IsStackLower, &*IP, false,
-        MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-    IRBuilder<> ThenIRB(ThenTerm);
-    auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
-    LowestStack->setNoSanitizeMetadata();
-    Store->setNoSanitizeMetadata();
+    const DataLayout &DL = M->getDataLayout();
+
+    if (Options.StackDepthCallbackMin) {
+      // In callback mode, only add call when stack depth reaches minimum.
+      int EstimatedStackSize = 0;
+      // If dynamic alloca found, always add call.
+      bool HasDynamicAlloc = false;
+      // Find an insertion point after last "alloca".
+      llvm::Instruction *InsertBefore = nullptr;
+
+      // Examine all allocas in the basic block. since we're too early
+      // to have results from Intrinsic::frameaddress, we have to manually
+      // estimate the stack size.
+      for (auto &I : BB) {
+        if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+          // Move potential insertion point past the "alloca".
+          InsertBefore = AI->getNextNode();
+
+          // Make an estimate on the stack usage.
+          if (auto AllocaSize = AI->getAllocationSize(DL)) {
+            if (AllocaSize->isFixed())
+              EstimatedStackSize += AllocaSize->getFixedValue();
+            else
+              HasDynamicAlloc = true;
+          } else {
+            HasDynamicAlloc = true;
+          }
+        }
+      }
+
+      if (HasDynamicAlloc ||
+          EstimatedStackSize >= Options.StackDepthCallbackMin) {
+        if (InsertBefore)
+          IRB.SetInsertPoint(InsertBefore);
+        auto Call = IRB.CreateCall(SanCovStackDepthCallback);
+        if (EntryLoc)
+          Call->setDebugLoc(EntryLoc);
+        Call->setCannotMerge();
+      }
+    } else {
+      // Check stack depth.  If it's the deepest so far, record it.
+      auto FrameAddrPtr = IRB.CreateIntrinsic(
+          Intrinsic::frameaddress, IRB.getPtrTy(DL.getAllocaAddrSpace()),
+          {Constant::getNullValue(Int32Ty)});
+      auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
+      auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
+      auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
+      auto ThenTerm = SplitBlockAndInsertIfThen(
+          IsStackLower, &*IP, false,
+          MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
+      InstrumentationIRBuilder ThenIRB(ThenTerm);
+      auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
+      if (EntryLoc)
+        Store->setDebugLoc(EntryLoc);
+      LowestStack->setNoSanitizeMetadata();
+      Store->setNoSanitizeMetadata();
+    }
   }
 }
 
@@ -1138,13 +1148,13 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
     if (&BB == &F.getEntryBlock())
       CFs.push_back((Constant *)IRB.CreatePointerCast(&F, PtrTy));
     else
-      CFs.push_back((Constant *)IRB.CreatePointerCast(BlockAddress::get(&BB),
-                                                      PtrTy));
+      CFs.push_back(
+          (Constant *)IRB.CreatePointerCast(BlockAddress::get(&BB), PtrTy));
 
     for (auto SuccBB : successors(&BB)) {
       assert(SuccBB != &F.getEntryBlock());
-      CFs.push_back((Constant *)IRB.CreatePointerCast(BlockAddress::get(SuccBB),
-                                                      PtrTy));
+      CFs.push_back(
+          (Constant *)IRB.CreatePointerCast(BlockAddress::get(SuccBB), PtrTy));
     }
 
     CFs.push_back((Constant *)Constant::getNullValue(PtrTy));
@@ -1154,12 +1164,11 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
         if (CB->isIndirectCall()) {
           // TODO(navidem): handle indirect calls, for now mark its existence.
           CFs.push_back((Constant *)IRB.CreateIntToPtr(
-              ConstantInt::get(IntptrTy, -1), PtrTy));
+              ConstantInt::getAllOnesValue(IntptrTy), PtrTy));
         } else {
           auto CalledF = CB->getCalledFunction();
           if (CalledF && !CalledF->isIntrinsic())
-            CFs.push_back(
-                (Constant *)IRB.CreatePointerCast(CalledF, PtrTy));
+            CFs.push_back((Constant *)IRB.CreatePointerCast(CalledF, PtrTy));
         }
       }
     }
@@ -1167,8 +1176,8 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
     CFs.push_back((Constant *)Constant::getNullValue(PtrTy));
   }
 
-  FunctionCFsArray = CreateFunctionLocalArrayInSection(
-      CFs.size(), F, PtrTy, SanCovCFsSectionName);
+  FunctionCFsArray = CreateFunctionLocalArrayInSection(CFs.size(), F, PtrTy,
+                                                       SanCovCFsSectionName);
   FunctionCFsArray->setInitializer(
       ConstantArray::get(ArrayType::get(PtrTy, CFs.size()), CFs));
   FunctionCFsArray->setConstant(true);

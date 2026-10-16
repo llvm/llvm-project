@@ -1,7 +1,7 @@
 // DEFINE: %{entry_point} = entry
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
-// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  -march=aarch64 -mattr=+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
 // DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
@@ -10,7 +10,7 @@
 // Vector store.
 func.func @transfer_write_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) {
   %c0 = arith.constant 0.0 : f32
-  %zero = vector.splat %c0 : vector<[4]x[4]xf32>
+  %zero = vector.broadcast %c0 : f32 to vector<[4]x[4]xf32>
   vector.transfer_write %zero, %A[%base1, %base2] {in_bounds=[true, true]} :
     vector<[4]x[4]xf32>, memref<?x?xf32>
   return
@@ -22,7 +22,7 @@ func.func @transfer_write_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: i
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
   %mask = vector.create_mask %c2, %c3 : vector<[4]x[4]xi1>
-  %zero = vector.splat %c0 : vector<[4]x[4]xf32>
+  %zero = vector.broadcast %c0 : f32 to vector<[4]x[4]xf32>
   vector.transfer_write %zero, %A[%base1, %base2], %mask {in_bounds=[true, true]} :
     vector<[4]x[4]xf32>, memref<?x?xf32>
   return

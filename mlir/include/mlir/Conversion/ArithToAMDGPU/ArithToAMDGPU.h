@@ -9,7 +9,8 @@
 #ifndef MLIR_CONVERSION_ARITHTOAMDGPU_ARITHTOAMDGPU_H
 #define MLIR_CONVERSION_ARITHTOAMDGPU_ARITHTOAMDGPU_H
 
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
+#include "mlir/IR/PatternMatch.h"
 #include <memory>
 #include <string>
 
@@ -27,11 +28,10 @@ namespace arith {
 /// is set, values outside the range of the destination type are clamped
 /// to the largest value of that type instead of being rewritten to Inf (aka
 /// NaN).
-void populateArithToAMDGPUConversionPatterns(RewritePatternSet &patterns,
-                                             bool convertFP8Arithmetic,
-                                             bool saturateFP8Truncf,
-                                             bool allowPackedF16Rtz,
-                                             amdgpu::Chipset chipset);
+void populateArithToAMDGPUConversionPatterns(
+    RewritePatternSet &patterns, bool convertFP8Arithmetic,
+    bool saturateFP8Truncf, bool allowPackedF16Rtz, bool supportsScaledExtTrunc,
+    const ROCDL::TargetInfo &target, PatternBenefit benefit = 1);
 } // namespace arith
 } // namespace mlir
 

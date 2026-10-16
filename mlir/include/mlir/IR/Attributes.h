@@ -47,24 +47,6 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  /// Casting utility functions. These are deprecated and will be removed,
-  /// please prefer using the `llvm` namespace variants instead.
-  template <typename... Tys>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const;
-  template <typename... Tys>
-  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
-  bool isa_and_nonnull() const;
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const;
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
-  U dyn_cast_or_null() const;
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const;
-
   /// Return a unique identifier for the concrete attribute type. This is used
   /// to support dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
@@ -168,31 +150,6 @@ protected:
 inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {
   attr.print(os);
   return os;
-}
-
-template <typename... Tys>
-bool Attribute::isa() const {
-  return llvm::isa<Tys...>(*this);
-}
-
-template <typename... Tys>
-bool Attribute::isa_and_nonnull() const {
-  return llvm::isa_and_present<Tys...>(*this);
-}
-
-template <typename U>
-U Attribute::dyn_cast() const {
-  return llvm::dyn_cast<U>(*this);
-}
-
-template <typename U>
-U Attribute::dyn_cast_or_null() const {
-  return llvm::dyn_cast_if_present<U>(*this);
-}
-
-template <typename U>
-U Attribute::cast() const {
-  return llvm::cast<U>(*this);
 }
 
 inline ::llvm::hash_code hash_value(Attribute arg) {
@@ -345,14 +302,6 @@ namespace llvm {
 // Attribute hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::Attribute> {
-  static mlir::Attribute getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
-  }
-  static mlir::Attribute getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::Attribute val) {
     return mlir::hash_value(val);
   }
@@ -365,14 +314,6 @@ struct DenseMapInfo<
     T, std::enable_if_t<std::is_base_of<mlir::Attribute, T>::value &&
                         !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Attribute> {
-  static T getEmptyKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static T getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
 };
 
 /// Allow LLVM to steal the low bits of Attributes.
@@ -390,14 +331,6 @@ struct PointerLikeTypeTraits<mlir::Attribute> {
 
 template <>
 struct DenseMapInfo<mlir::NamedAttribute> {
-  static mlir::NamedAttribute getEmptyKey() {
-    auto emptyAttr = llvm::DenseMapInfo<mlir::Attribute>::getEmptyKey();
-    return mlir::NamedAttribute(emptyAttr, emptyAttr);
-  }
-  static mlir::NamedAttribute getTombstoneKey() {
-    auto tombAttr = llvm::DenseMapInfo<mlir::Attribute>::getTombstoneKey();
-    return mlir::NamedAttribute(tombAttr, tombAttr);
-  }
   static unsigned getHashValue(mlir::NamedAttribute val) {
     return mlir::hash_value(val);
   }

@@ -11,7 +11,7 @@
 #ifndef __UNWINDCURSOR_HPP__
 #define __UNWINDCURSOR_HPP__
 
-#include "cet_unwind.h"
+#include "shadow_stack_unwind.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,13 +31,21 @@
 #endif
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
-    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
-     defined(_LIBUNWIND_TARGET_S390X))
+    (defined(_LIBUNWIND_TARGET_AARCH64) ||                                     \
+     defined(_LIBUNWIND_TARGET_LOONGARCH) ||                                   \
+     defined(_LIBUNWIND_TARGET_RISCV) || defined(_LIBUNWIND_TARGET_S390X))
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
+#endif
+
+#if defined(_LIBUNWIND_TARGET_HAIKU) &&                                        \
+    (defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64))
+#include <OS.h>
+#include <signal.h>
+#define _LIBUNWIND_CHECK_HAIKU_SIGRETURN 1
 #endif
 
 #include "AddressSpace.hpp"
@@ -82,6 +90,22 @@ struct UNWIND_INFO {
   uint16_t UnwindCodes[2];
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+union UNWIND_INFO_ARM {
+  DWORD HeaderData;
+  struct {
+    DWORD FunctionLength : 18;
+    DWORD Version : 2;
+    DWORD ExceptionDataPresent : 1;
+    DWORD EpilogInHeader : 1;
+    DWORD FunctionFragment : 1;
+    DWORD EpilogCount : 5;
+    DWORD CodeWords : 4;
+  };
+};
+#pragma clang diagnostic pop
+
 extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
     int, _Unwind_Action, uint64_t, _Unwind_Exception *,
     struct _Unwind_Context *);
@@ -97,7 +121,9 @@ class _LIBUNWIND_HIDDEN DwarfFDECache {
   typedef typename A::pint_t pint_t;
 public:
   static constexpr pint_t kSearchAll = static_cast<pint_t>(-1);
-  static pint_t findFDE(pint_t mh, pint_t pc);
+  template <typename R>
+  static pint_t findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc);
+
   static void add(pint_t mh, pint_t ip_start, pint_t ip_end, pint_t fde);
   static void removeAllIn(pint_t mh);
   static void iterateCacheEntries(void (*func)(unw_word_t ip_start,
@@ -150,7 +176,9 @@ bool DwarfFDECache<A>::_registeredForDyldUnloads = false;
 #endif
 
 template <typename A>
-typename A::pint_t DwarfFDECache<A>::findFDE(pint_t mh, pint_t pc) {
+template <typename R>
+typename DwarfFDECache<A>::pint_t
+DwarfFDECache<A>::findFDE(pint_t mh, typename R::link_hardened_reg_arg_t pc) {
   pint_t result = 0;
   _LIBUNWIND_LOG_IF_FALSE(_lock.lock_shared());
   for (entry *p = _buffer; p < _bufferUsed; ++p) {
@@ -448,7 +476,9 @@ public:
   virtual void getInfo(unw_proc_info_t *) {
     _LIBUNWIND_ABORT("getInfo not implemented");
   }
-  virtual void jumpto() { _LIBUNWIND_ABORT("jumpto not implemented"); }
+  _LIBUNWIND_TRACE_NO_INLINE virtual void jumpto() {
+    _LIBUNWIND_ABORT("jumpto not implemented");
+  }
   virtual bool isSignalFrame() {
     _LIBUNWIND_ABORT("isSignalFrame not implemented");
   }
@@ -463,6 +493,12 @@ public:
   }
 #ifdef __arm__
   virtual void saveVFPAsX() { _LIBUNWIND_ABORT("saveVFPAsX not implemented"); }
+#endif
+
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  virtual void setWalkedFrames(unsigned) {
+    _LIBUNWIND_ABORT("setWalkedFrames not implemented");
+  }
 #endif
 
 #ifdef _AIX
@@ -927,7 +963,7 @@ template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
 /// UnwindCursor contains all state (including all register values) during
 /// an unwind.  This is normally stack allocated inside a unw_cursor_t.
 template <typename A, typename R>
-class UnwindCursor : public AbstractUnwindCursor{
+class UnwindCursor : public AbstractUnwindCursor {
   typedef typename A::pint_t pint_t;
 public:
                       UnwindCursor(unw_context_t *context, A &as);
@@ -941,13 +977,18 @@ public:
   virtual void        setFloatReg(int, unw_fpreg_t);
   virtual int         step(bool stage2 = false);
   virtual void        getInfo(unw_proc_info_t *);
-  virtual void        jumpto();
+  _LIBUNWIND_TRACE_NO_INLINE
+    virtual void      jumpto();
   virtual bool        isSignalFrame();
   virtual bool        getFunctionName(char *buf, size_t len, unw_word_t *off);
   virtual void        setInfoBasedOnIPRegister(bool isReturnAddress = false);
   virtual const char *getRegisterName(int num);
 #ifdef __arm__
   virtual void        saveVFPAsX();
+#endif
+
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  virtual void setWalkedFrames(unsigned);
 #endif
 
 #ifdef _AIX
@@ -996,6 +1037,10 @@ private:
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
 #endif
+#if defined(_LIBUNWIND_TARGET_LOONGARCH)
+  bool setInfoForSigReturn(Registers_loongarch &);
+  int stepThroughSigReturn(Registers_loongarch &);
+#endif
 #if defined(_LIBUNWIND_TARGET_RISCV)
   bool setInfoForSigReturn(Registers_riscv &);
   int stepThroughSigReturn(Registers_riscv &);
@@ -1010,7 +1055,7 @@ private:
   template <typename Registers> int stepThroughSigReturn(Registers &) {
     return UNW_STEP_END;
   }
-#elif defined(_LIBUNWIND_TARGET_HAIKU)
+#elif defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool setInfoForSigReturn();
   int stepThroughSigReturn();
 #endif
@@ -1018,19 +1063,28 @@ private:
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   bool getInfoFromFdeCie(const typename CFI_Parser<A>::FDE_Info &fdeInfo,
                          const typename CFI_Parser<A>::CIE_Info &cieInfo,
-                         pint_t pc, uintptr_t dso_base);
-  bool getInfoFromDwarfSection(pint_t pc, const UnwindInfoSections &sects,
-                                            uint32_t fdeSectionOffsetHint=0);
+                         typename R::link_hardened_reg_arg_t pc,
+                         uintptr_t dso_base);
+  bool getInfoFromDwarfSection(typename R::link_hardened_reg_arg_t pc,
+                               const UnwindInfoSections &sects,
+                               uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+    typename R::link_reg_t pc;
+    _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+    typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
     return DwarfInstructions<A, R>::stepWithDwarf(
-        _addressSpace, (pint_t)this->getReg(UNW_REG_IP),
-        (pint_t)_info.unwind_info, _registers, _isSignalFrame, stage2);
+        _addressSpace, pc, (pint_t)_info.unwind_info, _registers,
+        _isSignalFrame, stage2);
   }
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-  bool getInfoFromCompactEncodingSection(pint_t pc,
-                                            const UnwindInfoSections &sects);
+  bool getInfoFromCompactEncodingSection(typename R::link_hardened_reg_arg_t pc,
+                                         const UnwindInfoSections &sects);
   int stepWithCompactEncoding(bool stage2 = false) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     if ( compactSaysUseDwarf() )
@@ -1309,6 +1363,10 @@ private:
                            reinterpret_cast<tbtable *>(_info.unwind_info),
                            _registers, _isSignalFrame);
   }
+  bool isKnownVapiNotActive() const { return _isKnownVapiNotActive; }
+  void setIsKnownVapiNotActive(bool val) { _isKnownVapiNotActive = val; }
+  static pint_t getVAPILR();
+
 #endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
 
   A               &_addressSpace;
@@ -1317,31 +1375,48 @@ private:
   bool             _unwindInfoMissing;
   bool             _isSignalFrame;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   bool             _isSigReturn = false;
 #endif
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  uint32_t _walkedFrames;
+#endif
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  // TODO: this will need to be recorded in the unw_context_t by unw_getcontext
+  // to support cases where the cursor is retrieved prior to invocation of the
+  // Virtual API.
+  bool _isKnownVapiNotActive;
+#endif
 };
-
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     : _addressSpace(as), _registers(context), _unwindInfoMissing(false),
-      _isSignalFrame(false) {
+      _isSignalFrame(false)
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+      ,
+      _isKnownVapiNotActive(false)
+#endif
+{
   static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
                 "UnwindCursor<> does not fit in unw_cursor_t");
   static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
-  memset(&_info, 0, sizeof(_info));
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
 }
 
 template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(A &as, void *)
-    : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false) {
-  memset(&_info, 0, sizeof(_info));
+    : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false)
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+      ,
+      _isKnownVapiNotActive(false)
+#endif
+{
+  memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
   // fill in _registers from thread arg
 }
-
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::validReg(int regNum) {
@@ -1374,12 +1449,82 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 }
 
 template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  /*
+
+  The value of `_walkedFrames` is computed in `unwind_phase2` and represents the
+  number of frames walked starting `unwind_phase2` to get to the landing pad.
+
+  ```
+    // uc is initialized by __unw_getcontext in the parent frame.
+    // The first stack frame walked is unwind_phase2.
+    unsigned framesWalked = 1;
+  ```
+
+  To that, we need to add the number of function calls in libunwind between
+  `unwind_phase2` & `__libunwind_Registers_arm64_jumpto` which performs the long
+  jump, to rebalance the execution flow.
+
+  ```
+      frame #0: libunwind.1.dylib`__libunwind_Registers_arm64_jumpto at UnwindRegistersRestore.S:646
+      frame #1: libunwind.1.dylib`libunwind::Registers_arm64::returnto at Registers.hpp:2291:3
+      frame #2: libunwind.1.dylib`libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_arm64>::jumpto at UnwindCursor.hpp:1474:14
+      frame #3: libunwind.1.dylib`__unw_resume at libunwind.cpp:375:7
+      frame #4: libunwind.1.dylib`__unw_resume_with_frames_walked at libunwind.cpp:363:10
+      frame #5: libunwind.1.dylib`unwind_phase2 at UnwindLevel1.c:328:9
+      frame #6: libunwind.1.dylib`_Unwind_RaiseException at UnwindLevel1.c:480:10
+      frame #7: libc++abi.dylib`__cxa_throw at cxa_exception.cpp:295:5
+      ...
+  ```
+
+  If we look at the backtrace from `__libunwind_Registers_arm64_jumpto`, we see
+  there are 5 frames on the stack to reach `unwind_phase2`. However, only 4 of
+  them will never return, since `__libunwind_Registers_arm64_jumpto` returns
+  back to the landing pad, so we need to subtract 1 to the number of
+  `_EXTRA_LIBUNWIND_FRAMES_WALKED`.
+  */
+
+  static constexpr size_t _EXTRA_LIBUNWIND_FRAMES_WALKED = 5 - 1;
+  _registers.returnto(_walkedFrames + _EXTRA_LIBUNWIND_FRAMES_WALKED);
+#else
+#if defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
+  if (isKnownVapiNotActive()) {
+    // If the current frame is known VAPI not active, execute the VAPI return
+    // glue to clear the VAPI control block. The VAPI return glue is used by
+    // AIX longjmp based on the VAPI active status recorded by setjmp in the
+    // jmp_buf, which means that the VAPI return glue can be called solely on
+    // the basis of the VAPI active status of the target context.
+
+    // VAPI return glue address is the VAPI glue address - 4.
+#ifdef __64BIT__
+    constexpr pint_t VAPIReturnGlue = 0x8e40 - 4;
+#else
+    constexpr pint_t VAPIReturnGlue = 0x8c40 - 4;
+#endif
+
+    _LIBUNWIND_TRACE_UNWINDING("VAPI: executing return glue %p\n",
+                               reinterpret_cast<void *>(VAPIReturnGlue));
+    register auto *registers __asm__("r30") = &_registers;
+    __asm__ __volatile__("bla %[retglue]"
+                         : "+r"(registers)
+                         : [retglue] "i"(VAPIReturnGlue));
+    registers->jumpto();
+  }
+#endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
   _registers.jumpto();
+#endif
 }
 
 #ifdef __arm__
 template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {
   _registers.saveVFPAsX();
+}
+#endif
+
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+template <typename A, typename R>
+void UnwindCursor<A, R>::setWalkedFrames(unsigned walkedFrames) {
+  _walkedFrames = walkedFrames;
 }
 #endif
 
@@ -1631,11 +1776,11 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
-    const typename CFI_Parser<A>::CIE_Info &cieInfo, pint_t pc,
-    uintptr_t dso_base) {
+    const typename CFI_Parser<A>::CIE_Info &cieInfo,
+    typename R::link_hardened_reg_arg_t pc, uintptr_t dso_base) {
   typename CFI_Parser<A>::PrologInfo prolog;
-  if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo, pc,
-                                          R::getArch(), &prolog)) {
+  if (CFI_Parser<A>::template parseFDEInstructions<R>(
+          _addressSpace, fdeInfo, cieInfo, pc, R::getArch(), &prolog)) {
     // Save off parsed FDE info
     _info.start_ip          = fdeInfo.pcStart;
     _info.end_ip            = fdeInfo.pcEnd;
@@ -1655,43 +1800,42 @@ bool UnwindCursor<A, R>::getInfoFromFdeCie(
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
-                                                const UnwindInfoSections &sects,
-                                                uint32_t fdeSectionOffsetHint) {
+bool UnwindCursor<A, R>::getInfoFromDwarfSection(
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects,
+    uint32_t fdeSectionOffsetHint) {
   typename CFI_Parser<A>::FDE_Info fdeInfo;
   typename CFI_Parser<A>::CIE_Info cieInfo;
   bool foundFDE = false;
   bool foundInCache = false;
   // If compact encoding table gave offset into dwarf section, go directly there
   if (fdeSectionOffsetHint != 0) {
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                    sects.dwarf_section_length,
-                                    sects.dwarf_section + fdeSectionOffsetHint,
-                                    &fdeInfo, &cieInfo);
+    foundFDE = CFI_Parser<A>::template findFDE<R>(
+        _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
+        sects.dwarf_section + fdeSectionOffsetHint, &fdeInfo, &cieInfo);
   }
 #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
   if (!foundFDE && (sects.dwarf_index_section != 0)) {
-    foundFDE = EHHeaderParser<A>::findFDE(
+    foundFDE = EHHeaderParser<A>::template findFDE<R>(
         _addressSpace, pc, sects.dwarf_index_section,
         (uint32_t)sects.dwarf_index_section_length, &fdeInfo, &cieInfo);
   }
 #endif
   if (!foundFDE) {
     // otherwise, search cache of previously found FDEs.
-    pint_t cachedFDE = DwarfFDECache<A>::findFDE(sects.dso_base, pc);
+    pint_t cachedFDE =
+        DwarfFDECache<A>::template findFDE<R>(sects.dso_base, pc);
     if (cachedFDE != 0) {
-      foundFDE =
-          CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                 sects.dwarf_section_length,
-                                 cachedFDE, &fdeInfo, &cieInfo);
+      foundFDE = CFI_Parser<A>::template findFDE<R>(
+          _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length,
+          cachedFDE, &fdeInfo, &cieInfo);
       foundInCache = foundFDE;
     }
   }
   if (!foundFDE) {
     // Still not found, do full scan of __eh_frame section.
-    foundFDE = CFI_Parser<A>::findFDE(_addressSpace, pc, sects.dwarf_section,
-                                      sects.dwarf_section_length, 0,
-                                      &fdeInfo, &cieInfo);
+    foundFDE = CFI_Parser<A>::template findFDE<R>(
+        _addressSpace, pc, sects.dwarf_section, sects.dwarf_section_length, 0,
+        &fdeInfo, &cieInfo);
   }
   if (foundFDE) {
     if (getInfoFromFdeCie(fdeInfo, cieInfo, pc, sects.dso_base)) {
@@ -1715,8 +1859,8 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
-                                              const UnwindInfoSections &sects) {
+bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
+    typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects) {
   const bool log = false;
   if (log)
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX, mh=0x%llX)\n",
@@ -1767,6 +1911,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
   // do a binary search of second level page index
   uint32_t encoding = 0;
   pint_t funcStart = 0;
+  pint_t rangeStart = 0;
   pint_t funcEnd = 0;
   pint_t lsda = 0;
   pint_t personality = 0;
@@ -1806,21 +1951,39 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
       }
     }
     encoding = pageIndex.encoding(low);
-    funcStart = pageIndex.functionOffset(low) + sects.dso_base;
+    rangeStart = pageIndex.functionOffset(low) + sects.dso_base;
+
+    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual
+    // function start.
+    funcStart = rangeStart;
+    if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
+      assert(low != 0 &&
+             "UNWIND_IS_NOT_FUNCTION_START comact unwind must be preceded by a "
+             "~UNWIND_IS_NOT_FUNCTION_START entry for the same function");
+      uint32_t backIndex = low;
+      do {
+        --backIndex;
+      } while (backIndex > 0 &&
+               (pageIndex.encoding(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
+      funcStart = pageIndex.functionOffset(backIndex) + sects.dso_base;
+    }
+
     if (pc < funcStart) {
       if (log)
-        fprintf(
-            stderr,
-            "\tpc not in table, pc=0x%llX, funcStart=0x%llX, funcEnd=0x%llX\n",
-            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) funcEnd);
+        fprintf(stderr,
+                "\tpc not in table, pc=0x%llX, funcStart=0x%llX, "
+                "rangeStart=0x%llX, funcEnd=0x%llX\n",
+                (uint64_t)pc, (uint64_t)funcStart, (uint64_t)rangeStart,
+                (uint64_t)funcEnd);
       return false;
     }
     if (pc > funcEnd) {
       if (log)
-        fprintf(
-            stderr,
-            "\tpc not in table, pc=0x%llX, funcStart=0x%llX, funcEnd=0x%llX\n",
-            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) funcEnd);
+        fprintf(stderr,
+                "\tpc not in table, pc=0x%llX, funcStart=0x%llX, "
+                "rangeStart=0x%llX, funcEnd=0x%llX\n",
+                (uint64_t)pc, (uint64_t)funcStart, (uint64_t)rangeStart,
+                (uint64_t)funcEnd);
       return false;
     }
   } else if (pageKind == UNWIND_SECOND_LEVEL_COMPRESSED) {
@@ -1854,19 +2017,55 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
         high = mid;
       }
     }
-    funcStart = pageIndex.functionOffset(low) + firstLevelFunctionOffset
-                                                              + sects.dso_base;
+    rangeStart = pageIndex.functionOffset(low) + firstLevelFunctionOffset +
+                 sects.dso_base;
     if (low < last)
       funcEnd =
           pageIndex.functionOffset(low + 1) + firstLevelFunctionOffset
                                                               + sects.dso_base;
     else
       funcEnd = firstLevelNextPageFunctionOffset + sects.dso_base;
+
+    auto encodingAtIndex = [&](uint32_t idx) -> uint32_t {
+      uint16_t encIdx = pageIndex.encodingIndex(idx);
+      if (encIdx < sectionHeader.commonEncodingsArrayCount()) {
+        return _addressSpace.get32(
+            sects.compact_unwind_section +
+            sectionHeader.commonEncodingsArraySectionOffset() +
+            encIdx * sizeof(uint32_t));
+      } else {
+        uint16_t pageEncIdx =
+            encIdx - (uint16_t)sectionHeader.commonEncodingsArrayCount();
+        return _addressSpace.get32(secondLevelAddr +
+                                   pageHeader.encodingsPageOffset() +
+                                   pageEncIdx * sizeof(uint32_t));
+      }
+    };
+
+    encoding = encodingAtIndex(low);
+
+    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual
+    // function start.
+    funcStart = rangeStart;
+    if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
+      assert(low != 0 &&
+             "UNWIND_IS_NOT_FUNCTION_START comact unwind must be preceded by a "
+             "~UNWIND_IS_NOT_FUNCTION_START entry for the same function.");
+      uint32_t backIndex = low;
+      do {
+        --backIndex;
+      } while (backIndex > 0 &&
+               (encodingAtIndex(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
+      funcStart = pageIndex.functionOffset(backIndex) +
+                  firstLevelFunctionOffset + sects.dso_base;
+    }
+
     if (pc < funcStart) {
       _LIBUNWIND_DEBUG_LOG("malformed __unwind_info, pc=0x%llX "
                            "not in second level compressed unwind table. "
-                           "funcStart=0x%llX",
-                            (uint64_t) pc, (uint64_t) funcStart);
+                           "funcStart=0x%llX, rangeStart=0x%llX",
+                           (uint64_t)pc, (uint64_t)funcStart,
+                           (uint64_t)rangeStart);
       return false;
     }
     if (pc > funcEnd) {
@@ -1875,21 +2074,6 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
                            "funcEnd=0x%llX",
                            (uint64_t) pc, (uint64_t) funcEnd);
       return false;
-    }
-    uint16_t encodingIndex = pageIndex.encodingIndex(low);
-    if (encodingIndex < sectionHeader.commonEncodingsArrayCount()) {
-      // encoding is in common table in section header
-      encoding = _addressSpace.get32(
-          sects.compact_unwind_section +
-          sectionHeader.commonEncodingsArraySectionOffset() +
-          encodingIndex * sizeof(uint32_t));
-    } else {
-      // encoding is in page specific table
-      uint16_t pageEncodingIndex =
-          encodingIndex - (uint16_t)sectionHeader.commonEncodingsArrayCount();
-      encoding = _addressSpace.get32(secondLevelAddr +
-                                     pageHeader.encodingsPageOffset() +
-                                     pageEncodingIndex * sizeof(uint32_t));
     }
   } else {
     _LIBUNWIND_DEBUG_LOG(
@@ -1935,7 +2119,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
   if (personalityIndex != 0) {
     --personalityIndex; // change 1-based to zero-based index
     if (personalityIndex >= sectionHeader.personalityArrayCount()) {
-      _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
+      _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d, "
                             "but personality table has only %d entries",
                             encoding, personalityIndex,
                             sectionHeader.personalityArrayCount());
@@ -1947,6 +2131,16 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
         personalityIndex * sizeof(uint32_t));
     pint_t personalityPointer = sects.dso_base + (pint_t)personalityDelta;
     personality = _addressSpace.getP(personalityPointer);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+    // The GOT for the personality function was signed address authenticated.
+    // Resign it as a regular function pointer.
+    const auto discriminator = ptrauth_blend_discriminator(
+        &_info.handler, __ptrauth_unwind_upi_handler_disc);
+    void *signedPtr = ptrauth_auth_and_resign(
+        (void *)personality, ptrauth_key_function_pointer, personalityPointer,
+        ptrauth_key_function_pointer, discriminator);
+    personality = (__typeof(personality))signedPtr;
+#endif
     if (log)
       fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX), "
                       "personalityDelta=0x%08X, personality=0x%08llX\n",
@@ -1957,10 +2151,25 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     fprintf(stderr, "getInfoFromCompactEncodingSection(pc=0x%llX), "
                     "encoding=0x%08X, lsda=0x%08llX for funcStart=0x%llX\n",
             (uint64_t) pc, encoding, (uint64_t) lsda, (uint64_t) funcStart);
+
+  // For ARM64 PAuth_LR frames, start_ip should be the pacibsppc address
+  // (rangeStart). For all other cases, start_ip should be the function start.
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+  if ((encoding & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_FRAME_PAUTH_LR) {
+    _info.start_ip = rangeStart;
+  } else {
+    _info.start_ip = funcStart;
+  }
+#else
   _info.start_ip = funcStart;
+#endif
   _info.end_ip = funcEnd;
   _info.lsda = lsda;
-  _info.handler = personality;
+  // We use memmove to copy the personality function as we have already manually
+  // re-signed the pointer, and assigning directly will attempt to incorrectly
+  // sign the already signed value.
+  memmove(reinterpret_cast<void *>(&_info.handler),
+          reinterpret_cast<void *>(&personality), sizeof(personality));
   _info.gp = 0;
   _info.flags = 0;
   _info.format = encoding;
@@ -2011,6 +2220,61 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
     } else {
       _info.lsda = 0;
       _info.handler = 0;
+    }
+  }
+#elif defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_ARM)
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+#define FUNC_LENGTH_UNIT 4
+#define XDATA_TYPE IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY_XDATA
+#else
+#define FUNC_LENGTH_UNIT 2
+#define XDATA_TYPE UNWIND_INFO_ARM
+#endif
+  if (unwindEntry->Flag != 0) { // Packed unwind info
+    _info.end_ip =
+        _info.start_ip + unwindEntry->FunctionLength * FUNC_LENGTH_UNIT;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      // Packed unwind info doesn't have an exception handler.
+      _info.lsda = 0;
+      _info.handler = 0;
+    }
+  } else {
+    XDATA_TYPE *xdata =
+        reinterpret_cast<XDATA_TYPE *>(base + unwindEntry->UnwindData);
+    _info.end_ip = _info.start_ip + xdata->FunctionLength * FUNC_LENGTH_UNIT;
+    // Only fill in the handler and LSDA if they're stale.
+    if (pc != getLastPC()) {
+      if (xdata->ExceptionDataPresent) {
+        uint32_t offset = 1; // The main xdata
+        uint32_t codeWords = xdata->CodeWords;
+        uint32_t epilogScopes = xdata->EpilogCount;
+        if (xdata->EpilogCount == 0 && xdata->CodeWords == 0) {
+          // The extension word has got the same layout for both ARM and ARM64
+          uint32_t extensionWord = reinterpret_cast<uint32_t *>(xdata)[1];
+          codeWords = (extensionWord >> 16) & 0xff;
+          epilogScopes = extensionWord & 0xffff;
+          offset++;
+        }
+        if (!xdata->EpilogInHeader)
+          offset += epilogScopes;
+        offset += codeWords;
+        uint32_t *exceptionHandlerInfo =
+            reinterpret_cast<uint32_t *>(xdata) + offset;
+        _dispContext.HandlerData = &exceptionHandlerInfo[1];
+        _dispContext.LanguageHandler = reinterpret_cast<EXCEPTION_ROUTINE *>(
+            base + exceptionHandlerInfo[0]);
+        _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+        if (exceptionHandlerInfo[0])
+          _info.handler =
+              reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+        else
+          _info.handler = 0;
+      } else {
+        _info.lsda = 0;
+        _info.handler = 0;
+      }
     }
   }
 #endif
@@ -2288,6 +2552,45 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
   return true;
 }
 
+// VAPI glue addresses
+constexpr uintptr_t vapi_glue_addr_ext_32 = 0x8b80;
+constexpr uintptr_t vapi_addr_64 = 0x8e00;
+constexpr size_t vapi_size_64 = 0x0200;
+constexpr uintptr_t vapi_glue_addr_begin =
+    vapi_glue_addr_ext_32; // Start address in 32-bit
+constexpr uintptr_t vapi_glue_addr_end =
+    vapi_addr_64 + vapi_size_64; // End address in 64-bit
+
+#ifdef __64BIT__
+constexpr size_t VAPI_CB_SIZE = 256;
+constexpr ptrdiff_t TLS_POINTER_OFFSET = 30 * 1024;
+constexpr size_t TLSCB_BASE_SIZE = 256;
+
+static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
+  char *result;
+  __asm__("mr %0, 13" : "=r"(result));
+  return result;
+}
+#else // 32-bit
+constexpr size_t VAPI_CB_SIZE = 128;
+constexpr ptrdiff_t TLS_POINTER_OFFSET = 31 * 1024;
+constexpr size_t TLSCB_BASE_SIZE = 128;
+
+static __inline__ __attribute__((__always_inline__)) char *tptr(void) {
+  char *result;
+  __asm__("mfspr %0, 259" : "=r"(result));
+  return result;
+}
+#endif
+
+constexpr ptrdiff_t VAPI_CB_OFFSET =
+    TLS_POINTER_OFFSET + VAPI_CB_SIZE + TLSCB_BASE_SIZE;
+
+template <typename A, typename R>
+typename UnwindCursor<A, R>::pint_t UnwindCursor<A, R>::getVAPILR() {
+  return *reinterpret_cast<pint_t *>(tptr() - VAPI_CB_OFFSET + 8);
+}
+
 // Step back up the stack following the frame back link.
 template <typename A, typename R>
 int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
@@ -2339,6 +2642,16 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
   if (isSignalFrame) {
     _LIBUNWIND_TRACE_UNWINDING("Possible signal handler frame: lastStack=%p",
                                reinterpret_cast<void *>(lastStack));
+
+    pint_t returnAddressInStack = reinterpret_cast<pint_t *>(lastStack)[2];
+    if (vapi_glue_addr_begin <= returnAddressInStack &&
+        returnAddressInStack < vapi_glue_addr_end) {
+      _LIBUNWIND_TRACE_UNWINDING(
+          "The return address in stack %p is within the range of VAPI address;"
+          " set isKnownVapiNotActive to true\n",
+          reinterpret_cast<void *>(returnAddressInStack));
+      setIsKnownVapiNotActive(true);
+    }
 
     sigcontext *sigContext = reinterpret_cast<sigcontext *>(
         reinterpret_cast<char *>(lastStack) + STKMINALIGN);
@@ -2408,6 +2721,17 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     } else {
       // Otherwise, use the LR value in the stack link area.
       returnAddress = reinterpret_cast<pint_t *>(lastStack)[2];
+
+      if (vapi_glue_addr_begin <= returnAddress &&
+          returnAddress < vapi_glue_addr_end) {
+        _LIBUNWIND_TRACE_UNWINDING(
+            "The return address=%p is within the range of VAPI address;",
+            reinterpret_cast<void *>(returnAddress));
+        setIsKnownVapiNotActive(true);
+        returnAddress = getVAPILR();
+        _LIBUNWIND_TRACE_UNWINDING("return address=%p from VAPI\n",
+                                   reinterpret_cast<void *>(returnAddress));
+      }
     }
 
     // Reset LR in the current context.
@@ -2538,6 +2862,16 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
   // Return address is the address after call site instruction.
   pint_t nextReturnAddress = reinterpret_cast<pint_t *>(nextStack)[2];
 
+  if (vapi_glue_addr_begin <= nextReturnAddress &&
+      nextReturnAddress < vapi_glue_addr_end) {
+    _LIBUNWIND_TRACE_UNWINDING(
+        "The next return address=%p is within the range of VAPI address;",
+        reinterpret_cast<void *>(nextReturnAddress));
+    nextReturnAddress = getVAPILR();
+    _LIBUNWIND_TRACE_UNWINDING("the next return address=%p from VAPI\n",
+                               reinterpret_cast<void *>(nextReturnAddress));
+  }
+
   if (nextReturnAddress > 0x01 && nextReturnAddress < 0x10000) {
     _LIBUNWIND_TRACE_UNWINDING("The next is a signal handler frame: "
                                "nextStack=%p, next return address=%p\n",
@@ -2554,15 +2888,23 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 template <typename A, typename R>
 void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   _isSigReturn = false;
 #endif
 
-  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+
 #if defined(_LIBUNWIND_ARM_EHABI)
   // Remove the thumb bit so the IP represents the actual instruction address.
   // This matches the behaviour of _Unwind_GetIP on arm.
-  pc &= (pint_t)~0x1;
+  rawPC &= (pint_t)~0x1;
+#endif
+
+  typename R::link_reg_t pc;
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  pc = rawPC;
 #endif
 
   // Exit early if at the top of the stack.
@@ -2597,7 +2939,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
-  if (_addressSpace.findUnwindSections(pc, sects)) {
+  if (_addressSpace.template findUnwindSections<R>(pc, sects)) {
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
     // If there is a compact unwind encoding table, look there first.
     if (sects.compact_unwind_section != 0) {
@@ -2653,8 +2995,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
   // There is no static unwind info for this pc. Look to see if an FDE was
   // dynamically registered for it.
-  pint_t cachedFDE = DwarfFDECache<A>::findFDE(DwarfFDECache<A>::kSearchAll,
-                                               pc);
+  pint_t cachedFDE =
+      DwarfFDECache<A>::template findFDE<R>(DwarfFDECache<A>::kSearchAll, pc);
   if (cachedFDE != 0) {
     typename CFI_Parser<A>::FDE_Info fdeInfo;
     typename CFI_Parser<A>::CIE_Info cieInfo;
@@ -2666,7 +3008,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
   // Lastly, ask AddressSpace object about platform specific ways to locate
   // other FDEs.
   pint_t fde;
-  if (_addressSpace.findOtherFDE(pc, fde)) {
+  if (_addressSpace.template findOtherFDE<R>(pc, fde)) {
     typename CFI_Parser<A>::FDE_Info fdeInfo;
     typename CFI_Parser<A>::CIE_Info cieInfo;
     if (!CFI_Parser<A>::decodeFDE(_addressSpace, fde, &fdeInfo, &cieInfo)) {
@@ -2679,7 +3021,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif // #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (setInfoForSigReturn())
     return;
 #endif
@@ -2690,6 +3032,21 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_AARCH64)
+
+/*
+ * The linux sigreturn restorer stub will always have the form:
+ *
+ *  d2801168        movz    x8, #0x8b
+ *  d4000001        svc     #0x0
+ */
+#if defined(__AARCH64EB__)
+#define MOVZ_X8_8B 0x681180d2
+#define SVC_0 0x010000d4
+#else
+#define MOVZ_X8_8B 0xd2801168
+#define SVC_0 0xd4000001
+#endif
+
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // Look for the sigreturn trampoline. The trampoline's body is two
@@ -2714,7 +3071,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
     return false;
   auto *instructions = reinterpret_cast<const uint32_t *>(pc);
   // Look for instructions: mov x8, #0x8b; svc #0x0
-  if (instructions[0] != 0xd2801168 || instructions[1] != 0xd4000001)
+  if (instructions[0] != MOVZ_X8_8B || instructions[1] != SVC_0)
     return false;
 
   _info = {};
@@ -2755,65 +3112,63 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   _isSignalFrame = true;
   return UNW_STEP_SUCCESS;
 }
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_AARCH64)
 
-#elif defined(_LIBUNWIND_TARGET_HAIKU) && defined(_LIBUNWIND_TARGET_X86_64)
-#include <commpage_defs.h>
-#include <signal.h>
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_LOONGARCH)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_loongarch &) {
+  const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  if (!isReadableAddr(pc))
+    return false;
+  const auto *instructions = reinterpret_cast<const uint32_t *>(pc);
+  // Look for the two instructions used in the sigreturn trampoline
+  // __vdso_rt_sigreturn:
+  //
+  // 0x03822c0b li a7,0x8b
+  // 0x002b0000 syscall 0
+  if (instructions[0] != 0x03822c0b || instructions[1] != 0x002b0000)
+    return false;
 
-extern "C" {
-extern void *__gCommPageAddress;
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn() {
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  addr_t signal_handler =
-      (((addr_t *)__gCommPageAddress)[COMMPAGE_ENTRY_X86_SIGNAL_HANDLER] +
-       (addr_t)__gCommPageAddress);
-  addr_t signal_handler_ret = signal_handler + 45;
-#endif
-  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
-  if (pc == signal_handler_ret) {
-    _info = {};
-    _info.start_ip = signal_handler;
-    _info.end_ip = signal_handler_ret;
-    _isSigReturn = true;
-    return true;
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_loongarch &) {
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext_t struct:
+  //     - 8-byte long (__uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte uc_stack
+  //     - 8-byte uc_sigmask
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/loongarch/kernel/signal.c
+  const pint_t kOffsetSpToSigcontext = 128 + 8 + 8 + 24 + 8 + 128;
+
+  const pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+  _registers.setIP(_addressSpace.get64(sigctx));
+  for (int i = UNW_LOONGARCH_R1; i <= UNW_LOONGARCH_R31; ++i) {
+    // skip R0
+    uint64_t value =
+        _addressSpace.get64(sigctx + static_cast<pint_t>((i + 1) * 8));
+    _registers.setRegister(i, value);
   }
-  return false;
-}
-
-template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn() {
   _isSignalFrame = true;
-  pint_t sp = _registers.getSP();
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  vregs *regs = (vregs *)(sp + 0x70);
-
-  _registers.setRegister(UNW_REG_IP, regs->rip);
-  _registers.setRegister(UNW_REG_SP, regs->rsp);
-  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
-  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
-  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
-  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
-  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
-  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
-  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
-  _registers.setRegister(UNW_X86_64_R8, regs->r8);
-  _registers.setRegister(UNW_X86_64_R9, regs->r9);
-  _registers.setRegister(UNW_X86_64_R10, regs->r10);
-  _registers.setRegister(UNW_X86_64_R11, regs->r11);
-  _registers.setRegister(UNW_X86_64_R12, regs->r12);
-  _registers.setRegister(UNW_X86_64_R13, regs->r13);
-  _registers.setRegister(UNW_X86_64_R14, regs->r14);
-  _registers.setRegister(UNW_X86_64_R15, regs->r15);
-  // TODO: XMM
-#endif
-
   return UNW_STEP_SUCCESS;
 }
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
-       // defined(_LIBUNWIND_TARGET_AARCH64)
+       // defined(_LIBUNWIND_TARGET_LOONGARCH)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_RISCV)
@@ -2972,16 +3327,106 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
+#if defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn() {
+  Dl_info dlinfo;
+  const auto isSignalHandler = [&](pint_t addr) {
+    if (!dladdr(reinterpret_cast<void *>(addr), &dlinfo))
+      return false;
+    if (strcmp(dlinfo.dli_fname, "commpage"))
+      return false;
+    if (dlinfo.dli_sname == NULL ||
+        strcmp(dlinfo.dli_sname, "commpage_signal_handler"))
+      return false;
+    return true;
+  };
+
+  pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  if (!isSignalHandler(pc))
+    return false;
+
+  pint_t start = reinterpret_cast<pint_t>(dlinfo.dli_saddr);
+
+  static size_t signalHandlerSize = 0;
+  if (signalHandlerSize == 0) {
+    size_t boundLow = 0;
+    size_t boundHigh = static_cast<size_t>(-1);
+
+    area_info areaInfo;
+    if (get_area_info(area_for(dlinfo.dli_saddr), &areaInfo) == B_OK)
+      boundHigh = areaInfo.size;
+
+    while (boundLow < boundHigh) {
+      size_t boundMid = boundLow + ((boundHigh - boundLow) / 2);
+      pint_t test = start + boundMid;
+      if (test >= start && isSignalHandler(test))
+        boundLow = boundMid + 1;
+      else
+        boundHigh = boundMid;
+    }
+
+    signalHandlerSize = boundHigh;
+  }
+
+  _info = {};
+  _info.start_ip = start;
+  _info.end_ip = start + signalHandlerSize;
+  _isSigReturn = true;
+
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn() {
+  _isSignalFrame = true;
+
+#if defined(_LIBUNWIND_TARGET_X86_64)
+  // Layout of the stack before function call:
+  // - signal_frame_data
+  //   + siginfo_t    (public struct, fairly stable)
+  //   + ucontext_t   (public struct, fairly stable)
+  //     - mcontext_t -> Offset 0x70, this is what we want.
+  // - frame->ip (8 bytes)
+  // - frame->bp (8 bytes). Not written by the kernel,
+  //   but the signal handler has a "push %rbp" instruction.
+  pint_t bp = this->getReg(UNW_X86_64_RBP);
+  vregs *regs = (vregs *)(bp + 0x70);
+
+  _registers.setRegister(UNW_REG_IP, regs->rip);
+  _registers.setRegister(UNW_REG_SP, regs->rsp);
+  _registers.setRegister(UNW_X86_64_RAX, regs->rax);
+  _registers.setRegister(UNW_X86_64_RDX, regs->rdx);
+  _registers.setRegister(UNW_X86_64_RCX, regs->rcx);
+  _registers.setRegister(UNW_X86_64_RBX, regs->rbx);
+  _registers.setRegister(UNW_X86_64_RSI, regs->rsi);
+  _registers.setRegister(UNW_X86_64_RDI, regs->rdi);
+  _registers.setRegister(UNW_X86_64_RBP, regs->rbp);
+  _registers.setRegister(UNW_X86_64_R8, regs->r8);
+  _registers.setRegister(UNW_X86_64_R9, regs->r9);
+  _registers.setRegister(UNW_X86_64_R10, regs->r10);
+  _registers.setRegister(UNW_X86_64_R11, regs->r11);
+  _registers.setRegister(UNW_X86_64_R12, regs->r12);
+  _registers.setRegister(UNW_X86_64_R13, regs->r13);
+  _registers.setRegister(UNW_X86_64_R14, regs->r14);
+  _registers.setRegister(UNW_X86_64_R15, regs->r15);
+  // TODO: XMM
+#endif // defined(_LIBUNWIND_TARGET_X86_64)
+
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
+
 template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   (void)stage2;
-  // Bottom of stack is defined is when unwind info cannot be found.
+  // Bottom of stack is defined when unwind info cannot be found.
   if (_unwindInfoMissing)
     return UNW_STEP_END;
 
   // Use unwinding info to modify register set as if function returned.
   int result;
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
-    defined(_LIBUNWIND_TARGET_HAIKU)
+    defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   if (_isSigReturn) {
     result = this->stepThroughSigReturn();
   } else
@@ -3018,16 +3463,22 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 template <typename A, typename R>
 void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
   if (_unwindInfoMissing)
-    memset(info, 0, sizeof(*info));
+    memset(static_cast<void *>(info), 0, sizeof(*info));
   else
     *info = _info;
 }
 
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
-                                                           unw_word_t *offset) {
-  return _addressSpace.findFunctionName((pint_t)this->getReg(UNW_REG_IP),
-                                         buf, bufLen, offset);
+                                         unw_word_t *offset) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+  typename R::link_reg_t pc;
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
+  return _addressSpace.template findFunctionName<R>(pc, buf, bufLen, offset);
 }
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
@@ -3062,7 +3513,7 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 #endif
 
 #if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
-extern "C" void *__libunwind_cet_get_registers(unw_cursor_t *cursor) {
+extern "C" void *__libunwind_shstk_get_registers(unw_cursor_t *cursor) {
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   return co->get_registers();
 }

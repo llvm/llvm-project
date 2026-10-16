@@ -1,0 +1,17 @@
+# RUN: split-file %s %t
+# RUN: cp %S/1.in %t/out.txt
+# RUN: diff %t/test3.expected %t/out.txt
+
+#--- test1.expected
+unrelated
+#--- test2.expected
+#--- test3.expected
+BAR
+
+BAZ
+
+#--- test4.expected
+filler
+#--- test5.expected
+
+

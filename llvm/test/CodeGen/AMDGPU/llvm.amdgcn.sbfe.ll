@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}bfe_i32_arg_arg_arg:
 ; GCN: v_bfe_i32
@@ -35,11 +35,9 @@ define amdgpu_kernel void @bfe_i32_imm_arg_arg(ptr addrspace(1) %out, i32 %src1,
 
 ; GCN-LABEL: {{^}}v_bfe_print_arg:
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 2, 8
-define amdgpu_kernel void @v_bfe_print_arg(ptr addrspace(1) %out, ptr addrspace(1) %src0) #0 {
-  %load = load i32, ptr addrspace(1) %src0, align 4
-  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 2, i32 8)
-  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
-  ret void
+define i32 @v_bfe_print_arg(i32 %src0) #0 {
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 %src0, i32 2, i32 8)
+  ret i32 %bfe_i32
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_arg_0_width_reg_offset:
@@ -63,13 +61,11 @@ define amdgpu_kernel void @bfe_i32_arg_0_width_imm_offset(ptr addrspace(1) %out,
 ; GCN-LABEL: {{^}}bfe_i32_test_6:
 ; GCN: v_lshlrev_b32_e32 v{{[0-9]+}}, 31, v{{[0-9]+}}
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_6(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %shl = shl i32 %x, 31
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_6(i32 %in) #0 {
+  %shl = shl i32 %in, 31
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shl, i32 1, i32 31)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_7:
@@ -87,74 +83,62 @@ define amdgpu_kernel void @bfe_i32_test_7(ptr addrspace(1) %out, ptr addrspace(1
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_8:
-; GCN: buffer_load_dword
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 1
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %shl = shl i32 %x, 31
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_8(i32 %in) #0 {
+  %shl = shl i32 %in, 31
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shl, i32 31, i32 1)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_9:
 ; GCN-NOT: {{[^@]}}bfe
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 31, v{{[0-9]+}}
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_9(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %x, i32 31, i32 1)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_9(i32 %in) #0 {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %in, i32 31, i32 1)
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_10:
 ; GCN-NOT: {{[^@]}}bfe
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_10(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %x, i32 1, i32 31)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_10(i32 %in) #0 {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %in, i32 1, i32 31)
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_11:
 ; GCN-NOT: {{[^@]}}bfe
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_11(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %x, i32 8, i32 24)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_11(i32 %in) #0 {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %in, i32 8, i32 24)
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_12:
 ; GCN-NOT: {{[^@]}}bfe
 ; GCN: v_ashrrev_i32_e32 v{{[0-9]+}}, 24, v{{[0-9]+}}
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_12(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %x, i32 24, i32 8)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_12(i32 %in) #0 {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %in, i32 24, i32 8)
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_13:
 ; GCN: v_ashrrev_i32_e32 {{v[0-9]+}}, 31, {{v[0-9]+}}
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_i32_test_13(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %shl = ashr i32 %x, 31
+; GCN: s_setpc_b64
+define i32 @bfe_i32_test_13(i32 %in) #0 {
+  %shl = ashr i32 %in, 31
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shl, i32 31, i32 1)
-  store i32 %bfe, ptr addrspace(1) %out, align 4 ret void
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_test_14:
@@ -165,7 +149,8 @@ define amdgpu_kernel void @bfe_i32_test_14(ptr addrspace(1) %out, ptr addrspace(
   %x = load i32, ptr addrspace(1) %in, align 4
   %shl = lshr i32 %x, 31
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shl, i32 31, i32 1)
-  store i32 %bfe, ptr addrspace(1) %out, align 4 ret void
+  store i32 %bfe, ptr addrspace(1) %out, align 4
+  ret void
 }
 
 ; GCN-LABEL: {{^}}bfe_i32_constant_fold_test_0:
@@ -378,33 +363,25 @@ define amdgpu_kernel void @bfe_i32_constant_fold_test_18(ptr addrspace(1) %out) 
 }
 
 ; GCN-LABEL: {{^}}bfe_sext_in_reg_i24:
-; GCN: buffer_load_dword [[LOAD:v[0-9]+]],
 ; GCN-NOT: v_lshl
 ; GCN-NOT: v_ashr
-; GCN: v_bfe_i32 [[BFE:v[0-9]+]], [[LOAD]], 0, 24
-; GCN: buffer_store_dword [[BFE]],
-define amdgpu_kernel void @bfe_sext_in_reg_i24(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %x, i32 0, i32 24)
+; GCN: v_bfe_i32 [[BFE:v[0-9]+]], v0, 0, 24
+define i32 @bfe_sext_in_reg_i24(i32 %in) #0 {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %in, i32 0, i32 24)
   %shl = shl i32 %bfe, 8
   %ashr = ashr i32 %shl, 8
-  store i32 %ashr, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %ashr
 }
 
 ; GCN-LABEL: @simplify_demanded_bfe_sdiv
-; GCN: buffer_load_dword [[LOAD:v[0-9]+]]
-; GCN: v_bfe_i32 [[BFE:v[0-9]+]], [[LOAD]], 1, 16
+; GCN: v_bfe_i32 [[BFE:v[0-9]+]], v0, 1, 16
 ; GCN: v_lshrrev_b32_e32 [[TMP0:v[0-9]+]], 31, [[BFE]]
 ; GCN: v_add_{{[iu]}}32_e32 [[TMP1:v[0-9]+]], vcc, [[BFE]], [[TMP0]]
 ; GCN: v_ashrrev_i32_e32 [[TMP2:v[0-9]+]], 1, [[TMP1]]
-; GCN: buffer_store_dword [[TMP2]]
-define amdgpu_kernel void @simplify_demanded_bfe_sdiv(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %src = load i32, ptr addrspace(1) %in, align 4
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 1, i32 16)
+define i32 @simplify_demanded_bfe_sdiv(i32 %in) #0 {
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %in, i32 1, i32 16)
   %div = sdiv i32 %bfe, 2
-  store i32 %div, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %div
 }
 
 ; GCN-LABEL: {{^}}bfe_0_width:
@@ -420,37 +397,31 @@ define amdgpu_kernel void @bfe_0_width(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN-LABEL: {{^}}bfe_8_bfe_8:
 ; GCN: v_bfe_i32
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_8_bfe_8(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
-  %load = load i32, ptr addrspace(1) %ptr, align 4
-  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 0, i32 8)
+; GCN: s_setpc_b64
+define i32 @bfe_8_bfe_8(i32 %ptr) #0 {
+  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %ptr, i32 0, i32 8)
   %bfe1 = call i32 @llvm.amdgcn.sbfe.i32(i32 %bfe0, i32 0, i32 8)
-  store i32 %bfe1, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe1
 }
 
 ; GCN-LABEL: {{^}}bfe_8_bfe_16:
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_8_bfe_16(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
-  %load = load i32, ptr addrspace(1) %ptr, align 4
-  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 0, i32 8)
+; GCN: s_setpc_b64
+define i32 @bfe_8_bfe_16(i32 %ptr) #0 {
+  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %ptr, i32 0, i32 8)
   %bfe1 = call i32 @llvm.amdgcn.sbfe.i32(i32 %bfe0, i32 0, i32 16)
-  store i32 %bfe1, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe1
 }
 
 ; This really should be folded into 1
 ; GCN-LABEL: {{^}}bfe_16_bfe_8:
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
 ; GCN-NOT: {{[^@]}}bfe
-; GCN: s_endpgm
-define amdgpu_kernel void @bfe_16_bfe_8(ptr addrspace(1) %out, ptr addrspace(1) %ptr) #0 {
-  %load = load i32, ptr addrspace(1) %ptr, align 4
-  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %load, i32 0, i32 16)
+; GCN: s_setpc_b64
+define i32 @bfe_16_bfe_8(i32 %ptr) #0 {
+  %bfe0 = call i32 @llvm.amdgcn.sbfe.i32(i32 %ptr, i32 0, i32 16)
   %bfe1 = call i32 @llvm.amdgcn.sbfe.i32(i32 %bfe0, i32 0, i32 8)
-  store i32 %bfe1, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe1
 }
 
 ; Make sure there isn't a redundant BFE
@@ -509,44 +480,76 @@ define amdgpu_kernel void @sextload_i8_to_i32_bfe_0(ptr addrspace(1) %out, ptr a
 ; GCN-NOT: shr
 ; GCN-NOT: shl
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 1
-; GCN: s_endpgm
-define amdgpu_kernel void @sext_in_reg_i1_bfe_offset_0(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %shl = shl i32 %x, 31
+; GCN: s_setpc_b64
+define i32 @sext_in_reg_i1_bfe_offset_0(i32 %in) #0 {
+  %shl = shl i32 %in, 31
   %shr = ashr i32 %shl, 31
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 0, i32 1)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}sext_in_reg_i1_bfe_offset_1:
-; GCN: buffer_load_dword
 ; GCN-NOT: shl
 ; GCN-NOT: shr
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 1
-; GCN: s_endpgm
-define amdgpu_kernel void @sext_in_reg_i1_bfe_offset_1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %shl = shl i32 %x, 30
+; GCN: s_setpc_b64
+define i32 @sext_in_reg_i1_bfe_offset_1(i32 %in) #0 {
+  %shl = shl i32 %in, 30
   %shr = ashr i32 %shl, 30
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 1, i32 1)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
-  ret void
+  ret i32 %bfe
 }
 
 ; GCN-LABEL: {{^}}sext_in_reg_i2_bfe_offset_1:
-; GCN: buffer_load_dword
 ; GCN-NOT: v_lshl
 ; GCN-NOT: v_ashr
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 2
 ; GCN: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 1, 2
-; GCN: s_endpgm
-define amdgpu_kernel void @sext_in_reg_i2_bfe_offset_1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-  %x = load i32, ptr addrspace(1) %in, align 4
-  %shl = shl i32 %x, 30
+; GCN: s_setpc_b64
+define i32 @sext_in_reg_i2_bfe_offset_1(i32 %in) #0 {
+  %shl = shl i32 %in, 30
   %shr = ashr i32 %shl, 30
   %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %shr, i32 1, i32 2)
-  store i32 %bfe, ptr addrspace(1) %out, align 4
+  ret i32 %bfe
+}
+
+; Test that width values >= 32 are correctly masked with & 0x1f
+; This is a regression test for issue #182677 where missing mask caused
+; unsigned underflow in ComputeNumSignBitsForTargetNode
+
+; GCN-LABEL: {{^}}bfe_i32_width_33:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], 0
+; GCN: buffer_store_dword [[VREG]],
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_i32_width_33(ptr addrspace(1) %out) #0 {
+  ; Width 33 & 0x1f = 1, extracts 1 bit from position 0 of value 0
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 0, i32 0, i32 33)
+  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}bfe_i32_width_64:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], 0
+; GCN: buffer_store_dword [[VREG]],
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_i32_width_64(ptr addrspace(1) %out) #0 {
+  ; Width 64 & 0x1f = 0, should return 0 (width 0 extracts nothing)
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 255, i32 0, i32 64)
+  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}bfe_i32_width_32:
+; GCN-NOT: {{[^@]}}bfe
+; GCN: v_mov_b32_e32 [[VREG:v[0-9]+]], 0
+; GCN: buffer_store_dword [[VREG]],
+; GCN: s_endpgm
+define amdgpu_kernel void @bfe_i32_width_32(ptr addrspace(1) %out) #0 {
+  ; Width 32 & 0x1f = 0, should return 0
+  %bfe_i32 = call i32 @llvm.amdgcn.sbfe.i32(i32 123, i32 0, i32 32)
+  store i32 %bfe_i32, ptr addrspace(1) %out, align 4
   ret void
 }
 

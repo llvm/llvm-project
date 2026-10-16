@@ -137,7 +137,7 @@ protected:
     NewGroup->Next = nullptr;
 
     // Try to replace current group with allocated one.
-    if (AtomicGroup.compare_exchange_weak(CurGroup, NewGroup))
+    if (AtomicGroup.compare_exchange_strong(CurGroup, NewGroup))
       return true;
 
     // Put allocated group as last group.

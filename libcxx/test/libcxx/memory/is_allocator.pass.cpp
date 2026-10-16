@@ -11,7 +11,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 
 // template<typename _Alloc>
-// struct __is_allocator;
+// inline const bool __is_allocator_v;
 
 // Is either true_type or false_type depending on if A is an allocator.
 
@@ -23,14 +23,12 @@
 #include "test_allocator.h"
 
 template <typename T>
-void test_allocators()
-{
-    static_assert(!std::__is_allocator<T>::value, "" );
-    static_assert( std::__is_allocator<std::allocator<T>>::value, "" );
-    static_assert( std::__is_allocator<test_allocator<T>>::value, "" );
-    static_assert( std::__is_allocator<min_allocator<T>>::value, "" );
+void test_allocators() {
+  static_assert(!std::__is_allocator_v<T>, "");
+  static_assert(std::__is_allocator_v<std::allocator<T>>, "");
+  static_assert(std::__is_allocator_v<test_allocator<T>>, "");
+  static_assert(std::__is_allocator_v<min_allocator<T>>, "");
 }
-
 
 int main(int, char**)
 {

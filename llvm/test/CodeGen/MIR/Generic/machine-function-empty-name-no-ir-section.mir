@@ -1,0 +1,8 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+# This test ensures that the MIR parser is able to parse unnamed functions when
+# the LLVM IR module is not embedded.
+---
+# CHECK: name: ''
+name: ''
+...
+

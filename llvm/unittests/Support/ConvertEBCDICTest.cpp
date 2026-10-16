@@ -41,7 +41,7 @@ static const char AccentE[] = "\xaa\x4a\xb1\xc1\x63\x67\x9e\xc5\x74\x71\x72"
 // String with Cyrillic character ya.
 static const char CyrillicUTF[] = "\xd0\xaf";
 
-TEST(CharSet, FromUTF8) {
+TEST(ConverterEBCDIC, convertToEBCDIC) {
   // Hello string.
   StringRef Src(HelloA);
   SmallString<64> Dst;
@@ -72,7 +72,7 @@ TEST(CharSet, FromUTF8) {
   Dst.clear();
 }
 
-TEST(CharSet, ToUTF8) {
+TEST(ConverterEBCDIC, convertFromEBCDIC) {
   // Hello string.
   StringRef Src(HelloE);
   SmallString<64> Dst;
@@ -92,6 +92,39 @@ TEST(CharSet, ToUTF8) {
   ConverterEBCDIC::convertToUTF8(Src, Dst);
   EXPECT_STREQ(AccentUTF, static_cast<std::string>(Dst).c_str());
   Dst.clear();
+}
+
+TEST(ConverterEBCDIC, convertToEBCDICRejectsTruncatedUTF8) {
+  const StringRef TruncatedUTF8[] = {
+      StringRef("\x41\xc2", 2),
+      StringRef("\x41\xe2", 2),
+      StringRef("\x41\xe2\x82", 3),
+      StringRef("\x41\xf0\x9f\x92", 4),
+  };
+
+  for (StringRef Src : TruncatedUTF8) {
+    SmallString<8> Dst;
+    std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Src, Dst);
+    EXPECT_EQ(EC, std::errc::invalid_argument);
+    EXPECT_EQ(Dst, StringRef("\xc1", 1));
+  }
+}
+
+TEST(ConverterEBCDIC, convertToEBCDICRejectsMalformedUTF8) {
+  const StringRef MalformedUTF8[] = {
+      StringRef("\x41\xc0", 2),         StringRef("\x41\xc1", 2),
+      StringRef("\x41\xf5", 2),         StringRef("\x41\xc2\x41", 3),
+      StringRef("\x41\xe0\x80", 3),     StringRef("\x41\xed\xa0", 3),
+      StringRef("\x41\xf0\x80", 3),     StringRef("\x41\xf4\x90", 3),
+      StringRef("\x41\xe2\x28\xa1", 4),
+  };
+
+  for (StringRef Src : MalformedUTF8) {
+    SmallString<8> Dst;
+    std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Src, Dst);
+    EXPECT_EQ(EC, std::errc::illegal_byte_sequence);
+    EXPECT_EQ(Dst, StringRef("\xc1", 1));
+  }
 }
 
 } // namespace

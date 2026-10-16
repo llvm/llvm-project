@@ -6,7 +6,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -14,6 +13,9 @@ class NS_Op<string mnemonic, list<Trait> traits> :
 def OpA : NS_Op<"one_normal_result_op", []> {
   let results = (outs I32:$result);
 }
+
+// DECL-LABEL: class OpA : {{.*}} {
+// DECL: static constexpr int odsIndex_result = 0;
 
 // CHECK-LABEL: void OpA::build
 // CHECK:         ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands
@@ -24,6 +26,10 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
   let arguments = (ins I32:$x);
   let results = (outs I32:$y);
 }
+
+// DECL-LABEL: class OpB : {{.*}} {
+// DECL: static constexpr int odsIndex_x = 0;
+// DECL: static constexpr int odsIndex_y = 0;
 
 // CHECK-LABEL: OpB definitions
 // CHECK: void OpB::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type y, ::mlir::Value x)
@@ -39,6 +45,10 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 def OpC : NS_Op<"three_normal_result_op", []> {
   let results = (outs I32:$x, /*unnamed*/I32, I32:$z);
 }
+
+// DECL-LABEL: class OpC : {{.*}} {
+// DECL: static constexpr int odsIndex_x = 0;
+// DECL: static constexpr int odsIndex_z = 2;
 
 // CHECK-LABEL: OpC definitions
 // CHECK:       void OpC::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type x, ::mlir::Type resultType1, ::mlir::Type z)
@@ -58,7 +68,9 @@ def OpD : NS_Op<"type_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpD definitions
 // CHECK: void OpD::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(attr.getValue()).getValue()});
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(typeAttr).getValue()});
+// CHECK: void OpD::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes)
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(typeAttr).getValue()});
 
 def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
   let arguments = (ins I32:$x, F32Attr:$attr);
@@ -67,7 +79,10 @@ def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpE definitions
 // CHECK: void OpE::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(attr.getValue()).getType()});
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(typeAttr).getType()});
+// CHECK: void OpE::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes)
+// CHECK: ::mlir::Attribute typeAttr = properties.getAttr();
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(typeAttr).getType()});
 
 def OpF : NS_Op<"one_variadic_result_op", []> {
   let results = (outs Variadic<I32>:$x);
@@ -118,6 +133,8 @@ def OpK : NS_Op<"only_input_is_variadic_with_same_value_type_op", [SameOperandsA
 }
 
 // CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+// CHECK: odsState.addTypes({operands[0].getType()});
+// CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes)
 // CHECK: odsState.addTypes({operands[0].getType()});
 
 // Test with inferred shapes and interleaved with operands/attributes.
@@ -206,4 +223,4 @@ def OpM : NS_Op<"mix_diff_size_variadic_and_normal_results_op", [AttrSizedResult
 }
 
 // CHECK-LABEL: OpM::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange output1, ::mlir::Type output2, /*optional*/::mlir::Type output3)
-// CHECK: odsState.addAttribute(getResultSegmentSizesAttrName(odsState.name), odsBuilder.getDenseI32ArrayAttr({static_cast<int32_t>(output1.size()), 1, (output3 ? 1 : 0)}));
+// CHECK: ::llvm::copy(::llvm::ArrayRef<int32_t>({static_cast<int32_t>(output1.size()), 1, (output3 ? 1 : 0)}),  odsState.getOrAddProperties<Properties>().resultSegmentSizes.begin());

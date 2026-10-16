@@ -20,22 +20,24 @@ class MachineFunctionPass;
 class VirtRegMap;
 class VirtRegAuxInfo;
 class LiveIntervals;
+class LiveRegMatrix;
 class LiveStacks;
 class MachineDominatorTree;
 class MachineBlockFrequencyInfo;
+class AllocationOrder;
 
 /// Spiller interface.
 ///
 /// Implementations are utility classes which insert spill or remat code on
 /// demand.
-class Spiller {
+class LLVM_ABI Spiller {
   virtual void anchor();
 
 public:
   virtual ~Spiller() = 0;
 
   /// spill - Spill the LRE.getParent() live interval.
-  virtual void spill(LiveRangeEdit &LRE) = 0;
+  virtual void spill(LiveRangeEdit &LRE, AllocationOrder *Order = nullptr) = 0;
 
   /// Return the registers that were spilled.
   virtual ArrayRef<Register> getSpilledRegs() = 0;
@@ -56,9 +58,10 @@ public:
 
 /// Create and return a spiller that will insert spill code directly instead
 /// of deferring though VirtRegMap.
-Spiller *createInlineSpiller(const Spiller::RequiredAnalyses &Analyses,
-                             MachineFunction &MF, VirtRegMap &VRM,
-                             VirtRegAuxInfo &VRAI);
+LLVM_ABI Spiller *createInlineSpiller(const Spiller::RequiredAnalyses &Analyses,
+                                      MachineFunction &MF, VirtRegMap &VRM,
+                                      VirtRegAuxInfo &VRAI,
+                                      LiveRegMatrix *Matrix = nullptr);
 
 } // end namespace llvm
 

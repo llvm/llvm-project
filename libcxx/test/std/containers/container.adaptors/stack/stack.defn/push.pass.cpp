@@ -15,18 +15,17 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::stack<int> q;
-    q.push(1);
-    assert(q.size() == 1);
-    assert(q.top() == 1);
-    q.push(2);
-    assert(q.size() == 2);
-    assert(q.top() == 2);
-    q.push(3);
-    assert(q.size() == 3);
-    assert(q.top() == 3);
+int main(int, char**) {
+  std::stack<int> q;
+  q.push(1);
+  assert(q.size() == 1);
+  assert(q.top() == 1);
+  q.push(2);
+  assert(q.size() == 2);
+  assert(q.top() == 2);
+  q.push(3);
+  assert(q.size() == 3);
+  assert(q.top() == 3);
 
   return 0;
 }

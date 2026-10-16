@@ -237,7 +237,7 @@ void test_pr10771() {
     ((char*)foo)[sizeof(foo) - 1] = '\0';  // no-warning
     *(((char*)foo) + sizeof(foo) - 1) = '\0';  // no-warning
 
-    ((char*)foo)[sizeof(foo)] = '\0';  // expected-warning {{array index 32768 is past the end of the array (that has type 'double[4096]', cast to 'char *')}}
+    ((char*)foo)[sizeof(foo)] = '\0';  // expected-warning {{array index 32'768 is past the end of the array (that has type 'double[4096]', cast to 'char *')}}
 
     // TODO: This should probably warn, too.
     *(((char*)foo) + sizeof(foo)) = '\0';  // no-warning
@@ -248,7 +248,7 @@ int test_pr11007_aux(const char * restrict, ...);
 // Test checking with varargs.
 void test_pr11007() {
   double a[5]; // expected-note {{array 'a' declared here}}
-  test_pr11007_aux("foo", a[1000]); // expected-warning {{array index 1000 is past the end of the array (that has type 'double[5]')}}
+  test_pr11007_aux("foo", a[1000]); // expected-warning {{array index 1'000 is past the end of the array (that has type 'double[5]')}}
 }
 
 void test_rdar10916006(void)

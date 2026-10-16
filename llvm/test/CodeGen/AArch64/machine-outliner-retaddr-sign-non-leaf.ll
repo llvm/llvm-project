@@ -8,17 +8,17 @@ define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V8A-LABEL: a:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #27
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    sub sp, sp, #32
-; V8A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; V8A-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
 ; V8A-NEXT:    .cfi_offset w30, -16
 ; V8A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:    //APP
 ; V8A-NEXT:    mov x30, x0
 ; V8A-NEXT:    //NO_APP
-; V8A-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; V8A-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; V8A-NEXT:    add sp, sp, #32
 ; V8A-NEXT:    hint #31
 ; V8A-NEXT:    ret
@@ -26,17 +26,17 @@ define i64 @a(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V83A-LABEL: a:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    pacibsp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    sub sp, sp, #32
-; V83A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; V83A-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    mov x30, x0
 ; V83A-NEXT:    //NO_APP
-; V83A-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; V83A-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; V83A-NEXT:    add sp, sp, #32
 ; V83A-NEXT:    retab
   %1 = alloca i32, align 4
@@ -59,17 +59,17 @@ define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V8A-LABEL: b:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #27
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    sub sp, sp, #32
-; V8A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; V8A-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
 ; V8A-NEXT:    .cfi_offset w30, -16
 ; V8A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:    //APP
 ; V8A-NEXT:    mov x30, x0
 ; V8A-NEXT:    //NO_APP
-; V8A-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; V8A-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; V8A-NEXT:    add sp, sp, #32
 ; V8A-NEXT:    hint #31
 ; V8A-NEXT:    ret
@@ -77,17 +77,17 @@ define i64 @b(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V83A-LABEL: b:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    pacibsp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    sub sp, sp, #32
-; V83A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; V83A-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    mov x30, x0
 ; V83A-NEXT:    //NO_APP
-; V83A-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; V83A-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; V83A-NEXT:    add sp, sp, #32
 ; V83A-NEXT:    retab
   %1 = alloca i32, align 4
@@ -110,17 +110,17 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V8A-LABEL: c:
 ; V8A:       // %bb.0:
 ; V8A-NEXT:    .cfi_b_key_frame
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #27
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    sub sp, sp, #32
-; V8A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; V8A-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 32
 ; V8A-NEXT:    .cfi_offset w30, -16
 ; V8A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:    //APP
 ; V8A-NEXT:    mov x30, x0
 ; V8A-NEXT:    //NO_APP
-; V8A-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; V8A-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; V8A-NEXT:    add sp, sp, #32
 ; V8A-NEXT:    hint #31
 ; V8A-NEXT:    ret
@@ -128,17 +128,17 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; V83A-LABEL: c:
 ; V83A:       // %bb.0:
 ; V83A-NEXT:    .cfi_b_key_frame
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    pacibsp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    sub sp, sp, #32
-; V83A-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; V83A-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 32
 ; V83A-NEXT:    .cfi_offset w30, -16
 ; V83A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V83A-NEXT:    //APP
 ; V83A-NEXT:    mov x30, x0
 ; V83A-NEXT:    //NO_APP
-; V83A-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; V83A-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; V83A-NEXT:    add sp, sp, #32
 ; V83A-NEXT:    retab
   %1 = alloca i32, align 4
@@ -164,3 +164,5 @@ define i64 @c(i64 %x) "sign-return-address"="non-leaf" "sign-return-address-key"
 ; CHECK-NOT:            hint #2{{[5,7]}}
 ; CHECK-NOT:            .cfi_negate_ra_state
 ; CHECK-NOT:            auti{{[a,b]}}sp
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

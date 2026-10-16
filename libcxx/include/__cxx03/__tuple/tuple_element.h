@@ -38,21 +38,6 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, const volatile _Tp> {
   typedef _LIBCPP_NODEBUG const volatile typename tuple_element<_Ip, _Tp>::type type;
 };
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <size_t _Ip, class... _Types>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, __tuple_types<_Types...> > {
-  static_assert(_Ip < sizeof...(_Types), "tuple_element index out of range");
-  typedef _LIBCPP_NODEBUG __type_pack_element<_Ip, _Types...> type;
-};
-
-#  if _LIBCPP_STD_VER >= 14
-template <size_t _Ip, class... _Tp>
-using tuple_element_t _LIBCPP_NODEBUG = typename tuple_element<_Ip, _Tp...>::type;
-#  endif
-
-#endif // _LIBCPP_CXX03_LANG
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___TUPLE_TUPLE_ELEMENT_H

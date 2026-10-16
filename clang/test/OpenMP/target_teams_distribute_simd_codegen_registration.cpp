@@ -120,41 +120,41 @@
 
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
 // TCHECK-NOT: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 // CHECK-DAG: {{@.+}} = weak{{.*}} constant i8 0
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-DAG: {{@.+}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK-DAG: {{@.+}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 
 // CHECK-NTARGET-NOT: weak constant i8 0
 // CHECK-NTARGET-NOT: private unnamed_addr constant [1 x i
@@ -455,7 +455,7 @@ int bar(int a){
 // TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EE3fooEv", i32 {{[0-9]+}}, i32 0, i32 {{[0-9]+}}}
 // TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SCC1Ev", i32 {{[0-9]+}}, i32 0, i32 {{[0-9]+}}}
 
-// TCHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
-// CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+// TCHECK-DAG: !{!"llvm.loop.vectorize.enable"}
+// CHECK-DAG: !{!"llvm.loop.vectorize.enable"}
 
 #endif

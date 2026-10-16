@@ -14,12 +14,14 @@
 #ifndef LLVM_LIB_CODEGEN_REGISTERCOALESCER_H
 #define LLVM_LIB_CODEGEN_REGISTERCOALESCER_H
 
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
 class MachineInstr;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 /// A helper class for register coalescers. When deciding if

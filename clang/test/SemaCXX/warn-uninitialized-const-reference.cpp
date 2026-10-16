@@ -27,7 +27,7 @@ int const_use(const int i);
 void f(int a) {
   int i;
   const_ref_use(i);             // expected-warning {{variable 'i' is uninitialized when passed as a const reference argument here}}
-  int j = j + const_ref_use(j); // expected-warning {{variable 'j' is uninitialized when used within its own initialization}} expected-warning {{variable 'j' is uninitialized when passed as a const reference argument here}}
+  int j = j + const_ref_use(j); // expected-warning {{variable 'j' is uninitialized when used within its own initialization}}
   A a1 = const_ref_use_A(a1);   // expected-warning {{variable 'a1' is uninitialized when passed as a const reference argument here}}
   int k = const_use(k);         // expected-warning {{variable 'k' is uninitialized when used within its own initialization}}
   A a2 = const_use_A(a2);       // expected-warning {{variable 'a2' is uninitialized when used within its own initialization}}

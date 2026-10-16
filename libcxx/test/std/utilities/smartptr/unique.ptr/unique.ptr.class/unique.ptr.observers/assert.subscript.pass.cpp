@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <memory>
 //
@@ -49,8 +47,8 @@ struct MyDeleter {
 
 template <class WithCookie, class NoCookie>
 void test() {
-  LIBCPP_STATIC_ASSERT(std::__has_array_cookie<WithCookie>::value);
-  LIBCPP_STATIC_ASSERT(!std::__has_array_cookie<NoCookie>::value);
+  LIBCPP_STATIC_ASSERT(std::__has_array_cookie_v<WithCookie>);
+  LIBCPP_STATIC_ASSERT(!std::__has_array_cookie_v<NoCookie>);
 
   // For types with an array cookie, we can always detect OOB accesses. Note that reliance on an array
   // cookie is limited to the default deleter, since a unique_ptr with a custom deleter may not have
@@ -58,15 +56,18 @@ void test() {
   {
     {
       std::unique_ptr<WithCookie[]> ptr(new WithCookie[5]);
+      assert(&ptr[1] == ptr.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
     {
       std::unique_ptr<WithCookie[]> ptr = std::make_unique<WithCookie[]>(5);
+      assert(&ptr[1] == ptr.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
 #if TEST_STD_VER >= 20
     {
       std::unique_ptr<WithCookie[]> ptr = std::make_unique_for_overwrite<WithCookie[]>(5);
+      assert(&ptr[1] == ptr.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(ptr[6] = WithCookie(), "unique_ptr<T[]>::operator[](index): index out of range");
     }
 #endif
@@ -82,11 +83,13 @@ void test() {
   {
     {
       std::unique_ptr<NoCookie[]> ptr = std::make_unique<NoCookie[]>(5);
+      assert(&ptr[1] == ptr.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
 #  if TEST_STD_VER >= 20
     {
       std::unique_ptr<NoCookie[]> ptr = std::make_unique_for_overwrite<NoCookie[]>(5);
+      assert(&ptr[1] == ptr.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(ptr[6] = NoCookie(), "unique_ptr<T[]>::operator[](index): index out of range");
     }
 #  endif
@@ -101,6 +104,7 @@ void test() {
     {
       std::unique_ptr<T[]> ptr = std::make_unique<T[]>(5);
       std::unique_ptr<T[]> other(std::move(ptr));
+      assert(&other[1] == other.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(other[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
 
@@ -109,6 +113,7 @@ void test() {
       std::unique_ptr<T[]> ptr = std::make_unique<T[]>(5);
       std::unique_ptr<T[]> other;
       other = std::move(ptr);
+      assert(&other[1] == other.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(other[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
 
@@ -116,6 +121,7 @@ void test() {
     {
       std::unique_ptr<T[]> ptr = std::make_unique<T[]>(5);
       std::unique_ptr<T[], MyDeleter> other(std::move(ptr));
+      assert(&other[1] == other.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(other[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
 
@@ -124,6 +130,7 @@ void test() {
       std::unique_ptr<T[]> ptr = std::make_unique<T[]>(5);
       std::unique_ptr<T[], MyDeleter> other;
       other = std::move(ptr);
+      assert(&other[1] == other.get() + 1); // ensure no assertion
       TEST_LIBCPP_ASSERT_FAILURE(other[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
   });
@@ -144,6 +151,34 @@ struct WithCookie {
   char padding[Size];
 };
 
+template <std::size_t Size>
+struct alignas(128) OveralignedNoCookie {
+  char padding[Size];
+};
+
+template <std::size_t Size>
+struct alignas(128) OveralignedWithCookie {
+  OveralignedWithCookie() = default;
+  OveralignedWithCookie(OveralignedWithCookie const&) {}
+  OveralignedWithCookie& operator=(OveralignedWithCookie const&) { return *this; }
+  ~OveralignedWithCookie() {}
+  char padding[Size];
+};
+
+// These types have a different ABI alignment (alignof) and preferred alignment (__alignof) on some platforms.
+// Make sure things work with these types because array cookies can be sensitive to preferred alignment on some
+// platforms.
+struct WithCookiePreferredAlignment {
+  WithCookiePreferredAlignment() = default;
+  WithCookiePreferredAlignment(WithCookiePreferredAlignment const&) {}
+  WithCookiePreferredAlignment& operator=(WithCookiePreferredAlignment const&) { return *this; }
+  ~WithCookiePreferredAlignment() {}
+  long double data;
+};
+struct NoCookiePreferredAlignment {
+  long double data;
+};
+
 int main(int, char**) {
   test<WithCookie<1>, NoCookie<1>>();
   test<WithCookie<2>, NoCookie<2>>();
@@ -153,7 +188,18 @@ int main(int, char**) {
   test<WithCookie<16>, NoCookie<16>>();
   test<WithCookie<32>, NoCookie<32>>();
   test<WithCookie<256>, NoCookie<256>>();
+
+  test<OveralignedWithCookie<1>, OveralignedNoCookie<1>>();
+  test<OveralignedWithCookie<2>, OveralignedNoCookie<2>>();
+  test<OveralignedWithCookie<3>, OveralignedNoCookie<3>>();
+  test<OveralignedWithCookie<4>, OveralignedNoCookie<4>>();
+  test<OveralignedWithCookie<8>, OveralignedNoCookie<8>>();
+  test<OveralignedWithCookie<16>, OveralignedNoCookie<16>>();
+  test<OveralignedWithCookie<32>, OveralignedNoCookie<32>>();
+  test<OveralignedWithCookie<256>, OveralignedNoCookie<256>>();
+
   test<std::string, int>();
+  test<WithCookiePreferredAlignment, NoCookiePreferredAlignment>();
 
   return 0;
 }

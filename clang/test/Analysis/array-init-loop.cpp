@@ -19,7 +19,7 @@ void array_uninit() {
 
   auto [a, b, c, d, e] = arr;
 
-  int x = e; // expected-warning{{Assigned value is garbage or undefined}}
+  int x = e; // expected-warning{{Assigned value is uninitialized}}
 }
 
 void lambda_init() {
@@ -168,7 +168,7 @@ struct S3_duplicate {
 void array_uninit_non_pod() {
   S3 arr[1];
 
-  auto [a] = arr; // expected-warning@159{{ in implicit constructor is garbage or undefined }}
+  auto [a] = arr; // expected-warning@159{{ in implicit constructor is uninitialized}}
 }
 
 void lambda_init_non_pod() {
@@ -191,7 +191,7 @@ void lambda_init_non_pod() {
 void lambda_uninit_non_pod() {
   S3_duplicate arr[4];
 
-  int l = [arr] { return arr[3].i; }(); // expected-warning@164{{ in implicit constructor is garbage or undefined }}
+  int l = [arr] { return arr[3].i; }(); // expected-warning@164{{ in implicit constructor is uninitialized }}
 }
 
 // If this struct is being copy/move constructed by the implicit ctors, ArrayInitLoopExpr

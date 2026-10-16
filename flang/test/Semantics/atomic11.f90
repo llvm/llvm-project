@@ -31,7 +31,7 @@ program test_atomic_xor
   call atomic_xor(non_scalar_coarray, val)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
-  call atomic_xor(non_scalar_coarray[1], val)
+  call atomic_xor(non_scalar_coarray(:)[1], val)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_xor'
   call atomic_xor(non_coarray, val)

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-cuda.h"
+#include "flang/Common/restorer.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -17,6 +18,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringSet.h"
 
 // Once labeled DO constructs have been canonicalized and their parse subtrees
 // transformed into parser::DoConstructs, scan the parser::Blocks of the program
@@ -61,6 +63,47 @@ bool CanonicalizeCUDA(parser::Program &program) {
 
 using MaybeMsg = std::optional<parser::MessageFormattedText>;
 
+static const llvm::StringSet<> warpFunctions_ = {"match_all_syncjj",
+    "match_all_syncjx", "match_all_syncjf", "match_all_syncjd",
+    "match_any_syncjj", "match_any_syncjx", "match_any_syncjf",
+    "match_any_syncjd"};
+
+// These builtin procedures lower to inline pointer operations on either target.
+static const llvm::StringSet<> inlinePointerFunctions_ = {"c_associated_c_ptr",
+    "c_associated_c_funptr", "__builtin_c_ptr_eq", "__builtin_c_ptr_ne",
+    "__builtin_c_devptr_eq", "__builtin_c_devptr_ne", "__builtin_c_funloc"};
+
+enum class CallContext { Device, HostDevice, GuardedHostDevice };
+
+// Match the BIND(C) intrinsic-module procedure intercepted by CUDA lowering,
+// including calls through a USE rename. A user procedure named ON_DEVICE is
+// an ordinary call and does not allow host-only or device-only callees.
+static bool IsOnDevice(const evaluate::ProcedureDesignator &proc) {
+  const Symbol *sym{proc.GetSymbol()};
+  if (!sym) {
+    return false;
+  }
+  const Symbol &ultimate{sym->GetUltimate()};
+  const Symbol *module{ultimate.owner().GetSymbol()};
+  return ultimate.name() == "on_device" && IsBindCProcedure(ultimate) &&
+      module && module->attrs().test(Attr::INTRINSIC);
+}
+
+struct FindOnDevice : public evaluate::AnyTraverse<FindOnDevice, bool> {
+  using Base = evaluate::AnyTraverse<FindOnDevice, bool>;
+  FindOnDevice() : Base(*this) {}
+  using Base::operator();
+  bool operator()(const evaluate::ProcedureDesignator &proc) const {
+    return IsOnDevice(proc);
+  }
+};
+
+static bool ChecksOnDevice(
+    SemanticsContext &context, const parser::ScalarLogicalExpr &condition) {
+  const auto *expr{GetExpr(context, condition)};
+  return expr && FindOnDevice{}(*expr);
+}
+
 // Traverses an evaluate::Expr<> in search of unsupported operations
 // on the device.
 
@@ -68,28 +111,125 @@ struct DeviceExprChecker
     : public evaluate::AnyTraverse<DeviceExprChecker, MaybeMsg> {
   using Result = MaybeMsg;
   using Base = evaluate::AnyTraverse<DeviceExprChecker, Result>;
-  DeviceExprChecker() : Base(*this) {}
+  explicit DeviceExprChecker(SemanticsContext &c, CallContext callContext)
+      : Base(*this), context_{c}, callContext_{callContext} {}
   using Base::operator();
-  Result operator()(const evaluate::ProcedureDesignator &x) const {
+  Result operator()(const evaluate::ProcedureRef &x) const {
+    if (auto msg{CheckCallee(x.proc())}) {
+      return msg;
+    }
+    // A procedure passed as an argument is not called. Calls evaluated in
+    // argument expressions still need checking.
+    return (*this)(x.arguments());
+  }
+
+private:
+  Result CheckCallee(const evaluate::ProcedureDesignator &x) const {
+    if (IsOnDevice(x)) {
+      return {};
+    }
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
-      const auto *subp{
-          sym->GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+      const Symbol &ultimate{sym->GetUltimate()};
+      const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
+      if (subp && subp->moduleInterface()) {
+        subp = subp->moduleInterface()
+                   ->GetUltimate()
+                   .detailsIf<semantics::SubprogramDetails>();
+      }
       if (subp) {
+        if (const auto &stmtFunction{subp->stmtFunction()};
+            stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
+          return (*this)(*stmtFunction);
+        }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
           if (*attrs == common::CUDASubprogramAttrs::HostDevice ||
               *attrs == common::CUDASubprogramAttrs::Device) {
+            if (warpFunctions_.contains(sym->name().ToString()) &&
+                !context_.languageFeatures().IsEnabled(
+                    Fortran::common::LanguageFeature::CudaWarpMatchFunction)) {
+              return parser::MessageFormattedText(
+                  "warp match function disabled"_err_en_US);
+            }
+            if (*attrs == common::CUDASubprogramAttrs::Device &&
+                callContext_ == CallContext::HostDevice) {
+              return CallError(x, true);
+            }
             return {};
           }
+          if (*attrs == common::CUDASubprogramAttrs::Global) {
+            return parser::MessageFormattedText(
+                "not yet implemented: CUDA dynamic parallelism"_err_en_US);
+          }
         }
+        if (!subp->openACCRoutineInfos().empty()) {
+          return {};
+        }
+      }
+
+      const Scope &scope{ultimate.owner()};
+      const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
+      // Allow ieee_arithmetic module functions to be called on the device.
+      // TODO: Check for unsupported ieee_arithmetic on the device.
+      if (mod && mod->name() == "ieee_arithmetic") {
+        return {};
+      }
+      if (mod && mod->attrs().test(Attr::INTRINSIC) &&
+          mod->name() == "__fortran_builtins" &&
+          inlinePointerFunctions_.contains(ultimate.name().ToString())) {
+        return {};
       }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};
     }
-    return parser::MessageFormattedText(
-        "'%s' may not be called in device code"_err_en_US, x.GetName());
+
+    if (callContext_ == CallContext::GuardedHostDevice) {
+      return {};
+    }
+    return CallError(x, false);
+  }
+
+  SemanticsContext &context_;
+  CallContext callContext_;
+
+private:
+  static Result CallError(
+      const evaluate::ProcedureDesignator &proc, bool inHostCode) {
+    if (auto generic{proc.genericName()}) {
+      const Symbol *specific{proc.GetInterfaceSymbol()};
+      const std::string specificName{specific
+              ? specific->GetUltimate().name().ToString()
+              : proc.GetName()};
+      if (*generic != specificName) {
+        return parser::MessageFormattedText(inHostCode
+                ? "'%s' (specific procedure '%s') may not be called in host code"_err_en_US
+                : "'%s' (specific procedure '%s') may not be called in device code"_err_en_US,
+            *generic, specificName);
+      }
+    }
+    return parser::MessageFormattedText(inHostCode
+            ? "'%s' may not be called in host code"_err_en_US
+            : "'%s' may not be called in device code"_err_en_US,
+        proc.GetName());
   }
 };
+
+static bool IsHostArray(const Symbol &symbol) {
+  const Symbol &resolved{GetAssociationRoot(symbol)};
+  if (const auto *details{
+          resolved.detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::UseDevice)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 struct FindHostArray
     : public evaluate::AnyTraverse<FindHostArray, const Symbol *> {
@@ -98,15 +238,36 @@ struct FindHostArray
   FindHostArray() : Base(*this) {}
   using Base::operator();
   Result operator()(const evaluate::Component &x) const {
-    const Symbol &symbol{x.GetLastSymbol()};
+    const Symbol &symbol{x.GetLastSymbol().GetUltimate()};
+    const Symbol &baseSymbol{GetAssociationRoot(x.base().GetFirstSymbol())};
+    if (symbol.IsFuncResult() || baseSymbol.IsFuncResult()) {
+      return nullptr;
+    }
+    if (!IsHostArray(symbol)) {
+      return nullptr;
+    }
+    if (IsDummy(baseSymbol) && IsCUDADeviceContext(&baseSymbol.owner())) {
+      return nullptr;
+    }
     if (IsAllocatableOrPointer(symbol)) {
       if (Result hostArray{(*this)(symbol)}) {
         return hostArray;
+      }
+    } else if (const auto *details{symbol.GetUltimate()
+                       .detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->IsArray()) {
+        if (!IsHostArray(baseSymbol)) {
+          return nullptr;
+        }
+        return &symbol;
       }
     }
     return (*this)(x.base());
   }
   Result operator()(const Symbol &symbol) const {
+    if (symbol.IsFuncResult()) {
+      return nullptr;
+    }
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
@@ -117,7 +278,9 @@ struct FindHostArray
                   *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
-                  *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
+                  *details->cudaDataAttr() != common::CUDADataAttr::Unified &&
+                  *details->cudaDataAttr() !=
+                      common::CUDADataAttr::UseDevice))) {
         return &symbol;
       }
     }
@@ -125,122 +288,251 @@ struct FindHostArray
   }
 };
 
-template <typename A> static MaybeMsg CheckUnwrappedExpr(const A &x) {
-  if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
-    return DeviceExprChecker{}(expr->typedExpr);
+// Intrinsics that only use the address or the descriptor of their arguments.
+static const llvm::StringSet<> hostAddressIntrinsics_ = {
+    "__builtin_c_devloc", "__builtin_c_loc", "c_sizeof", "loc", "sizeof"};
+
+// Inquiry intrinsics whose arguments are all inquired objects. Other inquiry
+// intrinsics only inquire about their first argument and read the values of
+// the others (DIM=, KIND=).
+static const llvm::StringSet<> allArgsInquiryIntrinsics_ = {
+    "associated", "extends_type_of", "same_type_as"};
+
+// Collects, in order of appearance, the device data whose value host code
+// reads when it evaluates an expression. Device data that is only designated
+// (actual argument to a procedure, argument of an inquiry intrinsic) is not
+// read; the subscripts of its designator still are. A component with a CUDA
+// data attribute is collected instead of its base.
+struct CollectDeviceDataReadOnHost
+    : public evaluate::Traverse<CollectDeviceDataReadOnHost, SymbolVector> {
+  using Result = SymbolVector;
+  using Base = evaluate::Traverse<CollectDeviceDataReadOnHost, Result>;
+  explicit CollectDeviceDataReadOnHost(
+      SemanticsContext &c, bool onlyDesignated = false)
+      : Base(*this), context_{c}, onlyDesignated_{onlyDesignated} {}
+  using Base::operator();
+  static Result Default() { return {}; }
+  static Result Combine(Result &&x, Result &&y) {
+    x.insert(x.end(), y.begin(), y.end());
+    return std::move(x);
   }
-  return {};
+  Result operator()(const Symbol &symbol) const {
+    if (onlyDesignated_ ||
+        !evaluate::IsCUDADeviceOnlySymbol(GetAssociationRoot(symbol))) {
+      return {};
+    }
+    return {symbol};
+  }
+  Result operator()(const evaluate::Component &x) const {
+    const Symbol &component{x.GetLastSymbol()};
+    if (evaluate::HasCUDADataAttr(component)) {
+      // The attribute of the component hides the one of the base.
+      return Combine((*this)(component),
+          CollectDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+              x.base()));
+    }
+    return (*this)(x.base());
+  }
+  Result operator()(const evaluate::ArrayRef &x) const {
+    return Combine((*this)(x.base()),
+        CollectDeviceDataReadOnHost{context_}(x.subscript()));
+  }
+  Result operator()(const evaluate::Substring &x) const {
+    CollectDeviceDataReadOnHost readCollector{context_};
+    return Combine((*this)(x.parent()),
+        Combine(readCollector(x.lower()), readCollector(x.upper())));
+  }
+  Result operator()(const evaluate::DescriptorInquiry &x) const {
+    // Accessing descriptor metadata is allowed, but selecting the descriptor
+    // may require reading device data in subscripts.
+    return CollectDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+        x.base());
+  }
+  Result operator()(const evaluate::TypeParamInquiry &) const { return {}; }
+  Result operator()(const evaluate::ProcedureRef &x) const {
+    bool onlyFirstArgDesignated{false};
+    if (const auto *intrinsic{x.proc().GetSpecificIntrinsic()}) {
+      if (context_.intrinsics().GetIntrinsicClass(intrinsic->name) !=
+              evaluate::IntrinsicClass::inquiryFunction &&
+          !hostAddressIntrinsics_.contains(intrinsic->name)) {
+        return (*this)(x.arguments());
+      }
+      onlyFirstArgDesignated =
+          !allArgsInquiryIntrinsics_.contains(intrinsic->name);
+    }
+    Result result;
+    for (std::size_t j{0}; j < x.arguments().size(); ++j) {
+      const auto &arg{x.arguments()[j]};
+      if (const auto *expr{arg ? arg->UnwrapExpr() : nullptr}) {
+        bool designated{
+            evaluate::IsVariable(*expr) && (j == 0 || !onlyFirstArgDesignated)};
+        result = Combine(std::move(result),
+            CollectDeviceDataReadOnHost{
+                context_, onlyDesignated_ || designated}(*expr));
+      }
+    }
+    return result;
+  }
+
+  SemanticsContext &context_;
+  bool onlyDesignated_{false};
+};
+
+// A scalar variable other than a component, an allocatable or a pointer.
+static bool IsPlainScalar(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  return ultimate.has<ObjectEntityDetails>() && ultimate.Rank() == 0 &&
+      !ultimate.owner().IsDerivedType() && !IsAllocatableOrPointer(ultimate);
 }
 
 template <typename A>
-static void CheckUnwrappedExpr(
-    SemanticsContext &context, SourceName at, const A &x) {
+static void CheckUnwrappedExpr(SemanticsContext &context, SourceName at,
+    const A &x, CallContext callContext) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
-    if (auto msg{DeviceExprChecker{}(expr->typedExpr)}) {
+    if (auto msg{DeviceExprChecker{context, callContext}(expr->typedExpr)}) {
       context.Say(at, std::move(*msg));
     }
   }
 }
 
 template <bool CUF_KERNEL> struct ActionStmtChecker {
-  template <typename A> static MaybeMsg WhyNotOk(const A &x) {
+  template <typename A>
+  static MaybeMsg WhyNotOk(
+      SemanticsContext &context, const A &x, CallContext callContext) {
     if constexpr (ConstraintTrait<A>) {
-      return WhyNotOk(x.thing);
+      return WhyNotOk(context, x.thing, callContext);
     } else if constexpr (WrapperTrait<A>) {
-      return WhyNotOk(x.v);
+      return WhyNotOk(context, x.v, callContext);
     } else if constexpr (UnionTrait<A>) {
-      return WhyNotOk(x.u);
+      return WhyNotOk(context, x.u, callContext);
     } else if constexpr (TupleTrait<A>) {
-      return WhyNotOk(x.t);
+      return WhyNotOk(context, x.t, callContext);
     } else {
       return parser::MessageFormattedText{
           "Statement may not appear in device code"_err_en_US};
     }
   }
   template <typename A>
-  static MaybeMsg WhyNotOk(const common::Indirection<A> &x) {
-    return WhyNotOk(x.value());
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const common::Indirection<A> &x, CallContext callContext) {
+    return WhyNotOk(context, x.value(), callContext);
   }
   template <typename... As>
-  static MaybeMsg WhyNotOk(const std::variant<As...> &x) {
-    return common::visit([](const auto &x) { return WhyNotOk(x); }, x);
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const std::variant<As...> &x, CallContext callContext) {
+    return common::visit(
+        [&context, callContext](
+            const auto &x) { return WhyNotOk(context, x, callContext); },
+        x);
   }
   template <std::size_t J = 0, typename... As>
-  static MaybeMsg WhyNotOk(const std::tuple<As...> &x) {
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const std::tuple<As...> &x, CallContext callContext) {
     if constexpr (J == sizeof...(As)) {
       return {};
-    } else if (auto msg{WhyNotOk(std::get<J>(x))}) {
+    } else if (auto msg{WhyNotOk(context, std::get<J>(x), callContext)}) {
       return msg;
     } else {
-      return WhyNotOk<(J + 1)>(x);
+      return WhyNotOk<(J + 1)>(context, x, callContext);
     }
   }
-  template <typename A> static MaybeMsg WhyNotOk(const std::list<A> &x) {
+  template <typename A>
+  static MaybeMsg WhyNotOk(SemanticsContext &context, const std::list<A> &x,
+      CallContext callContext) {
     for (const auto &y : x) {
-      if (MaybeMsg result{WhyNotOk(y)}) {
+      if (MaybeMsg result{WhyNotOk(context, y, callContext)}) {
         return result;
       }
     }
     return {};
   }
-  template <typename A> static MaybeMsg WhyNotOk(const std::optional<A> &x) {
+  template <typename A>
+  static MaybeMsg WhyNotOk(SemanticsContext &context, const std::optional<A> &x,
+      CallContext callContext) {
     if (x) {
-      return WhyNotOk(*x);
+      return WhyNotOk(context, *x, callContext);
     } else {
       return {};
     }
   }
   template <typename A>
-  static MaybeMsg WhyNotOk(const parser::UnlabeledStatement<A> &x) {
-    return WhyNotOk(x.statement);
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const parser::UnlabeledStatement<A> &x, CallContext callContext) {
+    return WhyNotOk(context, x.statement, callContext);
   }
   template <typename A>
-  static MaybeMsg WhyNotOk(const parser::Statement<A> &x) {
-    return WhyNotOk(x.statement);
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const parser::Statement<A> &x, CallContext callContext) {
+    return WhyNotOk(context, x.statement, callContext);
   }
-  static MaybeMsg WhyNotOk(const parser::AllocateStmt &) {
-    return {}; // AllocateObjects are checked elsewhere
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const parser::AssignmentStmt &x, CallContext callContext) {
+    return DeviceExprChecker{context, callContext}(x.typedAssignment);
   }
-  static MaybeMsg WhyNotOk(const parser::AllocateCoarraySpec &) {
-    return parser::MessageFormattedText(
-        "A coarray may not be allocated on the device"_err_en_US);
+  static MaybeMsg WhyNotOk(SemanticsContext &context, const parser::CallStmt &x,
+      CallContext callContext) {
+    return DeviceExprChecker{context, callContext}(x.typedCall);
   }
-  static MaybeMsg WhyNotOk(const parser::DeallocateStmt &) {
-    return {}; // AllocateObjects are checked elsewhere
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const parser::ContinueStmt &, CallContext callContext) {
+    return {};
   }
-  static MaybeMsg WhyNotOk(const parser::AssignmentStmt &x) {
-    return DeviceExprChecker{}(x.typedAssignment);
+  static MaybeMsg WhyNotOk(
+      SemanticsContext &, const parser::PauseStmt &, CallContext callContext) {
+    return parser::MessageFormattedText{
+        "device subprograms may not contain PAUSE statements"_err_en_US};
   }
-  static MaybeMsg WhyNotOk(const parser::CallStmt &x) {
-    return DeviceExprChecker{}(x.typedCall);
-  }
-  static MaybeMsg WhyNotOk(const parser::ContinueStmt &) { return {}; }
-  static MaybeMsg WhyNotOk(const parser::IfStmt &x) {
-    if (auto result{
-            CheckUnwrappedExpr(std::get<parser::ScalarLogicalExpr>(x.t))}) {
-      return result;
-    }
-    return WhyNotOk(
-        std::get<parser::UnlabeledStatement<parser::ActionStmt>>(x.t)
-            .statement);
-  }
-  static MaybeMsg WhyNotOk(const parser::NullifyStmt &x) {
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const parser::NullifyStmt &x, CallContext callContext) {
     for (const auto &y : x.v) {
-      if (MaybeMsg result{DeviceExprChecker{}(y.typedExpr)}) {
+      if (MaybeMsg result{
+              DeviceExprChecker{context, callContext}(y.typedExpr)}) {
         return result;
       }
     }
     return {};
   }
-  static MaybeMsg WhyNotOk(const parser::PointerAssignmentStmt &x) {
-    return DeviceExprChecker{}(x.typedAssignment);
+  static MaybeMsg WhyNotOk(SemanticsContext &context,
+      const parser::PointerAssignmentStmt &x, CallContext callContext) {
+    return DeviceExprChecker{context, callContext}(x.typedAssignment);
+  }
+};
+
+// Check analyzed expressions in statements and specification parts that do
+// not have a single typed expression for the entire construct. Do not descend
+// into an expression already checked, or into declarations of other entities
+// whose expressions are not evaluated on entry to this scope.
+struct DeviceExprVisitor {
+  SemanticsContext &context;
+  CallContext callContext;
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
+  bool Pre(const parser::Expr &x) { return Check(x.typedExpr, x.source); }
+  bool Pre(const parser::Variable &x) {
+    return Check(x.typedExpr, x.GetSource());
+  }
+  bool Pre(const parser::InterfaceBlock &) { return false; }
+  bool Pre(const parser::DerivedTypeDef &) { return false; }
+  bool Pre(const parser::StmtFunctionStmt &) { return false; }
+
+private:
+  bool Check(const parser::TypedExpr &expr, parser::CharBlock source) {
+    if (expr) {
+      if (auto msg{DeviceExprChecker{context, callContext}(expr)}) {
+        context.Say(source, std::move(*msg));
+      }
+      return false;
+    }
+    return true;
   }
 };
 
 template <bool IsCUFKernelDo> class DeviceContextChecker {
 public:
   explicit DeviceContextChecker(SemanticsContext &c) : context_{c} {}
-  void CheckSubprogram(const parser::Name &name, const parser::Block &body) {
+  template <typename A>
+  void CheckSubprogram(const parser::Name &name, const A &header,
+      const parser::SpecificationPart &spec, const parser::Block &body) {
     if (name.symbol) {
       const auto *subp{
           name.symbol->GetUltimate().detailsIf<SubprogramDetails>()};
@@ -253,17 +545,33 @@ public:
           subp->cudaSubprogramAttrs().value_or(
               common::CUDASubprogramAttrs::Host) !=
               common::CUDASubprogramAttrs::Host) {
+        isHostDevice = subp->cudaSubprogramAttrs() &&
+            subp->cudaSubprogramAttrs() ==
+                common::CUDASubprogramAttrs::HostDevice;
+        callContext_ =
+            isHostDevice ? CallContext::HostDevice : CallContext::Device;
+        CheckExpressions(header);
+        CheckExpressions(spec);
         Check(body);
       }
     }
   }
   void Check(const parser::Block &block) {
+    // A guard established by a return affects only this block's continuation.
+    auto restore{common::Restorer{callContext_, callContext_}};
+    CheckStatements(block);
+  }
+
+private:
+  void CheckStatements(const parser::Block &block) {
     for (const auto &epc : block) {
       Check(epc);
     }
   }
-
-private:
+  template <typename A> void CheckExpressions(const A &x) {
+    DeviceExprVisitor visitor{context_, callContext_};
+    parser::Walk(x, visitor);
+  }
   void Check(const parser::ExecutionPartConstruct &epc) {
     common::visit(
         common::visitors{
@@ -297,18 +605,28 @@ private:
               Check(std::get<parser::Block>(x.value().t));
             },
             [&](const common::Indirection<parser::BlockConstruct> &x) {
-              Check(std::get<parser::Block>(x.value().t));
+              CheckExpressions(
+                  std::get<parser::BlockSpecificationPart>(x.value().t));
+              // BLOCK executes unconditionally, so its guard also applies to
+              // the enclosing continuation.
+              CheckStatements(std::get<parser::Block>(x.value().t));
             },
             [&](const common::Indirection<parser::IfConstruct> &x) {
               Check(x.value());
             },
             [&](const common::Indirection<parser::CaseConstruct> &x) {
+              CheckExpressions(
+                  std::get<parser::Statement<parser::SelectCaseStmt>>(
+                      x.value().t));
               const auto &caseList{
                   std::get<std::list<parser::CaseConstruct::Case>>(
                       x.value().t)};
               for (const parser::CaseConstruct::Case &c : caseList) {
                 Check(std::get<parser::Block>(c.t));
               }
+            },
+            [&](const common::Indirection<parser::CompilerDirective> &x) {
+              // TODO(CUDA): Check for unsupported compiler directive here.
             },
             [&](const auto &x) {
               if (auto source{parser::GetSource(x)}) {
@@ -349,6 +667,11 @@ private:
   }
   template <typename A>
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
+    if (isHostDevice)
+      return;
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified))
+      return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
           "Host array '%s' cannot be present in device context"_err_en_US,
@@ -373,9 +696,14 @@ private:
             [&](const common::Indirection<parser::GotoStmt> &) {
               ErrorInCUFKernel(source);
             },
-            [&](const common::Indirection<parser::StopStmt> &) { return; },
-            [&](const common::Indirection<parser::PrintStmt> &) {},
+            [&](const common::Indirection<parser::StopStmt> &x) {
+              CheckExpressions(x.value());
+            },
+            [&](const common::Indirection<parser::PrintStmt> &x) {
+              CheckExpressions(x.value());
+            },
             [&](const common::Indirection<parser::WriteStmt> &x) {
+              CheckExpressions(x.value());
               if (x.value().format) { // Formatted write to '*' or '6'
                 if (std::holds_alternative<Fortran::parser::Star>(
                         x.value().format->u)) {
@@ -390,25 +718,38 @@ private:
               WarnIfNotInternal(x.value(), source);
             },
             [&](const common::Indirection<parser::CloseStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::EndfileStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::OpenStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::ReadStmt> &x) {
+              CheckExpressions(x.value());
               WarnIfNotInternal(x.value(), source);
             },
             [&](const common::Indirection<parser::InquireStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::RewindStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::BackspaceStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::AllocateStmt> &x) {
+              CheckExpressions(x.value());
+            },
+            [&](const common::Indirection<parser::DeallocateStmt> &x) {
+              CheckExpressions(x.value());
             },
             [&](const common::Indirection<parser::IfStmt> &x) {
               Check(x.value());
@@ -419,12 +760,14 @@ private:
                 ErrorIfHostSymbol(assign->lhs, source);
                 ErrorIfHostSymbol(assign->rhs, source);
               }
-              if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
+              if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(
+                      context_, x, callContext_)}) {
                 context_.Say(source, std::move(*msg));
               }
             },
             [&](const auto &x) {
-              if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
+              if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(
+                      context_, x, callContext_)}) {
                 context_.Say(source, std::move(*msg));
               }
             },
@@ -432,34 +775,105 @@ private:
         stmt.u);
   }
   void Check(const parser::IfConstruct &ic) {
+    const CallContext incoming{callContext_};
     const auto &ifS{std::get<parser::Statement<parser::IfThenStmt>>(ic.t)};
-    CheckUnwrappedExpr(context_, ifS.source,
-        std::get<parser::ScalarLogicalExpr>(ifS.statement.t));
+    const auto &condition{std::get<parser::ScalarLogicalExpr>(ifS.statement.t)};
+    CheckUnwrappedExpr(context_, ifS.source, condition, callContext_);
+    AllowGuardedCalls(condition);
+    CallContext branchContext{callContext_};
     Check(std::get<parser::Block>(ic.t));
-    for (const auto &eib :
-        std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)) {
+    const auto &elseIfBlocks{
+        std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)};
+    for (const auto &eib : elseIfBlocks) {
+      // Later arms remain under the preceding conditions' guards. Reset any
+      // context changes caused by statements inside the preceding arm.
+      callContext_ = branchContext;
       const auto &eIfS{std::get<parser::Statement<parser::ElseIfStmt>>(eib.t)};
-      CheckUnwrappedExpr(context_, eIfS.source,
-          std::get<parser::ScalarLogicalExpr>(eIfS.statement.t));
+      const auto &elseIfCondition{
+          std::get<parser::ScalarLogicalExpr>(eIfS.statement.t)};
+      CheckUnwrappedExpr(context_, eIfS.source, elseIfCondition, callContext_);
+      AllowGuardedCalls(elseIfCondition);
+      branchContext = callContext_;
       Check(std::get<parser::Block>(eib.t));
     }
-    if (const auto &eb{
-            std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)}) {
+    const auto &eb{
+        std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)};
+    if (eb) {
+      callContext_ = branchContext;
       Check(std::get<parser::Block>(eb->t));
+    }
+    // A return only extends a guard when its arm is associated with ON_DEVICE.
+    if (!HasReturningOnDeviceArm(ic)) {
+      callContext_ = incoming;
     }
   }
   void Check(const parser::IfStmt &is) {
+    const CallContext incoming{callContext_};
     const auto &uS{
         std::get<parser::UnlabeledStatement<parser::ActionStmt>>(is.t)};
-    CheckUnwrappedExpr(
-        context_, uS.source, std::get<parser::ScalarLogicalExpr>(is.t));
+    const auto &condition{std::get<parser::ScalarLogicalExpr>(is.t)};
+    CheckUnwrappedExpr(context_, uS.source, condition, callContext_);
+    AllowGuardedCalls(condition);
     Check(uS.statement, uS.source);
+    if (!IsReturn(uS.statement)) {
+      callContext_ = incoming;
+    }
+  }
+  static bool IsReturn(const parser::ActionStmt &stmt) {
+    const auto *ret{parser::Unwrap<parser::ReturnStmt>(stmt)};
+    return ret && !ret->v;
+  }
+  static bool HasUnconditionalReturn(const parser::Block &block) {
+    for (const auto &epc : block) {
+      if (const auto *stmt{parser::Unwrap<parser::ActionStmt>(epc)}) {
+        if (IsReturn(*stmt)) {
+          return true;
+        }
+      } else if (const auto *bc{parser::Unwrap<parser::BlockConstruct>(epc)}) {
+        if (HasUnconditionalReturn(std::get<parser::Block>(bc->t))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  bool HasReturningOnDeviceArm(const parser::IfConstruct &ic) {
+    const auto &ifS{std::get<parser::Statement<parser::IfThenStmt>>(ic.t)};
+    bool checksOnDevice{ChecksOnDevice(
+        context_, std::get<parser::ScalarLogicalExpr>(ifS.statement.t))};
+    if (checksOnDevice &&
+        HasUnconditionalReturn(std::get<parser::Block>(ic.t))) {
+      return true;
+    }
+    for (const auto &eib :
+        std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)) {
+      const auto &elseIfS{
+          std::get<parser::Statement<parser::ElseIfStmt>>(eib.t)};
+      checksOnDevice = ChecksOnDevice(
+          context_, std::get<parser::ScalarLogicalExpr>(elseIfS.statement.t));
+      if (checksOnDevice &&
+          HasUnconditionalReturn(std::get<parser::Block>(eib.t))) {
+        return true;
+      }
+    }
+    const auto &eb{
+        std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)};
+    // A plain ELSE is associated with the preceding IF or ELSEIF condition.
+    return checksOnDevice && eb &&
+        HasUnconditionalReturn(std::get<parser::Block>(eb->t));
+  }
+  void AllowGuardedCalls(const parser::ScalarLogicalExpr &condition) {
+    // Accept either kind of callee in either arm of an ON_DEVICE guard.
+    // Determining whether a call is on the appropriate side is deferred.
+    if (isHostDevice && ChecksOnDevice(context_, condition)) {
+      callContext_ = CallContext::GuardedHostDevice;
+    }
   }
   void Check(const parser::LoopControl::Bounds &bounds) {
-    Check(bounds.lower);
-    Check(bounds.upper);
-    if (bounds.step) {
-      Check(*bounds.step);
+    Check(bounds.Lower());
+    Check(bounds.Upper());
+    if (auto &step{bounds.Step()}) {
+      Check(*step);
     }
   }
   void Check(const parser::LoopControl::Concurrent &x) {
@@ -488,18 +902,23 @@ private:
     Check(DEREF(parser::Unwrap<parser::Expr>(x)));
   }
   void Check(const parser::Expr &expr) {
-    if (MaybeMsg msg{DeviceExprChecker{}(expr.typedExpr)}) {
+    if (MaybeMsg msg{
+            DeviceExprChecker{context_, callContext_}(expr.typedExpr)}) {
       context_.Say(expr.source, std::move(*msg));
     }
   }
 
   SemanticsContext &context_;
+  bool isHostDevice{false};
+  CallContext callContext_{CallContext::Device};
 };
 
 void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
   DeviceContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Name>(
           std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t),
+      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement,
+      std::get<parser::SpecificationPart>(x.t),
       std::get<parser::ExecutionPart>(x.t).v);
 }
 
@@ -507,12 +926,16 @@ void CUDAChecker::Enter(const parser::FunctionSubprogram &x) {
   DeviceContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Name>(
           std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t),
+      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement,
+      std::get<parser::SpecificationPart>(x.t),
       std::get<parser::ExecutionPart>(x.t).v);
 }
 
 void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
   DeviceContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Statement<parser::MpSubprogramStmt>>(x.t).statement.v,
+      std::get<parser::Statement<parser::MpSubprogramStmt>>(x.t).statement,
+      std::get<parser::SpecificationPart>(x.t),
       std::get<parser::ExecutionPart>(x.t).v);
 }
 
@@ -525,6 +948,21 @@ static int DoConstructTightNesting(
     return 0;
   }
   innerBlock = &std::get<parser::Block>(doConstruct->t);
+  if (doConstruct->IsDoConcurrent()) {
+    const auto &loopControl = doConstruct->GetLoopControl();
+    if (loopControl) {
+      if (const auto *concurrentControl{
+              std::get_if<parser::LoopControl::Concurrent>(&loopControl->u)}) {
+        const auto &concurrentHeader =
+            std::get<Fortran::parser::ConcurrentHeader>(concurrentControl->t);
+        const auto &controls =
+            std::get<std::list<Fortran::parser::ConcurrentControl>>(
+                concurrentHeader.t);
+        return controls.size();
+      }
+    }
+    return 0;
+  }
   if (innerBlock->size() == 1) {
     if (const auto *execConstruct{
             std::get_if<parser::ExecutableConstruct>(&innerBlock->front().u)}) {
@@ -550,6 +988,10 @@ static void CheckReduce(
         auto cat{type->category()};
         bool isOk{false};
         switch (op) {
+        case parser::ReductionOperator::Operator::Minus:
+          context.Say(var.thing.GetSource(),
+              "'-' is not a supported !$CUF KERNEL DO REDUCE operator"_err_en_US);
+          continue;
         case parser::ReductionOperator::Operator::Plus:
         case parser::ReductionOperator::Operator::Multiply:
         case parser::ReductionOperator::Operator::Max:
@@ -598,9 +1040,14 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::optional<parser::DoConstruct>>(x.t))};
   const parser::Block *innerBlock{nullptr};
   if (DoConstructTightNesting(doConstruct, innerBlock) < depth) {
-    context_.Say(source,
-        "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
-        std::intmax_t{depth});
+    if (doConstruct && doConstruct->IsDoConcurrent())
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO CONCURRENT construct with at least %jd indices"_err_en_US,
+          std::intmax_t{depth}, std::intmax_t{depth});
+    else
+      context_.Say(source,
+          "!$CUF KERNEL DO (%jd) must be followed by a DO construct with tightly nested outer levels of counted DO loops"_err_en_US,
+          std::intmax_t{depth});
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);
@@ -609,18 +1056,67 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
       std::get<std::list<parser::CUFReduction>>(directive.t)) {
     CheckReduce(context_, reduce);
   }
-  inCUFKernelDoConstruct_ = true;
+  ++deviceConstructDepth_;
+}
+
+static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
+  const auto &beginBlockDirective =
+      std::get<Fortran::parser::AccBeginBlockDirective>(x.t);
+  const auto &blockDirective =
+      std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
+  if (blockDirective.v == llvm::acc::ACCD_parallel ||
+      blockDirective.v == llvm::acc::ACCD_serial ||
+      blockDirective.v == llvm::acc::ACCD_kernels) {
+    return true;
+  }
+  return false;
 }
 
 void CUDAChecker::Leave(const parser::CUFKernelDoConstruct &) {
-  inCUFKernelDoConstruct_ = false;
+  --deviceConstructDepth_;
+}
+void CUDAChecker::Enter(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    ++deviceConstructDepth_;
+  }
+}
+void CUDAChecker::Leave(const parser::OpenACCBlockConstruct &x) {
+  if (IsOpenACCComputeConstruct(x)) {
+    --deviceConstructDepth_;
+  }
+}
+void CUDAChecker::Enter(const parser::OpenACCCombinedConstruct &) {
+  ++deviceConstructDepth_;
+}
+void CUDAChecker::Leave(const parser::OpenACCCombinedConstruct &) {
+  --deviceConstructDepth_;
+}
+void CUDAChecker::Enter(const parser::OpenACCLoopConstruct &) {
+  ++deviceConstructDepth_;
+}
+void CUDAChecker::Leave(const parser::OpenACCLoopConstruct &) {
+  --deviceConstructDepth_;
+}
+void CUDAChecker::Enter(const parser::DoConstruct &x) {
+  if (x.IsDoConcurrent() &&
+      context_.foldingContext().languageFeatures().IsEnabled(
+          common::LanguageFeature::DoConcurrentOffload)) {
+    ++deviceConstructDepth_;
+  }
+}
+void CUDAChecker::Leave(const parser::DoConstruct &x) {
+  if (x.IsDoConcurrent() &&
+      context_.foldingContext().languageFeatures().IsEnabled(
+          common::LanguageFeature::DoConcurrentOffload)) {
+    --deviceConstructDepth_;
+  }
 }
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
   const auto &scope{context_.FindScope(lhsLoc)};
   const Scope &progUnit{GetProgramUnitContaining(scope)};
-  if (IsCUDADeviceContext(&progUnit) || inCUFKernelDoConstruct_) {
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
     return; // Data transfer with assignment is only perform on host.
   }
 
@@ -630,13 +1126,127 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
+  int nbRhs{evaluate::GetNbOfUniqueCUDADeviceSymbols(assign->rhs)};
+  int nbRhsManaged{
+      evaluate::GetNbOfUniqueCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
-  // legal.
-  if (nbLhs == 0 && nbRhs > 1) {
+  // legal. Managed and unified objects are accessible from the host and are not
+  // counted.
+  if (nbLhs == 0 && nbRhs - nbRhsManaged > 1) {
     context_.Say(lhsLoc,
-        "More than one reference to a CUDA object on the right hand side of the assigment"_err_en_US);
+        "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
+  }
+
+  // An implicit data transfer copies the whole device object to the host, and
+  // the size of an assumed-size array is unknown.
+  if (evaluate::IsCUDADataTransfer(assign->lhs, assign->rhs) &&
+      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+    for (const Symbol &sym : evaluate::CollectCudaSymbols(assign->rhs)) {
+      if (evaluate::IsCUDADeviceSymbol(sym) &&
+          IsAssumedSizeArray(sym.GetUltimate())) {
+        context_.Say(lhsLoc,
+            "Implicit data transfer of assumed-size device array '%s' is not supported"_err_en_US,
+            sym.name());
+        break;
+      }
+    }
+  }
+
+  if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
+      (evaluate::HasCUDAImplicitTransfer(assign->rhs) &&
+          !evaluate::HasOnlyCUDAConstntImplicitTransfer(assign->rhs))) {
+    if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
+        GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 && nbRhs == 1) {
+      return; // This is a special case handled on the host.
+    }
+    context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
+  }
+}
+
+template <typename A> void CUDAChecker::EnterHostScalarExpr(const A &x) {
+  if (hostScalarExprDepth_++ > 0) {
+    return; // Checked with the enclosing expression.
+  }
+  const auto &expr{DEREF(parser::Unwrap<parser::Expr>(x))};
+  const Scope &progUnit{
+      GetProgramUnitContaining(context_.FindScope(expr.source))};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+  if (const auto *typedExpr{GetExpr(context_, expr)}) {
+    const Symbol *deviceScalar{nullptr};
+    for (const Symbol &deviceData :
+        CollectDeviceDataReadOnHost{context_}(*typedExpr)) {
+      if (!IsPlainScalar(deviceData)) {
+        context_.Say(expr.source,
+            "Device data '%s' may not be referenced in host code outside of a data transfer or an actual argument"_err_en_US,
+            deviceData.name());
+        return;
+      }
+      // Host code reads a module scalar from its host copy.
+      if (!deviceScalar &&
+          deviceData.GetUltimate().owner().kind() != Scope::Kind::Module) {
+        deviceScalar = &deviceData;
+      }
+    }
+    if (deviceScalar) {
+      context_.Warn(common::UsageWarning::CUDAUsage, expr.source,
+          "Device data '%s' is read in host code outside of a data transfer or an actual argument"_warn_en_US,
+          deviceScalar->name());
+    }
+  }
+}
+
+void CUDAChecker::Enter(const parser::Scalar<parser::Expr> &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::Scalar<parser::Expr> &) {
+  --hostScalarExprDepth_;
+}
+void CUDAChecker::Enter(const parser::ScalarExpr &x) { EnterHostScalarExpr(x); }
+void CUDAChecker::Leave(const parser::ScalarExpr &) { --hostScalarExprDepth_; }
+void CUDAChecker::Enter(const parser::ScalarIntExpr &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::ScalarIntExpr &) {
+  --hostScalarExprDepth_;
+}
+void CUDAChecker::Enter(const parser::ScalarLogicalExpr &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::ScalarLogicalExpr &) {
+  --hostScalarExprDepth_;
+}
+
+void CUDAChecker::Enter(const parser::PrintStmt &x) {
+  CHECK(context_.location());
+  const Scope &scope{context_.FindScope(*context_.location())};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+
+  auto &outputItemList{std::get<std::list<Fortran::parser::OutputItem>>(x.t)};
+  for (const auto &item : outputItemList) {
+    if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
+      if (const auto *expr{GetExpr(context_, *x)}) {
+        for (const Symbol &sym : CollectCudaSymbols(*expr)) {
+          if (const auto *details = sym.GetUltimate()
+                  .detailsIf<semantics::ObjectEntityDetails>()) {
+            if (details->cudaDataAttr() &&
+                (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+                    *details->cudaDataAttr() ==
+                        common::CUDADataAttr::Constant ||
+                    *details->cudaDataAttr() ==
+                        common::CUDADataAttr::UseDevice)) {
+              context_.Say(parser::FindSourceLocation(*x),
+                  "device data not allowed in I/O statements"_err_en_US);
+            }
+          }
+        }
+      }
+    }
   }
 }
 

@@ -7,10 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/sincos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcSincosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -26,36 +33,36 @@ using LIBC_NAMESPACE::testing::tlog;
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
     if (__r1.success) {                                                        \
       LIBC_NAMESPACE::sincos(input, &sin_x, &cos_x);                           \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::Nearest);                          \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::Nearest);                          \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
     if (__r2.success) {                                                        \
       LIBC_NAMESPACE::sincos(input, &sin_x, &cos_x);                           \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::Upward);                           \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::Upward);                           \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
     if (__r3.success) {                                                        \
       LIBC_NAMESPACE::sincos(input, &sin_x, &cos_x);                           \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::Downward);                         \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::Downward);                         \
     }                                                                          \
                                                                                \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
     if (__r4.success) {                                                        \
       LIBC_NAMESPACE::sincos(input, &sin_x, &cos_x);                           \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Sin, input, sin_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::TowardZero);                       \
-      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, 0.5,               \
+      ASSERT_MPFR_MATCH(mpfr::Operation::Cos, input, cos_x, TOLERANCE + 0.5,   \
                         mpfr::RoundingMode::TowardZero);                       \
     }                                                                          \
   } while (0)
@@ -103,10 +110,10 @@ TEST_F(LlvmLibcSincosTest, TrickyInputs) {
 }
 
 TEST_F(LlvmLibcSincosTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 123'41;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-50).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p200).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t COUNT = 1'231;
+  constexpr uint64_t START = FPBits(0x1.0p-50).uintval();
+  constexpr uint64_t STOP = FPBits(0x1.0p200).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
     double x = FPBits(v).get_val();

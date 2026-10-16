@@ -50,7 +50,7 @@ __attribute__((global)) void kernel(long *out, void *ptr, unsigned u) {
   auto * sptr = (__attribute__((address_space(3))) void *)ptr;
   // CHECK: call ptr @llvm.nvvm.mapa(ptr %{{.*}}, i32 %{{.*}})
   out[i++] = (long) __nvvm_mapa(ptr, u);
-  // CHECK: call ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
+  // CHECK: call ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %{{.*}}, i32 %{{.*}})
   out[i++] = (long) __nvvm_mapa_shared_cluster(sptr, u);
   // CHECK: call i32 @llvm.nvvm.getctarank(ptr {{.*}})
   out[i++] = __nvvm_getctarank(ptr);

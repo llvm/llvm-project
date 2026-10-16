@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
@@ -18,6 +19,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGenUtils/ModuleUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -285,7 +287,8 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeLLVMFunctionInfo(
       getContext().IntTy, FnInfoOpts::None, {getContext().IntTy},
-      FunctionType::ExtInfo(), {}, RequiredArgs::All);
+      FunctionType::ExtInfo(), {}, RequiredArgs::All,
+      /*ABIInfoFD=*/nullptr);
 
   // Get the stub function type, int(*)(int,...).
   llvm::FunctionType *StubTy =
@@ -296,12 +299,11 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
 
   CodeGenFunction CGF(CGM);
 
-  FunctionArgList Args;
-  ImplicitParamDecl IPD(CGM.getContext(), CGM.getContext().IntTy,
-                        ImplicitParamKind::Other);
-  Args.push_back(&IPD);
+  auto *IPD = ImplicitParamDecl::Create(
+      CGM.getContext(), CGM.getContext().IntTy, ImplicitParamKind::Other);
   QualType ResTy = CGM.getContext().IntTy;
 
+  FunctionArgList Args{IPD};
   CGF.StartFunction(GlobalDecl(&D, DynamicInitKind::AtExit), ResTy, DtorStub,
                     FI, Args, D.getLocation(), D.getInit()->getExprLoc());
 
@@ -345,10 +347,7 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
 
 void CodeGenFunction::registerGlobalDtorWithAtExit(llvm::Constant *dtorStub) {
   // extern "C" int atexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to atexit has a wrong type.");
 
   llvm::FunctionType *atexitTy =
@@ -372,10 +371,7 @@ CodeGenFunction::unregisterGlobalDtorWithUnAtExit(llvm::Constant *dtorStub) {
   // value is returned.
   //
   // extern "C" int unatexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to unatexit has a wrong type.");
 
   llvm::FunctionType *unatexitTy =
@@ -453,6 +449,11 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
 
   if (Linkage == llvm::GlobalVariable::InternalLinkage)
     SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  else {
+    SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, false);
+    SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
+  }
 
   Fn->setCallingConv(getRuntimeCC());
 
@@ -703,36 +704,8 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // As noted above, we create the function, even if it is empty.
   // Module initializers for imported modules are emitted first.
 
-  // Collect all the modules that we import
-  llvm::SmallSetVector<Module *, 8> AllImports;
-  // Ones that we export
-  for (auto I : Primary->Exports)
-    AllImports.insert(I.getPointer());
-  // Ones that we only import.
-  for (Module *M : Primary->Imports)
-    AllImports.insert(M);
-  // Ones that we import in the global module fragment or the private module
-  // fragment.
-  for (Module *SubM : Primary->submodules()) {
-    assert((SubM->isGlobalModule() || SubM->isPrivateModule()) &&
-           "The sub modules of C++20 module unit should only be global module "
-           "fragments or private module framents.");
-    assert(SubM->Exports.empty() &&
-           "The global mdoule fragments and the private module fragments are "
-           "not allowed to export import modules.");
-    for (Module *M : SubM->Imports)
-      AllImports.insert(M);
-  }
-
   SmallVector<llvm::Function *, 8> ModuleInits;
-  for (Module *M : AllImports) {
-    // No Itanium initializer in header like modules.
-    if (M->isHeaderLikeModule())
-      continue; // TODO: warn of mixed use of module map modules and C++20?
-    // We're allowed to skip the initialization if we are sure it doesn't
-    // do any thing.
-    if (!M->isNamedModuleInterfaceHasInit())
-      continue;
+  for (Module *M : CodeGenUtils::importedModulesToInitialize(Primary, {})) {
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
     SmallString<256> FnName;
     {
@@ -750,7 +723,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Add any initializers with specified priority; this uses the same  approach
   // as EmitCXXGlobalInitFunc().
   if (!PrioritizedCXXGlobalInits.empty()) {
-    SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
     llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
     for (SmallVectorImpl<GlobalInitData>::iterator
@@ -827,7 +799,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   }
 
   // We are done with the inits.
-  AllImports.clear();
   PrioritizedCXXGlobalInits.clear();
   CXXGlobalInits.clear();
   ModuleInits.clear();
@@ -868,14 +839,9 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // When we import C++20 modules, we must run their initializers first.
   SmallVector<llvm::Function *, 8> ModuleInits;
   if (CXX20ModuleInits)
-    for (Module *M : ImportedModules) {
-      // No Itanium initializer in header like modules.
-      if (M->isHeaderLikeModule())
-        continue;
-      // We're allowed to skip the initialization if we are sure it doesn't
-      // do any thing.
-      if (!M->isNamedModuleInterfaceHasInit())
-        continue;
+    for (Module *M : CodeGenUtils::importedModulesToInitialize(
+             getContext().getCurrentNamedModule(),
+             ImportedModules.getArrayRef())) {
       llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
       SmallString<256> FnName;
       {
@@ -1077,9 +1043,6 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
     EmitCXXGlobalVarDeclInit(*D, Addr, PerformInit);
   }
 
-  if (getLangOpts().HLSL)
-    CGM.getHLSLRuntime().annotateHLSLResource(D, Addr);
-
   FinishFunction();
 }
 
@@ -1127,9 +1090,9 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       EmitObjCAutoreleasePoolCleanup(token);
     }
 
-    for (unsigned i = 0, e = Decls.size(); i != e; ++i)
-      if (Decls[i])
-        EmitRuntimeCall(Decls[i]);
+    for (llvm::Function *Decl : Decls)
+      if (Decl)
+        EmitRuntimeCall(Decl);
 
     Scope.ForceCleanup();
 
@@ -1161,18 +1124,35 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       llvm::Constant *Arg;
       std::tie(CalleeTy, Callee, Arg) = DtorsOrStermFinalizers[e - i - 1];
 
-      llvm::CallInst *CI = nullptr;
+      llvm::CallBase *CI = nullptr;
       if (Arg == nullptr) {
         assert(
             CGM.getCXXABI().useSinitAndSterm() &&
             "Arg could not be nullptr unless using sinit and sterm functions.");
         CI = Builder.CreateCall(CalleeTy, Callee);
-      } else
+      } else {
+        // If the object lives in a different address space, the `this` pointer
+        // address space won't match the dtor `this` param. An addrspacecast is
+        // required.
+        assert(Arg->getType()->isPointerTy());
+        assert(CalleeTy->getParamType(0)->isPointerTy());
+        unsigned ActualAddrSpace = Arg->getType()->getPointerAddressSpace();
+        unsigned ExpectedAddrSpace =
+            CalleeTy->getParamType(0)->getPointerAddressSpace();
+        if (ActualAddrSpace != ExpectedAddrSpace) {
+          llvm::PointerType *PTy =
+              llvm::PointerType::get(getLLVMContext(), ExpectedAddrSpace);
+          Arg = llvm::ConstantExpr::getAddrSpaceCast(Arg, PTy);
+        }
         CI = Builder.CreateCall(CalleeTy, Callee, Arg);
+      }
 
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
+
+      if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
+        CI = addConvergenceControlToken(CI);
     }
   }
 
@@ -1185,11 +1165,10 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
 llvm::Function *CodeGenFunction::generateDestroyHelper(
     Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const VarDecl *VD) {
-  FunctionArgList args;
-  ImplicitParamDecl Dst(getContext(), getContext().VoidPtrTy,
-                        ImplicitParamKind::Other);
-  args.push_back(&Dst);
+  auto *Dst = ImplicitParamDecl::Create(getContext(), getContext().VoidPtrTy,
+                                        ImplicitParamKind::Other);
 
+  FunctionArgList args{Dst};
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, args);
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);

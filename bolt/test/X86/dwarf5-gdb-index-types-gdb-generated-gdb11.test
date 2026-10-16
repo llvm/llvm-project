@@ -18,9 +18,9 @@
 # POSTCHECK-NEXT:       1: offset = 0x00000040, type_offset = 0x00000023, type_signature = 0x00f6cca4e3a15118
 # POSTCHECK:          Address area offset = 0x68, has 2 entries
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR:]],
-# POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 1
+# POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 0
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR1:]],
-# POSTCHECK-SAME:           0x[[#ADDR1 + 0xd]]) (Size: 0xd), CU id = 3
+# POSTCHECK-SAME:           0x[[#ADDR1 + 0xd]]) (Size: 0xd), CU id = 1
 # POSTCHECK:          Symbol table offset = 0x90, size = 1024, filled slots
 # POSTCHECK-NEXT:       2: Name offset = 0x28, CU vector offset = 0x0
 # POSTCHECK-NEXT:         String name: S, CU vector index: 0

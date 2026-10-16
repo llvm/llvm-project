@@ -18,7 +18,8 @@
 /// As a side-effect of the assumed element size stride, the array is also
 /// flattened to make it a 1D array - this is because the internal array
 /// structure must be either 1D or have known sizes in all dimensions - and at
-/// least one of the dimensions here is already unknown.
+/// least one of the dimensions here is already unknown. Supported slices are
+/// folded into the flattened indices.
 ///
 /// There are two distinct benefits here:
 /// 1. The loop that iterates over the elements is somewhat simplified by the
@@ -40,7 +41,7 @@
 ///       could be part of the cost analysis above.
 //===----------------------------------------------------------------------===//
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
@@ -51,18 +52,18 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
+#include <optional>
 
 namespace fir {
 #define GEN_PASS_DEF_LOOPVERSIONING
@@ -76,6 +77,10 @@ namespace {
 class LoopVersioningPass
     : public fir::impl::LoopVersioningBase<LoopVersioningPass> {
 public:
+  /// Construct the pass with its TableGen defaults.
+  LoopVersioningPass() = default;
+  /// Construct the pass with programmatic option values.
+  LoopVersioningPass(fir::LoopVersioningOptions options) : Base(options) {}
   void runOnOperation() override;
 };
 
@@ -170,6 +175,9 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
          seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent())) {
       size_t typeSize = 0;
       mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(v.getType());
+      // A pointer dummy is a box address, but accesses use its loaded box.
+      if (isArgument && fir::isBoxAddress(v.getType()))
+        elementType = seqTy.getEleTy();
       if (fir::isa_trivial(elementType)) {
         auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
             v.getLoc(), elementType, dl, kindMap);
@@ -184,65 +192,39 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
   return {0, 0};
 }
 
-/// if a value comes from a fir.declare, follow it to the original source,
-/// otherwise return the value
-static mlir::Value unwrapFirDeclare(mlir::Value val) {
-  // fir.declare is for source code variables. We don't have declares of
-  // declares
-  if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>())
-    return declare.getMemref();
-  return val;
-}
-
-/// Return true, if \p rebox operation keeps the input array
-/// continuous in the innermost dimension, if it is initially continuous
-/// in the innermost dimension.
-static bool reboxPreservesContinuity(fir::ReboxOp rebox) {
-  // If slicing is not involved, then the rebox does not affect
-  // the continuity of the array.
-  auto sliceArg = rebox.getSlice();
-  if (!sliceArg)
-    return true;
-
-  // A slice with step=1 in the innermost dimension preserves
-  // the continuity of the array in the innermost dimension.
-  if (auto sliceOp =
-          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
-    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
-      auto triples = sliceOp.getTriples();
-      if (triples.size() > 2)
-        if (auto innermostStep = fir::getIntIfConstant(triples[2]))
-          if (*innermostStep == 1)
-            return true;
-    }
-
-    LLVM_DEBUG(llvm::dbgs()
-               << "REBOX with slicing may produce non-contiguous array: "
-               << sliceOp << '\n'
-               << rebox << '\n');
-    return false;
-  }
-
-  LLVM_DEBUG(llvm::dbgs() << "REBOX with unknown slice" << sliceArg << '\n'
-                          << rebox << '\n');
-  return false;
-}
-
-/// if a value comes from a fir.rebox, follow the rebox to the original source,
-/// of the value, otherwise return the value
-static mlir::Value unwrapReboxOp(mlir::Value val) {
-  while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
-    if (!reboxPreservesContinuity(rebox))
-      break;
-    val = rebox.getBox();
-  }
-  return val;
-}
-
-/// normalize a value (removing fir.declare and fir.rebox) so that we can
-/// more conveniently spot values which came from function arguments
+/// Follow descriptor producers to identify a function argument. Traverse a
+/// load only when its source is a box address; other loads stop the walk.
+/// The original access value is retained for the guard and rewritten loop.
 static mlir::Value normaliseVal(mlir::Value val) {
-  return unwrapFirDeclare(unwrapReboxOp(val));
+  while (true) {
+    if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>()) {
+      val = declare.getMemref();
+      continue;
+    }
+    if (auto packArray = val.getDefiningOp<fir::PackArrayOp>()) {
+      val = packArray.getArray();
+      continue;
+    }
+    if (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
+      if (!fir::reboxPreservesContinuity(rebox,
+                                         /*mayHaveNonDefaultLowerBounds=*/true,
+                                         /*checkWhole=*/false)) {
+        LLVM_DEBUG(llvm::dbgs() << "REBOX may produce non-contiguous array: "
+                                << rebox << '\n');
+        break;
+      }
+      val = rebox.getBox();
+      continue;
+    }
+    if (fir::LoadOp load = val.getDefiningOp<fir::LoadOp>()) {
+      if (!fir::isBoxAddress(load.getMemref().getType()))
+        break;
+      val = load.getMemref();
+      continue;
+    }
+    break;
+  }
+  return val;
 }
 
 /// some FIR operations accept a fir.shape, a fir.shift or a fir.shapeshift.
@@ -276,6 +258,47 @@ static mlir::Value getLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
   return {};
 }
 
+/// A fir.slice triple whose upper bound is fir.undefined selects a single
+/// element instead of a section. XArrayCoor lowering then ignores the triple's
+/// lower bound and step, and only uses the fir.array_coor index of that
+/// dimension.
+static bool isScalarSliceDim(mlir::ValueRange triples, unsigned dim) {
+  return mlir::isa_and_nonnull<fir::UndefOp>(
+      triples[3 * dim + 1].getDefiningOp());
+}
+
+/// Return the section lower bound that dimension \p dim of \p coop's slice
+/// adds to the coordinate, or a null value if it adds nothing.
+static mlir::Value getSliceLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
+  if (!coop.getSlice())
+    return {};
+  auto slice = mlir::cast<fir::SliceOp>(coop.getSlice().getDefiningOp());
+  if (isScalarSliceDim(slice.getTriples(), dim))
+    return {};
+  return slice.getTriples()[3 * dim];
+}
+
+/// Match XArrayCoor's signed integerCast before computing sliced coordinates.
+/// FIR conversion zero-extends builtin i1 and unsigned integers, whereas the
+/// generic array-coordinate lowering sign-extends their bit patterns.
+static mlir::Value toSliceIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Value value) {
+  if (auto type = mlir::dyn_cast<mlir::IntegerType>(value.getType())) {
+    if (type.getWidth() == 1) {
+      value = builder.createConvert(loc, builder.getI1Type(), value);
+      value = mlir::arith::ExtSIOp::create(builder, loc,
+                                           builder.getIntegerType(2), value);
+    } else if (type.isUnsigned()) {
+      value = builder.createConvert(
+          loc, builder.getIntegerType(type.getWidth()), value);
+    }
+  }
+  if (value.getType().isSignlessInteger())
+    return mlir::arith::IndexCastOp::create(builder, loc,
+                                            builder.getIndexType(), value);
+  return builder.createConvert(loc, builder.getIndexType(), value);
+}
+
 /// gets the i'th index from array coordinate operation op
 /// dim should range between 0 and rank - 1
 static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
@@ -291,6 +314,23 @@ static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
   // subtracting the lower bound
   mlir::Value index = coop.getIndices()[dim];
   mlir::Value lb = getLowerBound(coop, dim);
+  if (coop.getSlice()) {
+    // Convert a unit-step slice coordinate to a zero-based source-array index:
+    // (index - lb) + (slice lower bound - lb); scalar dimensions omit the
+    // adjustment.
+    mlir::Location loc = coop.getLoc();
+    index = toSliceIndex(builder, loc, index);
+    lb = lb ? toSliceIndex(builder, loc, lb)
+            : builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+    mlir::Value coor = mlir::arith::SubIOp::create(builder, loc, index, lb);
+    if (mlir::Value sliceLb = getSliceLowerBound(coop, dim)) {
+      sliceLb = toSliceIndex(builder, loc, sliceLb);
+      mlir::Value adjust =
+          builder.createOrFold<mlir::arith::SubIOp>(loc, sliceLb, lb);
+      coor = builder.createOrFold<mlir::arith::AddIOp>(loc, coor, adjust);
+    }
+    return coor;
+  }
   if (!lb)
     // assume a default lower bound of one
     lb = builder.createIntegerConstant(coop.getLoc(), index.getType(), 1);
@@ -298,7 +338,75 @@ static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
   // index_0 = index - lb;
   if (lb.getType() != index.getType())
     lb = builder.createConvert(coop.getLoc(), index.getType(), lb);
-  return builder.create<mlir::arith::SubIOp>(coop.getLoc(), index, lb);
+  return mlir::arith::SubIOp::create(builder, coop.getLoc(), index, lb);
+}
+
+/// Return whether converting an integer through \p type may turn the value one
+/// into something else. A one-bit builtin or kind-mapped FIR integer denotes
+/// -1 once XArrayCoor lowering sign extends it again.
+static bool mayNotPreserveOne(mlir::Type type,
+                              const fir::KindMapping &kindMap) {
+  if (mlir::isa<mlir::IndexType>(type))
+    return false;
+  if (auto intTy = mlir::dyn_cast<fir::IntegerType>(type))
+    return kindMap.getIntegerBitsize(intTy.getFKind()) <= 1;
+  auto intTy = mlir::dyn_cast<mlir::IntegerType>(type);
+  return !intTy || intTy.getWidth() <= 1;
+}
+
+/// Return whether \p value is the constant one, looking through fir.convert.
+static bool isConstantOne(mlir::Value value, const fir::KindMapping &kindMap) {
+  while (auto convert = value.getDefiningOp<fir::ConvertOp>()) {
+    if (mayNotPreserveOne(convert.getType(), kindMap))
+      return false;
+    value = convert.getValue();
+  }
+  if (mayNotPreserveOne(value.getType(), kindMap))
+    return false;
+  std::optional<llvm::APInt> constant = fir::getIntIfConstant(value);
+  return constant && constant->isOne();
+}
+
+/// Return whether the slice of \p coop can be folded into the flat index
+/// computed for the fast loop version.
+///
+/// XArrayCoor lowering computes the zero based coordinate of dimension i of a
+/// boxed array as `(index - lb) * step + (sliceLb - lb)`, where step and
+/// sliceLb only contribute for a section. With a unit step this is the
+/// slice-free coordinate `index - lb` plus the loop invariant
+/// `sliceLb - lb`, so flattening only needs that extra term. Anything that
+/// does not fit is left on the generic path.
+static bool isFoldableSlice(fir::ArrayCoorOp coop, unsigned rank,
+                            const fir::KindMapping &kindMap) {
+  auto slice = coop.getSlice().getDefiningOp<fir::SliceOp>();
+  // ArrayCoorOp's verifier rejects slices with substring operands, so they do
+  // not need to be checked here.
+  if (!slice || !slice.getFields().empty())
+    return false;
+
+  mlir::ValueRange triples = slice.getTriples();
+  // Reduced-rank slices need a separate mapping from result coordinates to
+  // source dimensions. The current flattening handles only one coordinate per
+  // descriptor dimension.
+  if (coop.getIndices().size() != rank)
+    return false;
+
+  // TODO: Support the remaining valid fir.slice forms. This initial slice
+  // implementation leaves non-unit section steps on the generic path.
+  for (unsigned dim = 0; dim < rank; ++dim) {
+    if (isScalarSliceDim(triples, dim))
+      continue;
+    mlir::Value lower = triples[3 * dim];
+    mlir::Value step = triples[3 * dim + 2];
+    if (mlir::isa_and_nonnull<fir::UndefOp>(lower.getDefiningOp()) ||
+        mlir::isa_and_nonnull<fir::UndefOp>(step.getDefiningOp()))
+      return false;
+    // TODO: Fold constant zero and one through fir.convert when motivating
+    // source cases justify changing the dialect-wide folder.
+    if (!isConstantOne(step, kindMap))
+      return false;
+  }
+  return true;
 }
 
 void LoopVersioningPass::runOnOperation() {
@@ -312,8 +420,8 @@ void LoopVersioningPass::runOnOperation() {
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
-  std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+  std::optional<mlir::DataLayout> dl = fir::support::getOrSetMLIRDataLayout(
+      module, /*allowDefaultLayout=*/false);
   if (!dl)
     mlir::emitError(module.getLoc(),
                     "data layout attribute is required to perform " DEBUG_TYPE
@@ -361,34 +469,39 @@ void LoopVersioningPass::runOnOperation() {
       if (op->getParentOfType<fir::DoLoopOp>() != loop)
         return;
       mlir::Value operand = op->getOperand(0);
+      mlir::Value source = normaliseVal(operand);
       for (auto a : argsOfInterest) {
-        if (a.arg == normaliseVal(operand)) {
-          // Use the reboxed value, not the block arg when re-creating the loop.
+        if (a.arg == source) {
+          // Use the access descriptor, not its originating block argument.
           a.arg = operand;
 
-          // Check that the operand dominates the loop?
-          // If this is the case, record such operands in argsInLoop.cannot-
-          // Transform, so that they disable the transformation for the parent
-          /// loops as well.
-          if (!domInfo.dominates(a.arg, loop))
+          // A rejected descriptor cannot recover in a later access. Skip
+          // repeated dominance, type, and slice analysis for such accesses.
+          bool rejected = argsInLoop.cannotTransform.contains(a.arg);
+          if (!rejected) {
+            rejected = !domInfo.dominates(a.arg, loop);
+
+            // Compute rank and element size from the access descriptor rather
+            // than the original argument, since intervening descriptor
+            // operations may change them.
+            if (!rejected) {
+              std::tie(a.rank, a.size) =
+                  getRankAndElementSize(kindMap, *dl, a.arg);
+              rejected = a.rank == 0 || a.size == 0;
+
+              // A slice must fold into the flat index; otherwise this
+              // descriptor and its later accesses stay on the generic path.
+              if (!rejected) {
+                if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op);
+                    arrayCoor && arrayCoor.getSlice())
+                  rejected = !enableSlices ||
+                             !isFoldableSlice(arrayCoor, a.rank, kindMap);
+              }
+            }
+          }
+
+          if (rejected) {
             argsInLoop.cannotTransform.insert(a.arg);
-
-          // No support currently for sliced arrays.
-          // This means that we cannot transform properly
-          // instructions referencing a.arg in the whole loop
-          // nest this loop is located in.
-          if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op))
-            if (arrayCoor.getSlice())
-              argsInLoop.cannotTransform.insert(a.arg);
-
-          // We need to compute the rank and element size
-          // based on the operand, not the original argument,
-          // because array slicing may affect it.
-          std::tie(a.rank, a.size) = getRankAndElementSize(kindMap, *dl, a.arg);
-          if (a.rank == 0 || a.size == 0)
-            argsInLoop.cannotTransform.insert(a.arg);
-
-          if (argsInLoop.cannotTransform.contains(a.arg)) {
             // Remove any previously recorded usage, if any.
             argsInLoop.usageInfo.erase(a.arg);
             break;
@@ -496,26 +609,26 @@ void LoopVersioningPass::runOnOperation() {
       unsigned ndims = arg.rank;
       for (unsigned i = 0; i < ndims; i++) {
         mlir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, i);
-        arg.dims[i] = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                     arg.arg, dimIdx);
+        arg.dims[i] = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                             arg.arg, dimIdx);
       }
       // We only care about lowest order dimension, here.
       mlir::Value elemSize =
           builder.createIntegerConstant(loc, idxTy, arg.size);
-      mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, arg.dims[0].getResult(2),
-          elemSize);
+      mlir::Value cmp = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq,
+          arg.dims[0].getResult(2), elemSize);
       if (!allCompares) {
         allCompares = cmp;
       } else {
         allCompares =
-            builder.create<mlir::arith::AndIOp>(loc, cmp, allCompares);
+            mlir::arith::AndIOp::create(builder, loc, cmp, allCompares);
       }
     }
 
     auto ifOp =
-        builder.create<fir::IfOp>(loc, op.op->getResultTypes(), allCompares,
-                                  /*withElse=*/true);
+        fir::IfOp::create(builder, loc, op.op->getResultTypes(), allCompares,
+                          /*withElse=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     LLVM_DEBUG(llvm::dbgs() << "Creating cloned loop\n");
@@ -528,8 +641,8 @@ void LoopVersioningPass::runOnOperation() {
       mlir::Type arrTy = fir::SequenceType::get(newShape, elementType);
       mlir::Type boxArrTy = fir::BoxType::get(arrTy);
       mlir::Type refArrTy = builder.getRefType(arrTy);
-      auto carg = builder.create<fir::ConvertOp>(loc, boxArrTy, arg.arg);
-      auto caddr = builder.create<fir::BoxAddrOp>(loc, refArrTy, carg);
+      auto carg = fir::ConvertOp::create(builder, loc, boxArrTy, arg.arg);
+      auto caddr = fir::BoxAddrOp::create(builder, loc, refArrTy, carg);
       auto insPt = builder.saveInsertionPoint();
       // Use caddr instead of arg.
       clonedLoop->walk([&](mlir::Operation *coop) {
@@ -553,9 +666,9 @@ void LoopVersioningPass::runOnOperation() {
             mlir::Value scale =
                 builder.createConvert(loc, idxTy, arg.dims[i].getResult(2));
             curIndex =
-                builder.create<mlir::arith::MulIOp>(loc, scale, curIndex);
-            totalIndex = (totalIndex) ? builder.create<mlir::arith::AddIOp>(
-                                            loc, curIndex, totalIndex)
+                mlir::arith::MulIOp::create(builder, loc, scale, curIndex);
+            totalIndex = (totalIndex) ? mlir::arith::AddIOp::create(
+                                            builder, loc, curIndex, totalIndex)
                                       : curIndex;
           }
           // This is the lowest dimension - which doesn't need scaling
@@ -567,16 +680,16 @@ void LoopVersioningPass::runOnOperation() {
             unsigned bits = llvm::Log2_32(arg.size);
             mlir::Value elemShift =
                 builder.createIntegerConstant(loc, idxTy, bits);
-            totalIndex = builder.create<mlir::arith::AddIOp>(
-                loc,
-                builder.create<mlir::arith::ShRSIOp>(loc, totalIndex,
-                                                     elemShift),
+            totalIndex = mlir::arith::AddIOp::create(
+                builder, loc,
+                mlir::arith::ShRSIOp::create(builder, loc, totalIndex,
+                                             elemShift),
                 finalIndex);
           } else {
             totalIndex = finalIndex;
           }
-          auto newOp = builder.create<fir::CoordinateOp>(
-              loc, builder.getRefType(elementType), caddr,
+          auto newOp = fir::CoordinateOp::create(
+              builder, loc, builder.getRefType(elementType), caddr,
               mlir::ValueRange{totalIndex});
           LLVM_DEBUG(newOp->dump());
           coop->getResult(0).replaceAllUsesWith(newOp->getResult(0));
@@ -595,7 +708,7 @@ void LoopVersioningPass::runOnOperation() {
     mlir::ResultRange results = clonedLoop->getResults();
     bool hasResults = (results.size() > 0);
     if (hasResults)
-      builder.create<fir::ResultOp>(loc, results);
+      fir::ResultOp::create(builder, loc, results);
 
     // Add the original loop in the else-side of the if operation.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -604,7 +717,7 @@ void LoopVersioningPass::runOnOperation() {
     builder.insert(op.op);
     // Rely on "cloned loop has results, so original loop also has results".
     if (hasResults) {
-      builder.create<fir::ResultOp>(loc, op.op->getResults());
+      fir::ResultOp::create(builder, loc, op.op->getResults());
     } else {
       // Use an assert to check this.
       assert(op.op->getResults().size() == 0 &&

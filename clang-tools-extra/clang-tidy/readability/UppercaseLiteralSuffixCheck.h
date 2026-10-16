@@ -1,4 +1,4 @@
-//===--- UppercaseLiteralSuffixCheck.h - clang-tidy -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_UPPERCASELITERALSUFFIXCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/OptionsUtils.h"
 
 namespace clang::tidy::readability {
 
@@ -19,7 +18,7 @@ namespace clang::tidy::readability {
 /// Alternatively, a list of destination suffixes can be provided.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/uppercase-literal-suffix.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/uppercase-literal-suffix.html
 class UppercaseLiteralSuffixCheck : public ClangTidyCheck {
 public:
   UppercaseLiteralSuffixCheck(StringRef Name, ClangTidyContext *Context);
@@ -31,9 +30,6 @@ public:
   }
 
 private:
-  template <typename LiteralType>
-  bool checkBoundMatch(const ast_matchers::MatchFinder::MatchResult &Result);
-
   const std::vector<StringRef> NewSuffixes;
   const bool IgnoreMacros;
 };

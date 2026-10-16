@@ -70,3 +70,10 @@ namespace PR39528 {
   void f(nullptr_t);
   void g() { f(null); }
 }
+
+// CHECK-LABEL: define {{.*}}pr137276
+// CHECK: {{^}}  store i64 0, ptr %arr, align 8{{$}}
+void pr137276(nullptr_t np, int i) {
+  long arr[] = { long(np), i, 0 };
+  (void)arr;
+}

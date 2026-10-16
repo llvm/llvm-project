@@ -1,4 +1,16 @@
-add_entrypoint_object(
+# Helper to only add the generic implementations if they aren't handled by a
+# more specific implementation.
+# TODO: This should probably be cleaned up and formalized.
+function(add_generic_entrypoint_object name)
+  if(NOT TARGET libc.src.stdio.${LIBC_TARGET_OS}.${name})
+    add_entrypoint_object(
+      ${name}
+      ${ARGN}
+    )
+  endif()
+endfunction()
+
+add_generic_entrypoint_object(
   clearerr
   SRCS
     clearerr.cpp
@@ -10,7 +22,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   clearerr_unlocked
   SRCS
     clearerr_unlocked.cpp
@@ -22,7 +34,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   feof
   SRCS
     feof.cpp
@@ -34,7 +46,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   feof_unlocked
   SRCS
     feof_unlocked.cpp
@@ -46,7 +58,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   ferror
   SRCS
     ferror.cpp
@@ -58,7 +70,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   ferror_unlocked
   SRCS
     ferror_unlocked.cpp
@@ -70,7 +82,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fileno
   SRCS
     fileno.cpp
@@ -82,20 +94,31 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
-  fflush
-  SRCS
-    fflush.cpp
-  HDRS
-    ../fflush.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.hdr.types.FILE
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
+# since this isn't an entrypoint we need to do these checks manually.
+if(NOT TARGET libc.src.stdio.${LIBC_TARGET_OS}.fflush_internal AND
+  TARGET libc.src.__support.File.file AND
+  TARGET libc.src.__support.File.platform_file AND
+  "libc.src.stdio.stdin" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
+  "libc.src.stdio.stdout" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
+  "libc.src.stdio.stderr" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  add_object_library(
+    fflush_internal
+    SRCS
+      fflush_internal.cpp
+    HDRS
+      ../fflush_internal.h
+    DEPENDS
+      libc.hdr.types.FILE
+      libc.src.__support.error_or
+      libc.src.__support.File.file
+      libc.src.__support.File.platform_file
+      libc.src.stdio.stdin
+      libc.src.stdio.stdout
+      libc.src.stdio.stderr
+  )
+endif()
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fseek
   SRCS
     fseek.cpp
@@ -107,7 +130,61 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
+  fgetpos
+  SRCS
+    fgetpos.cpp
+  HDRS
+    ../fgetpos.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
+
+add_generic_entrypoint_object(
+  fsetpos
+  SRCS
+    fsetpos.cpp
+  HDRS
+    ../fsetpos.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_generic_entrypoint_object(
+  rewind
+  SRCS
+    rewind.cpp
+  HDRS
+    ../rewind.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.macros.null_check
+)
+
+add_generic_entrypoint_object(
   ftell
   SRCS
     ftell.cpp
@@ -119,7 +196,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fseeko
   SRCS
     fseeko.cpp
@@ -131,7 +208,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   ftello
   SRCS
     ftello.cpp
@@ -143,7 +220,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fopen
   SRCS
     fopen.cpp
@@ -155,7 +232,23 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
+  freopen
+  SRCS
+    freopen.cpp
+  HDRS
+    ../freopen.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_generic_entrypoint_object(
   fclose
   SRCS
     fclose.cpp
@@ -168,7 +261,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fread_unlocked
   SRCS
     fread_unlocked.cpp
@@ -181,7 +274,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fread
   SRCS
     fread.cpp
@@ -194,7 +287,22 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
+  perror
+  SRCS
+    perror.cpp
+  HDRS
+    ../perror.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.stdio.stderr
+)
+
+add_generic_entrypoint_object(
   fputs
   SRCS
     fputs.cpp
@@ -207,7 +315,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   puts
   SRCS
     puts.cpp
@@ -217,10 +325,10 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stdout
+    libc.src.stdio.stdout
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fwrite_unlocked
   SRCS
     fwrite_unlocked.cpp
@@ -233,7 +341,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fwrite
   SRCS
     fwrite.cpp
@@ -246,7 +354,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fputc
   SRCS
     fputc.cpp
@@ -259,7 +367,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   putc
   SRCS
     putc.cpp
@@ -272,7 +380,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   putchar
   SRCS
     putchar.cpp
@@ -285,7 +393,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fgetc
   SRCS
     fgetc.cpp
@@ -298,7 +406,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fgetc_unlocked
   SRCS
     fgetc_unlocked.cpp
@@ -311,7 +419,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   getc
   SRCS
     getc.cpp
@@ -324,7 +432,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   getc_unlocked
   SRCS
     getc_unlocked.cpp
@@ -337,7 +445,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   getchar
   SRCS
     getchar.cpp
@@ -350,7 +458,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   getchar_unlocked
   SRCS
     getchar_unlocked.cpp
@@ -364,15 +472,19 @@ add_entrypoint_object(
 )
 
 list(APPEND fprintf_deps
-      libc.hdr.types.FILE
-      libc.src.__support.arg_list
-      libc.src.stdio.printf_core.vfprintf_internal
+  libc.hdr.types.FILE
+  libc.src.__support.arg_list
+  libc.src.__support.CPP.limits
+  libc.src.__support.libc_errno
+  libc.src.__support.printf_core.vfprintf_internal
+  libc.src.__support.printf_core.core_structs
+  libc.src.__support.printf_core.error_mapper
 )
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND fprintf_deps
-      libc.src.__support.File.file
-      libc.src.__support.File.platform_file
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
   )
 endif()
 
@@ -381,11 +493,15 @@ set(printf_deps ${fprintf_deps})
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
-      libc.src.__support.File.platform_stdout
+    libc.src.stdio.stdout
   )
 endif()
 
-add_entrypoint_object(
+if(LIBC_CONF_PRINTF_MODULAR AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
+  message(FATAL_ERROR "modular printf is only supported in baremetal stdio")
+endif()
+
+add_generic_entrypoint_object(
   printf
   SRCS
     printf.cpp
@@ -395,7 +511,7 @@ add_entrypoint_object(
     ${printf_deps}
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   vprintf
   SRCS
     vprintf.cpp
@@ -405,7 +521,7 @@ add_entrypoint_object(
     ${printf_deps}
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   fprintf
   SRCS
     fprintf.cpp
@@ -415,7 +531,7 @@ add_entrypoint_object(
     ${fprintf_deps}
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   vfprintf
   SRCS
     vfprintf.cpp
@@ -425,7 +541,61 @@ add_entrypoint_object(
     ${fprintf_deps}
 )
 
-add_entrypoint_object(
+list(APPEND scanf_deps
+  libc.src.__support.arg_list
+  libc.src.stdio.scanf_core.vfscanf_internal
+  libc.hdr.types.FILE
+)
+
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
+  list(APPEND scanf_deps
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.stdio.stdin
+  )
+endif()
+
+add_generic_entrypoint_object(
+  fscanf
+  SRCS
+    fscanf.cpp
+  HDRS
+    ../fscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_generic_entrypoint_object(
+  vfscanf
+  SRCS
+    vfscanf.cpp
+  HDRS
+    ../vfscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_generic_entrypoint_object(
+  scanf
+  SRCS
+    scanf.cpp
+  HDRS
+    ../scanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_generic_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    ../vscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_generic_entrypoint_object(
   fgets
   SRCS
     fgets.cpp
@@ -438,7 +608,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   ungetc
   SRCS
     ungetc.cpp
@@ -450,7 +620,7 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   stdin
   SRCS
     stdin.cpp
@@ -459,10 +629,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stdin
+    libc.src.stdio.stdin
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   stdout
   SRCS
     stdout.cpp
@@ -471,10 +641,10 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stdout
+    libc.src.stdio.stdout
 )
 
-add_entrypoint_object(
+add_generic_entrypoint_object(
   stderr
   SRCS
     stderr.cpp
@@ -483,5 +653,5 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stderr
+    libc.src.stdio.stderr
 )

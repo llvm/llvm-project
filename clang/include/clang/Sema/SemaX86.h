@@ -26,6 +26,7 @@ public:
   SemaX86(Sema &S);
 
   bool CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckBuiltinVUnpackBImm(CallExpr *TheCall);
   bool CheckBuiltinGatherScatterScale(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinTileArgumentsRange(CallExpr *TheCall, ArrayRef<int> ArgNums);
@@ -37,6 +38,11 @@ public:
 
   void handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL);
   void handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL);
+
+  bool checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                             const SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &NewParams,
+                             SourceLocation AttrLoc);
 };
 } // namespace clang
 

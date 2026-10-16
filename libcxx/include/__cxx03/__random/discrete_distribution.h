@@ -46,9 +46,6 @@ public:
     _LIBCPP_HIDE_FROM_ABI param_type(_InputIterator __f, _InputIterator __l) : __p_(__f, __l) {
       __init();
     }
-#ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_HIDE_FROM_ABI param_type(initializer_list<double> __wl) : __p_(__wl.begin(), __wl.end()) { __init(); }
-#endif // _LIBCPP_CXX03_LANG
     template <class _UnaryOperation>
     _LIBCPP_HIDE_FROM_ABI param_type(size_t __nw, double __xmin, double __xmax, _UnaryOperation __fw);
 
@@ -81,9 +78,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI discrete_distribution() {}
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI discrete_distribution(_InputIterator __f, _InputIterator __l) : __p_(__f, __l) {}
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI discrete_distribution(initializer_list<double> __wl) : __p_(__wl) {}
-#endif // _LIBCPP_CXX03_LANG
   template <class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI discrete_distribution(size_t __nw, double __xmin, double __xmax, _UnaryOperation __fw)
       : __p_(__nw, __xmin, __xmax, __fw) {}

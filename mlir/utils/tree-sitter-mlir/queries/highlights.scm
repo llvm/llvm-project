@@ -181,7 +181,6 @@
   "vector.insert_strided_slice"
   "vector.matrix_multiply"
   "vector.print"
-  "vector.splat"
   "vector.transfer_read"
   "vector.transfer_write"
   "vector.yield"
@@ -209,11 +208,10 @@
   "tensor.yield"
 
   "bufferization.alloc_tensor"
-  "bufferization.to_memref"
+  "bufferization.to_buffer"
   "bufferization.to_tensor"
 
   "linalg.batch_matmul"
-  "linalg.batch_matmul_transpose_b"
   "linalg.batch_matvec"
   "linalg.batch_reduce_matmul"
   "linalg.broadcast"
@@ -244,7 +242,6 @@
   "linalg.fill"
   "linalg.fill_rng_2d"
   "linalg.matmul"
-  "linalg.matmul_transpose_b"
   "linalg.matmul_unsigned"
   "linalg.matvec"
   "linalg.mmt4d"

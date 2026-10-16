@@ -7,7 +7,7 @@
 ; RUN: -relocation-model=static < %s | FileCheck %s -check-prefix=FORWARD
 ; RUN: llc -mtriple=mipsel -disable-mips-df-backward-search -relocation-model=pic \
 ; RUN: -enable-shrink-wrap=false \
-; RUN: -disable-mips-df-succbb-search=false -disable-preheader-prot=true < %s | \
+; RUN: -disable-mips-df-succbb-search=false -cgp-preheader-prot=0 < %s | \
 ; RUN: FileCheck %s -check-prefix=SUCCBB
 
 define void @foo1() nounwind {
@@ -134,9 +134,12 @@ declare void @foo11()
 ;
 ; SUCCBB-LABEL:      succbbs_loop1:
 ; SUCCBB:      blez $5, $BB
-; SUCCBB-NEXT: addiu
-; SUCCBB:      bnez ${{[0-9]+}}, $BB
-; SUCCBB-NEXT: addiu
+; SUCCBB-NEXT: sll
+; SUCCBB-NEXT: # %bb
+; SUCCBB-NEXT: addu
+; SUCCBB:      addiu ${{[0-9]+}}, ${{[0-9]+}}, 4
+; SUCCBB-NEXT: bne ${{[0-9]+}}, ${{[0-9]+}}, $BB
+; SUCCBB-NEXT: nop
 
 define i32 @succbbs_loop1(ptr nocapture %a, i32 %n) {
 entry:

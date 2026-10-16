@@ -74,6 +74,7 @@ public:
   static_assert(std::is_unsigned_v<BigPart>);
   static_assert(CHAR_BIT * sizeof(BigPart) >= 2 * partBits);
   static constexpr bool littleEndian{IS_LITTLE_ENDIAN};
+  static constexpr int alignment{ALIGNMENT};
 
 private:
   static constexpr int maxPartBits{CHAR_BIT * sizeof(Part)};
@@ -1014,6 +1015,34 @@ public:
       }
     }
     return result;
+  }
+
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  static constexpr std::size_t bytesStored() { return sizeof(Integer{}); }
+
+  /// De-serializes an integer from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Integer FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    CHECK(expectedSize == bytesStored());
+    Integer result;
+    std::memcpy(&result, raw, bytesStored());
+    return result;
+  }
+
+  /// Serializes this integer to \p dst. \p expectedSize must match the the
+  /// number of bytes to be written. If \p changed points to a boolean, it will
+  /// be set to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    CHECK(expectedSize == bytesStored());
+    if (changed) {
+      if (std::memcmp(dst, this, bytesStored()) == 0) {
+        return;
+      }
+      *changed = true;
+    }
+    std::memcpy(dst, this, bytesStored());
   }
 
 private:

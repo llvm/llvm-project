@@ -8,7 +8,6 @@
 
 #include "PPCCallingConv.h"
 #include "PPCSubtarget.h"
-#include "PPCCCState.h"
 using namespace llvm;
 
 inline bool CC_PPC_AnyReg_Error(unsigned &, MVT &, MVT &,
@@ -194,4 +193,5 @@ static bool CC_PPC32_SPE_RetF64(unsigned &ValNo, MVT &ValVT,
   return true;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "PPCGenCallingConv.inc"

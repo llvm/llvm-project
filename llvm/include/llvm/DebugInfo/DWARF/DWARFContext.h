@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
@@ -45,7 +46,7 @@ class DWARFUnitIndex;
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
-class DWARFContext : public DIContext {
+class LLVM_ABI DWARFContext : public DIContext {
 public:
   /// DWARFContextState
   /// This structure contains all member variables for DWARFContext that need
@@ -82,8 +83,10 @@ public:
         getLineTableForUnit(DWARFUnit *U,
                             function_ref<void(Error)> RecoverableErrHandler) = 0;
     virtual void clearLineTableForUnit(DWARFUnit *U) = 0;
-    virtual Expected<const DWARFDebugFrame *> getDebugFrame() = 0;
-    virtual Expected<const DWARFDebugFrame *> getEHFrame() = 0;
+    virtual Expected<const DWARFDebugFrame *>
+    getDebugFrame(bool ParseCFIProgram) = 0;
+    virtual Expected<const DWARFDebugFrame *>
+    getEHFrame(bool ParseCFIProgram) = 0;
     virtual const DWARFDebugMacro *getDebugMacinfo() = 0;
     virtual const DWARFDebugMacro *getDebugMacinfoDWO() = 0;
     virtual const DWARFDebugMacro *getDebugMacro() = 0;
@@ -100,9 +103,8 @@ public:
     virtual bool isThreadSafe() const = 0;
 
     /// Parse a macro[.dwo] or macinfo[.dwo] section.
-    std::unique_ptr<DWARFDebugMacro>
+    LLVM_ABI std::unique_ptr<DWARFDebugMacro>
     parseMacroOrMacinfo(MacroSecType SectionType);
-
   };
   friend class DWARFContextState;
 
@@ -195,7 +197,7 @@ public:
   /// Get all normal compile/type units in this context.
   unit_iterator_range normal_units() {
     DWARFUnitVector &NormalUnits = State->getNormalUnits();
-    return unit_iterator_range(NormalUnits.begin(), NormalUnits.end());
+    return NormalUnits;
   }
 
   /// Get units from .debug_info..dwo in the DWO context.
@@ -231,7 +233,7 @@ public:
   /// Get all units in the DWO context.
   unit_iterator_range dwo_units() {
     DWARFUnitVector &DWOUnits = State->getDWOUnits();
-    return unit_iterator_range(DWOUnits.begin(), DWOUnits.end());
+    return DWOUnits;
   }
 
   /// Get the number of compile units in this context.
@@ -310,10 +312,15 @@ public:
   const DWARFDebugAranges *getDebugAranges();
 
   /// Get a pointer to the parsed frame information object.
-  Expected<const DWARFDebugFrame *> getDebugFrame();
+  ///
+  /// If \p ParseCFIProgram is false, the returned object has not decoded the
+  /// CFI instruction program of its entries; use
+  /// DWARFDebugFrame::parseCFIProgram() to decode the ones that are needed.
+  Expected<const DWARFDebugFrame *> getDebugFrame(bool ParseCFIProgram = true);
 
-  /// Get a pointer to the parsed eh frame information object.
-  Expected<const DWARFDebugFrame *> getEHFrame();
+  /// Get a pointer to the parsed eh frame information object. See
+  /// getDebugFrame() for \p ParseCFIProgram.
+  Expected<const DWARFDebugFrame *> getEHFrame(bool ParseCFIProgram = true);
 
   /// Get a pointer to the parsed DebugMacinfo information object.
   const DWARFDebugMacro *getDebugMacinfo();
@@ -357,13 +364,13 @@ public:
   void clearLineTableForUnit(DWARFUnit *U);
 
   DataExtractor getStringExtractor() const {
-    return DataExtractor(DObj->getStrSection(), false, 0);
+    return DataExtractor(DObj->getStrSection(), false);
   }
   DataExtractor getStringDWOExtractor() const {
-    return DataExtractor(DObj->getStrDWOSection(), false, 0);
+    return DataExtractor(DObj->getStrDWOSection(), false);
   }
   DataExtractor getLineStringExtractor() const {
-    return DataExtractor(DObj->getLineStrSection(), false, 0);
+    return DataExtractor(DObj->getLineStrSection(), false);
   }
 
   /// Wraps the returned DIEs for a given address.
@@ -386,10 +393,10 @@ public:
   ///            executable's debug info.
   DIEsForAddress getDIEsForAddress(uint64_t Address, bool CheckDWO = false);
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
   DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
@@ -402,7 +409,7 @@ public:
   getLocalsForAddress(object::SectionedAddress Address) override;
 
   bool isLittleEndian() const { return DObj->isLittleEndian(); }
-  static unsigned getMaxSupportedVersion() { return 5; }
+  static unsigned getMaxSupportedVersion() { return 6; }
   static bool isSupportedVersion(unsigned version) {
     return version >= 2 && version <= getMaxSupportedVersion();
   }

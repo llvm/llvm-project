@@ -11,7 +11,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
@@ -150,17 +151,16 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
   }
 
   const size_t addr_size = 4;
-  StreamString dwarf(Stream::eBinary, addr_size, lldb::eByteOrderLittle);
+  StreamString dwarf(Stream::eBinary, lldb::eByteOrderLittle);
   ToDWARF(*ast, dwarf);
 
   // print dwarf expression to comparable textual representation
-  llvm::DataExtractor extractor(dwarf.GetString(), /*IsLittleEndian=*/true,
-                                addr_size);
+  llvm::DataExtractor extractor(dwarf.GetString(), /*IsLittleEndian=*/true);
 
   std::string result;
   llvm::raw_string_ostream os(result);
-  llvm::DWARFExpression(extractor, addr_size, llvm::dwarf::DWARF32)
-      .print(os, llvm::DIDumpOptions(), nullptr);
+  llvm::DWARFExpression E(extractor, addr_size, llvm::dwarf::DWARF32);
+  llvm::printDwarfExpression(&E, os, llvm::DIDumpOptions(), nullptr);
   return result;
 }
 

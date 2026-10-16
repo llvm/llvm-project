@@ -43,6 +43,13 @@ void call_snprintf(double d, int n, int *ptr) {
   __builtin_snprintf(node_name, sizeof(node_name), "%pOFn", ptr); // nonkprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
   __builtin_snprintf(node_name, sizeof(node_name), "12345%pOFn", ptr); // nonkprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 12}}
   __builtin_snprintf(node_name, sizeof(node_name), "123456%pOFn", ptr); // nonkprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 13}}
+  __builtin_snprintf(buf, 6, "%5.1f", 9.f);
+  __builtin_snprintf(buf, 6, "%+5.1f", 9.f);
+  __builtin_snprintf(buf, 6, "% 5.1f", 9.f);
+  __builtin_snprintf(buf, 6, "%   5.1f", 9.f);
+  __builtin_snprintf(buf, 6, "%+6.1f", 9.f); // kprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
+  __builtin_snprintf(buf, 6, "% 6.1f", 9.f); // kprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
+  __builtin_snprintf(buf, 6, "%   6.1f", 9.f); // kprintf-warning {{'snprintf' will always be truncated; specified size is 6, but format string expands to at least 7}}
 }
 
 void call_vsnprintf(void) {
@@ -153,4 +160,11 @@ void call_sprintf(void) {
   sprintf(buf, "%+.3f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "%.0e", 9.f);
   sprintf(buf, "5%.1e", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
+  sprintf(buf, "%5.1f", 9.f);
+  sprintf(buf, "%+5.1f", 9.f);
+  sprintf(buf, "% 5.1f", 9.f);
+  sprintf(buf, "%   5.1f", 9.f);
+  sprintf(buf, "%+6.1f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "% 6.1f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "%   6.1f", 9.f); // kprintf-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
 }

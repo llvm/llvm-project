@@ -12,6 +12,8 @@
 #ifndef TSAN_REPORT_H
 #define TSAN_REPORT_H
 
+#include "sanitizer_common/sanitizer_internal_defs.h"
+#include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_vector.h"
@@ -44,21 +46,23 @@ struct ReportStack {
 };
 
 struct ReportMopMutex {
-  int id;
-  bool write;
+  int id = 0;
+  bool write = false;
 };
 
 struct ReportMop {
-  int tid;
-  uptr addr;
-  int size;
-  bool write;
-  bool atomic;
-  uptr external_tag;
+  int tid = kInvalidTid;
+  uptr addr = 0;
+  int size = 0;
+  bool write = false;
+  bool atomic = false;
+  uptr external_tag = 0;
   Vector<ReportMopMutex> mset;
-  ReportStack *stack;
+  StackTrace stack_trace;
+  ReportStack* stack = nullptr;
 
   ReportMop();
+  ~ReportMop();
 };
 
 enum ReportLocationType {
@@ -79,37 +83,49 @@ struct ReportLocation {
   int fd = 0;
   bool fd_closed = false;
   bool suppressable = false;
+  StackID stack_id = 0;
   ReportStack *stack = nullptr;
 };
 
 struct ReportThread {
-  Tid id;
-  tid_t os_id;
-  bool running;
-  ThreadType thread_type;
-  char *name;
-  Tid parent_tid;
-  ReportStack *stack;
+  Tid id = kInvalidTid;
+  ThreadID os_id = 0;
+  bool running = false;
+  ThreadType thread_type = ThreadType::Regular;
+  char* name = nullptr;
+  Tid parent_tid = kInvalidTid;
+  StackID stack_id = 0;
+  ReportStack* stack = nullptr;
+  bool suppressable = false;
 };
 
 struct ReportMutex {
-  int id;
-  uptr addr;
-  ReportStack *stack;
+  int id = 0;
+  uptr addr = 0;
+  StackID stack_id = 0;
+  ReportStack* stack = nullptr;
+};
+
+struct AddedStack {
+  StackTrace stack_trace;
+  bool suppressable = false;
 };
 
 class ReportDesc {
  public:
-  ReportType typ;
-  uptr tag;
+  ReportType typ = ReportTypeRace;
+  uptr tag = kExternalTagNone;
   Vector<ReportStack*> stacks;
+  Vector<AddedStack> added_stacks;
   Vector<ReportMop*> mops;
   Vector<ReportLocation*> locs;
+  Vector<uptr> loc_addrs;
   Vector<ReportMutex*> mutexes;
   Vector<ReportThread*> threads;
   Vector<Tid> unique_tids;
-  ReportStack *sleep;
-  int count;
+  ReportStack* sleep = nullptr;
+  StackID sleep_stack_id = 0;
+  int count = 0;
   int signum = 0;
 
   ReportDesc();

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcess.h"
+#include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
 #include <cinttypes>
@@ -26,12 +27,14 @@
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
@@ -80,7 +83,7 @@ SBProcess::~SBProcess() = default;
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 const char *SBProcess::GetPluginName() {
@@ -135,8 +138,8 @@ bool SBProcess::RemoteLaunch(char const **argv, char const **envp,
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     if (process_sp->GetState() == eStateConnected) {
       if (stop_at_entry)
         launch_flags |= eLaunchFlagStopAtEntry;
@@ -168,8 +171,8 @@ bool SBProcess::RemoteAttachToProcessWithID(lldb::pid_t pid,
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     if (process_sp->GetState() == eStateConnected) {
       ProcessAttachInfo attach_info;
       attach_info.SetProcessID(pid);
@@ -193,10 +196,11 @@ uint32_t SBProcess::GetNumThreads() {
   if (process_sp) {
     Process::StopLocker stop_locker;
 
-    const bool can_update = stop_locker.TryLock(&process_sp->GetRunLock());
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
-    num_threads = process_sp->GetThreadList().GetSize(can_update);
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
+      num_threads = process_sp->GetThreadList().GetSize();
+    }
   }
 
   return num_threads;
@@ -209,8 +213,8 @@ SBThread SBProcess::GetSelectedThread() const {
   ThreadSP thread_sp;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     thread_sp = process_sp->GetThreadList().GetSelectedThread();
     sb_thread.SetThread(thread_sp);
   }
@@ -226,8 +230,8 @@ SBThread SBProcess::CreateOSPluginThread(lldb::tid_t tid,
   ThreadSP thread_sp;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     thread_sp = process_sp->CreateOSPluginThread(tid, context);
     sb_thread.SetThread(thread_sp);
   }
@@ -309,7 +313,8 @@ void SBProcess::ReportEventState(const SBEvent &event, SBFile out) const {
 
 void SBProcess::ReportEventState(const SBEvent &event, FILE *out) const {
   LLDB_INSTRUMENT_VA(this, event, out);
-  FileSP outfile = std::make_shared<NativeFile>(out, false);
+  FileSP outfile =
+      std::make_shared<NativeFile>(out, File::eOpenOptionWriteOnly, false);
   return ReportEventState(event, outfile);
 }
 
@@ -349,8 +354,8 @@ bool SBProcess::SetSelectedThread(const SBThread &thread) {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     return process_sp->GetThreadList().SetSelectedThreadByID(
         thread.GetThreadID());
   }
@@ -363,8 +368,8 @@ bool SBProcess::SetSelectedThreadByID(lldb::tid_t tid) {
   bool ret_val = false;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     ret_val = process_sp->GetThreadList().SetSelectedThreadByID(tid);
   }
 
@@ -377,8 +382,8 @@ bool SBProcess::SetSelectedThreadByIndexID(uint32_t index_id) {
   bool ret_val = false;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     ret_val = process_sp->GetThreadList().SetSelectedThreadByIndexID(index_id);
   }
 
@@ -393,11 +398,12 @@ SBThread SBProcess::GetThreadAtIndex(size_t index) {
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     Process::StopLocker stop_locker;
-    const bool can_update = stop_locker.TryLock(&process_sp->GetRunLock());
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
-    thread_sp = process_sp->GetThreadList().GetThreadAtIndex(index, can_update);
-    sb_thread.SetThread(thread_sp);
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
+      thread_sp = process_sp->GetThreadList().GetThreadAtIndex(index, false);
+      sb_thread.SetThread(thread_sp);
+    }
   }
 
   return sb_thread;
@@ -411,8 +417,8 @@ uint32_t SBProcess::GetNumQueues() {
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       num_queues = process_sp->GetQueueList().GetSize();
     }
   }
@@ -429,8 +435,8 @@ SBQueue SBProcess::GetQueueAtIndex(size_t index) {
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       queue_sp = process_sp->GetQueueList().GetQueueAtIndex(index);
       sb_queue.SetQueue(queue_sp);
     }
@@ -444,8 +450,8 @@ uint32_t SBProcess::GetStopID(bool include_expression_stops) {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     if (include_expression_stops)
       return process_sp->GetStopID();
     else
@@ -461,8 +467,8 @@ SBEvent SBProcess::GetStopEventForStopID(uint32_t stop_id) {
   EventSP event_sp;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     event_sp = process_sp->GetStopEventForStopID(stop_id);
     sb_event.reset(event_sp);
   }
@@ -474,8 +480,8 @@ void SBProcess::ForceScriptedState(StateType new_state) {
   LLDB_INSTRUMENT_VA(this, new_state);
 
   if (ProcessSP process_sp = GetSP()) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     process_sp->ForceScriptedState(new_state);
   }
 }
@@ -486,8 +492,8 @@ StateType SBProcess::GetState() {
   StateType ret_val = eStateInvalid;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     ret_val = process_sp->GetState();
   }
 
@@ -500,8 +506,8 @@ int SBProcess::GetExitStatus() {
   int exit_status = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     exit_status = process_sp->GetExitStatus();
   }
 
@@ -515,8 +521,8 @@ const char *SBProcess::GetExitDescription() {
   if (!process_sp)
     return nullptr;
 
-  std::lock_guard<std::recursive_mutex> guard(
-      process_sp->GetTarget().GetAPIMutex());
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   return ConstString(process_sp->GetExitDescription()).GetCString();
 }
 
@@ -570,8 +576,8 @@ SBError SBProcess::Continue() {
   ProcessSP process_sp(GetSP());
 
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
 
     if (process_sp->GetTarget().GetDebugger().GetAsyncExecution())
       sb_error.ref() = process_sp->Resume();
@@ -583,14 +589,26 @@ SBError SBProcess::Continue() {
   return sb_error;
 }
 
+SBError SBProcess::ContinueInDirection(RunDirection direction) {
+  if (ProcessSP process_sp = GetSP()) {
+    if (direction == RunDirection::eRunReverse &&
+        !process_sp->SupportsReverseDirection())
+      return Status::FromErrorStringWithFormatv(
+          "{0} does not support reverse execution of processes",
+          GetPluginName());
+    process_sp->SetBaseDirection(direction);
+  }
+  return Continue();
+}
+
 SBError SBProcess::Destroy() {
   LLDB_INSTRUMENT_VA(this);
 
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     sb_error.SetError(process_sp->Destroy(false));
   } else
     sb_error = Status::FromErrorString("SBProcess is invalid");
@@ -604,8 +622,8 @@ SBError SBProcess::Stop() {
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     sb_error.SetError(process_sp->Halt());
   } else
     sb_error = Status::FromErrorString("SBProcess is invalid");
@@ -619,8 +637,8 @@ SBError SBProcess::Kill() {
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     sb_error.SetError(process_sp->Destroy(true));
   } else
     sb_error = Status::FromErrorString("SBProcess is invalid");
@@ -642,8 +660,8 @@ SBError SBProcess::Detach(bool keep_stopped) {
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     sb_error.SetError(process_sp->Detach(keep_stopped));
   } else
     sb_error = Status::FromErrorString("SBProcess is invalid");
@@ -657,8 +675,8 @@ SBError SBProcess::Signal(int signo) {
   SBError sb_error;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     sb_error.SetError(process_sp->Signal(signo));
   } else
     sb_error = Status::FromErrorString("SBProcess is invalid");
@@ -693,8 +711,8 @@ SBThread SBProcess::GetThreadByID(tid_t tid) {
   if (process_sp) {
     Process::StopLocker stop_locker;
     const bool can_update = stop_locker.TryLock(&process_sp->GetRunLock());
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     thread_sp = process_sp->GetThreadList().FindThreadByID(tid, can_update);
     sb_thread.SetThread(thread_sp);
   }
@@ -711,8 +729,8 @@ SBThread SBProcess::GetThreadByIndexID(uint32_t index_id) {
   if (process_sp) {
     Process::StopLocker stop_locker;
     const bool can_update = stop_locker.TryLock(&process_sp->GetRunLock());
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     thread_sp =
         process_sp->GetThreadList().FindThreadByIndexID(index_id, can_update);
     sb_thread.SetThread(thread_sp);
@@ -808,7 +826,7 @@ SBBroadcaster SBProcess::GetBroadcaster() const {
 const char *SBProcess::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString(nullptr);
 }
 
 lldb::SBAddressRangeList SBProcess::FindRangesInMemory(
@@ -828,8 +846,8 @@ lldb::SBAddressRangeList SBProcess::FindRangesInMemory(
     error = Status::FromErrorString("process is running");
     return matches;
   }
-  std::lock_guard<std::recursive_mutex> guard(
-      process_sp->GetTarget().GetAPIMutex());
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   matches.m_opaque_up->ref() = process_sp->FindRangesInMemory(
       reinterpret_cast<const uint8_t *>(buf), size, ranges.ref().ref(),
       alignment, max_matches, error.ref());
@@ -854,8 +872,8 @@ lldb::addr_t SBProcess::FindInMemory(const void *buf, uint64_t size,
     return LLDB_INVALID_ADDRESS;
   }
 
-  std::lock_guard<std::recursive_mutex> guard(
-      process_sp->GetTarget().GetAPIMutex());
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   return process_sp->FindInMemory(reinterpret_cast<const uint8_t *>(buf), size,
                                   range.ref(), alignment, error.ref());
 }
@@ -873,12 +891,11 @@ size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
 
-
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       bytes_read = process_sp->ReadMemory(addr, dst, dst_len, sb_error.ref());
     } else {
       sb_error = Status::FromErrorString("process is running");
@@ -890,6 +907,60 @@ size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
   return bytes_read;
 }
 
+size_t SBProcess::ReadMemory(SBProcessAddress process_addr, void *dst,
+                             size_t dst_len, SBError &sb_error) {
+  LLDB_INSTRUMENT_VA(this, process_addr, dst, dst_len, sb_error);
+
+  if (!dst) {
+    sb_error = Status::FromErrorStringWithFormat(
+        "no buffer provided to read %zu bytes into", dst_len);
+    return 0;
+  }
+
+  ProcessSP process_sp(GetSP());
+  if (!process_sp) {
+    sb_error = Status::FromErrorString("SBProcess is invalid");
+    return 0;
+  }
+
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&process_sp->GetRunLock())) {
+    sb_error = Status::FromErrorString("process is running");
+    return 0;
+  }
+
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
+  return process_sp->ReadMemory(process_addr.ref(), dst, dst_len,
+                                sb_error.ref());
+}
+
+lldb::addr_space_t SBProcess::GetAddressSpaceID(const char *name,
+                                                SBError &sb_error) {
+  LLDB_INSTRUMENT_VA(this, name, sb_error);
+
+  ProcessSP process_sp(GetSP());
+  if (!process_sp) {
+    sb_error = Status::FromErrorString("SBProcess is invalid");
+    return LLDB_INVALID_ADDRESS_SPACE_ID;
+  }
+
+  if (!name || !name[0]) {
+    sb_error = Status::FromErrorString("an address space name is required");
+    return LLDB_INVALID_ADDRESS_SPACE_ID;
+  }
+
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
+  llvm::Expected<AddressSpaceInfo> info = process_sp->GetAddressSpaceInfo(name);
+  if (!info) {
+    sb_error = Status::FromError(info.takeError());
+    return LLDB_INVALID_ADDRESS_SPACE_ID;
+  }
+  sb_error.Clear();
+  return info->space_id;
+}
+
 size_t SBProcess::ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
                                         lldb::SBError &sb_error) {
   LLDB_INSTRUMENT_VA(this, addr, buf, size, sb_error);
@@ -899,8 +970,8 @@ size_t SBProcess::ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       bytes_read = process_sp->ReadCStringFromMemory(addr, (char *)buf, size,
                                                      sb_error.ref());
     } else {
@@ -921,8 +992,8 @@ uint64_t SBProcess::ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       value = process_sp->ReadUnsignedIntegerFromMemory(addr, byte_size, 0,
                                                         sb_error.ref());
     } else {
@@ -943,9 +1014,13 @@ lldb::addr_t SBProcess::ReadPointerFromMemory(addr_t addr,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
-      ptr = process_sp->ReadPointerFromMemory(addr, sb_error.ref());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
+      if (llvm::Expected<lldb::addr_t> ptr_or_err =
+              process_sp->ReadPointerFromMemory(addr))
+        ptr = *ptr_or_err;
+      else
+        sb_error = Status::FromError(ptr_or_err.takeError());
     } else {
       sb_error = Status::FromErrorString("process is running");
     }
@@ -966,8 +1041,8 @@ size_t SBProcess::WriteMemory(addr_t addr, const void *src, size_t src_len,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       bytes_written =
           process_sp->WriteMemory(addr, src, src_len, sb_error.ref());
     } else {
@@ -998,7 +1073,8 @@ bool SBProcess::GetDescription(SBStream &description) {
     Module *exe_module = process_sp->GetTarget().GetExecutableModulePointer();
     const char *exe_name = nullptr;
     if (exe_module)
-      exe_name = exe_module->GetFileSpec().GetFilename().AsCString();
+      exe_name = ConstString(exe_module->GetFileSpec().GetFilename())
+                     .AsCString(nullptr);
 
     strm.Printf("SBProcess: pid = %" PRIu64 ", state = %s, threads = %d%s%s",
                 process_sp->GetID(), lldb_private::StateAsCString(GetState()),
@@ -1025,8 +1101,11 @@ SBStructuredData SBProcess::GetExtendedCrashInformation() {
   auto expected_data =
       platform_sp->FetchExtendedCrashInformation(*process_sp.get());
 
-  if (!expected_data)
+  if (!expected_data) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), expected_data.takeError(),
+                   "FetchExtendedCrashInformation failed: {0}");
     return data;
+  }
 
   StructuredData::ObjectSP fetched_data = *expected_data;
   data.m_impl_up->SetObjectSP(fetched_data);
@@ -1040,8 +1119,8 @@ SBProcess::GetNumSupportedHardwareWatchpoints(lldb::SBError &sb_error) const {
   uint32_t num = 0;
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     std::optional<uint32_t> actual_num = process_sp->GetWatchpointSlotCount();
     if (actual_num) {
       num = *actual_num;
@@ -1071,8 +1150,8 @@ uint32_t SBProcess::LoadImage(const lldb::SBFileSpec &sb_local_image_spec,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
       return platform_sp->LoadImage(process_sp.get(), *sb_local_image_spec,
                                     *sb_remote_image_spec, sb_error.ref());
@@ -1095,8 +1174,8 @@ uint32_t SBProcess::LoadImageUsingPaths(const lldb::SBFileSpec &image_spec,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
       size_t num_paths = paths.GetSize();
       std::vector<std::string> paths_vec;
@@ -1128,8 +1207,8 @@ lldb::SBError SBProcess::UnloadImage(uint32_t image_token) {
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
       sb_error.SetError(
           platform_sp->UnloadImage(process_sp.get(), image_token));
@@ -1149,8 +1228,8 @@ lldb::SBError SBProcess::SendEventData(const char *event_data) {
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       sb_error.SetError(process_sp->SendEventData(event_data));
     } else {
       sb_error = Status::FromErrorString("process is running");
@@ -1180,7 +1259,7 @@ const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
     const std::vector<ConstString> &names =
         runtime->GetExtendedBacktraceTypes();
     if (idx < names.size()) {
-      return names[idx].AsCString();
+      return names[idx].AsCString(nullptr);
     }
   }
   return nullptr;
@@ -1205,8 +1284,8 @@ bool SBProcess::IsInstrumentationRuntimePresent(
   if (!process_sp)
     return false;
 
-  std::lock_guard<std::recursive_mutex> guard(
-      process_sp->GetTarget().GetAPIMutex());
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
 
   InstrumentationRuntimeSP runtime_sp =
       process_sp->GetInstrumentationRuntime(type);
@@ -1249,15 +1328,24 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
-  std::lock_guard<std::recursive_mutex> guard(
-      process_sp->GetTarget().GetAPIMutex());
+  if (!options.GetProcess())
+    options.SetProcess(process_sp);
+
+  if (options.GetProcess().GetSP() != process_sp) {
+    error = Status::FromErrorString(
+        "Save Core Options configured for a different process.");
+    return error;
+  }
+
+  TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
 
   if (process_sp->GetState() != eStateStopped) {
     error = Status::FromErrorString("the process is not stopped");
     return error;
   }
 
-  error.ref() = PluginManager::SaveCore(process_sp, options.ref());
+  error.ref() = PluginManager::SaveCore(options.ref());
 
   return error;
 }
@@ -1272,8 +1360,8 @@ SBProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
 
       sb_error.ref() =
           process_sp->GetMemoryRegionInfo(load_addr, sb_region_info.ref());
@@ -1294,8 +1382,8 @@ lldb::SBMemoryRegionInfoList SBProcess::GetMemoryRegions() {
   ProcessSP process_sp(GetSP());
   Process::StopLocker stop_locker;
   if (process_sp && stop_locker.TryLock(&process_sp->GetRunLock())) {
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
 
     process_sp->GetMemoryRegions(sb_region_list.ref());
   }
@@ -1324,6 +1412,15 @@ lldb::SBFileSpec SBProcess::GetCoreFile() {
     core_file = process_sp->GetCoreFile();
   }
   return SBFileSpec(core_file);
+}
+
+bool SBProcess::IsLiveDebugSession() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ProcessSP process_sp(GetSP());
+  if (!process_sp)
+    return false;
+  return process_sp->IsLiveDebugSession();
 }
 
 addr_t SBProcess::GetAddressMask(AddressMaskType type,
@@ -1357,6 +1454,8 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
   LLDB_INSTRUMENT_VA(this, type, mask, addr_range);
 
   if (ProcessSP process_sp = GetSP()) {
+    TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
     switch (type) {
     case eAddressMaskTypeCode:
       if (addr_range == eAddressMaskRangeAll) {
@@ -1393,6 +1492,7 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
       }
       break;
     }
+    process_sp->AddressMaskChangedCallback();
   }
 }
 
@@ -1427,8 +1527,8 @@ lldb::addr_t SBProcess::AllocateMemory(size_t size, uint32_t permissions,
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       addr = process_sp->AllocateMemory(size, permissions, sb_error.ref());
     } else {
       sb_error = Status::FromErrorString("process is running");
@@ -1447,8 +1547,8 @@ lldb::SBError SBProcess::DeallocateMemory(lldb::addr_t ptr) {
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
+      TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       Status error = process_sp->DeallocateMemory(ptr);
       sb_error.SetError(std::move(error));
     } else {

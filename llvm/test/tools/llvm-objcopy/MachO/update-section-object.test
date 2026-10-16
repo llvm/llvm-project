@@ -1,0 +1,47 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: llvm-mc -assemble -triple=arm64-apple-macos11 -filetype=obj %p/Inputs/macho_sections.s -o %t.o
+# RUN: llvm-otool -l %t.o | FileCheck %s --check-prefix=ORIG
+
+
+# RUN: llvm-objcopy %t.o --update-section __DATA,__storage=%p/Inputs/macho_sections.s %t.new.o
+# RUN: llvm-otool -l %t.new.o | FileCheck %s --check-prefix=UPDATED
+
+# ORIG:      cmd LC_SEGMENT_64
+# ORIG-NEXT: cmdsize 232
+# ORIG-NEXT: segname
+# ORIG-NEXT: vmaddr 0x0000000000000000
+# ORIG-NEXT: vmsize 0x00000000000000c0
+# ORIG-NEXT: fileoff 392
+# ORIG-NEXT: filesize 192
+# ORIG-NEXT: maxprot 0x00000007
+# ORIG-NEXT: initprot 0x00000007
+# ORIG-NEXT: nsects 2
+# ORIG-NEXT: flags 0x0
+
+# ORIG:      Section
+# ORIG:      sectname __storage
+# ORIG-NEXT: segname __DATA
+# ORIG-NEXT: addr 0x0000000000000040
+# ORIG-NEXT: size 0x0000000000000080
+
+
+### Make sure the file size and segment size have changed
+# UPDATED:      cmd LC_SEGMENT_64
+# UPDATED-NEXT: cmdsize 232
+# UPDATED-NEXT: segname
+# UPDATED-NEXT: vmaddr 0x0000000000000000
+# UPDATED-NEXT: vmsize 0x0000000000000090
+# UPDATED-NEXT: fileoff 392
+# UPDATED-NEXT: filesize 144
+# UPDATED-NEXT: maxprot 0x00000007
+# UPDATED-NEXT: initprot 0x00000007
+# UPDATED-NEXT: nsects 2
+# UPDATED-NEXT: flags 0x0
+
+# UPDATED:      Section
+# UPDATED:      sectname __storage
+# UPDATED-NEXT: segname __DATA
+# UPDATED-NEXT: addr 0x0000000000000040
+# UPDATED-NEXT: size 0x0000000000000050
+

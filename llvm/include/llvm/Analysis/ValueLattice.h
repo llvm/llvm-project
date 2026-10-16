@@ -11,6 +11,7 @@
 
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/Compiler.h"
 
 //===----------------------------------------------------------------------===//
 //                               ValueLatticeElement
@@ -78,6 +79,11 @@ class ValueLatticeElement {
   ValueLatticeElementTy Tag : 8;
   /// Number of times a constant range has been extended with widening enabled.
   unsigned NumRangeExtensions : 8;
+
+  // Pointer constants derived from equality predicates may have different
+  // provenance than the original value. Limit constant propagation if this
+  // happens to be the case.
+  bool MayHaveDifferentProvenance = false;
 
   /// The union either stores a pointer to a constant or a constant range,
   /// associated to the lattice element. We have to ensure that Range is
@@ -147,7 +153,8 @@ public:
   ~ValueLatticeElement() { destroy(); }
 
   ValueLatticeElement(const ValueLatticeElement &Other)
-      : Tag(Other.Tag), NumRangeExtensions(0) {
+      : Tag(Other.Tag), NumRangeExtensions(0),
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -166,7 +173,8 @@ public:
   }
 
   ValueLatticeElement(ValueLatticeElement &&Other)
-      : Tag(Other.Tag), NumRangeExtensions(0) {
+      : Tag(Other.Tag), NumRangeExtensions(0),
+        MayHaveDifferentProvenance(Other.MayHaveDifferentProvenance) {
     switch (Other.Tag) {
     case constantrange:
     case constantrange_including_undef:
@@ -424,8 +432,13 @@ public:
     }
 
     if (isConstant()) {
-      if (RHS.isConstant() && getConstant() == RHS.getConstant())
-        return false;
+      if (RHS.isConstant() && getConstant() == RHS.getConstant()) {
+        // Equal constants may still differ in provenance, propagate it when
+        // merging values.
+        bool Current = MayHaveDifferentProvenance;
+        MayHaveDifferentProvenance |= RHS.mayHaveDifferentProvenance();
+        return MayHaveDifferentProvenance != Current;
+      }
       if (RHS.isUndef())
         return false;
       // If the constant is a vector of integers, try to treat it as a range.
@@ -467,9 +480,9 @@ public:
   // Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
-  Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
-                       const ValueLatticeElement &Other,
-                       const DataLayout &DL) const;
+  LLVM_ABI Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
+                                const ValueLatticeElement &Other,
+                                const DataLayout &DL) const;
 
   /// Combine two sets of facts about the same value into a single set of
   /// facts.  Note that this method is not suitable for merging facts along
@@ -486,15 +499,20 @@ public:
   ///   as not confuse the rest of LVI.  Ideally, we'd always return Undefined,
   ///   but we do not make this guarantee.  TODO: This would be a useful
   ///   enhancement.
-  ValueLatticeElement intersect(const ValueLatticeElement &Other) const;
+  LLVM_ABI ValueLatticeElement
+  intersect(const ValueLatticeElement &Other) const;
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
+
+  bool mayHaveDifferentProvenance() const { return MayHaveDifferentProvenance; }
+  void setMayHaveDifferentProvenance(bool V) { MayHaveDifferentProvenance = V; }
 };
 
 static_assert(sizeof(ValueLatticeElement) <= 40,
               "size of ValueLatticeElement changed unexpectedly");
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const ValueLatticeElement &Val);
 } // end namespace llvm
 #endif

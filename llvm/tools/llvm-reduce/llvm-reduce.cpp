@@ -8,24 +8,22 @@
 //
 // This program tries to reduce an IR test case for a given interesting-ness
 // test. It runs multiple delta debugging passes in order to minimize the input
-// file. It's worth noting that this is a part of the bugpoint redesign
-// proposal, and thus a *temporary* tool that will eventually be integrated
-// into the bugpoint tool itself.
+// file.
 //
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
+#include "deltas/Delta.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <system_error>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -35,8 +33,6 @@ using namespace llvm;
 
 cl::OptionCategory LLVMReduceOptions("llvm-reduce options");
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(LLVMReduceOptions));
 static cl::opt<bool> Version("v", cl::desc("Alias for -version"), cl::Hidden,
                              cl::cat(LLVMReduceOptions));
 
@@ -100,8 +96,6 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 static codegen::RegisterCodeGenFlags CGF;
 
 /// Turn off crash debugging features
@@ -141,10 +135,18 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   const StringRef ToolName(Argv[0]);
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
+
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
-  cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
+  cl::ParseCommandLineOptions(
+      Argc, Argv,
+      "LLVM automatic testcase reducer.\n"
+      "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
+      "information.\n");
 
   if (Argc == 1) {
     cl::PrintHelpMessage();
@@ -172,6 +174,14 @@ int main(int Argc, char **Argv) {
 
   if (TestFilename.empty()) {
     WithColor::error(errs(), ToolName) << "--test option must be specified\n";
+    return 1;
+  }
+
+  // Chunks are handed to worker threads by round tripping the program through
+  // bitcode, which cannot represent MachineFunctions.
+  if (ReduceModeMIR && getNumChunkProcessingJobs() > 1) {
+    WithColor::error(errs(), ToolName)
+        << "-j is not supported for MIR reduction\n";
     return 1;
   }
 
@@ -203,7 +213,7 @@ int main(int Argc, char **Argv) {
   // interestingness checks.
   if (!Tester.getProgram().isReduced(Tester)) {
     errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-    return 1;
+    return 2;
   }
 
   // Try to reduce code

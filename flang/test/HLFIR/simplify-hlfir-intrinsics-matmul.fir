@@ -13,40 +13,27 @@ func.func @matmul_matrix_matrix_integer(%arg0: !hlfir.expr<?x?xi16>, %arg1: !hlf
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant 0 : i32
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xi16>) -> !fir.shape<2>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
-// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
 // ANSE:           %[[VAL_11:.*]] = hlfir.eval_in_mem shape %[[VAL_10]] : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
 // ANSE:           ^bb0(%[[VAL_12:.*]]: !fir.ref<!fir.array<?x?xi32>>):
 // ANSE:             %[[VAL_13:.*]] = fir.embox %[[VAL_12]](%[[VAL_10]]) : (!fir.ref<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xi32>>
 // ANSE:             fir.do_loop %[[VAL_14:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                 %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_18:.*]] = arith.subi %[[VAL_16]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_19:.*]] = arith.addi %[[VAL_15]], %[[VAL_18]] : index
-// ANSE:                 %[[VAL_20:.*]] = arith.subi %[[VAL_17]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_21:.*]] = arith.addi %[[VAL_14]], %[[VAL_20]] : index
-// ANSE:                 %[[VAL_22:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_19]], %[[VAL_21]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
+// ANSE:                 %[[VAL_22:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_15]], %[[VAL_14]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
 // ANSE:                 hlfir.assign %[[VAL_4]] to %[[VAL_22]] : i32, !fir.ref<i32>
 // ANSE:               }
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_23:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_24:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:                 fir.do_loop %[[VAL_25:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                   %[[VAL_26:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_27:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_28:.*]] = arith.subi %[[VAL_26]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_29:.*]] = arith.addi %[[VAL_25]], %[[VAL_28]] : index
-// ANSE:                   %[[VAL_30:.*]] = arith.subi %[[VAL_27]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_31:.*]] = arith.addi %[[VAL_24]], %[[VAL_30]] : index
-// ANSE:                   %[[VAL_32:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_29]], %[[VAL_31]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
+// ANSE:                   %[[VAL_32:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_25]], %[[VAL_24]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
 // ANSE:                   %[[VAL_33:.*]] = fir.load %[[VAL_32]] : !fir.ref<i32>
 // ANSE:                   %[[VAL_34:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_25]], %[[VAL_23]] : (!hlfir.expr<?x?xi16>, index, index) -> i16
 // ANSE:                   %[[VAL_35:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_23]], %[[VAL_24]] : (!hlfir.expr<?x?xi32>, index, index) -> i32
@@ -64,10 +51,10 @@ func.func @matmul_matrix_matrix_integer(%arg0: !hlfir.expr<?x?xi16>, %arg1: !hlf
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xi16>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 // ELEMENTAL:           %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
 // ELEMENTAL:           ^bb0(%[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index):
@@ -94,40 +81,27 @@ func.func @matmul_matrix_matrix_real(%arg0: !hlfir.expr<?x?xf32>, %arg1: !hlfir.
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xf32>) -> !fir.shape<2>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xf16>) -> !fir.shape<2>
-// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
 // ANSE:           %[[VAL_11:.*]] = hlfir.eval_in_mem shape %[[VAL_10]] : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
 // ANSE:           ^bb0(%[[VAL_12:.*]]: !fir.ref<!fir.array<?x?xf32>>):
 // ANSE:             %[[VAL_13:.*]] = fir.embox %[[VAL_12]](%[[VAL_10]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
 // ANSE:             fir.do_loop %[[VAL_14:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                 %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_18:.*]] = arith.subi %[[VAL_16]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_19:.*]] = arith.addi %[[VAL_15]], %[[VAL_18]] : index
-// ANSE:                 %[[VAL_20:.*]] = arith.subi %[[VAL_17]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_21:.*]] = arith.addi %[[VAL_14]], %[[VAL_20]] : index
-// ANSE:                 %[[VAL_22:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_19]], %[[VAL_21]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+// ANSE:                 %[[VAL_22:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_15]], %[[VAL_14]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 // ANSE:                 hlfir.assign %[[VAL_4]] to %[[VAL_22]] : f32, !fir.ref<f32>
 // ANSE:               }
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_23:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_3]] {
 // ANSE:               fir.do_loop %[[VAL_24:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] {
 // ANSE:                 fir.do_loop %[[VAL_25:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] {
-// ANSE:                   %[[VAL_26:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_27:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_28:.*]] = arith.subi %[[VAL_26]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_29:.*]] = arith.addi %[[VAL_25]], %[[VAL_28]] : index
-// ANSE:                   %[[VAL_30:.*]] = arith.subi %[[VAL_27]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_31:.*]] = arith.addi %[[VAL_24]], %[[VAL_30]] : index
-// ANSE:                   %[[VAL_32:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_29]], %[[VAL_31]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+// ANSE:                   %[[VAL_32:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_25]], %[[VAL_24]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 // ANSE:                   %[[VAL_33:.*]] = fir.load %[[VAL_32]] : !fir.ref<f32>
 // ANSE:                   %[[VAL_34:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_25]], %[[VAL_23]] : (!hlfir.expr<?x?xf32>, index, index) -> f32
 // ANSE:                   %[[VAL_35:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_23]], %[[VAL_24]] : (!hlfir.expr<?x?xf16>, index, index) -> f16
@@ -145,10 +119,10 @@ func.func @matmul_matrix_matrix_real(%arg0: !hlfir.expr<?x?xf32>, %arg1: !hlfir.
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xf32>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xf16>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 // ELEMENTAL:           %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
 // ELEMENTAL:           ^bb0(%[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index):
@@ -175,14 +149,13 @@ func.func @matmul_matrix_matrix_complex(%arg0: !hlfir.expr<?x?xcomplex<f32>>, %a
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xcomplex<f32>>) -> !fir.shape<2>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xcomplex<f16>>) -> !fir.shape<2>
-// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
 // ANSE:           %[[VAL_11:.*]] = hlfir.eval_in_mem shape %[[VAL_10]] : (!fir.shape<2>) -> !hlfir.expr<?x?xcomplex<f32>> {
 // ANSE:           ^bb0(%[[VAL_12:.*]]: !fir.ref<!fir.array<?x?xcomplex<f32>>>):
@@ -192,26 +165,14 @@ func.func @matmul_matrix_matrix_complex(%arg0: !hlfir.expr<?x?xcomplex<f32>>, %a
 // ANSE:             %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[VAL_4]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 // ANSE:             fir.do_loop %[[VAL_17:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                 %[[VAL_19:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_20:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_21:.*]] = arith.subi %[[VAL_19]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_22:.*]] = arith.addi %[[VAL_18]], %[[VAL_21]] : index
-// ANSE:                 %[[VAL_23:.*]] = arith.subi %[[VAL_20]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_24:.*]] = arith.addi %[[VAL_17]], %[[VAL_23]] : index
-// ANSE:                 %[[VAL_25:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_22]], %[[VAL_24]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
+// ANSE:                 %[[VAL_25:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_18]], %[[VAL_17]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
 // ANSE:                 hlfir.assign %[[VAL_16]] to %[[VAL_25]] : complex<f32>, !fir.ref<complex<f32>>
 // ANSE:               }
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_26:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_3]] {
 // ANSE:               fir.do_loop %[[VAL_27:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] {
 // ANSE:                 fir.do_loop %[[VAL_28:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] {
-// ANSE:                   %[[VAL_29:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_30:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_31:.*]] = arith.subi %[[VAL_29]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_32:.*]] = arith.addi %[[VAL_28]], %[[VAL_31]] : index
-// ANSE:                   %[[VAL_33:.*]] = arith.subi %[[VAL_30]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_34:.*]] = arith.addi %[[VAL_27]], %[[VAL_33]] : index
-// ANSE:                   %[[VAL_35:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_32]], %[[VAL_34]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
+// ANSE:                   %[[VAL_35:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_28]], %[[VAL_27]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
 // ANSE:                   %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<complex<f32>>
 // ANSE:                   %[[VAL_37:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_28]], %[[VAL_26]] : (!hlfir.expr<?x?xcomplex<f32>>, index, index) -> complex<f32>
 // ANSE:                   %[[VAL_38:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_26]], %[[VAL_27]] : (!hlfir.expr<?x?xcomplex<f16>>, index, index) -> complex<f16>
@@ -229,10 +190,10 @@ func.func @matmul_matrix_matrix_complex(%arg0: !hlfir.expr<?x?xcomplex<f32>>, %a
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xcomplex<f32>>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xcomplex<f16>>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 // ELEMENTAL:           %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xcomplex<f32>> {
 // ELEMENTAL:           ^bb0(%[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index):
@@ -262,14 +223,13 @@ func.func @matmul_matrix_matrix_complex_real(%arg0: !hlfir.expr<?x?xcomplex<f32>
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xcomplex<f32>>) -> !fir.shape<2>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xf16>) -> !fir.shape<2>
-// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
 // ANSE:           %[[VAL_11:.*]] = hlfir.eval_in_mem shape %[[VAL_10]] : (!fir.shape<2>) -> !hlfir.expr<?x?xcomplex<f32>> {
 // ANSE:           ^bb0(%[[VAL_12:.*]]: !fir.ref<!fir.array<?x?xcomplex<f32>>>):
@@ -279,26 +239,14 @@ func.func @matmul_matrix_matrix_complex_real(%arg0: !hlfir.expr<?x?xcomplex<f32>
 // ANSE:             %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[VAL_4]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 // ANSE:             fir.do_loop %[[VAL_17:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                 %[[VAL_19:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_20:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_21:.*]] = arith.subi %[[VAL_19]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_22:.*]] = arith.addi %[[VAL_18]], %[[VAL_21]] : index
-// ANSE:                 %[[VAL_23:.*]] = arith.subi %[[VAL_20]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_24:.*]] = arith.addi %[[VAL_17]], %[[VAL_23]] : index
-// ANSE:                 %[[VAL_25:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_22]], %[[VAL_24]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
+// ANSE:                 %[[VAL_25:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_18]], %[[VAL_17]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
 // ANSE:                 hlfir.assign %[[VAL_16]] to %[[VAL_25]] : complex<f32>, !fir.ref<complex<f32>>
 // ANSE:               }
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_26:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_3]] {
 // ANSE:               fir.do_loop %[[VAL_27:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] {
 // ANSE:                 fir.do_loop %[[VAL_28:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] {
-// ANSE:                   %[[VAL_29:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_30:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_31:.*]] = arith.subi %[[VAL_29]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_32:.*]] = arith.addi %[[VAL_28]], %[[VAL_31]] : index
-// ANSE:                   %[[VAL_33:.*]] = arith.subi %[[VAL_30]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_34:.*]] = arith.addi %[[VAL_27]], %[[VAL_33]] : index
-// ANSE:                   %[[VAL_35:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_32]], %[[VAL_34]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
+// ANSE:                   %[[VAL_35:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_28]], %[[VAL_27]])  : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index, index) -> !fir.ref<complex<f32>>
 // ANSE:                   %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<complex<f32>>
 // ANSE:                   %[[VAL_37:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_28]], %[[VAL_26]] : (!hlfir.expr<?x?xcomplex<f32>>, index, index) -> complex<f32>
 // ANSE:                   %[[VAL_38:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_26]], %[[VAL_27]] : (!hlfir.expr<?x?xf16>, index, index) -> f16
@@ -320,10 +268,10 @@ func.func @matmul_matrix_matrix_complex_real(%arg0: !hlfir.expr<?x?xcomplex<f32>
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xcomplex<f32>>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xf16>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 // ELEMENTAL:           %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xcomplex<f32>> {
 // ELEMENTAL:           ^bb0(%[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index):
@@ -357,14 +305,13 @@ func.func @matmul_matrix_matrix_logical(%arg0: !hlfir.expr<?x?x!fir.logical<1>>,
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant false
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x!fir.logical<1>>) -> !fir.shape<2>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?x!fir.logical<4>>) -> !fir.shape<2>
-// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
 // ANSE:           %[[VAL_11:.*]] = hlfir.eval_in_mem shape %[[VAL_10]] : (!fir.shape<2>) -> !hlfir.expr<?x?x!fir.logical<4>> {
 // ANSE:           ^bb0(%[[VAL_12:.*]]: !fir.ref<!fir.array<?x?x!fir.logical<4>>>):
@@ -372,26 +319,14 @@ func.func @matmul_matrix_matrix_logical(%arg0: !hlfir.expr<?x?x!fir.logical<1>>,
 // ANSE:             %[[VAL_14:.*]] = fir.convert %[[VAL_4]] : (i1) -> !fir.logical<4>
 // ANSE:             fir.do_loop %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_16:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                 %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_18:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_19:.*]] = arith.subi %[[VAL_17]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_20:.*]] = arith.addi %[[VAL_16]], %[[VAL_19]] : index
-// ANSE:                 %[[VAL_21:.*]] = arith.subi %[[VAL_18]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_22:.*]] = arith.addi %[[VAL_15]], %[[VAL_21]] : index
-// ANSE:                 %[[VAL_23:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_20]], %[[VAL_22]])  : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index, index) -> !fir.ref<!fir.logical<4>>
+// ANSE:                 %[[VAL_23:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_16]], %[[VAL_15]])  : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index, index) -> !fir.ref<!fir.logical<4>>
 // ANSE:                 hlfir.assign %[[VAL_14]] to %[[VAL_23]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // ANSE:               }
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_24:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_3]] unordered {
 // ANSE:               fir.do_loop %[[VAL_25:.*]] = %[[VAL_3]] to %[[VAL_9]] step %[[VAL_3]] unordered {
 // ANSE:                 fir.do_loop %[[VAL_26:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:                   %[[VAL_27:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_2]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_28:.*]]:3 = fir.box_dims %[[VAL_13]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
-// ANSE:                   %[[VAL_29:.*]] = arith.subi %[[VAL_27]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_30:.*]] = arith.addi %[[VAL_26]], %[[VAL_29]] : index
-// ANSE:                   %[[VAL_31:.*]] = arith.subi %[[VAL_28]]#0, %[[VAL_3]] : index
-// ANSE:                   %[[VAL_32:.*]] = arith.addi %[[VAL_25]], %[[VAL_31]] : index
-// ANSE:                   %[[VAL_33:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_30]], %[[VAL_32]])  : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index, index) -> !fir.ref<!fir.logical<4>>
+// ANSE:                   %[[VAL_33:.*]] = hlfir.designate %[[VAL_13]] (%[[VAL_26]], %[[VAL_25]])  : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index, index) -> !fir.ref<!fir.logical<4>>
 // ANSE:                   %[[VAL_34:.*]] = fir.load %[[VAL_33]] : !fir.ref<!fir.logical<4>>
 // ANSE:                   %[[VAL_35:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_26]], %[[VAL_24]] : (!hlfir.expr<?x?x!fir.logical<1>>, index, index) -> !fir.logical<1>
 // ANSE:                   %[[VAL_36:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_24]], %[[VAL_25]] : (!hlfir.expr<?x?x!fir.logical<4>>, index, index) -> !fir.logical<4>
@@ -412,10 +347,10 @@ func.func @matmul_matrix_matrix_logical(%arg0: !hlfir.expr<?x?x!fir.logical<1>>,
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant false
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x!fir.logical<1>>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?x!fir.logical<4>>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_9:.*]] = fir.shape %[[VAL_5]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 // ELEMENTAL:           %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?x!fir.logical<4>> {
 // ELEMENTAL:           ^bb0(%[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index):
@@ -446,29 +381,22 @@ func.func @matmul_matrix_vector_real(%arg0: !hlfir.expr<?x?xf32>, %arg1: !hlfir.
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xf32>) -> !fir.shape<2>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_5]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // ANSE:           %[[VAL_9:.*]] = hlfir.eval_in_mem shape %[[VAL_8]] : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // ANSE:           ^bb0(%[[VAL_10:.*]]: !fir.ref<!fir.array<?xf32>>):
 // ANSE:             %[[VAL_11:.*]] = fir.embox %[[VAL_10]](%[[VAL_8]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 // ANSE:             fir.do_loop %[[VAL_12:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] unordered {
-// ANSE:               %[[VAL_13:.*]]:3 = fir.box_dims %[[VAL_11]], %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// ANSE:               %[[VAL_14:.*]] = arith.subi %[[VAL_13]]#0, %[[VAL_3]] : index
-// ANSE:               %[[VAL_15:.*]] = arith.addi %[[VAL_12]], %[[VAL_14]] : index
-// ANSE:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_11]] (%[[VAL_15]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// ANSE:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_11]] (%[[VAL_12]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // ANSE:               hlfir.assign %[[VAL_4]] to %[[VAL_16]] : f32, !fir.ref<f32>
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_17:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_3]] {
 // ANSE:               fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] {
-// ANSE:                 %[[VAL_19:.*]]:3 = fir.box_dims %[[VAL_11]], %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_20:.*]] = arith.subi %[[VAL_19]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_21:.*]] = arith.addi %[[VAL_18]], %[[VAL_20]] : index
-// ANSE:                 %[[VAL_22:.*]] = hlfir.designate %[[VAL_11]] (%[[VAL_21]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// ANSE:                 %[[VAL_22:.*]] = hlfir.designate %[[VAL_11]] (%[[VAL_18]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // ANSE:                 %[[VAL_23:.*]] = fir.load %[[VAL_22]] : !fir.ref<f32>
 // ANSE:                 %[[VAL_24:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_18]], %[[VAL_17]] : (!hlfir.expr<?x?xf32>, index, index) -> f32
 // ANSE:                 %[[VAL_25:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_17]] : (!hlfir.expr<?xf16>, index) -> f16
@@ -485,8 +413,8 @@ func.func @matmul_matrix_vector_real(%arg0: !hlfir.expr<?x?xf32>, %arg1: !hlfir.
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xf32>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_7:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // ELEMENTAL:           %[[VAL_8:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // ELEMENTAL:           ^bb0(%[[VAL_9:.*]]: index):
@@ -513,30 +441,23 @@ func.func @matmul_vector_matrix_real(%arg0: !hlfir.expr<?xf32>, %arg1: !hlfir.ex
 
 // NOANSE: hlfir.matmul
 
-// ANSE:           %[[VAL_2:.*]] = arith.constant 0 : index
 // ANSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // ANSE:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
 // ANSE:           %[[VAL_5:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xf32>) -> !fir.shape<1>
-// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// ANSE:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_5]] dim(0) : (!fir.shape<1>) -> index
 // ANSE:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xf16>) -> !fir.shape<2>
-// ANSE:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ANSE:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ANSE:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 // ANSE:           %[[VAL_10:.*]] = hlfir.eval_in_mem shape %[[VAL_9]] : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // ANSE:           ^bb0(%[[VAL_11:.*]]: !fir.ref<!fir.array<?xf32>>):
 // ANSE:             %[[VAL_12:.*]] = fir.embox %[[VAL_11]](%[[VAL_9]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 // ANSE:             fir.do_loop %[[VAL_13:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_3]] unordered {
-// ANSE:               %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_12]], %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// ANSE:               %[[VAL_15:.*]] = arith.subi %[[VAL_14]]#0, %[[VAL_3]] : index
-// ANSE:               %[[VAL_16:.*]] = arith.addi %[[VAL_13]], %[[VAL_15]] : index
-// ANSE:               %[[VAL_17:.*]] = hlfir.designate %[[VAL_12]] (%[[VAL_16]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// ANSE:               %[[VAL_17:.*]] = hlfir.designate %[[VAL_12]] (%[[VAL_13]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // ANSE:               hlfir.assign %[[VAL_4]] to %[[VAL_17]] : f32, !fir.ref<f32>
 // ANSE:             }
 // ANSE:             fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_3]] {
 // ANSE:               fir.do_loop %[[VAL_19:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_3]] {
-// ANSE:                 %[[VAL_20:.*]]:3 = fir.box_dims %[[VAL_12]], %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// ANSE:                 %[[VAL_21:.*]] = arith.subi %[[VAL_20]]#0, %[[VAL_3]] : index
-// ANSE:                 %[[VAL_22:.*]] = arith.addi %[[VAL_19]], %[[VAL_21]] : index
-// ANSE:                 %[[VAL_23:.*]] = hlfir.designate %[[VAL_12]] (%[[VAL_22]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// ANSE:                 %[[VAL_23:.*]] = hlfir.designate %[[VAL_12]] (%[[VAL_19]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // ANSE:                 %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<f32>
 // ANSE:                 %[[VAL_25:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_18]] : (!hlfir.expr<?xf32>, index) -> f32
 // ANSE:                 %[[VAL_26:.*]] = hlfir.apply %[[VAL_1]], %[[VAL_18]], %[[VAL_19]] : (!hlfir.expr<?x?xf16>, index, index) -> f16
@@ -553,9 +474,9 @@ func.func @matmul_vector_matrix_real(%arg0: !hlfir.expr<?xf32>, %arg1: !hlfir.ex
 // ELEMENTAL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ELEMENTAL:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // ELEMENTAL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?xf32>) -> !fir.shape<1>
-// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<1>) -> index
+// ELEMENTAL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<1>) -> index
 // ELEMENTAL:           %[[VAL_6:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xf16>) -> !fir.shape<2>
-// ELEMENTAL:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_6]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ELEMENTAL:           %[[VAL_7:.*]] = hlfir.get_extent %[[VAL_6]] dim(1) : (!fir.shape<2>) -> index
 // ELEMENTAL:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 // ELEMENTAL:           %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // ELEMENTAL:           ^bb0(%[[VAL_10:.*]]: index):
@@ -582,10 +503,10 @@ func.func @matmul_transpose_matrix_matrix_integer(%arg0: !hlfir.expr<?x?xi16>, %
 // ALL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ALL:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // ALL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xi16>) -> !fir.shape<2>
-// ALL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ALL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ALL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ALL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ALL:           %[[VAL_7:.*]] = hlfir.shape_of %[[VAL_1]] : (!hlfir.expr<?x?xi32>) -> !fir.shape<2>
-// ALL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ALL:           %[[VAL_8:.*]] = hlfir.get_extent %[[VAL_7]] dim(1) : (!fir.shape<2>) -> index
 // ALL:           %[[VAL_9:.*]] = fir.shape %[[VAL_6]], %[[VAL_8]] : (index, index) -> !fir.shape<2>
 // ALL:           %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
 // ALL:           ^bb0(%[[VAL_11:.*]]: index, %[[VAL_12:.*]]: index):
@@ -612,8 +533,8 @@ func.func @matmul_transpose_matrix_vector_real(%arg0: !hlfir.expr<?x?xf32>, %arg
 // ALL:           %[[VAL_2:.*]] = arith.constant 1 : index
 // ALL:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // ALL:           %[[VAL_4:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xf32>) -> !fir.shape<2>
-// ALL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 0 : index} : (!fir.shape<2>) -> index
-// ALL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// ALL:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_4]] dim(0) : (!fir.shape<2>) -> index
+// ALL:           %[[VAL_6:.*]] = hlfir.get_extent %[[VAL_4]] dim(1) : (!fir.shape<2>) -> index
 // ALL:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // ALL:           %[[VAL_8:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // ALL:           ^bb0(%[[VAL_9:.*]]: index):

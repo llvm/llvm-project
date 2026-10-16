@@ -58,6 +58,8 @@ __attribute__((__swift_name__("IClass")))
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 + (instancetype)trailingColon SWIFT_NAME("foo:");
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
++ (instancetype)emptyString SWIFT_NAME("");
+// expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 + (instancetype)initialIgnore:(int)value SWIFT_NAME("_(value:)");
 // expected-warning@-1 {{'__swift_name__' attribute has invalid identifier for the base name}}
 + (instancetype)middleOmitted:(int)value SWIFT_NAME("i(:)");
@@ -203,3 +205,30 @@ void asyncNoParams(void) SWIFT_ASYNC_NAME("asyncNoParams()");
 // expected-error@+1 {{'__swift_async_name__' attribute only applies to Objective-C methods and functions}}
 SWIFT_ASYNC_NAME("NoAsync")
 @protocol NoAsync @end
+
+// --- Raw identifiers
+
+@interface RawIdentifiers
+- (void)m1:(int)x SWIFT_NAME("regularBase(`raw param`:)");
+- (void)m2:(int)x SWIFT_NAME("`raw base`(`raw param` :)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the parameter name}}
+- (void)m3:(int)x SWIFT_NAME("`raw base`(`raw param`:)");
+- (void)m4:(int)x SWIFT_NAME("`raw base`(`raw param` :)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the parameter name}}
+- (void)m5:(int)x SWIFT_NAME("` `(param:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the base name}}
+- (void)m6:(int)x SWIFT_NAME("base(` `:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the parameter name}}
+- (void)m7:(int)x SWIFT_NAME("`ba\\se`(_:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the base name}}
+- (void)m8:(int)x SWIFT_NAME("base(`pa\\ram`:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the parameter name}}
+
+- (void)m9:(int)x SWIFT_NAME("if(for:)");
+- (void)m10:(int)x SWIFT_NAME("`if`(`for`:)");
+@end
+
+void goodQualifiedRawFn1(int x) SWIFT_NAME("`Raw Module`.`Raw Class`.`raw base`(`raw param`:)");
+
+// Ensure we don't split delimiters inside backticks
+void goodQualifiedRawFn2(int x) SWIFT_NAME("`Raw.(Module`.`Raw.)Class`.`raw:.(base)`(`raw:param`:)");
+
+// Mismatched or extra backticks
+void badQualifiedRawFn1(int x) SWIFT_NAME("`raw base(`raw param`:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the base name}}
+void badQualifiedRawFn2(int x) SWIFT_NAME("`raw``base`(`raw param`:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the base name}}
+void badQualifiedRawFn3(int x) SWIFT_NAME("`raw base`(`raw param:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the parameter name}}
+void badQualifiedRawFn4(int x) SWIFT_NAME("`raw base`(`raw``param`:)"); // expected-warning {{'__swift_name__' attribute has invalid identifier for the parameter name}}

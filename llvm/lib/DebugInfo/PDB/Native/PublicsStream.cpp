@@ -22,9 +22,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -95,4 +98,51 @@ Error PublicsStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted publics stream.");
   return Error::success();
+}
+
+// This is a reimplementation of NearestSym:
+// https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/PDB/dbi/gsi.cpp#L1492-L1581
+std::optional<std::pair<codeview::PublicSym32, size_t>>
+PublicsStream::findByAddress(const SymbolStream &Symbols, uint16_t Segment,
+                             uint32_t Offset) const {
+  // The address map is sorted by address, so we can use lower_bound to find the
+  // position. Each element is an offset into the symbols for a public symbol.
+  auto It = llvm::lower_bound(
+      AddressMap, std::tuple(Segment, Offset),
+      [&](support::ulittle32_t Cur, auto Addr) {
+        auto Sym = Symbols.readRecord(Cur.value());
+        if (Sym.kind() != codeview::S_PUB32)
+          return false; // stop here, this is most likely corrupted debug info
+
+        auto Psym =
+            codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(
+                Sym);
+        if (!Psym) {
+          consumeError(Psym.takeError());
+          return false;
+        }
+
+        return std::tie(Psym->Segment, Psym->Offset) < Addr;
+      });
+
+  if (It == AddressMap.end())
+    return std::nullopt;
+
+  auto Sym = Symbols.readRecord(It->value());
+  if (Sym.kind() != codeview::S_PUB32)
+    return std::nullopt; // this is most likely corrupted debug info
+
+  auto MaybePsym =
+      codeview::SymbolDeserializer::deserializeAs<codeview::PublicSym32>(Sym);
+  if (!MaybePsym) {
+    consumeError(MaybePsym.takeError());
+    return std::nullopt;
+  }
+  codeview::PublicSym32 Psym = std::move(*MaybePsym);
+
+  if (std::tuple(Segment, Offset) != std::tuple(Psym.Segment, Psym.Offset))
+    return std::nullopt;
+
+  std::ptrdiff_t IterOffset = It - AddressMap.begin();
+  return std::pair{Psym, static_cast<size_t>(IterOffset)};
 }

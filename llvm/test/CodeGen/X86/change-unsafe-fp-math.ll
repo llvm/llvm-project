@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown \
 ; RUN:   | FileCheck %s --check-prefix=CHECK --check-prefix=SAFE
 
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -enable-unsafe-fp-math \
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown \
 ; RUN:   | FileCheck %s --check-prefix=CHECK --check-prefix=UNSAFE
 
 ; The div in these functions should be converted to a mul when unsafe-fp-math
@@ -12,14 +12,19 @@
 
 ; CHECK-LABEL: unsafe_fp_math_default0:
 define double @unsafe_fp_math_default0(double %x) {
-; SAFE:      divsd
 ; UNSAFE:    mulsd
+  %div = fdiv arcp double %x, 3.0
+  ret double %div
+}
+; CHECK-LABEL: safe_fp_math_default0:
+define double @safe_fp_math_default0(double %x) {
+; SAFE:      divsd
   %div = fdiv double %x, 3.0
   ret double %div
 }
 
 ; CHECK-LABEL: unsafe_fp_math_off:
-define double @unsafe_fp_math_off(double %x) #0 {
+define double @unsafe_fp_math_off(double %x) {
 ; SAFE:      divsd
 ; UNSAFE:    divsd
   %div = fdiv double %x, 3.0
@@ -29,28 +34,37 @@ define double @unsafe_fp_math_off(double %x) #0 {
 ; CHECK-LABEL: unsafe_fp_math_default1:
 define double @unsafe_fp_math_default1(double %x) {
 ; With unsafe math enabled, can change this div to a mul.
-; SAFE:      divsd
 ; UNSAFE:    mulsd
+  %div = fdiv arcp double %x, 3.0
+  ret double %div
+}
+; CHECK-LABEL: safe_fp_math_default1:
+define double @safe_fp_math_default1(double %x) {
+; With unsafe math enabled, can change this div to a mul.
+; SAFE:      divsd
   %div = fdiv double %x, 3.0
   ret double %div
 }
 
 ; CHECK-LABEL: unsafe_fp_math_on:
-define double @unsafe_fp_math_on(double %x) #1 {
+define double @unsafe_fp_math_on(double %x) {
 ; SAFE:      mulsd
 ; UNSAFE:    mulsd
-  %div = fdiv double %x, 3.0
+  %div = fdiv arcp double %x, 3.0
   ret double %div
 }
 
 ; CHECK-LABEL: unsafe_fp_math_default2:
 define double @unsafe_fp_math_default2(double %x) {
 ; With unsafe math enabled, can change this div to a mul.
-; SAFE:      divsd
 ; UNSAFE:    mulsd
+  %div = fdiv arcp double %x, 3.0
+  ret double %div
+}
+; CHECK-LABEL: safe_fp_math_default2:
+define double @safe_fp_math_default2(double %x) {
+; With unsafe math enabled, can change this div to a mul.
+; SAFE:      divsd
   %div = fdiv double %x, 3.0
   ret double %div
 }
-
-attributes #0 = { "unsafe-fp-math"="false" }
-attributes #1 = { "unsafe-fp-math"="true" }

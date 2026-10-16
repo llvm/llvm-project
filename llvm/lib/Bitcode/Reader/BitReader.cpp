@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/BitReader.h"
-#include "llvm-c/Core.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <cstring>
 #include <string>
 
 using namespace llvm;
@@ -22,13 +20,14 @@ using namespace llvm;
    Optionally returns a human-readable error message via OutMessage. */
 LLVMBool LLVMParseBitcode(LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutModule,
                           char **OutMessage) {
-  return LLVMParseBitcodeInContext(LLVMGetGlobalContext(), MemBuf, OutModule,
+  return LLVMParseBitcodeInContext(getGlobalContextForCAPI(), MemBuf, OutModule,
                                    OutMessage);
 }
 
 LLVMBool LLVMParseBitcode2(LLVMMemoryBufferRef MemBuf,
                            LLVMModuleRef *OutModule) {
-  return LLVMParseBitcodeInContext2(LLVMGetGlobalContext(), MemBuf, OutModule);
+  return LLVMParseBitcodeInContext2(getGlobalContextForCAPI(), MemBuf,
+                                    OutModule);
 }
 
 LLVMBool LLVMParseBitcodeInContext(LLVMContextRef ContextRef,
@@ -122,11 +121,12 @@ LLVMBool LLVMGetBitcodeModuleInContext2(LLVMContextRef ContextRef,
 
 LLVMBool LLVMGetBitcodeModule(LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage) {
-  return LLVMGetBitcodeModuleInContext(LLVMGetGlobalContext(), MemBuf, OutM,
+  return LLVMGetBitcodeModuleInContext(getGlobalContextForCAPI(), MemBuf, OutM,
                                        OutMessage);
 }
 
 LLVMBool LLVMGetBitcodeModule2(LLVMMemoryBufferRef MemBuf,
                                LLVMModuleRef *OutM) {
-  return LLVMGetBitcodeModuleInContext2(LLVMGetGlobalContext(), MemBuf, OutM);
+  return LLVMGetBitcodeModuleInContext2(getGlobalContextForCAPI(), MemBuf,
+                                        OutM);
 }

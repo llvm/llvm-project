@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Compiler.h"
 #include "Diagnostics.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
@@ -220,13 +221,16 @@ TEST(IncludeCleaner, ComputeMissingHeaders) {
 TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
   Annotations MainFile(R"cpp(
 #include "a.h"
+#include "angled_wrapper.h"
 #include "all.h"
 $insert_b[[]]#include "baz.h"
 #include "dir/c.h"
 $insert_d[[]]$insert_foo[[]]#include "fuzz.h"
 #include "header.h"
-$insert_foobar[[]]#include <e.h>
-$insert_f[[]]$insert_vector[[]]
+$insert_foobar[[]]$insert_quoted[[]]$insert_quoted2[[]]#include "quoted_wrapper.h"
+$insert_angled[[]]#include <e.h>
+$insert_f[[]]#include <quoted2_wrapper.h>
+$insert_vector[[]]
 
 #define DEF(X) const Foo *X;
 #define BAZ(X) const X x
@@ -237,6 +241,9 @@ $insert_f[[]]$insert_vector[[]]
 
   void foo() {
     $b[[b]]();
+    $angled[[angled]]();
+    $quoted[[quoted]]();
+    $quoted2[[quoted2]]();
 
     ns::$bar[[Bar]] bar;
     bar.d();
@@ -263,12 +270,22 @@ $insert_f[[]]$insert_vector[[]]
   TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
   TU.AdditionalFiles["b.h"] = guard("void b();");
 
+  TU.AdditionalFiles["angled_wrapper.h"] = guard("#include <angled.h>");
+  TU.AdditionalFiles["angled.h"] = guard("void angled();");
+  TU.ExtraArgs.push_back("-I" + testPath("."));
+
+  TU.AdditionalFiles["quoted_wrapper.h"] = guard("#include \"quoted.h\"");
+  TU.AdditionalFiles["quoted.h"] = guard("void quoted();");
+
   TU.AdditionalFiles["dir/c.h"] = guard("#include \"d.h\"");
   TU.AdditionalFiles["dir/d.h"] =
       guard("namespace ns { struct Bar { void d(); }; }");
 
   TU.AdditionalFiles["system/e.h"] = guard("#include <f.h>");
   TU.AdditionalFiles["system/f.h"] = guard("void f();");
+  TU.AdditionalFiles["system/quoted2_wrapper.h"] =
+      guard("#include <system/quoted2.h>");
+  TU.AdditionalFiles["system/quoted2.h"] = guard("void quoted2();");
   TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 
   TU.AdditionalFiles["fuzz.h"] = guard("#include \"buzz.h\"");
@@ -297,7 +314,15 @@ $insert_f[[]]$insert_vector[[]]
   Findings.UnusedIncludes.clear();
   std::vector<clangd::Diag> Diags = issueIncludeCleanerDiagnostics(
       AST, TU.Code, Findings, MockFS(),
-      {[](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }});
+      /*IgnoreHeaders=*/{[](llvm::StringRef Header) {
+        return Header.ends_with("buzz.h");
+      }},
+      /*AngledHeaders=*/{[](llvm::StringRef Header) {
+        return Header.contains("angled.h");
+      }},
+      /*QuotedHeaders=*/{[](llvm::StringRef Header) {
+        return Header.contains("quoted.h") || Header.contains("quoted2.h");
+      }});
   EXPECT_THAT(
       Diags,
       UnorderedElementsAre(
@@ -306,6 +331,23 @@ $insert_f[[]]$insert_vector[[]]
                 withFix({Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
                              "#include \"b.h\""),
                          FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("angled"),
+                     "No header providing \"angled\" is directly included"),
+                withFix({Fix(MainFile.range("insert_angled"),
+                             "#include <angled.h>\n", "#include <angled.h>"),
+                         FixMessage("add all missing includes")})),
+          AllOf(
+              Diag(MainFile.range("quoted"),
+                   "No header providing \"quoted\" is directly included"),
+              withFix({Fix(MainFile.range("insert_quoted"),
+                           "#include \"quoted.h\"\n", "#include \"quoted.h\""),
+                       FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("quoted2"),
+                     "No header providing \"quoted2\" is directly included"),
+                withFix(
+                    {Fix(MainFile.range("insert_quoted2"),
+                         "#include \"quoted2.h\"\n", "#include \"quoted2.h\""),
+                     FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
                 withFix({Fix(MainFile.range("insert_d"),
@@ -482,6 +524,43 @@ TEST(IncludeCleaner, MissingIncludesAreUnique) {
   auto &SM = AST.getSourceManager();
   EXPECT_EQ(RefRange.file(), SM.getMainFileID());
   EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), MainFile.range());
+}
+
+TEST(IncludeCleaner, NoHangOnRefExpandedInsidePreamblePatchInclude) {
+  llvm::StringLiteral Baseline = R"cpp(// comment
+#include "all.h"
+#define RET Foo
+)cpp";
+  Annotations Modified(R"cpp(// comment
+#include "all.h"
+#define RET Foo
+#include [["rettype.inc"]]
+plugin_callback();
+)cpp");
+
+  TestTU TU;
+  TU.AdditionalFiles["foo.h"] = guard("struct Foo {};");
+  TU.AdditionalFiles["all.h"] = guard("#include \"foo.h\"");
+  TU.AdditionalFiles["rettype.inc"] = "RET\n";
+
+  TU.Code = Baseline.str();
+  auto BaselinePreamble = TU.preamble();
+  ASSERT_TRUE(BaselinePreamble);
+
+  IgnoreDiagnostics Diags;
+  MockFS FS;
+  TU.Code = Modified.code().str();
+  auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
+  ASSERT_TRUE(CI);
+  auto AST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
+                              std::move(CI), {}, std::move(BaselinePreamble));
+  ASSERT_TRUE(AST);
+  auto Findings = computeIncludeCleanerFindings(*AST).MissingIncludes;
+  ASSERT_THAT(Findings, testing::SizeIs(1));
+  auto RefRange = Findings.front().SymRefRange;
+  const auto &SM = AST->getSourceManager();
+  EXPECT_EQ(RefRange.file(), SM.getMainFileID());
+  EXPECT_EQ(halfOpenToRange(SM, RefRange.toCharRange(SM)), Modified.range());
 }
 
 TEST(IncludeCleaner, NoCrash) {

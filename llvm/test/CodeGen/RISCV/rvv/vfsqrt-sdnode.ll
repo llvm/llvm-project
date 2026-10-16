@@ -87,21 +87,19 @@ define <vscale x 32 x bfloat> @vfsqrt_nxv32bf16(<vscale x 32 x bfloat> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v16, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vfsqrt.v v16, v24
+; CHECK-NEXT:    vfsqrt.v v24, v24
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v16
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
+; CHECK-NEXT:    vfncvtbf16.f.f.w v12, v24
 ; CHECK-NEXT:    ret
   %r = call <vscale x 32 x bfloat> @llvm.sqrt.nxv32bf16(<vscale x 32 x bfloat> %v)
   ret <vscale x 32 x bfloat> %r
 }
-
-declare <vscale x 1 x half> @llvm.sqrt.nxv1f16(<vscale x 1 x half>)
 
 define <vscale x 1 x half> @vfsqrt_nxv1f16(<vscale x 1 x half> %v) {
 ; ZVFH-LABEL: vfsqrt_nxv1f16:
@@ -123,8 +121,6 @@ define <vscale x 1 x half> @vfsqrt_nxv1f16(<vscale x 1 x half> %v) {
   ret <vscale x 1 x half> %r
 }
 
-declare <vscale x 2 x half> @llvm.sqrt.nxv2f16(<vscale x 2 x half>)
-
 define <vscale x 2 x half> @vfsqrt_nxv2f16(<vscale x 2 x half> %v) {
 ; ZVFH-LABEL: vfsqrt_nxv2f16:
 ; ZVFH:       # %bb.0:
@@ -144,8 +140,6 @@ define <vscale x 2 x half> @vfsqrt_nxv2f16(<vscale x 2 x half> %v) {
   %r = call <vscale x 2 x half> @llvm.sqrt.nxv2f16(<vscale x 2 x half> %v)
   ret <vscale x 2 x half> %r
 }
-
-declare <vscale x 4 x half> @llvm.sqrt.nxv4f16(<vscale x 4 x half>)
 
 define <vscale x 4 x half> @vfsqrt_nxv4f16(<vscale x 4 x half> %v) {
 ; ZVFH-LABEL: vfsqrt_nxv4f16:
@@ -167,8 +161,6 @@ define <vscale x 4 x half> @vfsqrt_nxv4f16(<vscale x 4 x half> %v) {
   ret <vscale x 4 x half> %r
 }
 
-declare <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half>)
-
 define <vscale x 8 x half> @vfsqrt_nxv8f16(<vscale x 8 x half> %v) {
 ; ZVFH-LABEL: vfsqrt_nxv8f16:
 ; ZVFH:       # %bb.0:
@@ -188,8 +180,6 @@ define <vscale x 8 x half> @vfsqrt_nxv8f16(<vscale x 8 x half> %v) {
   %r = call <vscale x 8 x half> @llvm.sqrt.nxv8f16(<vscale x 8 x half> %v)
   ret <vscale x 8 x half> %r
 }
-
-declare <vscale x 16 x half> @llvm.sqrt.nxv16f16(<vscale x 16 x half>)
 
 define <vscale x 16 x half> @vfsqrt_nxv16f16(<vscale x 16 x half> %v) {
 ; ZVFH-LABEL: vfsqrt_nxv16f16:
@@ -211,8 +201,6 @@ define <vscale x 16 x half> @vfsqrt_nxv16f16(<vscale x 16 x half> %v) {
   ret <vscale x 16 x half> %r
 }
 
-declare <vscale x 32 x half> @llvm.sqrt.nxv32f16(<vscale x 32 x half>)
-
 define <vscale x 32 x half> @vfsqrt_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFH-LABEL: vfsqrt_nxv32f16:
 ; ZVFH:       # %bb.0:
@@ -224,21 +212,19 @@ define <vscale x 32 x half> @vfsqrt_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfsqrt.v v16, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vfsqrt.v v16, v24
+; ZVFHMIN-NEXT:    vfsqrt.v v24, v24
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v16
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v12, v24
 ; ZVFHMIN-NEXT:    ret
   %r = call <vscale x 32 x half> @llvm.sqrt.nxv32f16(<vscale x 32 x half> %v)
   ret <vscale x 32 x half> %r
 }
-
-declare <vscale x 1 x float> @llvm.sqrt.nxv1f32(<vscale x 1 x float>)
 
 define <vscale x 1 x float> @vfsqrt_nxv1f32(<vscale x 1 x float> %v) {
 ; CHECK-LABEL: vfsqrt_nxv1f32:
@@ -250,8 +236,6 @@ define <vscale x 1 x float> @vfsqrt_nxv1f32(<vscale x 1 x float> %v) {
   ret <vscale x 1 x float> %r
 }
 
-declare <vscale x 2 x float> @llvm.sqrt.nxv2f32(<vscale x 2 x float>)
-
 define <vscale x 2 x float> @vfsqrt_nxv2f32(<vscale x 2 x float> %v) {
 ; CHECK-LABEL: vfsqrt_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -261,8 +245,6 @@ define <vscale x 2 x float> @vfsqrt_nxv2f32(<vscale x 2 x float> %v) {
   %r = call <vscale x 2 x float> @llvm.sqrt.nxv2f32(<vscale x 2 x float> %v)
   ret <vscale x 2 x float> %r
 }
-
-declare <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float>)
 
 define <vscale x 4 x float> @vfsqrt_nxv4f32(<vscale x 4 x float> %v) {
 ; CHECK-LABEL: vfsqrt_nxv4f32:
@@ -274,8 +256,6 @@ define <vscale x 4 x float> @vfsqrt_nxv4f32(<vscale x 4 x float> %v) {
   ret <vscale x 4 x float> %r
 }
 
-declare <vscale x 8 x float> @llvm.sqrt.nxv8f32(<vscale x 8 x float>)
-
 define <vscale x 8 x float> @vfsqrt_nxv8f32(<vscale x 8 x float> %v) {
 ; CHECK-LABEL: vfsqrt_nxv8f32:
 ; CHECK:       # %bb.0:
@@ -285,8 +265,6 @@ define <vscale x 8 x float> @vfsqrt_nxv8f32(<vscale x 8 x float> %v) {
   %r = call <vscale x 8 x float> @llvm.sqrt.nxv8f32(<vscale x 8 x float> %v)
   ret <vscale x 8 x float> %r
 }
-
-declare <vscale x 16 x float> @llvm.sqrt.nxv16f32(<vscale x 16 x float>)
 
 define <vscale x 16 x float> @vfsqrt_nxv16f32(<vscale x 16 x float> %v) {
 ; CHECK-LABEL: vfsqrt_nxv16f32:
@@ -298,8 +276,6 @@ define <vscale x 16 x float> @vfsqrt_nxv16f32(<vscale x 16 x float> %v) {
   ret <vscale x 16 x float> %r
 }
 
-declare <vscale x 1 x double> @llvm.sqrt.nxv1f64(<vscale x 1 x double>)
-
 define <vscale x 1 x double> @vfsqrt_nxv1f64(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: vfsqrt_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -309,8 +285,6 @@ define <vscale x 1 x double> @vfsqrt_nxv1f64(<vscale x 1 x double> %v) {
   %r = call <vscale x 1 x double> @llvm.sqrt.nxv1f64(<vscale x 1 x double> %v)
   ret <vscale x 1 x double> %r
 }
-
-declare <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double>)
 
 define <vscale x 2 x double> @vfsqrt_nxv2f64(<vscale x 2 x double> %v) {
 ; CHECK-LABEL: vfsqrt_nxv2f64:
@@ -322,8 +296,6 @@ define <vscale x 2 x double> @vfsqrt_nxv2f64(<vscale x 2 x double> %v) {
   ret <vscale x 2 x double> %r
 }
 
-declare <vscale x 4 x double> @llvm.sqrt.nxv4f64(<vscale x 4 x double>)
-
 define <vscale x 4 x double> @vfsqrt_nxv4f64(<vscale x 4 x double> %v) {
 ; CHECK-LABEL: vfsqrt_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -333,8 +305,6 @@ define <vscale x 4 x double> @vfsqrt_nxv4f64(<vscale x 4 x double> %v) {
   %r = call <vscale x 4 x double> @llvm.sqrt.nxv4f64(<vscale x 4 x double> %v)
   ret <vscale x 4 x double> %r
 }
-
-declare <vscale x 8 x double> @llvm.sqrt.nxv8f64(<vscale x 8 x double>)
 
 define <vscale x 8 x double> @vfsqrt_nxv8f64(<vscale x 8 x double> %v) {
 ; CHECK-LABEL: vfsqrt_nxv8f64:

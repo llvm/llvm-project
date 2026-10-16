@@ -1,5 +1,4 @@
-; RUN: opt -passes='cgscc(inline)' -S %s -o - -S | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt -passes='cgscc(inline)' -S %s -o - -S --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt -passes='cgscc(inline)' -S %s -o - -S | FileCheck %s --implicit-check-not=dbg_value
 
 ;; Test that dbg.value intrinsics are inlined, remapped, and have their
 ;; dilocation updated just like normal instructions. This becomes
@@ -54,9 +53,9 @@
 ; CHECK-DAG: ![[TESTSP:[0-9]+]] = distinct !DISubprogram(name: "test",
 ; CHECK-DAG: ![[KVAR]] = !DILocalVariable(name: "k",
 ; CHECK-DAG: ![[K2VAR]] = !DILocalVariable(name: "k2",
-; CHECK-DAG: ![[KLINE]] = !DILocation(line: 4, scope: ![[TESTSP]], inlinedAt: ![[INLINESITE:[0-9]+]])
+; CHECK-DAG: ![[KLINE]] = distinct !DILocation(line: 4, scope: ![[TESTSP]], inlinedAt: ![[INLINESITE:[0-9]+]])
 ; CHECK-DAG: ![[INLINESITE]] = distinct !DILocation(line: 14, scope: ![[INLINESITEBLOCK]])
-; CHECK-DAG: ![[GLINE]] = !DILocation(line: 5, scope: ![[TESTSP]], inlinedAt: ![[INLINESITE:[0-9]+]])
+; CHECK-DAG: ![[GLINE]] = distinct !DILocation(line: 5, scope: ![[TESTSP]], inlinedAt: ![[INLINESITE:[0-9]+]])
 
 target triple = "x86_64--"
 

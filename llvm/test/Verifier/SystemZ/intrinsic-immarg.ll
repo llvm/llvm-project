@@ -31,22 +31,22 @@ define <2 x double> @test_vfmindb(<2 x double> %arg0, <2 x double> %arg1, i32 %a
   ret <2 x double> %ret
 }
 
-declare <2 x float> @llvm.s390.vfmaxsb(<2 x float>, <2 x float>, i32)
-define <2 x float> @test_vfmaxsb(<2 x float> %arg0, <2 x float> %arg1, i32 %arg2) {
+declare <4 x float> @llvm.s390.vfmaxsb(<4 x float>, <4 x float>, i32)
+define <4 x float> @test_vfmaxsb(<4 x float> %arg0, <4 x float> %arg1, i32 %arg2) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg2
-  ; CHECK-NEXT: %ret = call <2 x float> @llvm.s390.vfmaxsb(<2 x float> %arg0, <2 x float> %arg1, i32 %arg2)
-  %ret = call <2 x float> @llvm.s390.vfmaxsb(<2 x float> %arg0, <2 x float> %arg1, i32 %arg2)
-  ret <2 x float> %ret
+  ; CHECK-NEXT: %ret = call <4 x float> @llvm.s390.vfmaxsb(<4 x float> %arg0, <4 x float> %arg1, i32 %arg2)
+  %ret = call <4 x float> @llvm.s390.vfmaxsb(<4 x float> %arg0, <4 x float> %arg1, i32 %arg2)
+  ret <4 x float> %ret
 }
 
-declare <2 x float> @llvm.s390.vfminsb(<2 x float>, <2 x float>, i32)
-define <2 x float> @test_vfminsb(<2 x float> %arg0, <2 x float> %arg1, i32 %arg2) {
+declare <4 x float> @llvm.s390.vfminsb(<4 x float>, <4 x float>, i32)
+define <4 x float> @test_vfminsb(<4 x float> %arg0, <4 x float> %arg1, i32 %arg2) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg2
-  ; CHECK-NEXT: %ret = call <2 x float> @llvm.s390.vfminsb(<2 x float> %arg0, <2 x float> %arg1, i32 %arg2)
-  %ret = call <2 x float> @llvm.s390.vfminsb(<2 x float> %arg0, <2 x float> %arg1, i32 %arg2)
-  ret <2 x float> %ret
+  ; CHECK-NEXT: %ret = call <4 x float> @llvm.s390.vfminsb(<4 x float> %arg0, <4 x float> %arg1, i32 %arg2)
+  %ret = call <4 x float> @llvm.s390.vfminsb(<4 x float> %arg0, <4 x float> %arg1, i32 %arg2)
+  ret <4 x float> %ret
 }
 
 declare <4 x float> @llvm.s390.vfisb(<4 x float>, i32, i32)
@@ -363,13 +363,13 @@ define <2 x i64> @test_vpdi(<2 x i64> %a, <2 x i64> %b, i32 %c) {
   ret <2 x i64> %res
 }
 
-declare <16 x i8> @llvm.s390.vmslg(<2 x i64>, <2 x i64>, <16 x i8>, i32)
-define <16 x i8> @test_vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 %d) {
+declare i128 @llvm.s390.vmslg(<2 x i64>, <2 x i64>, i128, i32)
+define i128 @test_vmslg(<2 x i64> %a, <2 x i64> %b, i128 %c, i32 %d) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %d
-  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 %d)
-  %res = call <16 x i8> @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, <16 x i8> %c, i32 %d)
-  ret <16 x i8> %res
+  ; CHECK-NEXT: %res = call i128 @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, i128 %c, i32 %d)
+  %res = call i128 @llvm.s390.vmslg(<2 x i64> %a, <2 x i64> %b, i128 %c, i32 %d)
+  ret i128 %res
 }
 
 declare <16 x i8> @llvm.s390.vsldb(<16 x i8>, <16 x i8>, i32)

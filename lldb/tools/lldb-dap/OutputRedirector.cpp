@@ -6,7 +6,14 @@
 //
 //===----------------------------------------------------------------------===/
 
+#include "OutputRedirector.h"
+#include "DAP.h"
+#include "DAPLog.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/MainLoopBase.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <cstring>
 #include <system_error>
 #if defined(_WIN32)
 #include <fcntl.h>
@@ -15,62 +22,108 @@
 #include <unistd.h>
 #endif
 
-#include "DAP.h"
-#include "OutputRedirector.h"
-#include "llvm/ADT/StringRef.h"
-
-using lldb_private::Pipe;
-using lldb_private::Status;
-using llvm::createStringError;
-using llvm::Error;
-using llvm::Expected;
-using llvm::StringRef;
+using namespace llvm;
+using namespace lldb_private;
 
 namespace lldb_dap {
 
+int OutputRedirector::kInvalidDescriptor = -1;
+
+OutputRedirector::OutputRedirector()
+    : m_fd(kInvalidDescriptor), m_original_fd(kInvalidDescriptor),
+      m_restore_fd(kInvalidDescriptor) {}
+
 Expected<int> OutputRedirector::GetWriteFileDescriptor() {
-  if (!m_pipe.CanWrite())
+  if (m_fd == kInvalidDescriptor)
     return createStringError(std::errc::bad_file_descriptor,
                              "write handle is not open for writing");
-  return m_pipe.GetWriteFileDescriptor();
+  return m_fd;
 }
 
-Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
-  Status status = m_pipe.CreateNew(/*child_process_inherit=*/false);
-  if (status.Fail())
-    return status.takeError();
+Error OutputRedirector::RedirectTo(MainLoopBase &loop, std::FILE *file_override,
+                                   std::function<void(StringRef)> callback,
+                                   Log &log) {
+  assert(m_fd == kInvalidDescriptor && "OutputRedirector already started.");
+  int new_fd[2];
 
-  m_forwarder = std::thread([this, callback]() {
-    char buffer[OutputBufferSize];
-    while (m_pipe.CanRead() && !m_stopped) {
-      size_t bytes_read;
-      Status status = m_pipe.Read(&buffer, sizeof(buffer), bytes_read);
-      if (status.Fail())
-        continue;
+#if defined(_WIN32)
+  if (::_pipe(new_fd, OutputBufferSize, O_TEXT) == -1) {
+#else
+  if (::pipe(new_fd) == -1) {
+#endif
+    int error = errno;
+    return createStringError(inconvertibleErrorCode(),
+                             "Couldn't create new pipe %s", strerror(error));
+  }
 
-      // EOF detected
-      if (bytes_read == 0 || m_stopped)
-        break;
+  int read_fd = new_fd[0];
+  m_fd = new_fd[1];
 
-      callback(StringRef(buffer, bytes_read));
+  m_read_obj = std::make_shared<NativeFile>(read_fd, File::eOpenOptionReadOnly,
+                                            NativeFile::Owned);
+
+  if (file_override) {
+    int override_fd = fileno(file_override);
+
+    // Backup the FD to restore once redirection is complete.
+    m_original_fd = override_fd;
+    m_restore_fd = dup(override_fd);
+
+    // Override the existing fd the new write end of the pipe.
+    if (::dup2(m_fd, override_fd) == -1)
+      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
+  }
+
+  auto read_callback = [callback = std::move(callback), this,
+                        &log](MainLoopBase &) {
+    std::array<char, OutputBufferSize> buffer;
+    size_t num_bytes = buffer.size();
+
+    const Status status = m_read_obj->Read(buffer.data(), num_bytes);
+    if (status.Fail()) {
+      DAP_LOG_ERROR(log, status.ToError(),
+                    "OutputRedirector read failed (handle {1}): error: {0}",
+                    m_read_obj->GetWaitableHandle());
+      m_read_handle.reset();
+      return;
     }
-  });
+    if (num_bytes == 0) { // EOF
+      m_read_handle.reset();
+      return;
+    }
 
-  return Error::success();
+    const llvm::StringRef data(buffer.data(), num_bytes);
+    callback(data);
+  };
+
+  Status status;
+  m_read_handle =
+      loop.RegisterReadObject(m_read_obj, std::move(read_callback), status);
+
+  return status.takeError();
 }
 
 void OutputRedirector::Stop() {
-  m_stopped = true;
+  // Stop polling.
+  m_read_handle.reset();
+  m_read_obj.reset();
 
-  if (m_pipe.CanWrite()) {
-    // Closing the pipe may not be sufficient to wake up the thread in case the
-    // write descriptor is duplicated (to stdout/err or to another process).
-    // Write a null byte to ensure the read call returns.
-    char buf[] = "\0";
-    size_t bytes_written;
-    m_pipe.Write(buf, sizeof(buf), bytes_written);
-    m_pipe.CloseWriteFileDescriptor();
-    m_forwarder.join();
+  if (m_fd != kInvalidDescriptor) {
+    int fd = m_fd;
+    m_fd = kInvalidDescriptor;
+    ::close(fd);
+
+    // Restore the fd back to its original state since we stopped the
+    // redirection.
+    if (m_restore_fd != kInvalidDescriptor &&
+        m_original_fd != kInvalidDescriptor) {
+      int restore_fd = m_restore_fd;
+      m_restore_fd = kInvalidDescriptor;
+      int original_fd = m_original_fd;
+      m_original_fd = kInvalidDescriptor;
+      ::dup2(restore_fd, original_fd);
+      ::close(restore_fd);
+    }
   }
 }
 

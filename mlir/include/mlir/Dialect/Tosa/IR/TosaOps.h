@@ -16,6 +16,7 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Traits.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -24,21 +25,29 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
+#include <string>
+
 //===----------------------------------------------------------------------===//
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaEnums.h.inc"
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 class PatternRewriter;
 
 namespace tosa {
 
-ParseResult parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
-                            Attribute &attr);
-void printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
-                     Attribute attr);
+ParseResult parseVariableOpTypeOrInitialValue(OpAsmParser &parser,
+                                              DenseElementsAttr &varShapeAttr,
+                                              TypeAttr &typeAttr,
+                                              Attribute &initialValueAttr);
+void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
+                                       DenseElementsAttr varShapeAttr,
+                                       TypeAttr typeAttr,
+                                       Attribute initialValueAttr);
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
@@ -46,53 +55,6 @@ void printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
 
 namespace OpTrait {
 namespace tosa {
-
-// This trait verifies if the element type amoung operands and result
-// of multiplication match tosa specification.
-template <typename ConcreteType>
-class MulOperandsAndResultElementType
-    : public TraitBase<ConcreteType, MulOperandsAndResultElementType> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    // Check we have a single result.
-    if (failed(impl::verifyOneResult(op)))
-      return failure();
-    Type resElemType = getElementTypeOrSelf(op->getResult(0));
-
-    // Check we have lhs and rhs.
-    if (failed(impl::verifyAtLeastNOperands(op, 2)))
-      return failure();
-
-    Type lhsElemType = getElementTypeOrSelf(op->getOperand(0));
-    Type rhsElemType = getElementTypeOrSelf(op->getOperand(1));
-
-    // Check that for i32 a shift has been explicitly provided.
-    if (lhsElemType.isInteger(32) && failed(impl::verifyNOperands(op, 3)))
-      return failure();
-
-    // Verify operands type match (ignoring the shift parameter which will
-    // always be i8).
-    if (lhsElemType != rhsElemType)
-      return op->emitOpError("requires the same element type for all operands");
-
-    // Though the spec requires the element type of result to be i32, a more
-    // relaxed way is provided at dialect level for easier cooperating with
-    // other dialects.
-    if (auto resIntType = dyn_cast<IntegerType>(resElemType)) {
-      auto lhsIntType = cast<IntegerType>(lhsElemType);
-      if (lhsIntType.getWidth() > resIntType.getWidth())
-        return op->emitOpError("invalid data type size for operands or result");
-    } else {
-      // In cases of floating point type or quant types, op requires the same
-      // element type for all operands and result (excluding shift).
-      if (resElemType != lhsElemType)
-        return op->emitOpError(
-            "requires the same element type for all operands and results");
-    }
-
-    return llvm::success();
-  }
-};
 
 /// This class indicates that an op is tosa-elementwise (permits broadcasting,
 /// unlike Elementwise trait).
@@ -111,15 +73,9 @@ public:
   }
 };
 
-LogicalResult verifyTosaShapeOperator(Operation *op);
 /// This class indicates that op operates on tosa shape types
 template <typename ConcreteType>
-class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    return verifyTosaShapeOperator(op);
-  }
-};
+class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {};
 
 LogicalResult verifyTosaShapeOperatorWithSameRanks(Operation *op);
 /// This class indicates that op operates on tosa shape types
@@ -139,6 +95,12 @@ namespace tosa {
 
 bool isa_tosa_shape_type(mlir::Type t);
 
+/// Represents a dimension in the shape of a tensor that can be inferred
+/// based on the other provided dimensions. For example, in a reshape
+/// operation, -1 can be used to indicate a size that is the remainder
+/// of the other dimensions.
+constexpr int64_t kInferableDimSize = -1;
+
 } // namespace tosa
 
 } // namespace mlir
@@ -151,5 +113,41 @@ bool isa_tosa_shape_type(mlir::Type t);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"
+
+namespace mlir {
+namespace tosa {
+
+// Create a rank-1 const tensor for zero point of the source tensor.
+std::optional<Value> createZeroPointTensor(OpBuilder &builder, Location loc,
+                                           Type srcElemType, int64_t zp = 0);
+
+// Create a pad-const const tensor with value of `val` of required data-type
+Value createPadConstTensor(OpBuilder &builder, Location loc, Value src,
+                           int32_t val = 0);
+
+// returns type of variable op
+RankedTensorType getVariableType(VariableOp variableOp);
+
+// Returns the bitwidth of a TOSA tensor element type
+unsigned getBitWidth(Type type);
+
+// Returns the storage element type for a given type
+Type getStorageElementTypeOrSelf(Type type);
+
+// Returns the storage element type for a given value
+Type getStorageElementTypeOrSelf(Value value);
+
+// Verify that a given type is a valid block scaled tensor type
+LogicalResult verifyBlockScaledTensorType(
+    mlir::Type type,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = nullptr,
+    bool allowScaleValues = false);
+
+// Returns a diagnostic suffix string for a type verification failure, or
+// empty string if the type is valid
+std::string getTosaTensorTypeErrorMessage(mlir::Type type);
+
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_IR_TOSAOPS_H

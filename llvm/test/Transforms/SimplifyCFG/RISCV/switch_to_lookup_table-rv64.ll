@@ -17,7 +17,7 @@ target triple = "riscv64-unknown-elf"
 ; CHECK: @.str4 = private unnamed_addr constant [6 x i8] c"error\00", align 1
 ; CHECK: @switch.table.f = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1], align 4
 ; CHECK: @switch.table.char = private unnamed_addr constant [9 x i8] c"7{\00\FF\1B>\01!T", align 1
-; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000], align 4
+; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 3.140000e+00, float 1.234000e+00, float 4.567000e+00, float 2.210000e+00], align 4
 ; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x ptr] [ptr @.str, ptr @.str1, ptr @.str2, ptr @.str3], align 8
 ;.
 define i32 @f(i32 %c) {
@@ -27,7 +27,8 @@ define i32 @f(i32 %c) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 7
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.f, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.f, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
@@ -67,7 +68,8 @@ define i8 @char(i32 %c) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 9
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [9 x i8], ptr @switch.table.char, i32 0, i32 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [9 x i8], ptr @switch.table.char, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
@@ -114,12 +116,13 @@ define void @h(i32 %x) {
 ; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i32 [[X]], 8
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 89655594, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x float], ptr @switch.table.h, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[X]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x float], ptr @switch.table.h, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load float, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[A_0:%.*]] = phi i8 [ [[SWITCH_MASKED]], [[SWITCH_LOOKUP]] ], [ 7, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi float [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 0x4023FAE140000000, [[ENTRY]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi float [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ f0x411FD70A, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @dummy(i8 signext [[A_0]], float [[B_0]])
 ; CHECK-NEXT:    ret void
 ;
@@ -159,7 +162,8 @@ define ptr @foostring(i32 %x)  {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 4
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr], ptr @switch.table.foostring, i32 0, i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[X]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x ptr], ptr @switch.table.foostring, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:

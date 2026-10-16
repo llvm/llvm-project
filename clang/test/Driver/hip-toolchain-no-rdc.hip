@@ -4,30 +4,10 @@
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc \
-// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
-// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck -check-prefixes=CHECK,LINK %s
-
-// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc \
-// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
-// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
-// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc -c \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
-
-// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc \
-// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
-// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
-// RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -B%S/Inputs/lld -nogpuinc --offload-new-driver -c \
-// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
-// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck -check-prefixes=CHECK %s
+// RUN: 2>&1 | FileCheck -check-prefixes=CHECK,NEW %s
 
 // RUN: touch %t/a.o %t/b.o
 // RUN: %clang -### --target=x86_64-linux-gnu \
@@ -37,70 +17,67 @@
 // RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
-// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -no-use-spirv-backend \
 // RUN:   %s -nogpuinc -nogpulib \
-// RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV %s
+// RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV-NEW %s
 
 //
 // Compile device code in a.cu to code object for gfx803.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-obj"
+// NEW-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
-// CHECK-SAME: "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
-// CHECK-SAME: "-target-cpu" "gfx803"
-// CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_803:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_A_803:.*(o|bc)]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK-NOT: {{".*llvm-link"}}
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "-m" "elf64_amdgpu" "--no-undefined" "-shared"
-// CHECK-SAME: "-o" "[[IMG_DEV_A_803:.*out]]" [[OBJ_DEV_A_803]]
-
 //
 // Compile device code in a.cu to code object for gfx900.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-obj"
+// CHECK-SAME: "-emit-{{(obj|llvm-bc)}}"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
-// CHECK-SAME: "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
-// CHECK-SAME: "-target-cpu" "gfx900"
-// CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_900:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_A_900:.*(o|bc)]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK-NOT: {{".*llvm-link"}}
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-m" "elf64_amdgpu" "--no-undefined" "-shared"
-// CHECK-SAME: "-o" "[[IMG_DEV_A_900:.*out]]" [[OBJ_DEV_A_900]]
-
 //
 // Bundle and embed device code in host object for a.cu.
 //
 
-// CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
-// CHECK-SAME: "-bundle-align=4096"
-// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
-// CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV_A_803]]" "-input=[[IMG_DEV_A_900]]" "-output=[[BUNDLE_A:.*hipfb]]"
+// NEW: [[PACKAGER:".*llvm-offload-binary"]] "-o" "[[PACKAGE_A:.*.out]]"
+// NEW-SAME: "--image=file=[[OBJ_DEV_A_803]],triple=amdgpu8.03-amd-amdhsa,arch=gfx803,kind=hip"
+// NEW-SAME: "--image=file=[[OBJ_DEV_A_900]],triple=amdgpu9.00-amd-amdhsa,arch=gfx900,kind=hip"
+
+// NEW: [[WRAPPER:".*clang-linker-wrapper]]"
+// NEW-SAME: "--device-compiler=amdgpu-amd-amdhsa=-flto=full"
+// NEW-SAME: "--host-triple=x86_64-unknown-linux-gnu"
+// NEW-SAME: "--emit-fatbin-only"
+// NEW-SAME: "-o" "[[HIPFB_A:.*.hipfb]]" "[[PACKAGE_A]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
+// CHECK-SAME: "-aux-triple" "amdgpu-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// CHECK-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_A]]"
+// NEW-SAME: {{.*}} "-foffload-include-binary" "[[HIPFB_A]]"
 // CHECK-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
@@ -108,74 +85,64 @@
 // Compile device code in b.hip to code object for gfx803.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgpu8.03-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-obj"
+// CHECK-SAME: "-emit-{{(obj|llvm-bc)}}"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
-// CHECK-SAME: "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
-// CHECK-SAME: "-target-cpu" "gfx803"
-// CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_B_803:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_B_803:.*(o|bc)]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
 // CHECK-NOT: {{".*llvm-link"}}
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-m" "elf64_amdgpu" "--no-undefined" "-shared"
-// CHECK-SAME: "-o" "[[IMG_DEV_B_803:.*out]]" [[OBJ_DEV_B_803]]
-
 //
 // Compile device code in b.hip to code object for gfx900.
 //
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-obj"
+// CHECK-SAME: "-emit-{{(obj|llvm-bc)}}"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
-// CHECK-SAME: "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
-// CHECK-SAME: "-target-cpu" "gfx900"
-// CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_B_900:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_B_900:.*(o|bc)]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: {{".*llvm-link"}}
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
 
-// CHECK: [[LLD]] "-flavor" "gnu" "-m" "elf64_amdgpu" "--no-undefined" "-shared"
-// CHECK-SAME: "-o" "[[IMG_DEV_B_900:.*out]]" [[OBJ_DEV_B_900]]
-
 //
 // Bundle and embed device code in host object for b.hip.
 //
 
-// CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
-// CHECK-SAME: "-bundle-align=4096"
-// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
-// CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV_B_803]]" "-input=[[IMG_DEV_B_900]]" "-output=[[BUNDLE_A:.*hipfb]]"
+// NEW: [[PACKAGER:".*llvm-offload-binary"]] "-o" "[[PACKAGE_B:.*.out]]"
+// NEW-SAME: "--image=file=[[OBJ_DEV_B_803]],triple=amdgpu8.03-amd-amdhsa,arch=gfx803,kind=hip"
+// NEW-SAME: "--image=file=[[OBJ_DEV_B_900]],triple=amdgpu9.00-amd-amdhsa,arch=gfx900,kind=hip"
+
+// NEW: [[WRAPPER:".*clang-linker-wrapper]]"
+// NEW-SAME: "--device-compiler=amdgpu-amd-amdhsa=-flto=full"
+// NEW-SAME: "--emit-fatbin-only"
+// NEW-SAME: "-o" "[[HIPFB_B:.*.hipfb]]" "[[PACKAGE_B]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
+// CHECK-SAME: "-aux-triple" "amdgpu-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// CHECK-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_A]]"
+// NEW-SAME: {{.*}} "-foffload-include-binary" "[[HIPFB_B]]"
 // CHECK-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 //
 // Link host objects.
 //
-
-// LINK-NOT: {{".*/llvm-link"}}
-// LINK-NOT: {{".*/opt"}}
-// LINK-NOT: {{".*/llc"}}
-// LINK: [[LD:".*ld.*"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
-// LINK-NOT: "-T" "{{.*}}.lk"
 
 // LKONLY-NOT: {{".*/llvm-link"}}
 // LKONLY-NOT: {{".*/opt"}}
@@ -187,11 +154,11 @@
 // Check mixed AMDGCNSPIRV and concrete GPU arch.
 //
 
-// AMDGCNSPIRV: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-obj" {{.*}} "-o" "[[AMDGCNSPV_OBJ:.*o]]"
-// AMDGCNSPIRV: {{".*llvm-link.*"}} "-o" "[[AMDGCNSPV_TMP:.*out]]" "[[AMDGCNSPV_OBJ]]"
-// AMDGCNSPIRV: {{".*llvm-spirv.*"}} "--spirv-max-version=1.6" "--spirv-ext=+all" {{.*}} "[[AMDGCNSPV_TMP]]" {{.*}}"-o" "[[AMDGCNSPV_CO:.*out]]"
-// AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-obj" {{.*}}"-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_OBJ:.*o]]"
-// AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_OBJ]]"
-// AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
-// AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-spirv64-amd-amdhsa--amdgcnspirv,hipv4-amdgcn-amd-amdhsa--gfx900"
-// AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
+// AMDGCNSPIRV-NEW: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}} "-o" "[[AMDGCNSPV_BC:[^"]*]]"
+
+// Check verbose printing.
+// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc -nogpulib -nogpuinc \
+// RUN:   --offload-arch=gfx908 -v %s 2>&1 | FileCheck %s --check-prefix=VERBOSE
+// VERBOSE: clang-linker-wrapper
+// VERBOSE-NOT: --device-compiler=amdgpu{{.*}}-amd-amdhsa=-v {{.*}}-o {{.*}}.hipfb
+// VERBOSE-NOT: --wrapper-verbose {{.*}}-o {{.*}}.hipfb

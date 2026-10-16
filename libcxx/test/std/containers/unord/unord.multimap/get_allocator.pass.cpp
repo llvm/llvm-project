@@ -20,19 +20,18 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-    typedef std::pair<const int, std::string> ValueType;
-    {
-        std::allocator<ValueType> alloc;
-        const std::unordered_multimap<int, std::string> m(alloc);
-        assert(m.get_allocator() == alloc);
-    }
-    {
-        other_allocator<ValueType> alloc(1);
-        const std::unordered_multimap<int, std::string, std::hash<int>,
-                                      std::equal_to<int>,
-                                      other_allocator<ValueType> > m(alloc);
-        assert(m.get_allocator() == alloc);
-    }
+  typedef std::pair<const int, std::string> ValueType;
+  {
+    std::allocator<ValueType> alloc;
+    const std::unordered_multimap<int, std::string> m(alloc);
+    assert(m.get_allocator() == alloc);
+  }
+  {
+    other_allocator<ValueType> alloc(1);
+    const std::unordered_multimap<int, std::string, std::hash<int>, std::equal_to<int>, other_allocator<ValueType> > m(
+        alloc);
+    assert(m.get_allocator() == alloc);
+  }
 
-    return 0;
+  return 0;
 }

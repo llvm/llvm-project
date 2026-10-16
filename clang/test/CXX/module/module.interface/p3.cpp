@@ -40,7 +40,7 @@ export { // No diagnostic after P2615R1 DR
   extern "C++" {} // No diagnostic after P2615R1 DR
 }
 export [[]]; // No diagnostic after P2615R1 DR
-export [[example::attr]]; // expected-warning {{unknown attribute 'attr'}}
+export [[example::attr]]; // expected-warning {{unknown attribute 'example::attr' ignored}}
 
 // [...] shall not declare a name with internal linkage
 export static int a; // expected-error {{declaration of 'a' with internal linkage cannot be exported}}

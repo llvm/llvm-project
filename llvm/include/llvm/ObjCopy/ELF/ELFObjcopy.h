@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_ELF_ELFOBJCOPY_H
 #define LLVM_OBJCOPY_ELF_ELFOBJCOPY_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Error;
 class MemoryBuffer;
@@ -27,24 +29,25 @@ namespace elf {
 /// \p In, which must represent an IHex file, and writes the result
 /// into \p Out.
 /// \returns any Error encountered whilst performing the operation.
-Error executeObjcopyOnIHex(const CommonConfig &Config,
-                           const ELFConfig &ELFConfig, MemoryBuffer &In,
-                           raw_ostream &Out);
+LLVM_ABI Error executeObjcopyOnIHex(const CommonConfig &Config,
+                                    const ELFConfig &ELFConfig,
+                                    MemoryBuffer &In, raw_ostream &Out);
 
 /// Apply the transformations described by \p Config and \p ELFConfig to
 /// \p In, which is treated as a raw binary input, and writes the result
 /// into \p Out.
 /// \returns any Error encountered whilst performing the operation.
-Error executeObjcopyOnRawBinary(const CommonConfig &Config,
-                                const ELFConfig &ELFConfig, MemoryBuffer &In,
-                                raw_ostream &Out);
+LLVM_ABI Error executeObjcopyOnRawBinary(const CommonConfig &Config,
+                                         const ELFConfig &ELFConfig,
+                                         MemoryBuffer &In, raw_ostream &Out);
 
 /// Apply the transformations described by \p Config and \p ELFConfig to
 /// \p In and writes the result into \p Out.
 /// \returns any Error encountered whilst performing the operation.
-Error executeObjcopyOnBinary(const CommonConfig &Config,
-                             const ELFConfig &ELFConfig,
-                             object::ELFObjectFileBase &In, raw_ostream &Out);
+LLVM_ABI Error executeObjcopyOnBinary(const CommonConfig &Config,
+                                      const ELFConfig &ELFConfig,
+                                      object::ELFObjectFileBase &In,
+                                      raw_ostream &Out);
 
 } // end namespace elf
 } // end namespace objcopy

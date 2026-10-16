@@ -16,7 +16,6 @@ from lldbsuite.test import lldbutil
 class UnalignedWatchpointTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfOutOfTreeDebugserver
     def test_unaligned_watchpoint(self):
         """Test an unaligned watchpoint triggered by a larger aligned write."""
         self.build()

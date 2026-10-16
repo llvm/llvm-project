@@ -4,5 +4,5 @@
 # RUN: %update_llc_test_checks --no-generate-body-for-unused-prefixes %t.ll 2>&1 | FileCheck %s
 # RUN: FileCheck --input-file=%t.ll %s --check-prefix=OUTPUT
 
-# CHECK: WARNING: Prefix A had conflicting output
+# CHECK: WARNING: For function 'fold_v2i64', the following RUN lines will not generate checks due to conflicting output
 # OUTPUT-NOT: A:

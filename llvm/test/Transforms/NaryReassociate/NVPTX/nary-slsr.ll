@@ -17,7 +17,7 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 define void @nary_reassociate_after_slsr(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @nary_reassociate_after_slsr(
 ; PTX-LABEL: .visible .func nary_reassociate_after_slsr(
-; PTX: ld.param.u32 [[b:%r[0-9]+]], [nary_reassociate_after_slsr_param_1];
+; PTX: ld.param.b32 [[b:%r[0-9]+]], [nary_reassociate_after_slsr_param_1];
   %ab = add i32 %a, %b
   %abc = add i32 %ab, %c
   call void @foo(i32 %abc)

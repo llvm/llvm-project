@@ -290,6 +290,26 @@ namespace clang {
     }
   };
 
+  class GenericAssociationTypeRAIIObject {
+    Parser &P;
+    bool OldVal;
+
+  public:
+    GenericAssociationTypeRAIIObject(Parser &P, bool Value = true)
+        : P(P), OldVal(P.ParsingGenericAssociationType) {
+      P.ParsingGenericAssociationType = Value;
+    }
+
+    GenericAssociationTypeRAIIObject(const GenericAssociationTypeRAIIObject &) =
+        delete;
+    GenericAssociationTypeRAIIObject &
+    operator=(const GenericAssociationTypeRAIIObject &) = delete;
+
+    void restore() { P.ParsingGenericAssociationType = OldVal; }
+
+    ~GenericAssociationTypeRAIIObject() { restore(); }
+  };
+
   /// Activates OpenMP parsing mode to preseve OpenMP specific annotation
   /// tokens.
   class ParsingOpenMPDirectiveRAII {
@@ -361,11 +381,11 @@ namespace clang {
   };
 
   class OffsetOfStateRAIIObject {
-    Sema::OffsetOfKind &OffsetOfState;
-    Sema::OffsetOfKind OldValue;
+    OffsetOfKind &OffsetOfState;
+    OffsetOfKind OldValue;
 
   public:
-    OffsetOfStateRAIIObject(Parser &P, Sema::OffsetOfKind Value)
+    OffsetOfStateRAIIObject(Parser &P, OffsetOfKind Value)
         : OffsetOfState(P.OffsetOfState), OldValue(P.OffsetOfState) {
       OffsetOfState = Value;
     }

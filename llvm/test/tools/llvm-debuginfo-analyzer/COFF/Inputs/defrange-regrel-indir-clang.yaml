@@ -1,0 +1,301 @@
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC18C744241400000000488B0500000000488944240C488D44240C48890424488B04240FBF4002488B0C240341044883C418C3
+    SizeOfRawData:   53
+    Relocations:
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'F:\Dev\dummy\t.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   23
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    23000
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         'clang version 23.0.0git (https://github.com/Nerixyz/llvm-project.git ec2af1a892629f17c76fad23c5c1a0496aff4662)'
+      - !Symbols
+        Records:
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              CodeSize:        53
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4098
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 24
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            4101
+              Flags:           [  ]
+              VarName:         f
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          12
+              Range:
+                OffsetStart:     12
+                ISectStart:      0
+                Range:           41
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            48
+              Flags:           [  ]
+              VarName:         a
+          - Kind:            S_DEFRANGE_REGISTER_REL_INDIR
+            DefRangeRegisterRelIndirSym:
+              Register:        335
+              Flags:           0
+              BasePointerOffset: 0
+              OffsetInUdt:     0
+              Range:
+                OffsetStart:     12
+                ISectStart:      0
+                Range:           41
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            17
+              Flags:           [  ]
+              VarName:         b
+          - Kind:            S_DEFRANGE_REGISTER_REL_INDIR
+            DefRangeRegisterRelIndirSym:
+              Register:        335
+              Flags:           0
+              BasePointerOffset: 0
+              OffsetInUdt:     2
+              Range:
+                OffsetStart:     12
+                ISectStart:      0
+                Range:           41
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [  ]
+              VarName:         c
+          - Kind:            S_DEFRANGE_REGISTER_REL_INDIR
+            DefRangeRegisterRelIndirSym:
+              Register:        335
+              Flags:           0
+              BasePointerOffset: 0
+              OffsetInUdt:     4
+              Range:
+                OffsetStart:     12
+                ISectStart:      0
+                Range:           41
+              Gaps:            []
+          - Kind:            S_PROC_ID_END
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        53
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        'F:\Dev\dummy\t.cpp'
+            Lines:
+              - Offset:          0
+                LineStart:       7
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          12
+                LineStart:       8
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          24
+                LineStart:       9
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          33
+                LineStart:       10
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+      - !Symbols
+        Records:
+          - Kind:            S_UDT
+            UDTSym:
+              Type:            4101
+              UDTName:         Foo
+      - !FileChecksums
+        Checksums:
+          - FileName:        'F:\Dev\dummy\t.cpp'
+            Kind:            MD5
+            Checksum:        0F1D77932744955224E6CF67B46A8F99
+      - !StringTable
+        Strings:
+          - 'F:\Dev\dummy\t.cpp'
+      - !Symbols
+        Records:
+          - Kind:            S_BUILDINFO
+            BuildInfoSym:
+              BuildId:         4109
+    SizeOfRawData:   564
+    Relocations:
+      - VirtualAddress:  220
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECREL
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_ARGLIST
+        ArgList:
+          ArgIndices:      [  ]
+      - Kind:            LF_PROCEDURE
+        Procedure:
+          ReturnType:      116
+          CallConv:        NearC
+          Options:         [ None ]
+          ParameterCount:  0
+          ArgumentList:    4096
+      - Kind:            LF_FUNC_ID
+        FuncId:
+          ParentScope:     0
+          FunctionType:    4097
+          Name:            main
+      - Kind:            LF_STRUCTURE
+        Class:
+          MemberCount:     0
+          Options:         [ None, ForwardReference, HasUniqueName ]
+          FieldList:       0
+          Name:            Foo
+          UniqueName:      '.?AUFoo@@'
+          DerivationList:  0
+          VTableShape:     0
+          Size:            0
+      - Kind:            LF_FIELDLIST
+        FieldList:
+          - Kind:            LF_MEMBER
+            DataMember:
+              Attrs:           3
+              Type:            48
+              FieldOffset:     0
+              Name:            a
+          - Kind:            LF_MEMBER
+            DataMember:
+              Attrs:           3
+              Type:            17
+              FieldOffset:     2
+              Name:            b
+          - Kind:            LF_MEMBER
+            DataMember:
+              Attrs:           3
+              Type:            116
+              FieldOffset:     4
+              Name:            c
+      - Kind:            LF_STRUCTURE
+        Class:
+          MemberCount:     3
+          Options:         [ None, HasUniqueName ]
+          FieldList:       4100
+          Name:            Foo
+          UniqueName:      '.?AUFoo@@'
+          DerivationList:  0
+          VTableShape:     0
+          Size:            8
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          'F:\Dev\dummy\t.cpp'
+      - Kind:            LF_UDT_SRC_LINE
+        UdtSourceLine:
+          UDT:             4101
+          SourceFile:      4102
+          LineNumber:      1
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          'F:\Dev\dummy'
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          t.cpp
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          ''
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          'F:\Dev\llvm-project\build\bin\clang-cl.exe'
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          ''
+      - Kind:            LF_BUILDINFO
+        BuildInfo:
+          ArgIndices:      [ 4104, 4107, 4105, 4106, 4108 ]
+    SizeOfRawData:   2120
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          53
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        142096877
+      Number:          1
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          564
+      NumberOfRelocations: 12
+      NumberOfLinenumbers: 0
+      CheckSum:        3837595763
+      Number:          7
+  - Name:            '.debug$T'
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          2120
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1067981291
+      Number:          8
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

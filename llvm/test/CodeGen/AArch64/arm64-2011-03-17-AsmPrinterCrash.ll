@@ -5,10 +5,10 @@
 source_filename = "test/CodeGen/AArch64/arm64-2011-03-17-AsmPrinterCrash.ll"
 
 ; Function Attrs: nounwind ssp
-define void @drt_vsprintf() #0 {
+define void @drt_vsprintf(i1 %arg) #0 {
 entry:
   %do_tab_convert = alloca i32, align 4
-  br i1 undef, label %if.then24, label %if.else295, !dbg !11
+  br i1 %arg, label %if.then24, label %if.else295, !dbg !11
 
 if.then24:                                        ; preds = %entry
   unreachable
@@ -28,12 +28,12 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "print.i", directory: "/Volumes/Ebi/echeng/radars/r9146594")
 !2 = !{!3}
 !3 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression())
 !4 = !DIGlobalVariable(name: "vsplive", scope: !5, file: !1, line: 617, type: !8, isLocal: true, isDefinition: true)
-!5 = distinct !DISubprogram(name: "drt_vsprintf", scope: !1, file: !1, line: 616, type: !6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!5 = distinct !DISubprogram(name: "drt_vsprintf", scope: !1, file: !1, line: 616, type: !6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

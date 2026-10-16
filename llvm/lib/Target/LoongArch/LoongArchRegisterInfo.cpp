@@ -38,9 +38,14 @@ LoongArchRegisterInfo::LoongArchRegisterInfo(unsigned HwMode)
 const MCPhysReg *
 LoongArchRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<LoongArchSubtarget>();
+  auto CC = MF->getFunction().getCallingConv();
 
-  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+  if (CC == CallingConv::GHC)
     return CSR_NoRegs_SaveList;
+  if (CC == CallingConv::PreserveNone)
+    return CSR_NoneRegs_SaveList;
+  if (CC == CallingConv::PreserveMost)
+    return CSR_MostRegs_SaveList;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
@@ -63,6 +68,10 @@ LoongArchRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
   if (CC == CallingConv::GHC)
     return CSR_NoRegs_RegMask;
+  if (CC == CallingConv::PreserveNone)
+    return CSR_NoneRegs_RegMask;
+  if (CC == CallingConv::PreserveMost)
+    return CSR_MostRegs_RegMask;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
@@ -140,25 +149,135 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   bool FrameRegIsKill = false;
 
-  if (!isInt<12>(Offset.getFixed())) {
+  int FixedOffset = Offset.getFixed();
+  bool OffsetLegal = true;
+  // True only when the instruction's immediate field is si12.
+  bool HasSimm12Field = false;
+  // Replace ld/st with ldptr/stptr if possible.
+  unsigned PtrOpc = 0;
+
+  switch (MIOpc) {
+  case LoongArch::LDPTR_W:
+  case LoongArch::LDPTR_D:
+  case LoongArch::STPTR_W:
+  case LoongArch::STPTR_D:
+    PtrOpc = MIOpc;
+    break;
+  case LoongArch::LD_W:
+    HasSimm12Field = true;
+    PtrOpc = LoongArch::LDPTR_W;
+    break;
+  case LoongArch::LD_D:
+    HasSimm12Field = true;
+    PtrOpc = LoongArch::LDPTR_D;
+    break;
+  case LoongArch::ST_W:
+    HasSimm12Field = true;
+    PtrOpc = LoongArch::STPTR_W;
+    break;
+  case LoongArch::ST_D:
+    HasSimm12Field = true;
+    PtrOpc = LoongArch::STPTR_D;
+    break;
+  case LoongArch::LD_B:
+  case LoongArch::LD_H:
+  case LoongArch::LD_BU:
+  case LoongArch::LD_HU:
+  case LoongArch::LD_WU:
+  case LoongArch::ST_B:
+  case LoongArch::ST_H:
+  case LoongArch::FLD_S:
+  case LoongArch::FLD_D:
+  case LoongArch::FST_S:
+  case LoongArch::FST_D:
+  case LoongArch::VLD:
+  case LoongArch::VST:
+  case LoongArch::XVLD:
+  case LoongArch::XVST:
+  case LoongArch::VLDREPL_B:
+  case LoongArch::XVLDREPL_B:
+    HasSimm12Field = true;
+    break;
+  }
+
+  // Handle offsets that exceed the immediate range of the instruction.
+  switch (MIOpc) {
+  case LoongArch::VSTELM_B:
+  case LoongArch::XVSTELM_B:
+    OffsetLegal = isInt<8>(FixedOffset);
+    break;
+  case LoongArch::VSTELM_H:
+  case LoongArch::XVSTELM_H:
+    OffsetLegal = isShiftedInt<8, 1>(FixedOffset);
+    break;
+  case LoongArch::VSTELM_W:
+  case LoongArch::XVSTELM_W:
+    OffsetLegal = isShiftedInt<8, 2>(FixedOffset);
+    break;
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_D:
+    OffsetLegal = isShiftedInt<8, 3>(FixedOffset);
+    break;
+  }
+
+  if (!OffsetLegal && isInt<12>(FixedOffset)) {
+    unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+
+    // The offset fits in si12 but is not legal for the instruction,
+    // so use only one scratch register instead.
+    Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(Addi), ScratchReg)
+        .addReg(FrameReg)
+        .addImm(FixedOffset);
+    Offset = StackOffset::getFixed(0);
+    FrameReg = ScratchReg;
+    FrameRegIsKill = true;
+  }
+
+  // If the offset doesn't fit the si12 field of ld/st but does fit
+  // the si14 << 2 field of ldptr/stptr, replace with the latter one.
+  if (IsLA64 && !isInt<12>(FixedOffset) && isShiftedInt<14, 2>(FixedOffset)) {
+    if (PtrOpc) {
+      MI.setDesc(TII->get(PtrOpc));
+      MI.getOperand(FIOperandNum)
+          .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(FixedOffset);
+      return false;
+    }
+  }
+
+  if (!isInt<12>(FixedOffset)) {
     unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
     unsigned Add = IsLA64 ? LoongArch::ADD_D : LoongArch::ADD_W;
+    int64_t Val = FixedOffset;
+    // Keep the old behaviour of materializing the whole offset for instructions
+    // do not have simm12 field or ADDI due to it will be replaced.
+    int64_t Lo12 = !HasSimm12Field ? 0 : SignExtend64<12>(Val);
+    uint64_t HiVal = (uint64_t)Val - (uint64_t)Lo12;
 
     // The offset won't fit in an immediate, so use a scratch register instead.
     // Modify Offset and FrameReg appropriately.
     Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
-    TII->movImm(MBB, II, DL, ScratchReg, Offset.getFixed());
-    if (MIOpc == Addi) {
-      BuildMI(MBB, II, DL, TII->get(Add), MI.getOperand(0).getReg())
+    // Move lower 12-bit of offset into original instruction.
+    Offset = StackOffset::getFixed(Lo12);
+
+    if (HasSimm12Field && isShiftedInt<20, 12>(HiVal)) {
+      BuildMI(MBB, II, DL, TII->get(LoongArch::PseudoAddUpperImm), ScratchReg)
+          .addReg(FrameReg)
+          .addImm(static_cast<int64_t>(HiVal) >> 12);
+    } else {
+      TII->movImm(MBB, II, DL, ScratchReg, HiVal);
+      if (MIOpc == Addi) {
+        BuildMI(MBB, II, DL, TII->get(Add), MI.getOperand(0).getReg())
+            .addReg(FrameReg)
+            .addReg(ScratchReg, RegState::Kill);
+        MI.eraseFromParent();
+        return true;
+      }
+      BuildMI(MBB, II, DL, TII->get(Add), ScratchReg)
           .addReg(FrameReg)
           .addReg(ScratchReg, RegState::Kill);
-      MI.eraseFromParent();
-      return true;
     }
-    BuildMI(MBB, II, DL, TII->get(Add), ScratchReg)
-        .addReg(FrameReg)
-        .addReg(ScratchReg, RegState::Kill);
-    Offset = StackOffset::getFixed(0);
     FrameReg = ScratchReg;
     FrameRegIsKill = true;
   }

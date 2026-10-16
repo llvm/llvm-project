@@ -12,6 +12,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -32,8 +33,11 @@ using namespace lldb_private;
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
                                         llvm::StringRef name,
                                         const Address &address,
-                                        lldb::TypeSP &type_sp) {
-  auto manager_sp = ValueObjectManager::Create();
+                                        lldb::TypeSP &type_sp,
+                                        ValueObject *parent) {
+
+  std::shared_ptr<ValueObjectManager> manager_sp =
+      ValueObject::ReuseManagerIfParent(parent);
   return (new ValueObjectMemory(exe_scope, *manager_sp, name, address, type_sp))
       ->GetSP();
 }
@@ -41,8 +45,10 @@ ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
                                         llvm::StringRef name,
                                         const Address &address,
-                                        const CompilerType &ast_type) {
-  auto manager_sp = ValueObjectManager::Create();
+                                        const CompilerType &ast_type,
+                                        ValueObject *parent) {
+  std::shared_ptr<ValueObjectManager> manager_sp =
+      ValueObject::ReuseManagerIfParent(parent);
   return (new ValueObjectMemory(exe_scope, *manager_sp, name, address,
                                 ast_type))
       ->GetSP();
@@ -57,7 +63,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
       m_compiler_type() {
   // Do not attempt to construct one of these objects with no variable!
   assert(m_type_sp.get() != nullptr);
-  SetName(ConstString(name));
+  SetName(name);
   m_value.SetContext(Value::ContextType::LLDBType, m_type_sp.get());
   TargetSP target_sp(GetTargetSP());
   lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
@@ -88,7 +94,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
 
   TargetSP target_sp(GetTargetSP());
 
-  SetName(ConstString(name));
+  SetName(name);
   m_value.SetCompilerType(m_compiler_type);
   lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
   if (load_address != LLDB_INVALID_ADDRESS) {
@@ -143,10 +149,17 @@ llvm::Expected<uint32_t> ValueObjectMemory::CalculateNumChildren(uint32_t max) {
   return *child_count <= max ? *child_count : max;
 }
 
-std::optional<uint64_t> ValueObjectMemory::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectMemory::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  if (m_type_sp)
-    return m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  if (m_type_sp) {
+    if (auto size =
+            m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+      return *size;
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), size.takeError(),
+                     "failed to get byte size from type: {0}");
+    return llvm::createStringError("could not get byte size of memory object");
+  }
   return m_compiler_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
 }
 

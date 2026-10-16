@@ -56,7 +56,7 @@ while.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare i32 @_ZNK1F5beginEv(ptr)
 
@@ -68,7 +68,7 @@ declare noalias nonnull ptr @_Znwm(i64)
 
 declare void @_ZN1B6appendEv(ptr)
 
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare i1 @llvm.type.test(ptr, metadata)
 

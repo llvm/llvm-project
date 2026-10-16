@@ -1,7 +1,8 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=SVML -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SVML
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=AMDLIBM -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,AMDLIBM
 ; RUN: opt -mtriple=powerpc64-unknown-linux-gnu -vector-library=MASSV -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LIBMVEC-X86 -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
+; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=LIBMVEC -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-AARCH64
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=LIBMVEC -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -vector-library=Accelerate -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI
 ; RUN: opt -mtriple=riscv64-unknown-linux-gnu -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,SLEEFGNUABI_RISCV
@@ -15,27 +16,86 @@
 ; SVML-SAME:          ptr @__svml_log10f4,
 ; SVML-SAME:          ptr @__svml_log10f8,
 ; SVML-SAME:          ptr @__svml_log10f16
-; AMDLIBM-SAME:     [11 x ptr] [
+; AMDLIBM-SAME:     [42 x ptr] [
 ; AMDLIBM-SAME:       ptr @amd_vrd2_sin,
 ; AMDLIBM-SAME:       ptr @amd_vrd4_sin,
 ; AMDLIBM-SAME:       ptr @amd_vrd8_sin,
+; AMDLIBM-SAME:       ptr @amd_vrd2_sincos,
 ; AMDLIBM-SAME:       ptr @amd_vrd4_sincos,
 ; AMDLIBM-SAME:       ptr @amd_vrd8_sincos,
 ; AMDLIBM-SAME:       ptr @amd_vrs4_sincosf,
 ; AMDLIBM-SAME:       ptr @amd_vrs8_sincosf,
-; AMDLIBM-SAME:       ptr @amd_vrs16_sincosf
+; AMDLIBM-SAME:       ptr @amd_vrs16_sincosf,
+; AMDLIBM-SAME:       ptr @amd_vrd2_erfinv,
+; AMDLIBM-SAME:       ptr @amd_vrd4_erfinv,
+; AMDLIBM-SAME:       ptr @amd_vrd8_erfinv,
+; AMDLIBM-SAME:       ptr @amd_vrd2_erfcinv,
+; AMDLIBM-SAME:       ptr @amd_vrd4_erfcinv,
+; AMDLIBM-SAME:       ptr @amd_vrd8_erfcinv,
+; AMDLIBM-SAME:       ptr @amd_vrd2_cdfnorminv,
+; AMDLIBM-SAME:       ptr @amd_vrd4_cdfnorminv,
+; AMDLIBM-SAME:       ptr @amd_vrd8_cdfnorminv,
+; AMDLIBM-SAME:       ptr @amd_vrd2_acos,
+; AMDLIBM-SAME:       ptr @amd_vrd4_acos,
+; AMDLIBM-SAME:       ptr @amd_vrd8_acos,
+; AMDLIBM-SAME:       ptr @amd_vrd2_tanh,
+; AMDLIBM-SAME:       ptr @amd_vrd4_tanh,
+; AMDLIBM-SAME:       ptr @amd_vrd8_tanh,
+; AMDLIBM-SAME:       ptr @amd_vrd2_atan2,
+; AMDLIBM-SAME:       ptr @amd_vrd4_atan2,
+; AMDLIBM-SAME:       ptr @amd_vrd8_atan2,
+; AMDLIBM-SAME:       ptr @amd_vrd2_cosh,
+; AMDLIBM-SAME:       ptr @amd_vrd4_cosh,
+; AMDLIBM-SAME:       ptr @amd_vrd8_cosh,
+; AMDLIBM-SAME:       ptr @amd_vrs4_coshf,
+; AMDLIBM-SAME:       ptr @amd_vrs8_coshf,
+; AMDLIBM-SAME:       ptr @amd_vrs16_coshf,
+; AMDLIBM-SAME:       ptr @amd_vrd2_exp10,
+; AMDLIBM-SAME:       ptr @amd_vrd4_exp10,
+; AMDLIBM-SAME:       ptr @amd_vrd8_exp10,
+; AMDLIBM-SAME:       ptr @amd_vrs4_exp10f,
+; AMDLIBM-SAME:       ptr @amd_vrs8_exp10f,
+; AMDLIBM-SAME:       ptr @amd_vrs16_exp10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs4_log10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs8_log10f,
 ; AMDLIBM-SAME:       ptr @amd_vrs16_log10f
-; MASSV-SAME:       [2 x ptr] [
+; MASSV-SAME:       [7 x ptr] [
 ; MASSV-SAME:         ptr @__sind2,
+; MASSV-SAME:         ptr @__acosd2,
+; MASSV-SAME:         ptr @__tanhd2,
+; MASSV-SAME:         ptr @__atan2d2,
+; MASSV-SAME:         ptr @__coshd2,
+; MASSV-SAME:         ptr @__coshf4,
 ; MASSV-SAME:         ptr @__log10f4
-; ACCELERATE-SAME:  [1 x ptr] [
+; ACCELERATE-SAME:  [2 x ptr] [
+; ACCELERATE-SAME:    ptr @vcoshf,
 ; ACCELERATE-SAME:    ptr @vlog10f
+; LIBMVEC-AARCH64-SAME: [21 x ptr] [
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_sin,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_sin,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_acos,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_acos,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_tanh,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_tanh,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2vv_atan2,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxvv_atan2,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_cosh,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_cosh,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_coshf,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN4v_coshf,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_coshf,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_exp10,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_exp10,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_exp10f,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN4v_exp10f,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_exp10f,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN2v_log10f,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVnN4v_log10f,
+; LIBMVEC-AARCH64-SAME:   ptr @_ZGVsMxv_log10f
 ; LIBMVEC-X86-SAME: [2 x ptr] [
 ; LIBMVEC-X86-SAME:   ptr @_ZGVbN2v_sin,
 ; LIBMVEC-X86-SAME:   ptr @_ZGVdN4v_sin
-; SLEEFGNUABI-SAME: [16 x ptr] [
+; SLEEFGNUABI-SAME: [32 x ptr] [
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vl8_modf,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl8_modf,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN4vl4_modff,
@@ -50,9 +110,25 @@
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl8l8_sincospi,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVnN4vl4l4_sincospif,
 ; SLEEFGNUABI-SAME:   ptr @_ZGVsNxvl4l4_sincospif,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN2v_acos,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_acos,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN2v_tanh,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_tanh,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vv_atan2,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxvv_atan2,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN2v_cosh,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_cosh,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN4v_coshf,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_coshf,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN2v_exp10,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_exp10,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN4v_exp10f,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_exp10f,
 ; SLEEFGNUABI_SAME;   ptr @_ZGVnN4v_log10f,
-; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_log10f
-; ARMPL-SAME:       [16 x ptr] [
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxv_log10f,
+; SLEEFGNUABI-SAME:   ptr @_ZGVnN2vv_ldexp,
+; SLEEFGNUABI-SAME:   ptr @_ZGVsMxvv_ldexp
+; ARMPL-SAME:       [32 x ptr] [
 ; ARMPL-SAME:         ptr @armpl_vmodfq_f64,
 ; ARMPL-SAME:         ptr @armpl_svmodf_f64_x,
 ; ARMPL-SAME:         ptr @armpl_vmodfq_f32,
@@ -67,8 +143,24 @@
 ; ARMPL-SAME:         ptr @armpl_svsincospi_f64_x,
 ; ARMPL-SAME:         ptr @armpl_vsincospiq_f32,
 ; ARMPL-SAME:         ptr @armpl_svsincospi_f32_x,
+; ARMPL-SAME:         ptr @armpl_vacosq_f64,
+; ARMPL-SAME:         ptr @armpl_svacos_f64_x,
+; ARMPL-SAME:         ptr @armpl_vtanhq_f64,
+; ARMPL-SAME:         ptr @armpl_svtanh_f64_x,
+; ARMPL-SAME:         ptr @armpl_vatan2q_f64,
+; ARMPL-SAME:         ptr @armpl_svatan2_f64_x,
+; ARMPL-SAME:         ptr @armpl_vcoshq_f64,
+; ARMPL-SAME:         ptr @armpl_svcosh_f64_x,
+; ARMPL-SAME:         ptr @armpl_vcoshq_f32,
+; ARMPL-SAME:         ptr @armpl_svcosh_f32_x,
+; ARMPL-SAME:         ptr @armpl_vexp10q_f64,
+; ARMPL-SAME:         ptr @armpl_svexp10_f64_x,
+; ARMPL-SAME:         ptr @armpl_vexp10q_f32,
+; ARMPL-SAME:         ptr @armpl_svexp10_f32_x,
 ; ARMPL-SAME:         ptr @armpl_vlog10q_f32,
-; ARMPL-SAME:         ptr @armpl_svlog10_f32_x
+; ARMPL-SAME:         ptr @armpl_svlog10_f32_x,
+; ARMPL-SAME:         ptr @armpl_vldexpq_f64,
+; ARMPL-SAME:         ptr @armpl_svldexp_f64_x
 ; COMMON-SAME:      ], section "llvm.metadata"
 
 define double @modf_f64(double %in, ptr %iptr) {
@@ -97,6 +189,7 @@ define double @sin_f64(double %in) {
 ; AMDLIBM:            call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; MASSV:              call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; ACCELERATE:         call double @sin(double %{{.*}})
+; LIBMVEC-AARCH64:    call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; LIBMVEC-X86:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; SLEEFGNUABI:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; SLEEFGNUABI_RISCV:  call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
@@ -151,10 +244,128 @@ define void @sincospi_f32(float %in, ptr %sin, ptr %cos) {
 
 declare void @sincospif(float, ptr, ptr) #0
 
+define double @erfinv_f64(double %in) {
+; COMMON-LABEL:       @erfinv_f64(
+; AMDLIBM:            call double @erfinv(double %{{.*}}) #[[ERFINV:[0-9]+]]
+  %call = tail call double @erfinv(double %in)
+  ret double %call
+}
+
+declare double @erfinv(double) #0
+
+define double @erfcinv_f64(double %in) {
+; COMMON-LABEL:       @erfcinv_f64(
+; AMDLIBM:            call double @erfcinv(double %{{.*}}) #[[ERFCINV:[0-9]+]]
+  %call = tail call double @erfcinv(double %in)
+  ret double %call
+}
+
+declare double @erfcinv(double) #0
+
+define double @cdfnorminv_f64(double %in) {
+; COMMON-LABEL:       @cdfnorminv_f64(
+; AMDLIBM:            call double @cdfnorminv(double %{{.*}}) #[[CDFNORMINV:[0-9]+]]
+  %call = tail call double @cdfnorminv(double %in)
+  ret double %call
+}
+
+declare double @cdfnorminv(double) #0
+
+define double @acos_f64(double %in) {
+; COMMON-LABEL:       @acos_f64(
+; AMDLIBM:            call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
+; MASSV:              call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
+; LIBMVEC-AARCH64:    call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
+; SLEEFGNUABI:        call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
+; ARMPL:              call double @acos(double %{{.*}}) #[[ACOS:[0-9]+]]
+  %call = tail call double @acos(double %in)
+  ret double %call
+}
+
+declare double @acos(double) #0
+
+define double @tanh_f64(double %in) {
+; COMMON-LABEL:       @tanh_f64(
+; AMDLIBM:            call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
+; MASSV:              call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
+; LIBMVEC-AARCH64:    call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
+; SLEEFGNUABI:        call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
+; ARMPL:              call double @tanh(double %{{.*}}) #[[TANH:[0-9]+]]
+  %call = tail call double @tanh(double %in)
+  ret double %call
+}
+
+declare double @tanh(double) #0
+
+define double @atan2_f64(double %y, double %x) {
+; COMMON-LABEL:       @atan2_f64(
+; AMDLIBM:            call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
+; MASSV:              call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
+; LIBMVEC-AARCH64:    call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
+; SLEEFGNUABI:        call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
+; ARMPL:              call double @atan2(double %{{.*}}, double %{{.*}}) #[[ATAN2:[0-9]+]]
+  %call = tail call double @atan2(double %y, double %x)
+  ret double %call
+}
+
+declare double @atan2(double, double) #0
+
+define double @cosh_f64(double %in) {
+; COMMON-LABEL:       @cosh_f64(
+; AMDLIBM:            call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
+; MASSV:              call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
+; LIBMVEC-AARCH64:    call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
+; SLEEFGNUABI:        call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
+; ARMPL:              call double @cosh(double %{{.*}}) #[[COSH:[0-9]+]]
+  %call = tail call double @cosh(double %in)
+  ret double %call
+}
+
+declare double @cosh(double) #0
+
+define float @cosh_f32(float %in) {
+; COMMON-LABEL:       @cosh_f32(
+; AMDLIBM:            call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; MASSV:              call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; ACCELERATE:         call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; LIBMVEC-AARCH64:    call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; SLEEFGNUABI:        call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+; ARMPL:              call float @coshf(float %{{.*}}) #[[COSHF:[0-9]+]]
+  %call = tail call float @coshf(float %in)
+  ret float %call
+}
+
+declare float @coshf(float) #0
+
+define double @exp10_f64(double %in) {
+; COMMON-LABEL:       @exp10_f64(
+; AMDLIBM:            call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
+; LIBMVEC-AARCH64:    call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
+; SLEEFGNUABI:        call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
+; ARMPL:              call double @exp10(double %{{.*}}) #[[EXP10:[0-9]+]]
+  %call = tail call double @exp10(double %in)
+  ret double %call
+}
+
+declare double @exp10(double) #0
+
+define float @exp10_f32(float %in) {
+; COMMON-LABEL:       @exp10_f32(
+; AMDLIBM:            call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+; LIBMVEC-AARCH64:    call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+; SLEEFGNUABI:        call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+; ARMPL:              call float @exp10f(float %{{.*}}) #[[EXP10F:[0-9]+]]
+  %call = tail call float @exp10f(float %in)
+  ret float %call
+}
+
+declare float @exp10f(float) #0
+
 define float @call_llvm.log10.f32(float %in) {
 ; COMMON-LABEL:       @call_llvm.log10.f32(
 ; SVML:               call float @llvm.log10.f32(float %{{.*}})
 ; AMDLIBM:            call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
+; LIBMVEC-AARCH64:    call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; LIBMVEC-X86:        call float @llvm.log10.f32(float %{{.*}})
 ; MASSV:              call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:         call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
@@ -164,12 +375,23 @@ define float @call_llvm.log10.f32(float %in) {
 ; No mapping of "llvm.log10.f32" to a vector function for SVML.
 ; SVML-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; AMDLIBM-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
+; LIBMVEC-AARCH64-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; LIBMVEC-X86-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
   %call = tail call float @llvm.log10.f32(float %in)
   ret float %call
 }
 
 declare float @llvm.log10.f32(float) #0
+
+define double @ldexp_f64_signext(double %x, i32 signext %exp) {
+; COMMON-LABEL: @ldexp_f64_signext(
+; SLEEFGNUABI:  call double @ldexp(double %{{.*}}, i32 signext %{{.*}}) #[[LDEXP:[0-9]+]]
+; ARMPL:        call double @ldexp(double %{{.*}}, i32 signext %{{.*}}) #[[LDEXP:[0-9]+]]
+  %call = tail call double @ldexp(double %x, i32 signext %exp)
+  ret double %call
+}
+
+declare double @ldexp(double, i32 signext) #0
 
 ; SVML: declare <2 x double> @__svml_sin2(<2 x double>)
 ; SVML: declare <4 x double> @__svml_sin4(<4 x double>)
@@ -181,21 +403,71 @@ declare float @llvm.log10.f32(float) #0
 ; AMDLIBM: declare <2 x double> @amd_vrd2_sin(<2 x double>)
 ; AMDLIBM: declare <4 x double> @amd_vrd4_sin(<4 x double>)
 ; AMDLIBM: declare <8 x double> @amd_vrd8_sin(<8 x double>)
+; AMDLIBM: declare void @amd_vrd2_sincos(<2 x double>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrd4_sincos(<4 x double>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrd8_sincos(<8 x double>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrs4_sincosf(<4 x float>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrs8_sincosf(<8 x float>, ptr, ptr)
 ; AMDLIBM: declare void @amd_vrs16_sincosf(<16 x float>, ptr, ptr)
+; AMDLIBM: declare <2 x double> @amd_vrd2_acos(<2 x double>)
+; AMDLIBM: declare <4 x double> @amd_vrd4_acos(<4 x double>)
+; AMDLIBM: declare <8 x double> @amd_vrd8_acos(<8 x double>)
+; AMDLIBM: declare <2 x double> @amd_vrd2_tanh(<2 x double>)
+; AMDLIBM: declare <4 x double> @amd_vrd4_tanh(<4 x double>)
+; AMDLIBM: declare <8 x double> @amd_vrd8_tanh(<8 x double>)
+; AMDLIBM: declare <2 x double> @amd_vrd2_atan2(<2 x double>, <2 x double>)
+; AMDLIBM: declare <4 x double> @amd_vrd4_atan2(<4 x double>, <4 x double>)
+; AMDLIBM: declare <8 x double> @amd_vrd8_atan2(<8 x double>, <8 x double>)
+; AMDLIBM: declare <2 x double> @amd_vrd2_cosh(<2 x double>)
+; AMDLIBM: declare <4 x double> @amd_vrd4_cosh(<4 x double>)
+; AMDLIBM: declare <8 x double> @amd_vrd8_cosh(<8 x double>)
+; AMDLIBM: declare <4 x float> @amd_vrs4_coshf(<4 x float>)
+; AMDLIBM: declare <8 x float> @amd_vrs8_coshf(<8 x float>)
+; AMDLIBM: declare <16 x float> @amd_vrs16_coshf(<16 x float>)
+; AMDLIBM: declare <2 x double> @amd_vrd2_exp10(<2 x double>)
+; AMDLIBM: declare <4 x double> @amd_vrd4_exp10(<4 x double>)
+; AMDLIBM: declare <8 x double> @amd_vrd8_exp10(<8 x double>)
+; AMDLIBM: declare <4 x float> @amd_vrs4_exp10f(<4 x float>)
+; AMDLIBM: declare <8 x float> @amd_vrs8_exp10f(<8 x float>)
+; AMDLIBM: declare <16 x float> @amd_vrs16_exp10f(<16 x float>)
 ; AMDLIBM: declare <4 x float> @amd_vrs4_log10f(<4 x float>)
 ; AMDLIBM: declare <8 x float> @amd_vrs8_log10f(<8 x float>)
 ; AMDLIBM: declare <16 x float> @amd_vrs16_log10f(<16 x float>)
 
 ; MASSV: declare <2 x double> @__sind2(<2 x double>)
+; MASSV: declare <2 x double> @__acosd2(<2 x double>)
+; MASSV: declare <2 x double> @__tanhd2(<2 x double>)
+; MASSV: declare <2 x double> @__atan2d2(<2 x double>, <2 x double>)
+; MASSV: declare <2 x double> @__coshd2(<2 x double>)
+; MASSV: declare <4 x float> @__coshf4(<4 x float>)
 ; MASSV: declare <4 x float> @__log10f4(<4 x float>)
+
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x double> @_ZGVnN2v_sin(<2 x double>)
+; LIBMVEC-AARCH64: declare <vscale x 2 x double> @_ZGVsMxv_sin(<vscale x 2 x double>, <vscale x 2 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x double> @_ZGVnN2v_acos(<2 x double>)
+; LIBMVEC-AARCH64: declare <vscale x 2 x double> @_ZGVsMxv_acos(<vscale x 2 x double>, <vscale x 2 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x double> @_ZGVnN2v_tanh(<2 x double>)
+; LIBMVEC-AARCH64: declare <vscale x 2 x double> @_ZGVsMxv_tanh(<vscale x 2 x double>, <vscale x 2 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x double> @_ZGVnN2vv_atan2(<2 x double>, <2 x double>)
+; LIBMVEC-AARCH64: declare <vscale x 2 x double> @_ZGVsMxvv_atan2(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x double> @_ZGVnN2v_cosh(<2 x double>)
+; LIBMVEC-AARCH64: declare <vscale x 2 x double> @_ZGVsMxv_cosh(<vscale x 2 x double>, <vscale x 2 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x float> @_ZGVnN2v_coshf(<2 x float>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <4 x float> @_ZGVnN4v_coshf(<4 x float>)
+; LIBMVEC-AARCH64: declare <vscale x 4 x float> @_ZGVsMxv_coshf(<vscale x 4 x float>, <vscale x 4 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp10(<2 x double>)
+; LIBMVEC-AARCH64: declare <vscale x 2 x double> @_ZGVsMxv_exp10(<vscale x 2 x double>, <vscale x 2 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x float> @_ZGVnN2v_exp10f(<2 x float>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <4 x float> @_ZGVnN4v_exp10f(<4 x float>)
+; LIBMVEC-AARCH64: declare <vscale x 4 x float> @_ZGVsMxv_exp10f(<vscale x 4 x float>, <vscale x 4 x i1>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <2 x float> @_ZGVnN2v_log10f(<2 x float>)
+; LIBMVEC-AARCH64: declare aarch64_vector_pcs <4 x float> @_ZGVnN4v_log10f(<4 x float>)
+; LIBMVEC-AARCH64: declare <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float>, <vscale x 4 x i1>)
 
 ; LIBMVEC-X86: declare <2 x double> @_ZGVbN2v_sin(<2 x double>)
 ; LIBMVEC-X86: declare <4 x double> @_ZGVdN4v_sin(<4 x double>)
 
+; ACCELERATE: declare <4 x float> @vcoshf(<4 x float>)
 ; ACCELERATE: declare <4 x float> @vlog10f(<4 x float>)
 
 ; SLEEFGNUABI: declare <2 x double> @_ZGVnN2vl8_modf(<2 x double>, ptr)
@@ -212,27 +484,56 @@ declare float @llvm.log10.f32(float) #0
 ; SLEEFGNUABI: declare void @_ZGVsNxvl8l8_sincospi(<vscale x 2 x double>, ptr, ptr)
 ; SLEEFGNUABI: declare void @_ZGVnN4vl4l4_sincospif(<4 x float>, ptr, ptr)
 ; SLEEFGNUABI: declare void @_ZGVsNxvl4l4_sincospif(<vscale x 4 x float>, ptr, ptr)
+; SLEEFGNUABI: declare <2 x double> @_ZGVnN2v_acos(<2 x double>)
+; SLEEFGNUABI: declare <vscale x 2 x double> @_ZGVsMxv_acos(<vscale x 2 x double>, <vscale x 2 x i1>)
+; SLEEFGNUABI: declare <2 x double> @_ZGVnN2v_tanh(<2 x double>)
+; SLEEFGNUABI: declare <vscale x 2 x double> @_ZGVsMxv_tanh(<vscale x 2 x double>, <vscale x 2 x i1>)
+; SLEEFGNUABI: declare <2 x double> @_ZGVnN2vv_atan2(<2 x double>, <2 x double>)
+; SLEEFGNUABI: declare <vscale x 2 x double> @_ZGVsMxvv_atan2(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>)
+; SLEEFGNUABI: declare <2 x double> @_ZGVnN2v_cosh(<2 x double>)
+; SLEEFGNUABI: declare <vscale x 2 x double> @_ZGVsMxv_cosh(<vscale x 2 x double>, <vscale x 2 x i1>)
+; SLEEFGNUABI: declare <4 x float> @_ZGVnN4v_coshf(<4 x float>)
+; SLEEFGNUABI: declare <vscale x 4 x float> @_ZGVsMxv_coshf(<vscale x 4 x float>, <vscale x 4 x i1>)
+; SLEEFGNUABI: declare <2 x double> @_ZGVnN2v_exp10(<2 x double>)
+; SLEEFGNUABI: declare <vscale x 2 x double> @_ZGVsMxv_exp10(<vscale x 2 x double>, <vscale x 2 x i1>)
+; SLEEFGNUABI: declare <4 x float> @_ZGVnN4v_exp10f(<4 x float>)
+; SLEEFGNUABI: declare <vscale x 4 x float> @_ZGVsMxv_exp10f(<vscale x 4 x float>, <vscale x 4 x i1>)
 ; SLEEFGNUABI: declare <4 x float> @_ZGVnN4v_log10f(<4 x float>)
 ; SLEEFGNUABI: declare <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float>, <vscale x 4 x i1>)
 
 ; SLEEFGNUABI_RISCV: declare <vscale x 2 x double> @Sleef_sindx_u10rvvm2(<vscale x 2 x double>)
 ; SLEEFGNUABI_RISCV: declare <vscale x 4 x float> @Sleef_log10fx_u10rvvm2(<vscale x 4 x float>)
+; SLEEFGNUABI_RISCV: declare <vscale x 2 x double> @Sleef_ldexpdx_rvvm2(<vscale x 2 x double>, <vscale x 2 x i32>)
 
-; ARMPL: declare <2 x double> @armpl_vmodfq_f64(<2 x double>, ptr)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vmodfq_f64(<2 x double>, ptr)
 ; ARMPL: declare <vscale x 2 x double> @armpl_svmodf_f64_x(<vscale x 2 x double>, ptr, <vscale x 2 x i1>)
-; ARMPL: declare <4 x float> @armpl_vmodfq_f32(<4 x float>, ptr)
+; ARMPL: declare aarch64_vector_pcs <4 x float> @armpl_vmodfq_f32(<4 x float>, ptr)
 ; ARMPL: declare <vscale x 4 x float> @armpl_svmodf_f32_x(<vscale x 4 x float>, ptr, <vscale x 4 x i1>)
-; ARMPL: declare <2 x double> @armpl_vsinq_f64(<2 x double>)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vsinq_f64(<2 x double>)
 ; ARMPL: declare <vscale x 2 x double> @armpl_svsin_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
-; ARMPL: declare void @armpl_vsincosq_f64(<2 x double>, ptr, ptr)
+; ARMPL: declare aarch64_vector_pcs void @armpl_vsincosq_f64(<2 x double>, ptr, ptr)
 ; ARMPL: declare void @armpl_svsincos_f64_x(<vscale x 2 x double>, ptr, ptr, <vscale x 2 x i1>)
-; ARMPL: declare void @armpl_vsincosq_f32(<4 x float>, ptr, ptr)
+; ARMPL: declare aarch64_vector_pcs void @armpl_vsincosq_f32(<4 x float>, ptr, ptr)
 ; ARMPL: declare void @armpl_svsincos_f32_x(<vscale x 4 x float>, ptr, ptr, <vscale x 4 x i1>)
-; ARMPL: declare void @armpl_vsincospiq_f64(<2 x double>, ptr, ptr)
+; ARMPL: declare aarch64_vector_pcs void @armpl_vsincospiq_f64(<2 x double>, ptr, ptr)
 ; ARMPL: declare void @armpl_svsincospi_f64_x(<vscale x 2 x double>, ptr, ptr, <vscale x 2 x i1>)
-; ARMPL: declare void @armpl_vsincospiq_f32(<4 x float>, ptr, ptr)
+; ARMPL: declare aarch64_vector_pcs void @armpl_vsincospiq_f32(<4 x float>, ptr, ptr)
 ; ARMPL: declare void @armpl_svsincospi_f32_x(<vscale x 4 x float>, ptr, ptr, <vscale x 4 x i1>)
-; ARMPL: declare <4 x float> @armpl_vlog10q_f32(<4 x float>)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vacosq_f64(<2 x double>)
+; ARMPL: declare <vscale x 2 x double> @armpl_svacos_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vtanhq_f64(<2 x double>)
+; ARMPL: declare <vscale x 2 x double> @armpl_svtanh_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vatan2q_f64(<2 x double>, <2 x double>)
+; ARMPL: declare <vscale x 2 x double> @armpl_svatan2_f64_x(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vcoshq_f64(<2 x double>)
+; ARMPL: declare <vscale x 2 x double> @armpl_svcosh_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
+; ARMPL: declare aarch64_vector_pcs <4 x float> @armpl_vcoshq_f32(<4 x float>)
+; ARMPL: declare <vscale x 4 x float> @armpl_svcosh_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
+; ARMPL: declare aarch64_vector_pcs <2 x double> @armpl_vexp10q_f64(<2 x double>)
+; ARMPL: declare <vscale x 2 x double> @armpl_svexp10_f64_x(<vscale x 2 x double>, <vscale x 2 x i1>)
+; ARMPL: declare aarch64_vector_pcs <4 x float> @armpl_vexp10q_f32(<4 x float>)
+; ARMPL: declare <vscale x 4 x float> @armpl_svexp10_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
+; ARMPL: declare aarch64_vector_pcs <4 x float> @armpl_vlog10q_f32(<4 x float>)
 ; ARMPL: declare <vscale x 4 x float> @armpl_svlog10_f32_x(<vscale x 4 x float>, <vscale x 4 x i1>)
 
 attributes #0 = { nounwind readnone }
@@ -247,12 +548,53 @@ attributes #0 = { nounwind readnone }
 ; AMDLIBM-SAME:   _ZGV_LLVM_N4v_sin(amd_vrd4_sin),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8v_sin(amd_vrd8_sin)" }
 ; AMDLIBM:      attributes #[[SINCOS]] = { "vector-function-abi-variant"=
-; AMDLIBM-SAME:   "_ZGV_LLVM_N4vl8l8_sincos(amd_vrd4_sincos),
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2vl8l8_sincos(amd_vrd2_sincos),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4vl8l8_sincos(amd_vrd4_sincos),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8vl8l8_sincos(amd_vrd8_sincos)" }
 ; AMDLIBM:      attributes #[[SINCOSF]] = { "vector-function-abi-variant"=
 ; AMDLIBM-SAME:   "_ZGV_LLVM_N4vl4l4_sincosf(amd_vrs4_sincosf),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8vl4l4_sincosf(amd_vrs8_sincosf),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N16vl4l4_sincosf(amd_vrs16_sincosf)" }
+; AMDLIBM:      attributes #[[ERFINV]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_erfinv(amd_vrd2_erfinv),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_erfinv(amd_vrd4_erfinv),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_erfinv(amd_vrd8_erfinv)" }
+; AMDLIBM:      attributes #[[ERFCINV]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_erfcinv(amd_vrd2_erfcinv),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_erfcinv(amd_vrd4_erfcinv),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_erfcinv(amd_vrd8_erfcinv)" }
+; AMDLIBM:      attributes #[[CDFNORMINV]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_cdfnorminv(amd_vrd2_cdfnorminv),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_cdfnorminv(amd_vrd4_cdfnorminv),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_cdfnorminv(amd_vrd8_cdfnorminv)" }
+; AMDLIBM:      attributes #[[ACOS]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_acos(amd_vrd2_acos),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_acos(amd_vrd4_acos),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_acos(amd_vrd8_acos)" }
+; AMDLIBM:      attributes #[[TANH]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_tanh(amd_vrd2_tanh),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_tanh(amd_vrd4_tanh),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_tanh(amd_vrd8_tanh)" }
+; AMDLIBM:      attributes #[[ATAN2]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2vv_atan2(amd_vrd2_atan2),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4vv_atan2(amd_vrd4_atan2),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8vv_atan2(amd_vrd8_atan2)" }
+; AMDLIBM:      attributes #[[COSH]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_cosh(amd_vrd2_cosh),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_cosh(amd_vrd4_cosh),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_cosh(amd_vrd8_cosh)" }
+; AMDLIBM:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N4v_coshf(amd_vrs4_coshf),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_coshf(amd_vrs8_coshf),
+; AMDLIBM-SAME:   _ZGV_LLVM_N16v_coshf(amd_vrs16_coshf)" }
+; AMDLIBM:      attributes #[[EXP10]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N2v_exp10(amd_vrd2_exp10),
+; AMDLIBM-SAME:   _ZGV_LLVM_N4v_exp10(amd_vrd4_exp10),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_exp10(amd_vrd8_exp10)" }
+; AMDLIBM:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; AMDLIBM-SAME:   "_ZGV_LLVM_N4v_exp10f(amd_vrs4_exp10f),
+; AMDLIBM-SAME:   _ZGV_LLVM_N8v_exp10f(amd_vrs8_exp10f),
+; AMDLIBM-SAME:   _ZGV_LLVM_N16v_exp10f(amd_vrs16_exp10f)" }
 ; AMDLIBM:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; AMDLIBM-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(amd_vrs4_log10f),
 ; AMDLIBM-SAME:   _ZGV_LLVM_N8v_llvm.log10.f32(amd_vrs8_log10f),
@@ -260,11 +602,54 @@ attributes #0 = { nounwind readnone }
 
 ; MASSV:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; MASSV-SAME:   "_ZGV_LLVM_N2v_sin(__sind2)" }
+; MASSV:      attributes #[[ACOS]] = { "vector-function-abi-variant"=
+; MASSV-SAME:   "_ZGV_LLVM_N2v_acos(__acosd2)" }
+; MASSV:      attributes #[[TANH]] = { "vector-function-abi-variant"=
+; MASSV-SAME:   "_ZGV_LLVM_N2v_tanh(__tanhd2)" }
+; MASSV:      attributes #[[ATAN2]] = { "vector-function-abi-variant"=
+; MASSV-SAME:   "_ZGV_LLVM_N2vv_atan2(__atan2d2)" }
+; MASSV:      attributes #[[COSH]] = { "vector-function-abi-variant"=
+; MASSV-SAME:   "_ZGV_LLVM_N2v_cosh(__coshd2)" }
+; MASSV:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; MASSV-SAME:   "_ZGV_LLVM_N4v_coshf(__coshf4)" }
 ; MASSV:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; MASSV-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(__log10f4)" }
 
+; ACCELERATE:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; ACCELERATE-SAME:   "_ZGV_LLVM_N4v_coshf(vcoshf)" }
 ; ACCELERATE:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ACCELERATE-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(vlog10f)" }
+
+; LIBMVEC-AARCH64:      attributes #[[SIN]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVnN2v_sin),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_sin(_ZGVsMxv_sin)" }
+; LIBMVEC-AARCH64:      attributes #[[ACOS]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_acos(_ZGVnN2v_acos),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_acos(_ZGVsMxv_acos)" }
+; LIBMVEC-AARCH64:      attributes #[[TANH]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_tanh(_ZGVnN2v_tanh),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_tanh(_ZGVsMxv_tanh)" }
+; LIBMVEC-AARCH64:      attributes #[[ATAN2]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2vv_atan2(_ZGVnN2vv_atan2),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxvv_atan2(_ZGVsMxvv_atan2)" }
+; LIBMVEC-AARCH64:      attributes #[[COSH]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_cosh(_ZGVnN2v_cosh),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_cosh(_ZGVsMxv_cosh)" }
+; LIBMVEC-AARCH64:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_coshf(_ZGVnN2v_coshf),
+; LIBMVEC-AARCH64-SAME:   _ZGV_LLVM_N4v_coshf(_ZGVnN4v_coshf),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_coshf(_ZGVsMxv_coshf)" }
+; LIBMVEC-AARCH64:      attributes #[[EXP10]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_exp10(_ZGVnN2v_exp10),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_exp10(_ZGVsMxv_exp10)" }
+; LIBMVEC-AARCH64:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_exp10f(_ZGVnN2v_exp10f),
+; LIBMVEC-AARCH64-SAME:   _ZGV_LLVM_N4v_exp10f(_ZGVnN4v_exp10f),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_exp10f(_ZGVsMxv_exp10f)" }
+; LIBMVEC-AARCH64:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
+; LIBMVEC-AARCH64-SAME:   "_ZGV_LLVM_N2v_llvm.log10.f32(_ZGVnN2v_log10f),
+; LIBMVEC-AARCH64-SAME:   _ZGV_LLVM_N4v_llvm.log10.f32(_ZGVnN4v_log10f),
+; LIBMVEC-AARCH64-SAME:   _ZGVsMxv_llvm.log10.f32(_ZGVsMxv_log10f)" }
 
 ; LIBMVEC-X86:      attributes #[[SIN]] = { "vector-function-abi-variant"=
 ; LIBMVEC-X86-SAME:   "_ZGV_LLVM_N2v_sin(_ZGVbN2v_sin),
@@ -291,6 +676,27 @@ attributes #0 = { nounwind readnone }
 ; SLEEFGNUABI:      attributes #[[SINCOSPIF]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N4vl4l4_sincospif(_ZGVnN4vl4l4_sincospif),
 ; SLEEFGNUABI-SAME:   _ZGVsNxvl4l4_sincospif(_ZGVsNxvl4l4_sincospif)" }
+; SLEEFGNUABI:      attributes #[[ACOS]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2v_acos(_ZGVnN2v_acos),
+; SLEEFGNUABI-SAME:   _ZGVsMxv_acos(_ZGVsMxv_acos)" }
+; SLEEFGNUABI:      attributes #[[TANH]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2v_tanh(_ZGVnN2v_tanh),
+; SLEEFGNUABI-SAME:   _ZGVsMxv_tanh(_ZGVsMxv_tanh)" }
+; SLEEFGNUABI:      attributes #[[ATAN2]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2vv_atan2(_ZGVnN2vv_atan2),
+; SLEEFGNUABI-SAME:   _ZGVsMxvv_atan2(_ZGVsMxvv_atan2)" }
+; SLEEFGNUABI:      attributes #[[COSH]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2v_cosh(_ZGVnN2v_cosh),
+; SLEEFGNUABI-SAME:   _ZGVsMxv_cosh(_ZGVsMxv_cosh)" }
+; SLEEFGNUABI:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N4v_coshf(_ZGVnN4v_coshf),
+; SLEEFGNUABI-SAME:   _ZGVsMxv_coshf(_ZGVsMxv_coshf)" }
+; SLEEFGNUABI:      attributes #[[EXP10]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N2v_exp10(_ZGVnN2v_exp10),
+; SLEEFGNUABI-SAME:   _ZGVsMxv_exp10(_ZGVsMxv_exp10)" }
+; SLEEFGNUABI:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N4v_exp10f(_ZGVnN4v_exp10f),
+; SLEEFGNUABI-SAME:   _ZGVsMxv_exp10f(_ZGVsMxv_exp10f)" }
 ; SLEEFGNUABI:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; SLEEFGNUABI-SAME:   "_ZGV_LLVM_N4v_llvm.log10.f32(_ZGVnN4v_log10f),
 ; SLEEFGNUABI-SAME:   _ZGVsMxv_llvm.log10.f32(_ZGVsMxv_log10f)" }
@@ -321,6 +727,27 @@ attributes #0 = { nounwind readnone }
 ; ARMPL:      attributes #[[SINCOSPIF]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4vl4l4_sincospif(armpl_vsincospiq_f32),
 ; ARMPL-SAME:    _ZGVsMxvl4l4_sincospif(armpl_svsincospi_f32_x)" }
+; ARMPL:      attributes #[[ACOS]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N2v_acos(armpl_vacosq_f64),
+; ARMPL-SAME:    _ZGVsMxv_acos(armpl_svacos_f64_x)" }
+; ARMPL:      attributes #[[TANH]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N2v_tanh(armpl_vtanhq_f64),
+; ARMPL-SAME:    _ZGVsMxv_tanh(armpl_svtanh_f64_x)" }
+; ARMPL:      attributes #[[ATAN2]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N2vv_atan2(armpl_vatan2q_f64),
+; ARMPL-SAME:    _ZGVsMxvv_atan2(armpl_svatan2_f64_x)" }
+; ARMPL:      attributes #[[COSH]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N2v_cosh(armpl_vcoshq_f64),
+; ARMPL-SAME:    _ZGVsMxv_cosh(armpl_svcosh_f64_x)" }
+; ARMPL:      attributes #[[COSHF]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N4v_coshf(armpl_vcoshq_f32),
+; ARMPL-SAME:    _ZGVsMxv_coshf(armpl_svcosh_f32_x)" }
+; ARMPL:      attributes #[[EXP10]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N2v_exp10(armpl_vexp10q_f64),
+; ARMPL-SAME:    _ZGVsMxv_exp10(armpl_svexp10_f64_x)" }
+; ARMPL:      attributes #[[EXP10F]] = { "vector-function-abi-variant"=
+; ARMPL-SAME:    "_ZGV_LLVM_N4v_exp10f(armpl_vexp10q_f32),
+; ARMPL-SAME:    _ZGVsMxv_exp10f(armpl_svexp10_f32_x)" }
 ; ARMPL:      attributes #[[LOG10]] = { "vector-function-abi-variant"=
 ; ARMPL-SAME:    "_ZGV_LLVM_N4v_llvm.log10.f32(armpl_vlog10q_f32),
 ; ARMPL-SAME:    _ZGVsMxv_llvm.log10.f32(armpl_svlog10_f32_x)" }

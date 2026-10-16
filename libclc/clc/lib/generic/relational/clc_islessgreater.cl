@@ -1,5 +1,13 @@
-#include <clc/internal/clc.h>
-#include <clc/relational/relational.h>
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "clc/internal/clc.h"
+#include "clc/relational/relational.h"
 
 #define _CLC_RELATIONAL_OP(X, Y) ((X) < (Y)) || ((X) > (Y))
 

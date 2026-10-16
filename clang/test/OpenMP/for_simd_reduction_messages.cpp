@@ -164,7 +164,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel
-#pragma omp for simd reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+#pragma omp for simd reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}} omp45-error 2 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp for simd'}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel
@@ -236,6 +236,7 @@ T tmain(T argc) {
 #pragma omp for simd reduction(max : j) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   for (int i = 0; i < 10; ++i)
     foo();
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)  // expected-note 2 {{defined as private}}
 #pragma omp for simd reduction(+ : fl) // expected-error 2 {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
@@ -244,6 +245,7 @@ T tmain(T argc) {
 #pragma omp for simd reduction(+ : fl)      // expected-error 2 {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
+#endif
 
   return T();
 }
@@ -389,6 +391,7 @@ int main(int argc, char **argv) {
 #pragma omp for simd reduction(max : j) // expected-error {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   for (int i = 0; i < 10; ++i)
     foo();
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)  // expected-note {{defined as private}}
 #pragma omp for simd reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
@@ -397,6 +400,7 @@ int main(int argc, char **argv) {
 #pragma omp for simd reduction(+ : fl)      // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
+#endif
   static int m;
 #pragma omp for simd reduction(+ : m)
   for (int i = 0; i < 10; ++i)

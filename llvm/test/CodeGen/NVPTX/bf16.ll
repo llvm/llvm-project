@@ -26,8 +26,8 @@ define void @test_bitcast_from_bfloat(ptr addrspace(1) %in, ptr addrspace(1) %ou
 
 define void @test_bitcast_to_bfloat(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; CHECK-LABEL: @test_bitcast_to_bfloat
-; CHECK: ld.global.u16 [[TMP:%rs[0-9]+]], [{{%rd[0-9]+}}]
-; CHECK: st.global.u16 [{{%rd[0-9]+}}], [[TMP]]
+; CHECK: ld.global.b16 [[TMP:%rs[0-9]+]], [{{%rd[0-9]+}}]
+; CHECK: st.global.b16 [{{%rd[0-9]+}}], [[TMP]]
   %val = load i16, ptr addrspace(1) %in
   %val_fp = bitcast i16 %val to bfloat
   store bfloat %val_fp, ptr addrspace(1) %out

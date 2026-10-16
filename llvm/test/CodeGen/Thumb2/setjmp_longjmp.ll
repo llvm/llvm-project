@@ -58,8 +58,8 @@ define void @double_foobar() {
 ; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    movs r0, #2
 ; CHECK-NEXT:    str r0, [r1]
-; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    add r1, sp, #4
 ; CHECK-NEXT:    ldr r0, [r1, #8]
 ; CHECK-NEXT:    mov sp, r0
 ; CHECK-NEXT:    ldr r0, [r1, #4]

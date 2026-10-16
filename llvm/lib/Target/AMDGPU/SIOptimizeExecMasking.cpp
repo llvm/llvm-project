@@ -8,8 +8,8 @@
 
 #include "SIOptimizeExecMasking.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
@@ -25,12 +25,20 @@ using namespace llvm;
 namespace {
 
 class SIOptimizeExecMasking {
-  MachineFunction *MF = nullptr;
-  const GCNSubtarget *ST = nullptr;
-  const SIRegisterInfo *TRI = nullptr;
-  const SIInstrInfo *TII = nullptr;
-  const MachineRegisterInfo *MRI = nullptr;
-  MCRegister Exec;
+public:
+  SIOptimizeExecMasking(MachineFunction *MF)
+      : MF(MF), ST(&MF->getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
+        TRI(&TII->getRegisterInfo()), MRI(&MF->getRegInfo()),
+        LMC(AMDGPU::LaneMaskConstants::get(*ST)) {}
+  bool run();
+
+private:
+  MachineFunction *MF;
+  const GCNSubtarget *ST;
+  const SIInstrInfo *TII;
+  const SIRegisterInfo *TRI;
+  const MachineRegisterInfo *MRI;
+  const AMDGPU::LaneMaskConstants &LMC;
 
   DenseMap<MachineInstr *, MachineInstr *> SaveExecVCmpMapping;
   SmallVector<std::pair<MachineInstr *, MachineInstr *>, 1> OrXors;
@@ -55,24 +63,22 @@ class SIOptimizeExecMasking {
       SmallVectorImpl<MachineOperand *> *KillFlagCandidates = nullptr,
       unsigned MaxInstructions = 20) const;
   bool optimizeExecSequence();
+  bool blocksAndN2Sink(const MachineInstr &MI, Register Dst) const;
+  bool optimizeAndN2WrExecSequence(MachineInstr &CopyToExecInst,
+                                   Register Dst) const;
   void tryRecordVCmpxAndSaveexecSequence(MachineInstr &MI);
   bool optimizeVCMPSaveExecSequence(MachineInstr &SaveExecInstr,
-                                    MachineInstr &VCmp, MCRegister Exec) const;
+                                    MachineInstr &VCmp) const;
 
   void tryRecordOrSaveexecXorSequence(MachineInstr &MI);
   bool optimizeOrSaveexecXorSequences();
-
-public:
-  bool run(MachineFunction &MF);
 };
 
 class SIOptimizeExecMaskingLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -91,9 +97,9 @@ public:
 PreservedAnalyses
 SIOptimizeExecMaskingPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &) {
-  SIOptimizeExecMasking Impl;
+  SIOptimizeExecMasking Impl(&MF);
 
-  if (!Impl.run(MF))
+  if (!Impl.run())
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -120,7 +126,7 @@ Register SIOptimizeExecMasking::isCopyFromExec(const MachineInstr &MI) const {
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B32_term: {
     const MachineOperand &Src = MI.getOperand(1);
-    if (Src.isReg() && Src.getReg() == Exec)
+    if (Src.isReg() && Src.getReg() == LMC.ExecReg)
       return MI.getOperand(0).getReg();
   }
   }
@@ -135,7 +141,7 @@ Register SIOptimizeExecMasking::isCopyToExec(const MachineInstr &MI) const {
   case AMDGPU::S_MOV_B64:
   case AMDGPU::S_MOV_B32: {
     const MachineOperand &Dst = MI.getOperand(0);
-    if (Dst.isReg() && Dst.getReg() == Exec && MI.getOperand(1).isReg())
+    if (Dst.isReg() && Dst.getReg() == LMC.ExecReg && MI.getOperand(1).isReg())
       return MI.getOperand(1).getReg();
     break;
   }
@@ -289,6 +295,12 @@ bool SIOptimizeExecMasking::removeTerminatorBit(MachineInstr &MI) const {
     MI.setDesc(TII->get(AMDGPU::S_AND_B32));
     return true;
   }
+  case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
+    MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32));
+    return true;
+  case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
+    MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
+    return true;
   default:
     return false;
   }
@@ -412,7 +424,8 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
     ++A;
 
   for (; A != Stop.getParent()->rend() && A != Stop; ++A) {
-    LR.stepBackward(*A);
+    if (!A->isDebugInstr())
+      LR.stepBackward(*A);
   }
 
   return !LR.available(Reg) || MRI->isReserved(Reg);
@@ -463,7 +476,7 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     auto *CopyToExecInst = &*I;
     auto CopyFromExecInst = findExecCopy(MBB, I);
     if (CopyFromExecInst == E) {
-      auto PrepareExecInst = std::next(I);
+      auto PrepareExecInst = next_nodbg(I, E);
       if (PrepareExecInst == E)
         continue;
       // Fold exec = COPY (S_AND_B64 reg, exec) -> exec = S_AND_B64 reg, exec
@@ -471,11 +484,13 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
           isLogicalOpOnExec(*PrepareExecInst) == CopyToExec) {
         LLVM_DEBUG(dbgs() << "Fold exec copy: " << *PrepareExecInst);
 
-        PrepareExecInst->getOperand(0).setReg(Exec);
+        PrepareExecInst->getOperand(0).setReg(LMC.ExecReg);
 
         LLVM_DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
 
         CopyToExecInst->eraseFromParent();
+        Changed = true;
+      } else if (optimizeAndN2WrExecSequence(*CopyToExecInst, CopyToExec)) {
         Changed = true;
       }
 
@@ -496,7 +511,10 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
              J = std::next(CopyFromExecInst->getIterator()),
              JE = I->getIterator();
          J != JE; ++J) {
-      if (SaveExecInst && J->readsRegister(Exec, TRI)) {
+      if (J->isDebugInstr())
+        continue;
+
+      if (SaveExecInst && J->readsRegister(LMC.ExecReg, TRI)) {
         LLVM_DEBUG(dbgs() << "exec read prevents saveexec: " << *J << '\n');
         // Make sure this is inserted after any VALU ops that may have been
         // scheduled in between.
@@ -580,8 +598,8 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     CopyToExecInst->eraseFromParent();
 
     for (MachineInstr *OtherInst : OtherUseInsts) {
-      OtherInst->substituteRegister(CopyToExec, Exec, AMDGPU::NoSubRegister,
-                                    *TRI);
+      OtherInst->substituteRegister(CopyToExec, LMC.ExecReg,
+                                    AMDGPU::NoSubRegister, *TRI);
     }
 
     Changed = true;
@@ -590,10 +608,88 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
   return Changed;
 }
 
+bool SIOptimizeExecMasking::blocksAndN2Sink(const MachineInstr &MI,
+                                            Register Dst) const {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    // Any access to Dst would see a stale value once the def sinks past it,
+    // and a use of SCC would see the s_andn2 result.
+    if (TRI->regsOverlap(MO.getReg(), Dst))
+      return true;
+    if (MO.isUse() && MO.getReg() == AMDGPU::SCC)
+      return true;
+  }
+  return false;
+}
+
+// Fold
+//
+//     sdst = S_ANDN2_B32 ssrc, exec
+//     exec = COPY sdst
+// =>
+//     sdst = S_ANDN2_WREXEC_B32 ssrc
+//
+// The waterfall loop emits the two operations separately so that spill code
+// for sdst can be inserted before exec is narrowed.
+bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
+    MachineInstr &CopyToExecInst, Register Dst) const {
+  if (!ST->hasNoSdstCMPX() || TII->pseudoToMCOpcode(LMC.AndN2WrExecOpc) == -1)
+    return false;
+
+  MachineBasicBlock &MBB = *CopyToExecInst.getParent();
+
+  // Keep the fused instruction ahead of any trailing debug instructions, so
+  // DBG_VALUEs of Dst stay after its def.
+  MachineBasicBlock::iterator InsertPt = CopyToExecInst.getIterator();
+  if (InsertPt != MBB.begin())
+    InsertPt = std::next(prev_nodbg(InsertPt, MBB.begin()));
+
+  // Scan back for the s_andn2 computing the new exec value. The scheduler may
+  // have moved it away from the exec write, so allow instructions in between
+  // as long as sinking the s_andn2 past them is safe.
+  auto IsAndN2Def = [&](const MachineInstr &MI) {
+    return MI.getOpcode() == LMC.AndN2Opc && MI.getOperand(0).getReg() == Dst;
+  };
+  MachineInstr *AndN2Inst = findInstrBackwards(
+      CopyToExecInst,
+      [&](MachineInstr *Check) {
+        return IsAndN2Def(*Check) || blocksAndN2Sink(*Check, Dst);
+      },
+      /*NonModifiableRegs=*/{});
+  if (!AndN2Inst || !IsAndN2Def(*AndN2Inst))
+    return false;
+
+  const MachineOperand &Src = AndN2Inst->getOperand(1);
+  const MachineOperand &Mask = AndN2Inst->getOperand(2);
+  if (!Src.isReg() || !Mask.isReg() || Mask.getReg() != LMC.ExecReg)
+    return false;
+
+  for (MachineInstr &MI : make_range(
+           std::next(MachineBasicBlock::iterator(AndN2Inst)), InsertPt)) {
+    if (MI.modifiesRegister(Src.getReg(), TRI))
+      return false;
+  }
+
+  // The fused form also clobbers SCC, at the point the s_andn2 is moved to.
+  if (isRegisterInUseAfter(CopyToExecInst, AMDGPU::SCC))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Fold exec write: " << *AndN2Inst);
+
+  BuildMI(MBB, InsertPt, AndN2Inst->getDebugLoc(), TII->get(LMC.AndN2WrExecOpc),
+          Dst)
+      .addReg(Src.getReg());
+
+  AndN2Inst->eraseFromParent();
+  CopyToExecInst.eraseFromParent();
+  return true;
+}
+
 // Inserts the optimized s_mov_b32 / v_cmpx sequence based on the
 // operands extracted from a v_cmp ..., s_and_saveexec pattern.
 bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
-    MachineInstr &SaveExecInstr, MachineInstr &VCmp, MCRegister Exec) const {
+    MachineInstr &SaveExecInstr, MachineInstr &VCmp) const {
   const int NewOpcode = AMDGPU::getVCMPXOpFromVCMP(VCmp.getOpcode());
 
   if (NewOpcode == -1)
@@ -610,7 +706,7 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
     unsigned MovOpcode = IsSGPR32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     BuildMI(*SaveExecInstr.getParent(), InsertPosIt,
             SaveExecInstr.getDebugLoc(), TII->get(MovOpcode), MoveDest)
-        .addReg(Exec);
+        .addReg(LMC.ExecReg);
   }
 
   // Omit dst as V_CMPX is implicitly writing to EXEC.
@@ -619,7 +715,7 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
                          VCmp.getDebugLoc(), TII->get(NewOpcode));
 
   auto TryAddImmediateValueFromNamedOperand =
-      [&](unsigned OperandName) -> void {
+      [&](AMDGPU::OpName OperandName) -> void {
     if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
       Builder.addImm(Mod->getImm());
   };
@@ -631,6 +727,8 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   Builder.add(*Src1);
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
+
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::op_sel);
 
   // The kill flags may no longer be correct.
   if (Src0->isReg())
@@ -659,10 +757,7 @@ void SIOptimizeExecMasking::tryRecordVCmpxAndSaveexecSequence(
   if (!ST->hasGFX10_3Insts())
     return;
 
-  const unsigned AndSaveExecOpcode =
-      ST->isWave32() ? AMDGPU::S_AND_SAVEEXEC_B32 : AMDGPU::S_AND_SAVEEXEC_B64;
-
-  if (MI.getOpcode() != AndSaveExecOpcode)
+  if (MI.getOpcode() != LMC.AndSaveExecOpc)
     return;
 
   Register SaveExecDest = MI.getOperand(0).getReg();
@@ -688,7 +783,7 @@ void SIOptimizeExecMasking::tryRecordVCmpxAndSaveexecSequence(
         return AMDGPU::getVCMPXOpFromVCMP(Check->getOpcode()) != -1 &&
                Check->modifiesRegister(SaveExecSrc0->getReg(), TRI);
       },
-      {Exec, SaveExecSrc0->getReg()});
+      {LMC.ExecReg, SaveExecSrc0->getReg()});
 
   if (!VCmp)
     return;
@@ -746,32 +841,29 @@ void SIOptimizeExecMasking::tryRecordVCmpxAndSaveexecSequence(
 // to be replaced with
 // s_andn2_saveexec s_o, s_i.
 void SIOptimizeExecMasking::tryRecordOrSaveexecXorSequence(MachineInstr &MI) {
-  const unsigned XorOpcode =
-      ST->isWave32() ? AMDGPU::S_XOR_B32 : AMDGPU::S_XOR_B64;
-
-  if (MI.getOpcode() == XorOpcode && &MI != &MI.getParent()->front()) {
+  if (MI.getOpcode() == LMC.XorOpc && &MI != &MI.getParent()->front()) {
     const MachineOperand &XorDst = MI.getOperand(0);
     const MachineOperand &XorSrc0 = MI.getOperand(1);
     const MachineOperand &XorSrc1 = MI.getOperand(2);
 
-    if (XorDst.isReg() && XorDst.getReg() == Exec && XorSrc0.isReg() &&
+    if (XorDst.isReg() && XorDst.getReg() == LMC.ExecReg && XorSrc0.isReg() &&
         XorSrc1.isReg() &&
-        (XorSrc0.getReg() == Exec || XorSrc1.getReg() == Exec)) {
-      const unsigned OrSaveexecOpcode = ST->isWave32()
-                                            ? AMDGPU::S_OR_SAVEEXEC_B32
-                                            : AMDGPU::S_OR_SAVEEXEC_B64;
+        (XorSrc0.getReg() == LMC.ExecReg || XorSrc1.getReg() == LMC.ExecReg)) {
 
-      // Peek at the previous instruction and check if this is a relevant
-      // s_or_saveexec instruction.
-      MachineInstr &PossibleOrSaveexec = *MI.getPrevNode();
-      if (PossibleOrSaveexec.getOpcode() != OrSaveexecOpcode)
+      // Peek at the previous non-debug instruction and check if this is a
+      // relevant s_or_saveexec instruction.
+      auto It = prev_nodbg(MI.getIterator(), MI.getParent()->instr_begin());
+      MachineInstr &PossibleOrSaveexec = *It;
+      if (PossibleOrSaveexec.getOpcode() != LMC.OrSaveExecOpc)
         return;
 
       const MachineOperand &OrDst = PossibleOrSaveexec.getOperand(0);
       const MachineOperand &OrSrc0 = PossibleOrSaveexec.getOperand(1);
       if (OrDst.isReg() && OrSrc0.isReg()) {
-        if ((XorSrc0.getReg() == Exec && XorSrc1.getReg() == OrDst.getReg()) ||
-            (XorSrc0.getReg() == OrDst.getReg() && XorSrc1.getReg() == Exec)) {
+        if ((XorSrc0.getReg() == LMC.ExecReg &&
+             XorSrc1.getReg() == OrDst.getReg()) ||
+            (XorSrc0.getReg() == OrDst.getReg() &&
+             XorSrc1.getReg() == LMC.ExecReg)) {
           OrXors.emplace_back(&PossibleOrSaveexec, &MI);
         }
       }
@@ -785,15 +877,13 @@ bool SIOptimizeExecMasking::optimizeOrSaveexecXorSequences() {
   }
 
   bool Changed = false;
-  const unsigned Andn2Opcode = ST->isWave32() ? AMDGPU::S_ANDN2_SAVEEXEC_B32
-                                              : AMDGPU::S_ANDN2_SAVEEXEC_B64;
 
   for (const auto &Pair : OrXors) {
     MachineInstr *Or = nullptr;
     MachineInstr *Xor = nullptr;
     std::tie(Or, Xor) = Pair;
     BuildMI(*Or->getParent(), Or->getIterator(), Or->getDebugLoc(),
-            TII->get(Andn2Opcode), Or->getOperand(0).getReg())
+            TII->get(LMC.AndN2SaveExecOpc), Or->getOperand(0).getReg())
         .addReg(Or->getOperand(1).getReg());
 
     Or->eraseFromParent();
@@ -809,24 +899,17 @@ bool SIOptimizeExecMaskingLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  return SIOptimizeExecMasking().run(MF);
+  return SIOptimizeExecMasking(&MF).run();
 }
 
-bool SIOptimizeExecMasking::run(MachineFunction &MF) {
-  this->MF = &MF;
-  ST = &MF.getSubtarget<GCNSubtarget>();
-  TRI = ST->getRegisterInfo();
-  TII = ST->getInstrInfo();
-  MRI = &MF.getRegInfo();
-  Exec = TRI->getExec();
-
+bool SIOptimizeExecMasking::run() {
   bool Changed = optimizeExecSequence();
 
   OrXors.clear();
   SaveExecVCmpMapping.clear();
   KillFlagCandidates.clear();
   static unsigned SearchWindow = 10;
-  for (MachineBasicBlock &MBB : MF) {
+  for (MachineBasicBlock &MBB : *MF) {
     unsigned SearchCount = 0;
 
     for (auto &MI : llvm::reverse(MBB)) {
@@ -840,7 +923,7 @@ bool SIOptimizeExecMasking::run(MachineFunction &MF) {
       tryRecordOrSaveexecXorSequence(MI);
       tryRecordVCmpxAndSaveexecSequence(MI);
 
-      if (MI.modifiesRegister(Exec, TRI)) {
+      if (MI.modifiesRegister(LMC.ExecReg, TRI)) {
         break;
       }
 
@@ -853,7 +936,7 @@ bool SIOptimizeExecMasking::run(MachineFunction &MF) {
     MachineInstr *SaveExecInstr = Entry.getFirst();
     MachineInstr *VCmpInstr = Entry.getSecond();
 
-    Changed |= optimizeVCMPSaveExecSequence(*SaveExecInstr, *VCmpInstr, Exec);
+    Changed |= optimizeVCMPSaveExecSequence(*SaveExecInstr, *VCmpInstr);
   }
 
   return Changed;

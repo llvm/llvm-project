@@ -5,6 +5,12 @@
 ; RUN: llc -O3 -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -O3 -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s  --check-prefix=CHECK-WACC
+; RUN: llc -O3 -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE-WACC
 
 declare <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8>, <16 x i8>)
 declare <512 x i1> @llvm.ppc.mma.xxsetaccz()
@@ -64,6 +70,60 @@ define void @testPHI1(ptr %Dst, ptr %Src, i32 signext %Len) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-WACC-LABEL: testPHI1:
+; CHECK-WACC:       # %bb.0: # %entry
+; CHECK-WACC-NEXT:    cmpwi r5, 3
+; CHECK-WACC-NEXT:    dmxxsetaccz wacc0
+; CHECK-WACC-NEXT:    blt cr0, .LBB0_3
+; CHECK-WACC-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-WACC-NEXT:    clrldi r5, r5, 32
+; CHECK-WACC-NEXT:    addi r5, r5, -2
+; CHECK-WACC-NEXT:    lxv v2, 0(r4)
+; CHECK-WACC-NEXT:    lxv v3, 16(r4)
+; CHECK-WACC-NEXT:    mtctr r5
+; CHECK-WACC-NEXT:    addi r4, r4, 32
+; CHECK-WACC-NEXT:    .p2align 4
+; CHECK-WACC-NEXT:  .LBB0_2: # %for.body
+; CHECK-WACC-NEXT:    #
+; CHECK-WACC-NEXT:    lxv vs0, 0(r4)
+; CHECK-WACC-NEXT:    addi r4, r4, 16
+; CHECK-WACC-NEXT:    xvf64gerpp wacc0, vsp34, vs0
+; CHECK-WACC-NEXT:    bdnz .LBB0_2
+; CHECK-WACC-NEXT:  .LBB0_3: # %for.cond.cleanup
+; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-WACC-NEXT:    stxv v5, 0(r3)
+; CHECK-WACC-NEXT:    stxv v4, 16(r3)
+; CHECK-WACC-NEXT:    stxv v3, 32(r3)
+; CHECK-WACC-NEXT:    stxv v2, 48(r3)
+; CHECK-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: testPHI1:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    cmpwi r5, 3
+; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0
+; CHECK-BE-WACC-NEXT:    blt cr0, .LBB0_3
+; CHECK-BE-WACC-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-BE-WACC-NEXT:    clrldi r5, r5, 32
+; CHECK-BE-WACC-NEXT:    addi r5, r5, -2
+; CHECK-BE-WACC-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-WACC-NEXT:    lxv v3, 16(r4)
+; CHECK-BE-WACC-NEXT:    mtctr r5
+; CHECK-BE-WACC-NEXT:    addi r4, r4, 32
+; CHECK-BE-WACC-NEXT:    .p2align 4
+; CHECK-BE-WACC-NEXT:  .LBB0_2: # %for.body
+; CHECK-BE-WACC-NEXT:    #
+; CHECK-BE-WACC-NEXT:    lxv vs0, 0(r4)
+; CHECK-BE-WACC-NEXT:    addi r4, r4, 16
+; CHECK-BE-WACC-NEXT:    xvf64gerpp wacc0, vsp34, vs0
+; CHECK-BE-WACC-NEXT:    bdnz .LBB0_2
+; CHECK-BE-WACC-NEXT:  .LBB0_3: # %for.cond.cleanup
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r3)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r3)
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r3)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %Src, align 16
   %arrayidx1 = getelementptr inbounds <16 x i8>, ptr %Src, i64 1
@@ -161,6 +221,62 @@ define dso_local void @testPHI2(ptr %Dst, ptr %Src, i32 signext %Len) {
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-WACC-LABEL: testPHI2:
+; CHECK-WACC:       # %bb.0: # %entry
+; CHECK-WACC-NEXT:    lxv v2, 0(r4)
+; CHECK-WACC-NEXT:    lxv v3, 16(r4)
+; CHECK-WACC-NEXT:    lxv vs0, 32(r4)
+; CHECK-WACC-NEXT:    cmpwi r5, 4
+; CHECK-WACC-NEXT:    xvf64ger wacc0, vsp34, vs0
+; CHECK-WACC-NEXT:    blt cr0, .LBB1_3
+; CHECK-WACC-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-WACC-NEXT:    clrldi r5, r5, 32
+; CHECK-WACC-NEXT:    addi r5, r5, -3
+; CHECK-WACC-NEXT:    mtctr r5
+; CHECK-WACC-NEXT:    addi r4, r4, 48
+; CHECK-WACC-NEXT:    .p2align 4
+; CHECK-WACC-NEXT:  .LBB1_2: # %for.body
+; CHECK-WACC-NEXT:    #
+; CHECK-WACC-NEXT:    lxv vs0, 0(r4)
+; CHECK-WACC-NEXT:    addi r4, r4, 16
+; CHECK-WACC-NEXT:    xvf64gerpp wacc0, vsp34, vs0
+; CHECK-WACC-NEXT:    bdnz .LBB1_2
+; CHECK-WACC-NEXT:  .LBB1_3: # %for.cond.cleanup
+; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-WACC-NEXT:    stxv v5, 0(r3)
+; CHECK-WACC-NEXT:    stxv v4, 16(r3)
+; CHECK-WACC-NEXT:    stxv v3, 32(r3)
+; CHECK-WACC-NEXT:    stxv v2, 48(r3)
+; CHECK-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: testPHI2:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-WACC-NEXT:    lxv v3, 16(r4)
+; CHECK-BE-WACC-NEXT:    lxv vs0, 32(r4)
+; CHECK-BE-WACC-NEXT:    cmpwi r5, 4
+; CHECK-BE-WACC-NEXT:    xvf64ger wacc0, vsp34, vs0
+; CHECK-BE-WACC-NEXT:    blt cr0, .LBB1_3
+; CHECK-BE-WACC-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-BE-WACC-NEXT:    clrldi r5, r5, 32
+; CHECK-BE-WACC-NEXT:    addi r5, r5, -3
+; CHECK-BE-WACC-NEXT:    mtctr r5
+; CHECK-BE-WACC-NEXT:    addi r4, r4, 48
+; CHECK-BE-WACC-NEXT:    .p2align 4
+; CHECK-BE-WACC-NEXT:  .LBB1_2: # %for.body
+; CHECK-BE-WACC-NEXT:    #
+; CHECK-BE-WACC-NEXT:    lxv vs0, 0(r4)
+; CHECK-BE-WACC-NEXT:    addi r4, r4, 16
+; CHECK-BE-WACC-NEXT:    xvf64gerpp wacc0, vsp34, vs0
+; CHECK-BE-WACC-NEXT:    bdnz .LBB1_2
+; CHECK-BE-WACC-NEXT:  .LBB1_3: # %for.cond.cleanup
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r3)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r3)
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r3)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %Src, align 16
   %arrayidx1 = getelementptr inbounds <16 x i8>, ptr %Src, i64 1
@@ -229,6 +345,28 @@ define void @testImplicitDef(ptr %ptr) {
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs3, 0(r3)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-WACC-LABEL: testImplicitDef:
+; CHECK-WACC:       # %bb.0: # %label1
+; CHECK-WACC-NEXT:    # implicit-def: $wacc0
+; CHECK-WACC-NEXT:    bc 12, 4*cr5+lt, .LBB2_2
+; CHECK-WACC-NEXT:  # %bb.1: # %label2
+; CHECK-WACC-NEXT:    xvf64gerpp wacc0, vsp34, vs0
+; CHECK-WACC-NEXT:  .LBB2_2: # %label3
+; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-WACC-NEXT:    stxv v2, 0(r3)
+; CHECK-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: testImplicitDef:
+; CHECK-BE-WACC:       # %bb.0: # %label1
+; CHECK-BE-WACC-NEXT:    # implicit-def: $wacc0
+; CHECK-BE-WACC-NEXT:    bc 12, 4*cr5+lt, .LBB2_2
+; CHECK-BE-WACC-NEXT:  # %bb.1: # %label2
+; CHECK-BE-WACC-NEXT:    xvf64gerpp wacc0, vsp34, vs0
+; CHECK-BE-WACC-NEXT:  .LBB2_2: # %label3
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 0(r3)
+; CHECK-BE-WACC-NEXT:    blr
 label1:
   br i1 undef, label %label3, label %label2
 
@@ -312,6 +450,70 @@ define dso_local signext i32 @testNestedPHI(i32 signext %cond, i32 signext %coun
 ; CHECK-BE-NEXT:    stxv vs3, 48(r5)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r5)
 ; CHECK-BE-NEXT:    blr
+;
+; CHECK-WACC-LABEL: testNestedPHI:
+; CHECK-WACC:       # %bb.0: # %entry
+; CHECK-WACC-NEXT:    cmplwi r3, 0
+; CHECK-WACC-NEXT:    beq cr0, .LBB3_2
+; CHECK-WACC-NEXT:  # %bb.1: # %if.then
+; CHECK-WACC-NEXT:    xvf32gernp wacc0, v2, v2
+; CHECK-WACC-NEXT:    cmpwi r4, 1
+; CHECK-WACC-NEXT:    bge cr0, .LBB3_3
+; CHECK-WACC-NEXT:    b .LBB3_5
+; CHECK-WACC-NEXT:  .LBB3_2:
+; CHECK-WACC-NEXT:    # implicit-def: $wacc0
+; CHECK-WACC-NEXT:    cmpwi r4, 1
+; CHECK-WACC-NEXT:    blt cr0, .LBB3_5
+; CHECK-WACC-NEXT:  .LBB3_3: # %for.body.preheader
+; CHECK-WACC-NEXT:    addi r3, r4, -1
+; CHECK-WACC-NEXT:    clrldi r3, r3, 32
+; CHECK-WACC-NEXT:    addi r3, r3, 1
+; CHECK-WACC-NEXT:    mtctr r3
+; CHECK-WACC-NEXT:    .p2align 4
+; CHECK-WACC-NEXT:  .LBB3_4: # %for.body
+; CHECK-WACC-NEXT:    #
+; CHECK-WACC-NEXT:    xvf32gernp wacc0, v2, v2
+; CHECK-WACC-NEXT:    bdnz .LBB3_4
+; CHECK-WACC-NEXT:  .LBB3_5: # %for.cond.cleanup
+; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-WACC-NEXT:    li r3, 0
+; CHECK-WACC-NEXT:    stxv v4, 48(r5)
+; CHECK-WACC-NEXT:    stxv v5, 32(r5)
+; CHECK-WACC-NEXT:    stxv v2, 16(r5)
+; CHECK-WACC-NEXT:    stxv v3, 0(r5)
+; CHECK-WACC-NEXT:    blr
+;
+; CHECK-BE-WACC-LABEL: testNestedPHI:
+; CHECK-BE-WACC:       # %bb.0: # %entry
+; CHECK-BE-WACC-NEXT:    cmplwi r3, 0
+; CHECK-BE-WACC-NEXT:    beq cr0, .LBB3_2
+; CHECK-BE-WACC-NEXT:  # %bb.1: # %if.then
+; CHECK-BE-WACC-NEXT:    xvf32gernp wacc0, v2, v2
+; CHECK-BE-WACC-NEXT:    cmpwi r4, 1
+; CHECK-BE-WACC-NEXT:    bge cr0, .LBB3_3
+; CHECK-BE-WACC-NEXT:    b .LBB3_5
+; CHECK-BE-WACC-NEXT:  .LBB3_2:
+; CHECK-BE-WACC-NEXT:    # implicit-def: $wacc0
+; CHECK-BE-WACC-NEXT:    cmpwi r4, 1
+; CHECK-BE-WACC-NEXT:    blt cr0, .LBB3_5
+; CHECK-BE-WACC-NEXT:  .LBB3_3: # %for.body.preheader
+; CHECK-BE-WACC-NEXT:    addi r3, r4, -1
+; CHECK-BE-WACC-NEXT:    clrldi r3, r3, 32
+; CHECK-BE-WACC-NEXT:    addi r3, r3, 1
+; CHECK-BE-WACC-NEXT:    mtctr r3
+; CHECK-BE-WACC-NEXT:    .p2align 4
+; CHECK-BE-WACC-NEXT:  .LBB3_4: # %for.body
+; CHECK-BE-WACC-NEXT:    #
+; CHECK-BE-WACC-NEXT:    xvf32gernp wacc0, v2, v2
+; CHECK-BE-WACC-NEXT:    bdnz .LBB3_4
+; CHECK-BE-WACC-NEXT:  .LBB3_5: # %for.cond.cleanup
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; CHECK-BE-WACC-NEXT:    li r3, 0
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r5)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r5)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r5)
+; CHECK-BE-WACC-NEXT:    stxv v2, 0(r5)
+; CHECK-BE-WACC-NEXT:    blr
 entry:
   %tobool.not = icmp eq i32 %cond, 0
   br i1 %tobool.not, label %if.end, label %if.then

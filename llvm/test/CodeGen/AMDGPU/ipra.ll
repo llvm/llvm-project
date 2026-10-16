@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -enable-ipra < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; Kernels are not called, so there is no call preserved mask.
 ; GCN-LABEL: {{^}}kernel:
@@ -33,27 +33,27 @@ define hidden void @func() #1 {
 ; GCN: ; TotalNumSgprs: 37
 ; GCN: ; NumVgprs: 9
 define amdgpu_kernel void @kernel_call() #0 {
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
-  store volatile i32 %vgpr, ptr addrspace(1) undef
+  store volatile i32 %vgpr, ptr addrspace(1) poison
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_regular_call:
-; GCN-NOT: buffer_load
-; GCN-NOT: readlane
+; GCN: v_writelane_b32 v9, s30, 0
+; GCN: v_writelane_b32 v9, s31, 1
 ; GCN: flat_load_dword v8
 ; GCN: s_swappc_b64
-; GCN-NOT: buffer_load
-; GCN-NOT: readlane
+; GCN: v_readlane_b32 s30, v9, 0
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
+; GCN: v_readlane_b32 s31, v9, 1
 
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
 define void @func_regular_call() #1 {
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
-  store volatile i32 %vgpr, ptr addrspace(1) undef
+  store volatile i32 %vgpr, ptr addrspace(1) poison
   ret void
 }
 
@@ -80,9 +80,9 @@ define void @func_tail_call() #1 {
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
 define void @func_call_tail_call() #1 {
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   tail call void @func()
-  store volatile i32 %vgpr, ptr addrspace(1) undef
+  store volatile i32 %vgpr, ptr addrspace(1) poison
   tail call void @func()
   ret void
 }

@@ -42,14 +42,12 @@ struct SimpleDiagnosticConsumer : public clang::DiagnosticConsumer {
 // for testing situations where it will only ever be used for emitting
 // diagnostics, such as being passed to `MultilibSet::select`.
 inline clang::driver::Driver diagnostic_test_driver() {
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
-      new clang::DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts =
-      new clang::DiagnosticOptions();
-  clang::DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  clang::DiagnosticOptions DiagOpts;
+  clang::DiagnosticsEngine Diags(clang::DiagnosticIDs::create(), DiagOpts,
+                                 DiagConsumer);
   return clang::driver::Driver("/bin/clang", "", Diags, "", InMemoryFileSystem);
 }
 

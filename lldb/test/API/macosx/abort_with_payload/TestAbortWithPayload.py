@@ -61,7 +61,7 @@ class TestAbortWithPayload(TestBase):
         self.assertEqual(thread, sel_thread, "Selected the original thread")
         # Make sure the stop reason is right:
         self.assertEqual(
-            thread.GetStopDescription(100),
+            thread.stop_description,
             "abort with payload or reason",
             "Description was right",
         )

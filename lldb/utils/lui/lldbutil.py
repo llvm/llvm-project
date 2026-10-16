@@ -951,7 +951,7 @@ def get_GPRs(frame):
         from lldbutil import get_GPRs
         regs = get_GPRs(frame)
         for reg in regs:
-            print "%s => %s" % (reg.GetName(), reg.GetValue())
+            print("%s => %s" % (reg.GetName(), reg.GetValue()))
         ...
     """
     return get_registers(frame, "general purpose")
@@ -965,7 +965,7 @@ def get_FPRs(frame):
         from lldbutil import get_FPRs
         regs = get_FPRs(frame)
         for reg in regs:
-            print "%s => %s" % (reg.GetName(), reg.GetValue())
+            print("%s => %s" % (reg.GetName(), reg.GetValue()))
         ...
     """
     return get_registers(frame, "floating point")
@@ -1040,8 +1040,8 @@ class ChildVisitingFormatter(BasicFormatter):
         return output.getvalue()
 
 
-class RecursiveDecentFormatter(BasicFormatter):
-    """The recursive decent formatter prints the value and the decendents.
+class RecursiveDescentFormatter(BasicFormatter):
+    """The recursive descent formatter prints the value and the descendents.
 
     The constructor takes two keyword args: indent_level, which defaults to 0,
     and indent_child, which defaults to 2.  The current indentation level is
@@ -1058,7 +1058,6 @@ class RecursiveDecentFormatter(BasicFormatter):
             output = io.StringIO()
         else:
             output = buffer
-
         BasicFormatter.format(self, value, buffer=output, indent=self.lindent)
         new_indent = self.lindent + self.cindent
         for child in value:
@@ -1066,7 +1065,7 @@ class RecursiveDecentFormatter(BasicFormatter):
                 BasicFormatter.format(self, child, buffer=output, indent=new_indent)
             else:
                 if child.GetNumChildren() > 0:
-                    rdf = RecursiveDecentFormatter(indent_level=new_indent)
+                    rdf = RecursiveDescentFormatter(indent_level=new_indent)
                     rdf.format(child, buffer=output)
                 else:
                     BasicFormatter.format(self, child, buffer=output, indent=new_indent)

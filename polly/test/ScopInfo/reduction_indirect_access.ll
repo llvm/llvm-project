@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -polly-allow-nonaffine -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-allow-nonaffine -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Reduction Type: NONE
 ; CHECK: MemRef_INDICES[i0]

@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -start-after=livedebugvalues -O0 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
-# RUN: llc -o - %s -start-after=livedebugvalues  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj \
+# RUN: llc -o - %s -start-after=live-debug-values -O0 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+# RUN: llc -o - %s -start-after=live-debug-values  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj \
 # RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 #
 # Verify that we have correct debug info for local variables in code
@@ -160,7 +160,7 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #2
   
-  attributes #0 = { nounwind sanitize_address uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { nounwind sanitize_address uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }
   attributes #2 = { nounwind }
   

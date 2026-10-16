@@ -1,4 +1,5 @@
 # RUN: llc -o /dev/null %s -mtriple=aarch64-- -run-pass=machine-scheduler -enable-misched -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-- -passes=machine-scheduler -enable-misched -debug-only=machine-scheduler 2>&1 | FileCheck %s
 # REQUIRES: asserts
 --- |
   define void @func() { ret void }
@@ -6,7 +7,7 @@
 ---
 # Check that the instructions are not dependent on each other, even though
 # they all read/write to the zero register.
-# CHECK-LABEL: MI Scheduling
+# CHECK-LABEL: Current Schedule Region
 # CHECK: SU(0): dead $wzr = SUBSWri $w1, 0, 0, implicit-def dead $nzcv
 # CHECK: # succs left : 0
 # CHECK-NOT: Successors:

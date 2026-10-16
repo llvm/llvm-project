@@ -5,8 +5,8 @@
 define void @foo(double %arg) {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    vmovq %xmm0, %rax
-; CHECK-NEXT:    vmovd %eax, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    movl %eax, (%rax)
 ; CHECK-NEXT:    movq $0, (%rax)
@@ -21,8 +21,8 @@ bb:
   %tmp6 = extractelement <2 x double> %tmp4, i32 1
   %tmp7 = bitcast double %tmp6 to i64
   %tmp8 = trunc i64 %tmp7 to i32
-  store i32 %tmp8, ptr undef, align 4
-  store double %tmp5, ptr undef, align 16
+  store i32 %tmp8, ptr poison, align 4
+  store double %tmp5, ptr poison, align 16
   ret void
 }
 

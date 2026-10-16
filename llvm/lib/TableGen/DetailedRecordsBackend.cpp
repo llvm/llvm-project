@@ -1,4 +1,4 @@
-//===- DetailedRecordBackend.cpp - Detailed Records Report      -*- C++ -*-===//
+//===- DetailedRecordBackend.cpp - Detailed Records Report ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This Tablegen backend prints a report that includes all the global 
+// This Tablegen backend prints a report that includes all the global
 // variables, classes, and records in complete detail. It includes more
 // detail than the default TableGen printer backend.
 //
@@ -22,7 +22,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
-#include <utility>
 
 using namespace llvm;
 
@@ -82,10 +81,10 @@ void DetailedRecordsEmitter::printVariables(raw_ostream &OS) {
 
 // Print classes, including the template arguments, superclasses, and fields.
 void DetailedRecordsEmitter::printClasses(raw_ostream &OS) {
-  const auto &ClassList = Records.getClasses();
+  ArrayRef<const Record *> ClassList = Records.getClasses();
   printSectionHeading("Classes", ClassList.size(), OS);
 
-  for (const auto &[Name, Class] : ClassList) {
+  for (const Record *Class : ClassList) {
     OS << formatv("\n{0}  |{1}|\n", Class->getNameInitAsString(),
                   SrcMgr.getFormattedLocationNoOffset(Class->getLoc().front()));
     printTemplateArgs(*Class, OS);
@@ -96,10 +95,10 @@ void DetailedRecordsEmitter::printClasses(raw_ostream &OS) {
 
 // Print the records, including the defm sequences, supercasses, and fields.
 void DetailedRecordsEmitter::printRecords(raw_ostream &OS) {
-  const auto &RecordList = Records.getDefs();
+  ArrayRef<const Record *> RecordList = Records.getDefs();
   printSectionHeading("Records", RecordList.size(), OS);
 
-  for (const auto &[DefName, Rec] : RecordList) {
+  for (const Record *Rec : RecordList) {
     std::string Name = Rec->getNameInitAsString();
     OS << formatv("\n{0}  |{1}|\n", Name.empty() ? "\"\"" : Name,
                   SrcMgr.getFormattedLocationNoOffset(Rec->getLoc().front()));
@@ -152,15 +151,14 @@ void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
 // are enclosed in parentheses.
 void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<std::pair<const Record *, SMRange>> Superclasses =
-      Rec.getSuperClasses();
+  std::vector<const Record *> Superclasses = Rec.getSuperClasses();
   if (Superclasses.empty()) {
     OS << "  Superclasses: (none)\n";
     return;
   }
 
   OS << "  Superclasses:";
-  for (const auto &[ClassRec, Loc] : Superclasses) {
+  for (const Record *ClassRec : Superclasses) {
     if (Rec.hasDirectSuperClass(ClassRec))
       OS << formatv(" {0}", ClassRec->getNameInitAsString());
     else

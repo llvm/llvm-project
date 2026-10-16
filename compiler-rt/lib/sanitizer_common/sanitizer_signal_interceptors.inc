@@ -45,6 +45,8 @@ using namespace __sanitizer;
 INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) return 0;
+
+  // TODO: support cloak_sanitizer_signal_handlers
   SIGNAL_INTERCEPTOR_SIGNAL_IMPL(bsd_signal, signum, handler);
 }
 #define INIT_BSD_SIGNAL COMMON_INTERCEPT_FUNCTION(bsd_signal)
@@ -56,19 +58,55 @@ INTERCEPTOR(uptr, bsd_signal, int signum, uptr handler) {
 INTERCEPTOR(uptr, signal, int signum, uptr handler) {
   SIGNAL_INTERCEPTOR_ENTER();
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive)
+    // The user can neither view nor change the signal handler, regardless of
+    // the cloak_sanitizer_signal_handlers setting. This differs from
+    // sigaction().
     return (uptr) nullptr;
-  SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
+
+  uptr ret = +[](auto signal, int signum, uptr handler) {
+    SIGNAL_INTERCEPTOR_SIGNAL_IMPL(signal, signum, handler);
+  }(signal, signum, handler);
+
+  if (ret != sig_err && SetSignalHandlerFromSanitizer(signum, false))
+    // If the user sets a signal handler, it becomes uncloaked, even if they
+    // reuse a sanitizer's signal handler.
+    ret = sig_dfl;
+
+  return ret;
 }
 #define INIT_SIGNAL COMMON_INTERCEPT_FUNCTION(signal)
 
 INTERCEPTOR(int, sigaction_symname, int signum,
             const __sanitizer_sigaction *act, __sanitizer_sigaction *oldact) {
   SIGNAL_INTERCEPTOR_ENTER();
+
   if (GetHandleSignalMode(signum) == kHandleSignalExclusive) {
     if (!oldact) return 0;
     act = nullptr;
+    // If cloak_sanitizer_signal_handlers=true, the user can neither view nor
+    // change the signal handle.
+    // If false, the user can view but not change the signal handler. This
+    // differs from signal().
   }
-  SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
+
+  int ret = +[](int signum, const __sanitizer_sigaction* act,
+                __sanitizer_sigaction* oldact) {
+    SIGNAL_INTERCEPTOR_SIGACTION_IMPL(signum, act, oldact);
+  }(signum, act, oldact);
+
+  if (act) {
+    if (ret == 0 && SetSignalHandlerFromSanitizer(signum, false)) {
+      // If the user sets a signal handler, it becomes uncloaked, even if they
+      // reuse a sanitizer's signal handler.
+
+      if (oldact)
+        oldact->handler = reinterpret_cast<__sanitizer_sighandler_ptr>(sig_dfl);
+    }
+  } else if (ret == 0 && oldact && IsSignalHandlerFromSanitizer(signum)) {
+    oldact->handler = reinterpret_cast<__sanitizer_sighandler_ptr>(sig_dfl);
+  }
+
+  return ret;
 }
 #define INIT_SIGACTION COMMON_INTERCEPT_FUNCTION(sigaction_symname)
 

@@ -13,7 +13,6 @@
 
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -128,11 +127,11 @@ void JSONEmitter::run(raw_ostream &OS) {
   // over the classes, invoking std::map::operator[] to default-
   // construct the array for each one.
   std::map<std::string, json::Array> InstanceLists;
-  for (const auto &[ClassName, ClassRec] : Records.getClasses())
+  for (const Record *ClassRec : Records.getClasses())
     InstanceLists.emplace(ClassRec->getNameInitAsString(), json::Array());
 
   // Main iteration over the defs.
-  for (const auto &[DefName, Def] : Records.getDefs()) {
+  for (const Record *Def : Records.getDefs()) {
     const std::string Name = Def->getNameInitAsString();
 
     json::Object Obj;
@@ -151,7 +150,7 @@ void JSONEmitter::run(raw_ostream &OS) {
 
     json::Array SuperClasses;
     // Add this def to the instance list for each of its superclasses.
-    for (const auto &[SuperClass, Loc] : Def->getSuperClasses()) {
+    for (const Record *SuperClass : Def->getSuperClasses()) {
       std::string SuperName = SuperClass->getNameInitAsString();
       SuperClasses.push_back(SuperName);
       InstanceLists[SuperName].push_back(Name);

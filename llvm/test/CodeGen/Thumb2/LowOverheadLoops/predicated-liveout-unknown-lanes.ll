@@ -6,8 +6,7 @@ define arm_aapcs_vfpcc <4 x float> @arm_max_no_idx_f32_mve(ptr %pSrc, i32 %block
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    subs r2, r1, #4
-; CHECK-NEXT:    movw r3, #0
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    movt r3, #65408
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    dlstp.32 lr, r1
@@ -23,7 +22,7 @@ entry:
 
 do.body:                                          ; preds = %do.body, %entry
   %blockSize.addr.0 = phi i32 [ %blockSize, %entry ], [ %sub, %do.body ]
-  %curExtremValVec.0 = phi <4 x float> [ <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>, %entry ], [ %3, %do.body ]
+  %curExtremValVec.0 = phi <4 x float> [ <float -inf, float -inf, float -inf, float -inf>, %entry ], [ %3, %do.body ]
   %pSrc.addr.0 = phi ptr [ %pSrc, %entry ], [ %add.ptr, %do.body ]
   %0 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %blockSize.addr.0)
   %1 = bitcast ptr %pSrc.addr.0 to ptr

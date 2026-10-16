@@ -64,7 +64,7 @@ public:
 
   // Compile Unit function calls
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
-  XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) override;
+  XcodeSDKAndSysroot ParseXcodeSDK(CompileUnit &comp_unit) override;
   llvm::SmallSet<lldb::LanguageType, 4>
   ParseAllLanguages(CompileUnit &comp_unit) override;
   size_t ParseFunctions(CompileUnit &comp_unit) override;
@@ -129,11 +129,14 @@ public:
   std::vector<std::unique_ptr<CallEdge>>
   ParseCallEdgesInFunction(UserID func_id) override;
 
-  void DumpClangAST(Stream &s) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter,
+                    bool show_color) override;
+
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override;
 
   /// List separate oso files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -143,6 +146,11 @@ public:
 
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
+
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override;
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
@@ -237,15 +245,8 @@ protected:
   /// If closure returns \ref IterationAction::Continue, iteration
   /// continues. Otherwise, iteration terminates.
   void
-  ForEachSymbolFile(std::function<IterationAction(SymbolFileDWARF *)> closure) {
-    for (uint32_t oso_idx = 0, num_oso_idxs = m_compile_unit_infos.size();
-         oso_idx < num_oso_idxs; ++oso_idx) {
-      if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-        if (closure(oso_dwarf) == IterationAction::Stop)
-          return;
-      }
-    }
-  }
+  ForEachSymbolFile(std::string description,
+                    std::function<IterationAction(SymbolFileDWARF &)> closure);
 
   CompileUnitInfo *GetCompileUnitInfoForSymbolWithIndex(uint32_t symbol_idx,
                                                         uint32_t *oso_idx_ptr);

@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class BreakpointByLineAndColumnTestCase(TestBase):
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def testBreakpointByLineAndColumn(self):
         self.build()
         src_file = lldb.SBFileSpec("main.cpp")
@@ -19,6 +20,26 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             line_number("main.cpp", "At the beginning of a function name (col:50)") + 1
         )  # Next line after comment
         _, _, _, breakpoint = lldbutil.run_to_line_breakpoint(self, src_file, line, 50)
+        self.expect("fr v did_call", substrs=["1"])
+        in_then = False
+        for i in range(breakpoint.GetNumLocations()):
+            b_loc = breakpoint.GetLocationAtIndex(i).GetAddress().GetLineEntry()
+            self.assertEqual(b_loc.GetLine(), line)
+            in_then |= b_loc.GetColumn() == 50
+        self.assertTrue(in_then)
+
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
+    def testBreakpointByLineAndColumnUsingCLI(self):
+        self.build()
+        src_file = lldb.SBFileSpec("main.cpp")
+        line = (
+            line_number("main.cpp", "At the beginning of a function name (col:50)") + 1
+        )  # Next line after comment
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(self, "This is a random comment", src_file)
+        bkpt_no = lldbutil.run_break_set_by_file_and_line(self, "main.cpp", line, "--column 50")
+        breakpoint = target.FindBreakpointByID(bkpt_no)
+        threads = lldbutil.continue_to_breakpoint(process, breakpoint)
+        self.assertEqual(len(threads), 1, "Stopped at our breakpoint")
         self.expect("fr v did_call", substrs=["1"])
         in_then = False
         for i in range(breakpoint.GetNumLocations()):
@@ -60,7 +81,7 @@ class BreakpointByLineAndColumnTestCase(TestBase):
 
         for pattern in patterns:
             line = line_number("main.cpp", pattern) + 1
-            column = int(re.search("\(col:([0-9]+)\)", pattern).group(1))
+            column = int(re.search(r"\(col:([0-9]+)\)", pattern).group(1))
             source_loc.append({"line": line, "column": column})
 
         target = self.createTestTarget()

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks that the backend is capable to correctly translate
@@ -22,6 +23,10 @@
 ;;
   ;; barrier should also work (preserved for backward compatibility)
 ;;   barrier(CLK_GLOBAL_MEM_FENCE);
+;;   work_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_work_group);
+;;   work_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
+;;   work_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_all_svm_devices);
+;;   work_group_barrier(CLK_GLOBAL_MEM_FENCE, memory_scope_sub_group);
 ;; }
 ;;
 ;; __kernel void test_barrier_non_const_flags(cl_mem_fence_flags flags, memory_scope scope) {
@@ -54,15 +59,15 @@
 
 ;; Scopes [4]:
 ;; 2 Workgroup
-; CHECK-SPIRV-DAG: %[[#SCOPE_WORK_GROUP:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#SCOPE_WORK_GROUP:]] = OpConstant %[[#UINT]] 2{{$}}
 ;; 4 Invocation
-; CHECK-SPIRV-DAG: %[[#SCOPE_INVOCATION:]] = OpConstant %[[#UINT]] 4
+; CHECK-SPIRV-DAG: %[[#SCOPE_INVOCATION:]] = OpConstant %[[#UINT]] 4{{$}}
 ;; 1 Device
-; CHECK-SPIRV-DAG: %[[#SCOPE_DEVICE:]] = OpConstant %[[#UINT]] 1
+; CHECK-SPIRV-DAG: %[[#SCOPE_DEVICE:]] = OpConstant %[[#UINT]] 1{{$}}
 ;; 0 CrossDevice
-; CHECK-SPIRV-DAG: %[[#SCOPE_CROSS_DEVICE:]] = OpConstant %[[#UINT]] 0
+; CHECK-SPIRV-DAG: %[[#SCOPE_CROSS_DEVICE:]] = OpConstantNull %[[#UINT]]
 ;; 3 Subgroup
-; CHECK-SPIRV-DAG: %[[#SCOPE_SUBGROUP:]] = OpConstant %[[#UINT]] 3
+; CHECK-SPIRV-DAG: %[[#SCOPE_SUBGROUP:]] = OpConstant %[[#UINT]] 3{{$}}
 
 ; CHECK-SPIRV: %[[#TEST_CONST_FLAGS]] = OpFunction %[[#]]
 ; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_WORK_GROUP]] %[[#LOCAL]]
@@ -77,6 +82,11 @@
 ; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_CROSS_DEVICE]] %[[#LOCAL]]
 ; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_SUBGROUP]] %[[#LOCAL]]
 ; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_WORK_GROUP]] %[[#GLOBAL]]
+; Explicit memory scope must not change the Workgroup execution scope.
+; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_WORK_GROUP]] %[[#GLOBAL]]
+; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_DEVICE]] %[[#GLOBAL]]
+; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_CROSS_DEVICE]] %[[#GLOBAL]]
+; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_SUBGROUP]] %[[#GLOBAL]]
 
 define dso_local spir_kernel void @test_barrier_const_flags() local_unnamed_addr {
 entry:
@@ -92,6 +102,10 @@ entry:
   tail call spir_func void @_Z18work_group_barrierj12memory_scope(i32 noundef 1, i32 noundef 3)
   tail call spir_func void @_Z18work_group_barrierj12memory_scope(i32 noundef 1, i32 noundef 4)
   tail call spir_func void @_Z7barrierj(i32 noundef 2)
+  tail call spir_func void @_Z18work_group_barrierj12memory_scope(i32 noundef 2, i32 noundef 1)
+  tail call spir_func void @_Z18work_group_barrierj12memory_scope(i32 noundef 2, i32 noundef 2)
+  tail call spir_func void @_Z18work_group_barrierj12memory_scope(i32 noundef 2, i32 noundef 3)
+  tail call spir_func void @_Z18work_group_barrierj12memory_scope(i32 noundef 2, i32 noundef 4)
   ret void
 }
 

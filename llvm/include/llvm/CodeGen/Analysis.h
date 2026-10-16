@@ -20,6 +20,7 @@
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
+class Constant;
 class GlobalValue;
 class LLT;
 class MachineBasicBlock;
@@ -44,16 +45,22 @@ struct EVT;
 /// \param CurIndex is the current index in the recursion.
 ///
 /// \returns \p CurIndex plus the linear index in \p Ty  the indices list.
-unsigned ComputeLinearIndex(Type *Ty,
-                            const unsigned *Indices,
-                            const unsigned *IndicesEnd,
-                            unsigned CurIndex = 0);
+LLVM_ABI unsigned ComputeLinearIndex(Type *Ty, const unsigned *Indices,
+                                     const unsigned *IndicesEnd,
+                                     unsigned CurIndex = 0);
 
 inline unsigned ComputeLinearIndex(Type *Ty,
                                    ArrayRef<unsigned> Indices,
                                    unsigned CurIndex = 0) {
   return ComputeLinearIndex(Ty, Indices.begin(), Indices.end(), CurIndex);
 }
+
+/// Given an LLVM IR type, compute non-aggregate subtypes. Optionally also
+/// compute their offsets.
+LLVM_ABI void ComputeValueTypes(const DataLayout &DL, Type *Ty,
+                                SmallVectorImpl<Type *> &Types,
+                                SmallVectorImpl<TypeSize> *Offsets = nullptr,
+                                TypeSize StartingOffset = TypeSize::getZero());
 
 /// ComputeValueVTs - Given an LLVM IR type, compute a sequence of
 /// EVTs that represent all the individual underlying
@@ -62,30 +69,16 @@ inline unsigned ComputeLinearIndex(Type *Ty,
 /// If Offsets is non-null, it points to a vector to be filled in
 /// with the in-memory offsets of each of the individual values.
 ///
-void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
-                     SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<EVT> *MemVTs,
-                     SmallVectorImpl<TypeSize> *Offsets = nullptr,
-                     TypeSize StartingOffset = TypeSize::getZero());
-void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
-                     SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<EVT> *MemVTs,
-                     SmallVectorImpl<uint64_t> *FixedOffsets,
-                     uint64_t StartingOffset);
-
-/// Variant of ComputeValueVTs that don't produce memory VTs.
-inline void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                            Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                            SmallVectorImpl<TypeSize> *Offsets = nullptr,
-                            TypeSize StartingOffset = TypeSize::getZero()) {
-  ComputeValueVTs(TLI, DL, Ty, ValueVTs, nullptr, Offsets, StartingOffset);
-}
-inline void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                            Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                            SmallVectorImpl<uint64_t> *FixedOffsets,
-                            uint64_t StartingOffset) {
-  ComputeValueVTs(TLI, DL, Ty, ValueVTs, nullptr, FixedOffsets, StartingOffset);
-}
+LLVM_ABI void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
+                              Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
+                              SmallVectorImpl<EVT> *MemVTs = nullptr,
+                              SmallVectorImpl<TypeSize> *Offsets = nullptr,
+                              TypeSize StartingOffset = TypeSize::getZero());
+LLVM_ABI void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
+                              Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
+                              SmallVectorImpl<EVT> *MemVTs,
+                              SmallVectorImpl<uint64_t> *FixedOffsets,
+                              uint64_t StartingOffset);
 
 /// computeValueLLTs - Given an LLVM IR type, compute a sequence of
 /// LLTs that represent all the individual underlying
@@ -94,31 +87,66 @@ inline void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
 /// If Offsets is non-null, it points to a vector to be filled in
 /// with the in-memory offsets of each of the individual values.
 ///
-void computeValueLLTs(const DataLayout &DL, Type &Ty,
-                      SmallVectorImpl<LLT> &ValueTys,
-                      SmallVectorImpl<uint64_t> *Offsets = nullptr,
-                      uint64_t StartingOffset = 0);
+LLVM_ABI void computeValueLLTs(const DataLayout &DL, Type &Ty,
+                               SmallVectorImpl<LLT> &ValueLLTs,
+                               SmallVectorImpl<TypeSize> *Offsets = nullptr,
+                               TypeSize StartingOffset = TypeSize::getZero());
+LLVM_ABI void computeValueLLTs(const DataLayout &DL, Type &Ty,
+                               SmallVectorImpl<LLT> &ValueLLTs,
+                               SmallVectorImpl<uint64_t> *FixedOffsets,
+                               uint64_t FixedStartingOffset = 0);
 
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
-GlobalValue *ExtractTypeInfo(Value *V);
+LLVM_ABI GlobalValue *ExtractTypeInfo(Value *V);
+
+/// Return true if landingpad result type \p Ty is a struct of an exception
+/// pointer (pointer or integer) and an integer selector, the only lowerable
+/// form.
+LLVM_ABI bool isExceptionPointerAndSelectorType(Type *Ty);
 
 /// getFCmpCondCode - Return the ISD condition code corresponding to
 /// the given LLVM IR floating-point condition code.  This includes
 /// consideration of global floating-point math flags.
 ///
-ISD::CondCode getFCmpCondCode(FCmpInst::Predicate Pred);
+LLVM_ABI ISD::CondCode getFCmpCondCode(FCmpInst::Predicate Pred);
 
 /// getFCmpCodeWithoutNaN - Given an ISD condition code comparing floats,
 /// return the equivalent code if we're allowed to assume that NaNs won't occur.
-ISD::CondCode getFCmpCodeWithoutNaN(ISD::CondCode CC);
+LLVM_ABI ISD::CondCode getFCmpCodeWithoutNaN(ISD::CondCode CC);
 
 /// getICmpCondCode - Return the ISD condition code corresponding to
 /// the given LLVM IR integer condition code.
-ISD::CondCode getICmpCondCode(ICmpInst::Predicate Pred);
+LLVM_ABI ISD::CondCode getICmpCondCode(ICmpInst::Predicate Pred);
 
 /// getICmpCondCode - Return the LLVM IR integer condition code
 /// corresponding to the given ISD integer condition code.
-ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
+LLVM_ABI ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
+
+/// Test if the address of \p GV can be described in debug info as a plain
+/// reference to its symbol, so that a variable holding that address can be
+/// described for the whole of its scope rather than only from wherever the
+/// address happens to be materialized.
+///
+/// Whether the symbol alone denotes the runtime address depends on \p MF: the
+/// relocation model decides whether a base has to be added to it, and the
+/// debug format and DWARF version decide whether the result can be spelled as
+/// a value rather than as a place to load from.
+LLVM_ABI bool canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
+                                                  const MachineFunction &MF);
+
+/// If \p C is the address of a global, possibly displaced by a constant,
+/// return that global and set \p Offset to the displacement in bytes. Returns
+/// nullptr if \p C is not such an address, or if the global's address cannot be
+/// described per canDescribeGlobalAddressInDebugInfo(). \p Offset is set to
+/// zero in those cases, so it only carries a displacement alongside a global.
+LLVM_ABI const GlobalValue *
+getDescribableGlobalAddress(const Constant *C, int64_t &Offset,
+                            const MachineFunction &MF);
+
+/// Test if the debug info for \p MF can name a describable global address in a
+/// location list too, rather than only in a variable's single location. Where
+/// it cannot, a register holding the address is the more robust description.
+LLVM_ABI bool canDescribeGlobalAddressInLocationList(const MachineFunction &MF);
 
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with
@@ -126,8 +154,9 @@ ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
-                          bool ReturnsFirstArg = false);
+LLVM_ABI bool isInTailCallPosition(const CallBase &Call,
+                                   const TargetMachine &TM,
+                                   bool ReturnsFirstArg = false);
 
 /// Test if given that the input instruction is in the tail call position, if
 /// there is an attribute mismatch between the caller and the callee that will
@@ -135,24 +164,25 @@ bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
 /// \p AllowDifferingSizes is an output parameter which, if forming a tail call
 /// is permitted, determines whether it's permitted only if the size of the
 /// caller's and callee's return types match exactly.
-bool attributesPermitTailCall(const Function *F, const Instruction *I,
-                              const ReturnInst *Ret,
-                              const TargetLoweringBase &TLI,
-                              bool *AllowDifferingSizes = nullptr);
+LLVM_ABI bool attributesPermitTailCall(const Function *F, const Instruction *I,
+                                       const ReturnInst *Ret,
+                                       const TargetLoweringBase &TLI,
+                                       bool *AllowDifferingSizes = nullptr);
 
 /// Test if given that the input instruction is in the tail call position if the
 /// return type or any attributes of the function will inhibit tail call
 /// optimization.
-bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
-                                     const ReturnInst *Ret,
-                                     const TargetLoweringBase &TLI,
-                                     bool ReturnsFirstArg = false);
+LLVM_ABI bool returnTypeIsEligibleForTailCall(const Function *F,
+                                              const Instruction *I,
+                                              const ReturnInst *Ret,
+                                              const TargetLoweringBase &TLI,
+                                              bool ReturnsFirstArg = false);
 
 /// Returns true if the parent of \p CI returns CI's first argument after
 /// calling \p CI.
-bool funcReturnsFirstArgOfCall(const CallInst &CI);
+LLVM_ABI bool funcReturnsFirstArgOfCall(const CallInst &CI);
 
-DenseMap<const MachineBasicBlock *, int>
+LLVM_ABI DenseMap<const MachineBasicBlock *, int>
 getEHScopeMembership(const MachineFunction &MF);
 
 } // End llvm namespace

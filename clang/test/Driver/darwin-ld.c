@@ -198,6 +198,16 @@
 // LINK_DRIVERKIT-NOT: lSystem
 // LINK_DRIVERKIT: libclang_rt.driverkit.a
 
+// RUN: %clang -target arm64-apple-firmware1.0 -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_FIRMWARE %s < %t.log
+// RUN: %clang -target arm64-apple-firmware1.0 -static -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_FIRMWARE %s < %t.log
+// LINK_FIRMWARE: {{ld(.exe)?"}}
+// LINK_FIRMWARE-NOT: crt
+// LINK_FIRMWARE-NOT: lgcc_s.1
+// LINK_FIRMWARE-NOT: lSystem
+// LINK_FIRMWARE: libclang_rt.soft_static.a
+
 // RUN: %clang -target armv7k-apple-watchos2.0 -fuse-ld= -mlinker-version=400 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_ARM %s < %t.log
 // LINK_WATCHOS_ARM: {{ld(.exe)?"}}
@@ -239,6 +249,15 @@
 // RUN: %clang -target arm64-apple-ios4.0 -miphoneos-version-min=4.0 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NO_IOS_ARM64_LIBGCC_S %s < %t.log
 // LINK_NO_IOS_ARM64_LIBGCC_S-NOT: lgcc_s.1
+
+// Check that clang links with libgcc_s.1 for Mac OS X 10.5 and earlier, but not arm64
+// RUN: %clang -target x86_64-apple-macosx10.5 -mmacosx-version-min=10.5 -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_OSX_LIBGCC_S %s < %t.log
+// LINK_OSX_LIBGCC_S: lgcc_s.1
+
+// RUN: %clang -target arm64-apple-macosx10.5 -mmacosx-version-min=10.5 -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_NO_OSX_ARM64_LIBGCC_S %s < %t.log
+// LINK_NO_OSX_ARM64_LIBGCC_S-NOT: lgcc_s.1
 
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=100 2> %t.log

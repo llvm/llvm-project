@@ -21,20 +21,12 @@
 func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func.func @max_pool_static(%arg0: !tensor_type) -> (!tensor_type) {
-  %0 = tosa.max_pool2d %arg0 {
-    pad = array<i64: 1, 1, 1, 1>,
-    kernel = array<i64: 3, 3>,
-    stride = array<i64: 1, 1>
-  } : (tensor<1x4x4x1xf32>) -> tensor<1x4x4x1xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([3, 3]) stride([1, 1]) pad([1, 1, 1, 1]) : (tensor<1x4x4x1xf32>) -> tensor<1x4x4x1xf32>
   return %0 : tensor<1x4x4x1xf32>
 }
 
 func.func @max_pool_dynamic(%arg0: tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>) {
-  %0 = tosa.max_pool2d %arg0 {
-    pad = array<i64: 1, 1, 1, 1>,
-    kernel = array<i64: 3, 3>,
-    stride = array<i64: 1, 1>
-  } : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([3, 3]) stride([1, 1]) pad([1, 1, 1, 1]) : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %0 : tensor<?x?x?x?xf32>
 }
 
@@ -54,7 +46,7 @@ func.func @main() {
   %result_static  = func.call @max_pool_static(%A) : (!tensor_type) -> !tensor_type
   %result_dynamic = func.call @max_pool_dynamic(%A_dynamic) : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  %static_buffer = bufferization.to_memref %result_static : !tensor_type to !memref_type
+  %static_buffer = bufferization.to_buffer %result_static : !tensor_type to !memref_type
   %unranked_static_buffer = memref.cast %static_buffer : !memref_type to memref<*xf32>
 
   // CHECK: Unranked Memref base@ = {{.*}} rank = 4 offset = 0 sizes = [1, 4, 4, 1] strides = [16, 4, 1, 1] data =
@@ -81,7 +73,7 @@ func.func @main() {
 
   func.call @printMemrefF32(%unranked_static_buffer) : (memref<*xf32>) -> ()
 
-  %dynamic_buffer = bufferization.to_memref %result_dynamic : tensor<?x?x?x?xf32> to memref<?x?x?x?xf32>
+  %dynamic_buffer = bufferization.to_buffer %result_dynamic : tensor<?x?x?x?xf32> to memref<?x?x?x?xf32>
   %unranked_dynamic_buffer = memref.cast %dynamic_buffer : memref<?x?x?x?xf32> to memref<*xf32>
 
   // CHECK: Unranked Memref base@ = {{.*}} rank = 4 offset = 0 sizes = [1, 4, 4, 1] strides = [16, 4, 1, 1] data =
@@ -109,4 +101,3 @@ func.func @main() {
 
   return
 }
-

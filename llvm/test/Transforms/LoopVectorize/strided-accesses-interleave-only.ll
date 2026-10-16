@@ -5,35 +5,23 @@ define void @test_variable_stride(ptr %dst, i32 %scale) {
 ; CHECK-LABEL: define void @test_variable_stride
 ; CHECK-SAME: (ptr [[DST:%.*]], i32 [[SCALE:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[INDEX]], [[SCALE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[SCALE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP1]], [[SCALE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[DST]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[DST]], i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[DST]], i32 [[TMP3]]
+; CHECK-NEXT:    store i32 [[INDEX]], ptr [[TMP3]], align 2
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP4]], align 2
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = mul i32 [[IV]], [[SCALE]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[DST]], i32 [[IDX]]
-; CHECK-NEXT:    store i32 [[IV]], ptr [[GEP]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

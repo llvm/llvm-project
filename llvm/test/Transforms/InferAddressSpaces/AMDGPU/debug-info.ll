@@ -1,8 +1,8 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
 ; check that the debug locations are correctly propagated
 
-@lds = internal unnamed_addr addrspace(3) global [648 x double] undef, align 8
+@lds = internal unnamed_addr addrspace(3) global [648 x double] poison, align 8
 
 ; CHECK-LABEL: @load_global_from_flat(
 ; CHECK-NEXT: %tmp0 = addrspacecast ptr %generic_scalar to ptr addrspace(1), !dbg ![[DEBUG_LOC_TMP0:[0-9]+]]
@@ -123,7 +123,7 @@ attributes #4 = { nounwind readnone speculatable }
 !25 = !{!"tbaa root"}
 !26 = !{!27}
 !27 = distinct !{!27, !28, !"some scope 1"}
-!28 = distinct !{!28, !"some domain"}
+!28 = distinct !{!28, i1 false, !"some domain"}
 !29 = !{!30}
 !30 = distinct !{!30, !28, !"some scope 2"}
 !31 = !DILocation(line: 13, column: 1, scope: !20)

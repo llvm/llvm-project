@@ -15,28 +15,46 @@
 
 #include "Context.h"
 #include "DynamicAllocator.h"
+#include "Floating.h"
+#include "FrameAllocator.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
-#include "clang/AST/APValue.h"
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/OptionalDiagnostic.h"
+#include <limits>
 
 namespace clang {
 namespace interp {
 class Context;
-class Function;
-class InterpStack;
-class InterpFrame;
 class SourceMapper;
+struct EvalSettings;
+
+struct StdAllocatorCaller {
+
+  const Expr *Call = nullptr;
+  QualType AllocType;
+  explicit operator bool() { return Call; }
+};
+
+// FIXME: Create one for the "checking potential constant expression"
+// evaluation.
+enum class EvaluationKind : uint8_t {
+  None,
+  Dtor, /// We're checking for constant destruction of a global variable.
+};
 
 /// Interpreter context.
-class InterpState final : public State, public SourceMapper {
+class InterpState final : public State {
 public:
-  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
+              FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);
+
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
+              FrameAllocator &FA, Context &Ctx, const Function *Func);
+
+  InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+              FrameAllocator &FA, Context &Ctx, SourceMapper *M);
 
   ~InterpState();
 
@@ -45,105 +63,226 @@ public:
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
 
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
+
   // Stack frame accessors.
-  Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
-  Frame *getCurrentFrame() override;
+  const Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override {
-    return Parent.getBottomFrame();
-  }
-
-  // Access objects from the walker context.
-  Expr::EvalStatus &getEvalStatus() const override {
-    return Parent.getEvalStatus();
-  }
-  ASTContext &getASTContext() const override { return Parent.getASTContext(); }
-
-  // Forward status checks and updates to the walker.
-  bool checkingForUndefinedBehavior() const override {
-    return Parent.checkingForUndefinedBehavior();
-  }
-  bool keepEvaluatingAfterFailure() const override {
-    return Parent.keepEvaluatingAfterFailure();
-  }
-  bool keepEvaluatingAfterSideEffect() const override {
-    return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool checkingPotentialConstantExpression() const override {
-    return Parent.checkingPotentialConstantExpression();
-  }
-  bool noteUndefinedBehavior() override {
-    return Parent.noteUndefinedBehavior();
-  }
+  bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
-  bool hasActiveDiagnostic() override { return Parent.hasActiveDiagnostic(); }
-  void setActiveDiagnostic(bool Flag) override {
-    Parent.setActiveDiagnostic(Flag);
-  }
-  void setFoldFailureDiagnostic(bool Flag) override {
-    Parent.setFoldFailureDiagnostic(Flag);
-  }
-  bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
-  bool noteSideEffect() override { return Parent.noteSideEffect(); }
-
-  /// Reports overflow and return true if evaluation should continue.
-  bool reportOverflow(const Expr *E, const llvm::APSInt &Value);
 
   /// Deallocates a pointer.
   void deallocate(Block *B);
 
   /// Delegates source mapping to the mapper.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    if (M)
-      return M->getSource(F, PC);
-
-    assert(F && "Function cannot be null");
-    return F->getSource(PC);
-  }
+  SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
 
   Context &getContext() const { return Ctx; }
 
   void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
-  DynamicAllocator &getAllocator() { return Alloc; }
+  DynamicAllocator &getAllocator() {
+    if (!Alloc) {
+      if (!Allocator)
+        Allocator.emplace();
+      Alloc = std::make_unique<DynamicAllocator>(*Allocator);
+    }
+
+    return *Alloc;
+  }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
   /// Will return \c false if there were any allocations to diagnose,
   /// \c true otherwise.
   bool maybeDiagnoseDanglingAllocations();
 
+  StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
+
+  void *allocate(size_t Size, unsigned Align = 8) const {
+    if (!Allocator)
+      Allocator.emplace();
+    return Allocator->Allocate(Size, Align);
+  }
+  template <typename T> T *allocate(size_t Num = 1) const {
+    return static_cast<T *>(allocate(Num * sizeof(T), alignof(T)));
+  }
+
+  template <typename T> T allocAP(unsigned BitWidth) {
+    unsigned NumWords = APInt::getNumWords(BitWidth);
+    if (NumWords == 1)
+      return T(BitWidth);
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return T(Mem, BitWidth);
+  }
+
+  Floating allocFloat(const llvm::fltSemantics &Sem) {
+    if (Floating::singleWord(Sem))
+      return Floating(llvm::APFloatBase::SemanticsToEnum(Sem));
+
+    unsigned NumWords =
+        APInt::getNumWords(llvm::APFloatBase::getSizeInBits(Sem));
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
+  }
+  const CXXRecordDecl **allocMemberPointerPath(unsigned Length) {
+    return reinterpret_cast<const CXXRecordDecl **>(
+        this->allocate(Length * sizeof(CXXRecordDecl *)));
+  }
+  PointerPathEntry *allocPointerPath(unsigned Length,
+                                     const PointerPathEntry *OldPP) {
+    assert(Length != 0);
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(Length * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * Length);
+    return PP;
+  }
+  /// Allocate a new pointer path of Length \c NewLength.
+  /// NewLength - 1 elements are copied form \c OldPP.
+  PointerPathEntry *extendPointerPath(unsigned NewLength,
+                                      const PointerPathEntry *OldPP,
+                                      PointerPathEntry NewEntry) {
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(NewLength * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * (NewLength - 1));
+    PP[NewLength - 1] = NewEntry;
+    return PP;
+  }
+
+  /// Note that a step has been executed. If there are no more steps remaining,
+  /// diagnoses and returns \c false.
+  bool noteStep(CodePtr OpPC) {
+    if (InfiniteSteps)
+      return true;
+
+    --StepsLeft;
+    if (LLVM_LIKELY(StepsLeft != 0))
+      return true;
+
+    return diagnoseStepLimitExceeded(OpPC);
+  }
+
+  bool initializingBlock(const Block *B) const {
+    for (PtrView V : InitializingPtrs)
+      if (V.block() == B)
+        return true;
+    return false;
+  }
+
+  bool lifetimeStartedInEvaluation(const Block *B) const {
+    if (EvalKind == EvaluationKind::None)
+      return B->getEvalID() == EvalID;
+
+    if (EvalKind == EvaluationKind::Dtor) {
+      assert(EvaluatingDecl);
+      if (B->getDescriptor()->asVarDecl() == EvaluatingDecl)
+        return EvaluatingDecl->getType().isConstQualified();
+    }
+    return false;
+  }
+
+  /// Return if we're checking if a global variable has a constant destructor.
+  bool checkingConstantDestruction() const {
+    return EvalKind == EvaluationKind::Dtor;
+  }
+  /// Return if we're checking if a global variable has a constant destructor
+  /// and the given pointer is pointing to the variable we're checking that for.
+  bool checkingConstantDestruction(const Pointer &Ptr) const {
+    return checkingConstantDestruction(Ptr.getRootVarDecl());
+  }
+  bool checkingConstantDestruction(const VarDecl *VD) const {
+    return EvalKind == EvaluationKind::Dtor && VD == EvaluatingDecl;
+  }
+
+  unsigned newStringID() { return StringID++; }
+
+  /// Allocate memory and create a new InterpFrame for the given function.
+  template <typename... Ts>
+  InterpFrame *allocFrame(const Function *F, Ts &&...Args) {
+    size_t FrameSize = InterpFrame::allocSize(F);
+    assert(FrameSize < std::numeric_limits<unsigned>::max());
+    InterpFrame *NewFrame = new (FrameAlloc.reserve(FrameSize))
+        InterpFrame(*this, F, std::forward<Ts>(Args)...);
+    assert(NewFrame);
+    return NewFrame;
+  }
+
+  /// Free resources associated with the current frame and set the caller to be
+  /// the new current frame.
+  void resetCurrentFrame() {
+    assert(Current);
+    unsigned CurrentSize = InterpFrame::allocSize(Current->getFunction());
+    InterpFrame *Caller = Current->Caller;
+    Current->~InterpFrame();
+    FrameAlloc.pop(CurrentSize);
+    Current = Caller;
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
-  /// AST Walker state.
-  State &Parent;
   /// Dead block chain.
   DeadBlock *DeadBlocks = nullptr;
   /// Reference to the offset-source mapping.
   SourceMapper *M;
+  /// Allocator for everything else, e.g. floating-point values.
+  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
   /// Allocator used for dynamic allocations performed via the program.
-  DynamicAllocator Alloc;
-  std::optional<bool> ConstantContextOverride;
+  std::unique_ptr<DynamicAllocator> Alloc;
+  /// Diagnose that we've reached the constexpr step limit.
+  bool diagnoseStepLimitExceeded(CodePtr OpPC);
+
+  FrameAllocator &FrameAlloc;
 
 public:
+  CodePtr PC;
   /// Reference to the module containing all bytecode.
   Program &P;
   /// Temporary stack.
   InterpStack &Stk;
   /// Interpreter Context.
   Context &Ctx;
+  /// Bottom function frame.
+  InterpFrame BottomFrame;
   /// The current frame.
   InterpFrame *Current = nullptr;
   /// Source location of the evaluating expression
   SourceLocation EvalLocation;
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
+  /// Steps left during evaluation.
+  unsigned StepsLeft = 1;
+  /// Whether infinite evaluation steps have been requested. If this is false,
+  /// we use the StepsLeft value above.
+  const bool InfiniteSteps = false;
+  /// ID identifying this evaluation.
+  const unsigned EvalID;
+
+  unsigned StringID = 0;
+
+  EvaluationKind EvalKind = EvaluationKind::None;
+
+  /// Things needed to do speculative execution.
+  SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+  bool PrevDiagsEmitted = false;
+#ifndef NDEBUG
+  unsigned SpeculationDepth = 0;
+#endif
+  unsigned DiagIgnoreDepth = 0;
+  std::optional<bool> ConstantContextOverride;
 
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+
+  /// List of blocks we're currently running either constructors or destructors
+  /// for.
+  llvm::SmallVector<PtrView> InitializingPtrs;
 };
 
 class InterpStateCCOverride final {

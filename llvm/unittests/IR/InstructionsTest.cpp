@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instructions.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -26,16 +27,13 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm-c/Core.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
-namespace llvm {
-namespace {
+using namespace llvm;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -44,6 +42,8 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
     Err.print("InstructionsTests", errs());
   return Mod;
 }
+
+namespace {
 
 TEST(InstructionsTest, ReturnInst) {
   LLVMContext C;
@@ -54,7 +54,7 @@ TEST(InstructionsTest, ReturnInst) {
   EXPECT_EQ(r0->op_begin(), r0->op_end());
 
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
   const ReturnInst* r1 = ReturnInst::Create(C, One);
   EXPECT_EQ(1U, r1->getNumOperands());
   User::const_op_iterator b(r1->op_begin());
@@ -130,18 +130,14 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
   }
 }
 
-TEST(InstructionsTest, BranchInst) {
+TEST(InstructionsTest, UncondBrInst) {
   LLVMContext C;
 
-  // Make a BasicBlocks
-  BasicBlock* bb0 = BasicBlock::Create(C);
-  BasicBlock* bb1 = BasicBlock::Create(C);
+  // Make a BasicBlock
+  BasicBlock *bb0 = BasicBlock::Create(C);
 
-  // Mandatory BranchInst
-  const BranchInst* b0 = BranchInst::Create(bb0);
+  const UncondBrInst *b0 = UncondBrInst::Create(bb0);
 
-  EXPECT_TRUE(b0->isUnconditional());
-  EXPECT_FALSE(b0->isConditional());
   EXPECT_EQ(1U, b0->getNumSuccessors());
 
   // check num operands
@@ -152,14 +148,23 @@ TEST(InstructionsTest, BranchInst) {
 
   EXPECT_EQ(b0->op_end(), std::next(b0->op_begin()));
 
+  // clean up
+  delete b0;
+  delete bb0;
+}
+
+TEST(InstructionsTest, CondBrInst) {
+  LLVMContext C;
+
+  // Make a BasicBlocks
+  BasicBlock *bb0 = BasicBlock::Create(C);
+  BasicBlock *bb1 = BasicBlock::Create(C);
+
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
 
-  // Conditional BranchInst
-  BranchInst* b1 = BranchInst::Create(bb0, bb1, One);
+  CondBrInst *b1 = CondBrInst::Create(One, bb0, bb1);
 
-  EXPECT_FALSE(b1->isUnconditional());
-  EXPECT_TRUE(b1->isConditional());
   EXPECT_EQ(2U, b1->getNumSuccessors());
 
   // check num operands
@@ -174,22 +179,21 @@ TEST(InstructionsTest, BranchInst) {
   EXPECT_EQ(One, b1->getCondition());
   ++b;
 
-  // check ELSE
-  EXPECT_EQ(bb1, *b);
-  EXPECT_EQ(bb1, b1->getOperand(1));
-  EXPECT_EQ(bb1, b1->getSuccessor(1));
-  ++b;
-
   // check THEN
   EXPECT_EQ(bb0, *b);
-  EXPECT_EQ(bb0, b1->getOperand(2));
+  EXPECT_EQ(bb0, b1->getOperand(1));
   EXPECT_EQ(bb0, b1->getSuccessor(0));
+  ++b;
+
+  // check ELSE
+  EXPECT_EQ(bb1, *b);
+  EXPECT_EQ(bb1, b1->getOperand(2));
+  EXPECT_EQ(bb1, b1->getSuccessor(1));
   ++b;
 
   EXPECT_EQ(b1->op_end(), b);
 
   // clean up
-  delete b0;
   delete b1;
 
   delete bb0;
@@ -539,7 +543,8 @@ TEST(InstructionsTest, VectorGep) {
 
 TEST(InstructionsTest, FPMathOperator) {
   LLVMContext Context;
-  IRBuilder<> Builder(Context);
+  Module M("", Context);
+  IRBuilder<> Builder(M);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
   MDNode *MD1 = MDHelper.createFPMath(1.0);
@@ -561,8 +566,7 @@ TEST(InstructionTest, ConstrainedTrans) {
                         false);
   auto *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
   auto *BB = BasicBlock::Create(Context, "bb", F);
-  IRBuilder<> Builder(Context);
-  Builder.SetInsertPoint(BB);
+  IRBuilder<> Builder(BB);
   auto *Arg0 = F->arg_begin();
   auto *Arg1 = F->arg_begin() + 1;
 
@@ -607,82 +611,101 @@ TEST(InstructionTest, ConstrainedTrans) {
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
+  DataLayout DL1("p1:32:32-p2:64:64:64:32");
 
-  Type* Int16Ty = Type::getInt16Ty(C);
-  Type* Int32Ty = Type::getInt32Ty(C);
-  Type* Int64Ty = Type::getInt64Ty(C);
-  Type *Int64PtrTy = PointerType::get(C, 0);
+  Type *Int16Ty = Type::getInt16Ty(C);
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *Int64Ty = Type::getInt64Ty(C);
+  Type *PtrTy64 = PointerType::get(C, 0);
+  Type *PtrTy32 = PointerType::get(C, 1);
+  Type *PtrTy64_32 = PointerType::get(C, 2);
 
   // Source and destination pointers have same size -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
-                                           CastInst::IntToPtr,
-                                           Int64PtrTy, Int64Ty, Int64PtrTy,
-                                           Int32Ty, nullptr, Int32Ty),
+                                           CastInst::IntToPtr, PtrTy32, Int64Ty,
+                                           PtrTy32, &DL1),
             CastInst::BitCast);
 
-  // Source and destination have unknown sizes, but the same address space and
-  // the intermediate int is the maximum pointer size -> bitcast
+  // Source and destination have unknown sizes.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
-                                           CastInst::IntToPtr,
-                                           Int64PtrTy, Int64Ty, Int64PtrTy,
-                                           nullptr, nullptr, nullptr),
-            CastInst::BitCast);
-
-  // Source and destination have unknown sizes, but the same address space and
-  // the intermediate int is not the maximum pointer size -> nothing
-  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
-                                           CastInst::IntToPtr,
-                                           Int64PtrTy, Int32Ty, Int64PtrTy,
-                                           nullptr, nullptr, nullptr),
+                                           CastInst::IntToPtr, PtrTy32, Int64Ty,
+                                           PtrTy32, nullptr),
             0U);
 
   // Middle pointer big enough -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::PtrToInt,
-                                           Int64Ty, Int64PtrTy, Int64Ty,
-                                           nullptr, Int64Ty, nullptr),
+                                           CastInst::PtrToInt, Int64Ty, PtrTy64,
+                                           Int64Ty, &DL1),
             CastInst::BitCast);
 
   // Middle pointer too small -> fail.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::PtrToInt,
-                                           Int64Ty, Int64PtrTy, Int64Ty,
-                                           nullptr, Int32Ty, nullptr),
+                                           CastInst::PtrToInt, Int64Ty, PtrTy32,
+                                           Int64Ty, &DL1),
             0U);
+
+  // Destination larger than source. Pointer type same as destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy64,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination larger than source. Pointer type different from destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy32,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination smaller than source. Pointer type same as source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy64,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // Destination smaller than source. Pointer type different from source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy32,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int64Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Non-truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int32Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::BitCast);
 
   // Test that we don't eliminate bitcasts between different address spaces,
   // or if we don't have available pointer size information.
-  DataLayout DL("e-p:32:32:32-p1:16:16:16-p2:64:64:64-i1:8:8-i8:8:8-i16:16:16"
-                "-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64"
-                "-v128:128:128-a:0:64-s:64:64-f80:128:128-n8:16:32:64-S128");
+  DataLayout DL2("e-p:32:32:32-p1:16:16:16-p2:64:64:64-i1:8:8-i8:8:8-i16:16:16"
+                 "-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64"
+                 "-v128:128:128-a:0:64-s:64:64-f80:128:128-n8:16:32:64-S128");
 
   Type *Int64PtrTyAS1 = PointerType::get(C, 1);
   Type *Int64PtrTyAS2 = PointerType::get(C, 2);
 
-  IntegerType *Int16SizePtr = DL.getIntPtrType(C, 1);
-  IntegerType *Int64SizePtr = DL.getIntPtrType(C, 2);
-
   // Cannot simplify inttoptr, addrspacecast
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::AddrSpaceCast,
-                                           Int16Ty, Int64PtrTyAS1, Int64PtrTyAS2,
-                                           nullptr, Int16SizePtr, Int64SizePtr),
+                                           CastInst::AddrSpaceCast, Int16Ty,
+                                           Int64PtrTyAS1, Int64PtrTyAS2, &DL2),
             0U);
 
   // Cannot simplify addrspacecast, ptrtoint
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::AddrSpaceCast,
-                                           CastInst::PtrToInt,
-                                           Int64PtrTyAS1, Int64PtrTyAS2, Int16Ty,
-                                           Int64SizePtr, Int16SizePtr, nullptr),
+                                           CastInst::PtrToInt, Int64PtrTyAS1,
+                                           Int64PtrTyAS2, Int16Ty, &DL2),
             0U);
 
   // Pass since the bitcast address spaces are the same
-  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::BitCast,
-                                           Int16Ty, Int64PtrTyAS1, Int64PtrTyAS1,
-                                           nullptr, nullptr, nullptr),
+  EXPECT_EQ(CastInst::isEliminableCastPair(
+                CastInst::IntToPtr, CastInst::BitCast, Int16Ty, Int64PtrTyAS1,
+                Int64PtrTyAS1, nullptr),
             CastInst::IntToPtr);
-
 }
 
 TEST(InstructionsTest, CloneCall) {
@@ -720,6 +743,80 @@ TEST(InstructionsTest, CloneCall) {
   }
 }
 
+TEST(InstructionsTest, IsSameOperationAsCompareCallTargets) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+declare i32 @foo(i32)
+declare i32 @bar(i32)
+
+define void @test_calls(ptr %fp1, ptr %fp2, i32 %x) {
+entry:
+  %same_direct0 = call i32 @foo(i32 %x)
+  %same_direct1 = call i32 @foo(i32 %x)
+  %diff_direct = call i32 @bar(i32 %x)
+  %same_indirect0 = call i32 %fp1(i32 %x)
+  %same_indirect1 = call i32 %fp1(i32 %x)
+  %diff_indirect = call i32 %fp2(i32 %x)
+  %attr_same0 = call i32 @foo(i32 %x) #0
+  %attr_same1 = call i32 @foo(i32 %x) #1
+  %attr_diff = call i32 @bar(i32 %x) #1
+  ret void
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { willreturn }
+)");
+  ASSERT_TRUE(M);
+
+  auto GetNamedInst = [](Function *F, StringRef Name) -> Instruction * {
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB)
+        if (I.getName() == Name)
+          return &I;
+    ADD_FAILURE() << "Could not find instruction " << Name;
+    return nullptr;
+  };
+
+  Function *TestCalls = M->getFunction("test_calls");
+  ASSERT_NE(TestCalls, nullptr);
+  Instruction *SameDirect0 = GetNamedInst(TestCalls, "same_direct0");
+  Instruction *SameDirect1 = GetNamedInst(TestCalls, "same_direct1");
+  Instruction *DiffDirect = GetNamedInst(TestCalls, "diff_direct");
+  Instruction *SameIndirect0 = GetNamedInst(TestCalls, "same_indirect0");
+  Instruction *SameIndirect1 = GetNamedInst(TestCalls, "same_indirect1");
+  Instruction *DiffIndirect = GetNamedInst(TestCalls, "diff_indirect");
+  Instruction *AttrSame0 = GetNamedInst(TestCalls, "attr_same0");
+  Instruction *AttrSame1 = GetNamedInst(TestCalls, "attr_same1");
+  Instruction *AttrDiff = GetNamedInst(TestCalls, "attr_diff");
+  ASSERT_TRUE(SameDirect0 && SameDirect1 && DiffDirect && SameIndirect0 &&
+              SameIndirect1 && DiffIndirect && AttrSame0 && AttrSame1 &&
+              AttrDiff);
+
+  EXPECT_TRUE(SameDirect0->isSameOperationAs(SameDirect1));
+  EXPECT_TRUE(SameDirect0->isSameOperationAs(DiffDirect));
+  EXPECT_TRUE(SameDirect0->isSameOperationAs(SameDirect1,
+                                             Instruction::CompareCallTargets));
+  EXPECT_FALSE(SameDirect0->isSameOperationAs(DiffDirect,
+                                              Instruction::CompareCallTargets));
+
+  EXPECT_TRUE(SameIndirect0->isSameOperationAs(DiffIndirect));
+  EXPECT_TRUE(SameIndirect0->isSameOperationAs(
+      SameIndirect1, Instruction::CompareCallTargets));
+  EXPECT_FALSE(SameIndirect0->isSameOperationAs(
+      DiffIndirect, Instruction::CompareCallTargets));
+
+  EXPECT_FALSE(
+      AttrSame0->isSameOperationAs(AttrSame1, Instruction::CompareCallTargets));
+  EXPECT_TRUE(AttrSame0->isSameOperationAs(
+      AttrSame1, Instruction::CompareCallTargets |
+                     Instruction::CompareUsingIntersectedAttrs));
+  EXPECT_TRUE(AttrSame0->isSameOperationAs(
+      AttrDiff, Instruction::CompareUsingIntersectedAttrs));
+  EXPECT_FALSE(AttrSame0->isSameOperationAs(
+      AttrDiff, Instruction::CompareCallTargets |
+                    Instruction::CompareUsingIntersectedAttrs));
+}
+
 TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
@@ -733,7 +830,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, {})));
+  Call->setDebugLoc(DebugLoc(DILocation::get(C, 1, 1, MDNode::get(C, {}))));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
@@ -763,7 +860,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, {})));
+  Invoke->setDebugLoc(DebugLoc(DILocation::get(C, 1, 1, MDNode::get(C, {}))));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
@@ -783,7 +880,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   auto *OnlyBB = BasicBlock::Create(Ctx, "bb", F);
   auto *Arg0 = &*F->arg_begin();
 
-  IRBuilder<NoFolder> B(Ctx);
+  IRBuilder<NoFolder> B(*M);
   B.SetInsertPoint(OnlyBB);
 
   {
@@ -838,23 +935,40 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
     GI->dropPoisonGeneratingFlags();
     ASSERT_FALSE(GI->isInBounds());
   }
+
+  {
+    Value *Ptr = B.CreateIntToPtr(Arg0, B.getPtrTy(1));
+    auto *ASC = cast<AddrSpaceCastInst>(
+        B.CreateAddrSpaceCast(Ptr, B.getPtrTy(), "", /*IsNonNull*/ true));
+    EXPECT_TRUE(ASC->hasNonNull());
+    EXPECT_TRUE(ASC->hasPoisonGeneratingFlags());
+    ASC->dropPoisonGeneratingFlags();
+    EXPECT_FALSE(ASC->hasNonNull());
+    EXPECT_FALSE(ASC->hasPoisonGeneratingFlags());
+  }
+
+  {
+    // A ConstantExpr addrspacecast is an Operator but not an
+    // AddrSpaceCastInst; hasPoisonGeneratingFlags() must not assume the
+    // instruction subclass.
+    Constant *NullPtr = Constant::getNullValue(B.getPtrTy(1));
+    auto *CE =
+        cast<Operator>(ConstantExpr::getAddrSpaceCast(NullPtr, B.getPtrTy()));
+    EXPECT_FALSE(CE->hasPoisonGeneratingFlags());
+  }
 }
 
 TEST(InstructionsTest, GEPIndices) {
   LLVMContext Context;
-  IRBuilder<NoFolder> Builder(Context);
-  Type *ElementTy = Builder.getInt8Ty();
+  Type *ElementTy = Type::getInt8Ty(Context);
+  Type *IdxTy = Type::getInt32Ty(Context);
   Type *ArrTy = ArrayType::get(ArrayType::get(ElementTy, 64), 64);
-  Value *Indices[] = {
-    Builder.getInt32(0),
-    Builder.getInt32(13),
-    Builder.getInt32(42) };
+  Value *Indices[] = {ConstantInt::get(IdxTy, 0), ConstantInt::get(IdxTy, 13),
+                      ConstantInt::get(IdxTy, 42)};
 
-  Value *V = Builder.CreateGEP(
+  auto *GEPI = GetElementPtrInst::Create(
       ArrTy, UndefValue::get(PointerType::getUnqual(Context)), Indices);
-  ASSERT_TRUE(isa<GetElementPtrInst>(V));
 
-  auto *GEPI = cast<GetElementPtrInst>(V);
   ASSERT_NE(GEPI->idx_begin(), GEPI->idx_end());
   ASSERT_EQ(GEPI->idx_end(), std::next(GEPI->idx_begin(), 3));
   EXPECT_EQ(Indices[0], GEPI->idx_begin()[0]);
@@ -950,6 +1064,29 @@ TEST(InstructionsTest, SwitchInst) {
   const auto &Handle = *CCI;
   EXPECT_EQ(1, Handle.getCaseValue()->getSExtValue());
   EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
+
+  // C API tests.
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSwitchDefaultDest(wrap(SI))));
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSuccessor(wrap(SI), 0)));
+  EXPECT_EQ(BB1.get(), unwrap(LLVMGetSuccessor(wrap(SI), 1)));
+  EXPECT_EQ(
+      1,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 1))->getSExtValue());
+  EXPECT_EQ(BB2.get(), unwrap(LLVMGetSuccessor(wrap(SI), 2)));
+  EXPECT_EQ(
+      2,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
+  EXPECT_EQ(BB3.get(), unwrap(LLVMGetSuccessor(wrap(SI), 3)));
+  EXPECT_EQ(
+      3,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 3))->getSExtValue());
+  // Test case value modification. The C API provides case value indices
+  // matching the successor indices.
+  LLVMSetSwitchCaseValue(wrap(SI), 2, wrap(ConstantInt::get(Int32Ty, 12)));
+  EXPECT_EQ(12, (SI->case_begin() + 1)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(
+      12,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
 }
 
 TEST(InstructionsTest, SwitchInstProfUpdateWrapper) {
@@ -1449,51 +1586,10 @@ TEST(InstructionsTest, GetSplat) {
   EXPECT_EQ(NotSplatPoison->getSplatValue(true), nullptr);
 }
 
-TEST(InstructionsTest, SkipDebug) {
-  LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"(
-      declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-      define void @f() {
-      entry:
-        call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !13
-        ret void
-      }
-
-      !llvm.dbg.cu = !{!0}
-      !llvm.module.flags = !{!3, !4}
-      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-      !1 = !DIFile(filename: "t2.c", directory: "foo")
-      !2 = !{}
-      !3 = !{i32 2, !"Dwarf Version", i32 4}
-      !4 = !{i32 2, !"Debug Info Version", i32 3}
-      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
-      !9 = !DISubroutineType(types: !10)
-      !10 = !{null}
-      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
-      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-      !13 = !DILocation(line: 2, column: 7, scope: !8)
-  )");
-  ASSERT_TRUE(M);
-  Function *F = cast<Function>(M->getNamedValue("f"));
-  BasicBlock &BB = F->front();
-
-  // The first non-debug instruction is the terminator.
-  auto *Term = BB.getTerminator();
-  EXPECT_EQ(Term, BB.begin()->getNextNonDebugInstruction());
-  EXPECT_EQ(Term->getIterator(), skipDebugIntrinsics(BB.begin()));
-
-  // After the terminator, there are no non-debug instructions.
-  EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
-  UseNewDbgInfoFormat = OldDbgValueMode;
-}
-
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
   LLVMContext Context;
-  IRBuilder<> Builder(Context);
+  Module M("", Context);
+  IRBuilder<> Builder(M);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getInt32Ty(), 0);
   EXPECT_FALSE(isa<FPMathOperator>(I));
@@ -1664,7 +1760,8 @@ if.end:
 
 TEST(InstructionsTest, UnaryOperator) {
   LLVMContext Context;
-  IRBuilder<> Builder(Context);
+  Module M("", Context);
+  IRBuilder<> Builder(M);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
   Value *F = Builder.CreateFNeg(I);
 
@@ -1937,5 +2034,21 @@ TEST(InstructionsTest, CmpPredicate) {
   EXPECT_EQ(P2, R2);
 }
 
+TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
+  LLVMContext C;
+  DataLayout DL;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+  define void @foo(ptr %ptr, i64 %offset) {
+    %gep = getelementptr inbounds [1 x i8], ptr %ptr, i64 4, i64 %offset
+    ret void
+  })");
+  ASSERT_TRUE(M);
+  Value *GEP = &M->getFunction("foo")->getEntryBlock().front();
+  APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+  Value *Stripped = GEP->stripAndAccumulateConstantOffsets(
+      DL, Offset, /*AllowNonInBounds=*/true);
+  EXPECT_EQ(Stripped, GEP);
+  EXPECT_TRUE(Offset.isZero());
+}
+
 } // end anonymous namespace
-} // end namespace llvm

@@ -1,4 +1,4 @@
-//===--- MtUnsafeCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "MtUnsafeCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
+namespace clang::tidy {
+
 // Initial list was extracted from gcc documentation
-static const clang::StringRef GlibcFunctions[] = {
+static constexpr StringRef GlibcFunctions[] = {
     "::argp_error",
     "::argp_help",
     "::argp_parse",
@@ -153,7 +154,6 @@ static const clang::StringRef GlibcFunctions[] = {
     "::sigsuspend",
     "::sleep",
     "::srand48",
-    "::strerror",
     "::strsignal",
     "::strtok",
     "::tcflow",
@@ -173,7 +173,7 @@ static const clang::StringRef GlibcFunctions[] = {
     "::wordexp",
 };
 
-static const clang::StringRef PosixFunctions[] = {
+static constexpr StringRef PosixFunctions[] = {
     "::asctime",
     "::basename",
     "::catgets",
@@ -258,8 +258,6 @@ static const clang::StringRef PosixFunctions[] = {
     "::wctomb",
 };
 
-namespace clang::tidy {
-
 template <> struct OptionEnumMapping<concurrency::MtUnsafeCheck::FunctionSet> {
   static llvm::ArrayRef<
       std::pair<concurrency::MtUnsafeCheck::FunctionSet, StringRef>>
@@ -275,7 +273,7 @@ template <> struct OptionEnumMapping<concurrency::MtUnsafeCheck::FunctionSet> {
 
 namespace concurrency {
 
-static ast_matchers::internal::Matcher<clang::NamedDecl>
+static ast_matchers::internal::Matcher<NamedDecl>
 hasAnyMtUnsafeNames(MtUnsafeCheck::FunctionSet Libc) {
   switch (Libc) {
   case MtUnsafeCheck::FunctionSet::Posix:

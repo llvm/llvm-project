@@ -387,7 +387,7 @@ struct ChainEdge {
   void appendJump(JumpT *Jump) { Jumps.push_back(Jump); }
 
   void moveJumps(ChainEdge *Other) {
-    Jumps.insert(Jumps.end(), Other->Jumps.begin(), Other->Jumps.end());
+    llvm::append_range(Jumps, Other->Jumps);
     Other->Jumps.clear();
     Other->Jumps.shrink_to_fit();
   }
@@ -1285,7 +1285,7 @@ private:
     // Cache misses on the merged chain
     double MergedCounts = ChainPred->ExecutionCount + ChainSucc->ExecutionCount;
     double MergedSize = ChainPred->Size + ChainSucc->Size;
-    double MergedDensity = static_cast<double>(MergedCounts) / MergedSize;
+    double MergedDensity = MergedCounts / MergedSize;
     double NewScore = MergedCounts * missProbability(MergedDensity);
 
     return CurScore - NewScore;

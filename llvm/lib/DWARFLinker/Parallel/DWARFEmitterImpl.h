@@ -16,6 +16,7 @@
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -91,18 +92,9 @@ public:
   void emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table);
 
 private:
-  // Enumerate all string patches and write them into the destination section.
-  // Order of patches is the same as in original input file. To avoid emitting
-  // the same string twice we accumulate NextOffset value. Thus if string
-  // offset smaller than NextOffset value then the patch is skipped (as that
-  // string was emitted earlier).
-  template <typename PatchTy>
-  void emitStringsImpl(ArrayList<PatchTy> &StringPatches,
-                       const StringEntryToDwarfStringPoolEntryMap &Strings,
-                       uint64_t &NextOffset, MCSection *OutSection);
-
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCObjectFileInfo> MOFI;
@@ -110,7 +102,7 @@ private:
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
   std::unique_ptr<MCSubtargetInfo> MSTI;
-  MCInstPrinter *MIP; // Owned by AsmPrinter
+  std::unique_ptr<MCInstPrinter> MIP; // Owned by AsmPrinter
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;

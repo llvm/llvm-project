@@ -15,23 +15,19 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
-static cl::opt<bool> MarkBTIProperty(
-    "aarch64-mark-bti-property", cl::Hidden,
-    cl::desc("Add .note.gnu.property with BTI to assembly files"),
-    cl::init(false));
-
 //
-// AArch64TargetStreamer Implemenation
+// AArch64TargetStreamer Implementation
 //
 AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S), ConstantPools(new AssemblerConstantPools()) {}
+    : MCTargetStreamer(S), CLOpts(AArch64MCOptions::Global),
+      ConstantPools(new AssemblerConstantPools()) {}
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;
 
@@ -64,7 +60,7 @@ void AArch64TargetStreamer::emitConstantPools() {
 // finish() - write out any non-empty assembler constant pools and
 //   write out note.gnu.properties if need.
 void AArch64TargetStreamer::finish() {
-  if (MarkBTIProperty)
+  if (CLOpts.mark_bti_property)
     emitNoteSection(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
 }
 
@@ -152,14 +148,14 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
   return new AArch64TargetStreamer(S);
 }
 
-void AArch64TargetStreamer::emitAtributesSubsection(
-    StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
-    AArch64BuildAttrs::SubsectionType ParameterType) {
+void AArch64TargetStreamer::emitAttributesSubsection(
+    StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
+    AArch64BuildAttributes::SubsectionType ParameterType) {
 
   // If exists, return.
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (VendorName == SubSection.VendorName) {
-      activateAtributesSubsection(VendorName);
+      activateAttributesSubsection(VendorName);
       return;
     }
   }
@@ -169,11 +165,11 @@ void AArch64TargetStreamer::emitAtributesSubsection(
   AttSubSection.IsOptional = IsOptional;
   AttSubSection.ParameterType = ParameterType;
   AttributeSubSections.push_back(AttSubSection);
-  activateAtributesSubsection(VendorName);
+  activateAttributesSubsection(VendorName);
 }
 
 std::unique_ptr<MCELFStreamer::AttributeSubSection>
-AArch64TargetStreamer::getActiveAtributesSubsection() {
+AArch64TargetStreamer::getActiveAttributesSubsection() {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (SubSection.IsActive) {
       return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
@@ -183,7 +179,7 @@ AArch64TargetStreamer::getActiveAtributesSubsection() {
 }
 
 std::unique_ptr<MCELFStreamer::AttributeSubSection>
-AArch64TargetStreamer::getAtributesSubsectionByName(StringRef Name) {
+AArch64TargetStreamer::getAttributesSubsectionByName(StringRef Name) {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (Name == SubSection.VendorName) {
       return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
@@ -193,8 +189,7 @@ AArch64TargetStreamer::getAtributesSubsectionByName(StringRef Name) {
 }
 
 void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                          unsigned Value, std::string String,
-                                          bool Override) {
+                                          unsigned Value, std::string String) {
 
   if (unsigned(-1) == Value && "" == String) {
     assert(0 && "Arguments error");
@@ -214,22 +209,14 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
         return;
       }
       for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
+        // Tag already exists
         if (Item.Tag == Tag) {
-          if (!Override) {
-            if ((unsigned(-1) != Value && Item.IntValue != Value) ||
-                ("" != String && Item.StringValue != String)) {
-              assert(0 &&
-                     "Can not add AArch64 build attribute: An attribute with "
-                     "the same tag and a different value already exists");
-              return;
-            } else {
-              // Case Item.IntValue == Value, no need to emit twice
-              assert(0 &&
-                     "AArch64 build attribute: An attribute with the same tag "
-                     "and a same value already exists");
-              return;
-            }
-          }
+          Item.Type = unsigned(-1) != Value
+                          ? MCELFStreamer::AttributeItem::NumericAttribute
+                          : MCELFStreamer::AttributeItem::TextAttribute;
+          Item.IntValue = unsigned(-1) != Value ? Value : unsigned(-1);
+          Item.StringValue = unsigned(-1) != Value ? "" : String;
+          return;
         }
       }
       if (unsigned(-1) != Value)
@@ -246,7 +233,7 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
               "not exist");
 }
 
-void AArch64TargetStreamer::activateAtributesSubsection(StringRef VendorName) {
+void AArch64TargetStreamer::activateAttributesSubsection(StringRef VendorName) {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (VendorName == SubSection.VendorName) {
       SubSection.IsActive = true;

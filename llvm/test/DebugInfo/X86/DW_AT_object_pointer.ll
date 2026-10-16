@@ -1,5 +1,11 @@
-; RUN: llc -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=gdb -dwarf-version=5 -filetype=obj < %s | \
+; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-GDB
+
+; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=lldb -dwarf-version=4 -filetype=obj < %s | \
+; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-LLDB-DWARF4
+
+; RUN: llc -mtriple=x86_64-apple-darwin -debugger-tune=lldb -dwarf-version=5 -filetype=obj < %s | \
+; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-LLDB-DWARF5
 
 ; CHECK: DW_TAG_formal_parameter [
 ; CHECK-NOT: ""
@@ -7,16 +13,18 @@
 ; CHECK: DW_TAG_class_type
 ; CHECK: [[DECL:0x[0-9a-f]+]]: DW_TAG_subprogram
 ; CHECK:                         DW_AT_name {{.*}} "A"
-; CHECK:                         DW_AT_object_pointer [DW_FORM_ref4] 
-; CHECK-SAME:                    (cu + 0x{{[0-9a-f]*}} => {[[DECL_PARAM:0x[0-9a-f]*]]})
-; CHECK: [[DECL_PARAM]]:         DW_TAG_formal_parameter
+; CHECK-LLDB-DWARF5:             DW_AT_object_pointer [DW_FORM_implicit_const] (0)
+; CHECK-GDB-NOT:                 DW_AT_object_pointer
+; CHECK-LLDB-DWARF4-NOT:         DW_AT_object_pointer
+; CHECK: DW_TAG_formal_parameter
 ;
 ; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_specification [DW_FORM_ref4] (cu + {{.*}} => {[[DECL]]}
 ; CHECK:   DW_AT_object_pointer [DW_FORM_ref4]     (cu + 0x{{[0-9a-f]*}} => {[[PARAM:0x[0-9a-f]*]]})
+; CHECK:   DW_AT_specification [DW_FORM_ref4] (cu + {{.*}} => {[[DECL]]}
 ; CHECK: [[PARAM]]:     DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x{{[0-9a-f]*}}] = "this")
+; CHECK: DW_AT_name
+; CHECK-SAME        = "this")
 
 %class.A = type { i32 }
 

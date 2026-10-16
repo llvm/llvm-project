@@ -11,22 +11,20 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
-#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
+#include "flang/Runtime/CUDA/init.h"
+#include "flang/Runtime/exceptions.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
-#ifdef FLANG_CUDA_SUPPORT
-#include "flang/Runtime/CUDA/init.h"
-#endif
 
 using namespace Fortran::runtime;
 
 /// Create a `int main(...)` that calls the Fortran entry point
 void fir::runtime::genMain(
     fir::FirOpBuilder &builder, mlir::Location loc,
-    const std::vector<Fortran::lower::EnvironmentDefault> &defs,
-    bool initCuda) {
+    const std::vector<Fortran::lower::EnvironmentDefault> &defs, bool initCuda,
+    bool initCoarrayEnv, unsigned fpExceptionTraps) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
@@ -64,19 +62,29 @@ void fir::runtime::genMain(
   llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
   args.push_back(env);
 
-  builder.create<fir::CallOp>(loc, startFn, args);
+  fir::CallOp::create(builder, loc, startFn, args);
 
-#ifdef FLANG_CUDA_SUPPORT
   if (initCuda) {
     auto initFn = builder.createFunction(
         loc, RTNAME_STRING(CUFInit), mlir::FunctionType::get(context, {}, {}));
-    builder.create<fir::CallOp>(loc, initFn);
+    fir::CallOp::create(builder, loc, initFn);
   }
-#endif
+  if (initCoarrayEnv)
+    mif::InitOp::create(builder, loc);
 
-  builder.create<fir::CallOp>(loc, qqMainFn);
-  builder.create<fir::CallOp>(loc, stopFn);
+  if (fpExceptionTraps != 0) {
+    auto i32Ty = builder.getI32Type();
+    auto enableFn =
+        builder.createFunction(loc, RTNAME_STRING(EnableFPETraps),
+                               mlir::FunctionType::get(context, {i32Ty}, {}));
+    mlir::Value trapsVal =
+        builder.createIntegerConstant(loc, i32Ty, fpExceptionTraps);
+    fir::CallOp::create(builder, loc, enableFn, mlir::ValueRange{trapsVal});
+  }
+
+  fir::CallOp::create(builder, loc, qqMainFn);
 
   mlir::Value ret = builder.createIntegerConstant(loc, argcTy, 0);
-  builder.create<mlir::func::ReturnOp>(loc, ret);
+  fir::CallOp::create(builder, loc, stopFn);
+  mlir::func::ReturnOp::create(builder, loc, ret);
 }

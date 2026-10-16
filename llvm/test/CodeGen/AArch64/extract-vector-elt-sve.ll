@@ -22,8 +22,8 @@ define <vscale x 2 x i64> @insert_vscale_2_i64_zero(<vscale x 2 x i64> %vec, i64
 ; CHECK-GI-NEXT:    index z1.d, #0, #1
 ; CHECK-GI-NEXT:    ptrue p0.d
 ; CHECK-GI-NEXT:    mov z2.d, x8
-; CHECK-GI-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
-; CHECK-GI-NEXT:    mov z0.d, p0/m, x0
+; CHECK-GI-NEXT:    cmpeq p1.d, p0/z, z1.d, z2.d
+; CHECK-GI-NEXT:    mov z0.d, p1/m, x0
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <vscale x 2 x i64> %vec, i64 %elt, i64 0
@@ -36,8 +36,8 @@ define <vscale x 2 x i64> @insert_vscale_2_i64(<vscale x 2 x i64> %vec, i64 %elt
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    mov z2.d, x1
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
-; CHECK-NEXT:    mov z0.d, p0/m, x0
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    mov z0.d, p1/m, x0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <vscale x  2 x i64> %vec, i64 %elt, i64 %idx
@@ -57,8 +57,8 @@ define <vscale x 4 x i32> @insert_vscale_4_i32_zero(<vscale x 4 x i32> %vec, i32
 ; CHECK-GI-NEXT:    index z1.s, #0, #1
 ; CHECK-GI-NEXT:    ptrue p0.s
 ; CHECK-GI-NEXT:    mov z2.s, w8
-; CHECK-GI-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; CHECK-GI-NEXT:    mov z0.s, p0/m, w0
+; CHECK-GI-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; CHECK-GI-NEXT:    mov z0.s, p1/m, w0
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = insertelement <vscale x 4 x i32> %vec, i32 %elt, i64 0
@@ -71,8 +71,8 @@ define <vscale x 4 x i32> @insert_vscale_4_i32(<vscale x 4 x i32> %vec, i32 %elt
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    mov z2.s, w1
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
-; CHECK-NEXT:    mov z0.s, p0/m, w0
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    mov z0.s, p1/m, w0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <vscale x 4 x i32> %vec, i32 %elt, i64 %idx
@@ -96,8 +96,8 @@ define <vscale x 8 x i16> @insert_vscale_8_i16(<vscale x 8 x i16> %vec, i16 %elt
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w1
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
-; CHECK-NEXT:    mov z0.h, p0/m, w0
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    mov z0.h, p1/m, w0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <vscale x 8 x i16> %vec, i16 %elt, i64 %idx
@@ -121,8 +121,8 @@ define <vscale x 16 x i8> @insert_vscale_16_i8(<vscale x 16 x i8> %vec, i8 %elt,
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    mov z2.b, w1
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, z2.b
-; CHECK-NEXT:    mov z0.b, p0/m, w0
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    mov z0.b, p1/m, w0
 ; CHECK-NEXT:    ret
 entry:
   %d = insertelement <vscale x 16 x i8> %vec, i8 %elt, i64 %idx

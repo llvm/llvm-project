@@ -1,4 +1,5 @@
 add_subdirectory(Atomic)
+add_subdirectory(Directive)
 add_subdirectory(Driver)
 add_subdirectory(HLSL)
 add_subdirectory(OpenACC)

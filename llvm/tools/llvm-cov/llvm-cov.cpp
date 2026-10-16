@@ -71,8 +71,8 @@ int main(int argc, const char **argv) {
                             .Case("gcov", gcovMain)
                             .Case("report", reportMain)
                             .Case("show", showMain)
-                            .Cases("-h", "-help", "--help", helpMain)
-                            .Cases("-version", "--version", versionMain)
+                            .Cases({"-h", "-help", "--help"}, helpMain)
+                            .Cases({"-version", "--version"}, versionMain)
                             .Default(nullptr);
 
     if (Func) {

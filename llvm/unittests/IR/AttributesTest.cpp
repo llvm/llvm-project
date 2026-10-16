@@ -263,19 +263,19 @@ TEST(Attributes, AttributeListPrinting) {
 
 TEST(Attributes, MismatchedABIAttrs) {
   const char *IRString = R"IR(
-    declare void @f1(i32* byval(i32))
+    declare void @f1(ptr byval(i32))
     define void @g() {
-      call void @f1(i32* null)
+      call void @f1(ptr null)
       ret void
     }
-    declare void @f2(i32* preallocated(i32))
+    declare void @f2(ptr preallocated(i32))
     define void @h() {
-      call void @f2(i32* null)
+      call void @f2(ptr null)
       ret void
     }
-    declare void @f3(i32* inalloca(i32))
+    declare void @f3(ptr inalloca(i32))
     define void @i() {
-      call void @f3(i32* null)
+      call void @f3(ptr null)
       ret void
     }
   )IR";
@@ -341,6 +341,36 @@ TEST(Attributes, ConstantRangeAttributeCAPI) {
     auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
         wrap(&C), Attribute::Range, NumBits, LowerWords, UpperWords));
     EXPECT_EQ(OutAttr, RangeAttr);
+  }
+}
+
+TEST(Attributes, DenormalFPEnvAttributeCAPI) {
+  LLVMContext C;
+  LLVMContextRef CtxC = wrap(&C);
+  {
+    LLVMAttributeRef CAttr = LLVMCreateDenormalFPEnvAttribute(
+        CtxC, LLVMDenormalModeKindIEEE, LLVMDenormalModeKindIEEE,
+        LLVMDenormalModeKindPreserveSign, LLVMDenormalModeKindPreserveSign);
+
+    Attribute OutAttr = unwrap(CAttr);
+
+    EXPECT_EQ(OutAttr.getDenormalFPEnv(),
+              DenormalFPEnv(DenormalMode::getIEEE(),
+                            DenormalMode::getPreserveSign()));
+  }
+
+  {
+    LLVMAttributeRef CAttr = LLVMCreateDenormalFPEnvAttribute(
+        CtxC, LLVMDenormalModeKindDynamic, LLVMDenormalModeKindPositiveZero,
+        LLVMDenormalModeKindPreserveSign, LLVMDenormalModeKindIEEE);
+
+    Attribute OutAttr = unwrap(CAttr);
+
+    EXPECT_EQ(
+        OutAttr.getDenormalFPEnv(),
+        DenormalFPEnv(
+            DenormalMode(DenormalMode::Dynamic, DenormalMode::PositiveZero),
+            DenormalMode(DenormalMode::PreserveSign, DenormalMode::IEEE)));
   }
 }
 
@@ -786,6 +816,39 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::ReadNone));
   ASSERT_TRUE(Res->hasParamAttr(3, Attribute::ReadNone));
   ASSERT_TRUE(Res->hasParamAttr(3, Attribute::ByVal));
+}
+
+TEST(Attributes, BuilderMerge) {
+  LLVMContext C;
+  AttrBuilder A(C), B(C);
+  A.addAttribute(Attribute::NoUnwind);
+  A.addAlignmentAttr(4);
+  A.addAttribute("a", "1");
+  A.addAttribute("c", "1");
+  B.addAttribute(Attribute::NoReturn);
+  B.addAlignmentAttr(8);
+  B.addAttribute("b", "2");
+  B.addAttribute("c", "2");
+  B.addAttribute("d", "2");
+  A.merge(B);
+
+  // Attributes of B replace those of the same kind in A, and the result stays
+  // sorted (AttrBuilder equality compares the sorted lists).
+  AttrBuilder Expected(C);
+  for (Attribute Attr :
+       {Attribute::get(C, Attribute::NoUnwind),
+        Attribute::get(C, Attribute::NoReturn),
+        Attribute::getWithAlignment(C, Align(8)), Attribute::get(C, "a", "1"),
+        Attribute::get(C, "b", "2"), Attribute::get(C, "c", "2"),
+        Attribute::get(C, "d", "2")})
+    Expected.addAttribute(Attr);
+  EXPECT_EQ(A, Expected);
+
+  AttrBuilder Empty(C);
+  Empty.merge(B);
+  EXPECT_EQ(Empty, B);
+  B.merge(AttrBuilder(C));
+  EXPECT_EQ(Empty, B);
 }
 
 } // end anonymous namespace

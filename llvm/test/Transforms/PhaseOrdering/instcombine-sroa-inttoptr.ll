@@ -73,23 +73,23 @@ bb:
   %i = alloca %0, align 8
   %i1 = alloca %0, align 8
   %i2 = alloca %0, align 8
-  call void @llvm.lifetime.start.p0(i64 24, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %i1, ptr align 8 %arg, i64 24, i1 false)
   call void @_Z3gen1S(ptr sret(%0) align 8 %i, ptr byval(%0) align 8 %i1)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %i2, ptr align 8 %i, i64 24, i1 false)
   call void @_Z7escape01S(ptr byval(%0) align 8 %i2)
   %i9 = load ptr, ptr %i, align 8
-  call void @llvm.lifetime.end.p0(i64 24, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   ret ptr %i9
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 declare dso_local void @_Z7escape01S(ptr byval(%0) align 8)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define dso_local ptr @_Z3bar1S(ptr byval(%0) align 8 %arg) {
 ; CHECK-LABEL: @_Z3bar1S(
@@ -112,7 +112,7 @@ define dso_local ptr @_Z3bar1S(ptr byval(%0) align 8 %arg) {
 bb:
   %i = alloca %0, align 8
   %i1 = alloca %0, align 8
-  call void @llvm.lifetime.start.p0(i64 24, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %i1, ptr align 8 %arg, i64 24, i1 false)
   call void @_Z3gen1S(ptr sret(%0) align 8 %i, ptr byval(%0) align 8 %i1)
   %i5 = call i32 @_Z4condv()
@@ -133,7 +133,7 @@ bb10:
 
 bb13:
   %i15 = load ptr, ptr %i, align 8
-  call void @llvm.lifetime.end.p0(i64 24, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   ret ptr %i15
 }
 

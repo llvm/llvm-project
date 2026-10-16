@@ -51,13 +51,15 @@ template <>
 const MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {
   if (!value)
     return nullptr;
-  return F->getRegInfo().getVRegDef(value)->getParent();
+  return F->getRegInfo().getDefBlock(value);
 }
 
 static bool isUndef(const MachineInstr &MI) {
   return MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
          MI.getOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
+
+template <> bool MachineSSAContext::isAlwaysUniform(Register) { return false; }
 
 /// MachineInstr equivalent of PHINode::hasConstantOrUndefValue() for G_PHI.
 template <>
@@ -67,7 +69,7 @@ bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
 
   // In later passes PHI may appear with an undef operand, getVRegDef can fail.
   if (Phi.getOpcode() == TargetOpcode::PHI)
-    return Phi.isConstantValuePHI();
+    return Phi.isConstantValuePHI().isValid();
 
   // For G_PHI we do equivalent of PHINode::hasConstantOrUndefValue().
   const MachineRegisterInfo &MRI = Phi.getMF()->getRegInfo();

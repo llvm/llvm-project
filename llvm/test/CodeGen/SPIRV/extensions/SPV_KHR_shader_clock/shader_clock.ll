@@ -20,6 +20,9 @@
 ; CHECK: OpReadClockKHR [[v2uint]] [[uint_1]]
 ; CHECK: OpReadClockKHR [[v2uint]] [[uint_2]]
 ; CHECK: OpReadClockKHR [[v2uint]] [[uint_3]]
+; CHECK: OpReadClockKHR [[ulong]] [[uint_1]]
+; CHECK: OpReadClockKHR [[ulong]] [[uint_2]]
+; CHECK: OpReadClockKHR [[ulong]] [[uint_3]]
 
 define dso_local spir_kernel void @test_clocks(ptr addrspace(1) nocapture noundef writeonly align 8 %out64, ptr addrspace(1) nocapture noundef writeonly align 8 %outv2) {
 entry:
@@ -39,6 +42,9 @@ entry:
   %call9 = tail call spir_func <2 x i32> @_Z25clock_read_hilo_sub_groupv()
   %arrayidx10 = getelementptr inbounds i8, ptr addrspace(1) %outv2, i32 16
   store <2 x i32> %call9, ptr addrspace(1) %arrayidx10, align 8
+  %call10 = call spir_func i64 @_Z27__spirv_ReadClockKHR_Rulongi(i32 1)
+  %call11 = call spir_func i64 @_Z27__spirv_ReadClockKHR_Rulongi(i32 2)
+  %call12 = call spir_func i64 @_Z27__spirv_ReadClockKHR_Rulongi(i32 3)
   ret void
 }
 
@@ -59,3 +65,6 @@ declare spir_func <2 x i32> @_Z26clock_read_hilo_work_groupv() local_unnamed_add
 
 ; Function Attrs: convergent nounwind
 declare spir_func <2 x i32> @_Z25clock_read_hilo_sub_groupv() local_unnamed_addr
+
+; Function Attrs: nounwind
+declare spir_func i64 @_Z27__spirv_ReadClockKHR_Rulongi(i32)

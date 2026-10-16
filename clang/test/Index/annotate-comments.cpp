@@ -204,7 +204,7 @@ void isdoxy45(void);
 /// Ggg. IS_DOXYGEN_END
 void isdoxy46(void);
 
-/// IS_DOXYGEN_NOT_ATTACHED
+/// IS_MACRO_DOC
 #define FOO
 void notdoxy47(void);
 
@@ -295,6 +295,7 @@ void isdoxy54(int);
 // Adding a non-documentation comment with CHECK line between every two
 // documentation comments will only test a single code path.
 //
+// CHECK: annotate-comments.cpp:208:9: macro definition=FOO {{.*}} BriefComment=[IS_MACRO_DOC]
 // CHECK: annotate-comments.cpp:16:6: FunctionDecl=isdoxy4:{{.*}} isdoxy4 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments.cpp:20:6: FunctionDecl=isdoxy5:{{.*}} isdoxy5 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments.cpp:25:6: FunctionDecl=isdoxy6:{{.*}} isdoxy6 IS_DOXYGEN_SINGLE

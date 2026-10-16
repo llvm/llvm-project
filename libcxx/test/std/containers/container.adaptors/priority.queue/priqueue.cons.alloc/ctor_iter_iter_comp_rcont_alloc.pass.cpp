@@ -21,26 +21,34 @@
 #include "test_allocator.h"
 #include "MoveOnly.h"
 
-template<class T, class Cont, class Comp = std::less<T> >
+template <class T, class Cont, class Comp = std::less<T> >
 struct PQ : std::priority_queue<T, Cont, Comp> {
-    typedef std::priority_queue<T, Cont, Comp> base;
+  typedef std::priority_queue<T, Cont, Comp> base;
 
-    template<class It, class Alloc>
-    explicit PQ(It first, It last, const Comp& compare, Cont&& v, const Alloc& a) : base(first, last, compare, std::move(v), a) {}
+  template <class It, class Alloc>
+  TEST_CONSTEXPR_CXX26 explicit PQ(It first, It last, const Comp& compare, Cont&& v, const Alloc& a)
+      : base(first, last, compare, std::move(v), a) {}
 
-    using base::c;
+  using base::c;
 };
 
-int main(int, char**)
-{
-    using Alloc = test_allocator<MoveOnly>;
-    int a[] = {3, 5, 2, 0, 6, 8, 1};
-    PQ<MoveOnly, std::vector<MoveOnly, Alloc>> q(
-        a+3, a+7, std::less<MoveOnly>(),
-        std::vector<MoveOnly, Alloc>(a, a+3), Alloc(2));
-    assert(q.size() == 7);
-    assert(q.top() == MoveOnly(8));
-    assert(q.c.get_allocator() == Alloc(2));
+TEST_CONSTEXPR_CXX26 bool test() {
+  using Alloc = test_allocator<MoveOnly>;
+  int a[]     = {3, 5, 2, 0, 6, 8, 1};
+  PQ<MoveOnly, std::vector<MoveOnly, Alloc>> q(
+      a + 3, a + 7, std::less<MoveOnly>(), std::vector<MoveOnly, Alloc>(a, a + 3), Alloc(2));
+  assert(q.size() == 7);
+  assert(q.top() == MoveOnly(8));
+  assert(q.c.get_allocator() == Alloc(2));
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
+  return 0;
 }

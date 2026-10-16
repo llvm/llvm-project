@@ -13,7 +13,7 @@
 // register. That taint register can then be used to mask off registers with
 // sensitive data when executing under miss-speculation, a.k.a. "transient
 // execution".
-// This pass is aimed at mitigating against SpectreV1-style vulnarabilities.
+// This pass is aimed at mitigating against SpectreV1-style vulnerabilities.
 //
 // It also implements speculative load hardening, i.e. using the taint register
 // to automatically mask off loaded data.
@@ -113,10 +113,6 @@ using namespace llvm;
 
 #define AARCH64_SPECULATION_HARDENING_NAME "AArch64 speculation hardening pass"
 
-static cl::opt<bool> HardenLoads("aarch64-slh-loads", cl::Hidden,
-                                 cl::desc("Sanitize loads from memory."),
-                                 cl::init(true));
-
 namespace {
 
 class AArch64SpeculationHardening : public MachineFunctionPass {
@@ -126,9 +122,7 @@ public:
 
   static char ID;
 
-  AArch64SpeculationHardening() : MachineFunctionPass(ID) {
-    initializeAArch64SpeculationHardeningPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64SpeculationHardening() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -663,7 +657,7 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
 
   // Step 1: Enable automatic insertion of SpeculationSafeValue.
-  if (HardenLoads) {
+  if (MF.getSubtarget<AArch64Subtarget>().getCLOpts().slh_loads) {
     LLVM_DEBUG(
         dbgs() << "***** AArch64SpeculationHardening - automatic insertion of "
                   "SpeculationSafeValue intrinsics *****\n");

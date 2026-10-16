@@ -117,9 +117,9 @@ struct MetadataLatticeValue {
     for (const auto &lhsIt : lhs.metadata) {
       // As noted above, we only merge if the values are the same.
       auto it = rhs.metadata.find(lhsIt.first);
-      if (it == rhs.metadata.end() || it.second != lhsIt.second)
+      if (it == rhs.metadata.end() || it->second != lhsIt.second)
         continue;
-      result.insert(lhsIt);
+      result.metadata.insert(lhsIt);
     }
     return result;
   }
@@ -132,7 +132,7 @@ struct MetadataLatticeValue {
     // Check that `rhs` contains the same metadata.
     for (const auto &it : metadata) {
       auto rhsIt = rhs.metadata.find(it.first);
-      if (rhsIt == rhs.metadata.end() || it.second != rhsIt.second)
+      if (rhsIt == rhs.metadata.end() || it.second != rhsIt->second)
         return false;
     }
     return true;

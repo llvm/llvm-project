@@ -1,3 +1,5 @@
+enum class ValueType {};
+
 struct IntWrapper {
   int value;
 

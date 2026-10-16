@@ -9,6 +9,7 @@
 #include "Compiler.h"
 #include "support/Logger.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -48,7 +49,7 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
   // our compiler invocation set-up doesn't seem to work with it (leading
   // assertions in VerifyDiagnosticConsumer).
   CI.getDiagnosticOpts().VerifyDiagnostics = false;
-  CI.getDiagnosticOpts().ShowColors = false;
+  CI.getDiagnosticOpts().setShowColors(ShowColorsKind::Off);
 
   // Disable any dependency outputting, we don't want to generate files or write
   // to stdout/stderr.
@@ -110,8 +111,9 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   CIOpts.VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   CIOpts.CC1Args = CC1Args;
   CIOpts.RecoverOnError = true;
-  CIOpts.Diags = CompilerInstance::createDiagnostics(
-      *CIOpts.VFS, new DiagnosticOptions, &D, false);
+  DiagnosticOptions DiagOpts;
+  CIOpts.Diags =
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts, &D, false);
   CIOpts.ProbePrecompiled = false;
   std::unique_ptr<CompilerInvocation> CI = createInvocation(ArgStrs, CIOpts);
   if (!CI)
@@ -119,7 +121,8 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   // createInvocationFromCommandLine sets DisableFree.
   CI->getFrontendOpts().DisableFree = false;
   CI->getLangOpts().CommentOpts.ParseAllComments = true;
-  CI->getLangOpts().RetainCommentsFromSystemHeaders = true;
+  CI->getLangOpts().CommentOpts.RetainComments = true;
+  CI->getLangOpts().CommentOpts.RetainCommentsFromSystemHeaders = true;
 
   disableUnsupportedOptions(*CI);
   return CI;
@@ -145,16 +148,10 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());
   }
 
-  auto Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
-  Clang->setInvocation(std::move(CI));
-  Clang->createDiagnostics(*VFS, &DiagsClient, false);
-
-  if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics(), VFS))
-    VFS = VFSWithRemapping;
-  Clang->createFileManager(VFS);
-
+  auto Clang = std::make_unique<CompilerInstance>(std::move(CI));
+  Clang->createVirtualFileSystem(VFS, &DiagsClient);
+  Clang->createDiagnostics(&DiagsClient, false);
+  Clang->createFileManager();
   if (!Clang->createTarget())
     return nullptr;
 

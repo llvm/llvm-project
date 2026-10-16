@@ -183,7 +183,7 @@ b0:
   %v11 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> %v10, <32 x i32> undef)
   %v12 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v11, i32 2147483647, i32 1)
   store <64 x i32> %v12, ptr @g0, align 128
-  call void (ptr, ...) @f1(ptr @g3) #2
+  call void (ptr, ...) @f1(ptr @g3) #3
   %v13 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v14 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> undef, <32 x i32> %v13)
   %v15 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v14, i32 -2147483648, i32 1)
@@ -193,7 +193,7 @@ b0:
   %v17 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> undef, <32 x i32> %v16)
   %v18 = call <64 x i32> @llvm.hexagon.V6.vrmpyubi.128B(<64 x i32> %v17, i32 0, i32 1)
   store <64 x i32> %v18, ptr @g0, align 128
-  call void @f0() #2
+  call void @f0() #3
   %v19 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1)
   %v20 = call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 2)
   %v21 = call <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32> %v19, <32 x i32> %v20)
@@ -205,3 +205,4 @@ b0:
 attributes #0 = { nounwind "use-soft-float"="false" "target-cpu"="hexagonv66" "target-features"="+hvxv66,+hvx-length128b" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind optsize }
+attributes #3 = { nounwind minsize }

@@ -26,7 +26,7 @@ void g() {
   b.f();
 }
 
-// MS: @[[B_VTABLE:.*]] = private unnamed_addr constant { [2 x ptr] } {{.*}}@"??_R4B@?A0x{{[^@]*}}@@6B@"{{.*}}@"?f@B@?A0x{{[^@]*}}@@UEAAXXZ"
+// MS: @[[B_VTABLE:.*]] = private constant { [2 x ptr] } {{.*}}@"??_R4B@?A0x{{[^@]*}}@@6B@"{{.*}}@"?f@B@?A0x{{[^@]*}}@@UEAAXXZ"
 
 // CHECK-LABEL: caller
 // CHECK:   %[[A:.*]] = load ptr, ptr

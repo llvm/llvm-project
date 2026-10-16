@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 class Instr<list<dag> pat> {
   list<dag> Pattern = pat;
@@ -20,5 +19,5 @@ multiclass shuffle<Reg RC> {
                                        RC:$src1, RC:$src2))]>;
 }
 
-// CHECK: shufp:src3
+// CHECK: shufp:$src3
 defm ADD : shuffle<VR128>;
