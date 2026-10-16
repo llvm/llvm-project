@@ -104,6 +104,139 @@ cc_library(
 # Unit tests.
 
 cc_test(
+    name = "ABIAArch64Tests",
+    srcs = glob(["ABI/AArch64/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//lldb/source/Plugins:PluginABIAArch64",
+        "//llvm:AArch64Info",
+        "//llvm:AArch64UtilsAndDesc",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ABIRISCVTests",
+    srcs = glob(["ABI/RISCV/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//lldb/source/Plugins:PluginABIRISCV",
+        "//llvm:RISCVInfo",
+        "//llvm:RISCVUtilsAndDesc",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ArchitectureRISCVTests",
+    srcs = glob(["Architecture/RISCV/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginArchitectureRISCV",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Arm64InstEmulationTests",
+    srcs = glob(["UnwindAssembly/ARM64/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginDisassemblerLLVMC",
+        "//lldb/source/Plugins:PluginInstructionARM64",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//lldb/source/Plugins:PluginUnwindAssemblyInstEmulation",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+# CMake means to build the ARM sources when the ARM target is built, but its
+# list(APPEND) is missing the list name, so it never does. They pass, so build
+# them here.
+cc_test(
+    name = "DisassemblerTests",
+    srcs = glob([
+        "Disassembler/ARM/*.cpp",
+        "Disassembler/RISCV/*.cpp",
+        "Disassembler/x86/*.cpp",
+    ]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginDisassemblerLLVMC",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "EmulatorTests",
+    srcs = [
+        "Instruction/ARM/TestARMEmulator.cpp",
+        "Instruction/ARM64/TestAArch64Emulator.cpp",
+        "Instruction/LoongArch/TestLoongArchEmulator.cpp",
+        "Instruction/RISCV/TestRISCVEmulator.cpp",
+    ],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//lldb/source/Plugins:PluginInstructionARM",
+        "//lldb/source/Plugins:PluginInstructionARM64",
+        "//lldb/source/Plugins:PluginInstructionLoongArch",
+        "//lldb/source/Plugins:PluginInstructionRISCV",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "EditlineTests",
     srcs = ["Editline/EditlineTest.cpp"],
     deps = [
@@ -366,6 +499,28 @@ cc_test(
 )
 
 cc_test(
+    name = "PPC64InstEmulationTests",
+    srcs = glob(["UnwindAssembly/PPC64/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginDisassemblerLLVMC",
+        "//lldb/source/Plugins:PluginInstructionPPC64",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//lldb/source/Plugins:PluginUnwindAssemblyInstEmulation",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "ProcessTests",
     srcs = glob(["Process/*.cpp"]),
     deps = [
@@ -411,6 +566,28 @@ cc_test(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "RISCVEmulatorTests",
+    srcs = ["Instruction/RISCV/TestRiscvInstEmulation.cpp"],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginDisassemblerLLVMC",
+        "//lldb/source/Plugins:PluginInstructionRISCV",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//lldb/source/Plugins:PluginUnwindAssemblyInstEmulation",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -526,6 +703,24 @@ cc_test(
         ],
         "//conditions:default": [],
     }),
+)
+
+cc_test(
+    name = "UnwindAssemblyx86Tests",
+    srcs = glob(["UnwindAssembly/x86/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginUnwindAssemblyX86",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
 )
 
 cc_test(
