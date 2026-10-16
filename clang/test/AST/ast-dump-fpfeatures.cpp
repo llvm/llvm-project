@@ -19,6 +19,15 @@ vector2float no_fpfeatures_func_01(vector2double x) {
   return __builtin_convertvector(x, vector2float);
 }
 
+// CHECK-LABEL: FunctionDecl {{.*}} no_fpfeatures_func_01a 'vector2float (double)'
+// CHECK:         CompoundStmt {{.*\>$}}
+// CHECK:           ReturnStmt
+// CHECK:             SplatVectorExpr {{.*}} 'vector2float':'__attribute__((__vector_size__(2 * sizeof(float)))) float'{{$}}
+
+vector2float no_fpfeatures_func_01a(double x) {
+  return __builtin_splatvector(x, vector2float);
+}
+
 float func_01(float x);
 
 template <typename T>
@@ -269,4 +278,14 @@ float func_23(float x, float y) {
 #pragma STDC FENV_ROUND FE_TOWARDZERO
 vector2float func_24(vector2double x) {
   return __builtin_convertvector(x, vector2float);
+}
+
+// CHECK-LABEL: FunctionDecl {{.*}} func_24a 'vector2float (double)'
+// CHECK:         CompoundStmt {{.*}} FPContractMode=2 ConstRoundingMode=towardzero
+// CHECK:           ReturnStmt
+// CHECK:             SplatVectorExpr {{.*}} FPContractMode=2 ConstRoundingMode=towardzero
+
+#pragma STDC FENV_ROUND FE_TOWARDZERO
+vector2float func_24a(double x) {
+  return __builtin_splatvector(x, vector2float);
 }

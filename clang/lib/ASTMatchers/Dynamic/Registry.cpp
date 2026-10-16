@@ -568,6 +568,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(specifiesNamespace);
   REGISTER_MATCHER(specifiesType);
   REGISTER_MATCHER(specifiesTypeLoc);
+  REGISTER_MATCHER(splatVectorExpr);
   REGISTER_MATCHER(statementCountIs);
   REGISTER_MATCHER(staticAssertDecl);
   REGISTER_MATCHER(stmt);
