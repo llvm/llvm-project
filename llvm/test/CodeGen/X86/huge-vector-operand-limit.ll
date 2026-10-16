@@ -45,6 +45,13 @@ define void @exact_131072(ptr %p) {
   ret void
 }
 
+define i8 @scalarized_arg_65537(<65537 x i8> %v) {
+; CHECK-LABEL: scalarized_arg_65537:
+; CHECK: retq
+  %e = extractelement <65537 x i8> %v, i32 65536
+  ret i8 %e
+}
+
 define i32 @pr214666(ptr %x) {
 ; CHECK-LABEL: pr214666:
 ; CHECK: retq
