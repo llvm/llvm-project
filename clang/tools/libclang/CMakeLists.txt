@@ -74,11 +74,11 @@ set(LIBS
 )
 
 if (HAVE_LIBDL)
-  list(APPEND LIBS ${CMAKE_DL_LIBS})
+  set(DL_LIBS ${CMAKE_DL_LIBS})
 elseif (CLANG_BUILT_STANDALONE)
   find_library(DL_LIBRARY_PATH dl)
   if (DL_LIBRARY_PATH)
-    list(APPEND LIBS dl)
+    set(DL_LIBS dl)
   endif ()
 endif ()
 
@@ -142,7 +142,7 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   clang-resource-headers
 
   LINK_LIBS
-  ${LIBS}
+  ${DL_LIBS}
 
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
@@ -150,6 +150,8 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   Support
   TargetParser
   )
+
+clang_target_link_libraries(libclang PRIVATE ${LIBS})
 
 if(ENABLE_STATIC)
   foreach(name libclang obj.libclang libclang_static)
