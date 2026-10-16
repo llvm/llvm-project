@@ -375,9 +375,11 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
   };
   for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
     TraitProperty Property = TraitProperty(Bit);
-    // Construct scores use ordered positions below. kind(any) is treated as
-    // if no kind selector were specified.
+    // Construct scores use ordered positions below, and unknown properties
+    // their UnknownTraits entries. kind(any) is treated as if no kind selector
+    // were specified.
     if (getOpenMPContextTraitSetForProperty(Property) == TraitSet::construct ||
+        Property == TraitProperty::invalid ||
         Property == TraitProperty::device_kind_any ||
         Property == TraitProperty::target_device_kind_any)
       continue;
@@ -385,6 +387,8 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
     AddSelectorScore(getOpenMPContextTraitSelectorForProperty(Property),
                      It == VMI.ScoreMap.end() ? nullptr : &It->second);
   }
+  for (const VariantMatchInfo::UnknownTrait &Trait : VMI.UnknownTraits)
+    AddSelectorScore(Trait.Selector, Trait.Score ? &*Trait.Score : nullptr);
 
   assert(VMI.ConstructTraits.size() >= ConstructMatches.size() &&
          "Mismatch in the construct traits!");

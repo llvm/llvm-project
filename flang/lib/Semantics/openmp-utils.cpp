@@ -2410,10 +2410,8 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+      // An unknown property never matches, but its selector is still scored.
+      vmi.addUnknownTrait(selector, scorePtr);
     }
   }
 }
