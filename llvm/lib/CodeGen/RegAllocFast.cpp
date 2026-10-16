@@ -2192,8 +2192,8 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
                       return D.Reg == Def;
                     })->Folded;
           });
-          NeedsReg = R.TiedNeedsOwnReg ? NeedsReg || InDefReg
-                                       : NeedsReg && !InDefReg;
+          NeedsReg =
+              R.TiedNeedsOwnReg ? NeedsReg || InDefReg : NeedsReg && !InDefReg;
         }
 
         UsesNeeded += NeedsReg * W;
