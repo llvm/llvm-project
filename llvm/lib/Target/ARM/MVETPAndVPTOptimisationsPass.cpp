@@ -83,7 +83,8 @@ private:
   bool ConvertVPSEL(MachineBasicBlock &MBB);
   bool HintDoLoopStartReg(MachineBasicBlock &MBB);
   MachineInstr *CheckForLRUseInPredecessors(MachineBasicBlock *PreHeader,
-                                            MachineInstr *LoopStart);
+                                            MachineInstr *LoopStart,
+                                            MachineLoop *ML);
 };
 
 char MVETPAndVPTOptimisations::ID = 0;
@@ -272,7 +273,7 @@ static bool IsInvalidTPInstruction(MachineInstr &MI) {
 // is reverted from a WhileLoopStart to a DoLoopStart on the same loop. Will
 // return the new DLS LoopStart if updated.
 MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
-    MachineBasicBlock *PreHeader, MachineInstr *LoopStart) {
+    MachineBasicBlock *PreHeader, MachineInstr *LoopStart, MachineLoop *ML) {
   SmallVector<MachineBasicBlock *> Worklist;
   SmallPtrSet<MachineBasicBlock *, 4> Visited;
   Worklist.push_back(PreHeader);
@@ -288,6 +289,8 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
         continue;
 
       LLVM_DEBUG(dbgs() << "Found LR use in predecessors, reverting: " << MI);
+      Register DefReg = LoopStart->getOperand(0).getReg();
+      Register SrcReg = LoopStart->getOperand(1).getReg();
 
       // Create a t2DoLoopStart at the end of the preheader.
       MachineInstrBuilder MIB =
@@ -301,6 +304,13 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
 
       // Revert the t2WhileLoopStartLR to a CMP and Br.
       RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
+      // Replace any uses of the DefReg not in the loop to SrcReg.
+      for (MachineOperand &MO :
+           make_early_inc_range(MRI->use_operands(DefReg))) {
+        if (!ML->contains(MO.getParent()->getParent())) {
+          MO.setReg(SrcReg);
+        }
+      }
       return MIB;
     }
 
@@ -333,7 +343,7 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
   // check the preheaders, but can be reverted to a DLS loop if needed.
   auto *PreHeader = ML->getLoopPreheader();
   if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR && PreHeader)
-    LoopStart = CheckForLRUseInPredecessors(PreHeader, LoopStart);
+    LoopStart = CheckForLRUseInPredecessors(PreHeader, LoopStart, ML);
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
