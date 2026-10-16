@@ -508,18 +508,27 @@ add_header_library(
 )
 
 add_header_library(
-  gesf2
+  ledf2
   HDRS
-    gesf2.h
+    ledf2.h
   DEPENDS
     libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
 )
 
 add_header_library(
-  lesf2
+  gedf2
   HDRS
-    lesf2.h
+    gedf2.h
+  DEPENDS
+    libc.src.__support.builtins.cmp_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  unorddf2
+  HDRS
+    unorddf2.h
   DEPENDS
     libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
