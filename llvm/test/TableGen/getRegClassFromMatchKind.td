@@ -164,7 +164,7 @@ def qux2 : Instruction {
 // REGINFO-ENUM-EMPTY:
 // REGINFO-ENUM-NEXT: };
 
-// REGINFO-DESC: extern const MCRegisterClassStorage<3, 4, 3, 3, 1, 0> ArchMCRegisterClassStorage = {
+// REGINFO-DESC: extern const MCRegisterClassStorage<3, 4, 3, 3, 0, 1, 0> ArchMCRegisterClassStorage = {
 // REGINFO-DESC:   Arch::RegClassRegClassID,
 // REGINFO-DESC:   Arch::RegClass2RegClassID,
 // REGINFO-DESC:   Arch::RegClass3RegClassID,

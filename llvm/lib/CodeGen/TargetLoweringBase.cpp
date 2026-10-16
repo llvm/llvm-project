@@ -1406,7 +1406,7 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
   // Compute the set of all super-register classes.
   BitVector SuperRegRC(TRI->getNumRegClasses());
-  for (SuperRegClassIterator RCI(RC, TRI); RCI.isValid(); ++RCI)
+  for (SuperRegClassIterator RCI(RC); RCI.isValid(); ++RCI)
     SuperRegRC.setBitsInMask(RCI.getMask());
 
   // Find the first legal register class with the largest spill size.
