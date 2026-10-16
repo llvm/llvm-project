@@ -52,8 +52,11 @@ Error Object::removeSymbols(
 }
 
 Error Object::markSymbols() {
-  for (Symbol &Sym : Symbols)
+  DenseMap<size_t, Symbol *> RawSymbolMap;
+  for (Symbol &Sym : Symbols) {
     Sym.Referenced = false;
+    RawSymbolMap[Sym.OriginalRawIndex] = &Sym;
+  }
   for (const Section &Sec : Sections) {
     for (const Relocation &R : Sec.Relocs) {
       auto It = SymbolMap.find(R.Target);
@@ -61,6 +64,26 @@ Error Object::markSymbols() {
         return createStringError(object_error::invalid_symbol_index,
                                  "relocation target %zu not found", R.Target);
       It->second->Referenced = true;
+    }
+    if (Sec.Name == ".sxdata") {
+      auto Contents = Sec.getContents();
+      if (Contents.size() % sizeof(uint32_t) != 0) {
+        return createStringError(object_error::parse_failed,
+                                 "section '.sxdata' has invalid size");
+      }
+
+      for (size_t Offset = 0; Offset < Contents.size();
+           Offset += sizeof(uint32_t)) {
+        const uint32_t RawIndex =
+            support::endian::read32le(Contents.data() + Offset);
+        auto It = RawSymbolMap.find(RawIndex);
+        if (It == RawSymbolMap.end()) {
+          return createStringError(object_error::invalid_symbol_index,
+                                   ".sxdata symbol index %u is invalid",
+                                   RawIndex);
+        }
+        It->second->Referenced = true;
+      }
     }
   }
   return Error::success();
