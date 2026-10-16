@@ -1045,9 +1045,13 @@ llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
       return Result;
     case TargetOpcode::G_FSQRT:
     case TargetOpcode::G_FLOG2: {
-      Type *Ty =
-          Type::getFloatingPointTy(MRI.getMF().getFunction().getContext(),
-                                   getFltSemanticForLLT(DstEltTy));
+      // ConstantFoldFP only accepts IEEE-like formats up to double. fp128,
+      // x86_fp80, and ppc_fp128 are not supported.
+      const fltSemantics &FltSem = getFltSemanticForLLT(DstEltTy);
+      if (!APFloat::isIEEELikeFP(FltSem) || APFloat::getSizeInBits(FltSem) > 64)
+        return std::nullopt;
+      Type *Ty = Type::getFloatingPointTy(
+          MRI.getMF().getFunction().getContext(), FltSem);
       Constant *C = Opcode == TargetOpcode::G_FSQRT
                         ? ConstantFoldFP(sqrt, V, Ty)
                         : ConstantFoldFP(log2, V, Ty);

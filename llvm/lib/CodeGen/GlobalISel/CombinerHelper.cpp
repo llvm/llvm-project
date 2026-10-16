@@ -5183,12 +5183,14 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
 
 // Vector FP constant folding assumes IEEE denormal arithmetic. Flush-to-zero
 // and dynamic modes can produce a different value, so skip those folds.
+// Targets such as RISC-V represent FP values as untyped scalars
+// (s16/s32/s64/s128). getFltSemanticForLLT maps those onto the IEEE formats.
 //
 // TODO: Honor non-IEEE and dynamic denormal modes instead of skipping the
 // vector folds. Scalar folds have the same limitation and stay unchanged here.
 static bool vectorFPFoldUsesIEEEDenormals(const MachineFunction &MF, LLT Ty) {
   LLT ScalarTy = Ty.getScalarType();
-  if (!ScalarTy.isFloat())
+  if (!ScalarTy.isFloat() && !ScalarTy.isAnyScalar())
     return true;
   return MF.getDenormalMode(getFltSemanticForLLT(ScalarTy)) ==
          DenormalMode::getIEEE();
