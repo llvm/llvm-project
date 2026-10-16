@@ -12,7 +12,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
-#include <optional>
 
 namespace llvm {
 
@@ -46,8 +45,6 @@ struct IGLPPreRAAnalysis {
   // Whether or not there are instructions between the TRANS instruction and
   // V_CVT
   bool HasChainBetweenCvt = false;
-  // The first occuring DS_READ which feeds an MFMA chain
-  std::optional<unsigned> FirstPipeDSR;
 };
 
 /// Operand 0 immediate for IGLP_OPT pseudo instructions.

@@ -1023,6 +1023,9 @@ bool MFMASmallGemmOpt::applyIGLPStrategy(
 
 class MFMAExpInterleaveOpt final : public IGLPStrategy {
 private:
+  // The first occuring DS_READ which feeds an MFMA chain. Like the chain
+  // seeds, it refers to this DAG, so it is not kept for later phases.
+  std::optional<unsigned> FirstPipeDSR;
   // The MFMAPipe SUs with no MFMA predecessors
   SmallVector<SUnit *, 4> MFMAChainSeeds;
   // Compute the heuristics for the pipeline, returning whether or not the DAG
@@ -1570,7 +1573,7 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
   for (auto Pred : MFMAChainSeeds[0]->Preds) {
     if (TII->isDS(Pred.getSUnit()->getInstr()->getOpcode()) &&
         Pred.getSUnit()->getInstr()->mayLoad())
-      Analysis.FirstPipeDSR = Pred.getSUnit()->NodeNum;
+      FirstPipeDSR = Pred.getSUnit()->NodeNum;
   }
 
   // The number of bit pack operations that depend on a single V_EXP
@@ -1685,7 +1688,7 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   assert(IsPostRA || MFMAChainSeeds.size() == Analysis.MFMAChains);
 
   bool UsesFMA = IsSmallKernelType || !IsPostRA;
-  bool UsesDSRead = IsLargeKernelType && !IsPostRA && Analysis.FirstPipeDSR;
+  bool UsesDSRead = IsLargeKernelType && !IsPostRA && FirstPipeDSR;
   bool UsesCvt = Analysis.HasCvt && (IsSmallKernelType || !IsPostRA);
   bool UsesVALU = IsSmallKernelType;
 
@@ -1721,8 +1724,8 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
   if (UsesDSRead) {
     SG = &addSchedGroup(SyncedSchedGroups, SchedGroupMask::DS_READ, 2,
                         PipelineSyncID, DAG, TII);
-    SG->addRule(std::make_shared<OccursAtOrAfterNode>(*Analysis.FirstPipeDSR,
-                                                      TII, SG->getSGID()));
+    SG->addRule(std::make_shared<OccursAtOrAfterNode>(*FirstPipeDSR, TII,
+                                                      SG->getSGID()));
     SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
   }
 
@@ -1850,8 +1853,8 @@ bool MFMAExpInterleaveOpt::applyIGLPStrategy(
     if (UsesDSRead && !(I % 4)) {
       SG = &addSchedGroup(SyncedSchedGroups, SchedGroupMask::DS_READ, 2,
                           PipelineSyncID, DAG, TII);
-      SG->addRule(std::make_shared<OccursAtOrAfterNode>(*Analysis.FirstPipeDSR,
-                                                        TII, SG->getSGID()));
+      SG->addRule(std::make_shared<OccursAtOrAfterNode>(*FirstPipeDSR, TII,
+                                                        SG->getSGID()));
       SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
     }
 
@@ -2813,7 +2816,9 @@ bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   // to post-RA scheduling.
   auto *MFI = DAG->MF.getInfo<SIMachineFunctionInfo>();
   auto S = createIGLPStrategy(StrategyID, DAG, TII,
-                              MFI->getIGLPPreRAAnalysis(IGLPOpt));
+                              Phase == AMDGPU::SchedulingPhase::Initial
+                                  ? AMDGPU::IGLPPreRAAnalysis()
+                                  : MFI->getIGLPPreRAAnalysis(IGLPOpt));
   bool Applied = false;
   if (S->shouldApplyStrategy(DAG, Phase)) {
     IsBottomUp = S->IsBottomUp;
