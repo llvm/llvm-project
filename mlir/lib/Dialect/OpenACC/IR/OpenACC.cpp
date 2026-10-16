@@ -5497,6 +5497,16 @@ mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
       .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 
+SmallVector<DeviceType, 3>
+acc::getDeviceTypesByPrecedence(DeviceType deviceType) {
+  SmallVector<DeviceType, 3> deviceTypes;
+  if (deviceType != DeviceType::None && deviceType != DeviceType::Star)
+    deviceTypes.push_back(deviceType);
+  deviceTypes.push_back(DeviceType::Star);
+  deviceTypes.push_back(DeviceType::None);
+  return deviceTypes;
+}
+
 std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {
   auto name{
       llvm::TypeSwitch<mlir::Operation *, std::optional<llvm::StringRef>>(accOp)
