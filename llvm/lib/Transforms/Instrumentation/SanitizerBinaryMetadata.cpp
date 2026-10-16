@@ -212,8 +212,8 @@ bool SanitizerBinaryMetadata::run() {
         /*VersionCheckName=*/StringRef(),
         /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks);
     const Attribute::AttrKind ExtAttr =
-      TargetLibraryInfo::getExtAttrForI32Param(TargetTriple,
-                                               /*Signed=*/false);
+        TargetLibraryInfo::getExtAttrForI32Param(TargetTriple,
+                                                 /*Signed=*/false);
     if (ExtAttr != Attribute::None)
       for (FunctionCallee InitFn : {CtorInitFn, DtorInitFn})
         cast<Function>(InitFn.getCallee())->addParamAttr(0, ExtAttr);
