@@ -35,7 +35,7 @@ def scrub_isel_default(isel, args):
     return isel
 
 
-def get_run_handler(triple):
+def get_run_handler(triple, bb_sections=False):
     target_handlers = {}
     handler = None
     best_prefix = ""
