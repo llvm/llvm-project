@@ -471,7 +471,7 @@ void X86CallFrameOptimizationImpl::collectCallInfo(
 
   Context.Call = &*I;
   I = next_nodbg(I, MBB.end(), /*SkipPseudoOp=*/false);
-  if (I == MBB.end() || I->getOpcode() != TII->getCallFrameDestroyOpcode())
+  if (I->getOpcode() != TII->getCallFrameDestroyOpcode())
     return;
 
   // Now, go through the vector, and see that we don't have any gaps,
