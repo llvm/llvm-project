@@ -1837,7 +1837,6 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
   for (AArch64ABIKind Kind : {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS,
                               AArch64ABIKind::Win64}) {
     expectDirectIntSlot(Classify(Kind, TwoInts), 64);
-    expectDirectIntSlot(Classify(Kind, Char), 64);
     expectDirectArraySlot(Classify(Kind, ThreeInts), 2, /*PointerElts=*/false,
                           64);
     expectDirectArraySlot(Classify(Kind, FourInts), 2, /*PointerElts=*/false,
@@ -1859,7 +1858,11 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
     expectDirectIntSlot(Classify(Kind, PtrWithEmptyBase), 64);
     expectDirectIntSlot(Classify(Kind, ASPtrRecord), 64);
     expectDirectIntSlot(Classify(Kind, AS0PtrRecord), 64);
-    expectDirectIntSlot(Classify(Kind, NarrowPtrRecord), 64);
+    if (Kind == AArch64ABIKind::DarwinPCS) {
+      expectDirectIntSlot(Classify(Kind, NarrowPtrRecord), 64);
+    } else {
+      expectDirectCoercedInteger(Classify(Kind, NarrowPtrRecord), 32);
+    }
     expectDirectPointerSlot(Classify(Kind, PtrUnion));
     expectDirectIntSlot(Classify(Kind, MixedUnion), 64);
     expectNaturalAlignIndirect(Classify(Kind, ThreeLongs), llvm::Align(8),
@@ -1883,12 +1886,26 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
     expectDirectIntSlot(Classify(Kind, OveralignedPtr), 128);
   }
 
-  // ILP32 Darwin rounds the slot up to the 32-bit pointer width. AAPCS ILP32
-  // still uses the 8-byte AAPCS slot.
+  // A little-endian aggregate smaller than 8 bytes keeps its exact width,
+  // except on Darwin, which rounds it up to the slot width.
+  expectDirectCoercedInteger(Classify(AArch64ABIKind::AAPCS, Char), 8);
+  expectDirectCoercedInteger(Classify(AArch64ABIKind::Win64, Char), 8);
+  expectDirectIntSlot(Classify(AArch64ABIKind::DarwinPCS, Char), 64);
+  {
+    AArch64ABIOptions Opts(AArch64ABIKind::AAPCS);
+    Opts.IsBigEndian = true;
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Char});
+    TI->computeInfo(*FI);
+    expectDirectIntSlot(FI->getArgInfo(0).Info, 64);
+  }
+
+  // ILP32 Darwin rounds the slot up to the 32-bit pointer width.
   expectDirectIntSlot(Classify(AArch64ABIKind::DarwinPCS, Char, /*ILP32=*/true),
                       32);
-  expectDirectIntSlot(Classify(AArch64ABIKind::AAPCS, Char, /*ILP32=*/true),
-                      64);
+  expectDirectCoercedInteger(
+      Classify(AArch64ABIKind::AAPCS, Char, /*ILP32=*/true), 8);
   expectDirectIntSlot(Classify(AArch64ABIKind::DarwinPCS, NarrowPtrRecord,
                                /*ILP32=*/true),
                       32);
@@ -1897,9 +1914,9 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
   expectDirectIntSlot(Classify(AArch64ABIKind::AAPCSSoft, TwoFloats), 64);
 
   // A non-zero-size empty C++ record is a one-byte aggregate on AAPCS.
-  expectDirectIntSlot(Classify(AArch64ABIKind::AAPCS, EmptyCXX,
-                               /*ILP32=*/false, /*IsCXX=*/true),
-                      64);
+  expectDirectCoercedInteger(Classify(AArch64ABIKind::AAPCS, EmptyCXX,
+                                      /*ILP32=*/false, /*IsCXX=*/true),
+                             8);
 
   // On Win64, a variadic argument is not an HFA.
   {

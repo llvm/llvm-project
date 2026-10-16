@@ -293,6 +293,11 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
   // Aggregates of at most 16 bytes are passed directly in registers or on
   // the stack.
   if (Size <= 128) {
+    if (Size < 64 && !Opts.IsBigEndian &&
+        Opts.Kind != AArch64ABIKind::DarwinPCS)
+      return ArgInfo::getDirect(
+          TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false));
+
     uint64_t AlignBits;
     if (Opts.Kind == AArch64ABIKind::AAPCS) {
       // An 8-byte slot when the unadjusted alignment is below 16 bytes, and

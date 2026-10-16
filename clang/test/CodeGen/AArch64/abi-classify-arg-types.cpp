@@ -2,10 +2,10 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,GPR64 --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,ILP32
 // RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,ILP32 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,LE
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,BE
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64,BE --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies C++ record
 // arguments that cannot be passed in registers the same way Clang does without
@@ -100,12 +100,14 @@ void arg_overaligned_derived_hfa(OveralignedDerivedHFA d) {}
 // NOHFAALIGN: define{{.*}} void @arg_overaligned_derived_hfa([2 x double] %{{.*}})
 
 // Aggregates of at most 16 bytes are passed directly. A one-byte empty class
-// is ignored on Darwin and passed as i64 on AAPCS. An empty base makes the
-// record an integer slot instead of a pointer.
+// is ignored on Darwin. On little-endian AAPCS it is an i8, and on
+// big-endian AAPCS it is an i64. An empty base makes the record an integer
+// slot instead of a pointer.
 
 struct Empty {};
 void arg_empty_record(Empty e) {}
-// AAPCS64: define{{.*}} void @arg_empty_record(i64 %{{.*}})
+// LE: define{{.*}} void @arg_empty_record(i8 %{{.*}})
+// BE: define{{.*}} void @arg_empty_record(i64 %{{.*}})
 // NOHFAALIGN: define{{.*}} void @arg_empty_record()
 
 struct OnePtr {
