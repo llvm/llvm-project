@@ -2438,15 +2438,15 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   assert(!cir::MissingFeatures::sanitizers());
 
   CallArgList args;
-  assert(!cir::MissingFeatures::opCallArgEvaluationOrder());
 
-  // C++23 static-member operators (`static operator()` /
-  // `static operator[]`) produce a CXXOperatorCallExpr whose first argument
-  // is the object expression even though the operator is static.  Emit the
-  // object for its side effects and drop it before walking the parameter
-  // arguments.
+  EvaluationOrder order = CodeGenUtils::getCallArgEvaluationOrder(e);
   auto arguments = e->arguments();
   if (const auto *oce = dyn_cast<CXXOperatorCallExpr>(e)) {
+    // C++23 static-member operators (`static operator()` /
+    // `static operator[]`) produce a CXXOperatorCallExpr whose first argument
+    // is the object expression even though the operator is static.  Emit the
+    // object for its side effects and drop it before walking the parameter
+    // arguments.
     if (const auto *md =
             dyn_cast_if_present<CXXMethodDecl>(oce->getCalleeDecl());
         md && md->isStatic()) {
@@ -2456,7 +2456,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   }
 
   emitCallArgs(args, dyn_cast<FunctionProtoType>(fnType), arguments,
-               e->getDirectCallee());
+               e->getDirectCallee(), /*paramsToSkip=*/0, order);
 
   const CIRGenFunctionInfo &funcInfo =
       cgm.getTypes().arrangeFreeFunctionCall(args, fnType);

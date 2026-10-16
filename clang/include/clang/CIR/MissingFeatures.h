@@ -85,7 +85,6 @@ struct MissingFeatures {
   static bool opCallPaddingArgs() { return false; }
   static bool opCallBitcastArg() { return false; }
   static bool opCallReturn() { return false; }
-  static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }

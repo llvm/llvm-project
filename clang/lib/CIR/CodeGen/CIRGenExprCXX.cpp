@@ -186,7 +186,7 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
       rtlArgs = &rtlArgStorage;
       emitCallArgs(*rtlArgs, md->getType()->castAs<FunctionProtoType>(),
                    drop_begin(ce->arguments(), 1), ce->getDirectCallee(),
-                   /*ParamsToSkip*/ 0);
+                   /*ParamsToSkip*/ 0, EvaluationOrder::ForceRightToLeft);
     }
   }
 
