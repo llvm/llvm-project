@@ -25,7 +25,7 @@
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTarget() {
   // Register the target.
   RegisterTargetMachine<XtensaTargetMachine> A(getTheXtensaTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();

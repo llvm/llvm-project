@@ -1659,6 +1659,7 @@ void CSKYAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.emitInstruction((Res ? CInst : Inst), getSTI());
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeCSKYAsmParser() {
   RegisterMCAsmParser<CSKYAsmParser> X(getTheCSKYTarget());
 }

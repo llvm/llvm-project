@@ -219,7 +219,7 @@ createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
 template <>
 LLVM_ABI PreservedAnalyses PassManager<MachineFunction>::run(
     MachineFunction &, AnalysisManager<MachineFunction> &);
-extern template class PassManager<MachineFunction>;
+extern template class LLVM_TEMPLATE_ABI PassManager<MachineFunction>;
 
 /// Convenience typedef for a pass manager over functions.
 using MachineFunctionPassManager = PassManager<MachineFunction>;
