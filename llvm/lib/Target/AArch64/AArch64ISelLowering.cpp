@@ -1903,22 +1903,41 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
       for (auto VT : {MVT::v4bf16, MVT::v8bf16, MVT::nxv2bf16, MVT::nxv4bf16,
                       MVT::nxv8bf16}) {
-        setOperationAction(ISD::FADD, VT, Custom);
-        setOperationAction(ISD::FMA, VT, Custom);
-        setOperationAction(ISD::FMAXIMUM, VT, Custom);
-        setOperationAction(ISD::FMAXNUM, VT, Custom);
-        setOperationAction(ISD::FMINIMUM, VT, Custom);
-        setOperationAction(ISD::FMINNUM, VT, Custom);
-        setOperationAction(ISD::FMUL, VT, Custom);
-        setOperationAction(ISD::FSUB, VT, Custom);
+        setOperationAction({ISD::FADD, ISD::STRICT_FADD}, VT, Custom);
+        setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
+        setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
+        setOperationAction({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT, Custom);
+        setOperationAction({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT, Custom);
+        setOperationAction({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT, Custom);
+        setOperationAction({ISD::FMUL, ISD::STRICT_FMUL}, VT, Custom);
+        setOperationAction({ISD::FSUB, ISD::STRICT_FSUB}, VT, Custom);
       }
     }
 
-    for (auto Opcode :
-         {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC,
-          ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMAXIMUM,
-          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMINIMUM}) {
+    for (auto Opcode : {ISD::FCEIL,
+                        ISD::FDIV,
+                        ISD::FFLOOR,
+                        ISD::FNEARBYINT,
+                        ISD::FRINT,
+                        ISD::FROUND,
+                        ISD::FROUNDEVEN,
+                        ISD::FSQRT,
+                        ISD::FTRUNC,
+                        ISD::SETCC,
+                        ISD::STRICT_FCEIL,
+                        ISD::STRICT_FDIV,
+                        ISD::STRICT_FFLOOR,
+                        ISD::STRICT_FNEARBYINT,
+                        ISD::STRICT_FRINT,
+                        ISD::STRICT_FROUND,
+                        ISD::STRICT_FROUNDEVEN,
+                        ISD::STRICT_FSQRT,
+                        ISD::STRICT_FTRUNC,
+                        ISD::VECREDUCE_FADD,
+                        ISD::VECREDUCE_FMAX,
+                        ISD::VECREDUCE_FMAXIMUM,
+                        ISD::VECREDUCE_FMIN,
+                        ISD::VECREDUCE_FMINIMUM}) {
       setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
       setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
@@ -1928,18 +1947,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
         MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
-        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+        setOperationPromotedToType({ISD::FADD, ISD::STRICT_FADD}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMA, ISD::STRICT_FMA}, VT, PromotedVT);
+        setOperationPromotedToType({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FSUB, ISD::STRICT_FSUB}, VT,
+                                   PromotedVT);
 
         if (VT != MVT::nxv2bf16 && Subtarget->hasBF16())
           setOperationAction(ISD::FMUL, VT, Custom);
         else
           setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
+        setOperationPromotedToType(ISD::STRICT_FMUL, VT, PromotedVT);
       }
 
       if (Subtarget->hasBF16() && Subtarget->isNeonAvailable())
