@@ -3,6 +3,7 @@ set(LLVM_LIBC_SHARED_RPC_EXPORT_HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/rpc_util.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/rpc_dispatch.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/rpc_server.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/emissary_rpc_server.h"
   "${CMAKE_CURRENT_SOURCE_DIR}/rpc_opcodes.h"
 )
 
