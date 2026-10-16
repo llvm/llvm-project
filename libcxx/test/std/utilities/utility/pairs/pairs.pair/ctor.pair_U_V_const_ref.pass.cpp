@@ -189,7 +189,18 @@ TEST_CONSTEXPR_CXX20 bool test() {
       static_assert(p2.second.value == 101, "");
     }
 #endif
-    return true;
+
+// Test construction prohibition of introduced by https://wg21.link/P2255R2.
+#if TEST_STD_VER >= 23
+  test_pair_const<int&&, char, false>();
+  test_pair_const<const int&, char, false>();
+  test_pair_const<ConvertingType&&, int, false>();
+  test_pair_const<const ConvertingType&, char, false>();
+  test_pair_const<ExplicitTypes::ConvertingType&&, int, false>();
+  test_pair_const<const ExplicitTypes::ConvertingType&, int, false>();
+#endif // TEST_STD_VER >= 23
+
+  return true;
 }
 
 int main(int, char**) {

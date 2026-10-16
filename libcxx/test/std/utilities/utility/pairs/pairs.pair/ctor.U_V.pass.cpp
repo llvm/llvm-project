@@ -139,5 +139,15 @@ int main(int, char**)
     }
 #endif // TEST_STD_VER > 20
 
-    return 0;
+// Test construction prohibition of introduced by https://wg21.link/P2255R2.
+#if TEST_STD_VER >= 23
+  test_sfinae<int&&, char, false>();
+  test_sfinae<const int&, char, false>();
+  test_sfinae<ConvertingType&&, int, false>();
+  test_sfinae<const ConvertingType&, char, false>();
+  test_sfinae<ExplicitTypes::ConvertingType&&, int, false>();
+  test_sfinae<const ExplicitTypes::ConvertingType&, int, false>();
+#endif // TEST_STD_VER >= 23
+
+  return 0;
 }

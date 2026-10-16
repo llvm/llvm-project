@@ -47,6 +47,12 @@ static_assert(!std::is_convertible_v<const std::pair<X, Y>&&,
                                      std::pair<ExplicitConstructibleFrom<X>, ExplicitConstructibleFrom<Y>>>);
 // clang-format on
 
+// Test construction prohibition of introduced by https://wg21.link/P2255R2.
+static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, const std::pair<int, short>&&>);
+static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, const std::pair<char, long>&&>);
+static_assert(!std::is_convertible_v<const std::pair<int, short>&&, std::pair<const int&, const long&>>);
+static_assert(!std::is_convertible_v<const std::pair<char, long>&&, std::pair<const int&, const long&>>);
+
 constexpr bool test() {
   // simple case: init pair<const T&&, const U&&> from const pair<T, U>&&
   {
