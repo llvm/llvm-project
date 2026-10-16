@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(cse))' -mlir-print-ir-after=cse -o /dev/null 2>&1 | FileCheck --check-prefix=DEFAULT %s
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(cse))' -mlir-print-ir-after=cse -mlir-print-always-use-aliases -o /dev/null 2>&1 | FileCheck --check-prefix=ALIASES %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' -mlir-print-ir-after=canonicalize -o /dev/null 2>&1 | FileCheck --check-prefix=DEFAULT %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' -mlir-print-ir-after=canonicalize -mlir-print-always-use-aliases -o /dev/null 2>&1 | FileCheck --check-prefix=ALIASES %s
 
-// Per-function IR dumps (CSE here only triggers one) print the func op,
-// which is not a top-level op, so types expand in full by default. With
-// the flag, the dump uses aliases.
+// Per-function IR dumps (canonicalize here only triggers one; the pass
+// itself is irrelevant) print the func op, which is not a top-level op,
+// so types expand in full by default. With the flag, the dump uses aliases.
 
 // DEFAULT: IR Dump After
 // DEFAULT-NOT: !tuple =
