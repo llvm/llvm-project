@@ -71,15 +71,16 @@ define amdgpu_kernel void @reduced_fmha_kernel(i32 %arg, i32 %arg1, i32 %arg2, i
 ; IR-NEXT:    [[SELECT82:%.*]] = select i1 [[ARG6]], <4 x float> zeroinitializer, <4 x float> [[SELECT81]]
 ; IR-NEXT:    [[OR83:%.*]] = or i32 [[ARG1]], [[CALL]]
 ; IR-NEXT:    [[ICMP84:%.*]] = icmp sge i32 [[OR83]], 0
-; IR-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[ICMP84]], <4 x float> [[SELECT82]], <4 x float> [[ARG37]]
+; IR-NEXT:    br i1 [[ICMP84]], label %[[BB85:.*]], label %[[BB86]]
+; IR:       [[BB85]]:
 ; IR-NEXT:    br label %[[BB86]]
 ; IR:       [[BB86]]:
-; IR-NEXT:    [[PHI87:%.*]] = phi <4 x float> [ zeroinitializer, %[[BB38]] ], [ [[SELECT46]], %[[BB40]] ]
-; IR-NEXT:    [[PHI88:%.*]] = phi <4 x float> [ zeroinitializer, %[[BB38]] ], [ [[SELECT56]], %[[BB40]] ]
-; IR-NEXT:    [[PHI89:%.*]] = phi <4 x float> [ zeroinitializer, %[[BB38]] ], [ [[SELECT63]], %[[BB40]] ]
-; IR-NEXT:    [[PHI90:%.*]] = phi <4 x float> [ zeroinitializer, %[[BB38]] ], [ [[SELECT70]], %[[BB40]] ]
-; IR-NEXT:    [[PHI91:%.*]] = phi <4 x float> [ zeroinitializer, %[[BB38]] ], [ [[SELECT77]], %[[BB40]] ]
-; IR-NEXT:    [[PHI92:%.*]] = phi <4 x float> [ zeroinitializer, %[[BB38]] ], [ [[SPEC_SELECT]], %[[BB40]] ]
+; IR-NEXT:    [[PHI87:%.*]] = phi <4 x float> [ [[SELECT46]], %[[BB85]] ], [ [[SELECT46]], %[[BB40]] ], [ zeroinitializer, %[[BB38]] ]
+; IR-NEXT:    [[PHI88:%.*]] = phi <4 x float> [ [[SELECT56]], %[[BB85]] ], [ [[SELECT56]], %[[BB40]] ], [ zeroinitializer, %[[BB38]] ]
+; IR-NEXT:    [[PHI89:%.*]] = phi <4 x float> [ [[SELECT63]], %[[BB85]] ], [ [[SELECT63]], %[[BB40]] ], [ zeroinitializer, %[[BB38]] ]
+; IR-NEXT:    [[PHI90:%.*]] = phi <4 x float> [ [[SELECT70]], %[[BB85]] ], [ [[SELECT70]], %[[BB40]] ], [ zeroinitializer, %[[BB38]] ]
+; IR-NEXT:    [[PHI91:%.*]] = phi <4 x float> [ [[SELECT77]], %[[BB85]] ], [ [[SELECT77]], %[[BB40]] ], [ zeroinitializer, %[[BB38]] ]
+; IR-NEXT:    [[PHI92:%.*]] = phi <4 x float> [ [[SELECT82]], %[[BB85]] ], [ [[ARG37]], %[[BB40]] ], [ zeroinitializer, %[[BB38]] ]
 ; IR-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x float> [[PHI87]], i64 0
 ; IR-NEXT:    [[EXTRACTELEMENT93:%.*]] = extractelement <4 x float> [[PHI88]], i64 0
 ; IR-NEXT:    [[FMUL:%.*]] = fmul float [[EXTRACTELEMENT]], [[EXTRACTELEMENT93]]
