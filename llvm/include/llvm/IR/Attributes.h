@@ -363,6 +363,9 @@ public:
   /// Returns the value of the initializes attribute.
   LLVM_ABI ArrayRef<ConstantRange> getInitializes() const;
 
+  /// Returns the value of the writerange attribute.
+  LLVM_ABI ArrayRef<ConstantRange> getWriteRange() const;
+
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
   LLVM_ABI std::string getAsString(bool InAttrGrp = false) const;
@@ -1369,6 +1372,9 @@ public:
 
   /// Add initializes attribute.
   LLVM_ABI AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
+
+  /// Add writerange attribute.
+  LLVM_ABI AttrBuilder &addWriteRangeAttr(const ConstantRangeList &CRL);
 
   /// Add 0 or more parameter attributes which are equivalent to metadata
   /// attached to \p I. e.g. !align -> align. This assumes the argument type is

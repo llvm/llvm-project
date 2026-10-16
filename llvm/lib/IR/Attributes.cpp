@@ -522,6 +522,12 @@ ArrayRef<ConstantRange> Attribute::getInitializes() const {
   return pImpl->getValueAsConstantRangeList();
 }
 
+ArrayRef<ConstantRange> Attribute::getWriteRange() const {
+  assert(hasAttribute(Attribute::WriteRange) &&
+         "Trying to get writerange attr from non-ConstantRangeList attribute");
+  return pImpl->getValueAsConstantRangeList();
+}
+
 static const char *getModRefStr(ModRefInfo MR) {
   switch (MR) {
   case ModRefInfo::NoModRef:
@@ -731,6 +737,16 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     raw_string_ostream OS(Result);
     ConstantRangeList CRL = getInitializes();
     OS << "initializes(";
+    CRL.print(OS);
+    OS << ")";
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::WriteRange)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    ConstantRangeList CRL = getWriteRange();
+    OS << "writerange(";
     CRL.print(OS);
     OS << ")";
     return Result;
@@ -2355,6 +2371,10 @@ AttrBuilder::addConstantRangeListAttr(Attribute::AttrKind Kind,
 
 AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
   return addConstantRangeListAttr(Attribute::Initializes, CRL.rangesRef());
+}
+
+AttrBuilder &AttrBuilder::addWriteRangeAttr(const ConstantRangeList &CRL) {
+  return addConstantRangeListAttr(Attribute::WriteRange, CRL.rangesRef());
 }
 
 AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {

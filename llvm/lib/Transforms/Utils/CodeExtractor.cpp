@@ -1055,6 +1055,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::ImmArg:
       case Attribute::ByRef:
       case Attribute::WriteOnly:
+      case Attribute::WriteRange:
       case Attribute::Writable:
       case Attribute::DeadOnUnwind:
       case Attribute::Range:

@@ -1014,6 +1014,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_RANGE;
   case Attribute::Initializes:
     return bitc::ATTR_KIND_INITIALIZES;
+  case Attribute::WriteRange:
+    return bitc::ATTR_KIND_WRITE_RANGE;
   case Attribute::NoExt:
     return bitc::ATTR_KIND_NO_EXT;
   case Attribute::Captures:
