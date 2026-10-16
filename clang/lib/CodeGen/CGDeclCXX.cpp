@@ -19,6 +19,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGenUtils/ModuleUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -703,34 +704,8 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // As noted above, we create the function, even if it is empty.
   // Module initializers for imported modules are emitted first.
 
-  // Collect all the modules that we import
-  llvm::SmallSetVector<Module *, 8> AllImports;
-  // Ones that we export
-  for (auto I : Primary->Exports)
-    AllImports.insert(I.first);
-  // Ones that we only import.
-  AllImports.insert_range(Primary->Imports);
-  // Ones that we import in the global module fragment or the private module
-  // fragment.
-  for (Module *SubM : Primary->submodules()) {
-    assert((SubM->isGlobalModule() || SubM->isPrivateModule()) &&
-           "The sub modules of C++20 module unit should only be global module "
-           "fragments or private module framents.");
-    assert(SubM->Exports.empty() &&
-           "The global mdoule fragments and the private module fragments are "
-           "not allowed to export import modules.");
-    AllImports.insert_range(SubM->Imports);
-  }
-
   SmallVector<llvm::Function *, 8> ModuleInits;
-  for (Module *M : AllImports) {
-    // No Itanium initializer in header like modules.
-    if (M->isHeaderLikeModule())
-      continue; // TODO: warn of mixed use of module map modules and C++20?
-    // We're allowed to skip the initialization if we are sure it doesn't
-    // do any thing.
-    if (!M->isNamedModuleInterfaceHasInit())
-      continue;
+  for (Module *M : CodeGenUtils::importedModulesToInitialize(Primary, {})) {
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
     SmallString<256> FnName;
     {
@@ -824,7 +799,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   }
 
   // We are done with the inits.
-  AllImports.clear();
   PrioritizedCXXGlobalInits.clear();
   CXXGlobalInits.clear();
   ModuleInits.clear();
@@ -865,14 +839,9 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // When we import C++20 modules, we must run their initializers first.
   SmallVector<llvm::Function *, 8> ModuleInits;
   if (CXX20ModuleInits)
-    for (Module *M : ImportedModules) {
-      // No Itanium initializer in header like modules.
-      if (M->isHeaderLikeModule())
-        continue;
-      // We're allowed to skip the initialization if we are sure it doesn't
-      // do any thing.
-      if (!M->isNamedModuleInterfaceHasInit())
-        continue;
+    for (Module *M : CodeGenUtils::importedModulesToInitialize(
+             getContext().getCurrentNamedModule(),
+             ImportedModules.getArrayRef())) {
       llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
       SmallString<256> FnName;
       {

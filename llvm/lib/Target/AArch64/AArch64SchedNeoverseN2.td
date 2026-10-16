@@ -95,10 +95,8 @@ def N2Write_3c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 3;
                                                    let ReleaseAtCycles = [3]; }
 def N2Write_5c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 5;
                                                    let ReleaseAtCycles = [5]; }
-def N2Write_12c_1M0 : SchedWriteRes<[N2UnitM0]>  { let Latency = 12;
-                                                   let ReleaseAtCycles = [12]; }
-def N2Write_20c_1M0 : SchedWriteRes<[N2UnitM0]>  { let Latency = 20;
-                                                   let ReleaseAtCycles = [20]; }
+def N2Write_7c_1M0  : SchedWriteRes<[N2UnitM0]>  { let Latency = 7;
+                                                   let ReleaseAtCycles = [7]; }
 def N2Write_4c_1L   : SchedWriteRes<[N2UnitL]>   { let Latency = 4; }
 def N2Write_6c_1L   : SchedWriteRes<[N2UnitL]>   { let Latency = 6; }
 def N2Write_2c_1V   : SchedWriteRes<[N2UnitV]>   { let Latency = 2; }
@@ -885,8 +883,8 @@ def : SchedAlias<WriteImm, N2Write_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  N2Write_12c_1M0>;
-def : SchedAlias<WriteID64,  N2Write_20c_1M0>;
+def : SchedAlias<WriteID32,  N2Write_7c_1M0>;
+def : SchedAlias<WriteID64,  N2Write_7c_1M0>;
 
 def : WriteRes<WriteIM32, [N2UnitM]> { let Latency = 2; }
 def : WriteRes<WriteIM64, [N2UnitM]> { let Latency = 2; }

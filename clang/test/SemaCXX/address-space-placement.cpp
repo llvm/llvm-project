@@ -15,7 +15,8 @@ void f([[clang::address_space(1)]] int* param) { // expected-warning {{applying 
   while([[clang::address_space(1)]] int* p = nullptr) {} // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
   if ([[clang::address_space(1)]] int* p = nullptr) {} // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
   try {
-  } catch([[clang::address_space(1)]] int& i) { // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
+   } catch([[clang::address_space(1)]] int& i) { // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
+                                               // expected-error@-1 {{cannot catch reference with non-default address space}}
   }
 
   for (int [[clang::address_space(1)]] * p = nullptr; p; ++p) {}
@@ -23,7 +24,7 @@ void f([[clang::address_space(1)]] int* param) { // expected-warning {{applying 
   while(int [[clang::address_space(1)]] * p = nullptr) {}
   if (int [[clang::address_space(1)]] * p = nullptr) {}
   try {
-  } catch(int [[clang::address_space(1)]] & i) {
+  } catch(int [[clang::address_space(1)]] & i) { // expected-error {{cannot catch reference with non-default address space}}
   }
 }
 

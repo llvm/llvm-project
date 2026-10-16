@@ -2095,8 +2095,14 @@ public:
       return;
     InUsePath.insert(FD);
     UsePath.push_back(FD);
-    if (auto *S = FD->getBody()) {
-      this->Visit(S);
+    const FunctionDecl *Definition = nullptr;
+    auto *Body = FD->getBody(Definition);
+    if (Body)
+      this->Visit(Body);
+
+    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Definition)) {
+      for (auto *Init : Ctor->inits())
+        this->Visit(Init->getInit());
     }
     // A constructor initializes its bases and members, and so calls their
     // constructors, in its initializer list rather than its body.

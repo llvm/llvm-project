@@ -136,6 +136,11 @@ public:
   const BlockExpr *getExpr() const {
     return dyn_cast<const BlockExpr *>(Source);
   }
+  QualType getType() const {
+    if (const FunctionDecl *FD = getDecl())
+      return FD->getType();
+    return getExpr()->getType();
+  }
 
   /// Returns the name of the function decl this code
   /// was generated for.

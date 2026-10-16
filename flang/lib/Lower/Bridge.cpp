@@ -39,7 +39,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
-#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -1695,14 +1694,7 @@ private:
   mlir::Value genLoopVariableAddress(mlir::Location loc,
                                      const Fortran::semantics::Symbol &sym,
                                      bool isUnordered) {
-    if (!shallowLookupSymbol(sym) &&
-        (isUnordered ||
-         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpPrivate) ||
-         GetSymbolDSA(sym).test(
-             Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
-         GetSymbolDSA(sym).test(
-             Fortran::semantics::Symbol::Flag::OmpLastPrivate) ||
-         GetSymbolDSA(sym).test(Fortran::semantics::Symbol::Flag::OmpLinear))) {
+    if (!shallowLookupSymbol(sym) && isUnordered) {
       // Do concurrent loop variables are not mapped yet since they are
       // local to the Do concurrent scope (same for OpenMP loops).
       mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -2073,7 +2065,7 @@ private:
         mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
-              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              cuf::DeviceSynchronizeOp::create(*builder, loc);
               bridge.cudaCleanupCtx().finalizeAndKeep();
             })
             .end();
@@ -4410,6 +4402,17 @@ private:
         activeConstructStack.back().stmtCtx;
     const Fortran::lower::SomeExpr *expr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    // Semantics already turned enumeration CASE values into ordinals.
+    std::optional<Fortran::lower::SomeExpr> enumOrdinal;
+    if (const auto *derived = std::get_if<
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+      if (const auto *spec =
+              Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
+          spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
+        enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+        expr = &*enumOrdinal;
+      }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
     bool isLogicalSelector = isLogicalCategory(expr->GetType()->category());
     mlir::MLIRContext *context = builder->getContext();
@@ -4895,7 +4898,7 @@ private:
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Block *> blockList;
     unsigned typeGuardIdx = 0;
-    std::size_t defaultAttrPos = std::numeric_limits<size_t>::max();
+    std::size_t defaultAttrPos = Fortran::common::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 

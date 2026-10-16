@@ -426,6 +426,20 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
     auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     return MLIWrapper ? &MLIWrapper->getLI() : nullptr;
   };
+  GetMBPI = [this](MachineFunction &MF) {
+    return &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  };
+  GetMBFI = [this](MachineFunction &MF) {
+    return &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+  };
+  GetMBHI = [this](MachineFunction &MF) {
+    return &getAnalysis<MachineBlockHashInfo>().getMBHI();
+  };
+  GetBBSPR = [this](MachineFunction &MF) {
+    auto *BBSPRPass =
+        getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
+    return BBSPRPass ? &BBSPRPass->getBBSPR() : nullptr;
+  };
   BeginGCAssembly = [this](Module &M) {
     GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
     assert(MI && "AsmPrinter didn't require GCModuleInfo?");
@@ -525,11 +539,6 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   AddrLabelSymbols = nullptr;
 
-  // Initialize TargetLoweringObjectFile.
-  TM.getObjFileLowering()->Initialize(OutContext, TM);
-
-  TM.getObjFileLowering()->getModuleMetadata(M);
-
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
   // information (such as the embedded command line) to be associated
@@ -618,9 +627,10 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI.doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    // On Windows targets, emit minimal CodeView compiler info even when debug
-    // info is disabled.
-    if ((Target.isOSWindows() || (Target.isUEFI() && EmitCodeView)) &&
+    // On Windows and UEFI targets, emit minimal CodeView compiler info even
+    // when debug info is disabled. UEFI follows the MSVC toolchain
+    // conventions, so it is treated the same way as Windows here.
+    if ((Target.isOSWindows() || Target.isUEFI()) &&
         M.getNamedMetadata("llvm.dbg.cu"))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
@@ -1426,10 +1436,6 @@ AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
   return getFunctionCFISectionType(MF.getFunction());
 }
 
-bool AsmPrinter::needsSEHMoves() {
-  return MAI.usesWindowsCFI() && MF->getFunction().needsUnwindTableEntry();
-}
-
 bool AsmPrinter::usesCFIWithoutEH() const {
   return MAI.usesCFIWithoutEH() && ModuleCFISection != CFISection::None;
 }
@@ -1523,10 +1529,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
   bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
 
-  const BasicBlockSectionsProfileReader *BBSPR = nullptr;
-  if (auto *BBSPRPass =
-          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
-    BBSPR = &BBSPRPass->getBBSPR();
+  const BasicBlockSectionsProfileReader *BBSPR = GetBBSPR(*this->MF);
   const CFGProfile *FuncCFGProfile = nullptr;
   if (BBSPR)
     FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
@@ -1582,8 +1585,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       PrevMBBEndSymbol = MBBSymbol;
     }
 
-    auto MBHI =
-        Features.BBHash ? &getAnalysis<MachineBlockHashInfo>() : nullptr;
+    const MachineBlockHashInfoResult *MBHI =
+        Features.BBHash ? GetMBHI(*this->MF) : nullptr;
 
     if (!Features.OmitBBEntries) {
       OutStreamer->AddComment("BB id");
@@ -1630,13 +1633,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(MaybeEntryCount ? *MaybeEntryCount : 0);
     }
     const MachineBlockFrequencyInfo *MBFI =
-        Features.BBFreq
-            ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
-            : nullptr;
+        Features.BBFreq ? GetMBFI(*this->MF) : nullptr;
     const MachineBranchProbabilityInfo *MBPI =
-        Features.BrProb
-            ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
-            : nullptr;
+        Features.BrProb ? GetMBPI(*this->MF) : nullptr;
 
     if (Features.BBFreq || Features.BrProb) {
       for (const MachineBasicBlock &MBB : MF) {
@@ -1999,7 +1998,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;
@@ -5357,13 +5357,22 @@ void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
 
 namespace llvm {
 namespace {
+FunctionAnalysisManager &getFAM(Module &M, ModuleAnalysisManager &MAM) {
+  return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+}
+
+FunctionAnalysisManager &getFAM(MachineFunctionAnalysisManager &MFAM,
+                                MachineFunction &MF) {
+  return MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+      .getManager();
+}
+
 MachineFunctionAnalysisManager &getMFAM(Module &M, ModuleAnalysisManager &MAM,
                                         MachineFunction &MF) {
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   MachineFunctionAnalysisManager &MFAM =
-      FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(
-             MF.getFunction())
+      getFAM(M, MAM)
+          .getResult<MachineFunctionAnalysisManagerFunctionProxy>(
+              MF.getFunction())
           .getManager();
   return MFAM;
 }
@@ -5383,6 +5392,20 @@ void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
   };
   AsmPrinter.GetMLI = [&MAM, &M](MachineFunction &MF) {
     return &getMFAM(M, MAM, MF).getResult<MachineLoopAnalysis>(MF);
+  };
+  AsmPrinter.GetMBPI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineBranchProbabilityAnalysis>(MF);
+  };
+  AsmPrinter.GetMBFI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineBlockFrequencyAnalysis>(MF);
+  };
+  AsmPrinter.GetMBHI = [&MAM, &M](MachineFunction &MF) {
+    return &getMFAM(M, MAM, MF).getResult<MachineBlockHashInfoAnalysis>(MF);
+  };
+  AsmPrinter.GetBBSPR = [&MAM, &M](MachineFunction &MF) {
+    return getFAM(M, MAM)
+        .getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(
+            MF.getFunction());
   };
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
@@ -5410,6 +5433,20 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   };
   AsmPrinter.GetMLI = [&MFAM](MachineFunction &MF) {
     return &MFAM.getResult<MachineLoopAnalysis>(MF);
+  };
+  AsmPrinter.GetMBPI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  };
+  AsmPrinter.GetMBFI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  };
+  AsmPrinter.GetMBHI = [&MFAM](MachineFunction &MF) {
+    return &MFAM.getResult<MachineBlockHashInfoAnalysis>(MF);
+  };
+  AsmPrinter.GetBBSPR = [&MFAM](MachineFunction &MF) {
+    return getFAM(MFAM, MF)
+        .getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(
+            MF.getFunction());
   };
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
