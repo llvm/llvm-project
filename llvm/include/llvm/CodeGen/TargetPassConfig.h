@@ -27,6 +27,8 @@ class PassConfigImpl;
 struct CodeGenOptions;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
+class MachineUnroller;
+struct MachineUnrollerContext;
 
 // The old pass manager infrastructure is hidden in a legacy namespace now.
 namespace legacy {
@@ -320,6 +322,11 @@ public:
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();
+
+  virtual MachineUnroller *
+  createMachineUnroller(MachineUnrollerContext *C) const {
+    return nullptr;
+  }
 
   /// printAndVerify - Add a pass to dump then verify the machine function, if
   /// those steps are enabled.
