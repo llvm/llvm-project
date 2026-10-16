@@ -1060,7 +1060,8 @@ Context::computeGEP(GEPOperator &GEP,
 
     // Handle a struct index, which adds its field offset to the pointer.
     if (StructType *STy = GTI.getStructTypeOrNull()) {
-      unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
+      unsigned ElementIdx =
+          cast<Constant>(V)->getUniqueInteger().getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
       ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),

@@ -2064,7 +2064,7 @@ bool IRTranslatorImpl::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
       FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+          DefaultMBB->getBasicBlock()->getFirstNonPHIOrPseudoProbe());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -2615,12 +2615,15 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   StringRef TrapFuncName =
       CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
   if (TrapFuncName.empty()) {
+    MachineInstrBuilder MIB;
     if (Opcode == TargetOpcode::G_UBSANTRAP) {
       uint64_t Code = cast<ConstantInt>(CI.getOperand(0))->getZExtValue();
-      MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
+      MIB = MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
     } else {
-      MIRBuilder.buildInstr(Opcode);
+      MIB = MIRBuilder.buildInstr(Opcode);
     }
+    if (CI.cannotMerge())
+      MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
     return true;
   }
 
@@ -2632,6 +2635,7 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
   Info.CB = &CI;
   Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+  Info.NoMerge = CI.cannotMerge();
   return CLI->lowerCall(MIRBuilder, Info);
 }
 

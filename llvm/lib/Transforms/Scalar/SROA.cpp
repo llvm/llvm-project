@@ -1669,7 +1669,7 @@ static StoreInst *getPHIStoreToRewrite(PHINode &PN, bool PreserveCFG,
 
   BasicBlock *BB = PN.getParent();
   // TODO: Allow a harmless prefix between the PHIs and the store.
-  if (&*BB->getFirstNonPHIOrDbg() != SI)
+  if (&*BB->getFirstNonPHIOrPseudoProbe() != SI)
     return nullptr;
 
   Value *StoredValue = SI->getValueOperand();

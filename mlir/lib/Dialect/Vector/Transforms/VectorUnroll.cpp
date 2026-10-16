@@ -1741,6 +1741,13 @@ void mlir::vector::populateVectorUnrollPatterns(
                                           benefit);
 }
 
+void mlir::vector::populateVectorContractUnrollPatterns(
+    RewritePatternSet &patterns, const UnrollVectorOptions &options,
+    PatternBenefit benefit) {
+  patterns.add<UnrollContractionPattern>(patterns.getContext(), options,
+                                         benefit);
+}
+
 void mlir::vector::populateVectorToElementsUnrollPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<UnrollToElements>(patterns.getContext(), UnrollVectorOptions(),

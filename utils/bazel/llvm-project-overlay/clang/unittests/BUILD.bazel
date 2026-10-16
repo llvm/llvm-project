@@ -310,6 +310,7 @@ cc_test(
         "//clang:serialization",
         "//clang:static_analyzer_core_options",
         "//clang:tooling",
+        "//llvm:Core",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
