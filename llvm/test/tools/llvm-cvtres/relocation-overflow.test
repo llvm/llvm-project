@@ -1,0 +1,47 @@
+// Check that cvtres emits a valid relocation table for .rsrc$01 if there are
+// 0xffff or more resources, which need one relocation each.
+// The relocation count fields of the section header and of the section
+// definition symbol are only 16 bits wide.
+// For 0xffff or more relocations, they are set to 0xffff,
+// the section is marked with IMAGE_SCN_LNK_NRELOC_OVFL,
+// and an additional first relocation stores the actual count.
+
+RUN: %python %p/Inputs/generate-res.py --types=2 --names=32767 %t-65534.res
+RUN: llvm-cvtres /machine:X64 /out:%t-65534.obj %t-65534.res
+RUN: llvm-readobj --sections --relocations --symbols %t-65534.obj | \
+RUN:     FileCheck %s --check-prefixes=CHECK,NOOVFL -D#COUNT=65534
+
+RUN: %python %p/Inputs/generate-res.py --types=3 --names=21845 %t-65535.res
+RUN: llvm-cvtres /machine:X64 /out:%t-65535.obj %t-65535.res
+RUN: llvm-readobj --sections --relocations --symbols %t-65535.obj | \
+RUN:     FileCheck %s --check-prefixes=CHECK,OVFL -D#COUNT=65535
+
+RUN: %python %p/Inputs/generate-res.py --types=2 --names=32768 %t-65536.res
+RUN: llvm-cvtres /machine:X64 /out:%t-65536.obj %t-65536.res
+RUN: llvm-readobj --sections --relocations --symbols %t-65536.obj | \
+RUN:     FileCheck %s --check-prefixes=CHECK,OVFL -D#COUNT=65536
+
+CHECK:       Name: .rsrc$01
+NOOVFL:      RelocationCount: [[#COUNT]]
+OVFL:        RelocationCount: 65535
+CHECK-NEXT:  LineNumberCount: 0
+NOOVFL-NEXT: Characteristics [ (0x40000040)
+OVFL-NEXT:   Characteristics [ (0x41000040)
+CHECK-NEXT:    IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+OVFL-NEXT:     IMAGE_SCN_LNK_NRELOC_OVFL (0x1000000)
+CHECK-NEXT:    IMAGE_SCN_MEM_READ (0x40000000)
+CHECK-NEXT:  ]
+
+// Readers skip the relocation storing the count,
+// so the relocations reference the symbols 5 to COUNT + 4 in order.
+CHECK:      Relocations [
+CHECK-NEXT:   Section (1) .rsrc$01 {
+CHECK-NEXT:     IMAGE_REL_AMD64_ADDR32NB $R000000 (5)
+CHECK:          IMAGE_REL_AMD64_ADDR32NB $R[[#%.6X,COUNT-1]] ([[#COUNT+4]])
+CHECK-NEXT:   }
+
+CHECK:       Name: .rsrc$01
+CHECK:       AuxSectionDef {
+CHECK-NEXT:    Length: {{[0-9]+}}
+NOOVFL-NEXT:   RelocationCount: [[#COUNT]]
+OVFL-NEXT:     RelocationCount: 65535

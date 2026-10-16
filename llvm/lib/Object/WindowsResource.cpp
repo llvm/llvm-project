@@ -617,6 +617,12 @@ private:
   void writeDirectoryTree();
   void writeDirectoryStringTable();
   void writeFirstSectionRelocations();
+
+  bool hasRelocationOverflow() const { return Data.size() >= UINT16_MAX; }
+  uint16_t getRelocationCountField() const {
+    return hasRelocationOverflow() ? UINT16_MAX : Data.size();
+  }
+
   std::unique_ptr<WritableMemoryBuffer> OutputBuffer;
   char *BufferStart;
   uint64_t CurrentOffset = 0;
@@ -685,6 +691,8 @@ void WindowsResourceCOFFWriter::performSectionOneLayout() {
   FileSize += SectionOneSize;
   FileSize +=
       Data.size() * COFF::RelocationSize; // one relocation for each resource.
+  if (hasRelocationOverflow())
+    FileSize += COFF::RelocationSize; // the relocation storing the count.
   FileSize = alignTo(FileSize, SECTION_ALIGNMENT);
 }
 
@@ -752,10 +760,12 @@ void WindowsResourceCOFFWriter::writeFirstSectionHeader() {
   SectionOneHeader->PointerToRawData = SectionOneOffset;
   SectionOneHeader->PointerToRelocations = SectionOneRelocations;
   SectionOneHeader->PointerToLinenumbers = 0;
-  SectionOneHeader->NumberOfRelocations = Data.size();
+  SectionOneHeader->NumberOfRelocations = getRelocationCountField();
   SectionOneHeader->NumberOfLinenumbers = 0;
   SectionOneHeader->Characteristics += COFF::IMAGE_SCN_CNT_INITIALIZED_DATA;
   SectionOneHeader->Characteristics += COFF::IMAGE_SCN_MEM_READ;
+  if (hasRelocationOverflow())
+    SectionOneHeader->Characteristics |= COFF::IMAGE_SCN_LNK_NRELOC_OVFL;
 }
 
 void WindowsResourceCOFFWriter::writeSecondSectionHeader() {
@@ -821,7 +831,7 @@ void WindowsResourceCOFFWriter::writeSymbolTable() {
   auto *Aux = reinterpret_cast<coff_aux_section_definition *>(BufferStart +
                                                               CurrentOffset);
   Aux->Length = SectionOneSize;
-  Aux->NumberOfRelocations = Data.size();
+  Aux->NumberOfRelocations = getRelocationCountField();
   Aux->NumberOfLinenumbers = 0;
   Aux->CheckSum = 0;
   Aux->NumberLowPart = 0;
@@ -974,6 +984,15 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
   // Five symbols already in table before we start, @feat.00 and 2 for each
   // .rsrc section.
   uint32_t NextSymbolIndex = 5;
+  if (hasRelocationOverflow()) {
+    // The first relocation stores the number of relocations, including itself.
+    auto *Reloc =
+        reinterpret_cast<coff_relocation *>(BufferStart + CurrentOffset);
+    Reloc->VirtualAddress = Data.size() + 1;
+    Reloc->SymbolTableIndex = 0;
+    Reloc->Type = 0;
+    CurrentOffset += sizeof(coff_relocation);
+  }
   for (unsigned i = 0; i < Data.size(); i++) {
     auto *Reloc =
         reinterpret_cast<coff_relocation *>(BufferStart + CurrentOffset);
