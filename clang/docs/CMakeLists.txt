@@ -108,8 +108,6 @@ if (LLVM_ENABLE_SPHINX)
     # copy all the non-generated source files from the source to the build
     # directory before we run sphinx.
     set(clang_generated_docs
-      AttributeReference.md
-      _generated/AttributeReference.split.md
       _generated/AttributeReferenceSyntaxes.json
       DiagnosticsReference.md
       AMDGPUBuiltinReference.rst
@@ -118,8 +116,6 @@ if (LLVM_ENABLE_SPHINX)
     add_sphinx_source_sync_target(copy-clang-rst-docs
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
       PRESERVE_DOCS ${clang_generated_docs})
-    set(clang_docs_sync_stamp
-      "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/copy-clang-rst-docs.sphinx-source-sync/sync.stamp")
     add_custom_command(TARGET copy-clang-rst-docs POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
       "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.md"
@@ -154,29 +150,7 @@ if (LLVM_ENABLE_SPHINX)
     endif()
 
     # Generated files
-    set(attr_reference_split_input "${CMAKE_CURRENT_BINARY_DIR}/_generated/AttributeReference.split.md")
-    set(attr_reference_split_stamp "${CMAKE_CURRENT_BINARY_DIR}/_generated/AttributeReferenceSplit.stamp")
-    gen_sphinx_file_from_td(_generated/AttributeReference.split.md -gen-attr-docs ../include/clang/Basic/Attr.td "")
     gen_sphinx_file_from_td(_generated/AttributeReferenceSyntaxes.json -gen-attr-doc-syntaxes ../include/clang/Basic/Attr.td "${docs_targets}")
-    add_custom_command(
-      OUTPUT "${attr_reference_split_stamp}"
-      COMMAND "${CMAKE_COMMAND}" -E rm -rf
-              "${CMAKE_CURRENT_BINARY_DIR}/AttributeReference"
-      COMMAND $<TARGET_FILE:split-file>
-              "${attr_reference_split_input}"
-              "${CMAKE_CURRENT_BINARY_DIR}"
-      COMMAND "${CMAKE_COMMAND}" -E touch
-              "${attr_reference_split_stamp}"
-      DEPENDS "${attr_reference_split_input}"
-              "${clang_docs_sync_stamp}"
-              split-file
-      VERBATIM
-      COMMENT "Splitting generated AttributeReference Markdown")
-    add_custom_target(gen-AttributeReferenceSplit
-      DEPENDS "${attr_reference_split_stamp}")
-    foreach(target ${docs_targets})
-      add_dependencies(${target} gen-AttributeReferenceSplit)
-    endforeach()
     gen_sphinx_file_from_td(DiagnosticsReference.md -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
     gen_sphinx_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
     gen_sphinx_file_from_td(ClangCommandLineReference.md -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
