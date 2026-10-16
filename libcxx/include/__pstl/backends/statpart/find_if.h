@@ -35,21 +35,68 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
+template <class _Index, class _DifferenceType, class _Compare>
+_LIBCPP_HIDE_FROM_ABI _Index
+__simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {
+  // Experiments show good block sizes like this
+  const _DifferenceType __block_size                                    = 8;
+  alignas(__statpart::__lane_size) _DifferenceType __lane[__block_size] = {0};
+  while (__end - __begin >= __block_size) {
+    _DifferenceType __found = 0;
+    _PSTL_PRAGMA_SIMD_REDUCTION(| : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size; ++__i) {
+      const _DifferenceType __t = __comp(__first, __i);
+      __lane[__i - __begin]     = __t;
+      __found |= __t;
+    }
+    if (__found) {
+      _DifferenceType __i;
+      // This will vectorize
+      for (__i = 0; __i < __block_size; ++__i) {
+        if (__lane[__i]) {
+          break;
+        }
+      }
+      return __first + __begin + __i;
+    }
+    __begin += __block_size;
+  }
+
+  // Keep remainder scalar
+  while (__begin != __end) {
+    if (__comp(__first, __begin)) {
+      return __first + __begin;
+    }
+    ++__begin;
+  }
+  return __first + __end;
+}
+
 template <class _ExecutionPolicy>
 struct __find_if<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       return __statpart::__find(
           std::move(__first),
           std::move(__last),
-          [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            return std::find_if(__brick_first, __brick_last, __pred);
+          [&__policy, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
+            using _FindIfUnseq =
+                __pstl::__find_if<__statpart_backend_tag, __remove_parallel_policy_t<_ExecutionPolicy>>;
+            auto __res = _FindIfUnseq()(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __pred);
+            _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
+            return *std::move(__res);
           },
           less<>{},
           true);
+    } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
+                         __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using __diff_t = __iterator_difference_type<_ForwardIterator>;
+      return __pstl::__simd_first(
+          __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
+            return __pred(__iter[__i]);
+          });
     } else {
       return std::find_if(std::move(__first), std::move(__last), std::move(__pred));
     }

@@ -64,6 +64,8 @@ constexpr inline size_t __max_partitions_per_cpu = 8;
 // The minimum number of elements to sort serially in a single partition
 constexpr inline size_t __min_sort_partition_size = 256;
 
+constexpr inline size_t __lane_size = 64;
+
 enum class __partitioning_status {
   // Returned when the partitioning result is not a nullopt.
   __ok,
