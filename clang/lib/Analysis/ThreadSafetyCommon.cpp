@@ -108,9 +108,23 @@ til::SCFG *SExprBuilder::buildCFG(CFGWalker &Walker) {
   return Scfg;
 }
 
-static bool isCalleeArrow(const Expr *E) {
-  const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
-  return ME ? ME->isArrow() : false;
+/// If CE calls through a function pointer field D, return the member access
+/// through which the field was reached; its base is the implicit object
+/// ('this') for the attributes on the field.
+static const MemberExpr *getFunPtrFieldCallee(const CallExpr *CE,
+                                              const NamedDecl *D) {
+  if (!isa<FieldDecl>(D))
+    return nullptr;
+  // Look through the operators that CallExpr::getCalleeDecl looks through
+  // when it finds D, e.g. in `(*dev->lock)()`.
+  const Expr *Callee = CE->getCallee()->IgnoreParenCasts();
+  while (const auto *UO = dyn_cast<UnaryOperator>(Callee)) {
+    if (UO->getOpcode() != UO_Deref && UO->getOpcode() != UO_AddrOf &&
+        UO->getOpcode() != UO_Plus)
+      break;
+    Callee = UO->getSubExpr()->IgnoreParenCasts();
+  }
+  return dyn_cast<MemberExpr>(Callee);
 }
 
 /// Translate a clang expression in an attribute to a til::SExpr.
@@ -137,21 +151,20 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   if (!DeclExp)
     /* We'll use Self. */;
   else if (const auto *ME = dyn_cast<MemberExpr>(DeclExp)) {
-    Ctx.SelfArg   = ME->getBase();
-    Ctx.SelfArrow = ME->isArrow();
+    Ctx.SelfArg = ME->getBase();
   } else if (const auto *CE = dyn_cast<CXXMemberCallExpr>(DeclExp)) {
-    Ctx.SelfArg   = CE->getImplicitObjectArgument();
-    Ctx.SelfArrow = isCalleeArrow(CE->getCallee());
-    Ctx.NumArgs   = CE->getNumArgs();
-    Ctx.FunArgs   = CE->getArgs();
+    Ctx.SelfArg = CE->getImplicitObjectArgument();
+    Ctx.NumArgs = CE->getNumArgs();
+    Ctx.FunArgs = CE->getArgs();
   } else if (const auto *CE = dyn_cast<CallExpr>(DeclExp)) {
     // Calls to operators that are members need to be treated like member calls.
     if (isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(D)) {
       Ctx.SelfArg = CE->getArg(0);
-      Ctx.SelfArrow = false;
       Ctx.NumArgs = CE->getNumArgs() - 1;
       Ctx.FunArgs = CE->getArgs() + 1;
     } else {
+      if (const MemberExpr *ME = getFunPtrFieldCallee(CE, D))
+        Ctx.SelfArg = ME->getBase();
       Ctx.NumArgs = CE->getNumArgs();
       Ctx.FunArgs = CE->getArgs();
     }
@@ -551,6 +564,9 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
         CallingContext LRCallCtx(Ctx);
         LRCallCtx.AttrDecl = D;
         LRCallCtx.SelfArg = SelfE;
+        if (!SelfE)
+          if (const MemberExpr *ME = getFunPtrFieldCallee(CE, D))
+            LRCallCtx.SelfArg = ME->getBase();
         LRCallCtx.NumArgs = CE->getNumArgs();
         LRCallCtx.FunArgs = CE->getArgs();
         return const_cast<til::SExpr *>(
@@ -560,6 +576,9 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
   }
 
   til::SExpr *E = translate(CE->getCallee(), Ctx);
+  // Explicitly propagate Undefined, when the callee couldn't be analyzed.
+  if (isa<til::Undefined>(E))
+    return E;
   for (const auto *Arg : CE->arguments()) {
     til::SExpr *A = translate(Arg, Ctx);
     E = new (Arena) til::Apply(E, A);
@@ -570,9 +589,11 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
 til::SExpr *SExprBuilder::translateCXXMemberCallExpr(
     const CXXMemberCallExpr *ME, CallingContext *Ctx) {
   if (CapabilityExprMode) {
-    // Ignore calls to get() on smart pointers.
-    if (ME->getMethodDecl()->getNameAsString() == "get" &&
-        ME->getNumArgs() == 0) {
+    // Ignore calls to get() on smart pointers. A call through a pointer to
+    // member function has no method declaration.
+    const CXXMethodDecl *MD = ME->getMethodDecl();
+    if (ME->getNumArgs() == 0 && MD && MD->getIdentifier() &&
+        MD->getIdentifier()->isStr("get")) {
       auto *E = translate(ME->getImplicitObjectArgument(), Ctx);
       return new (Arena) til::Cast(til::CAST_objToPtr, E);
       // return E;
@@ -607,15 +628,12 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
 
   case UO_AddrOf:
     if (CapabilityExprMode) {
-      // interpret &Graph::mu_ as an existential.
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-        if (DRE->getDecl()->isCXXInstanceMember()) {
-          // This is a pointer-to-member expression, e.g. &MyClass::mu_.
-          // We interpret this syntax specially, as a wildcard.
+      // A pointer-to-member expression, &MyClass::mu_, is read as a wildcard.
+      if (UO->getType()->isMemberPointerType())
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
           auto *W = new (Arena) til::Wildcard();
           return new (Arena) til::Project(W, DRE->getDecl());
         }
-      }
     }
     // otherwise, & is a no-op
     return translate(UO->getSubExpr(), Ctx);

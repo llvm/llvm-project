@@ -30,6 +30,12 @@ enum ColumnWidthErrors {
   ErrorNonPrintableCharacter = -1
 };
 
+/// Unicode code points that are considered characters. This function
+/// returns true for any code point defined by Unicode as a character, false for
+/// any code point defined as a non-character, as reserved, as a surrogate code
+/// point, or not defined at all.
+LLVM_ABI bool isCharacter(int UCS);
+
 /// Determines if a character is likely to be displayed correctly on the
 /// terminal. Exact implementation would have to depend on the specific
 /// terminal, so we define the semantic that should be suitable for generic case
@@ -38,6 +44,9 @@ enum ColumnWidthErrors {
 /// Printable codepoints are those in the categories L, M, N, P, S and Zs
 /// \return true if the character is considered printable.
 LLVM_ABI bool isPrintable(int UCS);
+
+// Control codepoints are codepoints in the Cc category.
+LLVM_ABI bool isControl(int UCS);
 
 // Formatting codepoints are codepoints in the Cf category.
 LLVM_ABI bool isFormatting(int UCS);

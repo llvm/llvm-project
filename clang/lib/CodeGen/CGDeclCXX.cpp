@@ -1090,9 +1090,10 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       EmitObjCAutoreleasePoolCleanup(token);
     }
 
-    for (llvm::Function *Decl : Decls)
+    for (llvm::Function *Decl : Decls) {
       if (Decl)
-        EmitRuntimeCall(Decl);
+        EmitRuntimeCall(Decl, {}, "", Decl->isConvergent());
+    }
 
     Scope.ForceCleanup();
 
@@ -1124,12 +1125,17 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       llvm::Constant *Arg;
       std::tie(CalleeTy, Callee, Arg) = DtorsOrStermFinalizers[e - i - 1];
 
+      bool IsConvergent = getLangOpts().assumeFunctionsAreConvergent();
+      SmallVector<llvm::OperandBundleDef> BundleList;
+      if (IsConvergent)
+        addConvergenceControlBundle(BundleList);
+
       llvm::CallBase *CI = nullptr;
       if (Arg == nullptr) {
         assert(
             CGM.getCXXABI().useSinitAndSterm() &&
             "Arg could not be nullptr unless using sinit and sterm functions.");
-        CI = Builder.CreateCall(CalleeTy, Callee);
+        CI = Builder.CreateCall(CalleeTy, Callee, {}, BundleList);
       } else {
         // If the object lives in a different address space, the `this` pointer
         // address space won't match the dtor `this` param. An addrspacecast is
@@ -1144,15 +1150,15 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
               llvm::PointerType::get(getLLVMContext(), ExpectedAddrSpace);
           Arg = llvm::ConstantExpr::getAddrSpaceCast(Arg, PTy);
         }
-        CI = Builder.CreateCall(CalleeTy, Callee, Arg);
+
+        CI = Builder.CreateCall(CalleeTy, Callee, Arg, BundleList);
       }
 
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
 
-      if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
-        CI = addConvergenceControlToken(CI);
+      setConvergentCallSite(CI, IsConvergent);
     }
   }
 

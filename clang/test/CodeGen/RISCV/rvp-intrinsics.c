@@ -396,6 +396,138 @@ int32_t test_mulhrsu_i32(int32_t a, uint32_t b) {
   return __riscv_mulhrsu_i32(a, b);
 }
 
+/* Scalar Multiply High Accumulate */
+
+// RV32-LABEL: define dso_local i32 @test_mhacc_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhacc.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhacc_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhacc.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_mhacc_i32(int32_t rd, int32_t a, int32_t b) {
+  return __riscv_mhacc_i32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhracc_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhracc.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhracc_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhracc.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_mhracc_i32(int32_t rd, int32_t a, int32_t b) {
+  return __riscv_mhracc_i32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhaccu_u32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhaccu.u32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhaccu_u32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhaccu.u32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_mhaccu_u32(uint32_t rd, uint32_t a, uint32_t b) {
+  return __riscv_mhaccu_u32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhraccu_u32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhraccu.u32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhraccu_u32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhraccu.u32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_mhraccu_u32(uint32_t rd, uint32_t a, uint32_t b) {
+  return __riscv_mhraccu_u32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhaccsu_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhaccsu.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhaccsu_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhaccsu.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_mhaccsu_i32(int32_t rd, int32_t a, uint32_t b) {
+  return __riscv_mhaccsu_i32(rd, a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mhraccsu_i32(
+// RV32-SAME: i32 noundef [[RD:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhraccsu.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mhraccsu_i32(
+// RV64-SAME: i32 noundef signext [[RD:%.*]], i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mhraccsu.i32(i32 [[RD]], i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_mhraccsu_i32(int32_t rd, int32_t a, uint32_t b) {
+  return __riscv_mhraccsu_i32(rd, a, b);
+}
+
+/* Scalar "Q-format" Multiplication */
+
+// RV32-LABEL: define dso_local i32 @test_mulq_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulq.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mulq_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulq.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_mulq_i32(int32_t a, int32_t b) {
+  return __riscv_mulq_i32(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_mulqr_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulqr.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_mulqr_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulqr.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int32_t test_mulqr_i32(int32_t a, int32_t b) {
+  return __riscv_mulqr_i32(a, b);
+}
+
 /* Packed Splat (32-bit) */
 
 // CHECK-LABEL: define dso_local i32 @test_pmv_s_u8x4(

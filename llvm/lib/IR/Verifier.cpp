@@ -3603,9 +3603,6 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   InstsInThisBlock.clear();
   ConvergenceVerifyHelper.visit(BB);
 
-  // Ensure that basic blocks have terminators!
-  Check(BB.getTerminator(), "Basic Block does not have terminator!", &BB);
-
   // Check constraints that this basic block imposes on all of the PHI nodes in
   // it.
   if (isa<PHINode>(BB.front())) {
@@ -6749,8 +6746,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       // statepoint terminator
       Check(InvokeBB, "safepoints should have unique landingpads",
             LandingPad->getParent());
-      Check(InvokeBB->getTerminator(), "safepoint block should be well formed",
-            InvokeBB);
       Check(isa<GCStatepointInst>(InvokeBB->getTerminator()),
             "gc relocate should be linked to a statepoint", InvokeBB);
     } else {
