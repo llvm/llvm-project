@@ -954,10 +954,23 @@ mlir::applyPatternsGreedily(Region &region,
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
+#ifdef EXPENSIVE_CHECKS
+  OperationFingerPrint before(config.getScope()->getParentOp());
+  bool rewriteChanged = false;
+  if (!changed)
+    changed = &rewriteChanged;
+#endif // EXPENSIVE_CHECKS
+
   // Start the pattern driver.
   RegionPatternRewriteDriver driver(region.getContext(), patterns, config,
                                     region);
   LogicalResult converged = std::move(driver).simplify(changed);
+#ifdef EXPENSIVE_CHECKS
+  if (!*changed &&
+      before != OperationFingerPrint(config.getScope()->getParentOp()))
+    llvm::report_fatal_error(
+        "greedy pattern rewriter changed IR but did not report a change");
+#endif // EXPENSIVE_CHECKS
   if (failed(converged))
     LDBG() << "The pattern rewrite did not converge after scanning "
            << config.getMaxIterations() << " times";
@@ -1084,12 +1097,27 @@ LogicalResult mlir::applyOpPatternsGreedily(
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
+#ifdef EXPENSIVE_CHECKS
+  std::optional<OperationFingerPrint> before;
+  if (config.getScope())
+    before.emplace(config.getScope()->getParentOp());
+  bool rewriteChanged = false;
+  if (!changed)
+    changed = &rewriteChanged;
+#endif // EXPENSIVE_CHECKS
+
   // Start the pattern driver.
   llvm::SmallDenseSet<Operation *, 4> surviving;
   MultiOpPatternRewriteDriver driver(ops.front()->getContext(), patterns,
                                      config, ops,
                                      allErased ? &surviving : nullptr);
   LogicalResult converged = std::move(driver).simplify(ops, changed);
+#ifdef EXPENSIVE_CHECKS
+  if (!*changed && before &&
+      *before != OperationFingerPrint(config.getScope()->getParentOp()))
+    llvm::report_fatal_error(
+        "greedy pattern rewriter changed IR but did not report a change");
+#endif // EXPENSIVE_CHECKS
   if (allErased)
     *allErased = surviving.empty();
   if (failed(converged))
