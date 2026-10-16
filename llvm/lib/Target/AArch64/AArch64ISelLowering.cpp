@@ -22736,6 +22736,72 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+/// Try to combine this node to a TRN1.
+static SDValue tryCombineToTrn1(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue A, B;
+
+  auto getTrn1 = [&]() {
+    return DAG.getNode(AArch64ISD::TRN1, DL, VT,
+                       DAG.getNode(AArch64ISD::NVCAST, DL, VT, A),
+                       DAG.getNode(AArch64ISD::NVCAST, DL, VT, B));
+  };
+  // concat(trunc(zip1(a, b)), trunc(zip2(a, b))) -> trn1(a, b)
+  // The concat (for a 4 element vector) is essentially:
+  // [lo(a0), lo(b0), lo(a1), lo(b1), lo(a2), lo(b2), lo(a3), lo(b3)]
+  // We can get this by interleaving reinterpreted even elements.
+  if (sd_match(N,
+               m_Node(ISD::CONCAT_VECTORS,
+                      m_Trunc(m_Node(AArch64ISD::ZIP1, m_Value(A), m_Value(B))),
+                      m_Trunc(m_Node(AArch64ISD::ZIP2, m_Deferred(A),
+                                     m_Deferred(B))))) &&
+      A.getScalarValueSizeInBits() == 2 * VT.getScalarSizeInBits())
+    return getTrn1();
+
+  // uzp1(bitcast(zip1(a, b)), bitcast(zip2(a, b))) -> trn1(a, b)
+  // Viewed with half-sized elements, zip1/zip2 interleave the elements of a
+  // and b, and uzp1 selects the even (low) halves of the interleaved elements.
+  // Essentially the same as above.
+  if (DAG.getDataLayout().isLittleEndian() &&
+      sd_match(
+          N, m_Node(AArch64ISD::UZP1,
+                    m_BitCast(m_Node(AArch64ISD::ZIP1, m_Value(A), m_Value(B))),
+                    m_BitCast(m_Node(AArch64ISD::ZIP2, m_Deferred(A),
+                                     m_Deferred(B))))) &&
+      A.getScalarValueSizeInBits() == 2 * VT.getScalarSizeInBits())
+    return getTrn1();
+
+  // concat(zip1(a, b), zip2(a, b)) is canonicalized to:
+  // zip1(concat(a, undef), concat(b, undef)). The combines below use the
+  // canonicalized form.
+
+  // trunc(zip1(concat(a, undef), concat(b, undef))) -> trn1(a, b)
+  if (sd_match(N, m_Trunc(m_Node(
+                      AArch64ISD::ZIP1,
+                      m_Node(ISD::CONCAT_VECTORS, m_Value(A), m_Undef()),
+                      m_Node(ISD::CONCAT_VECTORS, m_Value(B), m_Undef())))) &&
+      A.getScalarValueSizeInBits() == 2 * VT.getScalarSizeInBits())
+    return getTrn1();
+
+  // For unpacked types:
+  // zip1(concat(a, undef), concat(b, undef)) => trn1(a, b)
+  // If the type is unpacked, then each element is separated by a gap at least
+  // as big as the element size. It is therefore safe to re-interpret the
+  // inputs with double the elements and ignore odd elements (hence TRN1).
+  if (DCI.isAfterLegalizeDAG() &&
+      sd_match(N, m_Node(AArch64ISD::ZIP1,
+                         m_Node(ISD::CONCAT_VECTORS, m_Value(A), m_Undef()),
+                         m_Node(ISD::CONCAT_VECTORS, m_Value(B), m_Undef()))) &&
+      isUnpackedType(A.getValueType(), DAG))
+    return DAG.getNode(AArch64ISD::TRN1, DL, VT,
+                       DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, A),
+                       DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, B));
+  return SDValue();
+}
+
 static SDValue performConcatVectorsCombine(SDNode *N,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            SelectionDAG &DAG) {
@@ -22744,21 +22810,20 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   unsigned N0Opc = N0->getOpcode(), N1Opc = N1->getOpcode();
 
-  // For unpacked types:
-  // concat(zip1(a, b), zip2(a, b)) => trn1(a, b)
-  if (DCI.isAfterLegalizeDAG() && isUnpackedType(N0.getValueType(), DAG) &&
-      N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
-      N1Opc == AArch64ISD::ZIP2 && N0.getOperand(0) == N1.getOperand(0) &&
+  // concat(zip1(a, b), zip2(a, b)) is zip1(a, b)
+  if (DAG.getTargetLoweringInfo().isTypeLegal(VT) && N->getNumOperands() == 2 &&
+      N0Opc == AArch64ISD::ZIP1 && N1Opc == AArch64ISD::ZIP2 &&
+      N0.getOperand(0) == N1.getOperand(0) &&
       N0.getOperand(1) == N1.getOperand(1)) {
-    // If the type is unpacked, then each element is separated by a gap at least
-    // as big as the element size. It is therefore safe to re-interpret the
-    // inputs with double the elements and ignore odd elements (hence TRN1).
-    SDValue Op0MoreElems =
-        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(0));
-    SDValue Op1MoreElems =
-        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(1));
-    return DAG.getNode(AArch64ISD::TRN1, DL, VT, Op0MoreElems, Op1MoreElems);
+    SDValue E0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
+                             DAG.getPOISON(N0.getValueType()));
+    SDValue E1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(1),
+                             DAG.getPOISON(N0.getValueType()));
+    return DAG.getNode(AArch64ISD::ZIP1, DL, VT, E0, E1);
   }
+
+  if (SDValue V = tryCombineToTrn1(N, DCI, DAG))
+    return V;
 
   if (VT.isScalableVector())
     return SDValue();
@@ -22963,17 +23028,6 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     SDValue Shr =
         DAG.getNode(AArch64ISD::VLSHR, DL, BVT, Add, N0.getOperand(1));
     return Shr;
-  }
-
-  // concat(zip1(a, b), zip2(a, b)) is zip1(a, b)
-  if (N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
-      N1Opc == AArch64ISD::ZIP2 && N0.getOperand(0) == N1.getOperand(0) &&
-      N0.getOperand(1) == N1.getOperand(1)) {
-    SDValue E0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
-                             DAG.getPOISON(N0.getValueType()));
-    SDValue E1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(1),
-                             DAG.getPOISON(N0.getValueType()));
-    return DAG.getNode(AArch64ISD::ZIP1, DL, VT, E0, E1);
   }
 
   // If we see a (concat_vectors (v1x64 A), (v1x64 A)) it's really a vector
@@ -23981,6 +24035,9 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
   if (!DCI.isBeforeLegalizeOps() && N0.getOpcode() == ISD::BUILD_VECTOR &&
       N0.hasOneUse() && (VT == MVT::v8i8 || VT == MVT::v4i16))
     return DAG.getBuildVector(VT, DL, N0->ops());
+
+  if (SDValue V = tryCombineToTrn1(N, DCI, DAG))
+    return V;
 
   return SDValue();
 }
@@ -26779,7 +26836,9 @@ static SDValue isNVCastToHalfWidthElements(SDValue V,
   return Op;
 }
 
-static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performUzpCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 SelectionDAG &DAG,
                                  const AArch64Subtarget *Subtarget) {
   SDLoc DL(N);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -26878,6 +26937,9 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   // These optimizations only work on little endian.
   if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
+
+  if (SDValue V = tryCombineToTrn1(N, DCI, DAG))
+    return V;
 
   // uzp1(x, undef) -> concat(truncate(x), undef)
   if (Op1.isUndef()) {
@@ -31992,7 +32054,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performUnpackCombine(N, DAG, Subtarget);
   case AArch64ISD::UZP1:
   case AArch64ISD::UZP2:
-    return performUzpCombine(N, DAG, Subtarget);
+    return performUzpCombine(N, DCI, DAG, Subtarget);
+  case AArch64ISD::ZIP1:
+    return tryCombineToTrn1(N, DCI, DAG);
   case AArch64ISD::SETCC_MERGE_ZERO:
     return performSetccMergeZeroCombine(N, DCI);
   case AArch64ISD::REINTERPRET_CAST:

@@ -17,9 +17,7 @@ define <vscale x 8 x i8> @complex_add_v8i8(<vscale x 8 x i8> %a, <vscale x 8 x i
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z3.s
 ; CHECK-NEXT:    sub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    add z1.s, z2.s, z4.s
-; CHECK-NEXT:    zip2 z2.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
+; CHECK-NEXT:    trn1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 4 x i8>, <vscale x 4 x i8> } @llvm.vector.deinterleave2.nxv8i8(<vscale x 8 x i8> %a)
