@@ -2280,15 +2280,52 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+
+  // The code below computes the distance between first/last bytes of the
+  // accessed memory during one vector loop iteration as
+  // VF*IC*Stride-(Stride-AccessSize).
+
+  // Bailout if we cannot guarantee this doesn't overflow (necessary for
+  // non-unit-stride accesses). We're expecting that most interesting cases
+  // won't require really huge strides, so a conservative check by adding bit
+  // widths of all multiplication terms is good enough.
+  for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
+                    NeedsFreeze] : Checks) {
     assert(IC * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
-    const SCEV *TotalAccessSize = SE.getElementCount(Ty, VF * IC * AccessSize);
+
+    const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
+    unsigned VFBits = SE.getUnsignedRangeMax(VFSCEV).getActiveBits();
+    unsigned VFxICBits = VFBits + llvm::bit_width(IC);
+    unsigned TyBits = Ty->getScalarSizeInBits();
+    unsigned AvailableStrideBits = TyBits > VFxICBits ? TyBits - VFxICBits : 0;
+
+    assert(AbsCommonStrideInBytes >= AccessSize &&
+           "Stride is expected to be at least AccessSize!");
+
+    if (AccessSize != AbsCommonStrideInBytes &&
+        !isUIntN(AvailableStrideBits, AbsCommonStrideInBytes)) {
+      return nullptr;
+    }
+  }
+
+  for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
+                    NeedsFreeze] : Checks) {
+    Type *Ty = SinkStart->getType();
+    const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
+
+    // Compute VF*IC*Stride-(Stride-AccessSize).
+    const SCEV *VectorIterAccessSpan = SE.getMinusSCEV(
+        SE.getMulExpr(VFSCEV, SE.getConstant(Ty, IC),
+                      SE.getConstant(Ty, AbsCommonStrideInBytes)),
+        SE.getConstant(Ty, AbsCommonStrideInBytes - AccessSize));
+
     Value *ThresholdMinusOne = Expander.expandCodeFor(
-        SE.getMinusSCEV(TotalAccessSize, SE.getConstant(Ty, 1)), Ty, Loc);
-    Value *Diff =
-        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+        SE.getMinusSCEV(VectorIterAccessSpan, SE.getConstant(Ty, 1)), Ty, Loc);
+    Value *Diff = Expander.expandCodeFor(
+        SE.getNoopOrSignExtend(SE.getMinusSCEV(SinkStart, SrcStart), Ty), Ty,
+        Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
