@@ -183,6 +183,11 @@ static cl::opt<bool> InlineAllViableCalls(
     "inline-all-viable-calls", cl::Hidden, cl::init(false),
     cl::desc("Inline all viable calls, even if they exceed the inlining "
              "threshold"));
+
+static cl::opt<bool> NoInlineFunctionsCalledOnce(
+    "no-inline-functions-called-once", cl::Hidden, cl::init(false),
+    cl::desc("Disable inlining of functions with internal linkage that are "
+             "called only once"));
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -2197,9 +2202,17 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // If there is only one call of the function, and it has internal linkage,
   // the cost of inlining it drops dramatically. It may seem odd to update
   // Cost in updateThreshold, but the bonus depends on the logic in this method.
+  // When -fno-inline-functions-called-once is enabled, disable this bonus
+  // and instead apply a large cost penalty to prevent inlining of such
+  // functions.
   if (isSoleCallToLocalFunction(Call, F)) {
-    addCost(-LastCallToStaticBonus);
-    StaticBonusApplied = LastCallToStaticBonus;
+    if (NoInlineFunctionsCalledOnce) {
+      addCost(INT_MAX);
+      StaticBonusApplied = 0;
+    } else {
+      addCost(-LastCallToStaticBonus);
+      StaticBonusApplied = LastCallToStaticBonus;
+    }
   }
 }
 
