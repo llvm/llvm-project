@@ -471,3 +471,38 @@ entry:
   store float %add3, ptr %s3
   ret void
 }
+
+define void @shl_mul_copyable(ptr %p, ptr %s) {
+; CHECK-LABEL: @shl_mul_copyable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i16> [[TMP0]], <i16 5, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i16> [[TMP1]], <i16 0, i16 3, i16 1, i16 9>
+; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[S:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr i16, ptr %p, i64 1
+  %p2 = getelementptr i16, ptr %p, i64 2
+  %p3 = getelementptr i16, ptr %p, i64 3
+
+  %l0 = load i16, ptr %p
+  %l1 = load i16, ptr %p1
+  %l2 = load i16, ptr %p2
+  %l3 = load i16, ptr %p3
+
+  %mul0 = mul i16 %l0, 5
+  %mul1 = shl i16 %l1, 3
+  %mul2 = mul i16 %l2, 2
+  %mul3 = shl i16 %l3, 9
+
+  %s1 = getelementptr i16, ptr %s, i64 1
+  %s2 = getelementptr i16, ptr %s, i64 2
+  %s3 = getelementptr i16, ptr %s, i64 3
+
+  store i16 %mul0, ptr %s
+  store i16 %mul1, ptr %s1
+  store i16 %mul2, ptr %s2
+  store i16 %mul3, ptr %s3
+  ret void
+}
