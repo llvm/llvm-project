@@ -76,7 +76,6 @@ program sample
             count = count * eta
             double_count = count - eta
     !$omp end sections
-
     !$omp sections
         call foo()
     !$omp end sections nowait

@@ -358,14 +358,11 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     - These effects apply only to storage directly designated by the original
       variables and their corresponding private block arguments.
     - They may not access other storage, including globals or pointees reached
-      by loading pointers from these variables. Such accesses, or allocations
-      and frees of other storage, are outside the assumed bounds.
+      by loading pointers from these variables.
 
     These are upper bounds, not a claim that every recipe performs every
-    permitted effect. The flag applies only to implicit recipe effects;
-    explicit nested operations and barrier effects are modelled separately.
-    Without the flag, referenced recipes are assumed to have arbitrary memory
-    effects.
+    permitted effect. Without the flag, referenced recipes are assumed to have
+    arbitrary memory effects.
 
     Flang currently sets it when all private and reduction variables are
     non-derived. These checks do not establish that all recipe effects satisfy
