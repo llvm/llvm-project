@@ -90,13 +90,6 @@ createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts) {
   return std::make_unique<AArch64TargetInfo>(TB, Opts);
 }
 
-// Alignment of an integer coercion of \p BitWidth bits. The width is
-// rounded up to a whole number of bytes, then to a power of two.
-static llvm::Align alignForIntegerBits(uint64_t BitWidth) {
-  uint64_t Bytes = llvm::divideCeil(BitWidth, 8);
-  return llvm::Align(llvm::PowerOf2Ceil(std::max<uint64_t>(Bytes, 1)));
-}
-
 static void reportNYI(StringRef Feature) {
   WithColor::warning()
       << Feature
@@ -163,11 +156,14 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
   // the stack.
   if (Size <= 128) {
     if (Size <= 64 && !Opts.IsBigEndian) {
-      // A little-endian aggregate of at most 8 bytes is an integer of its
-      // exact width. A big-endian aggregate is widened to a multiple of 8
-      // bytes so that it occupies the high bits of the register.
+      // Composite types are returned in lower bits of a 64-bit register for LE,
+      // and in higher bits for BE. However, integer types are always returned
+      // in lower bits for both LE and BE, and they are not rounded up to
+      // 64-bits. We can skip rounding up of composite types for LE, but not for
+      // BE, otherwise composite types will be indistinguishable from integer
+      // types.
       return ArgInfo::getDirect(
-          TB.getIntegerType(Size, alignForIntegerBits(Size), /*Signed=*/false));
+          TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false));
     }
 
     uint64_t AlignBits = RetTy->getAlignment().value() * 8;
@@ -180,7 +176,7 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
       return ArgInfo::getDirect(TB.getArrayType(I64, Size / 64, Size));
     }
     return ArgInfo::getDirect(
-        TB.getIntegerType(Size, alignForIntegerBits(Size), /*Signed=*/false));
+        TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false));
   }
 
   return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace());
@@ -331,10 +327,10 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
   return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
 }
 
-// True for a record whose bases and fields are 64-bit pointers in address
-// space 0, or records of such pointers. An array field is inspected through
-// its base element. False for an empty record and for a type that is not a
-// record.
+// True for a record whose bases and fields are plain pointers, or records of
+// such pointers. A plain pointer is a 64-bit pointer with no address-space
+// qualifier. An array field is inspected through its base element. False for an
+// empty record and for a type that is not a record.
 bool AArch64TargetInfo::containsOnlyPointers(const Type *Ty) const {
   if (Ty->isEmptyRecord())
     return false;
@@ -359,8 +355,9 @@ bool AArch64TargetInfo::containsOnlyPointers(const Type *Ty) const {
 
     bool IsPlainPointer = false;
     if (const auto *PT = dyn_cast<PointerType>(FT))
-      IsPlainPointer =
-          PT->getSizeInBits().getFixedValue() == 64 && PT->getAddrSpace() == 0;
+      IsPlainPointer = PT->getSizeInBits().getFixedValue() == 64 &&
+                       PT->getAddrSpace() == 0 &&
+                       !PT->hasAddressSpaceQualifier();
     if (!IsPlainPointer && !containsOnlyPointers(FT))
       return false;
   }
