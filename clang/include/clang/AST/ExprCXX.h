@@ -1870,12 +1870,19 @@ public:
   static CXXFunctionalCastExpr *
   CreateEmpty(const ASTContext &Context, unsigned PathSize, bool HasFPFeatures);
 
+  static CXXFunctionalCastExpr *
+  CreateListInitializer(const ASTContext &Context, QualType T, ExprValueKind VK,
+                        TypeSourceInfo *Written, CastKind Kind, Expr *Op,
+                        const CXXCastPath *Path, FPOptionsOverride FPO,
+                        SourceLocation R);
+
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
   /// Determine whether this expression models list-initialization.
+  /// FIXME: We should use a bit to represent it.
   bool isListInitialization() const { return LParenLoc.isInvalid(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;
