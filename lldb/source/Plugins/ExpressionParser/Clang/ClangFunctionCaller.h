@@ -64,7 +64,7 @@ class ClangFunctionCaller : public FunctionCaller {
     // LLVM RTTI support
     static char ID;
 
-    ClangFunctionCallerHelper(ClangFunctionCaller& owner);
+    ClangFunctionCallerHelper(ClangFunctionCaller &owner);
 
     virtual ~ClangFunctionCallerHelper();
 

@@ -216,9 +216,11 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
 char ClangFunctionCaller::ClangFunctionCallerHelper::ID;
 
 ClangFunctionCaller::ClangFunctionCallerHelper::ClangFunctionCallerHelper(
-    ClangFunctionCaller &owner) : m_owner(owner) {}
+    ClangFunctionCaller &owner)
+    : m_owner(owner) {}
 
-ClangFunctionCaller::ClangFunctionCallerHelper::~ClangFunctionCallerHelper() = default;
+ClangFunctionCaller::ClangFunctionCallerHelper::~ClangFunctionCallerHelper() =
+    default;
 
 clang::ASTConsumer *
 ClangFunctionCaller::ClangFunctionCallerHelper::ASTTransformer(
