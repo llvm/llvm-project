@@ -4188,6 +4188,12 @@ llvm::DILocation *
 CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
                                      StringRef SynthFuncName,
                                      llvm::DIFile *SynthFile) {
+  if (!ParentLocation)
+    return nullptr;
+  if (!SynthFile)
+    SynthFile = ParentLocation->getFile();
+  if (!SynthFile && TheCU)
+    SynthFile = TheCU->getFile();
   llvm::DISubprogram *SP = createInlinedSubprogram(SynthFuncName, SynthFile);
   return CreateSyntheticInlineAt(ParentLocation, SP);
 }

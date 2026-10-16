@@ -685,7 +685,7 @@ public:
                           llvm::DISubprogram *SynthSubprogram);
   llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
                                             StringRef SynthFuncName,
-                                            llvm::DIFile *SynthFile);
+                                            llvm::DIFile *SynthFile = nullptr);
 
   /// Reset internal state.
   void completeFunction();
