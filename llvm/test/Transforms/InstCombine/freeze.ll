@@ -1936,10 +1936,10 @@ define i1 @freeze_other_uses_requeues_user(i32 %a, i32 %b) {
 define <4 x i32> @freeze_splat(i32 %x) {
 ; CHECK-LABEL: define <4 x i32> @freeze_splat(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X_FR]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[FR:%.*]] = freeze <4 x i32> [[DOTSPLAT]]
-; CHECK-NEXT:    ret <4 x i32> [[FR]]
+; CHECK-NEXT:    ret <4 x i32> [[DOTSPLAT]]
 ;
   %ins = insertelement <4 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1950,10 +1950,10 @@ define <4 x i32> @freeze_splat(i32 %x) {
 define <vscale x 4 x i32> @freeze_splat_scalable(i32 %x) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @freeze_splat_scalable(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X_FR]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[FR:%.*]] = freeze <vscale x 4 x i32> [[DOTSPLAT]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[FR]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[DOTSPLAT]]
 ;
   %ins = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer

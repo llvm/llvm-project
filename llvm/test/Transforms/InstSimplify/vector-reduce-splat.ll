@@ -4,10 +4,7 @@
 define i32 @and_splat(i32 %x) {
 ; CHECK-LABEL: define i32 @and_splat(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[INS]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[SPLAT]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %ins = insertelement <4 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -18,10 +15,7 @@ define i32 @and_splat(i32 %x) {
 define i1 @or_splat_i1(i1 %x) {
 ; CHECK-LABEL: define i1 @or_splat_i1(
 ; CHECK-SAME: i1 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <8 x i1> poison, i1 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <8 x i1> [[INS]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[SPLAT]])
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[X]]
 ;
   %ins = insertelement <8 x i1> poison, i1 %x, i64 0
   %splat = shufflevector <8 x i1> %ins, <8 x i1> poison, <8 x i32> zeroinitializer
@@ -32,10 +26,7 @@ define i1 @or_splat_i1(i1 %x) {
 define i32 @umin_splat_scalable(i32 %x) {
 ; CHECK-LABEL: define i32 @umin_splat_scalable(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[INS]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.umin.nxv4i32(<vscale x 4 x i32> [[SPLAT]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %ins = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -46,10 +37,7 @@ define i32 @umin_splat_scalable(i32 %x) {
 define i16 @umax_splat(i16 %x) {
 ; CHECK-LABEL: define i16 @umax_splat(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x i16> poison, i16 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <3 x i16> [[INS]], <3 x i16> poison, <3 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.umax.v3i16(<3 x i16> [[SPLAT]])
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    ret i16 [[X]]
 ;
   %ins = insertelement <3 x i16> poison, i16 %x, i64 0
   %splat = shufflevector <3 x i16> %ins, <3 x i16> poison, <3 x i32> zeroinitializer
@@ -60,10 +48,7 @@ define i16 @umax_splat(i16 %x) {
 define i64 @smin_splat(i64 %x) {
 ; CHECK-LABEL: define i64 @smin_splat(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i64> [[INS]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.vector.reduce.smin.v2i64(<2 x i64> [[SPLAT]])
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    ret i64 [[X]]
 ;
   %ins = insertelement <2 x i64> poison, i64 %x, i64 0
   %splat = shufflevector <2 x i64> %ins, <2 x i64> poison, <2 x i32> zeroinitializer
@@ -74,10 +59,7 @@ define i64 @smin_splat(i64 %x) {
 define i8 @smax_splat(i8 %x) {
 ; CHECK-LABEL: define i8 @smax_splat(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <16 x i8> poison, i8 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <16 x i8> [[INS]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> [[SPLAT]])
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %ins = insertelement <16 x i8> poison, i8 %x, i64 0
   %splat = shufflevector <16 x i8> %ins, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -88,10 +70,7 @@ define i8 @smax_splat(i8 %x) {
 define i32 @xor_splat_even(i32 %x) {
 ; CHECK-LABEL: define i32 @xor_splat_even(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[INS]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[SPLAT]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ins = insertelement <4 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -102,10 +81,7 @@ define i32 @xor_splat_even(i32 %x) {
 define i32 @xor_splat_odd(i32 %x) {
 ; CHECK-LABEL: define i32 @xor_splat_odd(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <3 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <3 x i32> [[INS]], <3 x i32> poison, <3 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.xor.v3i32(<3 x i32> [[SPLAT]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %ins = insertelement <3 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <3 x i32> %ins, <3 x i32> poison, <3 x i32> zeroinitializer
@@ -116,10 +92,7 @@ define i32 @xor_splat_odd(i32 %x) {
 define i32 @xor_splat_scalable_even(i32 %x) {
 ; CHECK-LABEL: define i32 @xor_splat_scalable_even(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[INS]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.xor.nxv2i32(<vscale x 2 x i32> [[SPLAT]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ins = insertelement <vscale x 2 x i32> poison, i32 %x, i64 0
   %splat = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer

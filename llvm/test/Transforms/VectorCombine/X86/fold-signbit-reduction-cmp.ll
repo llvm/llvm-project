@@ -626,12 +626,27 @@ define i1 @negative_ashr_add_sgt_0(<5 x i3> %x) {
 }
 
 define i1 @i1_or_eq_0(<4 x i1> %x) {
-; CHECK-LABEL: define i1 @i1_or_eq_0(
-; CHECK-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @i1_or_eq_0(
+; SSE-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @i1_or_eq_0(
+; AVX2-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX2-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; AVX2-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @i1_or_eq_0(
+; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[RED:%.*]] = icmp ne i4 [[TMP1]], 0
+; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %shr)
@@ -657,7 +672,9 @@ define i1 @i1_or_ne_0(<4 x i1> %x) {
 ; AVX512-LABEL: define i1 @i1_or_ne_0(
 ; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; AVX512-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[RED:%.*]] = icmp ne i4 [[TMP1]], 0
+; AVX512-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
 ; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
@@ -667,12 +684,27 @@ define i1 @i1_or_ne_0(<4 x i1> %x) {
 }
 
 define i1 @i1_and_eq_0(<4 x i1> %x) {
-; CHECK-LABEL: define i1 @i1_and_eq_0(
-; CHECK-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @i1_and_eq_0(
+; SSE-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; SSE-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; SSE-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @i1_and_eq_0(
+; AVX2-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX2-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; AVX2-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @i1_and_eq_0(
+; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[RED:%.*]] = icmp eq i4 [[TMP1]], -1
+; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %shr)
@@ -681,12 +713,27 @@ define i1 @i1_and_eq_0(<4 x i1> %x) {
 }
 
 define i1 @i1_and_ne_0(<4 x i1> %x) {
-; CHECK-LABEL: define i1 @i1_and_ne_0(
-; CHECK-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @i1_and_ne_0(
+; SSE-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; SSE-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; SSE-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @i1_and_ne_0(
+; AVX2-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX2-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; AVX2-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @i1_and_ne_0(
+; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[RED:%.*]] = icmp eq i4 [[TMP1]], -1
+; AVX512-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %shr)
@@ -695,12 +742,27 @@ define i1 @i1_and_ne_0(<4 x i1> %x) {
 }
 
 define i1 @i1_umax_eq_0(<4 x i1> %x) {
-; CHECK-LABEL: define i1 @i1_umax_eq_0(
-; CHECK-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @i1_umax_eq_0(
+; SSE-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @i1_umax_eq_0(
+; AVX2-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX2-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; AVX2-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @i1_umax_eq_0(
+; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i4 [[TMP2]], -1
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> %shr)
@@ -725,7 +787,8 @@ define i1 @i1_umin_ne_0(<4 x i1> %x) {
 ; AVX512-LABEL: define i1 @i1_umin_ne_0(
 ; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; AVX512-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i4 [[TMP1]], -1
 ; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
@@ -735,12 +798,27 @@ define i1 @i1_umin_ne_0(<4 x i1> %x) {
 }
 
 define i1 @i1_ashr_or_eq_0(<4 x i1> %x) {
-; CHECK-LABEL: define i1 @i1_ashr_or_eq_0(
-; CHECK-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @i1_ashr_or_eq_0(
+; SSE-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @i1_ashr_or_eq_0(
+; AVX2-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
+; AVX2-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; AVX2-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @i1_ashr_or_eq_0(
+; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[RED:%.*]] = icmp ne i4 [[TMP1]], 0
+; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = ashr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %shr)
@@ -749,12 +827,27 @@ define i1 @i1_ashr_or_eq_0(<4 x i1> %x) {
 }
 
 define i1 @i1_ashr_and_ne_0(<4 x i1> %x) {
-; CHECK-LABEL: define i1 @i1_ashr_and_ne_0(
-; CHECK-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @i1_ashr_and_ne_0(
+; SSE-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
+; SSE-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; SSE-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @i1_ashr_and_ne_0(
+; AVX2-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
+; AVX2-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[SHR]])
+; AVX2-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @i1_ashr_and_ne_0(
+; AVX512-SAME: <4 x i1> [[X:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
+; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[SHR]] to i4
+; AVX512-NEXT:    [[RED:%.*]] = icmp eq i4 [[TMP1]], -1
+; AVX512-NEXT:    [[CMP:%.*]] = icmp ne i1 [[RED]], false
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %shr = ashr <4 x i1> %x, splat (i1 0)
   %red = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %shr)

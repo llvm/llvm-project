@@ -276,12 +276,10 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uge <2 x double> [[TMP7]], splat (double f0x3EB0C6F7A0B5ED8D)
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x i1> [[TMP8]] to i2
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i2 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i1> [[TMP9]] to i2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i2 [[TMP13]], 0
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = and i1 [[TMP12]], [[TMP10]]
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP11:%.*]] = tail call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP10]])
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = and i1 [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:
