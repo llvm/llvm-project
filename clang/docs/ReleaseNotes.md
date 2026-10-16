@@ -1013,6 +1013,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where Clang failed to resolve a reference to an overloaded
   conversion function when one of the overloads was non-template. (#GH230682)
 
+- Fixed a crash when classifying a dependent call whose callee has already
+  been substituted to a value of non-callable type. (#GH218323)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

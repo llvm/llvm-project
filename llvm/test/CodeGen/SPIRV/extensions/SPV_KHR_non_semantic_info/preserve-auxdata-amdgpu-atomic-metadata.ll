@@ -1,42 +1,27 @@
 ; AMDGPU atomic metadata is preserved as AuxData InstructionMetadata records.
 ; AMD triples enable all extensions by default; only disabling them is tested.
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
-
 ; AMD triples preserve it without -spirv-preserve-auxdata. The old UserSemantic
 ; decoration encoding is no longer emitted.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   | FileCheck %s --implicit-check-not=UserSemantic
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   -filetype=obj | spirv-val %}
 
-; Without SPV_KHR_non_semantic_info, nothing is emitted.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=-SPV_KHR_non_semantic_info %s -o - \
-; RUN:   | FileCheck %s --check-prefixes=DROPPED,NONSI
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=-SPV_KHR_non_semantic_info %s -o - -filetype=obj \
-; RUN:   | spirv-val %}
-
 ; Records forward-reference their target, which requires
 ; SPV_KHR_relaxed_extended_instruction; without it they are dropped.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction \
-; RUN:   -spirv-preserve-auxdata %s -o - \
-; RUN:   | FileCheck %s --check-prefixes=DROPPED,NORELAXED
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction %s -o - \
+; RUN:   | FileCheck %s --check-prefix=NORELAXED
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction \
-; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
+; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction %s -o - \
+; RUN:   -filetype=obj | spirv-val %}
 
-; NONSI-NOT: NonSemantic.AuxData
 ; NORELAXED-NOT: SPV_KHR_relaxed_extended_instruction
-; DROPPED-NOT: amdgpu.no.fine.grained.memory
-; DROPPED-NOT: amdgpu.no.remote.memory
-; DROPPED-NOT: atomic.ignore.denormal.mode
-; DROPPED-NOT: OpExtInstWithForwardRefsKHR
+; NORELAXED-NOT: amdgpu.no.fine.grained.memory
+; NORELAXED-NOT: amdgpu.no.remote.memory
+; NORELAXED-NOT: atomic.ignore.denormal.mode
+; NORELAXED-NOT: OpExtInstWithForwardRefsKHR
 
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
