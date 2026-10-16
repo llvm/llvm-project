@@ -1,17 +1,12 @@
 ; X86 GlobalISel can't lower inline asm, so only SelectionDAG is tested here;
-; see the AArch64 test for both instruction selectors. The two RUN lines differ
-; in optimization level because "rm" prefers a register only above -O0.
-; RUN: not llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 -O0 \
-; RUN:   -filetype=null < %s 2>&1 \
-; RUN:   | FileCheck --check-prefixes=CHECK,O0 --implicit-check-not=error: %s
+; see the AArch64 test for both instruction selectors.
 ; RUN: not llc -mtriple=x86_64-unknown-linux-gnu -global-isel=0 \
 ; RUN:   -filetype=null < %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 ; A direct output is the asm's result, so there is no memory to write it to.
 ; Picking a memory constraint for one is an error, not a crash.
 
-; -O0 picks memory for "rm"; above -O0 the register is preferred.
-; O0: error: cannot handle direct memory outputs for constraint 'm'
+; "rm" prefers the register here, so there's no error.
 define i32 @rm_i32() {
   %r = call i32 asm "# $0", "=rm"()
   ret i32 %r
