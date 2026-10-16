@@ -3648,8 +3648,12 @@ let append Predicates = [IsRV64] in {
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
   def : Pat<(v2i32 (riscv_ppaire (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (PACK GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_ppaireo (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PPAIREO_W GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_ppairoe (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (PPAIROE_W GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_ppairo (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+            (PPAIRO_W GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV64]
