@@ -154,6 +154,128 @@ void foo() {
                      TabStyle);
 }
 
+TEST(FormatIncremental, ContinueBlockComment) {
+  expectAfterNewline(R"cpp(
+ /*
+  * existing comment
+  ^more text
+  */
+)cpp",
+   R"cpp(
+ /*
+  * existing comment
+  * ^more text
+  */
+)cpp");
+
+  expectAfterNewline(R"cpp(
+ /**
+  * existing comment
+  ^more text
+  */
+)cpp",
+   R"cpp(
+ /**
+  * existing comment
+  * ^more text
+  */
+)cpp");
+
+  // A plain block comment does not start automatic star continuation.
+  expectAfterNewline(R"cpp(
+/*
+^
+*/
+)cpp",
+   R"cpp(
+/*
+^
+*/
+)cpp");
+
+  // Manually starting a starred line enables continuation.
+  expectAfterNewline(R"cpp(
+/*
+ * first line
+ ^second line
+ */
+)cpp",
+   R"cpp(
+/*
+ * first line
+ * ^second line
+ */
+)cpp");
+
+  // Subsequent lines continue the star prefix.
+  expectAfterNewline(R"cpp(
+/*
+ * first line
+ * second line
+^
+ */
+)cpp",
+   R"cpp(
+/*
+ * first line
+ * second line
+ * ^
+ */
+)cpp");
+
+  // Doxygen-style comments continue automatically.
+  expectAfterNewline(R"cpp(
+/**
+^
+ */
+)cpp",
+   R"cpp(
+/**
+ * ^
+ */
+)cpp");
+
+  // Doxygen-style continuation also works on subsequent lines.
+  expectAfterNewline(R"cpp(
+/**
+ * first line
+^
+ */
+)cpp",
+   R"cpp(
+/**
+ * first line
+ * ^
+ */
+)cpp");
+
+  // If the editor already continued the comment, don't add a second star.
+  expectAfterNewline(R"cpp(
+/**
+ * ^
+ */
+)cpp",
+   R"cpp(
+/**
+ * ^
+ */
+)cpp");
+
+  // Do not continue after the closing delimiter.
+  expectAfterNewline(R"cpp(
+/*
+ * comment
+ */
+^
+)cpp",
+   R"cpp(
+/*
+ * comment
+ */
+^
+)cpp");
+}
+
 TEST(FormatIncremental, Indentation) {
   expectAfterNewline(R"cpp(
 void foo() {
