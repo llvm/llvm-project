@@ -25,8 +25,8 @@ static_assert(sizeof(std::inplace_vector<char, std::numeric_limits<unsigned shor
               sizeof(InplaceVectorLayout<char, std::numeric_limits<unsigned short>::max() - 1, unsigned short>));
 static_assert(sizeof(std::inplace_vector<char, std::numeric_limits<unsigned int>::max() - 1>) ==
               sizeof(InplaceVectorLayout<char, std::numeric_limits<unsigned int>::max() - 1, unsigned int>));
-// Max array size accepted by clang is MAX_SIZE / 8
-static_assert(sizeof(std::inplace_vector<char, (std::numeric_limits<unsigned long>::max() / 8) - 1>) ==
-              sizeof(InplaceVectorLayout<char, (std::numeric_limits<unsigned long>::max() / 8) - 1, unsigned long>));
-static_assert(sizeof(std::inplace_vector<char, (std::numeric_limits<std::size_t>::max() / 8) - 1>) ==
-              sizeof(InplaceVectorLayout<char, (std::numeric_limits<std::size_t>::max() / 8) - 1, std::size_t>));
+// Divide by 64 to not run into max structure size issues
+static_assert(sizeof(std::inplace_vector<char, (std::numeric_limits<unsigned long>::max() / 64) - 1>) ==
+              sizeof(InplaceVectorLayout<char, (std::numeric_limits<unsigned long>::max() / 64) - 1, unsigned long>));
+static_assert(sizeof(std::inplace_vector<char, (std::numeric_limits<std::size_t>::max() / 64) - 1>) ==
+              sizeof(InplaceVectorLayout<char, (std::numeric_limits<std::size_t>::max() / 64) - 1, std::size_t>));
