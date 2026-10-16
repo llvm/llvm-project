@@ -70,6 +70,9 @@ bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
+
   // OpenMP categorizes Fortran characters as aggregates.
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;

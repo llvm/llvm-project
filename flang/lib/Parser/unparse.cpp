@@ -2285,6 +2285,11 @@ public:
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpDefaultClause &x) {
+    using Modifier = OmpDefaultClause::Modifier;
+    Walk(std::get<OmpDefaultClause::DataSharingAttribute>(x.t));
+    Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
+  }
   void Unparse(const OmpDoacross &x) {
     using Modifier = OmpDoacross::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t));

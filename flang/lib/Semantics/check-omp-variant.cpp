@@ -46,14 +46,23 @@ using namespace Fortran::semantics::omp;
 
 namespace {
 
-bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec) {
+bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec,
+    parser::OmpVariableCategory::Value &varCategory) {
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  using VariableCategory = parser::OmpVariableCategory;
   const parser::OmpClause *clause{
       parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_default)};
   if (!clause) {
     return false;
   }
   const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
+  auto *maybeCategory = OmpGetUniqueModifier<parser::OmpVariableCategory>(
+      std::get<1>(defaultClause.v.t));
+  if (maybeCategory) {
+    varCategory = maybeCategory->v;
+  } else {
+    varCategory = VariableCategory::Value::All;
+  }
   return std::get<DataSharingAttribute>(defaultClause.v.t) ==
       DataSharingAttribute::None;
 }
@@ -75,7 +84,7 @@ class MetadirectiveDefaultNoneChecker {
 public:
   MetadirectiveDefaultNoneChecker(SemanticsContext &context, const Scope &scope,
       const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed,
-      std::list<parser::OmpVariableCategory::Value> &varcat)
+      parser::OmpVariableCategory::Value &varcat)
       : context_{context}, scope_{scope}, explicitDSA_{explicitDSA},
         diagnosed_{diagnosed}, varcat_{varcat} {}
 
@@ -119,16 +128,6 @@ public:
     const Symbol &symbol{*name.symbol};
     const Symbol &ultimate{symbol.GetUltimate()};
 
-    bool isDefaultNoneCat = false;
-    for (auto &cat : varcat_) {
-      isDefaultNoneCat =
-          isDefaultNoneCat || DefaultMapCategoryMatchesSymbol(cat, symbol);
-    }
-
-    if (!isDefaultNoneCat) {
-      return true;
-    }
-
     // Variables declared inside the associated loop without static storage are
     // predetermined private.
     bool isNonStaticLocal{ultimate.owner() != scope_ &&
@@ -138,6 +137,16 @@ public:
         ultimate.test(Symbol::Flag::OmpThreadprivate) ||
         loopIndices_.count(ultimate) != 0 ||
         HasNestedPrivateDSA(symbol, scope_) || isNonStaticLocal) {
+      return true;
+    }
+
+    bool isDefaultNoneCat = false;
+    for (auto &cat : varcat_) {
+      isDefaultNoneCat =
+          isDefaultNoneCat || DefaultMapCategoryMatchesSymbol(cat, symbol);
+    }
+
+    if (!isDefaultNoneCat) {
       return true;
     }
 
@@ -182,38 +191,25 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
 
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
   using VariableCategory = parser::OmpVariableCategory;
-  const parser::OmpClause *clause{
-      parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_default)};
-  if (!clause) {
-    return;
-  }
-  const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
+  VariableCategory::Value varCategory{};
+  if (HasDefaultNone(spec, varCategory)) {
+    SymbolSourceMap explicitDSA;
 
-  VariableCategory::Value varCategory;
-  SymbolSourceMap explicitDSA;
-  auto *maybeCategory = OmpGetUniqueModifier<parser::OmpVariableCategory>(
-      std::get<1>(defaultClause.v.t));
-  if (maybeCategory) {
-    varCategory = maybeCategory->v;
-  } else {
-    varCategory = VariableCategory::Value::All;
-  }
-  std::list<VariableCategory::Value> varcat{varCategory};
-
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  for (const parser::OmpClause &clause : spec.Clauses().v) {
-    if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
-      if (const parser::OmpObjectList *objects{
-              parser::omp::GetOmpObjectList(clause)}) {
-        GetSymbolsInObjectList(*objects, explicitDSA);
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    for (const parser::OmpClause &clause : spec.Clauses().v) {
+      if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
+        if (const parser::OmpObjectList *objects{
+                parser::omp::GetOmpObjectList(clause)}) {
+          GetSymbolsInObjectList(*objects, explicitDSA);
+        }
       }
     }
-  }
 
-  const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
-  MetadirectiveDefaultNoneChecker checker{
-      context_, scope, explicitDSA, diagnosed, varcat};
-  parser::Walk(rootLoop, checker);
+    const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
+    MetadirectiveDefaultNoneChecker checker{
+        context_, scope, explicitDSA, diagnosed, varCategory};
+    parser::Walk(rootLoop, checker);
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {

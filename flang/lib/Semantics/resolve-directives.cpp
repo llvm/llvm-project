@@ -111,7 +111,7 @@ protected:
           parser::OmpVariableCategory::Value::All) {
     GetContext().defaultDSA = {{VarCat, flag}};
   }
-  Symbol::Flag DefaultDSAForSymbol(
+  std::optional<Symbol::Flag> DefaultDSAForSymbol(
       const DirContext &dirContext, const Symbol &symbol) {
     for (auto defaults : dirContext.defaultDSA) {
       if (omp::DefaultMapCategoryMatchesSymbol(defaults.first, symbol)) {
@@ -2867,7 +2867,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
-      dsa = {DefaultDSAForSymbol(dirContext, *symbol)};
+      dsa = {DefaultDSAForSymbol(dirContext, *symbol).value()};
       if (DefaultDSAForSymbol(dirContext, *symbol) != Symbol::Flag::OmpNone) {
         makeSymbol(dsa);
       }
@@ -2964,8 +2964,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
                       defaults.first, *found)) {
                 if (!IsObjectWithDSA(*symbol)) {
                   context_.Say(name.source,
-                      "The DEFAULTMAP(NONE) clause requires that '%s' must "
-                      "be "
+                      "The DEFAULTMAP(NONE) clause requires that '%s' must be "
                       "listed in a "
                       "data-sharing attribute, data-mapping attribute, or is_device_ptr clause"_err_en_US,
                       symbol->name());

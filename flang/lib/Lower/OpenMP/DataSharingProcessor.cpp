@@ -714,25 +714,29 @@ void DataSharingProcessor::collectDefaultSymbols() {
             break;
           case VariableCategory::Scalar:
             if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
-                    parser::OmpVariableCategory::Value::Scalar, *symbol)) {
+                    parser::OmpVariableCategory::Value::Scalar,
+                    semantics::FollowHostAssoc(*symbol))) {
               allSymbols.remove(symbol);
             }
             break;
           case VariableCategory::Aggregate:
             if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
-                    parser::OmpVariableCategory::Value::Aggregate, *symbol)) {
+                    parser::OmpVariableCategory::Value::Aggregate,
+                    semantics::FollowHostAssoc(*symbol))) {
               allSymbols.remove(symbol);
             }
             break;
           case VariableCategory::Allocatable:
             if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
-                    parser::OmpVariableCategory::Value::Allocatable, *symbol)) {
+                    parser::OmpVariableCategory::Value::Allocatable,
+                    semantics::FollowHostAssoc(*symbol))) {
               allSymbols.remove(symbol);
             }
             break;
           case VariableCategory::Pointer:
             if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
-                    parser::OmpVariableCategory::Value::Pointer, *symbol)) {
+                    parser::OmpVariableCategory::Value::Pointer,
+                    semantics::FollowHostAssoc(*symbol))) {
               allSymbols.remove(symbol);
             }
             break;
