@@ -89,8 +89,7 @@ define void @test_func(ptr %ptr, i32 %val, i1 %cond) nounwind {
 ; R6-O2-NEXT:  .LBB0_4: # %bb4
 ; R6-O2-NEXT:    daddiu $sp, $sp, -16
 ; R6-O2-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; R6-O2-NEXT:    jal exit
-; R6-O2-NEXT:    nop
+; R6-O2-NEXT:    balc exit
 ;
 ; R6-O3-LABEL: test_func:
 ; R6-O3:       # %bb.0: # %entry
@@ -116,8 +115,7 @@ define void @test_func(ptr %ptr, i32 %val, i1 %cond) nounwind {
 ; R6-O3-NEXT:  .LBB0_4: # %bb4
 ; R6-O3-NEXT:    daddiu $sp, $sp, -16
 ; R6-O3-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; R6-O3-NEXT:    jal exit
-; R6-O3-NEXT:    nop
+; R6-O3-NEXT:    balc exit
 entry:
   br i1 %cond, label %bb5, label %bb4
 
