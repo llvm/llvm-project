@@ -1467,8 +1467,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
           // Extract the argument's value.
           lldb_private::Scalar auth_ptr_val;
           if (!frame.EvaluateValue(auth_ptr_val, auth_ptr, module)) {
-            error = lldb_private::Status::FromErrorStringWithFormat(
-                "unable to evaluate argument %d", 0);
+            error = lldb_private::Status::FromErrorString(
+                "unable to evaluate argument 0");
             return false;
           }
 
