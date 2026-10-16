@@ -191,10 +191,63 @@ void Scheduler::notifyMoveInstr(Instruction *I, const BBIterator &To) {
   // If this assumption does not hold, we would need to empty the ready list and
   // re-fill it.
 }
+
 void Scheduler::notifySetUse(const Use &U, Value *NewSrc) {
   // We don't maintain the state while reverting.
   if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
     return;
+
+  auto TryUpdateUnschedDeps = [this, &U, NewSrc]() {
+    // If U.User is not in the DAG, then we should not attempt to decrement
+    // CurrSrcN's unscheduled successors.
+    //  -------   -------   -
+    //  CurrSrc             | DAG interval
+    //     |       NewSrc   |
+    //  ---|---   ---|---   -
+    //  U.User     U.User
+    auto *UserI = dyn_cast_or_null<Instruction>(U.getUser());
+    if (UserI == nullptr)
+      return;
+    auto *UserN = DAG.getNode(UserI);
+    if (UserN == nullptr)
+      return;
+    // If UserN is marked as scheduled then we should not update CrrSrcN' or
+    // NewSrcN's unscheduled successors.
+    if (UserN->scheduled())
+      return;
+    // If UserN is marked as scheduled then we should not update CrrSrcN' or
+    // NewSrcN's unscheduled successors.
+    if (UserN->scheduled())
+      return;
+    // Update the UnscheduledSuccs counter for both the current source and
+    // NewSrc if needed.
+    if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
+      if (auto *CurrSrcN = DAG.getNode(CurrSrcI)) {
+        // If CurrSrcN is scheduled there is no point in updating
+        // UnscheduledDeps.
+        if (!CurrSrcN->scheduled()) {
+          if (Dir == SchedDirection::BottomUp)
+            CurrSrcN->decrUnscheduledDeps();
+          else
+            UserN->decrUnscheduledDeps();
+        }
+      }
+    }
+    if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
+      if (auto *NewSrcN = DAG.getNode(NewSrcI)) {
+        // If CurrSrcN is scheduled there is no point in updating
+        // UnscheduleDeps.
+        if (!NewSrcN->scheduled()) {
+          if (Dir == SchedDirection::BottomUp)
+            NewSrcN->incrUnscheduledDeps();
+          else
+            UserN->incrUnscheduledDeps();
+        }
+      }
+    }
+  };
+  TryUpdateUnschedDeps();
+
   Instruction *DstI = cast<Instruction>(U.getUser());
   DGNode *DstN = DAG.getNode(DstI);
   Value *OldSrc = U.get();
@@ -217,7 +270,7 @@ void Scheduler::notifySetUse(const Use &U, Value *NewSrc) {
   }
   case SchedDirection::TopDown: {
     // Check if we need to add DstN to the ready list.
-    if (DstN && DstN->ready() && !NewSrcN->scheduled() &&
+    if (DstN && DstN->ready() && NewSrcN && !NewSrcN->scheduled() &&
         !ReadyList.contains(NewSrcN))
       ReadyList.insert(NewSrcN);
     // Check if we need to remove DstN from the ready list.
