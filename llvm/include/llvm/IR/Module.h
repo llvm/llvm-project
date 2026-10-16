@@ -152,9 +152,13 @@ public:
     /// Takes the min of the two values, which are required to be integers.
     Min = 8,
 
+    /// Ignores differences between the values without warning. The result value
+    /// will be the operand for the flag from the first module being linked.
+    Ignore = 9,
+
     // Markers:
     ModFlagBehaviorFirstVal = Error,
-    ModFlagBehaviorLastVal = Min
+    ModFlagBehaviorLastVal = Ignore
   };
 
   /// Checks if Metadata represents a valid ModFlagBehavior, and stores the
