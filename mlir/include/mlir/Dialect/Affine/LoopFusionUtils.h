@@ -104,8 +104,12 @@ private:
 /// 'Success' if fusion of the src/dst loop nests is feasible (i.e. they are
 /// in the same block and dependences would not be violated). Otherwise
 /// returns a FusionResult explaining why fusion is not feasible.
-/// NOTE: This function is not feature complete and should only be used in
-/// testing.
+/// NOTE: This utility is not a complete legality check. In particular, it
+/// does not model generic or unknown memory effects in operations between the
+/// candidate loops. Callers requiring complete legality must first perform the
+/// corresponding MemRefDependenceGraph checks; the affine loop-fusion pass
+/// calls this utility only after those checks, and other direct callers should
+/// use it only for testing.
 FusionResult
 canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
              ComputationSliceState *srcSlice,
