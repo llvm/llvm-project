@@ -239,8 +239,7 @@ public:
         auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
         Operation *symbolTableOp =
             gpuMod ? gpuMod.getOperation() : module.getOperation();
-        SymbolTable symbolTable(symbolTableOp);
-        if (!symbolTable.lookup(bindName)) {
+        if (!symbolTables.getSymbolTable(symbolTableOp).lookup(bindName)) {
           callOp.emitError(
               "string-bound ACC routine target was not materialized");
           failed = true;
