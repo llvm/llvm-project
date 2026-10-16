@@ -60,3 +60,48 @@ latch:
 exit:
   ret void
 }
+
+; Do not thread through a loop header with multiple backedges.
+define void @multi_latch(ptr %p, i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: define void @multi_latch(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[V:%.*]] = phi i1 [ [[A]], %[[ENTRY]] ], [ [[B]], %[[LATCH1:.*]] ], [ false, %[[LATCH2:.*]] ]
+; CHECK-NEXT:    br i1 [[V]], label %[[BODY:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br i1 [[C]], label %[[LATCH1]], label %[[LATCH2]]
+; CHECK:       [[LATCH1]]:
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[HEADER]]
+; CHECK:       [[LATCH2]]:
+; CHECK-NEXT:    store i32 2, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %header
+
+header:
+  %v = phi i1 [ %a, %entry ], [ %b, %latch1 ], [ false, %latch2 ]
+  br i1 %v, label %body, label %exit
+
+body:
+  store i32 0, ptr %p, align 4
+  br i1 %c, label %latch1, label %latch2
+
+latch1:
+  store i32 1, ptr %p, align 4
+  br label %header
+
+latch2:
+  store i32 2, ptr %p, align 4
+  br label %header
+
+exit:
+  ret void
+}
+

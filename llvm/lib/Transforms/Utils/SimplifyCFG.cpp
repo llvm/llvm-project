@@ -3526,12 +3526,15 @@ static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
 }
 
 /// Return true if threading \p PredBBs through \p Header to \p RealDest
-/// preserves canonical loop form. Every predecessor in \p PredBBs must be
-/// dominated by \p Header, and \p RealDest must not reach any of them without
-/// passing through \p Header.
+/// eliminates the loop's single backedge. \p Header must have two predecessors
+/// (one entry and one backedge), the threaded predecessor must be dominated by
+/// \p Header, and \p RealDest must not reach it without passing through
+/// \p Header.
 static bool isSafeToThreadThroughLoopHeader(BasicBlock *Header,
                                             ArrayRef<BasicBlock *> PredBBs,
                                             BasicBlock *RealDest) {
+  if (!Header->hasNPredecessors(2))
+    return false;
   BlocksSet Visited;
   SmallVector<BasicBlock *, 8> Worklist(PredBBs);
   while (!Worklist.empty()) {
