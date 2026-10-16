@@ -1,7 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
 
-// expected-no-diagnostics
-
 void clang_analyzer_warnIfReached();
 
 void testAsmGoto() {
@@ -11,16 +9,13 @@ void testAsmGoto() {
            : /* clobbers */
            : label1, label2 /* any labels used */);
 
-  // FIXME: Should be reachable.
-  clang_analyzer_warnIfReached();
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 
   label1:
-  // FIXME: Should be reachable.
-  clang_analyzer_warnIfReached();
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
   return;
 
   label2:
-  // FIXME: Should be reachable.
-  clang_analyzer_warnIfReached();
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
   return;
 }
