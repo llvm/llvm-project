@@ -4,10 +4,9 @@ else()
   set(LIBC_TEST_SUBPROCESS_TESTS 0)
 endif()
 
-function(_get_common_test_compile_options output_var c_test flags)
-  _get_compile_options_from_flags(compile_flags ${flags})
-  _get_compile_options_from_config(config_flags)
-  _get_compile_options_from_arch(arch_flags)
+function(_get_common_test_compile_options_impl output_var c_test)
+  set(config_flags ${LIBC_COMPILE_OPTIONS_FROM_CONFIG})
+  set(arch_flags ${LIBC_COMPILE_OPTIONS_FROM_ARCH})
 
   # Death test executor is only available in Linux for now.
   if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
@@ -19,9 +18,6 @@ function(_get_common_test_compile_options output_var c_test flags)
   endif()
 
   set(compile_options
-    ${LIBC_COMPILE_OPTIONS_DEFAULT}
-    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
-    ${compile_flags}
     ${config_flags}
     ${arch_flags})
   libc_add_definition(compile_options
@@ -109,9 +105,30 @@ function(_get_common_test_compile_options output_var c_test flags)
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
+_get_common_test_compile_options_impl(LIBC_COMMON_TEST_COMPILE_OPTIONS_CPP FALSE)
+_get_common_test_compile_options_impl(LIBC_COMMON_TEST_COMPILE_OPTIONS_C TRUE)
 
-function(_get_hermetic_test_compile_options output_var c_test flags)
-  _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
+function(_get_common_test_compile_options output_var c_test flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  if(c_test)
+    set(common_test_opts ${LIBC_COMMON_TEST_COMPILE_OPTIONS_C})
+  else()
+    set(common_test_opts ${LIBC_COMMON_TEST_COMPILE_OPTIONS_CPP})
+  endif()
+  set(${output_var}
+    ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+    ${compile_flags}
+    ${common_test_opts}
+    PARENT_SCOPE)
+endfunction()
+
+function(_get_hermetic_test_compile_options_impl output_var c_test)
+  if(c_test)
+    set(compile_options ${LIBC_COMMON_TEST_COMPILE_OPTIONS_C})
+  else()
+    set(compile_options ${LIBC_COMMON_TEST_COMPILE_OPTIONS_CPP})
+  endif()
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -134,6 +151,23 @@ function(_get_hermetic_test_compile_options output_var c_test flags)
   endif()
 
   set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+_get_hermetic_test_compile_options_impl(LIBC_HERMETIC_TEST_COMPILE_OPTIONS_CPP FALSE)
+_get_hermetic_test_compile_options_impl(LIBC_HERMETIC_TEST_COMPILE_OPTIONS_C TRUE)
+
+function(_get_hermetic_test_compile_options output_var c_test flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  if(c_test)
+    set(hermetic_test_opts ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS_C})
+  else()
+    set(hermetic_test_opts ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS_CPP})
+  endif()
+  set(${output_var}
+    ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+    ${compile_flags}
+    ${hermetic_test_opts}
+    PARENT_SCOPE)
 endfunction()
 
 # This is a helper function and not a build rule. It is to be used by the
@@ -521,6 +555,29 @@ if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
 endif()
 
+# Hermetic and integration tests link with -nodefaultlibs, so the compiler
+# runtime builtins have to be linked explicitly. -print-libgcc-file-name
+# reports whichever library the driver would use (libgcc.a or
+# libclang_rt.builtins.a). The query uses the same flags as the test link so
+# that the driver selects the same multilib. GPU and UEFI targets do not link a
+# compiler runtime.
+if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND
+  NOT LIBC_TARGET_OS_IS_UEFI AND
+  NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
+  separate_arguments(libc_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} ${libc_cxx_flags}
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+      -print-libgcc-file-name
+    OUTPUT_VARIABLE LIBC_TEST_BUILTINS_LIBRARY
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT EXISTS "${LIBC_TEST_BUILTINS_LIBRARY}")
+    message(FATAL_ERROR "Compiler runtime builtins library "
+      "'${LIBC_TEST_BUILTINS_LIBRARY}' not found. Set "
+      "LIBC_TEST_BUILTINS_LIBRARY or LIBC_TEST_BUILTINS_TARGET.")
+  endif()
+endif()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
@@ -652,8 +709,8 @@ function(add_integration_test test_name)
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
@@ -664,8 +721,8 @@ function(add_integration_test test_name)
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
@@ -678,8 +735,13 @@ function(add_integration_test test_name)
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
     ${fq_target_name}.__libc__
+    ${LIBC_TEST_BUILTINS_LIBRARY}
     ${compiler_runtime}
   )
+  if(LIBC_TEST_BUILTINS_TARGET)
+    target_link_libraries(${fq_build_target_name} $<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>)
+    add_dependencies(${fq_build_target_name} ${LIBC_TEST_BUILTINS_TARGET})
+  endif()
   add_dependencies(${fq_build_target_name}
     libc.test.IntegrationTest.test
     ${INTEGRATION_TEST_DEPENDS})
@@ -1003,8 +1065,8 @@ function(add_libc_hermetic test_name)
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
@@ -1021,8 +1083,8 @@ function(add_libc_hermetic test_name)
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
     set(link_options
-      -nolibc
       -nostartfiles
+      -nodefaultlibs
       -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
@@ -1052,8 +1114,13 @@ function(add_libc_hermetic test_name)
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
       ${coverage_link_libs}
+      ${LIBC_TEST_BUILTINS_LIBRARY}
       ${compiler_runtime}
   )
+  if(LIBC_TEST_BUILTINS_TARGET)
+    target_link_libraries(${fq_build_target_name} PRIVATE $<TARGET_FILE:${LIBC_TEST_BUILTINS_TARGET}>)
+    add_dependencies(${fq_build_target_name} ${LIBC_TEST_BUILTINS_TARGET})
+  endif()
   add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)

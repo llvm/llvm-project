@@ -19,10 +19,12 @@ add_clang_library(MLIRCIRTransforms
   DEPENDS
   MLIRCIRPassIncGen
 
+  LINK_COMPONENTS
+  ABI
+
   LINK_LIBS PUBLIC
   clangBasic
 
-  LLVMABI
   MLIRABI
   MLIRAnalysis
   MLIRDLTIDialect

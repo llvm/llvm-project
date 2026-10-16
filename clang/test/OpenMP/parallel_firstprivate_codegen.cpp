@@ -329,7 +329,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 [[T_VAR:%.*]], ptr nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nonnull align 4 dereferenceable(4) [[VAR:%.*]], i32 [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 [[T_VAR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[VAR:%.*]], i32 [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -719,7 +719,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
-// CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 [[T_VAR:%.*]], ptr nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[VEC:%.*]], i32 [[T_VAR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1180,7 +1180,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__main_block_invoke.omp_outlined
-// CHECK4-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i32 [[G:%.*]], i32 [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK4-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i32 [[G:%.*]], i32 [[SIVAR:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1284,7 +1284,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
-// CHECK4-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr nonnull align 4 dereferenceable(16) [[E:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr nonnull align 4 dereferenceable(16) [[E:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1386,7 +1386,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@g_block_invoke_2.omp_outlined
-// CHECK4-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR3]] {
+// CHECK4-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK4-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1509,7 +1509,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK9-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 [[T_VAR:%.*]], ptr nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nonnull align 4 dereferenceable(4) [[VAR:%.*]], i64 [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK9-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 [[T_VAR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[VAR:%.*]], i64 [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1899,7 +1899,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
-// CHECK9-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 [[T_VAR:%.*]], ptr nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[VEC:%.*]], i64 [[T_VAR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2360,7 +2360,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@__main_block_invoke.omp_outlined
-// CHECK12-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[G:%.*]], i64 [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK12-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[G:%.*]], i64 [[SIVAR:%.*]]) #[[ATTR2]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2464,7 +2464,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
-// CHECK12-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]], ptr nonnull align 4 dereferenceable(16) [[E:%.*]]) #[[ATTR3]] {
+// CHECK12-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]], ptr nonnull align 4 dereferenceable(16) [[E:%.*]]) #[[ATTR2]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2566,7 +2566,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK12-LABEL: define {{[^@]+}}@g_block_invoke_2.omp_outlined
-// CHECK12-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]]) #[[ATTR3]] {
+// CHECK12-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[THIS:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]]) #[[ATTR2]] {
 // CHECK12-NEXT:  entry:
 // CHECK12-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK12-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2635,7 +2635,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_Z10array_funcPfP2StiPe.omp_outlined
-// CHECK17-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[S:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], i64 [[VLA:%.*]], ptr [[VLA1:%.*]], ptr [[A:%.*]], i64 [[VLA2:%.*]], i64 [[VLA4:%.*]], ptr nonnull align 8 dereferenceable(8) [[VLA26:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK17-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], ptr [[S:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], i64 [[VLA:%.*]], ptr [[VLA1:%.*]], ptr [[A:%.*]], i64 [[VLA2:%.*]], i64 [[VLA4:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[VLA26:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2725,7 +2725,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2St7St_funcEPS_iPe.omp_outlined
-// CHECK17-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[VLA:%.*]], ptr [[VLA1:%.*]], ptr [[THIS:%.*]], i64 [[VLA2:%.*]], i64 [[VLA4:%.*]], ptr nonnull align 8 dereferenceable(8) [[VLA26:%.*]], ptr nonnull align 4 dereferenceable(4) [[N:%.*]], ptr [[S:%.*]]) #[[ATTR2]] {
+// CHECK17-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[VLA:%.*]], ptr [[VLA1:%.*]], ptr [[THIS:%.*]], i64 [[VLA2:%.*]], i64 [[VLA4:%.*]], ptr nofreeobj nonnull align 8 dereferenceable(8) [[VLA26:%.*]], ptr nofreeobj nonnull align 4 dereferenceable(4) [[N:%.*]], ptr [[S:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

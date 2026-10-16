@@ -32,6 +32,9 @@ class Instruction;
 class LLVMContextImpl;
 class Module;
 class OptPassGate;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 template <typename T> class SmallVectorImpl;
 template <typename T> class StringMapEntry;
 class StringRef;
@@ -328,6 +331,10 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   LLVM_ABI void setOptPassGate(OptPassGate &);
+
+  /// The library options this context reads in place of their process-wide
+  /// values.
+  LLVM_ABI cl::LibraryOptionsContext &getLibraryOptions() const;
 
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value

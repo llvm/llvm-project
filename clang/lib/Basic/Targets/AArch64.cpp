@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace clang;
@@ -248,13 +249,13 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
          getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
-bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
+bool AArch64TargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                                  BranchProtectionInfo &BPI,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple(),
-                                        HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple(), HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be
@@ -275,10 +276,27 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
   else
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
+  if (Attr.SignReturnAddrHardening.empty())
+    BPI.SignReturnAddressHardening =
+        LangOptions::SignReturnAddressHardeningKind::None;
+  else if (auto Hardening =
+               parseSignReturnAddressHardening(Attr.SignReturnAddrHardening))
+    BPI.SignReturnAddressHardening = *Hardening;
+
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
+}
+
+std::optional<LangOptions::SignReturnAddressHardeningKind>
+AArch64TargetInfo::parseSignReturnAddressHardening(StringRef Spec) const {
+  return llvm::StringSwitch<
+             std::optional<LangOptions::SignReturnAddressHardeningKind>>(Spec)
+      .Case("load-return-address",
+            LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress)
+      .Case("none", LangOptions::SignReturnAddressHardeningKind::None)
+      .Default(std::nullopt);
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
@@ -408,8 +426,9 @@ void AArch64TargetInfo::getTargetDefinesARMV98A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  const llvm::Triple &T = getTriple();
   // Target identification.
-  if (getTriple().isWindowsArm64EC()) {
+  if (T.isWindowsArm64EC()) {
     // Define the same set of macros as would be defined on x86_64 to ensure that
     // ARM64EC datatype layouts match those of x86_64 compiled code
     Builder.defineMacro("__amd64__");
@@ -421,7 +440,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
-  if (getTriple().isLFI())
+  // For bare-metal none-elf.
+  if (T.getOS() == llvm::Triple::UnknownOS &&
+      T.getEnvironment() == llvm::Triple::UnknownEnvironment &&
+      T.getObjectFormat() == llvm::Triple::ELF && Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  if (T.isLFI())
     Builder.defineMacro("__LFI__");
 
   // Inline assembly supports AArch64 flag outputs.
@@ -1419,6 +1445,11 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
     if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.starts_with("harden-pac-ret=")) {
+      Ret.SignReturnAddrHardening = Feature.split('=').second.trim();
       continue;
     }
 

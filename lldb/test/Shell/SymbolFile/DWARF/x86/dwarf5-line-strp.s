@@ -1,6 +1,6 @@
 # Test handling of DWARF5 DW_FORM_line_strp from .debug_info as used by GCC.
 
-# UNSUPPORTED: system-darwin, system-windows
+# UNSUPPORTED: system-darwin
 
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-pc-linux %s
 # RUN: %lldb %t -o "expression main" \
