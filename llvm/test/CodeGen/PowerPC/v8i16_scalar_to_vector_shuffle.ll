@@ -1058,17 +1058,24 @@ entry:
 define <16 x i8> @test_v4i32_v8i16(ptr %a, ptr %b) local_unnamed_addr {
 ; CHECK-LE-P8-LABEL: test_v4i32_v8i16:
 ; CHECK-LE-P8:       # %bb.0: # %entry
+; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI10_0@toc@ha
 ; CHECK-LE-P8-NEXT:    lhz r3, 0(r3)
-; CHECK-LE-P8-NEXT:    lxsiwzx v3, 0, r4
-; CHECK-LE-P8-NEXT:    mtvsrd v2, r3
-; CHECK-LE-P8-NEXT:    vmrghh v2, v2, v3
+; CHECK-LE-P8-NEXT:    lxsiwzx v4, 0, r4
+; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI10_0@toc@l
+; CHECK-LE-P8-NEXT:    mtvsrd v3, r3
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
+; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v4, v2
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v4i32_v8i16:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxsihzx v2, 0, r3
-; CHECK-LE-P9-NEXT:    lxsiwzx v3, 0, r4
-; CHECK-LE-P9-NEXT:    vmrghh v2, v2, v3
+; CHECK-LE-P9-NEXT:    lxsihzx f0, 0, r3
+; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI10_0@toc@ha
+; CHECK-LE-P9-NEXT:    lxsiwzx v2, 0, r4
+; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI10_0@toc@l
+; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-LE-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-LE-P9-NEXT:    blr
 ;
 ; CHECK-BE-P8-LABEL: test_v4i32_v8i16:
@@ -1340,48 +1347,65 @@ entry:
 define <16 x i8> @test_v2i64_v4i32(ptr %a, ptr %b) local_unnamed_addr {
 ; CHECK-LE-P8-LABEL: test_v2i64_v4i32:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxsiwzx v2, 0, r3
-; CHECK-LE-P8-NEXT:    lxsdx v3, 0, r4
-; CHECK-LE-P8-NEXT:    vmrghh v2, v2, v3
+; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI13_0@toc@ha
+; CHECK-LE-P8-NEXT:    lxsiwzx v3, 0, r3
+; CHECK-LE-P8-NEXT:    lxsdx v4, 0, r4
+; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI13_0@toc@l
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
+; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v4, v2
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v2i64_v4i32:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxsiwzx v2, 0, r3
-; CHECK-LE-P9-NEXT:    lxsd v3, 0(r4)
-; CHECK-LE-P9-NEXT:    vmrghh v2, v2, v3
+; CHECK-LE-P9-NEXT:    lfiwzx f0, 0, r3
+; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI13_0@toc@ha
+; CHECK-LE-P9-NEXT:    lxsd v2, 0(r4)
+; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI13_0@toc@l
+; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-LE-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-LE-P9-NEXT:    blr
 ;
 ; CHECK-BE-P8-LABEL: test_v2i64_v4i32:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    lfiwzx f0, 0, r3
+; CHECK-BE-P8-NEXT:    addis r3, r2, .LCPI13_0@toc@ha
 ; CHECK-BE-P8-NEXT:    lxsdx v3, 0, r4
+; CHECK-BE-P8-NEXT:    addi r3, r3, .LCPI13_0@toc@l
+; CHECK-BE-P8-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-BE-P8-NEXT:    xxsldwi v2, f0, f0, 1
-; CHECK-BE-P8-NEXT:    vmrghh v2, v3, v2
+; CHECK-BE-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_v2i64_v4i32:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    lfiwzx f0, 0, r3
-; CHECK-BE-P9-NEXT:    lxsd v3, 0(r4)
+; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI13_0@toc@ha
+; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI13_0@toc@l
+; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-BE-P9-NEXT:    xxsldwi v2, f0, f0, 1
-; CHECK-BE-P9-NEXT:    vmrghh v2, v3, v2
+; CHECK-BE-P9-NEXT:    lfd f0, 0(r4)
+; CHECK-BE-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-BE-P9-NEXT:    blr
 ;
 ; CHECK-AIX-64-P8-LABEL: test_v2i64_v4i32:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    lfiwzx f0, 0, r3
+; CHECK-AIX-64-P8-NEXT:    ld r3, L..C12(r2) # %const.0
 ; CHECK-AIX-64-P8-NEXT:    lxsdx v3, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-AIX-64-P8-NEXT:    xxsldwi v2, f0, f0, 1
-; CHECK-AIX-64-P8-NEXT:    vmrghh v2, v3, v2
+; CHECK-AIX-64-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_v2i64_v4i32:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    lfiwzx f0, 0, r3
-; CHECK-AIX-64-P9-NEXT:    lxsd v3, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    ld r3, L..C11(r2) # %const.0
 ; CHECK-AIX-64-P9-NEXT:    xxsldwi v2, f0, f0, 1
-; CHECK-AIX-64-P9-NEXT:    vmrghh v2, v3, v2
+; CHECK-AIX-64-P9-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-AIX-64-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-AIX-64-P9-NEXT:    blr
 ;
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_v4i32:
@@ -1417,17 +1441,24 @@ entry:
 define <16 x i8> @test_v2i64_v8i16(ptr %a, ptr %b) local_unnamed_addr {
 ; CHECK-LE-P8-LABEL: test_v2i64_v8i16:
 ; CHECK-LE-P8:       # %bb.0: # %entry
+; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI14_0@toc@ha
 ; CHECK-LE-P8-NEXT:    lhz r3, 0(r3)
-; CHECK-LE-P8-NEXT:    lxsdx v3, 0, r4
-; CHECK-LE-P8-NEXT:    mtvsrd v2, r3
-; CHECK-LE-P8-NEXT:    vmrghh v2, v2, v3
+; CHECK-LE-P8-NEXT:    lxsdx v4, 0, r4
+; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI14_0@toc@l
+; CHECK-LE-P8-NEXT:    mtvsrd v3, r3
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
+; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v4, v2
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v2i64_v8i16:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxsihzx v2, 0, r3
-; CHECK-LE-P9-NEXT:    lxsd v3, 0(r4)
-; CHECK-LE-P9-NEXT:    vmrghh v2, v2, v3
+; CHECK-LE-P9-NEXT:    lxsihzx f0, 0, r3
+; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-LE-P9-NEXT:    lxsd v2, 0(r4)
+; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-LE-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-LE-P9-NEXT:    blr
 ;
 ; CHECK-BE-P8-LABEL: test_v2i64_v8i16:
@@ -1436,15 +1467,21 @@ define <16 x i8> @test_v2i64_v8i16(ptr %a, ptr %b) local_unnamed_addr {
 ; CHECK-BE-P8-NEXT:    lxsdx v3, 0, r4
 ; CHECK-BE-P8-NEXT:    sldi r3, r3, 48
 ; CHECK-BE-P8-NEXT:    mtvsrd v2, r3
-; CHECK-BE-P8-NEXT:    vmrghh v2, v3, v2
+; CHECK-BE-P8-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-BE-P8-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-BE-P8-NEXT:    lxvw4x v4, 0, r3
+; CHECK-BE-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_v2i64_v8i16:
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    lxsihzx v2, 0, r3
-; CHECK-BE-P9-NEXT:    lxsd v3, 0(r4)
+; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI14_0@toc@ha
+; CHECK-BE-P9-NEXT:    lfd f0, 0(r4)
+; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI14_0@toc@l
+; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-BE-P9-NEXT:    vsplth v2, v2, 3
-; CHECK-BE-P9-NEXT:    vmrghh v2, v3, v2
+; CHECK-BE-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-BE-P9-NEXT:    blr
 ;
 ; CHECK-AIX-64-P8-LABEL: test_v2i64_v8i16:
@@ -1453,15 +1490,19 @@ define <16 x i8> @test_v2i64_v8i16(ptr %a, ptr %b) local_unnamed_addr {
 ; CHECK-AIX-64-P8-NEXT:    lxsdx v3, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    sldi r3, r3, 48
 ; CHECK-AIX-64-P8-NEXT:    mtvsrd v2, r3
-; CHECK-AIX-64-P8-NEXT:    vmrghh v2, v3, v2
+; CHECK-AIX-64-P8-NEXT:    ld r3, L..C13(r2) # %const.0
+; CHECK-AIX-64-P8-NEXT:    lxvw4x v4, 0, r3
+; CHECK-AIX-64-P8-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_v2i64_v8i16:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    lxsihzx v2, 0, r3
-; CHECK-AIX-64-P9-NEXT:    lxsd v3, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    ld r3, L..C12(r2) # %const.0
+; CHECK-AIX-64-P9-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r3)
 ; CHECK-AIX-64-P9-NEXT:    vsplth v2, v2, 3
-; CHECK-AIX-64-P9-NEXT:    vmrghh v2, v3, v2
+; CHECK-AIX-64-P9-NEXT:    xxperm v2, vs0, vs1
 ; CHECK-AIX-64-P9-NEXT:    blr
 ;
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_v8i16:
