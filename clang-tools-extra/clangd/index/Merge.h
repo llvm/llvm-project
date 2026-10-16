@@ -55,6 +55,24 @@ public:
   }
 };
 
+// A merged view for definition lookup that treats project files specially.
+// Dynamic definitions from project files are preferred because they may contain
+// unsaved edits. Definitions from dynamic files outside the project are
+// superseded by project definitions, so merely opening an inactive source file
+// cannot redirect navigation.
+//
+// The provided indexes must outlive this non-owning view.
+class ProjectDefinitionIndex : public MergedIndex {
+  const SymbolIndex *Dynamic, *Project;
+
+public:
+  ProjectDefinitionIndex(const SymbolIndex *Dynamic, const SymbolIndex *Project)
+      : MergedIndex(Dynamic, Project), Dynamic(Dynamic), Project(Project) {}
+
+  void lookup(const LookupRequest &,
+              llvm::function_ref<void(const Symbol &)>) const override;
+};
+
 } // namespace clangd
 } // namespace clang
 
