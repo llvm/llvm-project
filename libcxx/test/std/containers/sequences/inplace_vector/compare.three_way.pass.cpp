@@ -26,6 +26,7 @@
 #include "test_comparisons.h"
 
 static_assert(std::three_way_comparable<std::inplace_vector<int, 8>>);
+// LWG4122
 static_assert(!std::three_way_comparable<std::inplace_vector<NonComparable, 8>>);
 
 template <class Elem, class Order>

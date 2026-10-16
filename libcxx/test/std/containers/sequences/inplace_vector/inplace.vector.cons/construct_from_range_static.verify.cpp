@@ -22,6 +22,7 @@ void fn() {
   std::array<int, 6> arr{1, 2, 3, 4, 5, 6};
   std::array<int, 1> arr2{1};
 
+  // LWG4396
   std::inplace_vector<int, 5> v1(
       std::from_range,
       arr); // expected-error-re@inplace_vector:* {{static assertion failed{{.*}}inplace_vector<Tp,N>(from_range_t, Range): Statically sized range must be <= Capacity}}
