@@ -889,6 +889,17 @@ getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
 
 namespace {
 
+// Pointer facts for one killing location during eliminateDeadDefs. The killing
+// instruction and its operand graph remain unchanged throughout that call.
+struct KillingLocationInfo {
+  const Value *Pointer = nullptr;
+  const Value *Object = nullptr;
+  LocationSize Size = LocationSize::beforeOrAfterPointer();
+  std::optional<bool> OverwritesObject;
+  const Value *Base = nullptr;
+  int64_t Offset = 0;
+};
+
 struct DSEState {
   const ScalarOptions &Opts;
   Function &F;
@@ -965,7 +976,8 @@ struct DSEState {
                               const Instruction *DeadI,
                               const MemoryLocation &KillingLoc,
                               const MemoryLocation &DeadLoc,
-                              int64_t &KillingOff, int64_t &DeadOff);
+                              int64_t &KillingOff, int64_t &DeadOff,
+                              KillingLocationInfo *KillingInfo = nullptr);
 
   bool isInvisibleToCallerAfterRet(const Value *V, const Value *Ptr,
                                    const LocationSize StoreSize);
@@ -1034,7 +1046,8 @@ struct DSEState {
                   const MemoryLocation &KillingLoc, const Value *KillingUndObj,
                   unsigned &ScanLimit, unsigned &WalkerStepLimit,
                   bool IsMemTerm, unsigned &PartialLimit,
-                  bool IsInitializesAttrMemLoc);
+                  bool IsInitializesAttrMemLoc,
+                  KillingLocationInfo &KillingInfo);
 
   /// Delete dead memory defs and recursively add their operands to ToRemove if
   /// they became dead.
@@ -1192,27 +1205,42 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
                                       const Instruction *DeadI,
                                       const MemoryLocation &KillingLoc,
                                       const MemoryLocation &DeadLoc,
-                                      int64_t &KillingOff, int64_t &DeadOff) {
+                                      int64_t &KillingOff, int64_t &DeadOff,
+                                      KillingLocationInfo *KillingInfo) {
   // AliasAnalysis does not always account for loops. Limit overwrite checks
   // to dependencies for which we can guarantee they are independent of any
   // loops they are in.
   if (!isGuaranteedLoopIndependent(DeadI, KillingI, DeadLoc))
     return OW_Unknown;
 
+  if (KillingInfo && !KillingInfo->Pointer) {
+    KillingInfo->Size = strengthenLocationSize(KillingI, KillingLoc.Size);
+    KillingInfo->Pointer = KillingLoc.Ptr->stripPointerCasts();
+    KillingInfo->Object = getUnderlyingObject(KillingInfo->Pointer);
+  }
   LocationSize KillingLocSize =
-      strengthenLocationSize(KillingI, KillingLoc.Size);
+      KillingInfo ? KillingInfo->Size
+                  : strengthenLocationSize(KillingI, KillingLoc.Size);
   const Value *DeadPtr = DeadLoc.Ptr->stripPointerCasts();
-  const Value *KillingPtr = KillingLoc.Ptr->stripPointerCasts();
+  const Value *KillingPtr =
+      KillingInfo ? KillingInfo->Pointer : KillingLoc.Ptr->stripPointerCasts();
   const Value *DeadUndObj = getUnderlyingObject(DeadPtr);
-  const Value *KillingUndObj = getUnderlyingObject(KillingPtr);
+  const Value *KillingUndObj =
+      KillingInfo ? KillingInfo->Object : getUnderlyingObject(KillingPtr);
 
   // Check whether the killing store overwrites the whole object, in which
   // case the size/offset of the dead store does not matter.
   if (DeadUndObj == KillingUndObj && KillingLocSize.isPrecise() &&
       isIdentifiedObject(KillingUndObj)) {
-    std::optional<TypeSize> KillingUndObjSize =
-        getPointerSize(KillingUndObj, DL, TLI, &F);
-    if (KillingUndObjSize && *KillingUndObjSize == KillingLocSize.getValue())
+    auto OverwritesObject = [&] {
+      std::optional<TypeSize> KillingUndObjSize =
+          getPointerSize(KillingUndObj, DL, TLI, &F);
+      return KillingUndObjSize &&
+             *KillingUndObjSize == KillingLocSize.getValue();
+    };
+    if (KillingInfo && !KillingInfo->OverwritesObject)
+      KillingInfo->OverwritesObject = OverwritesObject();
+    if (KillingInfo ? *KillingInfo->OverwritesObject : OverwritesObject())
       return OW_Complete;
   }
 
@@ -1281,8 +1309,15 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
   KillingOff = 0;
   const Value *DeadBasePtr =
       GetPointerBaseWithConstantOffset(DeadPtr, DeadOff, DL);
+  if (KillingInfo && !KillingInfo->Base)
+    KillingInfo->Base =
+        GetPointerBaseWithConstantOffset(KillingPtr, KillingInfo->Offset, DL);
   const Value *KillingBasePtr =
-      GetPointerBaseWithConstantOffset(KillingPtr, KillingOff, DL);
+      KillingInfo
+          ? KillingInfo->Base
+          : GetPointerBaseWithConstantOffset(KillingPtr, KillingOff, DL);
+  if (KillingInfo)
+    KillingOff = KillingInfo->Offset;
 
   // If the base pointers still differ, we have two completely different
   // stores.
@@ -1576,11 +1611,13 @@ bool DSEState::isGuaranteedLoopInvariant(const Value *Ptr) {
   return true;
 }
 
-std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
-    MemoryDef *KillingDef, MemoryAccess *StartAccess,
-    const MemoryLocation &KillingLoc, const Value *KillingUndObj,
-    unsigned &ScanLimit, unsigned &WalkerStepLimit, bool IsMemTerm,
-    unsigned &PartialLimit, bool IsInitializesAttrMemLoc) {
+std::optional<MemoryAccess *>
+DSEState::getDomMemoryDef(MemoryDef *KillingDef, MemoryAccess *StartAccess,
+                          const MemoryLocation &KillingLoc,
+                          const Value *KillingUndObj, unsigned &ScanLimit,
+                          unsigned &WalkerStepLimit, bool IsMemTerm,
+                          unsigned &PartialLimit, bool IsInitializesAttrMemLoc,
+                          KillingLocationInfo &KillingInfo) {
   if (ScanLimit == 0 || WalkerStepLimit == 0) {
     LLVM_DEBUG(dbgs() << "\n    ...  hit scan limit\n");
     return std::nullopt;
@@ -1708,7 +1745,7 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
       int64_t KillingOffset = 0;
       int64_t DeadOffset = 0;
       auto OR = isOverwrite(KillingI, CurrentI, KillingLoc, *CurrentLoc,
-                            KillingOffset, DeadOffset);
+                            KillingOffset, DeadOffset, &KillingInfo);
       if (CanOptimize) {
         // CurrentDef is the earliest write clobber of KillingDef. Use it as
         // optimized access. Do not optimize if CurrentDef is already the
@@ -2540,6 +2577,7 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
 
 std::pair<bool, bool>
 DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
+  KillingLocationInfo KillingInfo;
   bool Changed = false;
   bool DeletedKillingLoc = false;
   unsigned ScanLimit = Opts.dse_memoryssa_scanlimit;
@@ -2565,7 +2603,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
         KillingLocWrapper.MemDef, Current, KillingLocWrapper.MemLoc,
         KillingLocWrapper.UnderlyingObject, ScanLimit, WalkerStepLimit,
         isMemTerminatorInst(KillingLocWrapper.DefInst), PartialLimit,
-        KillingLocWrapper.DefByInitializesAttr);
+        KillingLocWrapper.DefByInitializesAttr, KillingInfo);
 
     if (!MaybeDeadAccess) {
       LLVM_DEBUG(dbgs() << "  finished walk\n");
@@ -2624,7 +2662,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
       OverwriteResult OR =
           isOverwrite(KillingLocWrapper.DefInst, DeadLocWrapper.DefInst,
                       KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
-                      KillingOffset, DeadOffset);
+                      KillingOffset, DeadOffset, &KillingInfo);
       if (OR == OW_MaybePartial) {
         auto &IOL = IOLs[DeadLocWrapper.DefInst->getParent()];
         OR = isPartialOverwrite(Opts, KillingLocWrapper.MemLoc,
