@@ -335,7 +335,7 @@ class VPRecipeValue : public VPValue {
   /// Returns true if this VPRecipeValue is defined by \p D.
   /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
   /// /p D are associated with its VPRecipeBase.
-  bool isDefinedBy(const VPDef *D) const;
+  LLVM_ABI_FOR_TEST bool isDefinedBy(const VPDef *D) const;
 #endif
 
 protected:

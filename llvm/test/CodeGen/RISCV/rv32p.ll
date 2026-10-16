@@ -2475,3 +2475,21 @@ define i32 @test_mhraccsu_i32(i32 %rd, i32 %a, i32 %b) {
   %res = call i32 @llvm.riscv.mhraccsu.i32(i32 %rd, i32 %a, i32 %b)
   ret i32 %res
 }
+
+define i32 @test_mulq_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_mulq_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulq a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulq.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mulqr_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_mulqr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulqr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulqr.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
