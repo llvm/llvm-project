@@ -2186,6 +2186,11 @@ class RVPBinaryIntrinsic
   def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;
 
+  // Scalar "Q-format" Multiplication. On RV64 these map to the packed
+  // pmulq.w family on the low words.
+  def int_riscv_mulq_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_mulqr_i32 : RVPScalarBinaryIntrinsic;
+
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;
   def int_riscv_pmhracc   : RVPTernaryIntrinsic;
