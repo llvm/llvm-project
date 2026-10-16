@@ -911,19 +911,21 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
 // ConstArrayAttr visitor
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type convertedTy = converter->convertType(attr.getType());
-  mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
+  auto moduleOp = parentOp->getParentOfType<mlir::ModuleOp>();
+  mlir::DataLayout dataLayout(moduleOp);
   mlir::Type llvmTy =
       adjustGlobalTypeForInit(convertedTy, attr, *converter, dataLayout);
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
-  // When the array can be represented as a single dense constant, emit one
-  // llvm.mlir.constant instead of a chain of llvm.insertvalue ops. A dense
-  // constant has the converted type, so it cannot take an adjusted shape.
-  if (llvmTy == convertedTy)
-    if (std::optional<mlir::Attribute> denseAttr =
-            lowerConstArrayAttr(attr, symbolTables, converter))
-      return mlir::LLVM::ConstantOp::create(rewriter, loc, llvmTy, *denseAttr);
+  // When the array can be represented as a single constant attribute, emit one
+  // llvm.mlir.constant instead of a chain of llvm.insertvalue ops. That works
+  // for any array type, including an array of split rows, but not for a split
+  // array itself: a struct-typed constant needs scalar fields.
+  if (mlir::isa<mlir::LLVM::LLVMArrayType>(llvmTy))
+    if (std::optional<mlir::Attribute> constAttr =
+            lowerConstArrayAttr(attr, symbolTables, converter, moduleOp))
+      return mlir::LLVM::ConstantOp::create(rewriter, loc, llvmTy, *constAttr);
 
   if (attr.hasTrailingZeros())
     result = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmTy);
