@@ -5,10 +5,10 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-LABEL: copy_to_vreg_1:
 ; GCN:       ; %bb.0: ; %._crit_edge
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_mov_b64_e32 v[2:3], 0
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b64_e32 v[0:1], 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_sub_i32 s5, 1, s4
 ; GCN-NEXT:    s_cmp_lt_u32 s4, 2
@@ -46,7 +46,7 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:  ; %bb.4: ; %pred.store.if
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    global_store_byte v[2:3], v1, off
+; GCN-NEXT:    global_store_byte v[0:1], v2, off
 ; GCN-NEXT:  .LBB0_5: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -60,7 +60,7 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    s_cbranch_execz .LBB0_1
 ; GCN-NEXT:  ; %bb.7: ; %pred.store.if41
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; GCN-NEXT:    global_store_byte v[2:3], v1, off
+; GCN-NEXT:    global_store_byte v[0:1], v2, off
 ; GCN-NEXT:    s_branch .LBB0_1
 ; GCN-NEXT:  .LBB0_8: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm

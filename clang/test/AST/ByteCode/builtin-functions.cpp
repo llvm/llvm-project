@@ -1911,6 +1911,11 @@ namespace WMemCpy {
                                                                     // both-note {{source of 'wmemcpy' is nullptr}}
   static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                     // both-note {{destination of 'wmemcpy' is nullptr}}
+
+  static_assert(__builtin_wmemcpy(L"foobar", L"bazqux", 6), ""); // both-warning {{conversion from string literal}} \
+                                                                 // both-error {{}} \
+                                                                 // both-note {{assignment to object}} \
+                                                                 // both-note {{temporary created here}}
 }
 
 namespace WMemMove {
@@ -2044,6 +2049,12 @@ namespace WithinLifetime {
     static_assert(__builtin_is_within_lifetime(&temp)); // both-error {{not an integral constant expression}} \
                                                         // both-note {{initializer of 'temp' is not a constant expression}}
   }
+
+
+  static_assert(__builtin_is_within_lifetime("")); // both-error {{not an integral constant expression}} \
+                                                   // both-note-re {{read of object {{.*}} whose value is not known}} \
+                                                   // both-note {{temporary created here}}
+
 }
 
 #ifdef __SIZEOF_INT128__
@@ -2152,4 +2163,14 @@ namespace SubCb {
 namespace ReduceMin {
   typedef float v4f __attribute__((__vector_size__(16)));
   static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
+}
+
+namespace Rejected {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    __builtin_alloca(10 / 0); // both-note 2{{subexpression not valid in a constant expression}} \
+                              // both-warning {{division by zero is undefined}}
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }

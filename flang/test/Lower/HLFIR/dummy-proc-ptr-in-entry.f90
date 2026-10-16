@@ -7,7 +7,7 @@
 !CHECK-LABEL: func @_QPdummy_char_proc_ptr() -> !fir.boxproc<(!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>> {
 !CHECK:         %[[UNDEF:.*]] = fir.undefined !fir.ref<!fir.boxproc<() -> ()>>
 !CHECK:         %{{.*}}:2 = hlfir.declare %[[UNDEF]]
-!CHECK-SAME:      {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdummy_char_proc_ptrEdummy"}
+!CHECK-SAME:      {{.*}}uniq_name("_QFdummy_char_proc_ptrEdummy") fortran_attrs<pointer>
 !CHECK-SAME:      : (!fir.ref<!fir.boxproc<() -> ()>>)
 !CHECK-SAME:      -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 
@@ -15,7 +15,7 @@
 !CHECK-SAME:        %[[ARG:.*]]: !fir.ref<!fir.boxproc<() -> ()>>)
 !CHECK-SAME:        -> !fir.boxproc<(!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>> {
 !CHECK:         %{{.*}}:2 = hlfir.declare %[[ARG]] dummy_scope %{{[^ ]*}}
-!CHECK-SAME:      {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdummy_char_proc_ptrEdummy"}
+!CHECK-SAME:      {{.*}}uniq_name("_QFdummy_char_proc_ptrEdummy") fortran_attrs<pointer>
 !CHECK-SAME:      : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope)
 !CHECK-SAME:      -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 function dummy_char_proc_ptr() result(fun)
@@ -34,7 +34,7 @@ end function
 !CHECK-LABEL: func @_QPdummy_int_proc_ptr()
 !CHECK:         %[[UNDEF:.*]] = fir.undefined !fir.ref<!fir.boxproc<() -> ()>>
 !CHECK:         %{{.*}}:2 = hlfir.declare %[[UNDEF]]
-!CHECK-SAME:      {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdummy_int_proc_ptrEdummy"}
+!CHECK-SAME:      {{.*}}uniq_name("_QFdummy_int_proc_ptrEdummy") fortran_attrs<pointer>
 !CHECK-SAME:      : (!fir.ref<!fir.boxproc<() -> ()>>)
 !CHECK-SAME:      -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 
@@ -42,7 +42,7 @@ end function
 !CHECK-SAME:        %[[ARG:.*]]: !fir.ref<!fir.boxproc<() -> ()>>)
 !CHECK-SAME:        -> !fir.boxproc<() -> i32> {
 !CHECK:         %{{.*}}:2 = hlfir.declare %[[ARG]] dummy_scope %{{[^ ]*}}
-!CHECK-SAME:      {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFdummy_int_proc_ptrEdummy"}
+!CHECK-SAME:      {{.*}}uniq_name("_QFdummy_int_proc_ptrEdummy") fortran_attrs<pointer>
 !CHECK-SAME:      : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope)
 !CHECK-SAME:      -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 function dummy_int_proc_ptr() result(fun)

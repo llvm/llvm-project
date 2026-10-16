@@ -856,7 +856,8 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
       ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
-      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple));
+      TM = ExitOnErr(codegen::createTargetMachineForTriple(
+          Ctxt.getLibraryOptions(), TheTriple));
 
       return TheTriple.computeDataLayout();
     };
