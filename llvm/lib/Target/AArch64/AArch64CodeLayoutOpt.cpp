@@ -163,7 +163,7 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
 
   // Aligning basic blocks currently isn't compatible with Windows unwind info.
-  if (Subtarget->isTargetWindows())
+  if (Subtarget->isTargetWindowsOrUEFI())
     return false;
 
   TII = Subtarget->getInstrInfo();
