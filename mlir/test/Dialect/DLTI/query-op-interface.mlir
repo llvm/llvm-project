@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -emit-bytecode | mlir-opt --mlir-print-op-generic | FileCheck --check-prefix=BYTECODE %s
 
 // BYTECODE: "builtin.module"() <{dlti = #dlti.map<"module" = 1 : i32>}> ({
-module attributes {dlti = #dlti.map<"module" = 1 : i32>} {
+module <dlti = #dlti.map<"module" = 1 : i32>> {
   // CHECK: "test.op_with_data_layout"() <{dlti = #dlti.map<"replaced" = 2 : i32, i32 = 32 : i32, "inserted" = 1 : i32>}> ({
   // CHECK-NOT: test.dlti_action
   "test.op_with_data_layout"() ({

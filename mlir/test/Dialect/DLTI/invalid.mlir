@@ -11,7 +11,7 @@
 // -----
 
 // expected-error@below {{attribute 'dlti' failed to satisfy constraint}}
-module attributes {dlti = 42 : i32} {}
+module <dlti = 42 : i32> {}
 
 // -----
 

@@ -11,7 +11,7 @@
 // DATA-LAYOUT-SAME:   chip = ""
 // DATA-LAYOUT-NOT:    features =
 
-// TARGET-FEATURES: module attributes
+// TARGET-FEATURES: module
 // TARGET-FEATURES-NOT:  dlti.dl_spec
 // TARGET-FEATURES-SAME: dlti = #dlti.map<"features" = #llvm.target_features<[
 // TARGET-FEATURES-SAME:     +64bit
@@ -37,7 +37,7 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // DATA-LAYOUT-SAME:   chip = ""
 // DATA-LAYOUT-SAME:   features = <["+mmx", "+sse"]>
 
-// TARGET-FEATURES: module attributes
+// TARGET-FEATURES: module
 // TARGET-FEATURES-NOT:  dlti.dl_spec
 // TARGET-FEATURES-SAME: dlti = #dlti.map<"features" = #llvm.target_features<[
 // TARGET-FEATURES-SAME:     +64bit
@@ -64,7 +64,7 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // DATA-LAYOUT-SAME:   chip = "skylake"
 // DATA-LAYOUT-NOT:    features =
 
-// TARGET-FEATURES: module attributes
+// TARGET-FEATURES: module
 // TARGET-FEATURES-NOT:  dlti.dl_spec
 // TARGET-FEATURES-SAME: dlti = #dlti.map<"features" = #llvm.target_features<[
 // TARGET-FEATURES-SAME:     +64bit
@@ -92,7 +92,7 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // DATA-LAYOUT-SAME:   chip = "skylake"
 // DATA-LAYOUT-SAME:   features = <["-sse", "-avx"]>
 
-// TARGET-FEATURES: module attributes
+// TARGET-FEATURES: module
 // TARGET-FEATURES-NOT:  dlti.dl_spec
 // TARGET-FEATURES-SAME: dlti = #dlti.map<"features" = #llvm.target_features<[
 // TARGET-FEATURES-SAME:     +64bit
@@ -112,7 +112,7 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 
 // -----
 
-// DATA-LAYOUT: module attributes
+// DATA-LAYOUT: module
 // DATA-LAYOUT-SAME: dlti.dl_spec = #dlti.dl_spec
 // DATA-LAYOUT-SAME:   "dlti.endianness" = "little"
 // DATA-LAYOUT-SAME:   index = 32
@@ -121,7 +121,7 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // DATA-LAYOUT-SAME:   chip = "skylake"
 // DATA-LAYOUT-SAME:   features = <["-mmx", "+avx512f"]>
 
-// TARGET-FEATURES: module attributes
+// TARGET-FEATURES: module
 // TARGET-FEATURES-SAME: dlti = #dlti.map<
 // TARGET-FEATURES-SAME:   "MPI:comm_world_size" = 4 : i64,
 // TARGET-FEATURES-SAME:   "features" = #llvm.target_features<[
@@ -138,11 +138,11 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // TARGET-FEATURES-SAME:   chip = "skylake"
 // TARGET-FEATURES-SAME:   features = <["-mmx", "+avx512f"]>
 
-module attributes { dlti = #dlti.map<"MPI:comm_world_size" = 4,
-                                     "features" = #llvm.target_features<["+old"]>,
-                                     "triple" = "preserved">,
-                    dlti.dl_spec = #dlti.dl_spec<index = 32>,
-                    llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
-                                               chip = "skylake",
-                                               features = <["-mmx", "+avx512f"]>> } {
+module <dlti = #dlti.map<"MPI:comm_world_size" = 4,
+                         "features" = #llvm.target_features<["+old"]>,
+                         "triple" = "preserved">>
+    attributes {dlti.dl_spec = #dlti.dl_spec<index = 32>,
+                llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
+                                           chip = "skylake",
+                                           features = <["-mmx", "+avx512f"]>>} {
 }
