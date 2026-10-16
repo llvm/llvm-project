@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_SCRIPTEDMETADATA_H
 #define LLDB_UTILITY_SCRIPTEDMETADATA_H
 
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
@@ -26,6 +27,7 @@ public:
     if (metadata_sp) {
       m_class_name = metadata_sp->GetClassName();
       m_args_sp = metadata_sp->GetArgsSP();
+      m_source_path = metadata_sp->GetSourcePath();
     }
   }
 
@@ -36,6 +38,11 @@ public:
 
   llvm::StringRef GetClassName() const { return m_class_name; }
   StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
+
+  const FileSpec &GetSourcePath() const { return m_source_path; }
+  void SetSourcePath(const FileSpec &source_path) {
+    m_source_path = source_path;
+  }
 
   /// Get a unique identifier for this metadata based on its contents.
   /// The ID is computed from the class name and arguments dictionary,
@@ -62,6 +69,7 @@ public:
 private:
   std::string m_class_name;
   StructuredData::DictionarySP m_args_sp;
+  FileSpec m_source_path;
 };
 } // namespace lldb_private
 

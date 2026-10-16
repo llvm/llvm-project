@@ -243,6 +243,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
+  TargetOpts.MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
