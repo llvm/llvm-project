@@ -273,6 +273,14 @@ public:
   virtual Status GetFileWithUUID(const FileSpec &platform_file,
                                  const UUID *uuid_ptr, FileSpec &local_file);
 
+  /// Return the effective scripting policy for the specified module, using
+  /// its explicit override or the target-wide default. This query does not
+  /// locate symbol files or scripting resources, so callers can honor a
+  /// disabled policy before discovering resources.
+  static LoadScriptFromSymFile
+  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                              const Target &target);
+
   /// Locate the scripting resource given a module specification.
   ///
   /// Returns a map from a located script's \c FileSpec to the
@@ -1124,13 +1132,6 @@ protected:
       Stream &os,
       const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
       const FileSpec &original_fspec, const FileSpec &fspec);
-
-  /// Returns the \c LoadScriptFromSymFile of scripting resource associated
-  /// with the specified module \c FileSpec. If the load style wasn't explicitly
-  /// set for a module, returns the target-wide default.
-  static LoadScriptFromSymFile
-  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
-                              const Target &target);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
