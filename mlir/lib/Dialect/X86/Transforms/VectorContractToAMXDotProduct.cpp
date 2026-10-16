@@ -259,6 +259,22 @@ static LogicalResult validateContractOps(OpBuilder &rewriter,
   return success();
 }
 
+// Traces an accumulator back through the iter_args of the given loops and
+// returns the first value that is not one of them, e.g., the init value of the
+// outermost loop or a value computed within the loops.
+static Value getLoopNestInit(Value acc, ArrayRef<scf::ForOp> loops) {
+  while (auto arg = dyn_cast<BlockArgument>(acc)) {
+    auto loop = dyn_cast_if_present<scf::ForOp>(arg.getOwner()->getParentOp());
+    if (!loop || !llvm::is_contained(loops, loop))
+      break;
+    OpOperand *init = loop.getTiedLoopInit(arg);
+    if (!init)
+      break;
+    acc = init->get();
+  }
+  return acc;
+}
+
 // Returns the loop index position to get mapped during the
 // MemRef type clone.
 static unsigned getIndexPosition(Value operand, scf::ForOp loop) {
@@ -965,15 +981,19 @@ struct VectorContractToAMXDotProduct
             });
         auto one = rewriter.getIndexAttr(1);
         SmallVector<OpFoldResult> strides(indexVals.size(), one);
-        SmallVector<OpFoldResult> sizes = getAsIndexOpFoldResult(
-            contractOp.getRhs().getDefiningOp()->getContext(),
-            vecTy.getShape());
+        // A rank-reducing read drops leading unit dims. Append them back for
+        // the subview.
+        SmallVector<int64_t> subviewShape(indexVals.size() - vecTy.getRank(),
+                                          1);
+        llvm::append_range(subviewShape, vecTy.getShape());
+        SmallVector<OpFoldResult> sizes =
+            getAsIndexOpFoldResult(contractOp->getContext(), subviewShape);
         auto subview = memref::SubViewOp::create(rewriter, loc, srcBuffRhs,
                                                  indexVals, sizes, strides);
         auto bufferType = MemRefType::get({16, (16 * blockingFactor)}, ipType);
         auto packedBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-        // create a loop that does online packing.
+        // Create a loop that does online packing.
         Value step =
             arith::ConstantIndexOp::create(rewriter, loc, blockingFactor);
         Value uBound = arith::ConstantIndexOp::create(rewriter, loc,
@@ -990,20 +1010,21 @@ struct VectorContractToAMXDotProduct
               Value i1_load =
                   arith::AddIOp::create(rewriter, loc, nextLoadIndx, iv);
 
-              indicesRhs[indicesRhs.size() - 2] = iv;
-              indicesRhs[indicesRhs.size() - 1] = c0;
-              ValueRange range1(indicesRhs);
+              // The source subview already accounts for the leading unit
+              // dimensions.
+              size_t numOffsets = indicesRhs.size();
+              SmallVector<Value> indices(numOffsets, c0);
+              indices[numOffsets - 2] = iv;
               auto vec1 = vector::LoadOp::create(
                   rewriter, loc,
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
-                  range1);
+                  indices);
 
-              indicesRhs[indicesRhs.size() - 2] = i1_load;
-              ValueRange range2(indicesRhs);
+              indices[numOffsets - 2] = i1_load;
               auto vec2 = vector::LoadOp::create(
                   rewriter, loc,
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
-                  range2);
+                  indices);
 
               vector::ShuffleOp writeVal1;
               vector::ShuffleOp writeVal2;
@@ -1165,6 +1186,10 @@ struct VectorContractToAMXDotProduct
 
     // Retrive all the contaction operation within the loop.
     SmallVector<vector::ContractionOp> ops;
+    // Accumulators whose initial value passed into the rewritten reduction
+    // loops is neither read from memory nor zero, e.g. an iter_arg of an
+    // enclosing loop. Paired with the index of their contraction in `ops`.
+    SmallVector<std::pair<size_t, Value>> carriedAccs;
     for (Operation &op : loopLists[0].getBody()->getOperations()) {
 
       if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
@@ -1192,9 +1217,30 @@ struct VectorContractToAMXDotProduct
               contractOp, "The input acc should be a zero constant or "
                           "transfer_read for all contracts");
 
+        Value accInit = getLoopNestInit(contract.getAcc(), loopLists);
+        Operation *accInitOp = accInit.getDefiningOp();
+        bool carried = !isa_and_present<TransferReadOp, LoadOp>(accInitOp) &&
+                       !isZeroVectorConstant(accInitOp);
+        if (carried) {
+          if (loopLists.back().getRegion().isAncestor(
+                  accInit.getParentRegion()))
+            return rewriter.notifyMatchFailure(
+                contractOp, "The accumulator should enter the reduction loops "
+                            "through their init args.");
+          carriedAccs.emplace_back(ops.size(), accInit);
+        }
+
         ops.push_back(contract);
       }
     }
+
+    // The accumulators read from memory are added back to all the results at
+    // once, so they can't be mixed with carried ones.
+    if (!isAccZeroVectorConstant && !carriedAccs.empty() &&
+        carriedAccs.size() != ops.size())
+      return rewriter.notifyMatchFailure(
+          contractOp, "The accumulators read from memory can't be mixed with "
+                      "carried in accumulators.");
 
     if (!isVnni) {
       unsigned int pairCount = 0;
@@ -1537,7 +1583,10 @@ struct VectorContractToAMXDotProduct
     auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
     auto nBound = arith::ConstantIndexOp::create(rewriter, loc, N);
 
-    if (!isVnni || !isAccZeroVectorConstant) {
+    // Carried-in accumulators are added to the results instead.
+    bool addAccFromMemory = !isAccZeroVectorConstant && carriedAccs.empty();
+
+    if (!isVnni || addAccFromMemory) {
       // Create a loop that iterates over the MxN memerf, retrives two rows +
       // shuffle them, add up the C element values and stores them to temp
       // buffer.
@@ -1568,7 +1617,7 @@ struct VectorContractToAMXDotProduct
                                     15, 28, 29, 30, 31});
             }
 
-            if (!isAccZeroVectorConstant) {
+            if (addAccFromMemory) {
               indicesAcc[indicesAcc.size() - 2] = iv;
               indicesAcc[indicesAcc.size() - 1] = c0;
 
@@ -1627,6 +1676,18 @@ struct VectorContractToAMXDotProduct
             ValueRange{indexOp_i, indexOp_j}, padding, map, inBounds);
         writeResults.push_back(vec1);
       }
+    }
+
+    for (auto [idx, acc] : carriedAccs) {
+      Type resultType = writeResults[idx].getType();
+      if (acc.getType() != resultType)
+        acc = vector::ShapeCastOp::create(rewriter, loc, resultType, acc);
+      if (isa<FloatType>(opType))
+        writeResults[idx] =
+            arith::AddFOp::create(rewriter, loc, writeResults[idx], acc);
+      else
+        writeResults[idx] =
+            arith::AddIOp::create(rewriter, loc, writeResults[idx], acc);
     }
 
     // Replace use of vector.contract with dot-products.

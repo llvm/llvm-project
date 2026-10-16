@@ -4017,6 +4017,7 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_hlsl_entrypoint,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
+      options::OPT_fdx_semantic_signature_packing_mode_EQ,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
@@ -7480,6 +7481,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_hipstdpar_interpose_alloc);
     Args.addOptInFlag(CmdArgs, options::OPT_fhip_kernel_arg_name,
                       options::OPT_fno_hip_kernel_arg_name);
+    if (TC.getTriple().isSPIRV() &&
+        TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
+      Args.addLastArg(CmdArgs, options::OPT_fenable_spirv_size_optimization);
   }
 
   if ((IsCuda || IsHIP || IsSYCL) && IsRDCMode)
@@ -7790,12 +7794,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
+                             .Case("c++23", "-std=c++23")
                              // If you add cases below for spellings that are
                              // not in LangStandards.def, update
                              // TransferableCommand::tryParseStdArg() in
                              // lib/Tooling/InterpolatingCompilationDatabase.cpp
                              // to match.
-                             // TODO add c++23, c++26, c++29 when MSVC supports
+                             // TODO add c++26, c++29 when MSVC supports
                              // it.
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++26preview", "-std=c++26")
@@ -9845,7 +9850,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_sanitize_trap_EQ,
       OPT_fslp_vectorize,
       OPT_fno_slp_vectorize,
-      OPT_hipstdpar};
+      OPT_hipstdpar,
+      OPT_fenable_spirv_size_optimization};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   // Suppress verbose output for HIP non-RDC fat binaries because it confuses
   // CMake implicit linker argument parsing.

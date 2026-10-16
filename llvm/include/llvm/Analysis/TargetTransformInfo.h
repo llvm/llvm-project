@@ -640,6 +640,8 @@ public:
   /// operand index that collectFlatAddressOperands returned for the intrinsic.
   /// \returns nullptr if the intrinsic was not handled. Otherwise, returns the
   /// new value (which may be the original \p II with modified operands).
+  /// If a different value is returned, the caller replaces all uses of \p II
+  /// and erases it, including any side effects of the original call.
   LLVM_ABI Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                    Value *OldV,
                                                    Value *NewV) const;
@@ -1130,10 +1132,13 @@ public:
 
   /// Stores information about the uses of a build vector
   struct BuildVectorUseOp {
-    unsigned Opcode;
-    int OperandIndex;
-    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
-        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+    unsigned Opcode = 0;
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
+    int OperandIndex = -1;
+    BuildVectorUseOp(unsigned Opcode, Intrinsic::ID IntrinsicID,
+                     int OperandIndex)
+        : Opcode(Opcode), IntrinsicID(IntrinsicID), OperandIndex(OperandIndex) {
+    }
   };
 
   /// Calculates a VectorInstrContext from \p I.

@@ -270,7 +270,7 @@ template <int KIND> struct StoreNegativeHugeAt {
       const Fortran::runtime::Descriptor &result, std::size_t at) const {
     *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
         Fortran::common::TypeCategory::Integer, KIND>>(at) =
-        -std::numeric_limits<Fortran::runtime::CppTypeFor<
+        -common::numeric_limits<Fortran::runtime::CppTypeFor<
             Fortran::common::TypeCategory::Integer, KIND>>::max();
   }
 };
@@ -383,7 +383,7 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   // tm.tm_gmtoff is not available, there may be platform dependent alternatives
   // (such as using timezone from <time.h> when available), but so far just
   // return -HUGE to report that this information is not available.
-  const auto negHuge{-std::numeric_limits<Fortran::runtime::CppTypeFor<
+  const auto negHuge{-common::numeric_limits<Fortran::runtime::CppTypeFor<
       Fortran::common::TypeCategory::Integer, KIND>>::max()};
 #if defined _AIX
   bool err{false};

@@ -205,6 +205,7 @@ CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0, Benign) ///< -cl-fp32-correctly-
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1, Benign) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-block-signature-string is enabled.
 CODEGENOPT(HIPSaveKernelArgName, 1, 0, Benign) ///< Set when -fhip-kernel-arg-name is enabled.
+CODEGENOPT(AMDGCNSPIRVSizeOptimization, 1, 0, Benign) ///< Set when -fenable-spirv-size-optimization is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0, Benign) ///< Internal Linkage symbols get unique names.
 CODEGENOPT(SplitMachineFunctions, 1, 0, Benign) ///< Split machine functions using profile information.
 CODEGENOPT(PartitionStaticDataSections, 1, 0, Benign) /// < Partition static data sections using profile information.
@@ -524,6 +525,10 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
+
+/// Packing mode for HLSL signatures connecting programmable shader stages.
+ENUM_CODEGENOPT(HLSLSemanticSignaturePacking, HLSLSemanticSignaturePackingMode, 2,
+               HLSLSemanticSignaturePackingMode::Default, Benign)
 
 /// Do not embed dx.source.* metadata in HLSL modules.
 CODEGENOPT(DisableDXSourceMetadata, 1, 0, Benign)

@@ -1052,7 +1052,7 @@ class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPa
 
 class DSWritePat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (inst $ptr, (REG_SEQUENCE VGPR_32, $value, lo16, (i16 (IMPLICIT_DEF)), hi16),
+  (inst $ptr, (lo16_to_vgpr32 $value),
         Offset:$offset, (i1 gds))
 >;
 
@@ -1559,10 +1559,8 @@ defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
 
-let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;
 defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12_gfx13<0x075>;
-}
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {

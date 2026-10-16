@@ -266,8 +266,9 @@ GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
 void GCNSchedStrategy::getRegisterPressures(
     bool AtTop, const RegPressureTracker &RPTracker, SUnit *SU,
     std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure,
-    GCNDownwardRPTracker &DownwardTracker, GCNUpwardRPTracker &UpwardTracker,
-    ScheduleDAGMI *DAG, const SIRegisterInfo *SRI) {
+    const GCNDownwardRPTrackerBase &DownwardTracker,
+    const GCNUpwardRPTracker &UpwardTracker, ScheduleDAGMI *DAG,
+    const SIRegisterInfo *SRI) {
   // getDownwardPressure() and getUpwardPressure() make temporary changes to
   // the tracker, so we need to pass those function a non-const copy.
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker &>(RPTracker);
@@ -284,8 +285,7 @@ void GCNSchedStrategy::getRegisterPressures(
   MachineInstr *MI = SU->getInstr();
   GCNRegPressure NewPressure;
   if (AtTop) {
-    GCNDownwardRPTracker TempDownwardTracker(DownwardTracker);
-    NewPressure = TempDownwardTracker.bumpDownwardPressure(MI, SRI);
+    NewPressure = DownwardTracker.bumpDownwardPressure(MI, SRI);
   } else {
     GCNUpwardRPTracker TempUpwardTracker(UpwardTracker);
     TempUpwardTracker.recede(*MI);
@@ -728,8 +728,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
 void GCNSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (useGCNTrackers()) {
     MachineInstr *MI = SU->getInstr();
-    IsTopNode ? (void)DownwardTracker.advance(MI, false)
-              : UpwardTracker.recede(*MI);
+    IsTopNode ? DownwardTracker.advance(*MI) : UpwardTracker.recede(*MI);
   }
 
   return GenericScheduler::schedNode(SU, IsTopNode);
@@ -1269,8 +1268,8 @@ void GCNScheduleDAGMILive::runSchedStages() {
 
       if (S.useGCNTrackers()) {
         const unsigned RegionIdx = Stage->getRegionIdx();
-        S.getDownwardTracker()->reset(MRI, LiveIns[RegionIdx]);
-        S.getUpwardTracker()->reset(
+        S.getDownwardTracker().reset(MRI, LiveIns[RegionIdx]);
+        S.getUpwardTracker().reset(
             MRI, RegionLiveOuts.getLiveRegsForRegionIdx(RegionIdx));
       }
 
