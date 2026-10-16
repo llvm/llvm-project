@@ -360,6 +360,16 @@ end
   before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
   it acquires the type it would have had under implicit typing rules (F2023 8.7),
   and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
+* An inquiry function whose result depends only on the declared type, kind
+  type parameters, or rank of its argument, such as `KIND` or `DIGITS`, can
+  appear in a constant expression when that argument is a conditional
+  argument, as in `integer, parameter :: k = kind((flag ? a : b))`.
+  F2023 10.1.12 item (6) admits only a constant expression or a variable as
+  the argument of such a specification inquiry, and a conditional argument
+  is neither. All consequent-args have the same declared type and kind type
+  parameters (C1538) and, unless all are assumed-rank, the same rank
+  (C1539), so the result doesn't depend on the condition. Flang accepts
+  `kind(a + b)` in a constant expression on the same terms.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -586,6 +596,16 @@ end program
 * When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
+
+### `SIMPLE` classification of extensions
+
+The following extensions are `SIMPLE`: `IARGC`, `INT2`, `INT8`, `INT_PTR_KIND`, `ISNAN`,
+`IZEXT`, `JZEXT`, `LNBLNK`, `LOC`, `SELECTED_UNSIGNED_KIND`, `SIZEOF`, `UINT`, `UMASKL`,
+and `UMASKR`. All specific intrinsic extensions are also `SIMPLE`.
+
+The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ETIME`,
+`FSEEK`, `FTELL`, `GETCWD`, `GETGID`, `GETPID`, `GETUID`, `HOSTNM`, `IRAND`, `MALLOC`,
+`PUTENV`, `RAND`, `RENAME`, `RTC`, `SECNDS`, `SECOND`, `SYSTEM`, `TIME`, `TIMEF`, and `UNLINK`.
 
 ### Extensions supported when enabled by options
 

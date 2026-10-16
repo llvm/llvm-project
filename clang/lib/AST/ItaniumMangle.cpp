@@ -1767,14 +1767,8 @@ void CXXNameMangler::mangleUnqualifiedName(
     break;
 
   case DeclarationName::CXXOperatorName:
-    if (ND && Arity == UnknownArity) {
-      Arity = cast<FunctionDecl>(ND)->getNumParams();
-
-      // If we have a member function, we need to include the 'this' pointer.
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(ND))
-        if (MD->isImplicitObjectMemberFunction())
-          Arity++;
-    }
+    if (ND && Arity == UnknownArity)
+      Arity = cast<FunctionDecl>(ND)->getNumParamsIncludingThis();
     [[fallthrough]];
   case DeclarationName::CXXConversionFunctionName:
   case DeclarationName::CXXLiteralOperatorName:

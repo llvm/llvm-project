@@ -596,7 +596,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
                    Query.Types[0].getSizeInBits() > 32;
           },
-          changeTo(0, s32))
+          changeTo(0, i32))
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
       .bitcastIf(typeInSet(0, {v4s8}),
                  [=](const LegalityQuery &Query) {
@@ -1307,6 +1307,20 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
+
+  getActionDefinitionsBuilder(G_SPLAT_VECTOR)
+      .legalFor({{v8s8, s8},
+                 {v8s8, s32},
+                 {v16s8, s8},
+                 {v16s8, s32},
+                 {v4s16, s16},
+                 {v4s16, s32},
+                 {v8s16, s16},
+                 {v8s16, s32},
+                 {v2s32, s32},
+                 {v4s32, s32},
+                 {v2s64, s64},
+                 {v2p0, p0}});
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {

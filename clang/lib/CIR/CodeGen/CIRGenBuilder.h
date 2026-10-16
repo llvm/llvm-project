@@ -203,9 +203,12 @@ public:
         getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
-  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
-                               mlir::Value src, mlir::Value len) {
-    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  cir::MemMoveOp createMemMove(mlir::Location loc, Address dst, Address src,
+                               mlir::Value len) {
+    return cir::MemMoveOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
@@ -482,7 +485,7 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto ptrTy = getPointerTo(destType, addr.getAddressSpace());
     auto baseAddr =
         cir::BaseClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
                                      mlir::APInt(64, offset), assumeNotNull);
@@ -495,7 +498,7 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    cir::PointerType ptrTy = getPointerTo(destType);
+    cir::PointerType ptrTy = getPointerTo(destType, addr.getAddressSpace());
     auto derivedAddr =
         cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
                                         mlir::APInt(64, offset), assumeNotNull);
@@ -618,7 +621,8 @@ public:
 
   using CIRBaseBuilderTy::createGetMember;
   Address createGetMember(mlir::Location loc, Address base,
-                          llvm::StringRef name, unsigned index) {
+                          llvm::StringRef name, unsigned index,
+                          const cir::CIRDataLayout &layout) {
     auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
 
     assert(index < recordTy.getMembers().size() &&
@@ -626,11 +630,8 @@ public:
     mlir::Type memberTy = recordTy.getMembers()[index];
     mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
-    auto moduleOp =
-        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
-    mlir::DataLayout layout(moduleOp);
-    auto memberOffset =
-        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+    auto memberOffset = CharUnits::fromQuantity(
+        recordTy.getElementOffset(layout.layout, index));
 
     mlir::Value memberPtr =
         createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
@@ -826,6 +827,20 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixExtractOp createMatrixExtract(mlir::Location loc,
+                                           mlir::Value matrix,
+                                           mlir::Value rowIdx,
+                                           mlir::Value columnIdx) {
+    return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,
+                                         mlir::Value matrix, mlir::Value rowIdx,
+                                         mlir::Value columnIdx) {
+    return cir::MatrixInsertOp::create(*this, loc, value, matrix, rowIdx,
+                                       columnIdx);
+  }
+
   cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
                                                            mlir::Type resultTy,
                                                            mlir::Value value,
@@ -835,11 +850,22 @@ public:
                                                 stride, isVolatile);
   }
 
+  /// Multiply an MxK matrix by a KxN matrix, producing an MxN matrix.
+  cir::MatrixMultiplyOp createMatrixMultiply(mlir::Location loc,
+                                             mlir::Value lhs, mlir::Value rhs) {
+    auto lhsTy = mlir::cast<cir::MatrixType>(lhs.getType());
+    auto rhsTy = mlir::cast<cir::MatrixType>(rhs.getType());
+    auto resultTy = cir::MatrixType::get(
+        lhsTy.getElementType(), lhsTy.getNumRows(), rhsTy.getNumColumns());
+    return cir::MatrixMultiplyOp::create(*this, loc, resultTy, lhs, rhs);
+  }
+
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
                                                mlir::Value matrix) {
     auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
-    auto resultTy = cir::MatrixType::get(
-        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    auto resultTy =
+        cir::MatrixType::get(inputTy.getElementType(), inputTy.getNumColumns(),
+                             inputTy.getNumRows());
     return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
   }
 
@@ -850,6 +876,20 @@ public:
                                                              bool isVolatile) {
     return cir::MatrixColumnMajorStoreOp::create(*this, loc, matrix, data,
                                                  stride, isVolatile);
+  }
+
+  std::pair<mlir::Value, mlir::Value>
+  splatMatrixOpOperandsIfNecessary(mlir::Location loc, mlir::Value lhs,
+                                   mlir::Value rhs) {
+    assert(mlir::isa<cir::MatrixType>(lhs.getType()) ||
+           mlir::isa<cir::MatrixType>(rhs.getType()));
+
+    if (!mlir::isa<cir::MatrixType>(lhs.getType()))
+      lhs = cir::VecSplatOp::create(*this, loc, rhs.getType(), lhs);
+    else if (!mlir::isa<cir::MatrixType>(rhs.getType()))
+      rhs = cir::VecSplatOp::create(*this, loc, lhs.getType(), rhs);
+
+    return {lhs, rhs};
   }
 
   template <typename... Operands>

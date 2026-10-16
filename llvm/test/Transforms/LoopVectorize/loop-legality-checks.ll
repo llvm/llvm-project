@@ -42,3 +42,43 @@ BB2:
 ._crit_edge:
   ret void
 }
+
+; Make sure LV legal bails out when the pre-header is terminated by an
+; indirectbr instead of an unconditional branch.
+; CHECK-LABEL: 'preheader_indirectbr'
+; CHECK: LV: Not vectorizing: Loop doesn't have a legal pre-header.
+define void @preheader_indirectbr(ptr %dst, i64 %n) {
+entry:
+  indirectbr ptr blockaddress(@preheader_indirectbr, %loop), [label %loop]
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Make sure LV legal bails out when the pre-header is terminated by a switch
+; with a single destination instead of an unconditional branch.
+; CHECK-LABEL: 'preheader_switch'
+; CHECK: LV: Not vectorizing: Loop doesn't have a legal pre-header.
+define void @preheader_switch(ptr %dst, i64 %n, i32 %x) {
+entry:
+  switch i32 %x, label %loop []
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

@@ -15,11 +15,19 @@
 #define LLVM_CLANG_CODEGENUTILS_TARGETUTILS_H
 
 #include "clang/Basic/BitmaskEnum.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <cstdint>
 
+namespace llvm {
+class Triple;
+} // namespace llvm
+
 namespace clang {
+class Decl;
 class FunctionDecl;
+class QualType;
+class TargetInfo;
 } // namespace clang
 
 namespace clang::CodeGenUtils {
@@ -46,6 +54,44 @@ enum class ArmSMEInlinability : uint8_t {
 /// \p Caller. Returns the issue (if any) in the ArmSMEInlinability bit enum.
 ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
                                          const FunctionDecl *Callee);
+
+/// Returns whether the Neon builtin \p BuiltinID takes a trailing argument
+/// that discriminates the operand type.  This should be kept consistent with
+/// the logic in Sema.
+/// TODO: Make this return false for SISD builtins.
+bool hasExtraNeonArgument(unsigned BuiltinID);
+
+/// Helper method to check if the underlying ABI is AAPCS
+bool isAAPCS(const TargetInfo &TargetInfo);
+
+//===----------------------------------------------------------------------===//
+// Library builtins (PowerPC64 and AIX)
+//===----------------------------------------------------------------------===//
+
+/// Returns the library function name that should be called for the library
+/// builtin \p BuiltinID when the target's library does not use the name derived
+/// from the builtin (e.g. PPC64 IEEE 128-bit long double libcalls, or AIX with
+/// 64-bit long double), or an empty StringRef if there is no such override.
+llvm::StringRef getTargetBuiltinLibFunctionName(unsigned BuiltinID,
+                                                const TargetInfo &Target);
+
+//===----------------------------------------------------------------------===//
+// AMDGPU
+//===----------------------------------------------------------------------===//
+
+/// Returns whether \p D must be given protected visibility on AMDGPU.
+/// \p HasHiddenVisibility is whether the emitted global currently has hidden
+/// visibility.
+bool requiresAMDGPUProtectedVisibility(const Decl *D, bool HasHiddenVisibility);
+
+//===----------------------------------------------------------------------===//
+// SPIR-V
+//===----------------------------------------------------------------------===//
+
+/// Return true if a SPIR(-V) null pointer of type \p QT must be materialized
+/// as an addrspacecast from a generic null pointer, as the null bit pattern in
+/// non-generic address spaces is unspecified.
+bool spirNullPointerNeedsGenericCast(QualType QT, const llvm::Triple &Triple);
 
 } // namespace clang::CodeGenUtils
 

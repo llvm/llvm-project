@@ -33,14 +33,14 @@ ARMElfTargetObjectFile::ARMElfTargetObjectFile() {
   SupportIndirectSymViaGOTPCRel = true;
 }
 
-void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
-                                        const TargetMachine &TM) {
+void ARMElfTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                        const Module &M) {
   const ARMBaseTargetMachine &ARM_TM =
       static_cast<const ARMBaseTargetMachine &>(TM);
   bool genExecuteOnly =
       ARM_TM.getMCSubtargetInfo().hasFeature(ARM::FeatureExecuteOnly);
 
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   // Make code section unreadable when in execute-only mode
   if (genExecuteOnly) {
@@ -53,12 +53,7 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
     TextSection =
         Ctx.getELFSection(".text", Type, Flags, 0, "", false, 0U, nullptr);
   }
-}
 
-void ARMElfTargetObjectFile::getModuleMetadata(Module &M) {
-  TargetLoweringObjectFileELF::getModuleMetadata(M);
-
-  const auto &ARM_TM = static_cast<const ARMBaseTargetMachine &>(*TM);
   bool isAAPCS_ABI = ARM_TM.getEffectiveABI(M) == ARM::ARMABI::ARM_ABI_AAPCS;
   InitializeELF(isAAPCS_ABI);
 

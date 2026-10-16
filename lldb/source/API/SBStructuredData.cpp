@@ -86,8 +86,8 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
 
   lldb::SBError error;
 
-  StructuredData::ObjectSP json_obj =
-      StructuredData::ParseJSON(stream.GetData());
+  llvm::StringRef stream_data = stream.GetString();
+  StructuredData::ObjectSP json_obj = StructuredData::ParseJSON(stream_data);
   m_impl_up->SetObjectSP(json_obj);
 
   static constexpr StructuredDataType unsupported_type[] = {

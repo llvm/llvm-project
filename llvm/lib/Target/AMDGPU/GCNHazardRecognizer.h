@@ -185,11 +185,11 @@ private:
   /// every window WindowFor can return, and zero if it accepts none. Each
   /// window is paired with the distance to the instruction that supplied it.
   int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
+  int getMaxVALUWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
 
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
                          GetNumWaitStatesFn GetNumWaitStates) const;
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit) const;
-  int getWaitStatesSinceVALU(IsHazardFn IsHazard, int Limit) const;
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef,
                             int Limit) const;
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit) const;
@@ -242,6 +242,7 @@ private:
                               const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVPermPk16Hazard(MachineInstr *MI);
+  bool fixPkF32InvalidOpSel(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
