@@ -411,6 +411,12 @@ public:
     return Error::success();
   }
 
+  /// Check if the specified address is managed by the current memory manager.
+  bool manages(void *TgtPtr) {
+    std::lock_guard<std::mutex> LG(MapTableLock);
+    return PtrToNodeTable.find(TgtPtr) != PtrToNodeTable.end();
+  }
+
   /// Get the size threshold from the environment variable
   /// \p LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD . Returns a <tt>
   /// std::pair<size_t, bool> </tt> where the first element represents the

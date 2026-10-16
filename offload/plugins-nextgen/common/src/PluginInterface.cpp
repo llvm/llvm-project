@@ -859,6 +859,16 @@ MemoryManagerTy *PluginContextTy::getHostMemoryManager() {
   return HostMemoryManager.get();
 }
 
+MemoryManagerTy *PluginContextTy::findOwningMemoryManager(void *Ptr) {
+  std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
+  if (HostMemoryManager && HostMemoryManager->manages(Ptr))
+    return HostMemoryManager.get();
+  for (auto &MM : DeviceMemoryManagers)
+    if (MM.second->manages(Ptr))
+      return MM.second.get();
+  return nullptr;
+}
+
 Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
                                            int64_t Size, void *HostPtr,
                                            TargetAllocTy Kind, size_t Alignment,
@@ -896,9 +906,14 @@ Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
   if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
     return Device.dataDelete(Ptr, Kind, ProfilerPtr);
 
-  MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
-                            ? getHostMemoryManager()
-                            : getDeviceMemoryManagerFor(Device, Kind);
+  MemoryManagerTy *MM = nullptr;
+  // TARGET_ALLOC_DEFAULT does not identify which manager pooled the pointer, so
+  // look up the owner by address before falling back to the kind-based manager.
+  if (Kind == TARGET_ALLOC_DEFAULT)
+    MM = findOwningMemoryManager(Ptr);
+  if (!MM)
+    MM = (Kind == TARGET_ALLOC_HOST) ? getHostMemoryManager()
+                                     : getDeviceMemoryManagerFor(Device, Kind);
   if (MM)
     return MM->free(Ptr);
   return Device.dataDelete(Ptr, Kind, ProfilerPtr);
