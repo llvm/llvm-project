@@ -51,6 +51,38 @@ static bool isDataEntryInsideEnvironment(KernelEnvironmentOp environment,
   return isDataEntryOp(mapOp) && environment->isAncestor(mapOp);
 }
 
+/// The operand of \p environment that maps a section of the variable \p operand
+/// maps, when a reduction accumulates into that section. Only the section is
+/// given a device copy, so that the accumulator stays device resident.
+static Value findReductionSectionOperand(KernelEnvironmentOp environment,
+                                         Value operand) {
+  Operation *mapOp = operand.getDefiningOp();
+  if (!mapOp)
+    return {};
+  Value varPtr = getVarPtr(mapOp);
+  if (!varPtr)
+    return {};
+  for (Value candidate : environment.getDataClauseOperands()) {
+    if (candidate == operand)
+      continue;
+    Operation *candidateOp = candidate.getDefiningOp();
+    if (!candidateOp)
+      continue;
+    // An acc.map_info states a reduction in its flags, a data clause operation
+    // as its clause.
+    std::optional<MapFlags> flags = getMapFlags(candidateOp);
+    bool reduces =
+        flags ? bitEnumContainsAny(*flags, MapFlags::reduction)
+              : getDataClause(candidateOp) == DataClause::acc_reduction;
+    if (!reduces)
+      continue;
+    if (getBounds(candidateOp).empty() || getVarPtr(candidateOp) != varPtr)
+      continue;
+    return candidate;
+  }
+  return {};
+}
+
 /// The flags of a data clause operation that maps a kernel argument. A kernel
 /// argument only looks up the mapping its clause established, so the clauses
 /// that establish or tear down something else contribute no flag for it.
@@ -428,6 +460,13 @@ struct KernelEnvironmentLowering
         // as the variable of its clause.
         if (isDataEntryInsideEnvironment(environment, operand))
           value = remapOrSelf(getVar(operand.getDefiningOp()), rewriter);
+        // Only the section of a reduction accumulator is given a device copy,
+        // while the address returned for the variable itself is a host one.
+        // Pass the section's, which the entry call states from the variable's
+        // base.
+        else if (Value section =
+                     findReductionSectionOperand(environment, operand))
+          value = deviceAddress.lookup(section);
         else
           value = deviceAddress.lookup(operand);
         if (!value)

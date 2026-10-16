@@ -433,3 +433,50 @@ module attributes {gpu.container_module} {
     return
   }
 }
+
+// -----
+
+// A reduction into a section of a variable the construct also copies. Only the
+// section is given a device copy, so the kernel receives the section's address.
+
+// CHECK-LABEL: llvm.func @parallel_reduction_section
+// CHECK: llvm.call @__tgt_acc_data_begin
+// CHECK: %[[VAR_SLOT:.*]] = llvm.getelementptr %[[RETURNED:.*]][%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.ptr
+// CHECK: %[[VAR_DEVICE:.*]] = llvm.load %[[VAR_SLOT]] : !llvm.ptr -> !llvm.ptr
+// CHECK: %[[SECTION_SLOT:.*]] = llvm.getelementptr %[[RETURNED]][%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.ptr
+// CHECK: %[[SECTION_DEVICE:.*]] = llvm.load %[[SECTION_SLOT]] : !llvm.ptr -> !llvm.ptr
+// CHECK: %[[ARG:.*]] = llvm.alloca %{{.*}} x !llvm.ptr : (i32) -> !llvm.ptr
+// CHECK: llvm.store %[[SECTION_DEVICE]], %[[ARG]] : !llvm.ptr, !llvm.ptr
+// CHECK-NOT: llvm.store %[[VAR_DEVICE]]
+// CHECK: llvm.call @__tgt_acc_kernel
+
+module attributes {gpu.container_module} {
+  gpu.module @device_module {
+    gpu.func @loop_0(%a: !llvm.ptr, %n: i64) kernel {
+      gpu.return
+    }
+  }
+
+  func.func @parallel_reduction_section(%a: !llvm.ptr, %n: i64) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %c9 = arith.constant 9 : index
+    %c10 = arith.constant 10 : index
+    %c128 = arith.constant 128 : index
+    %copy = acc.copyin varPtr(%a : !llvm.ptr) varType(f32)
+        dataClause(acc_copy) name("a") -> !llvm.ptr
+    %bounds = acc.bounds lowerbound(%c2 : index) upperbound(%c9 : index)
+        extent(%c10 : index) stride(%c1 : index) startIdx(%c0 : index)
+    %red = acc.copyin varPtr(%a : !llvm.ptr) varType(f32) bounds(%bounds)
+        dataClause(acc_reduction) name("a") -> !llvm.ptr
+    acc.kernel_environment dataOperands(%copy, %red : !llvm.ptr, !llvm.ptr) {
+      gpu.launch_func @device_module::@loop_0
+          blocks in (%c1, %c1, %c1) threads in (%c128, %c1, %c1)
+          args(%copy : !llvm.ptr, %n : i64)
+    }
+    acc.copyout accPtr(%copy : !llvm.ptr) to varPtr(%a : !llvm.ptr)
+        varType(f32) dataClause(acc_copy) name("a")
+    return
+  }
+}
