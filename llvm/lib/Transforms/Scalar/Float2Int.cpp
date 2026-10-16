@@ -508,3 +508,12 @@ PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
+
+void Float2IntPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<Float2IntPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  OS << "max-integer-bw=" << MaxIntegerBW;
+  OS << '>';
+}
