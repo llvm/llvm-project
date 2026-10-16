@@ -52,9 +52,8 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
-                                      const SymbolTable &fallbackSymTab,
+                                      ModuleOp module,
                                       SymbolTableCollection &symbolTables) {
   SymbolRefAttr routineRef;
   if (isSpecializedAccRoutine(funcOp)) {
@@ -74,7 +73,8 @@ static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
       symbolTables.lookupNearestSymbolFrom<RoutineOp>(funcOp, routineRef);
   if (routine)
     return routine;
-  return fallbackSymTab.lookup<RoutineOp>(routineRef.getLeafReference());
+  return symbolTables.lookupSymbolIn<RoutineOp>(module,
+                                                routineRef.getLeafReference());
 }
 
 static bool isACCRoutineBindDefaultOrDeviceType(RoutineOp op,
@@ -113,7 +113,6 @@ public:
       return;
     }
 
-    SymbolTable outerSymTab(mod);
     SymbolTableCollection symbolTables;
     SymbolTable &insertSymTab = symbolTables.getSymbolTable(symbolTableOp);
     Block *insertBlock = &symbolTableOp->getRegion(0).front();
@@ -147,8 +146,7 @@ public:
         if (routineInfo.getAccRoutines().size() > 1)
           return WalkResult::advance();
 
-      RoutineOp routine =
-          getFirstAccRoutineOp(callee, outerSymTab, symbolTables);
+      RoutineOp routine = getFirstAccRoutineOp(callee, mod, symbolTables);
       if (!routine ||
           !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return WalkResult::advance();
@@ -189,7 +187,6 @@ public:
         getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
     OpenACCSupport &accSupport =
         cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
-    SymbolTable outerSymTab(module);
     SymbolTableCollection symbolTables;
     bool failed = false;
 
@@ -224,8 +221,7 @@ public:
         }
       }
 
-      RoutineOp routine =
-          getFirstAccRoutineOp(callee, outerSymTab, symbolTables);
+      RoutineOp routine = getFirstAccRoutineOp(callee, module, symbolTables);
       if (!routine ||
           !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return;
