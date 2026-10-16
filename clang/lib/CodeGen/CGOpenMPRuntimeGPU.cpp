@@ -527,6 +527,11 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
     switch (D.getDirectiveKind()) {
     case OMPD_target:
+      // A nested 'teams loop' is emitted as 'teams distribute' (see
+      // CodeGenFunction::EmitOMPTeamsGenericLoopDirective), which does not
+      // support SPMD mode.
+      if (DKind == OMPD_teams_loop)
+        return false;
       if (isOpenMPParallelDirective(DKind))
         return true;
       if (DKind == OMPD_teams) {
