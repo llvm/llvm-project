@@ -8,9 +8,8 @@
 define i16 @load_i16(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x1fe
-; CHECK-NEXT:    ldrh w0, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #6, #8
+; CHECK-NEXT:    ldrh w0, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
   %offset = and i64 %shift, u0x1fe
@@ -22,9 +21,8 @@ define i16 @load_i16(ptr %base, i64 %x) {
 define i32 @load_i32(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x3fc
-; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #7, #8
+; CHECK-NEXT:    ldr w0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
   %offset = and i64 %shift, u0x3fc
@@ -36,9 +34,8 @@ define i32 @load_i32(ptr %base, i64 %x) {
 define i64 @load_i64(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x7f8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #8, #8
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
   %offset = and i64 %shift, u0x7f8
@@ -50,9 +47,8 @@ define i64 @load_i64(ptr %base, i64 %x) {
 define <2 x i64> @load_i128(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0xff0
-; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #9, #8
+; CHECK-NEXT:    ldr q0, [x0, x8, lsl #4]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
   %offset = and i64 %shift, u0xff0
@@ -64,9 +60,8 @@ define <2 x i64> @load_i128(ptr %base, i64 %x) {
 define void @store_i64(ptr %base, i64 %x, i64 %value) {
 ; CHECK-LABEL: store_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x7f8
-; CHECK-NEXT:    str x2, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #8, #8
+; CHECK-NEXT:    str x2, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
   %offset = and i64 %shift, u0x7f8
@@ -78,10 +73,9 @@ define void @store_i64(ptr %base, i64 %x, i64 %value) {
 define i64 @load_store_i64(ptr %base1, ptr %base2, i64 %x) {
 ; CHECK-LABEL: load_store_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x2, #5
-; CHECK-NEXT:    and x8, x8, #0x7f8
-; CHECK-NEXT:    ldr x0, [x0, x8]
-; CHECK-NEXT:    str x0, [x1, x8]
+; CHECK-NEXT:    ubfx x8, x2, #8, #8
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
+; CHECK-NEXT:    str x0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
   %offset = and i64 %shift, u0x7f8
@@ -95,9 +89,8 @@ define i64 @load_store_i64(ptr %base1, ptr %base2, i64 %x) {
 define i64 @load_i64_zext(ptr %base, i32 %x) {
 ; CHECK-LABEL: load_i64_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w1, #5
-; CHECK-NEXT:    and x8, x8, #0x7f8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    ubfx w8, w1, #8, #8
+; CHECK-NEXT:    ldr x0, [x0, w8, uxtw #3]
 ; CHECK-NEXT:    ret
   %shift = lshr i32 %x, 5
   %masked = and i32 %shift, u0x7f8
@@ -112,9 +105,8 @@ define i64 @load_i64_zext(ptr %base, i32 %x) {
 define i64 @load_i64_zext_clamp_mask(ptr %base, i32 %x) {
 ; CHECK-LABEL: load_i64_zext_clamp_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w1, #25
-; CHECK-NEXT:    and x8, x8, #0x7f8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    lsr w8, w1, #28
+; CHECK-NEXT:    ldr x0, [x0, w8, uxtw #3]
 ; CHECK-NEXT:    ret
   %mask = bitcast i32 u0x7f8 to i32
   %shift = lshr i32 %x, 25
@@ -146,9 +138,8 @@ define i64 @shared_address(ptr %base, i64 %x) {
 define i64 @load_i64_shl(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i64_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0x7f8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #2, #8
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %shift = shl i64 %x, 1
   %offset = and i64 %shift, u0x7f8
@@ -161,9 +152,8 @@ define i64 @load_i64_shl(ptr %base, i64 %x) {
 define i64 @load_i64_shl_msb(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i64_shl_msb:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    lsr x8, x1, #2
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %shift = shl i64 %x, 1
   %offset = and i64 %shift, u0xfffffffffffffff8
@@ -177,9 +167,8 @@ define i64 @load_i64_shl_sext(ptr %base, i32 %x) {
 ; CHECK-LABEL: load_i64_shl_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sbfiz x8, x1, #2, #32
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    sbfx x8, x1, #1, #31
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %ext = sext i32 %x to i64
   %shift = shl i64 %ext, 2
@@ -193,9 +182,8 @@ define i64 @load_i64_shl_sext(ptr %base, i32 %x) {
 define i32 @load_i32_shl_zext(ptr %base, i32 %x) {
 ; CHECK-LABEL: load_i32_shl_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w1, #1
-; CHECK-NEXT:    and x8, x8, #0xfffffffc
-; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    ubfx w8, w1, #1, #30
+; CHECK-NEXT:    ldr w0, [x0, w8, uxtw #2]
 ; CHECK-NEXT:    ret
   %ext = zext i32 %x to i64
   %shift = shl i64 %ext, 1
@@ -210,8 +198,8 @@ define i32 @load_i32_shl_zext(ptr %base, i32 %x) {
 define i8 @load_i8(ptr %base, i64 %x) {
 ; CHECK-LABEL: load_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x7f8
+; CHECK-NEXT:    ubfx x8, x1, #8, #8
+; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
@@ -224,8 +212,8 @@ define i8 @load_i8(ptr %base, i64 %x) {
 define i64 @wrong_scale(ptr %base, i64 %x) {
 ; CHECK-LABEL: wrong_scale:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x3fc
+; CHECK-NEXT:    ubfx x8, x1, #7, #8
+; CHECK-NEXT:    lsl x8, x8, #2
 ; CHECK-NEXT:    ldr x0, [x0, x8]
 ; CHECK-NEXT:    ret
   %shift = lshr i64 %x, 5
@@ -238,8 +226,8 @@ define i64 @wrong_scale(ptr %base, i64 %x) {
 define i64 @add_imm_user(ptr %base, i64 %x) {
 ; CHECK-LABEL: add_imm_user:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #5
-; CHECK-NEXT:    and x8, x8, #0x7f8
+; CHECK-NEXT:    ubfx x8, x1, #8, #8
+; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    add x9, x8, #8
 ; CHECK-NEXT:    // fake_use: $x9
 ; CHECK-NEXT:    ldr x0, [x0, x8]
