@@ -891,6 +891,19 @@ func.func @complex_exp_with_fmf(%arg: complex<f32>) -> complex<f32> {
 
 // -----
 
+// CHECK-LABEL: func @complex_exp_ninf
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_exp_ninf(%arg: complex<f32>) -> complex<f32> {
+  %exp = complex.exp %arg fastmath<ninf> : complex<f32>
+  return %exp : complex<f32>
+}
+// CHECK-NOT: math.absf
+// CHECK-NOT: arith.cmpf uge
+// CHECK: %[[RESULT:.*]] = complex.create
+// CHECK: return %[[RESULT]] : complex<f32>
+
+// -----
+
 // CHECK-LABEL: func @complex_log_with_fmf
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>
 func.func @complex_log_with_fmf(%arg: complex<f32>) -> complex<f32> {
