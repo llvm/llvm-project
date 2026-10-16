@@ -18974,7 +18974,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     const std::optional<bool> KnownEq =
         KnownBits::eq(LHSKnownHi32, RHSKnownHi32);
 
-    if (KnownEq && *KnownEq) {
+    if (KnownEq == true) {
       // For signed comparisons, convert to unsigned since upper halves match
       ISD::CondCode NewCC = ISD::getUnsignedSetCC(CC);
 
