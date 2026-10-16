@@ -16,6 +16,7 @@
 #include "PassesOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -678,16 +679,12 @@ template <typename T>
 template <typename FunctionT>
 bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const FunctionT &F) {
   if (shouldGenerateData(F)) {
-    FuncDataT<T> FD(F.front().getName().str());
-    int I = 0;
+    FuncDataT<T> FD(getBlockLabel(F.front()));
     for (const auto &B : F) {
-      std::string BBName = B.getName().str();
-      if (BBName.empty()) {
-        BBName = formatv("{0}", I);
-        ++I;
-      }
-      FD.getOrder().emplace_back(BBName);
-      FD.getData().insert({BBName, B});
+      std::string BBLabel = getBlockLabel(B);
+      FD.getOrder().emplace_back(BBLabel);
+      [[maybe_unused]] bool Inserted = FD.getData().insert({BBLabel, B}).second;
+      assert(Inserted && "Duplicate basic block label");
     }
     Data.getOrder().emplace_back(F.getName());
     Data.getData().insert({F.getName(), FD});
@@ -1860,7 +1857,8 @@ protected:
   void createNode(StringRef Label, const BlockDataT<DCData> &BD, StringRef C) {
     unsigned Pos = Nodes.size();
     Nodes.emplace_back(*this, Pos, BD, C);
-    NodePosition.insert({Label, Pos});
+    [[maybe_unused]] bool Inserted = NodePosition.insert({Label, Pos}).second;
+    assert(Inserted && "Duplicate basic block label");
   }
 
   // TODO Nodes should probably be a StringMap<DotCfgDiffNode> after the
@@ -1873,6 +1871,24 @@ protected:
   StringMap<std::string> EdgeLabels;
 };
 
+// Drop the label line and any predecessor comment lines at the start of a
+// printed basic block body \p SR.  The label is shown separately and the
+// predecessors are visible as edges in the graph, so both are redundant.
+// Instruction lines are indented, so only lines starting in column 0 (the
+// label line and full-line comments such as "; preds = ..." or
+// "; predecessors: ...") are dropped.  An unnamed entry block is printed
+// without a label line, in which case nothing is dropped.
+static void dropLabelAndPredecessorLines(StringRef &SR) {
+  while (!SR.empty() && !isSpace(SR.front())) {
+    size_t Pos = SR.find('\n');
+    if (Pos == StringRef::npos) {
+      SR = StringRef();
+      return;
+    }
+    SR = SR.drop_front(Pos + 1);
+  }
+}
+
 std::string DotCfgDiffNode::getBodyContent() const {
   const PassesOptions &Opts = PassesOptions::Global;
   if (Colour == Opts.dot_cfg_common_color) {
@@ -1883,8 +1899,8 @@ std::string DotCfgDiffNode::getBodyContent() const {
       SR[I] = Data[I]->getBody();
       // drop initial '\n' if present
       SR[I].consume_front("\n");
-      // drop predecessors as they can be big and are redundant
-      SR[I] = SR[I].drop_until([](char C) { return C == '\n'; }).drop_front();
+      // drop the label and predecessors as they are redundant
+      dropLabelAndPredecessorLines(SR[I]);
     }
 
     SmallString<80> OldLineFormat =
@@ -1919,18 +1935,18 @@ std::string DotCfgDiffNode::getBodyContent() const {
 
   // Put node out in the appropriate colour.
   assert(!Data[1] && "Data[1] is set unexpectedly.");
-  std::string Body = makeHTMLReady(Data[0]->getBody());
-  const StringRef BS = Body;
-  StringRef BS1 = BS;
+  StringRef BS1 = Data[0]->getBody();
   // Drop leading newline, if present.
-  if (BS.front() == '\n')
-    BS1 = BS1.drop_front(1);
-  // Get label.
-  StringRef Label = BS1.take_until([](char C) { return C == ':'; });
-  // drop predecessors as they can be big and are redundant
-  BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
+  BS1.consume_front("\n");
+  // Drop the label line and predecessor comments as they are redundant.
+  // The label is taken from the saved data as the body of an unnamed entry
+  // block does not start with a label line.
+  dropLabelAndPredecessorLines(BS1);
+  std::string Body = makeHTMLReady(BS1);
+  BS1 = Body;
 
-  std::string S = "<FONT COLOR=\"" + Colour.str() + "\">" + Label.str() + ":";
+  std::string S =
+      "<FONT COLOR=\"" + Colour.str() + "\">" + Data[0]->getLabel().str() + ":";
 
   // align each line to the left.
   while (BS1.size()) {
@@ -2169,24 +2185,24 @@ DCData::DCData(const BasicBlock &B) {
   // Build up transition labels.
   const Instruction *Term = B.getTerminator();
   if (const CondBrInst *Br = dyn_cast<const CondBrInst>(Term)) {
-    addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
-    addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
+    addSuccessorLabel(getBlockLabel(*Br->getSuccessor(0)), "true");
+    addSuccessorLabel(getBlockLabel(*Br->getSuccessor(1)), "false");
   } else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
-    addSuccessorLabel(Sw->case_default()->getCaseSuccessor()->getName().str(),
+    addSuccessorLabel(getBlockLabel(*Sw->case_default()->getCaseSuccessor()),
                       "default");
     for (auto &C : Sw->cases()) {
       assert(C.getCaseValue() && "Expected to find case value.");
       SmallString<20> Value = formatv("{0}", C.getCaseValue()->getSExtValue());
-      addSuccessorLabel(C.getCaseSuccessor()->getName().str(), Value);
+      addSuccessorLabel(getBlockLabel(*C.getCaseSuccessor()), Value);
     }
   } else
     for (const BasicBlock *Succ : successors(&B))
-      addSuccessorLabel(Succ->getName().str(), "");
+      addSuccessorLabel(getBlockLabel(*Succ), "");
 }
 
 DCData::DCData(const MachineBasicBlock &B) {
   for (const MachineBasicBlock *Succ : successors(&B))
-    addSuccessorLabel(Succ->getName().str(), "");
+    addSuccessorLabel(getBlockLabel(*Succ), "");
 }
 
 DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)
