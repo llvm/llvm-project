@@ -4,7 +4,7 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-@shared = addrspace(3) global [4096 x i32] undef, align 16
+@shared = addrspace(3) global [4096 x i32] zeroinitializer, align 16
 @global = addrspace(1) global i32 0
 
 ; The accumulator is read when enable_input_d is true.
