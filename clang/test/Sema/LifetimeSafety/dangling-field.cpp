@@ -253,6 +253,43 @@ struct IndirectEscapeThroughReference {
   }
 };
 
+struct NestedAnonStructEscape {
+  struct {
+    struct {
+      const char *p; // expected-note {{this field dangles}}
+    };
+  };
+
+  void foo() {
+    std::string s;
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+  }
+};
+
+struct MultiFieldAnonStructEscapesOnlyWrittenField {
+  struct {
+    const char *p; // expected-note {{this field dangles}}
+    const char *q;
+  };
+
+  void foo() {
+    std::string s;
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+  }
+};
+
+struct AnonUnionEscapesOnlyWrittenField {
+  union {
+    const char *p; // expected-note {{this field dangles}}
+    const char *q;
+  };
+
+  void foo() {
+    std::string s;
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+  }
+};
+
 namespace DanglingPointerFieldInBaseClass {
 struct BaseWithPointer {
   std::string_view view; // expected-note {{this field dangles}}

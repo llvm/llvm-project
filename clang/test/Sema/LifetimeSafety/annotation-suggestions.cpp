@@ -828,6 +828,40 @@ struct FieldInAnonStruct {
     return ptr_;         // expected-note {{returned here}}
   }
 };
+
+struct FieldInNestedAnonStruct {
+  struct {
+    struct {
+      int *ptr_; // expected-note {{if field 'ptr_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+    };
+  };
+
+  int *get_ptr() const { // expected-warning {{return value depends on the object referenced by field 'ptr_', not on '*this'}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+};
+
+struct MultiFieldAnonStructSuggestsOnlyForReturnedField {
+  struct {
+    int *a_;
+    int *b_; // expected-note {{if field 'b_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_b() const { // expected-warning {{return value depends on the object referenced by field 'b_', not on '*this'}}
+    return b_;         // expected-note {{returned here}}
+  }
+};
+
+struct MultiFieldAnonUnionSuggestsOnlyForReturnedField {
+  union {
+    int *a_;
+    int *b_; // expected-note {{if field 'b_' is owned by the class, mark the method [[clang::lifetimebound]]}}
+  };
+
+  int *get_b() const { // expected-warning {{return value depends on the object referenced by field 'b_', not on '*this'}}
+    return b_;         // expected-note {{returned here}}
+  }
+};
 } // namespace FieldOriginEscapeThroughAnonStruct
 
 struct Base {
