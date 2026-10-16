@@ -37,6 +37,7 @@
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <array>
@@ -7066,6 +7067,150 @@ LogicalResult Tcgen05LdRedOp::verify() {
     return emitError("abs or nan is only applicable for f32 type");
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spcompress and spdecompress Ops
+//===----------------------------------------------------------------------===//
+
+// Returns the number of 32-bit registers in a register bundle, which is either
+// an i32 or a vector of i32.
+static unsigned getNumSPRegisters(Type type) {
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    return vecTy.getNumElements();
+  return 1;
+}
+
+// Returns the {source, target} group sizes of the sparsity factor.
+static std::pair<unsigned, unsigned> getSPFactor(NVVM::SPFactor compFactor) {
+  switch (compFactor) {
+  case NVVM::SPFactor::SP1TO2:
+    return {1, 2};
+  case NVVM::SPFactor::SP1TO4:
+    return {1, 4};
+  case NVVM::SPFactor::SP1TO8:
+    return {1, 8};
+  case NVVM::SPFactor::SP1TO16:
+    return {1, 16};
+  case NVVM::SPFactor::SP2TO4:
+    return {2, 4};
+  case NVVM::SPFactor::SP2TO8:
+    return {2, 8};
+  case NVVM::SPFactor::SP2TO16:
+    return {2, 16};
+  case NVVM::SPFactor::SP4TO8:
+    return {4, 8};
+  case NVVM::SPFactor::SP4TO16:
+    return {4, 16};
+  }
+  llvm_unreachable("Invalid SPFactor");
+}
+
+LogicalResult SPCompressOp::verify() {
+  unsigned repFactor = static_cast<unsigned>(getRepFactor());
+  unsigned indexSize = static_cast<unsigned>(getIndexSize());
+  unsigned elemSize = static_cast<unsigned>(getElemSize());
+
+  if (getNumSPRegisters(getData().getType()) != 2 * repFactor)
+    return emitError(
+        "Operation attributes and provided input data size doesn't match");
+
+  if (getNumSPRegisters(getCompressedData().getType()) != repFactor)
+    return emitError("Operation attributes and provided output compressed data "
+                     "size doesn't match");
+
+  if (getNumSPRegisters(getMetadata().getType()) !=
+      llvm::divideCeil(repFactor * indexSize, elemSize))
+    return emitError(
+        "Operation attributes and provided output metadata size doesn't match");
+
+  return success();
+}
+
+LogicalResult SPDecompressOp::verify() {
+  unsigned repFactor = static_cast<unsigned>(getRepFactor());
+  unsigned indexSize = static_cast<unsigned>(getIndexSize());
+  unsigned elemSize = static_cast<unsigned>(getElemSize());
+  auto [numSrc, numTgt] = getSPFactor(getCompFactor());
+
+  unsigned dataBits = numTgt * elemSize * repFactor;
+  if (dataBits < 32 || dataBits > 4096)
+    return emitError(
+        "Invalid compFactor, element size, and repeat factor combination");
+
+  if (numSrc * elemSize > 32)
+    return emitError("Invalid compFactor and element size combination");
+
+  if (indexSize == 2 && numTgt > 4)
+    return emitError("Invalid index size and target combination, target "
+                     "should be at most 4 if index size is 2");
+
+  if (getNumSPRegisters(getData().getType()) != dataBits / 32)
+    return emitError(
+        "Operation attributes and provided output data size doesn't match");
+
+  if (getNumSPRegisters(getCompressedData().getType()) !=
+      llvm::divideCeil(numSrc * elemSize * repFactor, 32))
+    return emitError("Operation attributes and provided input compressed data "
+                     "size doesn't match");
+
+  if (getNumSPRegisters(getMetadata().getType()) !=
+      llvm::divideCeil(numSrc * indexSize * repFactor, 32))
+    return emitError(
+        "Operation attributes and provided input metadata size doesn't match");
+
+  return success();
+}
+
+NVVM::IDArgPair
+SPCompressOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SPCompressOp>(op);
+  unsigned elemSize = static_cast<unsigned>(thisOp.getElemSize());
+  unsigned repFactor = static_cast<unsigned>(thisOp.getRepFactor());
+
+  // The intrinsic takes the dense data with one lane per element. The data
+  // occupies 2 * repFactor 32-bit registers.
+  llvm::Type *dataTy = llvm::FixedVectorType::get(builder.getIntNTy(elemSize),
+                                                  64 * repFactor / elemSize);
+  llvm::Value *data =
+      builder.CreateBitCast(mt.lookupValue(thisOp.getData()), dataTy);
+
+  llvm::SmallVector<llvm::Value *> args{
+      data,
+      mt.lookupValue(thisOp.getSpDesc()),
+      builder.getInt32(static_cast<unsigned>(thisOp.getIndexSize())),
+      // spcompress only supports the sp2to4 compression factor.
+      builder.getInt32(4),
+  };
+  return {llvm::Intrinsic::nvvm_spcompress, std::move(args)};
+}
+
+NVVM::IDArgPair SPDecompressOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SPDecompressOp>(op);
+  auto [numSrc, numTgt] = getSPFactor(thisOp.getCompFactor());
+  unsigned elemSize = static_cast<unsigned>(thisOp.getElemSize());
+  unsigned repFactor = static_cast<unsigned>(thisOp.getRepFactor());
+
+  // The intrinsic takes the compressed data with one lane per element.
+  // Compressed data narrower than 32 bits is carried in the low bits of an i32.
+  llvm::Value *compressedData = mt.lookupValue(thisOp.getCompressedData());
+  unsigned compressedBits = numSrc * elemSize * repFactor;
+  if (compressedBits < 32)
+    compressedData =
+        builder.CreateTrunc(compressedData, builder.getIntNTy(compressedBits));
+  llvm::Type *compressedTy = llvm::FixedVectorType::get(
+      builder.getIntNTy(elemSize), numSrc * repFactor);
+  compressedData = builder.CreateBitCast(compressedData, compressedTy);
+
+  llvm::SmallVector<llvm::Value *> args{
+      mt.lookupValue(thisOp.getMetadata()),
+      compressedData,
+      builder.getInt32(static_cast<unsigned>(thisOp.getIndexSize())),
+      builder.getInt32(numTgt),
+  };
+  return {llvm::Intrinsic::nvvm_spdecompress, std::move(args)};
 }
 
 //===----------------------------------------------------------------------===//
