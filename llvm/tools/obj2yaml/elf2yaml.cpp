@@ -902,7 +902,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 5)
+      if (Cur && Version > 6)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -915,6 +915,9 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(Feature);
     if (!FeatureOrErr)
       return FeatureOrErr.takeError();
+    std::optional<llvm::yaml::Hex64> FuncGUID;
+    if (FeatureOrErr->FuncGUID)
+      FuncGUID = Data.getU64(Cur);
     if (FeatureOrErr->MultiBBRange) {
       NumBBRanges = Data.getULEB128(Cur);
     } else {
@@ -958,7 +961,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
     }
     Entries.push_back(
-        {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
+        {Version, Feature, FuncGUID, /*NumBBRanges=*/{}, std::move(BBRanges)});
 
     BBAddrMapYAML::PGOAnalysisMapEntry &PGOAnalysis =
         PGOAnalyses.emplace_back();
