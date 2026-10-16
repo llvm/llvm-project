@@ -49,6 +49,15 @@ def create_parser():
         ),
     )
     group.add_argument(
+        "--fortran-compiler",
+        metavar="fortran_compiler",
+        dest="fortran_compiler",
+        default="",
+        help=textwrap.dedent(
+            """Specify the compiler used to build the inferior Fortran executables. The compiler path can be an executable basename or a full path to a compiler executable."""
+        ),
+    )
+    group.add_argument(
         "--sysroot",
         metavar="sysroot",
         dest="sysroot",
