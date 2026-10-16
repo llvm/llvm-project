@@ -1,6 +1,7 @@
-# Run the unit tests for get_triple_system_name.py, which parses
-# TripleName.def and must stay in sync with llvm::Triple.
+# Unit test for cmake/Modules/GetTripleCMakeSystemName.cmake, which maps a
+# target triple to a CMake system name and must stay in sync with the OS and
+# environment tables in TripleName.def.
 
-# RUN: %python %S/get_triple_system_name_test.py 2>&1 | FileCheck %s
+# RUN: %cmake -P %S/get-triple-cmake-system-name.cmake 2>&1 | FileCheck %s
 
-# CHECK: OK
+# CHECK: get-triple-cmake-system-name: OK
