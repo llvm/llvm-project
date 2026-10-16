@@ -31,6 +31,7 @@ static std::string computeARMDataLayout(const Triple &TT, StringRef ABIName) {
   Ret += TT.isLittleEndian() ? 'e' : 'E';
   Ret += getManglingComponent(TT);
 
+  // Pointers are 32 bits and aligned to 32 bits.
   // Function pointers are aligned to 8 bits (because the LSB stores the
   // ARM/Thumb state).
   Ret += "-p:32:32-Fi8";
@@ -120,13 +121,24 @@ static std::string computeLoongArchDataLayout(const Triple &TT) {
 static std::string computeM68kDataLayout(const Triple &TT) {
   // FIXME how to wire it with the used object format?
   // FIXME no floats at the moment
-  if (TT.isOSNetBSD())
+  if (TT.isOSNetBSD()) {
+    // NetBSD/m68k aligns long/pointer/stack/objects on 32-bits,
+    // ref. comment above.
+    // Bytes do not require special alignment,
+    // 16-bit ints are 16-bit aligned and
+    // 32-bit ints are 32-bit aligned
+    // The registers can hold 8, 16, 32 bits
+    // object and stack alignment is also 32 bits
     return "E-m:e-p:32:32:32-i8:8:8-i16:16:16-i32:32:32-n8:16:32-a:0:32-S32";
+  }
 
   // M68k pointers are always 32 bit wide even for 16-bit CPUs.
   // The ABI only specifies 16-bit alignment.
   // On at least the 68020+ with a 32-bit bus, there is a performance benefit
   // to having 32-bit alignment.
+  // Bytes do not require special alignment, words are word aligned and
+  // long words are word aligned at minimum.
+  // The registers can hold 8, 16, 32 bits
   return "E-m:e-p:32:16:32-i8:8:8-i16:16:16-i32:16:32-n8:16:32-a:0:16-S16";
 }
 
@@ -155,11 +167,16 @@ static MipsABI getMipsABI(const Triple &TT, StringRef ABIName) {
 }
 
 static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
-  std::string Ret;
-  Ret += TT.isLittleEndian() ? 'e' : 'E';
+  std::string Ret = TT.isLittleEndian() ? "e" : "E";
 
+  // Pointers are 32 bit on some ABIs.
+  //
   // 8 and 16 bit integers only need to have natural alignment, but try to
-  // align them to 32 bits.
+  // align them to 32 bits. 64 bit integers have natural alignment.
+  //
+  // 32 bit registers are always available and the stack is at least 64 bit
+  // aligned. On N32 and N64 64 bit registers are also available and the stack
+  // is 128 bit aligned.
   switch (getMipsABI(TT, ABIName)) {
   case MipsABI::O32:
     Ret += "-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64";
@@ -202,6 +219,7 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
 
   // Note, the alignment values for f64 and i64 on ppc64 in Darwin
   // documentation are wrong; these are correct (i.e. "what gcc does").
+  // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
   Ret += is64Bit ? "-i64:64-i128:128-n32:64" : "-i64:64-n32";
 
   // The ABI alignment for doubles on AIX is 4 bytes.
@@ -281,9 +299,12 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 }
 
 static std::string computeSparcDataLayout(const Triple &T) {
+  // Sparc is typically big endian, but some are little.
+  // Some ABIs have 32bit pointers.
   // The alignment of 128 bit integers is not specified in the ABI document but
   // is the de facto standard.
   // On SparcV9 128 floats are aligned to 128 bits, on others only to 64.
+  // On SparcV9 registers can hold 64 or 32 bits, on others only 32.
   if (T.isSPARC64())
     return "E-m:e-i64:64-i128:128-n32:64-S128";
   if (T.getArch() == Triple::sparcel)
@@ -292,19 +313,30 @@ static std::string computeSparcDataLayout(const Triple &T) {
 }
 
 static std::string computeSystemZDataLayout(const Triple &TT) {
+  // Big endian. The natural stack alignment is 64 bits.
   std::string Ret = "E-S64";
+
   Ret += getManglingComponent(TT);
 
-  // Custom address space for ptr32.
-  if (TT.isOSzOS())
+  // Special features for z/OS.
+  if (TT.isOSzOS()) {
+    // Custom address space for ptr32.
     Ret += "-p1:32:32";
+  }
 
   // Make sure that global data has at least 16 bits of alignment by
   // default, so that we can refer to it using LARL.  We don't have any
   // special requirements for stack variables though.
   //
+  // 64-bit integers are naturally aligned. 128-bit floats are aligned only to
+  // 64 bits.
+  //
   // The DataLayout string always holds a vector alignment of 64 bits, see
   // comment in clang/lib/Basic/Targets/SystemZ.h.
+  //
+  // We prefer 16 bits of aligned for all globals; see above.
+  //
+  // Integer registers are 32 or 64 bits.
   Ret += "-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64";
 
   return Ret;
@@ -315,9 +347,11 @@ static std::string computeX86DataLayout(const Triple &TT) {
   std::string Ret;
   Ret.reserve(128);
 
+  // X86 is little endian
   Ret += 'e';
   Ret += getManglingComponent(TT);
 
+  // X86 and x32 have 32 bit pointers.
   if (!Is64Bit || TT.isX32())
     Ret += "-p:32:32";
 
@@ -334,6 +368,7 @@ static std::string computeX86DataLayout(const Triple &TT) {
   else
     Ret += "-i128:128-f64:32:64";
 
+  // Some ABIs align long double to 128 bits, others to 32. IAMCU has no f80.
   if (TT.isOSIAMCU())
     Ret += "-f128:32";
   else if (Is64Bit || TT.isOSDarwin() || TT.isWindowsMSVCEnvironment())
@@ -341,8 +376,10 @@ static std::string computeX86DataLayout(const Triple &TT) {
   else
     Ret += "-f80:32";
 
+  // The registers can hold 8, 16, 32 or, in x86-64, 64 bits.
   Ret += Is64Bit ? "-n8:16:32:64" : "-n8:16:32";
 
+  // The stack is aligned to 32 bits on some ABIs and 128 bits on others.
   if ((!Is64Bit && TT.isOSWindows()) || TT.isOSIAMCU())
     Ret += "-a:0:32-S32";
   else
@@ -395,7 +432,14 @@ static std::string computeSPIRVDataLayout(const Triple &TT) {
 }
 
 static std::string computeLanaiDataLayout() {
-  return "E-m:e-p:32:32-i64:64-a:0:32-n32-S64";
+  // Data layout (keep in sync with clang/lib/Basic/Targets.cpp)
+  return "E"        // Big endian
+         "-m:e"     // ELF name manging
+         "-p:32:32" // 32-bit pointers, 32 bit aligned
+         "-i64:64"  // 64 bit integers, 64 bit aligned
+         "-a:0:32"  // 32 bit alignment of objects of aggregate type
+         "-n32"     // 32 bit native integer width
+         "-S64";    // 64 bit natural stack alignment
 }
 
 static std::string computeWebAssemblyDataLayout(const Triple &TT) {
@@ -411,8 +455,13 @@ static std::string computeWebAssemblyDataLayout(const Triple &TT) {
 }
 
 static std::string computeVEDataLayout(const Triple &T) {
-  // Need to define all of the vector alignments. Otherwise, each alignment
-  // becomes the size of each data by default.
+  // Aurora VE is little endian with ELF mangling. 64 bit integers are 64 bit
+  // aligned. VE supports 32 bit and 64 bits integer on registers. Stack
+  // alignment is 128 bits.
+  //
+  // Vector alignments are 64 bits, from v64 (v2f32) to v16384 (v256f64).
+  // Need to define all of them.  Otherwise, each alignment becomes the size of
+  // each data by default.
   return "e-m:e-i64:64-n32:64-S128-v64:64:64-v128:64:64-v256:64:64-v512:64:64-"
          "v1024:64:64-v2048:64:64-v4096:64:64-v8192:64:64-v16384:64:64";
 }
