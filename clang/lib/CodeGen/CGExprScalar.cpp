@@ -36,6 +36,7 @@
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
@@ -4487,6 +4488,15 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
       llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
   llvm::FunctionCallee handler =
       CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+  // Extend the two unsigned i8 arguments (operation code and operand
+  // bit-width) if required by target.
+  llvm::Attribute::AttrKind I8ExtAttr =
+      llvm::TargetLibraryInfo::getExtAttrForI8Param(/*Signed=*/false);
+  if (I8ExtAttr != llvm::Attribute::AttrKind::None)
+    if (llvm::Function *F = dyn_cast<llvm::Function>(handler.getCallee())) {
+      F->addParamAttr(2, I8ExtAttr);
+      F->addParamAttr(3, I8ExtAttr);
+    }
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.
