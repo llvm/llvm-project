@@ -8249,20 +8249,21 @@ node has a single operand containing the name string:
 ```
 
 When `llvm.loop.vectorize.enable` is present, the Loop Vectorizer is also
-permitted to reorder floating-point operations by default (equivalent to the
-behaviour of `#pragma clang loop vectorize(enable)`). This default can be
-overridden per-loop using `llvm.loop.vectorize.fp_reordering.enable` /
-`llvm.loop.vectorize.fp_reordering.disable` (see below).
+permitted to apply floating-point transforms that may change the computed
+result by default (equivalent to the behaviour of
+`#pragma clang loop vectorize(enable)`). This default can be overridden
+per-loop using `llvm.loop.vectorize.fp_unsafe.enable` /
+`llvm.loop.vectorize.fp_unsafe.disable` (see below).
 
-#### '`llvm.loop.vectorize.fp_reordering.enable`' and '`llvm.loop.vectorize.fp_reordering.disable`' Metadata
+#### '`llvm.loop.vectorize.fp_unsafe.enable`' and '`llvm.loop.vectorize.fp_unsafe.disable`' Metadata
 
 This metadata gives the Loop Vectorizer an explicit per-loop instruction about
-whether floating-point operation reordering (reassociation) is permitted. Each
-node has a single operand containing the name string:
+whether floating-point transforms that may change the computed result are
+permitted. Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.fp_reordering.enable"}   ; reordering allowed
-!1 = !{!"llvm.loop.vectorize.fp_reordering.disable"}  ; reordering suppressed
+!0 = !{!"llvm.loop.vectorize.fp_unsafe.enable"}   ; allowed
+!1 = !{!"llvm.loop.vectorize.fp_unsafe.disable"}  ; suppressed
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata

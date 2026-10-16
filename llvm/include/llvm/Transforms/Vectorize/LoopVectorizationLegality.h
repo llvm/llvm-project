@@ -96,13 +96,12 @@ class LoopVectorizeHints {
   /// a plain value because the enable/disable pair has no operand to validate.
   unsigned Scalable;
 
-  /// FP reordering hint from
-  /// llvm.loop.vectorize.fp_reordering.{enable,disable}; one of ForceKind,
-  /// carried as a plain unsigned like Force and Predicate.
+  /// Unsafe FP hint from llvm.loop.vectorize.fp_unsafe.{enable,disable}; one
+  /// of ForceKind, carried as a plain unsigned like Force and Predicate.
   ///   FK_Undefined : not specified
-  ///   FK_Disabled  : reordering explicitly suppressed
-  ///   FK_Enabled   : reordering explicitly allowed
-  unsigned FPReordering;
+  ///   FK_Disabled  : result-changing FP vectorization suppressed
+  ///   FK_Enabled   : result-changing FP vectorization allowed
+  unsigned FPUnsafe;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
@@ -194,6 +193,12 @@ public:
     // IEEE 754 FP ops properly, or bad single-to-double promotions.
     // Otherwise, a sequence of vectorized loops, even without reduction,
     // could lead to different end results on the destination vectors.
+    //
+    // An explicit fp_unsafe hint takes precedence over the vectorize.enable
+    // default.
+    if ((ForceKind)FPUnsafe != FK_Undefined)
+      return (ForceKind)FPUnsafe != FK_Enabled && PotentiallyUnsafe;
+
     return getForce() != LoopVectorizeHints::FK_Enabled && PotentiallyUnsafe;
   }
 
