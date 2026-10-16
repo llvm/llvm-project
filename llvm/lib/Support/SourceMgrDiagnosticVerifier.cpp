@@ -7,10 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SourceMgrDiagnosticVerifier.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
+    ArrayRef<std::string> Prefixes, ArrayRef<std::string> CommentPrefixes)
+    : CommentPrefixes(CommentPrefixes.begin(), CommentPrefixes.end()) {
+  std::string PrefixAlt;
+  raw_string_ostream PrefixOS(PrefixAlt);
+  ListSeparator Sep("|");
+  for (const std::string &Prefix : Prefixes) {
+    // An empty prefix would add an empty alternative to the regex below,
+    // letting a bare '-error {{...}}' comment (with no prefix word at all)
+    // match. Callers must not pass one.
+    assert(!Prefix.empty() && "prefixes must be non-empty");
+    PrefixOS << Sep << Regex::escape(Prefix);
+  }
+  Expected = Regex("(" + PrefixAlt +
+                   ")-(error|note|remark|warning)(-re)? "
+                   "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
+}
 
 /// Given a diagnostic kind, return a human readable string for it.
 static StringRef getDiagKindStr(SourceMgr::DiagKind Kind) {
@@ -100,12 +119,29 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &OS,
   // The indices of designators that apply to the next non designator line.
   SmallVector<unsigned, 1> DesignatorsForNextLine;
 
-  // Scan the file for expected-* designators.
+  // Scan the file for <prefix>-* designators.
   SmallVector<StringRef, 100> Lines;
   Buf->getBuffer().split(Lines, '\n');
   for (unsigned LineNo = 0, E = Lines.size(); LineNo < E; ++LineNo) {
-    SmallVector<StringRef, 4> Matches;
-    if (!Expected.match(Lines[LineNo].rtrim(), &Matches)) {
+    // If comment-scoping is enabled, only the text at or after the earliest
+    // recognized comment prefix on the line is eligible to match, so a magic
+    // string appearing outside of a comment (e.g. in an instruction operand)
+    // is ignored.
+    StringRef Line = Lines[LineNo].rtrim();
+    if (!CommentPrefixes.empty()) {
+      size_t CommentStart = StringRef::npos;
+      for (StringRef Prefix : CommentPrefixes) {
+        size_t Pos = Line.find(Prefix);
+        if (Pos != StringRef::npos &&
+            (CommentStart == StringRef::npos || Pos < CommentStart))
+          CommentStart = Pos;
+      }
+      Line = CommentStart == StringRef::npos ? StringRef()
+                                             : Line.substr(CommentStart);
+    }
+
+    SmallVector<StringRef, 5> Matches;
+    if (!Expected.match(Line, &Matches)) {
       // Check for designators that apply to this line.
       if (!DesignatorsForNextLine.empty()) {
         for (unsigned DiagIndex : DesignatorsForNextLine)
@@ -116,29 +152,29 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &OS,
       continue;
     }
 
-    // Point to the start of expected-*.
+    // Point to the start of <prefix>-*.
     SMLoc ExpectedStart = SMLoc::getFromPointer(Matches[0].data());
 
     SourceMgr::DiagKind Kind;
-    if (Matches[1] == "error")
+    if (Matches[2] == "error")
       Kind = SourceMgr::DK_Error;
-    else if (Matches[1] == "warning")
+    else if (Matches[2] == "warning")
       Kind = SourceMgr::DK_Warning;
-    else if (Matches[1] == "remark")
+    else if (Matches[2] == "remark")
       Kind = SourceMgr::DK_Remark;
     else {
-      assert(Matches[1] == "note");
+      assert(Matches[2] == "note");
       Kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag Record(Kind, LineNo + 1, ExpectedStart, Matches[5]);
+    ExpectedDiag Record(Kind, LineNo + 1, ExpectedStart, Matches[6]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
-    if (!Matches[2].empty() && !Record.computeRegex(OS, Mgr)) {
+    if (!Matches[3].empty() && !Record.computeRegex(OS, Mgr)) {
       OK = false;
       continue;
     }
 
-    StringRef OffsetMatch = Matches[3];
+    StringRef OffsetMatch = Matches[4];
     if (!OffsetMatch.empty()) {
       OffsetMatch = OffsetMatch.drop_front(1);
 
