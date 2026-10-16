@@ -2520,8 +2520,8 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) {
   // register value (a mid-chain RMW), the whole-register reaching-def/recolor
   // logic does not yet handle it and produces invalid live intervals ("Multiple
   // connected components"). Exclude such MFMAs until subreg-aware reaching-def
-  // handling lands. The check is tied to the specific value this src2 reads (via
-  // its reaching defs), so benign piecewise initialization, or a subreg
+  // handling lands. The check is tied to the specific value this src2 reads
+  // (via its reaching defs), so benign piecewise initialization, or a subreg
   // overwrite that happens only *after* this MFMA, does not exclude it.
   const TargetRegisterInfo *TRI = DAG.MRI.getTargetRegisterInfo();
   auto Src2ReadsSplicedValue = [&](MachineOperand &Src2MO) {
@@ -2587,8 +2587,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         SmallVector<SlotIndex, 8> Src2ReachingDefs;
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
 
-        bool Src2RecolorSafe =
-            isRecolorSafe(Src2->getReg(), {}, RewriteSet);
+        bool Src2RecolorSafe = isRecolorSafe(Src2->getReg(), {}, RewriteSet);
         if (!Src2RecolorSafe) {
           for (SlotIndex RDIdx : Src2ReachingDefs) {
             MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
@@ -2858,8 +2857,7 @@ bool RewriteMFMAFormStage::rewrite(
       // unsafe to recolor and collect the reaching defs that need a bridge.
       bool Src2AlreadyRedef = RedefMap.contains(Src2Reg);
       bool Src2RecolorSafe =
-          !Src2AlreadyRedef &&
-          isRecolorSafe(Src2Reg, {}, RewriteCandsSet);
+          !Src2AlreadyRedef && isRecolorSafe(Src2Reg, {}, RewriteCandsSet);
       // src2 cannot be recolored to AGPR: collect its non-candidate reaching
       // defs to bridge below (candidate MFMAs already produce AGPR directly).
       if (!Src2RecolorSafe) {
