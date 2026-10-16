@@ -244,6 +244,7 @@ struct DC : KW {
 };
 
 // Delegating constructor with multiple bases.
+// user-provided default ctor -> no zero-init required
 struct Base {
   Base();
 };
@@ -264,6 +265,7 @@ struct DCF : KW {
   Base d{};
 };
 
+// trivial, non-empty -> value-init zeroes it
 struct non_empty {
   int a,b;
 };
@@ -289,6 +291,35 @@ struct DCNE : KW {
   DCNE() noexcept : KW() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: DCNE() noexcept = default;
+};
+
+// Delegating constructor with zero-init of an array of class type.
+struct DCNA {
+  DCNA() : entries() {}
+  // defaulting would remove the zero-init of entries.
+  non_empty entries[32];
+};
+
+// Zero-init of an array of scalars.
+struct DCNS {
+  DCNS() : buf() {}
+  // defaulting would remove the zero-init of buf.
+  unsigned buf[8];
+};
+
+// Same for a plain scalar member.
+struct DCNSM {
+  DCNSM() : x() {}
+  // defaulting would remove the zero-init of x.
+  int x;
+};
+
+// user-provided default ctor -> no zero-init required
+struct DCAU {
+  Base entries[4];
+  DCAU() : entries() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DCAU() = default;
 };
 
 struct OverrideWithSemiColon : KW {
