@@ -40,11 +40,13 @@ add_offload_unittest("memory"
     memory/olMemPrefetch.cpp
     memory/olGetMemInfo.cpp
     memory/olGetMemInfoSize.cpp
-    memory/olMemRegister.cpp)
+    memory/olMemRegister.cpp
+    memory/olMemIsAccessible.cpp)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
     platform/olGetPlatformInfoSize.cpp
+    platform/olRegisterRPCCallback.cpp
     platform/olIteratePlatforms.cpp)
 
 add_offload_unittest("program"

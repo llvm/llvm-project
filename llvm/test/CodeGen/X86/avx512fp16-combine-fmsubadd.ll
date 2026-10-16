@@ -102,3 +102,48 @@ define <32 x half> @test_mulc_512(<32 x half> %a, <32 x half> %b) {
   %cmul = shufflevector <32 x half> %sub, <32 x half> %add, <32 x i32> <i32 0, i32 33, i32 2, i32 35, i32 4, i32 37, i32 6, i32 39, i32 8, i32 41, i32 10, i32 43, i32 12, i32 45, i32 14, i32 47, i32 16, i32 49, i32 18, i32 51, i32 20, i32 53, i32 22, i32 55, i32 24, i32 57, i32 26, i32 59, i32 28, i32 61, i32 30, i32 63>
   ret <32 x half> %cmul
 }
+
+; these mustn't fold to vfmulc/vfcmulc
+define <8 x half> @test_no_contract_op2_128(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_no_contract_op2_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,0,2,2,4,5,6,7]
+; CHECK-NEXT:    vpshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,4,6,6]
+; CHECK-NEXT:    vprold $16, %xmm0, %xmm3
+; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
+; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,7,7]
+; CHECK-NEXT:    vmulph %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vfmsubadd213ph %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %dup_even_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %mul_re = fmul contract <8 x half> %a, %dup_even_b
+  %swap_a = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %dup_odd_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %mul_im = fmul <8 x half> %swap_a, %dup_odd_b
+  %add = fadd contract <8 x half> %mul_re, %mul_im
+  %sub = fsub contract <8 x half> %mul_re, %mul_im
+  %cmul = shufflevector <8 x half> %add, <8 x half> %sub, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x half> %cmul
+}
+
+define <8 x half> @test_mulc_no_contract_op2_128(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: test_mulc_no_contract_op2_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,0,2,2,4,5,6,7]
+; CHECK-NEXT:    vpshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,4,6,6]
+; CHECK-NEXT:    vprold $16, %xmm0, %xmm3
+; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
+; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,7,7]
+; CHECK-NEXT:    vmulph %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vfmaddsub213ph %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %dup_even_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %mul_re = fmul contract <8 x half> %a, %dup_even_b
+  %swap_a = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %dup_odd_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
+  %mul_im = fmul <8 x half> %swap_a, %dup_odd_b
+  %add = fadd contract <8 x half> %mul_re, %mul_im
+  %sub = fsub contract <8 x half> %mul_re, %mul_im
+  %cmul = shufflevector <8 x half> %sub, <8 x half> %add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+  ret <8 x half> %cmul
+}

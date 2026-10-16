@@ -125,7 +125,6 @@ void registerTestLowerToLLVM();
 void registerTestMakeIsolatedFromAbovePass();
 void registerTestMatchReductionPass();
 void registerTestMathAlgebraicSimplificationPass();
-void registerTestMathPolynomialApproximationPass();
 void registerTestMathToVCIXPass();
 void registerTestIrdlTestDialectConversionPass();
 void registerTestMemRefDependenceCheck();
@@ -276,7 +275,6 @@ static void registerTestPasses() {
   mlir::test::registerTestMakeIsolatedFromAbovePass();
   mlir::test::registerTestMatchReductionPass();
   mlir::test::registerTestMathAlgebraicSimplificationPass();
-  mlir::test::registerTestMathPolynomialApproximationPass();
   mlir::test::registerTestMathToVCIXPass();
   mlir::test::registerTestMemRefDependenceCheck();
   mlir::test::registerTestMemRefStrideCalculation();

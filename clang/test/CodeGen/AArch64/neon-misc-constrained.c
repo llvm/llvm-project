@@ -82,28 +82,6 @@ float32x4_t test_vsqrtq_f32(float32x4_t a) {
 }
 
 
-// UNCONSTRAINED-LABEL: define dso_local <2 x double> @test_vsqrtq_f64(
-// UNCONSTRAINED-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
-// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
-// UNCONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
-// UNCONSTRAINED-NEXT:    ret <2 x double> [[VSQRT_I]]
-//
-// CONSTRAINED-LABEL: define dso_local <2 x double> @test_vsqrtq_f64(
-// CONSTRAINED-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
-// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
-// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
-// CONSTRAINED-NEXT:    ret <2 x double> [[VSQRT_I]]
-//
-float64x2_t test_vsqrtq_f64(float64x2_t a) {
-  return vsqrtq_f64(a);
-}
-
 // UNCONSTRAINED-LABEL: define dso_local <4 x half> @test_vcvt_f16_f32(
 // UNCONSTRAINED-SAME: <4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]

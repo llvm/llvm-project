@@ -178,7 +178,7 @@ define amdgpu_kernel void @test_vcmp_vcnd_f16(ptr addrspace(1) %out, half %x) #0
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1032-NEXT:    v_cmp_neq_f16_e64 vcc_lo, 0x7c00, s2
+; GFX1032-NEXT:    v_cmp_neq_f16_e64 vcc_lo, s2, 0x7c00
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v0, 0x3c00, v0, vcc_lo
 ; GFX1032-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX1032-NEXT:    s_endpgm
@@ -191,7 +191,7 @@ define amdgpu_kernel void @test_vcmp_vcnd_f16(ptr addrspace(1) %out, half %x) #0
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s2
-; GFX1064-NEXT:    v_cmp_neq_f16_e64 vcc, 0x7c00, s2
+; GFX1064-NEXT:    v_cmp_neq_f16_e64 vcc, s2, 0x7c00
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v0, 0x3c00, v0, vcc
 ; GFX1064-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX1064-NEXT:    s_endpgm

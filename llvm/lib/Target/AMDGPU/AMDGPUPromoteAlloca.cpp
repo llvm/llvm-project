@@ -469,7 +469,7 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
 }
 
 static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
-  IRBuilder<> B(Ptr->getContext());
+  IRBuilder<> B(*AA.Alloca->getModule());
 
   Ptr = Ptr->stripPointerCasts();
   if (Ptr == AA.Alloca)

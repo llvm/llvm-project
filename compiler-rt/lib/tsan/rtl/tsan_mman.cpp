@@ -183,12 +183,7 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   if (IsFiredSuppression(ctx, ReportTypeSignalUnsafe, stack))
     return;
   ScopedReport rep(ReportTypeSignalUnsafe);
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    rep.AddStack(stack, true);
-  }
+  rep.AddStack(stack, true);
   OutputReport(thr, rep);
 }
 
