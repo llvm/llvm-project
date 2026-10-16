@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !cir.array<!s32i x 10>}>
+
+// A global initializer ending in many zeros lowers to a packed struct with a
+// zero-initialized tail, but a cir.const keeps its array type.
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @g = #cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
+  // CHECK: llvm.mlir.global external @g([1 : i32, #llvm.zero]) {{.*}} : !llvm.struct<packed (i32, array<9 x i32>)>
+
+  cir.func @array(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
+    %0 = cir.const #cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
+    cir.store %0, %arg0 : !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>
+    cir.return
+  }
+  // CHECK-LABEL: llvm.func @array
+  // CHECK: %[[C:.*]] = llvm.mlir.constant(dense<[1, 0, 0, 0, 0, 0, 0, 0, 0, 0]> : tensor<10xi32>) : !llvm.array<10 x i32>
+  // CHECK: llvm.store %[[C]], %{{.*}} : !llvm.array<10 x i32>, !llvm.ptr
+
+  cir.func @record(%arg0: !cir.ptr<!rec_S>) {
+    %0 = cir.const #cir.const_record<{#cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>}> : !rec_S
+    cir.store %0, %arg0 : !rec_S, !cir.ptr<!rec_S>
+    cir.return
+  }
+  // CHECK-LABEL: llvm.func @record
+  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm.struct<"struct.S", (array<10 x i32>)>, !llvm.ptr
+}
