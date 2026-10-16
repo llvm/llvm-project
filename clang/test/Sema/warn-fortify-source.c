@@ -180,7 +180,7 @@ void call_realpath(const char *path, char *unknown_buf) {
   realpath(path, (char *)0);
   realpath(path, unknown_buf);
   realpath(path, ok_buf);
-  realpath(path, small_buf); // expected-warning {{'realpath' may overflow; destination buffer has size 1023, but at least 1024 bytes are required}}
+  realpath(path, small_buf); // expected-warning {{'realpath' may overflow; destination buffer has size 1023, but at least 1024 bytes are required (or pass NULL to dynamically allocate)}}
 }
 
 void call_snprintf(double d, int n) {
