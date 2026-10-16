@@ -5433,8 +5433,7 @@ bool Parser::ParseOpenMPVarList(
       // OpenMP 6.0 [5.2.1, Parameter List Items] adds positions and parameter
       // ranges, which the shared list loop below cannot express because a range
       // colon terminates it.
-      if (getLangOpts().OpenMP >= 60 &&
-          Data.ExtraModifier != OMPC_ADJUST_ARGS_unknown) {
+      if (getLangOpts().OpenMP >= 60) {
         ParsedAdjustArgsList = true;
         InvalidAdjustArgsList = ParseOpenMPAdjustArgsList(AdjustArgsItems);
       }

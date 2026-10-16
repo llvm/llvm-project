@@ -577,9 +577,10 @@ static void instantiateOMPDeclareVariantAttr(
       Items.push_back(NewItem);
     }
     if (!Items.empty())
-      AdjustArgs.push_back(S.OpenMP().ActOnOpenMPAdjustArgsClause(
-          Desc->AdjustOp, Desc->NeedDevicePtrModifier, Items,
-          Attr.getLocation()));
+      if (OMPAdjustArgsDescriptor *D = S.OpenMP().ActOnOpenMPAdjustArgsClause(
+              Desc->AdjustOp, Desc->NeedDevicePtrModifier, Items,
+              Attr.getLocation()))
+        AdjustArgs.push_back(D);
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
