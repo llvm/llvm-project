@@ -208,6 +208,12 @@ public:
   /// to erase it from LIS.
   void eraseVirtReg(Register Reg);
 
+  /// eraseInstruction - Notify the delegate that \p MI is about to be erased,
+  /// then remove it from SlotIndexes and from its parent. Use this instead of
+  /// erasing an instruction by hand, so that analyses holding SlotIndexes into
+  /// it get a chance to update themselves first.
+  void eraseInstruction(MachineInstr &MI);
+
   /// eliminateDeadDefs - Try to delete machine instructions that are now dead
   /// (allDefsAreDead returns true). This may cause live intervals to be trimmed
   /// and further dead efs to be eliminated.

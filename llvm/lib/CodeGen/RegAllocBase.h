@@ -143,6 +143,10 @@ protected:
   /// Method called when the allocator is about to remove a LiveInterval.
   virtual void aboutToRemoveInterval(const LiveInterval &LI) {}
 
+  /// Method called just before the allocator erases \p MI, so that analyses
+  /// holding SlotIndexes into it can update themselves first.
+  virtual void aboutToEraseInstruction(MachineInstr &MI) {}
+
 public:
   /// VerifyEnabled - True when -verify-regalloc is given.
   static bool VerifyEnabled;

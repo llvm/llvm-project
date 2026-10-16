@@ -3612,6 +3612,15 @@ void MachineVerifier::verifyLiveIntervals() {
   for (MCRegUnit Unit : TRI->regunits())
     if (const LiveRange *LR = LiveInts->getCachedRegUnit(Unit))
       verifyLiveRange(*LR, VirtRegOrUnit(Unit));
+
+  // Nothing removes entries from RegMaskSlots when an instruction is erased,
+  // so check that none of them names one.
+  for (SlotIndex Idx : LiveInts->getRegMaskSlots()) {
+    if (Idx.isPoisoned()) {
+      report("Regmask slot at the index of an erased instruction", MF);
+      report_context(Idx);
+    }
+  }
 }
 
 void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,
@@ -3620,6 +3629,12 @@ void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,
                                            LaneBitmask LaneMask) {
   if (VNI->isUnused())
     return;
+
+  if (VNI->def.isPoisoned()) {
+    report("VNInfo defined at the index of an erased instruction", MF);
+    report_context(LR, VRegOrUnit, LaneMask);
+    report_context(*VNI);
+  }
 
   const VNInfo *DefVNI = LR.getVNInfoAt(VNI->def);
 
@@ -3712,6 +3727,12 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
   const LiveRange::Segment &S = *I;
   const VNInfo *VNI = S.valno;
   assert(VNI && "Live segment has no valno");
+
+  if (S.start.isPoisoned() || S.end.isPoisoned()) {
+    report("Live segment bounded by the index of an erased instruction", MF);
+    report_context(LR, VRegOrUnit, LaneMask);
+    report_context(S);
+  }
 
   if (VNI->id >= LR.getNumValNums() || VNI != LR.getValNumInfo(VNI->id)) {
     report("Foreign valno in live segment", MF);
