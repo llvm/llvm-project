@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -28,12 +29,12 @@
 using namespace llvm;
 
 /// Lower barriers out of existence (if the associated GCStrategy hasn't
-/// already done so...), and insert initializing stores to roots as a defensive
-/// measure.  Given we're going to report all roots live at all safepoints, we
-/// need to be able to ensure each root has been initialized by the point the
-/// first safepoint is reached.  This really should have been done by the
-/// frontend, but the old API made this non-obvious, so we do a potentially
-/// redundant store just in case.
+/// already done so...), and zero-initialize roots as a defensive measure.
+/// Given we're going to report all roots live at all safepoints, we need to be
+/// able to ensure each root has been initialized by the point the first
+/// safepoint is reached.  This really should have been done by the frontend,
+/// but the old API made this non-obvious, so we do a potentially redundant
+/// zeroing just in case.
 static bool DoLowering(Function &F, GCStrategy &S);
 
 namespace {
@@ -148,11 +149,13 @@ static bool CouldBecomeSafePoint(Instruction *I) {
       isa<LoadInst>(I))
     return false;
 
-  // llvm.gcroot is safe because it doesn't do anything at runtime.
+  // llvm.gcroot is safe because it doesn't do anything at runtime.  A memset
+  // is safe because it cannot collect; it is also how roots are initialized
+  // below, so exempting it keeps this pass idempotent.
   if (CallInst *CI = dyn_cast<CallInst>(I))
     if (Function *F = CI->getCalledFunction())
       if (Intrinsic::ID IID = F->getIntrinsicID())
-        if (IID == Intrinsic::gcroot)
+        if (IID == Intrinsic::gcroot || IID == Intrinsic::memset)
           return false;
 
   return true;
@@ -166,19 +169,35 @@ static bool InsertRootInitializers(Function &F, ArrayRef<AllocaInst *> Roots) {
 
   // Search for initializers in the initial BB.
   SmallPtrSet<AllocaInst *, 16> InitedRoots;
-  for (; !CouldBecomeSafePoint(&*IP); ++IP)
+  for (; !CouldBecomeSafePoint(&*IP); ++IP) {
+    Value *Dest = nullptr;
     if (StoreInst *SI = dyn_cast<StoreInst>(IP))
-      if (AllocaInst *AI =
-              dyn_cast<AllocaInst>(SI->getOperand(1)->stripPointerCasts()))
+      Dest = SI->getOperand(1);
+    else if (MemSetInst *MSI = dyn_cast<MemSetInst>(IP))
+      Dest = MSI->getDest();
+    if (Dest)
+      if (AllocaInst *AI = dyn_cast<AllocaInst>(Dest->stripPointerCasts()))
         InitedRoots.insert(AI);
+  }
 
-  // Add root initializers.
+  // Add root initializers.  The contents of a root are an opaque blob which
+  // only the collector understands, so all we can do is fill it with zeros;
+  // note that this is a zero bit pattern rather than a null value of the
+  // allocated type, which need not be the same thing.
+  const DataLayout &DL = F.getDataLayout();
   bool MadeChange = false;
 
   for (AllocaInst *Root : Roots)
     if (!InitedRoots.count(Root)) {
-      new StoreInst(Constant::getNullValue(Root->getAllocatedType()), Root,
-                    std::next(Root->getIterator()));
+      std::optional<TypeSize> RootSize = Root->getAllocationSize(DL);
+      if (!RootSize)
+        reportFatalUsageError(
+            "Intrinsic::gcroot requires a fixed size stack object");
+      IRBuilder<> Builder(&*std::next(Root->getIterator()));
+      Builder.CreateMemSet(
+          Root, Builder.getInt8(0),
+          Builder.CreateTypeSize(Builder.getInt64Ty(), *RootSize),
+          Root->getAlign());
       MadeChange = true;
     }
 
