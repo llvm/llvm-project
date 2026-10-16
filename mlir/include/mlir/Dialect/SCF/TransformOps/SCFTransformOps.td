@@ -370,6 +370,11 @@ def LoopUnrollAndJamOp : Op<Transform_Dialect, "loop.unroll_and_jam",
     number of loop body copies per iteration. If the unroll factor is larger
     than the loop trip count, the latter is used as the unroll factor instead.
 
+    For `scf.for`, loops with effects other than reads are currently rejected
+    conservatively when an inner `scf.for` would be jammed. This prevents the
+    transform from reordering potentially conflicting effects until a more
+    precise dependence analysis can prove that the reordering is legal.
+
     #### Return modes
 
     This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
