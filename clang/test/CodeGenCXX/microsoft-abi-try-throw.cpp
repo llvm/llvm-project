@@ -25,7 +25,7 @@ int main() {
 #endif
 #ifdef THROW
   // THROW: store i32 42, ptr %[[mem_for_throw:.*]], align 4
-  // THROW: call void @_CxxThrowException(ptr %[[mem_for_throw]], ptr @_TI1H)
+  // THROW: call x86_stdcallcc void @_CxxThrowException(ptr %[[mem_for_throw]], ptr @_TI1H)
   throw int(42);
 #endif
   return rv;
