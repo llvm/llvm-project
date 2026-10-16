@@ -958,7 +958,7 @@ __packed_pair_oe2(ppairoe_u16x2, uint16x2_t)
 __packed_pair_oo2(ppairo_i16x2, int16x2_t)
 __packed_pair_oo2(ppairo_u16x2, uint16x2_t)
 
-/* Packed Pair (64-bit byte and halfword forms) */
+/* Packed Pair (64-bit) */
 __packed_pair_ee8(ppaire_i8x8, int8x8_t)
 __packed_pair_ee8(ppaire_u8x8, uint8x8_t)
 __packed_pair_eo8(ppaireo_i8x8, int8x8_t)
@@ -975,6 +975,14 @@ __packed_pair_oe4(ppairoe_i16x4, int16x4_t)
 __packed_pair_oe4(ppairoe_u16x4, uint16x4_t)
 __packed_pair_oo4(ppairo_i16x4, int16x4_t)
 __packed_pair_oo4(ppairo_u16x4, uint16x4_t)
+__packed_pair_ee2(ppaire_i32x2, int32x2_t)
+__packed_pair_ee2(ppaire_u32x2, uint32x2_t)
+__packed_pair_eo2(ppaireo_i32x2, int32x2_t)
+__packed_pair_eo2(ppaireo_u32x2, uint32x2_t)
+__packed_pair_oe2(ppairoe_i32x2, int32x2_t)
+__packed_pair_oe2(ppairoe_u32x2, uint32x2_t)
+__packed_pair_oo2(ppairo_i32x2, int32x2_t)
+__packed_pair_oo2(ppairo_u32x2, uint32x2_t)
 
 /* Packed Narrowing Zip (32-bit) */
 __packed_nzip2(pnzip_i8x4, int8x4_t, int16x2_t)
