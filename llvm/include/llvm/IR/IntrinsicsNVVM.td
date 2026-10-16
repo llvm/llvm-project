@@ -1825,18 +1825,19 @@ let TargetPrefix = "nvvm" in {
   //
   // Fma
   //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
-                        IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<3>>,
-                        Range<ArgIndex<3>, 0, 4>,
-                        ArgInfo<ArgIndex<3>,
-                                [ArgName<"rnd">,
-                                 ImmArgPrinter<"printFPRoundingMode">]>] in
-    foreach ftz = ["", "_ftz"] in
-      foreach variant = ["", "_sat", "_relu"] in
-        def int_nvvm_fma # ftz # variant :
-          DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-                                [LLVMMatchType<0>, LLVMMatchType<0>,
-                                 LLVMMatchType<0>, llvm_i32_ty]>;
+  // TODO: Add tests for commutativity along with missing mixed precision 
+  // patterns.
+  foreach ftz = ["", "_ftz"] in
+    foreach variant = ["", "_sat", "_relu"] in
+      def int_nvvm_fma # ftz # variant :
+        PureIntrinsic<[llvm_anyfloat_ty],
+                      [LLVMMatchType<0>, LLVMMatchType<0>,
+                       LLVMMatchType<0>, llvm_i32_ty],
+                      [Commutative, ImmArg<ArgIndex<3>>,
+                       Range<ArgIndex<3>, 0, 4>,
+                       ArgInfo<ArgIndex<3>,
+                               [ArgName<"rnd">,
+                                ImmArgPrinter<"printFPRoundingMode">]>]>;
 
   // oob (out-of-bounds) - clamps the result to 0 if either of the operand is
   // an OOB NaN value.
