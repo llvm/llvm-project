@@ -1118,10 +1118,11 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
   }
 }
 
-// v_movrel[sd]_b32 for the moves the pseudos above expand into. The verifier
-// requires a movrel to use the tuple it indexes, and no operand can name the
-// register file, so these have their own opcodes, mapped back by
-// AMDGPUMCInstLower. AMDGPULowerVGPREncoding needs their named operand table.
+// The moves the pseudos above expand into. A real v_movrel[sd]_b32 must carry
+// implicit operands for the register tuple it indexes, but these index the
+// whole register file, so they have their own opcodes, which
+// AMDGPUMCInstLower encodes as the real movrel. AMDGPULowerVGPREncoding needs
+// their named operand table.
 let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
     UseNamedOperandTable = 1, Size = V_MOV_B32_e32.Size in {
   def V_MOVRELS_B32_as_mem
@@ -1130,25 +1131,38 @@ let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
       : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
 }
 
-// An (add idx, imm) index folds the constant into $offset. The movrel patterns
-// take the index as an M0 input, so selection itself writes M0.
+// The constant of an (add idx, imm) index becomes the base register the move
+// adds the index to. It folds only if that register stays within the VGPRs the
+// function can address and the addition cannot wrap, as the hardware's does
+// not.
+class VRegIdxFoldableAdd<int NumDwords> : PatFrag<
+  (ops node:$idx, node:$offset), (add node:$idx, node:$offset), [{
+  return isVRegIdxFoldableAdd(N, }] # NumDwords # [{);
+}]>;
+
+// The movrel patterns take the index as an M0 input, so selection itself
+// writes M0.
 multiclass VRegIdxLoadStorePat<ValueType vt> {
   defvar load_inst = !cast<Instruction>("V_LOAD_IDX_B"#vt.Size);
   defvar store_inst = !cast<Instruction>("V_STORE_IDX_B"#vt.Size);
   defvar gpr_idx_load_inst = !cast<Instruction>("V_LOAD_IDX_GPR_IDX_B"#vt.Size);
   defvar gpr_idx_store_inst =
       !cast<Instruction>("V_STORE_IDX_GPR_IDX_B"#vt.Size);
+  defvar foldable_add = VRegIdxFoldableAdd<!div(vt.Size, 32)>;
 
   let OtherPredicates = [NotUseVGPRIndexMode] in {
     def : GCNPat<
-      (vt (SIreg_load (add M0, (i32 imm:$offset)))),
+      (vt (SIreg_load (foldable_add M0, (i32 imm:$offset)))),
       (load_inst imm:$offset)>;
+
     def : GCNPat<
       (vt (SIreg_load M0)),
       (load_inst 0)>;
+
     def : GCNPat<
-      (SIreg_store vt:$data, (add M0, (i32 imm:$offset))),
+      (SIreg_store vt:$data, (foldable_add M0, (i32 imm:$offset))),
       (store_inst $data, imm:$offset)>;
+
     def : GCNPat<
       (SIreg_store vt:$data, M0),
       (store_inst $data, 0)>;
@@ -1156,14 +1170,17 @@ multiclass VRegIdxLoadStorePat<ValueType vt> {
 
   let OtherPredicates = [UseVGPRIndexMode] in {
     def : GCNPat<
-      (vt (SIreg_load (add i32:$idx, (i32 imm:$offset)))),
+      (vt (SIreg_load (foldable_add i32:$idx, (i32 imm:$offset)))),
       (gpr_idx_load_inst $idx, imm:$offset)>;
+
     def : GCNPat<
       (vt (SIreg_load i32:$idx)),
       (gpr_idx_load_inst $idx, 0)>;
+
     def : GCNPat<
-      (SIreg_store vt:$data, (add i32:$idx, (i32 imm:$offset))),
+      (SIreg_store vt:$data, (foldable_add i32:$idx, (i32 imm:$offset))),
       (gpr_idx_store_inst $data, $idx, imm:$offset)>;
+
     def : GCNPat<
       (SIreg_store vt:$data, i32:$idx),
       (gpr_idx_store_inst $data, $idx, 0)>;
@@ -4951,8 +4968,6 @@ def G_AMDGPU_BUFFER_STORE_FORMAT_D16 : BufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT : TBufferStoreGenericInstruction;
 def G_AMDGPU_TBUFFER_STORE_FORMAT_D16 : TBufferStoreGenericInstruction;
 
-// GlobalISel equivalents, selected through the same patterns (GINodeEquiv in
-// AMDGPUGISel.td).
 def G_AMDGPU_REG_LOAD : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$dword_index);

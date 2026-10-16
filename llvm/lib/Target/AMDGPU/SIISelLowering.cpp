@@ -13602,7 +13602,7 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
 
 // Lower a VGPR ("as memory") load or store to a REG_LOAD / REG_STORE node
 // carrying the dword index. TODO: sub-dword accesses.
-SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
+SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MemSDNode *MemOp = cast<MemSDNode>(Op);
@@ -13653,9 +13653,7 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   }
 
   if (auto *StoreOp = dyn_cast<StoreSDNode>(MemOp)) {
-    SDValue Value = StoreOp->getValue();
-    if (RegVT != MemVT)
-      Value = DAG.getNode(ISD::BITCAST, DL, RegVT, Value);
+    SDValue Value = DAG.getBitcast(RegVT, StoreOp->getValue());
     return DAG.getMemIntrinsicNode(
         AMDGPUISD::REG_STORE, DL, DAG.getVTList(MVT::Other),
         {Chain, Value, Index}, MemVT, StoreOp->getMemOperand());
@@ -13665,15 +13663,10 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   SDValue NewLoad = DAG.getMemIntrinsicNode(
       AMDGPUISD::REG_LOAD, DL, DAG.getVTList(RegVT, MVT::Other), {Chain, Index},
       MemVT, LoadOp->getMemOperand());
-  SDValue Value = NewLoad;
-  if (RegVT != MemVT)
-    Value = DAG.getNode(ISD::BITCAST, DL, MemVT, Value);
+  SDValue Value = DAG.getBitcast(MemVT, NewLoad);
   // The combiner folds an extension of a whole-dword load into the load.
-  EVT VT = LoadOp->getValueType(0);
-  if (VT != MemVT)
-    Value = DAG.getNode(ISD::getExtForLoadExtType(VT.isFloatingPoint(),
-                                                  LoadOp->getExtensionType()),
-                        DL, VT, Value);
+  Value = getLoadExtOrTrunc(DAG, LoadOp->getExtensionType(), Value, DL,
+                            LoadOp->getValueType(0));
   if (Value == NewLoad)
     return NewLoad;
   return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
@@ -13687,7 +13680,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   MachineMemOperand *MMO = Load->getMemOperand();
 
   if (Load->getAddressSpace() == AMDGPUAS::VGPR)
-    return LowerLoadStoreVGPR(Op, DAG);
+    return lowerLoadStoreVGPR(Op, DAG);
 
   if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
@@ -14386,7 +14379,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Store->getMemoryVT();
 
   if (Store->getAddressSpace() == AMDGPUAS::VGPR)
-    return LowerLoadStoreVGPR(Op, DAG);
+    return lowerLoadStoreVGPR(Op, DAG);
 
   if (VT == MVT::i1) {
     return DAG.getTruncStore(
@@ -19469,12 +19462,12 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     // Done here rather than via operation legalization so it also fires at
     // -O0, where a scalar load is Legal and never reaches LowerLOAD.
     if (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR)
-      if (SDValue V = LowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
+      if (SDValue V = lowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
         return V;
     break;
   case ISD::STORE:
     if (cast<StoreSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR)
-      if (SDValue V = LowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
+      if (SDValue V = lowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
         return V;
     break;
   default:
@@ -19615,29 +19608,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
-  case AMDGPUISD::REG_LOAD:
-  case AMDGPUISD::REG_STORE: {
-    const SIMachineFunctionInfo *MFI =
-        DCI.DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
-    unsigned NumAddressableVGPRs =
-        Subtarget->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
-    APInt IndexMask =
-        APInt::getLowBitsSet(32, Log2_32_Ceil(NumAddressableVGPRs));
-
-    unsigned IndexOpIdx = 0;
-    switch (N->getOpcode()) {
-    case AMDGPUISD::REG_LOAD:
-      IndexOpIdx = 1;
-      break;
-    case AMDGPUISD::REG_STORE:
-      IndexOpIdx = 2;
-      break;
-    }
-
-    if (SimplifyDemandedBits(N->getOperand(IndexOpIdx), IndexMask, DCI))
-      return SDValue(N, 0);
-    break;
-  }
   case ISD::LOAD: {
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;

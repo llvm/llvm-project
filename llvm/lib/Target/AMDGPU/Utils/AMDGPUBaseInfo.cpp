@@ -493,7 +493,10 @@ const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc) {
 }
 
 const VLdStIdxOpcodeInfo *
-getVLdStIdxOpcodeInfoByKey(uint16_t BitWidth, bool IsStore, bool IsGPRIdx) {
+getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx) {
+  // The table's key is 16 bits, which a wider width would wrap onto an entry.
+  if (!isUInt<16>(BitWidth))
+    return nullptr;
   return getVLdStIdxOpcodeInfoByKeyImpl(BitWidth, IsStore, IsGPRIdx);
 }
 

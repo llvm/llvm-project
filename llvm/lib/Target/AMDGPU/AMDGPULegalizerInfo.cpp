@@ -3520,7 +3520,8 @@ static LLT widenToNextPowerOf2(LLT Ty) {
 }
 
 /// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into
-/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels LowerLoadStoreVGPR.
+/// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels
+/// SITargetLowering::lowerLoadStoreVGPR.
 static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();

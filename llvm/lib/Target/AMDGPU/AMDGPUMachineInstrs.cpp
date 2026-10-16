@@ -11,11 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineInstrs.h"
+#include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 
 using namespace llvm;
 using namespace AMDGPUMI;
+
+unsigned VLoadStoreIdxInst::getNumIndexableVGPRs(const MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  return std::min(ST.getAddressableNumArchVGPRs(),
+                  ST.getAddressableNumVGPRs(DynamicVGPRBlockSize));
+}
 
 int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
