@@ -13,6 +13,9 @@
 
 #include "WebAssemblyMCTypeUtilities.h"
 #include "WebAssemblyMCTargetDesc.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
@@ -119,4 +122,54 @@ wasm::ValType WebAssembly::regClassToValType(unsigned RC) {
   default:
     llvm_unreachable("unexpected type");
   }
+}
+
+std::optional<wasm::WasmInitExpr>
+WebAssembly::makeGlobalInitExpr(wasm::ValType Type, uint64_t Bits) {
+  wasm::WasmInitExpr Expr;
+  Expr.Extended = false;
+  switch (Type) {
+  case wasm::ValType::I32:
+    Expr.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
+    Expr.Inst.Value.Int32 = static_cast<int32_t>(static_cast<uint32_t>(Bits));
+    return Expr;
+  case wasm::ValType::I64:
+    Expr.Inst.Opcode = wasm::WASM_OPCODE_I64_CONST;
+    Expr.Inst.Value.Int64 = static_cast<int64_t>(Bits);
+    return Expr;
+  case wasm::ValType::F32:
+    Expr.Inst.Opcode = wasm::WASM_OPCODE_F32_CONST;
+    Expr.Inst.Value.Float32 = static_cast<uint32_t>(Bits);
+    return Expr;
+  case wasm::ValType::F64:
+    Expr.Inst.Opcode = wasm::WASM_OPCODE_F64_CONST;
+    Expr.Inst.Value.Float64 = Bits;
+    return Expr;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::string WebAssembly::floatToString(const APFloat &FP) {
+  // Print NaNs with custom payloads specially.
+  if (FP.isNaN() && !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) &&
+      !FP.bitwiseIsEqual(
+          APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) {
+    APInt AI = FP.bitcastToAPInt();
+    return std::string(AI.isNegative() ? "-" : "") + "nan:0x" +
+           utohexstr(AI.getZExtValue() &
+                         (AI.getBitWidth() == 32 ? INT64_C(0x007fffff)
+                                                 : INT64_C(0x000fffffffffffff)),
+                     /*LowerCase=*/true);
+  }
+
+  // Use C99's hexadecimal floating-point representation.
+  static const size_t BufBytes = 128;
+  char Buf[BufBytes];
+  auto Written = FP.convertToHexString(
+      Buf, /*HexDigits=*/0, /*UpperCase=*/false, APFloat::rmNearestTiesToEven);
+  (void)Written;
+  assert(Written != 0);
+  assert(Written < BufBytes);
+  return Buf;
 }
