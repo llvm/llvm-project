@@ -21,23 +21,23 @@ contains
 
   attributes(host,device) subroutine caller()
     ! Review example: the STOP code expression runs on both targets.
-    !ERROR: The DEVICE procedure 'd' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'd' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     stop d()
   end subroutine
   attributes(host,device) subroutine host_code()
-    !ERROR: The HOST procedure 'h' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'h' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     stop h()
   end subroutine
   attributes(host,device) subroutine error_code()
-    !ERROR: The DEVICE procedure 'd' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'd' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     error stop d()
   end subroutine
   attributes(host,device) subroutine quiet_device()
-    !ERROR: The DEVICE procedure 'device_quiet' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'device_quiet' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     stop 1, quiet=device_quiet()
   end subroutine
   attributes(host,device) subroutine quiet_host()
-    !ERROR: The HOST procedure 'host_quiet' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_quiet' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     error stop 'failed', quiet=host_quiet()
   end subroutine
   attributes(host,device) subroutine both_code()

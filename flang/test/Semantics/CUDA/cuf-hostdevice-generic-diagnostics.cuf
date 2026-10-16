@@ -57,20 +57,20 @@ contains
   attributes(host,device) subroutine unguarded(n, x)
     integer :: n
     real :: x
-    !ERROR: The HOST procedure 'host_generic' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_generic' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = host_generic(n)
-    !ERROR: The HOST procedure 'host_generic' (specific procedure 'host_real') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_generic' (specific procedure 'host_real') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     x = host_generic(x)
-    !ERROR: The DEVICE procedure 'device_generic' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'device_generic' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = device_generic(n)
-    !ERROR: The HOST procedure 'host_sub_generic' (specific procedure 'host_sub') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_sub_generic' (specific procedure 'host_sub') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     call host_sub_generic(n)
-    !ERROR: The DEVICE procedure 'device_sub_generic' (specific procedure 'device_sub') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'device_sub_generic' (specific procedure 'device_sub') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     call device_sub_generic(n)
     ! Ordinary calls keep their single-name diagnostics.
-    !ERROR: The HOST procedure 'host_integer' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_integer' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = host_integer(n)
-    !ERROR: The DEVICE procedure 'device_integer' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'device_integer' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = device_integer(n)
     n = both_generic(n)
   end subroutine
@@ -99,18 +99,18 @@ module generic_alias_callers
 contains
   attributes(host,device) subroutine aliases(n)
     integer :: n
-    !ERROR: The HOST procedure 'renamed_host' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'renamed_host' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = renamed_host(n)
-    !ERROR: The HOST procedure 'another_host' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'another_host' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = another_host(n)
-    !ERROR: The DEVICE procedure 'renamed_device' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'renamed_device' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = renamed_device(n)
-    !ERROR: The HOST procedure 'renamed_sub' (specific procedure 'host_sub') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'renamed_sub' (specific procedure 'host_sub') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     call renamed_sub(n)
-    !ERROR: The HOST procedure 'renamed_host' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'renamed_host' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = both_generic(renamed_host(n))
     ! A USE alias of an ordinary specific is not a generic reference.
-    !ERROR: The HOST procedure 'specific_alias' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'specific_alias' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = specific_alias(n)
   end subroutine
 end module
@@ -122,13 +122,13 @@ contains
     type(bound_targets) :: t
     class(bound_targets) :: poly
     integer :: n
-    !ERROR: The HOST procedure 'host_bound' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_bound' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = t%host_bound(n)
-    !ERROR: The DEVICE procedure 'device_bound' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'device_bound' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = t%device_bound(n)
-    !ERROR: The HOST procedure 'host_bound' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_bound' (specific procedure 'host_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = poly%host_bound(n)
-    !ERROR: The DEVICE procedure 'device_bound' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'device_bound' (specific procedure 'device_integer') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = poly%device_bound(n)
   end subroutine
 end module
@@ -139,7 +139,7 @@ contains
   attributes(host,device) subroutine atomic_call(a, n, old)
     integer, device :: a(*)
     integer :: n, old
-    !ERROR: The DEVICE procedure 'atomicadd' (specific procedure 'atomicaddi') may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The DEVICE procedure 'atomicadd' (specific procedure 'atomicaddi') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     old = atomicadd(a(1), n)
   end subroutine
 end module
@@ -156,7 +156,7 @@ contains
   attributes(host,device) subroutine caller(n)
     integer :: n
     ! Do not repeat the name when generic and specific have the same spelling.
-    !ERROR: The HOST procedure 'same_name' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'same_name' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     n = same_name(n)
   end subroutine
 end module

@@ -197,7 +197,8 @@ private:
       const evaluate::ProcedureDesignator &proc, bool inHostCode) const {
     const char *procedureType{inHostCode ? "DEVICE" : "HOST"};
     const char *codeContext{callContext_ == CallContext::HostDevice
-            ? "HOST,DEVICE code without an ON_DEVICE() guard"
+            ? "HOST,DEVICE code without a guard using ON_DEVICE() from the "
+              "CUDADEVICE module"
             : inHostCode ? "HOST code"
                          : "DEVICE code"};
     if (auto generic{proc.genericName()}) {

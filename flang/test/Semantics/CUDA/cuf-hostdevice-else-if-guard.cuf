@@ -18,7 +18,7 @@ contains
       call host_only()
     end if
     ! The guard does not apply after the entire IF.
-    !ERROR: The HOST procedure 'host_only' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+    !ERROR: The HOST procedure 'host_only' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
     call host_only()
   end subroutine
   attributes(host,device) subroutine later_else(x, y)
@@ -54,7 +54,7 @@ contains
       call host_only()
     else
       ! A nested guard in another arm does not guard this ELSE.
-      !ERROR: The HOST procedure 'host_only' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
+      !ERROR: The HOST procedure 'host_only' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
       call host_only()
     end if
   end subroutine
