@@ -11,42 +11,26 @@ define amdgpu_cs void @uniform_unstructured_around_nonuniform_subregion(i32 inre
 ; CHECK-LABEL: uniform_unstructured_around_nonuniform_subregion:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
-; CHECK-NEXT:  ; %bb.1: ; %B
-; CHECK-NEXT:    s_cmp_eq_u32 s1, 0
-; CHECK-NEXT:    s_mov_b32 s0, -1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
+; CHECK-NEXT:  ; %bb.1: ; %B
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
 ; CHECK-NEXT:  ; %bb.2: ; %B1
-; CHECK-NEXT:    v_mov_b32_e32 v3, 2
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
-; CHECK-NEXT:  .LBB0_3: ; %Flow2
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_branch .LBB0_5
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    s_mov_b32 s1, -1
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:  .LBB0_5: ; %Flow1
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_9
-; CHECK-NEXT:  ; %bb.6: ; %A
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB0_3: ; %A
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; CHECK-NEXT:    s_cbranch_execz .LBB0_8
-; CHECK-NEXT:  ; %bb.7: ; %A.then
+; CHECK-NEXT:    s_cbranch_execz .LBB0_5
+; CHECK-NEXT:  ; %bb.4: ; %A.then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB0_8: ; %Flow
+; CHECK-NEXT:  .LBB0_5: ; %Flow
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_mov_b32 s0, -1
-; CHECK-NEXT:  .LBB0_9: ; %Flow3
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_b32 s0, s0, exec_lo
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_11
-; CHECK-NEXT:  ; %bb.10: ; %A.end
+; CHECK-NEXT:  .LBB0_6: ; %A.end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB0_11: ; %end
 ; CHECK-NEXT:    s_endpgm
 entry:
   %c1 = icmp eq i32 %u1, 0
@@ -83,60 +67,41 @@ define amdgpu_cs void @uniform_loop_around_nonuniform_subregion(i32 inreg %n, i3
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 3
 ; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    s_set_inst_prefetch_distance 0x1
-; CHECK-NEXT:    s_branch .LBB1_2
+; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:    .p2align 6
-; CHECK-NEXT:  .LBB1_1: ; %latch
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:  .LBB1_1: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; CHECK-NEXT:  .LBB1_2: ; %div.end
+; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
+; CHECK-NEXT:  .LBB1_3: ; %latch
+; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    s_add_i32 s2, s2, 1
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lt_u32 s2, s0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB1_10
-; CHECK-NEXT:  .LBB1_2: ; %loop
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_8
+; CHECK-NEXT:  .LBB1_4: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_mov_b32 s4, -1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, s2
-; CHECK-NEXT:    s_mov_b32 s3, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_5
-; CHECK-NEXT:  ; %bb.3: ; %Flow1
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_and_b32 s4, s4, exec_lo
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_6
-; CHECK-NEXT:  .LBB1_4: ; %Flow2
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_and_b32 s3, s3, exec_lo
-; CHECK-NEXT:    s_cbranch_scc0 .LBB1_1
-; CHECK-NEXT:    s_branch .LBB1_9
-; CHECK-NEXT:    .p2align 6
-; CHECK-NEXT:  .LBB1_5: ; %other
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 7
-; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
-; CHECK-NEXT:    s_and_b32 s4, s4, exec_lo
-; CHECK-NEXT:    s_cbranch_scc0 .LBB1_4
-; CHECK-NEXT:  .LBB1_6: ; %div
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_7
+; CHECK-NEXT:  ; %bb.5: ; %div
+; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    s_mov_b32 s3, exec_lo
 ; CHECK-NEXT:    v_cmpx_eq_u32_e32 s2, v0
-; CHECK-NEXT:    s_cbranch_execz .LBB1_8
-; CHECK-NEXT:  ; %bb.7: ; %div.then
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    s_cbranch_execz .LBB1_1
+; CHECK-NEXT:  ; %bb.6: ; %div.then
+; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s2
 ; CHECK-NEXT:    global_store_b32 v[1:2], v4, off
-; CHECK-NEXT:  .LBB1_8: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; CHECK-NEXT:    s_mov_b32 s3, -1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_b32 s3, s3, exec_lo
-; CHECK-NEXT:    s_cbranch_scc0 .LBB1_1
-; CHECK-NEXT:  .LBB1_9: ; %div.end
-; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
 ; CHECK-NEXT:    s_branch .LBB1_1
-; CHECK-NEXT:  .LBB1_10: ; %exit
-; CHECK-NEXT:    s_set_inst_prefetch_distance 0x2
+; CHECK-NEXT:    .p2align 6
+; CHECK-NEXT:  .LBB1_7: ; %other
+; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    s_cmp_eq_u32 s2, 7
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_2
+; CHECK-NEXT:    s_branch .LBB1_3
+; CHECK-NEXT:  .LBB1_8: ; %exit
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %loop
@@ -177,45 +142,34 @@ define amdgpu_cs void @uniform_around_nonuniform_loop(i32 inreg %u1, i32 inreg %
 ; CHECK-LABEL: uniform_around_nonuniform_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB2_7
-; CHECK-NEXT:  ; %bb.1: ; %B
-; CHECK-NEXT:    s_cmp_eq_u32 s1, 0
-; CHECK-NEXT:    s_mov_b32 s0, -1
+; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB2_3
+; CHECK-NEXT:  ; %bb.1: ; %B
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB2_6
 ; CHECK-NEXT:  ; %bb.2: ; %B1
-; CHECK-NEXT:    v_mov_b32_e32 v3, 2
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
-; CHECK-NEXT:  .LBB2_3: ; %Flow1
-; CHECK-NEXT:  .LBB2_4: ; %Flow2
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_vccz .LBB2_6
-; CHECK-NEXT:  .LBB2_5: ; %L.end
-; CHECK-NEXT:    v_mov_b32_e32 v0, 3
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB2_6: ; %end
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB2_7:
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_cbranch_execz .LBB2_4
-; CHECK-NEXT:  ; %bb.8: ; %L.preheader
+; CHECK-NEXT:  .LBB2_3: ; %L.preheader
 ; CHECK-NEXT:    s_mov_b32 s1, -1
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:  .LBB2_9: ; %L
+; CHECK-NEXT:  .LBB2_4: ; %L
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_add_i32 s2, s1, 2
 ; CHECK-NEXT:    s_add_i32 s1, s1, 1
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_execnz .LBB2_9
-; CHECK-NEXT:  ; %bb.10: ; %L.end.loopexit
+; CHECK-NEXT:    s_cbranch_execnz .LBB2_4
+; CHECK-NEXT:  ; %bb.5: ; %L.end.loopexit
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
-; CHECK-NEXT:    s_cbranch_execnz .LBB2_5
-; CHECK-NEXT:    s_branch .LBB2_6
+; CHECK-NEXT:  .LBB2_6: ; %L.end
+; CHECK-NEXT:    v_mov_b32_e32 v0, 3
+; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
+; CHECK-NEXT:    s_endpgm
 entry:
   %c1 = icmp eq i32 %u1, 0
   br i1 %c1, label %L, label %B
@@ -249,49 +203,33 @@ define amdgpu_cs void @uniform_around_nonuniform_if_else(i32 inreg %u1, i32 inre
 ; CHECK-LABEL: uniform_around_nonuniform_if_else:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB3_4
-; CHECK-NEXT:  ; %bb.1: ; %B
-; CHECK-NEXT:    s_cmp_eq_u32 s1, 0
-; CHECK-NEXT:    s_mov_b32 s0, -1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_3
+; CHECK-NEXT:  ; %bb.1: ; %B
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB3_8
 ; CHECK-NEXT:  ; %bb.2: ; %B1
-; CHECK-NEXT:    v_mov_b32_e32 v3, 2
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
-; CHECK-NEXT:  .LBB3_3: ; %Flow3
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_branch .LBB3_5
-; CHECK-NEXT:  .LBB3_4:
-; CHECK-NEXT:    s_mov_b32 s1, -1
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:  .LBB3_5: ; %Flow2
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
-; CHECK-NEXT:    s_cbranch_vccz .LBB3_11
-; CHECK-NEXT:  ; %bb.6: ; %A
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB3_3: ; %A
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB3_8
-; CHECK-NEXT:  ; %bb.7: ; %A.else
+; CHECK-NEXT:    s_cbranch_execz .LBB3_5
+; CHECK-NEXT:  ; %bb.4: ; %A.else
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 4
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB3_8: ; %Flow
+; CHECK-NEXT:  .LBB3_5: ; %Flow
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB3_10
-; CHECK-NEXT:  ; %bb.9: ; %A.then
+; CHECK-NEXT:    s_cbranch_execz .LBB3_7
+; CHECK-NEXT:  ; %bb.6: ; %A.then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB3_10: ; %Flow1
+; CHECK-NEXT:  .LBB3_7: ; %Flow1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; CHECK-NEXT:    s_mov_b32 s0, -1
-; CHECK-NEXT:  .LBB3_11: ; %Flow4
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_b32 s0, s0, exec_lo
-; CHECK-NEXT:    s_cbranch_scc0 .LBB3_13
-; CHECK-NEXT:  ; %bb.12: ; %A.end
+; CHECK-NEXT:  .LBB3_8: ; %A.end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB3_13: ; %end
 ; CHECK-NEXT:    s_endpgm
 entry:
   %c1 = icmp eq i32 %u1, 0
@@ -332,59 +270,43 @@ define amdgpu_cs void @nonuniform_subregion_exit_is_uniform_loop_header(i32 inre
 ; CHECK-LABEL: nonuniform_subregion_exit_is_uniform_loop_header:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB4_5
+; CHECK-NEXT:    s_cbranch_scc0 .LBB4_3
 ; CHECK-NEXT:  ; %bb.1: ; %E
-; CHECK-NEXT:    s_cmp_eq_u32 s1, 0
-; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB4_6
-; CHECK-NEXT:  ; %bb.2: ; %Flow
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_vccnz .LBB4_7
-; CHECK-NEXT:  .LBB4_3: ; %Flow2
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_vccnz .LBB4_13
-; CHECK-NEXT:  .LBB4_4: ; %exit
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB4_9
+; CHECK-NEXT:  .LBB4_2: ; %exit
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB4_5:
-; CHECK-NEXT:    s_cbranch_execz .LBB4_3
-; CHECK-NEXT:    s_branch .LBB4_7
-; CHECK-NEXT:  .LBB4_6: ; %E1
-; CHECK-NEXT:    v_mov_b32_e32 v3, 2
-; CHECK-NEXT:    s_mov_b32 s0, -1
-; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s4
-; CHECK-NEXT:    s_cbranch_vccz .LBB4_3
-; CHECK-NEXT:  .LBB4_7: ; %D
+; CHECK-NEXT:  .LBB4_3: ; %D
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; CHECK-NEXT:    s_cbranch_execz .LBB4_9
-; CHECK-NEXT:  ; %bb.8: ; %D.then
+; CHECK-NEXT:    s_cbranch_execz .LBB4_5
+; CHECK-NEXT:  ; %bb.4: ; %D.then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
-; CHECK-NEXT:  .LBB4_9: ; %H.preheader
+; CHECK-NEXT:  .LBB4_5: ; %H.preheader
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 3
-; CHECK-NEXT:  .LBB4_10: ; %H
+; CHECK-NEXT:  .LBB4_6: ; %H
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    global_load_b32 v4, v0, s[2:3] glc dlc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; CHECK-NEXT:    s_cbranch_vccnz .LBB4_12
-; CHECK-NEXT:  ; %bb.11: ; %H.latch
-; CHECK-NEXT:    ; in Loop: Header=BB4_10 Depth=1
+; CHECK-NEXT:    s_cbranch_vccnz .LBB4_8
+; CHECK-NEXT:  ; %bb.7: ; %H.latch
+; CHECK-NEXT:    ; in Loop: Header=BB4_6 Depth=1
 ; CHECK-NEXT:    global_store_b32 v[1:2], v3, off
 ; CHECK-NEXT:    global_load_b32 v4, v0, s[2:3] glc dlc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s1, v4
-; CHECK-NEXT:    s_cbranch_vccnz .LBB4_10
-; CHECK-NEXT:  .LBB4_12: ; %X
+; CHECK-NEXT:    s_cbranch_vccnz .LBB4_6
+; CHECK-NEXT:  .LBB4_8: ; %X
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 1
-; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
-; CHECK-NEXT:    s_cbranch_vccz .LBB4_4
-; CHECK-NEXT:  .LBB4_13: ; %X1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB4_2
+; CHECK-NEXT:    s_branch .LBB4_10
+; CHECK-NEXT:  .LBB4_9: ; %E1
+; CHECK-NEXT:    v_mov_b32_e32 v0, 2
+; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
+; CHECK-NEXT:  .LBB4_10: ; %X1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 5
 ; CHECK-NEXT:    global_store_b32 v[1:2], v0, off
 ; CHECK-NEXT:    s_endpgm

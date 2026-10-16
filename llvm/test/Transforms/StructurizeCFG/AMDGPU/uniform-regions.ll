@@ -192,11 +192,8 @@ end:
 define amdgpu_cs void @uniform_unstructured_around_nonuniform_subregion(i32 inreg %u1, i32 inreg %u2, i32 %v, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @uniform_unstructured_around_nonuniform_subregion(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[U1:%.*]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[B:%.*]], label [[FLOW1:%.*]]
-; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[B1:%.*]] ], [ true, [[B]] ]
-; CHECK-NEXT:    br label [[FLOW1]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[U1:%.*]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[A:%.*]], label [[B:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[D:%.*]] = icmp eq i32 [[V:%.*]], 0
 ; CHECK-NEXT:    br i1 [[D]], label [[A_THEN:%.*]], label [[FLOW:%.*]]
@@ -205,22 +202,15 @@ define amdgpu_cs void @uniform_unstructured_around_nonuniform_subregion(i32 inre
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow:
 ; CHECK-NEXT:    br label [[A_END:%.*]]
-; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ true, [[FLOW]] ], [ [[TMP2:%.*]], [[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[A_END1:%.*]], label [[END:%.*]]
 ; CHECK:       A.end:
 ; CHECK-NEXT:    store i32 3, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[END]]
+; CHECK-NEXT:    br label [[END:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       B:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[U2:%.*]], 0
-; CHECK-NEXT:    br i1 [[C2]], label [[B1]], label [[FLOW2:%.*]]
-; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP2]] = phi i1 [ [[TMP0]], [[FLOW2]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, [[FLOW2]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[A:%.*]], label [[A_END]]
+; CHECK-NEXT:    br i1 [[C2]], label [[B1:%.*]], label [[A_END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[FLOW2]]
+; CHECK-NEXT:    br label [[END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
@@ -260,12 +250,8 @@ define amdgpu_cs void @uniform_loop_around_nonuniform_subregion(i32 inreg %n, i3
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I]], [[U:%.*]]
-; CHECK-NEXT:    br i1 [[C]], label [[OTHER:%.*]], label [[FLOW1:%.*]]
-; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[E:%.*]], [[OTHER]] ], [ false, [[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[OTHER]] ], [ true, [[LOOP]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[DIV:%.*]], label [[DIV_END:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[I]], [[U:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[DIV:%.*]], label [[OTHER:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       div:
 ; CHECK-NEXT:    [[D:%.*]] = icmp eq i32 [[V:%.*]], [[I]]
 ; CHECK-NEXT:    br i1 [[D]], label [[DIV_THEN:%.*]], label [[FLOW:%.*]]
@@ -273,16 +259,13 @@ define amdgpu_cs void @uniform_loop_around_nonuniform_subregion(i32 inreg %n, i3
 ; CHECK-NEXT:    store i32 [[I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    br label [[DIV_END]]
-; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ true, [[FLOW]] ], [ [[TMP0]], [[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[DIV_END1:%.*]], label [[LATCH]]
+; CHECK-NEXT:    br label [[DIV_END:%.*]]
 ; CHECK:       div.end:
 ; CHECK-NEXT:    store i32 3, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[LATCH]]
+; CHECK-NEXT:    br label [[LATCH]], !structurizecfg.uniform [[META0]]
 ; CHECK:       other:
-; CHECK-NEXT:    [[E]] = icmp eq i32 [[I]], 7
-; CHECK-NEXT:    br label [[FLOW1]]
+; CHECK-NEXT:    [[E:%.*]] = icmp eq i32 [[I]], 7
+; CHECK-NEXT:    br i1 [[E]], label [[DIV_END]], label [[LATCH]], !structurizecfg.uniform [[META0]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CONT:%.*]] = icmp ult i32 [[I_INC]], [[N:%.*]]
@@ -328,35 +311,25 @@ exit:
 define amdgpu_cs void @uniform_around_nonuniform_loop(i32 inreg %u1, i32 inreg %u2, i32 %v, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @uniform_around_nonuniform_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[U1:%.*]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[B:%.*]], label [[FLOW1:%.*]]
-; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[B1:%.*]] ], [ true, [[B]] ]
-; CHECK-NEXT:    br label [[FLOW1]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[U1:%.*]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[L:%.*]], label [[B:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       L:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], [[L:%.*]] ], [ 0, [[FLOW1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[L]] ]
 ; CHECK-NEXT:    store i32 [[I]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[I_INC]], [[V:%.*]]
 ; CHECK-NEXT:    br i1 [[D]], label [[FLOW:%.*]], label [[L]]
 ; CHECK:       Flow:
 ; CHECK-NEXT:    br label [[L_END:%.*]]
-; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ true, [[FLOW]] ], [ [[TMP2:%.*]], [[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[L_END1:%.*]], label [[END:%.*]]
 ; CHECK:       L.end:
 ; CHECK-NEXT:    store i32 3, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[END]]
+; CHECK-NEXT:    br label [[END:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       B:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[U2:%.*]], 0
-; CHECK-NEXT:    br i1 [[C2]], label [[B1]], label [[FLOW2:%.*]]
-; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP2]] = phi i1 [ [[TMP0]], [[FLOW2]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, [[FLOW2]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[L]], label [[L_END]]
+; CHECK-NEXT:    br i1 [[C2]], label [[B1:%.*]], label [[L_END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[FLOW2]]
+; CHECK-NEXT:    br label [[END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
@@ -392,16 +365,13 @@ end:
 define amdgpu_cs void @uniform_around_nonuniform_if_else(i32 inreg %u1, i32 inreg %u2, i32 %v, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @uniform_around_nonuniform_if_else(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[U1:%.*]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[B:%.*]], label [[FLOW2:%.*]]
-; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[B1:%.*]] ], [ true, [[B]] ]
-; CHECK-NEXT:    br label [[FLOW2]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[U1:%.*]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[A:%.*]], label [[B:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[D:%.*]] = icmp ne i32 [[V:%.*]], 0
 ; CHECK-NEXT:    br i1 [[D]], label [[A_ELSE:%.*]], label [[FLOW:%.*]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[A_ELSE]] ], [ true, [[A:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[A_ELSE]] ], [ true, [[A]] ]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[A_THEN:%.*]], label [[FLOW1:%.*]]
 ; CHECK:       A.then:
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[OUT:%.*]], align 4
@@ -411,22 +381,15 @@ define amdgpu_cs void @uniform_around_nonuniform_if_else(i32 inreg %u1, i32 inre
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow1:
 ; CHECK-NEXT:    br label [[A_END:%.*]]
-; CHECK:       Flow4:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ true, [[FLOW1]] ], [ [[TMP3:%.*]], [[FLOW2]] ]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[A_END1:%.*]], label [[END:%.*]]
 ; CHECK:       A.end:
 ; CHECK-NEXT:    store i32 3, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[END]]
+; CHECK-NEXT:    br label [[END:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       B:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[U2:%.*]], 0
-; CHECK-NEXT:    br i1 [[C2]], label [[B1]], label [[FLOW3:%.*]]
-; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP3]] = phi i1 [ [[TMP1]], [[FLOW3]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[FLOW3]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[A]], label [[A_END]]
+; CHECK-NEXT:    br i1 [[C2]], label [[B1:%.*]], label [[A_END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[FLOW3]]
+; CHECK-NEXT:    br label [[END]], !structurizecfg.uniform [[META0]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
@@ -468,45 +431,35 @@ end:
 define amdgpu_cs void @nonuniform_subregion_exit_is_uniform_loop_header(i32 inreg %u1, i32 inreg %u2, ptr addrspace(1) inreg %ctr, i32 %v, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @nonuniform_subregion_exit_is_uniform_loop_header(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[U1:%.*]], 0
-; CHECK-NEXT:    br i1 [[C1]], label [[E:%.*]], label [[FLOW:%.*]]
-; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[E1:%.*]] ], [ false, [[E]] ]
-; CHECK-NEXT:    br label [[FLOW]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[U1:%.*]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[D:%.*]], label [[E:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       D:
 ; CHECK-NEXT:    [[D:%.*]] = icmp eq i32 [[V:%.*]], 0
 ; CHECK-NEXT:    br i1 [[D]], label [[D_THEN:%.*]], label [[H:%.*]]
 ; CHECK:       D.then:
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    br label [[H]]
-; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[C4:%.*]], [[X:%.*]] ], [ [[TMP2:%.*]], [[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[X1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       H:
 ; CHECK-NEXT:    [[LD_1:%.*]] = load volatile i32, ptr addrspace(1) [[CTR:%.*]], align 4
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[LD_1]], 0
-; CHECK-NEXT:    br i1 [[C2]], label [[X]], label [[H_LATCH:%.*]], !structurizecfg.uniform [[META0]]
+; CHECK-NEXT:    br i1 [[C2]], label [[X:%.*]], label [[H_LATCH:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       H.latch:
 ; CHECK-NEXT:    store i32 3, ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, ptr addrspace(1) [[CTR]], align 4
 ; CHECK-NEXT:    [[CONT:%.*]] = icmp ult i32 [[Y]], [[U2:%.*]]
 ; CHECK-NEXT:    br i1 [[CONT]], label [[H]], label [[X]], !structurizecfg.uniform [[META0]]
 ; CHECK:       X:
-; CHECK-NEXT:    [[C4]] = icmp eq i32 [[U2]], 1
-; CHECK-NEXT:    br label [[FLOW2:%.*]]
+; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[U2]], 1
+; CHECK-NEXT:    br i1 [[C4]], label [[X1:%.*]], label [[EXIT:%.*]], !structurizecfg.uniform [[META0]]
 ; CHECK:       E:
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[U2]], 0
-; CHECK-NEXT:    br i1 [[C3]], label [[E1]], label [[FLOW1:%.*]]
-; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP2]] = phi i1 [ [[TMP0]], [[FLOW1]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, [[FLOW1]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[D:%.*]], label [[FLOW2]]
+; CHECK-NEXT:    br i1 [[C3]], label [[E1:%.*]], label [[EXIT]], !structurizecfg.uniform [[META0]]
 ; CHECK:       E1:
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[FLOW1]]
+; CHECK-NEXT:    br label [[X1]], !structurizecfg.uniform [[META0]]
 ; CHECK:       X1:
 ; CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    br label [[EXIT]]
+; CHECK-NEXT:    br label [[EXIT]], !structurizecfg.uniform [[META0]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
