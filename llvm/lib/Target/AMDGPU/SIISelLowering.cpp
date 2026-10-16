@@ -1029,6 +1029,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+  // Type legalization cannot expand the i128 pointer of a buffer resource
+  // prefetch; lowerPREFETCH drops the prefetch instead.
+  setOperationAction(ISD::PREFETCH, MVT::i128, Custom);
 
   if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
@@ -5023,6 +5026,8 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   case AMDGPUAS::CONSTANT_ADDRESS:
   case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
     break;
+  case AMDGPUAS::BUFFER_RESOURCE:
+    return Op.getOperand(0);
   default:
     return SDValue();
   }
