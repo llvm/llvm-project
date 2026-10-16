@@ -37,10 +37,10 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[ADD5]] to i64
 ; CHECK-NEXT:    [[WIDE_M:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[WIDE_N:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[WIDE_N]], [[WIDE_M]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP8]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[WIDE_M]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
@@ -957,6 +957,7 @@ define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[STRIDE1]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 2
@@ -964,7 +965,6 @@ define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[TMP6]]
@@ -1119,6 +1119,7 @@ define void @decreasing_outer_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[STRIDE2]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nsw i64 [[TMP3]], -4
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[WIDE_TRIP_COUNT]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], [[TMP7]]
@@ -1126,7 +1127,6 @@ define void @decreasing_outer_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP13]]
@@ -1610,13 +1610,13 @@ define void @shared_strides(ptr noundef %dst, ptr noundef readonly %src1, ptr no
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[STRIDE1]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP0]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC1]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], [[TMP0]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC1]], i64 [[TMP7]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC2]], i64 [[TMP7]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; CHECK:       [[OUTER_LOOP]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[OUTER_LOOP_PRE]] ], [ [[OUTER_IV_NEXT:%.*]], %[[INNER_LOOP_EXIT:.*]] ]

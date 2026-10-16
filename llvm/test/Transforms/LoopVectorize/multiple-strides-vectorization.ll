@@ -115,14 +115,10 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[Z]], 4
 ; CHECK-HOIST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-HOIST:       vector.memcheck:
-; CHECK-HOIST-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-HOIST-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
-; CHECK-HOIST-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-HOIST-NEXT:    [[BOUND08:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP]]
-; CHECK-HOIST-NEXT:    [[BOUND19:%.*]] = icmp ult ptr [[SCEVGEP5]], [[SCEVGEP1]]
+; CHECK-HOIST-NEXT:    [[BOUND08:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-HOIST-NEXT:    [[BOUND19:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
 ; CHECK-HOIST-NEXT:    [[FOUND_CONFLICT10:%.*]] = and i1 [[BOUND08]], [[BOUND19]]
-; CHECK-HOIST-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT10]]
-; CHECK-HOIST-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-HOIST-NEXT:    br i1 [[FOUND_CONFLICT10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK-HOIST:       vector.ph:
 ; CHECK-HOIST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[Z]], 3
 ; CHECK-HOIST-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]

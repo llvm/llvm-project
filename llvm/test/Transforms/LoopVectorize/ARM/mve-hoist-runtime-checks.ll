@@ -36,10 +36,10 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[N]], [[M]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[TMP1]]

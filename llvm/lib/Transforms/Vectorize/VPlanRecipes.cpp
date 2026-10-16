@@ -5193,6 +5193,8 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
+  if (ExpandInIR)
+    O << " (in IR)";
 }
 #endif
 

@@ -1575,7 +1575,7 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
                                     DebugLoc DL) {
   // Expand each group's bounds once so all checks reuse the same frozen values.
   SmallDenseMap<const RuntimeCheckingPtrGroup *,
-                std::tuple<VPValue *, VPValue *, VPValue *>, 8>
+                std::tuple<VPValue *, VPValue *, const SCEV *>, 8>
       GroupToBounds;
   for (const auto &[A, B] : Checks)
     for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
@@ -1584,17 +1584,17 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
         continue;
       auto [Low, High, StrideToCheck] = getRuntimeCheckBounds(
           CG, TheLoop, SE, VectorizerParams::HoistRuntimeChecks);
+      Stride = StrideToCheck;
       Start = Expander.expand(Low);
       End = Expander.expand(High);
       if (CG->NeedsFreeze) {
         Start = Builder.createFreeze(Start, DL);
         End = Builder.createFreeze(End, DL);
       }
-      if (StrideToCheck)
-        Stride = Expander.expand(StrideToCheck);
     }
 
   VPValue *Cond = Plan.getFalse();
+  SmallPtrSet<const SCEV *, 4> CheckedStrides;
   for (const auto &[A, B] : Checks) {
     auto [AStart, AEnd, AStride] = GroupToBounds[A];
     auto [BStart, BEnd, BStride] = GroupToBounds[B];
@@ -1604,12 +1604,13 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
         Builder.createICmp(CmpInst::ICMP_ULT, BStart, AEnd, DL, "bound1");
     VPValue *IsConflict =
         Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
-    for (VPValue *Stride : {AStride, BStride}) {
-      if (!Stride)
+    for (const SCEV *Stride : {AStride, BStride}) {
+      if (!Stride || !CheckedStrides.insert(Stride).second)
         continue;
+      VPValue *StrideV = Expander.expand(Stride);
       VPValue *IsNegative = Builder.createICmp(
-          CmpInst::ICMP_SLT, Stride, Plan.getZero(Stride->getScalarType()), DL,
-          "stride.check");
+          CmpInst::ICMP_SLT, StrideV, Plan.getZero(StrideV->getScalarType()),
+          DL, "stride.check");
       IsConflict = Builder.createOr(IsConflict, IsNegative, DL);
     }
     Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");

@@ -1295,6 +1295,11 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   VPValue *A, *B;
 
+  // icmp Pred X, X -> true if Pred is true when equal, false otherwise.
+  CmpPredicate Pred;
+  if (match(Def, m_ICmp(Pred, m_VPValue(A), m_Deferred(A))))
+    return ICmpInst::isTrueWhenEqual(Pred) ? Plan.getTrue() : Plan.getFalse();
+
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return A;
 
