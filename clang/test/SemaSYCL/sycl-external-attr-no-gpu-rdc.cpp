@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsycl-is-host -std=c++17 -fgpu-rdc -fsyntax-only -verify=rdc %s
 // RUN: %clang_cc1 -fsycl-is-device -std=c++17 -fsyntax-only -verify=nordc %s
 // RUN: %clang_cc1 -fsycl-is-device -std=c++17 -fgpu-rdc -fsyntax-only -verify=rdc %s
+// RUN: %clang_cc1 -fsycl-is-device -std=c++17 -Wno-sycl-external-ignored -fsyntax-only -verify=rdc %s
 
 // Tests that the sycl_external attribute is diagnosed as ignored during device
 // compilation without -fgpu-rdc; Host compilation does not diagnose this to
