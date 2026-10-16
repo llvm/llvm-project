@@ -428,12 +428,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
     if (Subtarget.is64Bit())
-      setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON}, MVT::i32, Custom);
+      setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON, ISD::ABDU, ISD::ABDS},
+                         MVT::i32, Custom);
   } else if (Subtarget.hasShortForwardBranchIALU()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
   } else if (Subtarget.is64Bit()) {
-    setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON}, MVT::i32, Custom);
+    setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON, ISD::ABDU, ISD::ABDS},
+                       MVT::i32, Custom);
   }
 
   if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
@@ -17524,6 +17526,26 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     assert(!Subtarget.hasStdExtZbb() && "Unexpected custom legalisation");
     Results.push_back(expandAddSubSat(N, DAG));
+    return;
+  }
+  case ISD::ABDU:
+  case ISD::ABDS: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    SDValue LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+    LHS = DAG.getFreeze(LHS);
+    RHS = DAG.getFreeze(RHS);
+    SDValue Diff = DAG.getNode(ISD::SUB, DL, MVT::i64, LHS, RHS);
+    Diff = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Diff,
+                       DAG.getValueType(MVT::i32));
+    SDValue SignFill = DAG.getNode(ISD::SRA, DL, MVT::i64, Diff,
+                                   DAG.getConstant(31, DL, MVT::i64));
+    SDValue NewRes = DAG.getNode(ISD::XOR, DL, MVT::i64, Diff, SignFill);
+    NewRes = DAG.getNode(ISD::SUB, DL, MVT::i64, NewRes, SignFill);
+    NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewRes,
+                         DAG.getValueType(MVT::i32));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
     return;
   }
   case ISD::ABS:
