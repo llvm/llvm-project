@@ -9,7 +9,6 @@
 #ifndef LLDB_TARGET_PATHMAPPINGLIST_H
 #define LLDB_TARGET_PATHMAPPINGLIST_H
 
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -61,21 +60,21 @@ public:
     return m_pairs.size();
   }
 
-  bool GetPathsAtIndex(uint32_t idx, ConstString &path,
-                       ConstString &new_path) const;
+  bool GetPathsAtIndex(uint32_t idx, std::string &path,
+                       std::string &new_path) const;
 
   void Insert(llvm::StringRef path, llvm::StringRef replacement,
               uint32_t insert_idx, bool notify);
 
   bool Remove(size_t index, bool notify);
 
-  bool Remove(ConstString path, bool notify);
+  bool Remove(llvm::StringRef path, bool notify);
 
   bool Replace(llvm::StringRef path, llvm::StringRef replacement, bool notify);
 
   bool Replace(llvm::StringRef path, llvm::StringRef replacement,
                uint32_t index, bool notify);
-  bool RemapPath(ConstString path, ConstString &new_path) const;
+  bool RemapPath(llvm::StringRef path, std::string &new_path) const;
 
   /// Remaps a source file given \a path into \a new_path.
   ///
@@ -139,7 +138,7 @@ public:
   }
 
 protected:
-  typedef std::pair<ConstString, ConstString> pair;
+  typedef std::pair<std::string, std::string> pair;
   typedef std::vector<pair> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
@@ -148,9 +147,7 @@ protected:
   uint32_t FindIndexForPathNoLock(llvm::StringRef path) const;
   void Notify(bool notify) const;
 
-  iterator FindIteratorForPath(ConstString path);
-
-  const_iterator FindIteratorForPath(ConstString path) const;
+  iterator FindIteratorForPath(llvm::StringRef path);
 
   collection m_pairs;
   mutable std::mutex m_pairs_mutex;

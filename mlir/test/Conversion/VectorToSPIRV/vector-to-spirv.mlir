@@ -604,6 +604,31 @@ func.func @shuffle(%v0 : vector<4xi32>, %v1: vector<4xi32>) -> vector<4xi32> {
 
 // -----
 
+// CHECK-LABEL:  func @shuffle_poison_scalar_operand
+//  CHECK-SAME:  %[[ARG0:.+]]: vector<4xi32>, %[[ARG1:.+]]: vector<4xi32>
+//       CHECK:    %[[UNDEF:.+]] = spirv.Undef : i32
+//       CHECK:    %[[RES:.+]]  = builtin.unrealized_conversion_cast %[[UNDEF]] : i32 to vector<1xi32>
+//       CHECK:    return %[[RES]] : vector<1xi32>
+func.func @shuffle_poison_scalar_operand(%v0 : vector<4xi32>, %v1: vector<4xi32>) -> vector<1xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [-1] : vector<4xi32>, vector<4xi32>
+  return %shuffle : vector<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL:  func @shuffle_poison_scalar_result
+//  CHECK-SAME:  %[[ARG0:.+]]: vector<1xi32>, %[[ARG1:.+]]: vector<1xi32>
+//   CHECK-DAG:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : vector<1xi32> to i32
+//   CHECK-DAG:    %[[UNDEF:.+]] = spirv.Undef : i32
+//       CHECK:    %[[RES:.+]] = spirv.CompositeConstruct %[[UNDEF]], %[[V1]] : (i32, i32) -> vector<2xi32>
+//       CHECK:    return %[[RES]]
+func.func @shuffle_poison_scalar_result(%v0 : vector<1xi32>, %v1: vector<1xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [-1, 1] : vector<1xi32>, vector<1xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @interleave
 //  CHECK-SAME: (%[[ARG0:.+]]: vector<2xf32>, %[[ARG1:.+]]: vector<2xf32>)
 //       CHECK: %[[SHUFFLE:.*]] = spirv.VectorShuffle [0 : i32, 2 : i32, 1 : i32, 3 : i32] %[[ARG0]], %[[ARG1]] : vector<2xf32>, vector<2xf32> -> vector<4xf32>
@@ -1286,4 +1311,34 @@ func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>
   %idx = arith.constant 0 : index
   %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return %0: vector<4xf32>
+}
+
+// -----
+
+// PhysicalStorageBuffer pointers get an Aligned memory operand, unlike StorageBuffer above.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, PhysicalStorageBufferAddresses],
+      [SPV_KHR_physical_storage_buffer]>, #spirv.resource_limits<>>
+  } {
+
+// CHECK-LABEL: @vector_load_physical
+//       CHECK:   spirv.Load "PhysicalStorageBuffer" {{%.*}} ["Aligned", 4] : vector<4xf32>
+func.func @vector_load_physical(%arg0 : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>
+    {spirv.decoration = #spirv.decoration<Aliased>}) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// CHECK-LABEL: @vector_store_physical
+//       CHECK:   spirv.Store "PhysicalStorageBuffer" {{%.*}}, {{%.*}} ["Aligned", 4] : vector<4xf32>
+func.func @vector_store_physical(%arg0 : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>
+    {spirv.decoration = #spirv.decoration<Aliased>}, %arg1 : vector<4xf32>) {
+  %idx = arith.constant 0 : index
+  vector.store %arg1, %arg0[%idx] : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>, vector<4xf32>
+  return
+}
+
 }

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Optional
 from packaging import version
 import contextlib
@@ -13,6 +13,7 @@ import locale
 import os
 import platform
 import re
+import socket
 import sys
 import tempfile
 import subprocess
@@ -1289,6 +1290,38 @@ def requireThreadSupport(func):
     )(func)
 
 
+@lru_cache(maxsize=None)
+def _socketPermissionError() -> Optional[str]:
+    """Probe whether the host lets us open a listening socket.
+    Returns None if it does, otherwise a description of why it doesn't.
+    """
+
+    family = socket.AF_INET
+    addr = ("localhost", 0)
+    try:
+        with socket.socket(family, socket.SOCK_STREAM) as sock:
+            sock.bind(addr)
+            sock.listen(1)
+    except OSError as e:
+        return f"host does not permit opening a listening socket: {e}"
+    return None
+
+
+def requireSocketPermission(func):
+    """Mark the item as requiring permission to open a listening socket."""
+    error = _socketPermissionError()
+    return unittest.skipIf(error is not None, UnsupportedReason(error or ""))(func)
+
+
+def requireClang(func):
+    """Mark the item as inherently Clang-only (Clang-specific debug info,
+    diagnostics, or command-line flags)."""
+    compiler = os.path.basename(lldbplatformutil.getCompiler())
+    return unittest.skipUnless(
+        compiler.startswith("clang"), UnsupportedReason("requires clang")
+    )(func)
+
+
 def skipIfTargetDoesNotSupportSharedLibraries():
     """Skip tests that require shared library (dylib/so) support."""
     platform = lldbplatformutil.getPlatform()
@@ -1386,19 +1419,6 @@ def skipUnlessHasCallSiteInfo(func):
             return None
 
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
-
-
-def skipUnlessCompilerIsClang(func):
-    """Decorate the item to skip test unless the compiler is clang."""
-
-    def is_compiler_clang():
-        compiler_path = lldbplatformutil.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        if not compiler.startswith("clang"):
-            return "Test requires clang as compiler"
-        return None
-
-    return skipTestIfFn(is_compiler_clang)(func)
 
 
 def skipUnlessMSVC(func):

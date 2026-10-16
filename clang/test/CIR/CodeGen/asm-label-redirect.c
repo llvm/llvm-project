@@ -21,6 +21,11 @@ int test(const char *p) {
   return r1 + r2;
 }
 
+// A builtin library function redeclared with an assembler label must call the
+// label, not the name derived from the builtin ID.
+double __builtin_cbrt(double) __asm__("my_cbrt");
+double test_builtin(double x) { return __builtin_cbrt(x); }
+
 // CIR-LABEL: cir.func {{.*}} @test(
 //
 // The first call site uses `struct my_stat *`, which matches the FuncOp's
@@ -48,12 +53,23 @@ int test(const char *p) {
 // CIR-SAME:    !cir.ptr<!s8i> {{[^,]*}},
 // CIR-SAME:    !cir.ptr<!rec_my_stat> {{[^,]*}}) -> !s32i
 
+// CIR-LABEL: cir.func {{.*}} @test_builtin(
+// CIR:         cir.call @my_cbrt(%{{.+}}) {{.*}}: (!cir.double {{.*}}) -> !cir.double
+// CIR-NOT:     @cbrt
+// CIR:       cir.func private @my_cbrt(
+
 // LLVM-LABEL:  define dso_local i32 @test(
 // LLVM:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})
 // LLVM:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})
 // LLVM:        declare i32 @real_impl(ptr {{[^,]*}}, ptr {{.*}})
+// LLVM-LABEL:  define dso_local double @test_builtin(
+// LLVM:          call double @my_cbrt(double {{.*}}%{{.+}})
+// LLVM:        declare double @my_cbrt(double {{.*}})
 
 // OGCG-LABEL:  define dso_local i32 @test(
 // OGCG:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})
 // OGCG:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})
 // OGCG:        declare i32 @real_impl(ptr {{[^,]*}}, ptr {{.*}})
+// OGCG-LABEL:  define dso_local double @test_builtin(
+// OGCG:          call double @my_cbrt(double {{.*}}%{{.+}})
+// OGCG:        declare double @my_cbrt(double {{.*}})

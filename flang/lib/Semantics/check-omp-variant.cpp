@@ -170,7 +170,7 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
   }
 
   SymbolSourceMap explicitDSA;
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
       if (const parser::OmpObjectList *objects{
@@ -187,13 +187,11 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  OmpVerifyModifiers(
-      x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
   // Record this WHEN clause's context selector so the variant directive it
   // controls can be paired with it for static-applicability matching. A
   // well-formed WHEN clause has exactly one modifier, its context selector;
   // pair it only in that case, which also makes front() safe. Any other count
-  // is malformed and already diagnosed by OmpVerifyModifiers above.
+  // is malformed and already diagnosed by VerifyModifierSyntax.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =
@@ -655,14 +653,14 @@ void OmpStructureChecker::CheckTraitDeviceNum(
 void OmpStructureChecker::CheckTraitRequires(
     const parser::OmpTraitSetSelector &traitSet,
     const parser::OmpTraitSelector &trait) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &traitName{std::get<parser::OmpTraitSelectorName>(trait.t)};
   auto &properties{GetTraitPropertyList(trait)};
 
   for (const parser::OmpTraitProperty &property : properties) {
     auto clauseId{*GetClauseFromProperty(property)};
-    if (!llvm::omp::isAllowedClauseForDirective(
-            llvm::omp::OMPD_requires, clauseId, version)) {
+    if (!IsClauseAllowedOnDirective(
+            clauseId, llvm::omp::OMPD_requires, version, &context_)) {
       context_.Say(property.source,
           "%s trait requires a clause from the requirement clause set"_err_en_US,
           parser::ToUpperCaseLetters(traitName.ToString()));
@@ -680,14 +678,14 @@ void OmpStructureChecker::CheckTraitRequires(
 void OmpStructureChecker::CheckTraitSimd(
     const parser::OmpTraitSetSelector &traitSet,
     const parser::OmpTraitSelector &trait) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   auto &traitName{std::get<parser::OmpTraitSelectorName>(trait.t)};
   auto &properties{GetTraitPropertyList(trait)};
 
   for (const parser::OmpTraitProperty &property : properties) {
     auto clauseId{*GetClauseFromProperty(property)};
-    if (!llvm::omp::isAllowedClauseForDirective(
-            llvm::omp::OMPD_declare_simd, clauseId, version)) {
+    if (!IsClauseAllowedOnDirective(
+            clauseId, llvm::omp::OMPD_declare_simd, version, &context_)) {
       context_.Say(property.source,
           "%s trait requires a clause that is allowed on the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(traitName.ToString()),
@@ -719,11 +717,11 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   if (const parser::OpenMPConstruct *meta{GetCurrentConstruct()}) {
     if (parser::Unwrap<parser::OmpDelimitedMetadirectiveDirective>(meta->u)) {
       checkDefaultNoneInAssociatedLoop = false;
-      unsigned version{context_.langOptions().OpenMPVersion};
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
       switch (llvm::omp::getDirectiveAssociation(dirId)) {
       case llvm::omp::Association::Block:
       case llvm::omp::Association::LoopNest:
-      case llvm::omp::Association::LoopSeq:
+      case llvm::omp::Association::LoopSequence:
         break;
       default:
         if (dirId != llvm::omp::Directive::OMPD_nothing) {
@@ -744,6 +742,22 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
     metadirectiveLoopVariants_.push_back(
         {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
+    // Metadirective is "pure", but its selected variant may not be.
+    // Check the variant independently only when metadirective is legal;
+    // otherwise, the outer metadirective check already reports the error.
+    if (GetDirectiveNest(MetadirectiveNest)) {
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+      if (version >= llvm::omp::getDirectivePureSince(
+                         llvm::omp::Directive::OMPD_metadirective)) {
+        CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      }
+      if (IsDoConcurrentLegal(version)) {
+        CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
+      }
+    } else {
+      CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
+    }
   }
 }
 
@@ -786,7 +800,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   std::vector<MetadirectiveLoopVariant> variants;
   variants.swap(metadirectiveLoopVariants_);
 
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
   const parser::DoConstruct &rootLoop{*parser::Unwrap<parser::DoConstruct>(x)};
   const auto &[haveSemantic, havePerfect]{sequence.depth()};
@@ -861,7 +875,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
       } else {
         CheckRectangularNest(*spec, sequence);
       }
-    } else if (assoc == llvm::omp::Association::LoopSeq) {
+    } else if (assoc == llvm::omp::Association::LoopSequence) {
       (void)checkRootLoopCanonical(*spec, /*isSequence=*/true);
     }
   }
@@ -895,7 +909,7 @@ void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
     if (assoc == llvm::omp::Association::LoopNest) {
       context_.Say(
           variant.spec->DirName().source, MsgShouldContainDoOr, "nest");
-    } else if (assoc == llvm::omp::Association::LoopSeq) {
+    } else if (assoc == llvm::omp::Association::LoopSequence) {
       context_.Say(
           variant.spec->DirName().source, MsgShouldContainDoOr, "sequence");
     }

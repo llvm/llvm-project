@@ -42,8 +42,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
     %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.alloca %2 x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
-    %4 = llvm.mlir.constant(1 : index) : i64
-    %5 = llvm.mlir.constant(0 : index) : i64
+    %4 = llvm.mlir.constant(1 : i64) : i64
+    %5 = llvm.mlir.constant(0 : i64) : i64
     %6 = llvm.mlir.constant(0 : i32) : i32
     %7 = llvm.mlir.constant(1 : i64) : i64
     %8 = llvm.mlir.constant(1 : i64) : i64
@@ -81,8 +81,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_3:.*]] = llvm.mlir.constant(16 : i64) : i64
 // CHECK: %[[HEAP0:.*]] = llvm.call @malloc(%[[VAL_3]]) : (i64) -> !llvm.ptr
 // CHECK: %[[VAL_5:.*]] = llvm.alloca %[[VAL_2]] x !llvm.struct<(ptr, i64)> : (i64) -> !llvm.ptr
-// CHECK: %[[VAL_6:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[VAL_7:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[VAL_7:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK: %[[VAL_8:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[VAL_9:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: %[[VAL_10:.*]] = llvm.mlir.constant(1 : i64) : i64

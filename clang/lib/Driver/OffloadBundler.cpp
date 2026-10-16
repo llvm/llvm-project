@@ -357,8 +357,10 @@ public:
   ~BinaryFileHandler() final {}
 
   Error ReadHeader(StringRef FC) final {
-    // Initialize the current bundle with the end of the container.
+    // Ensure iterators indicate an empty bundle range in case header parsing
+    // exits early.
     CurBundleInfo = BundlesInfo.end();
+    NextBundleInfo = BundlesInfo.end();
 
     // Check if buffer is smaller than magic string.
     size_t ReadChars = sizeof(OFFLOAD_BUNDLER_MAGIC_STR) - 1;

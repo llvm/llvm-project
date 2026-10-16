@@ -147,18 +147,22 @@ public:
         continue;
       }
 
-      ReachableMap.try_emplace(MBB, false);
-
       // If this block has a divergent terminator and the def block is its
       // post-dominator, the wave may first visit the other successors.
       if (TII->hasDivergentBranch(MBB) && PDT.dominates(&DefBlock, MBB))
-        append_range(Stack, MBB->successors());
+        Stack.push_back(MBB);
     }
 
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
       if (ReachableMap.try_emplace(MBB, false).second)
         append_range(Stack, MBB->successors());
+    }
+
+    // Insert remaining incoming blocks.
+    for (auto Incoming : Incomings) {
+      MachineBasicBlock *MBB = Incoming.Block;
+      ReachableMap.try_emplace(MBB, false);
     }
 
     for (auto &[MBB, IsSource] : ReachableMap) {
@@ -569,10 +573,8 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
     mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
-    if (NewReg != DstReg) {
-      replaceDstReg(NewReg, DstReg, &MBB);
-      MI->eraseFromParent();
-    }
+    replaceDstReg(NewReg, DstReg, &MBB);
+    MI->eraseFromParent();
 
     Incomings.clear();
   }
@@ -798,7 +800,8 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     } else {
       BuildMI(MBB, I, DL, TII->get(LMC->XorOpc), DstReg)
           .addReg(LMC->ExecReg)
-          .addImm(-1);
+          .addImm(-1)
+          .setOperandDead(3);
     }
     return;
   }
@@ -812,7 +815,8 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       PrevMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
       BuildMI(MBB, I, DL, TII->get(LMC->AndN2Opc), PrevMaskedReg)
           .addReg(PrevReg)
-          .addReg(LMC->ExecReg);
+          .addReg(LMC->ExecReg)
+          .setOperandDead(3);
     }
   }
   if (!CurConstant) {
@@ -823,7 +827,8 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       CurMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
       BuildMI(MBB, I, DL, TII->get(LMC->AndOpc), CurMaskedReg)
           .addReg(CurReg)
-          .addReg(LMC->ExecReg);
+          .addReg(LMC->ExecReg)
+          .setOperandDead(3);
     }
   }
 
@@ -836,11 +841,13 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   } else if (PrevConstant && PrevVal) {
     BuildMI(MBB, I, DL, TII->get(LMC->OrN2Opc), DstReg)
         .addReg(CurMaskedReg)
-        .addReg(LMC->ExecReg);
+        .addReg(LMC->ExecReg)
+        .setOperandDead(3);
   } else {
     BuildMI(MBB, I, DL, TII->get(LMC->OrOpc), DstReg)
         .addReg(PrevMaskedReg)
-        .addReg(CurMaskedReg ? CurMaskedReg : LMC->ExecReg);
+        .addReg(CurMaskedReg ? CurMaskedReg : LMC->ExecReg)
+        .setOperandDead(3);
   }
 }
 

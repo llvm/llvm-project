@@ -83,7 +83,7 @@ static void removeSections(const CommonConfig &Config, Object &Obj) {
   if (!Config.OnlySection.empty()) {
     RemovePred = [&Config](const Section &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      // Remove everything else, inluding known sections.
+      // Remove everything else, including known sections.
       return !Config.OnlySection.matches(Sec.Name);
     };
   }

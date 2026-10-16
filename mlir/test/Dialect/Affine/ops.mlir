@@ -192,6 +192,18 @@ func.func @parallel(%A : memref<100x100xf32>, %N : index) {
 
 // -----
 
+// CHECK-LABEL: func @parallel_int_min_max
+func.func @parallel_int_min_max(%A : memref<100xi32>) {
+  // CHECK: affine.parallel (%{{.*}}) = (0) to (100) reduce ("maxs", "mins", "maxu", "minu") -> (i32, i32, i32, i32)
+  %0:4 = affine.parallel (%i) = (0) to (100) reduce ("maxs", "mins", "maxu", "minu") -> (i32, i32, i32, i32) {
+    %1 = affine.load %A[%i] : memref<100xi32>
+    affine.yield %1, %1, %1, %1 : i32, i32, i32, i32
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @parallel_min_max
 // CHECK: %[[A:.*]]: index, %[[B:.*]]: index, %[[C:.*]]: index, %[[D:.*]]: index
 func.func @parallel_min_max(%a: index, %b: index, %c: index, %d: index) {
@@ -513,8 +525,8 @@ func.func @parallel_minnumf_reduce() {
 
 // CHECK-LABEL: func.func @affine_load_store_alignment
 func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
-  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
-  %val = affine.load %memref[0] { alignment = 16 } : memref<4xi32>
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64, test.marker}
+  %val = affine.load %memref[0] { alignment = 16, test.marker } : memref<4xi32>
   // CHECK: affine.store {{.*}} {alignment = 16 : i64}
   affine.store %val, %memref[0] { alignment = 16 } : memref<4xi32>
   return
@@ -528,5 +540,17 @@ func.func @affine_vector_load_store_alignment(%memref: memref<16xi32>) {
   %val = affine.vector_load %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
   // CHECK: affine.vector_store {{.*}} {alignment = 8 : i64}
   affine.vector_store %val, %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @symbol_multi_result_reuse
+func.func @symbol_multi_result_reuse(%mem: memref<?x?xf32>) {
+  %res:2 = "test.op"() : () -> (index, index)
+  // CHECK: %{{.*}} = affine.load %{{.*}}[symbol(%{{.*}}#0), symbol(%{{.*}}#0)] : memref<?x?xf32>
+  %v1 = affine.load %mem[symbol(%res#0), symbol(%res#0)] : memref<?x?xf32>
+  // CHECK: %{{.*}} = affine.load %{{.*}}[symbol(%{{.*}}#0), symbol(%{{.*}}#1)] : memref<?x?xf32>
+  %v2 = affine.load %mem[symbol(%res#0), symbol(%res#1)] : memref<?x?xf32>
   return
 }

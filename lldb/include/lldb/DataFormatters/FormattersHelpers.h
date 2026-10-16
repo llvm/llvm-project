@@ -53,7 +53,7 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
                llvm::StringRef type_name,
                ScriptedSyntheticChildren::Flags flags, bool regex = false);
 
-std::optional<size_t> ExtractIndexFromString(const char *item_name);
+std::optional<size_t> ExtractIndexFromString(llvm::StringRef item_name);
 
 /// Prints the summary for the pointer value of a C++
 /// std::unique_ptr/std::shared_ptr/std::weak_ptr.

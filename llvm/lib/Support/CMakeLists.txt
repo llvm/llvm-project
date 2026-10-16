@@ -1,3 +1,4 @@
+include(CheckFunctionExists)
 include(GetLibraryName)
 
 # Ensure that libSupport does not carry any static global initializer.
@@ -37,6 +38,10 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
+if(LLVM_ENABLE_LZMA)
+  list(APPEND imported_libs LibLZMA::LibLZMA)
+endif()
+
 if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
@@ -67,6 +72,12 @@ elseif( CMAKE_HOST_UNIX )
   endif()
   if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS" )
     set(system_libs ${system_libs} kstat socket)
+  endif()
+  if( UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "OpenBSD" )
+    check_function_exists(getexecpath HAVE_GETEXECPATH)
+    if (HAVE_GETEXECPATH)
+      add_compile_definitions(HAVE_GETEXECPATH)
+    endif()
   endif()
   if( FUCHSIA )
     set(system_libs ${system_libs} zircon)
@@ -187,6 +198,7 @@ add_llvm_component_library(LLVMSupport
   DebugCounter.cpp
   DeltaAlgorithm.cpp
   DeltaTree.cpp
+  DenseMap.cpp
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
@@ -220,6 +232,7 @@ add_llvm_component_library(LLVMSupport
   KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
+  Driver.cpp
   Locale.cpp
   LockFileManager.cpp
   ManagedStatic.cpp
@@ -277,6 +290,7 @@ add_llvm_component_library(LLVMSupport
   Twine.cpp
   Unicode.cpp
   UnicodeCaseFold.cpp
+  UnicodeCharSetsGenerated.cpp
   UnicodeNameToCodepoint.cpp
   UnicodeNameToCodepointGenerated.cpp
   VersionTuple.cpp
@@ -380,6 +394,19 @@ if(LLVM_ENABLE_ZSTD)
   endif()
 endif()
 
+if(LLVM_ENABLE_LZMA)
+  # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
+  if(CMAKE_BUILD_TYPE)
+    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
+    get_property(lzma_library TARGET LibLZMA::LibLZMA PROPERTY LOCATION_${build_type})
+  endif()
+  if(NOT lzma_library)
+    get_property(lzma_library TARGET LibLZMA::LibLZMA PROPERTY LOCATION)
+  endif()
+  get_library_name(${lzma_library} lzma_library)
+  set(llvm_system_libs ${llvm_system_libs} "${lzma_library}")
+endif()
+
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")
 
 
@@ -407,7 +434,7 @@ target_include_directories(LLVMSupport
   ${LLVM_SOURCE_DIR}/../libc
 )
 
-if(NOT MSVC)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
 endif()
 

@@ -37,10 +37,10 @@ static lldb::addr_t DerefToNSErrorPointer(ValueObject &valobj) {
       CompilerType pointee_type(valobj_type.GetPointeeType());
       Flags pointee_flags(pointee_type.GetTypeInfo());
       if (pointee_flags.AllSet(eTypeIsPointer)) {
-        if (ProcessSP process_sp = valobj.GetProcessSP()) {
-          Status error;
-          ptr_value = process_sp->ReadPointerFromMemory(ptr_value, error);
-        }
+        if (ProcessSP process_sp = valobj.GetProcessSP())
+          ptr_value = llvm::expectedToOptional(
+                          process_sp->ReadPointerFromMemory(ptr_value))
+                          .value_or(LLDB_INVALID_ADDRESS);
       }
     }
     return ptr_value;
@@ -69,17 +69,19 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   if (error.Fail())
     return false;
 
-  lldb::addr_t domain_str_value =
-      process_sp->ReadPointerFromMemory(domain_location, error);
-  if (error.Fail() || domain_str_value == LLDB_INVALID_ADDRESS)
-    return false;
-
+  llvm::Expected<lldb::addr_t> domain_str_value =
+      process_sp->ReadPointerFromMemory(domain_location);
   if (!domain_str_value) {
+    llvm::consumeError(domain_str_value.takeError());
+    return false;
+  }
+
+  if (!*domain_str_value) {
     stream.Printf("domain: nil - code: %" PRIi64, code);
     return true;
   }
 
-  InferiorSizedWord isw(domain_str_value, *process_sp);
+  InferiorSizedWord isw(*domain_str_value, *process_sp);
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
 
@@ -146,12 +148,13 @@ public:
     size_t ptr_size = process_sp->GetAddressByteSize();
 
     userinfo_location += 4 * ptr_size;
-    Status error;
-    lldb::addr_t userinfo =
-        process_sp->ReadPointerFromMemory(userinfo_location, error);
-    if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())
+    llvm::Expected<lldb::addr_t> userinfo =
+        process_sp->ReadPointerFromMemory(userinfo_location);
+    if (!userinfo) {
+      llvm::consumeError(userinfo.takeError());
       return lldb::ChildCacheState::eRefetch;
-    InferiorSizedWord isw(userinfo, *process_sp);
+    }
+    InferiorSizedWord isw(*userinfo, *process_sp);
     TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
     if (!scratch_ts_sp)

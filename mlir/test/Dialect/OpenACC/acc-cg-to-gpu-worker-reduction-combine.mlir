@@ -36,13 +36,12 @@ func.func @worker_reduction_combine(%result: memref<i32>) {
         } {acc.par_dims = #acc<par_dims[thread_y]>}
         acc.predicate_region {
           %unused = memref.load %result_arg[] : memref<i32>
-          acc.reduction_combine %local into %result_arg <add> : memref<i32>
-              {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+          acc.reduction_combine %local into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -90,7 +89,7 @@ func.func @worker_reduction_combine_region(%result: memref<i32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -131,18 +130,16 @@ func.func @nested_worker_reduction_combines(
         } {acc.par_dims = #acc<par_dims[thread_y]>}
         acc.predicate_region {
           acc.predicate_region {
-            acc.reduction_combine %local into %result_arg <add> : memref<i32>
-                {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+            acc.reduction_combine %local into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
           }
           acc.predicate_region {
-            acc.reduction_combine %other_arg into %result_arg <add> : memref<i32>
-                {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+            acc.reduction_combine %other_arg into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
           }
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -174,14 +171,13 @@ func.func @worker_combine_in_scf_if(%result: memref<i32>) {
             : (!acc.private_type<memref<i32>>) -> memref<i32>
         acc.predicate_region {
           scf.if %true {
-            acc.reduction_combine %local into %result_arg <add> : memref<i32>
-                {acc.par_dims = #acc<par_dims[block_y, thread_y]>}
+            acc.reduction_combine %local into %result_arg <add> par_dims(#acc<par_dims[block_y, thread_y]>) : memref<i32>
           }
         }
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

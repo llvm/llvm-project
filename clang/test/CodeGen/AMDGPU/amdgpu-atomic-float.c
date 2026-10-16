@@ -13,7 +13,7 @@
 // UNSAFE-LABEL: define dso_local float @test_float_post_inc(
 // UNSAFE-SAME: ) #[[ATTR0:[0-9]+]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_float_post_inc.n to ptr), float 1.000000e+00 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META2:![0-9]+]], !amdgpu.no.remote.memory [[META2]], !amdgpu.ignore.denormal.mode [[META2]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_float_post_inc.n to ptr), float 1.000000e+00 seq_cst, align 4, !atomic.ignore.denormal.mode [[META2:![0-9]+]], !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // UNSAFE-NEXT:    ret float [[TMP0]]
 //
 // SAFE-SPIRV-LABEL: define spir_func float @test_float_post_inc(
@@ -25,7 +25,7 @@
 // UNSAFE-SPIRV-LABEL: define spir_func float @test_float_post_inc(
 // UNSAFE-SPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // UNSAFE-SPIRV-NEXT:  [[ENTRY:.*:]]
-// UNSAFE-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test_float_post_inc.n to ptr addrspace(4)), float 1.000000e+00 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META2:![0-9]+]], !amdgpu.no.remote.memory [[META2]], !amdgpu.ignore.denormal.mode [[META2]]
+// UNSAFE-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test_float_post_inc.n to ptr addrspace(4)), float 1.000000e+00 seq_cst, align 4, !atomic.ignore.denormal.mode [[META2:![0-9]+]], !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // UNSAFE-SPIRV-NEXT:    ret float [[TMP0]]
 //
 float test_float_post_inc()
@@ -82,7 +82,7 @@ float test_float_pre_dc()
 // UNSAFE-LABEL: define dso_local float @test_float_pre_inc(
 // UNSAFE-SAME: ) #[[ATTR0]] {
 // UNSAFE-NEXT:  [[ENTRY:.*:]]
-// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_float_pre_inc.n to ptr), float 1.000000e+00 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]], !amdgpu.ignore.denormal.mode [[META2]]
+// UNSAFE-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @test_float_pre_inc.n to ptr), float 1.000000e+00 seq_cst, align 4, !atomic.ignore.denormal.mode [[META2]], !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // UNSAFE-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
 // UNSAFE-NEXT:    ret float [[TMP1]]
 //
@@ -96,7 +96,7 @@ float test_float_pre_dc()
 // UNSAFE-SPIRV-LABEL: define spir_func float @test_float_pre_inc(
 // UNSAFE-SPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
 // UNSAFE-SPIRV-NEXT:  [[ENTRY:.*:]]
-// UNSAFE-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test_float_pre_inc.n to ptr addrspace(4)), float 1.000000e+00 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]], !amdgpu.ignore.denormal.mode [[META2]]
+// UNSAFE-SPIRV-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(4) addrspacecast (ptr addrspace(1) @test_float_pre_inc.n to ptr addrspace(4)), float 1.000000e+00 seq_cst, align 4, !atomic.ignore.denormal.mode [[META2]], !amdgpu.no.fine.grained.memory [[META2]], !amdgpu.no.remote.memory [[META2]]
 // UNSAFE-SPIRV-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
 // UNSAFE-SPIRV-NEXT:    ret float [[TMP1]]
 //

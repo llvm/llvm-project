@@ -52,7 +52,7 @@ void (Foo::*m2_ptr)(int) = &Foo::m2;
 
 // Self-referencing PMF causes a null method.
 long (Foo::*pmf1)(int) = pmf1;
-// CIR-BEFORE: @pmf1 = ctor : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i) -> !s64i> in !rec_Foo> {
+// CIR-BEFORE: @pmf1 = #cir.method<null> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i) -> !s64i> in !rec_Foo> ctor {
 // CIR-AFTER: cir.global external @pmf1 = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> 
 // LLVM: @pmf1 = global { i64, i64 } zeroinitializer, align 8 
 // OGCG: @pmf1 = global { i64, i64 } zeroinitializer, align 8 
@@ -68,7 +68,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
-// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct attributes {{{.*}}nothrow} {
+// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct attributes {{{.*}}nothrow, optnone} {
 // CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NONVIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>

@@ -1315,7 +1315,6 @@ DeclContext::DeclContext(Decl::Kind K) {
   setNeedToReconcileExternalVisibleStorage(false);
   setHasLazyLocalLexicalLookups(false);
   setHasLazyExternalLexicalLookups(false);
-  setUseQualifiedLookup(false);
 }
 
 bool DeclContext::classof(const Decl *D) {
@@ -2094,6 +2093,14 @@ DeclContext *DeclContext::getEnclosingNonExpansionStatementContext() {
   while (isa<CXXExpansionStmtDecl>(DC))
     DC = DC->getParent();
   return DC;
+}
+
+FunctionDecl *DeclContext::getEnclosingFunction() {
+  return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+}
+
+FunctionDecl *DeclContext::castEnclosingFunction() {
+  return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
 }
 
 bool DeclContext::InEnclosingNamespaceSetOf(const DeclContext *O) const {

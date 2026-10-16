@@ -29,6 +29,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
@@ -171,6 +172,34 @@ static LogicalResult checkConstantOperandSilceShape(Operation *op,
     return checkConstantOperands(op, {1, 2});
   }
   return success();
+}
+
+// MATMUL's data type availability predates variadic batch support, so the
+// generated availability checks cannot distinguish its 1.0 and 1.1 shapes.
+static LogicalResult checkSpecificationVersionConstraint(Operation *op,
+                                                         const TargetEnv &env) {
+  auto matmul = dyn_cast<tosa::MatMulOp>(op);
+  if (!matmul ||
+      env.getSpecVersion().isBackwardsCompatibleWith(
+          TosaSpecificationVersion(SpecificationVersion::V_1_1_DRAFT)))
+    return success();
+
+  auto aType = dyn_cast<RankedTensorType>(matmul.getA().getType());
+  auto bType = dyn_cast<RankedTensorType>(matmul.getB().getType());
+  auto outputType = dyn_cast<RankedTensorType>(matmul.getOutput().getType());
+  auto getBatchDimOrDynamic = [](RankedTensorType type) {
+    return type ? type.getDimSize(0) : ShapedType::kDynamic;
+  };
+  if ((!aType || aType.getRank() == 3) && (!bType || bType.getRank() == 3) &&
+      (!outputType || outputType.getRank() == 3) &&
+      succeeded(verifyCompatibleDims({getBatchDimOrDynamic(aType),
+                                      getBatchDimOrDynamic(bType),
+                                      getBatchDimOrDynamic(outputType)})))
+    return success();
+
+  return op->emitOpError(
+      "MATMUL ranks other than 3 or batch broadcasting require TOSA "
+      "specification version 1.1.draft");
 }
 
 //===----------------------------------------------------------------------===//
@@ -715,6 +744,21 @@ LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
 }
 
 template <>
+LogicalResult TosaValidation::levelCheckRanks(tosa::ArgMinOp tosaOp) {
+  auto *op = tosaOp.getOperation();
+  if (failed(levelCheckRank(op, tosaOp.getInput(), "operand",
+                            targetEnv.getLevel().MAX_RANK)))
+    return failure();
+
+  // rank(output) = rank(input) - 1
+  if (failed(levelCheckRank(op, tosaOp.getOutput(), "result",
+                            targetEnv.getLevel().MAX_RANK - 1)))
+    return failure();
+
+  return success();
+}
+
+template <>
 LogicalResult TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
   auto *op = tosaOp.getOperation();
 
@@ -770,6 +814,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Tensor Operators
   CHECK_RANKS_AND_SIZES(ArgMax);
+  CHECK_RANKS_AND_SIZES(ArgMin);
   // Activation Functions
   CHECK_RANKS_AND_SIZES(Clamp);
   CHECK_RANKS_AND_SIZES(Erf);
@@ -858,8 +903,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(DepthwiseConv2D);
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
-  CHECK_SIZES(MatMul);
-  CHECK_SIZES(MatMulT);
+  CHECK_RANKS_AND_SIZES(MatMul);
+  CHECK_RANKS_AND_SIZES(MatMulT);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(MaxPool2dAdaptive);
@@ -1022,7 +1067,10 @@ LogicalResult TosaValidation::CheckVariable(Operation *op) {
 LogicalResult TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::StringAttr nameAttr =
+        TypeSwitch<Operation *, mlir::StringAttr>(op)
+            .Case<mlir::tosa::VariableReadOp, mlir::tosa::VariableWriteOp>(
+                [](auto variableOp) { return variableOp.getNameAttr(); });
     if (!variablesMap.count(nameAttr))
       return op->emitOpError() << "name has not been declared";
 
@@ -1634,6 +1682,10 @@ void TosaValidation::runOnOperation() {
 
     if (strictOpSpecAlignment &&
         failed(profileComp.checkExtension(op, targetEnv)))
+      return signalPassFailure();
+
+    if (strictOpSpecAlignment &&
+        failed(checkSpecificationVersionConstraint(op, targetEnv)))
       return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&

@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports padded, packed, and over-aligned record shapes.
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
@@ -15,7 +13,7 @@ typedef struct {
   int e : 15;
   unsigned f; // type other than int above, not a bitfield
 } S;
-// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !u64i, bitfield !u16i, data !u32i}>
+// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 27>, #cir.bitfield_decl<!s32i, 17>, #cir.bitfield_decl<!s32i, 2>]>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s32i, 15>]>, data !u32i}>
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
@@ -25,7 +23,7 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !u8i, data !u32i}>
+// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>, data !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
@@ -54,8 +52,8 @@ int load_field(S* s) {
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
 
 // LLVM: define dso_local noundef i32 @_Z10load_fieldP1S
-// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 // LLVM:   [[TMP1:%.*]] = alloca i32, align 4
+// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 // LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 // LLVM:   [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 4

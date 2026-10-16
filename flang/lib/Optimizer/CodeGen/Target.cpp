@@ -1920,6 +1920,117 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// SystemZ target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 64;
+
+  auto complexType(mlir::Type eleTy, bool isResult) const {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    unsigned short align{std::max(
+        static_cast<unsigned short>(getDataLayout().getTypeABIAlignment(eleTy)),
+        static_cast<unsigned short>(8))};
+    marshal.emplace_back(
+        fir::ReferenceType::get(mlir::TupleType::get(
+            eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+        AT{/*align=*/align, /*byval=*/false, /*sret=*/isResult,
+           /*append=*/false, /*intExt=*/AT::IntegerExtension::None,
+           /*indirect=*/!isResult});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location /*loc*/, mlir::Type eleTy) const override {
+    return complexType(eleTy, false);
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location /*loc*/, mlir::Type eleTy) const override {
+    return complexType(eleTy, true);
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    // SystemZ ABI requires all integers < 64 bits to be sign/zero extended.
+    // Handle widths 32 to 63 explicitly; GenericTarget handles widths < 32
+    // including the i1 zero-extension special case.
+    if (argTy.getWidth() >= 32 && argTy.getWidth() < 64) {
+      AT::IntegerExtension intExt = argTy.isUnsigned()
+                                        ? AT::IntegerExtension::Zero
+                                        : AT::IntegerExtension::Sign;
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
+                                     /*sret=*/false, /*append=*/false,
+                                     /*intExt=*/intExt});
+      return marshal;
+    }
+    return GenericTarget::integerArgumentType(loc, argTy);
+  }
+
+  // Check for a single floating-point member recursively.
+  static mlir::Type getSingleFPMember(fir::RecordType recTy) {
+    auto typeList = recTy.getTypeList();
+    if (typeList.size() != 1)
+      return {};
+    mlir::Type fieldTy = typeList[0].second;
+    if (auto nestedRec = mlir::dyn_cast<fir::RecordType>(fieldTy))
+      return getSingleFPMember(nestedRec);
+    if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(fieldTy))
+      if (floatTy.getWidth() <= 64)
+        return floatTy;
+    return {};
+  }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType ty,
+                     const Marshalling &previousArguments) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // Single FP member <= 8 bytes passed in FPR.
+    if (mlir::Type fpTy = getSingleFPMember(ty)) {
+      marshal.emplace_back(fpTy, AT{});
+      return marshal;
+    }
+    // Small structs passed in GPR (1, 2, 4, 8 bytes).
+    auto sizeAndAlign{
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
+    uint64_t byteSize = sizeAndAlign.first;
+    if (byteSize == 1 || byteSize == 2 || byteSize == 4 || byteSize == 8) {
+      marshal.emplace_back(
+          mlir::IntegerType::get(ty.getContext(), byteSize * 8), AT{});
+      return marshal;
+    }
+    // Larger structs passed via implicit reference (pointer in register/stack).
+    unsigned short align{
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{/*align=*/align, /*byval=*/false, /*sret=*/false,
+                            /*append=*/false,
+                            /*intExt=*/AT::IntegerExtension::None,
+                            /*indirect=*/true});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType ty) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign{
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
+    unsigned short align{
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{/*align=*/align, /*byval=*/false, /*sret=*/true});
+    return marshal;
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
@@ -1987,6 +2098,10 @@ std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
     return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
                                                std::move(kindMap), targetCPU,
                                                targetFeatures, targetABI, dl);
+  case llvm::Triple::ArchType::systemz:
+    return std::make_unique<TargetSystemZ>(ctx, std::move(trp),
+                                           std::move(kindMap), targetCPU,
+                                           targetFeatures, targetABI, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }
