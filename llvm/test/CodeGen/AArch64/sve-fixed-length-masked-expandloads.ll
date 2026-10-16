@@ -25674,4 +25674,41 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
   ret void
 }
 
+define void @masked_load_v1f64(ptr %ap, ptr %bp, ptr %c) vscale_range(2,0) #0 {
+; CHECK-LABEL: masked_load_v1f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    fcmp d1, d2
+; CHECK-NEXT:    b.ne .LBB51_2
+; CHECK-NEXT:  // %bb.1: // %cond.load
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:  .LBB51_2: // %else
+; CHECK-NEXT:    str d0, [x2]
+; CHECK-NEXT:    ret
+;
+; CHECK-EXPAND-LABEL: masked_load_v1f64:
+; CHECK-EXPAND:       // %bb.0:
+; CHECK-EXPAND-NEXT:    ldr d0, [x0]
+; CHECK-EXPAND-NEXT:    ldr d1, [x1]
+; CHECK-EXPAND-NEXT:    ptrue p0.d, vl1
+; CHECK-EXPAND-NEXT:    fcmp d0, d1
+; CHECK-EXPAND-NEXT:    csetm x8, eq
+; CHECK-EXPAND-NEXT:    fmov d0, x8
+; CHECK-EXPAND-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-EXPAND-NEXT:    cntp x8, p1, p1.d
+; CHECK-EXPAND-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-EXPAND-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-EXPAND-NEXT:    expand z0.d, p1, z0.d
+; CHECK-EXPAND-NEXT:    str d0, [x2]
+; CHECK-EXPAND-NEXT:    ret
+  %a = load <1 x double>, ptr %ap
+  %b = load <1 x double>, ptr %bp
+  %mask = fcmp oeq <1 x double> %a, %b
+  %load = call <1 x double> @llvm.masked.expandload.v1f64(ptr %ap, <1 x i1> %mask, <1 x double> zeroinitializer)
+  store <1 x double> %load, ptr %c
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }

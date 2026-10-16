@@ -965,6 +965,12 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::ATOMIC_STORE:
     Res = ScalarizeVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
     break;
+  case ISD::MLOAD:
+    Res = ScalarizeVecOp_MLOAD(cast<MaskedLoadSDNode>(N), OpNo);
+    break;
+  case ISD::MSTORE:
+    Res = ScalarizeVecOp_MSTORE(cast<MaskedStoreSDNode>(N), OpNo);
+    break;
   case ISD::STRICT_FP_ROUND:
     Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
     break;
@@ -1243,6 +1249,38 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N) {
   return DAG.getAtomic(ISD::ATOMIC_STORE, SDLoc(N),
                        N->getMemoryVT().getVectorElementType(), N->getChain(),
                        ScalarVal, N->getBasePtr(), N->getMemOperand());
+}
+
+/// If the mask is a vector that needs to be scalarized, it must be <1 x i1>.
+/// Promote it to a target boolean instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_MLOAD(MaskedLoadSDNode *N,
+                                               unsigned OpNo) {
+  assert(OpNo == 3 && "Can only scalarize the mask operand!");
+  EVT DataVT = N->getValueType(0);
+  SDValue Mask = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
+  SmallVector<SDValue, 4> NewOps(N->ops());
+  NewOps[OpNo] = Mask;
+  SDNode *Res = DAG.UpdateNodeOperands(N, NewOps);
+  if (Res == N)
+    return SDValue(Res, 0);
+
+  // Update triggered CSE, do our own replacement since caller can't.
+  ReplaceValueWith(SDValue(N, 0), SDValue(Res, 0));
+  ReplaceValueWith(SDValue(N, 1), SDValue(Res, 1));
+  return SDValue();
+}
+
+/// If the mask is a vector that needs to be scalarized, it must be <1 x i1>.
+/// Promote it to a target boolean instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_MSTORE(MaskedStoreSDNode *N,
+                                                unsigned OpNo) {
+  assert(!N->isCompressingStore() && "CompressingStore not expected");
+  if (OpNo != 4)
+    reportFatalInternalError("Scalarization of MSTORE data is not supported");
+  EVT DataVT = N->getValue().getValueType();
+  SmallVector<SDValue, 4> NewOps(N->ops());
+  NewOps[OpNo] = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 /// If the value to round is a vector that needs to be scalarized, it must be
