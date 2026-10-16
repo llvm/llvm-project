@@ -526,9 +526,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v2i16, MVT::v4i8}, Custom);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::v2i16, MVT::v4i8},
                          Custom);
-      // Operand legalization queries the action using the illegal subvector.
-      setOperationAction(ISD::INSERT_SUBVECTOR, {MVT::v2i16, MVT::v4i8},
-                         Custom);
     } else {
       VTs = P32VecVTs;
     }
@@ -14499,9 +14496,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   bool IsPExtInsert =
       Subtarget.hasStdExtP() &&
-      ((Subtarget.is64Bit() &&
-        (SubVecVT == MVT::v2i16 || SubVecVT == MVT::v4i8)) ||
-       (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)));
+      (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8));
 
   // Fold insert of a 32-bit packed type into a zero-filled 64-bit packed vector
   // at index 0 (a zero-extend) to avoid scalarizing it into a byte-wise repack.
@@ -14511,11 +14506,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
         !ISD::isConstantSplatVectorAllZeros(Vec.getNode()))
       return SDValue();
 
-    if (!Subtarget.is64Bit()) {
-      SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
-    }
-    return widenPackedVectorWithZeros(DAG, DL, SubVec, VecVT);
+    SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
   }
 
   if (OrigIdx == 0 && Vec.isUndef())
