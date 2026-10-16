@@ -3,7 +3,23 @@
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-linux-gnu"
-  define void @ScavengeForFrameWithoutOffset() { ret void }
+  define void @ScavengeForFrameWithoutOffset() !dbg !5 {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debug-info", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "reg-scavenge-frame.mir", directory: "/")
+  !2 = !{}
+  !3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "ScavengeForFrameWithoutOffset", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !6 = !DISubroutineType(types: !2)
+  !8 = !{!9}
+  !9 = !DILocalVariable(name: "value", scope: !5, file: !1, line: 1, type: !3)
+  !10 = !DILocation(line: 1, column: 1, scope: !5)
 ...
 ---
 name:            ScavengeForFrameWithoutOffset
@@ -41,14 +57,18 @@ body:             |
     $x25 = COPY $xzr
     $x26 = COPY $xzr
     $x27 = COPY $xzr
+    ; Debug instructions must not affect liveness or the scavenger search budget.
     $x28 = COPY $xzr
+    DBG_VALUE $x0, $noreg, !9, !DIExpression(), debug-location !10
     $fp = COPY $xzr
+    DBG_VALUE 0, $noreg, !9, !DIExpression(), debug-location !10
     $lr = COPY $xzr
+    DBG_VALUE 0, $noreg, !9, !DIExpression(), debug-location !10
     ST1Fourv1d killed $d16_d17_d18_d19, %stack.0 :: (store (s256) into %stack.0, align 8)
-    ; CHECK:  STRXui killed $[[SCAVREG:x[0-9]+|fp|lr]], $sp, [[SPOFFSET:[0-9]+]] :: (store (s64) into %stack.1)
-    ; CHECK-NEXT:  $[[SCAVREG]] = ADDXri $sp, {{[0-9]+}}, 0
-    ; CHECK-NEXT:  ST1Fourv1d killed $d16_d17_d18_d19, killed $[[SCAVREG]] :: (store (s256) into %stack.0, align 8)
-    ; CHECK-NEXT:  $[[SCAVREG]] = LDRXui $sp, [[SPOFFSET]] :: (load (s64) from %stack.1)
+    ; CHECK:  STRXui killed $x0, $sp, [[SPOFFSET:[0-9]+]] :: (store (s64) into %stack.1)
+    ; CHECK-NEXT:  $x0 = ADDXri $sp, {{[0-9]+}}, 0
+    ; CHECK-NEXT:  ST1Fourv1d killed $d16_d17_d18_d19, killed $x0 :: (store (s256) into %stack.0, align 8)
+    ; CHECK-NEXT:  $x0 = LDRXui $sp, [[SPOFFSET]] :: (load (s64) from %stack.1)
 
     HINT 0, implicit $x0
     HINT 0, implicit $x1
