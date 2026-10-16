@@ -657,6 +657,7 @@ constexpr u16 GetOSMajorKernelOffset() {
   if (TARGET_OS_OSX) return 4;
   if (TARGET_OS_IOS || TARGET_OS_TV) return 6;
   if (TARGET_OS_WATCH) return 13;
+  if (TARGET_OS_VISION) return 22;
 }
 
 using VersStr = char[64];
@@ -753,6 +754,8 @@ static void MapToMacos(u16 *major, u16 *minor) {
     *major += 2;
   else if (TARGET_OS_WATCH)
     *major += 9;
+  else if (TARGET_OS_VISION)
+    *major += 18;
   else
     UNREACHABLE("unsupported platform");
 
