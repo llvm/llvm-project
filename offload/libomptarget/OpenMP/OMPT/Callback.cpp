@@ -56,6 +56,7 @@ ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 ompt_get_target_task_data_t ompt_get_target_task_data_fn = nullptr;
 ompt_get_task_data_t ompt_get_task_data_fn = nullptr;
+ompt_set_target_info_t ompt_set_target_info_fn = nullptr;
 
 /// Unique correlation id
 static std::atomic<uint64_t> IdCounter(1);
@@ -75,6 +76,20 @@ static uint64_t createRegionId() {
   uint64_t NewId = createId();
   RegionInterface.setTargetDataValue(NewId);
   return NewId;
+}
+
+static int ompt_get_target_info_impl(uint64_t *DeviceNum, ompt_id_t *TargetId,
+                                     ompt_id_t *HostOpId) {
+  if (RegionInterface.getTargetDataValue() == ompt_id_none)
+    return 0;
+
+  if (DeviceNum)
+    *DeviceNum = RegionInterface.getDeviceNum();
+  if (TargetId)
+    *TargetId = RegionInterface.getTargetDataValue();
+  if (HostOpId)
+    *HostOpId = RegionInterface.getHostOpId();
+  return 1;
 }
 
 void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
@@ -225,6 +240,7 @@ void Interface::endTargetDataRetrieve(int64_t SrcDeviceId, void *SrcPtrBegin,
 }
 
 void Interface::beginTargetSubmit(unsigned int NumTeams) {
+  beginTargetSubmitOperation();
   if (ompt_callback_target_submit_emi_fn) {
     // HostOpId is set by the tool. Invoke the tool supplied target submit EMI
     // callback
@@ -245,10 +261,11 @@ void Interface::endTargetSubmit(unsigned int NumTeams) {
     ompt_callback_target_submit_emi_fn(ompt_scope_end, &TargetData, &HostOpId,
                                        NumTeams);
   }
+  endTargetSubmitOperation();
 }
 
 void Interface::beginTargetDataEnter(int64_t DeviceId, void *Code) {
-  beginTargetRegion();
+  beginTargetRegion(DeviceId);
   if (ompt_callback_target_emi_fn) {
     // Invoke the tool supplied target EMI callback
     ompt_callback_target_emi_fn(ompt_target_enter_data, ompt_scope_begin,
@@ -276,7 +293,7 @@ void Interface::endTargetDataEnter(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetDataExit(int64_t DeviceId, void *Code) {
-  beginTargetRegion();
+  beginTargetRegion(DeviceId);
   if (ompt_callback_target_emi_fn) {
     // Invoke the tool supplied target EMI callback
     ompt_callback_target_emi_fn(ompt_target_exit_data, ompt_scope_begin,
@@ -304,7 +321,7 @@ void Interface::endTargetDataExit(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetUpdate(int64_t DeviceId, void *Code) {
-  beginTargetRegion();
+  beginTargetRegion(DeviceId);
   if (ompt_callback_target_emi_fn) {
     // Invoke the tool supplied target EMI callback
     ompt_callback_target_emi_fn(ompt_target_update, ompt_scope_begin, DeviceId,
@@ -415,7 +432,7 @@ void Interface::endTargetMemset(int64_t DeviceId, void *HostPtrBegin,
 }
 
 void Interface::beginTarget(int64_t DeviceId, void *Code) {
-  beginTargetRegion();
+  beginTargetRegion(DeviceId);
   if (ompt_callback_target_emi_fn) {
     // Invoke the tool supplied target EMI callback
     ompt_callback_target_emi_fn(ompt_target, ompt_scope_begin, DeviceId,
@@ -442,16 +459,28 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetDataOperation() {
-  ODBG(ODT_Tool) << "in ompt_target_region_begin (TargetRegionId = "
+  ODBG(ODT_Tool) << "in ompt_target_data_region_begin (TargetRegionId = "
                  << TargetData.value << ")";
 }
 
 void Interface::endTargetDataOperation() {
-  ODBG(ODT_Tool) << "in ompt_target_region_end (TargetRegionId = "
+  ODBG(ODT_Tool) << "in ompt_target_data_region_end (TargetRegionId = "
+                 << TargetData.value << ")";
+  HostOpId = ompt_id_none;
+}
+
+void Interface::beginTargetSubmitOperation() {
+  ODBG(ODT_Tool) << "in ompt_target_submit_region_begin (TargetRegionId = "
                  << TargetData.value << ")";
 }
 
-void Interface::beginTargetRegion() {
+void Interface::endTargetSubmitOperation() {
+  ODBG(ODT_Tool) << "in ompt_target_submit_region_end (TargetRegionId = "
+                 << TargetData.value << ")";
+  HostOpId = ompt_id_none;
+}
+
+void Interface::beginTargetRegion(int64_t DeviceId) {
   // Set up task state
   assert(ompt_get_task_data_fn && "Calling a null task data function");
   TaskData = ompt_get_task_data_fn();
@@ -459,6 +488,7 @@ void Interface::beginTargetRegion() {
   assert(ompt_get_target_task_data_fn &&
          "Calling a null target task data function");
   TargetTaskData = ompt_get_target_task_data_fn();
+  DeviceNum = DeviceId;
   // Target state will be set later
   TargetData = ompt_data_none;
 }
@@ -466,6 +496,7 @@ void Interface::beginTargetRegion() {
 void Interface::endTargetRegion() {
   TaskData = 0;
   TargetTaskData = 0;
+  DeviceNum = /*omp_invalid_device*/ -2;
   TargetData = ompt_data_none;
 }
 
@@ -506,6 +537,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
   bindOmptFunctionName(ompt_get_task_data, ompt_get_task_data_fn);
   bindOmptFunctionName(ompt_get_target_task_data, ompt_get_target_task_data_fn);
+  bindOmptFunctionName(ompt_set_target_info, ompt_set_target_info_fn);
 #undef bindOmptFunctionName
 
   // Store pointer of 'ompt_libomp_target_fn_lookup' for use by libomptarget
@@ -518,6 +550,9 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
          "ompt_get_target_task_data_fn should be non-null");
   assert(LibraryFinalizer == nullptr &&
          "LibraryFinalizer should not be initialized yet");
+  // Not required for tool functionality, hence no assertion.
+  if (ompt_set_target_info_fn)
+    ompt_set_target_info_fn(ompt_get_target_info_impl);
 
   LibraryFinalizer = new LibomptargetRtlFinalizer();
 
@@ -528,6 +563,8 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 
 void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
   ODBG(ODT_Tool) << "Executing finalizeLibrary";
+  if (ompt_set_target_info_fn)
+    ompt_set_target_info_fn(nullptr);
   // Before disabling OMPT, call the (plugin) finalizations that were registered
   // with this library
   LibraryFinalizer->finalize();
