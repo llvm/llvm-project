@@ -2323,14 +2323,12 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; CHECK-NEXT:    mov z6.b, z0.b[5]
 ; CHECK-NEXT:    mov z7.b, z0.b[4]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z2.h, z5.h, z4.h
-; CHECK-NEXT:    zip1 z3.h, z7.h, z6.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z1.s, z3.s, z2.s
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
+; CHECK-NEXT:    zip1 z2.s, z5.s, z4.s
+; CHECK-NEXT:    zip1 z3.s, z7.s, z6.s
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    zip1 z1.d, z3.d, z2.d
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
 ; CHECK-NEXT:    lsl z1.s, z1.s, #31
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
