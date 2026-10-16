@@ -1598,9 +1598,8 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
 /// with another term. Binds the pointer, load, and the other comparison term.
 static bool matchUncountableExitCondition(Value *Cond, Value *&Ptr,
                                           Instruction *&Load, Value *&Other) {
-  return match(Cond, m_OneUse(m_c_Cmp(
-                         m_OneUse(m_Instruction(Load, m_Load(m_Value(Ptr)))),
-                         m_Value(Other))));
+  return match(
+      Cond, m_c_Cmp(m_Instruction(Load, m_Load(m_Value(Ptr))), m_Value(Other)));
 }
 
 /// Matches an exit condition formed by comparing the current value of an
@@ -1627,7 +1626,7 @@ static bool matchCombinedExitCondition(Value *Cond, Instruction *&CountableCond,
                                        Value *&Other, ScalarEvolution &SE,
                                        Loop *TheLoop) {
   Value *L, *R;
-  if (!match(Cond, m_OneUse(m_LogicalOr(m_Value(L), m_Value(R)))))
+  if (!match(Cond, m_LogicalOr(m_Value(L), m_Value(R))))
     return false;
 
   if (matchCountableExitCondition(L, SE, TheLoop) &&
@@ -1833,9 +1832,6 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // This is currently matching about the simplest form we can, expecting
   // only one in-loop load, the result of which is directly compared against
   // a loop-invariant value.
-  // FIXME: We're insisting on a single use for now, because otherwise we will
-  // need to make PHI nodes for other users. That can be done once the initial
-  // transform code lands.
   auto *Br = cast<CondBrInst>(ExitingBlock->getTerminator());
 
   using namespace llvm::PatternMatch;
