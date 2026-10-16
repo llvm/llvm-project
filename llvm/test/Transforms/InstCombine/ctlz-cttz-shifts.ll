@@ -232,9 +232,7 @@ declare i16 @llvm.cttz.i16(i16, i1)
 define i64 @cttz_exact_shift_add(i64 %x, i64 %k) {
 ; CHECK-LABEL: define i64 @cttz_exact_shift_add(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[K:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], [[K]]
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = add i64 [[K]], [[COUNT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %shift = lshr exact i64 %x, %k
@@ -246,11 +244,9 @@ define i64 @cttz_exact_shift_add(i64 %x, i64 %k) {
 define i32 @cttz_exact_shift_trunc_add(i64 %x) {
 ; CHECK-LABEL: define i32 @cttz_exact_shift_trunc_add(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 1
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
 ; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw nsw i64 [[COUNT]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i32 [[NARROW]], 1
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 [[NARROW]]
 ;
   %shift = lshr exact i64 %x, 1
   %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
@@ -262,12 +258,9 @@ define i32 @cttz_exact_shift_trunc_add(i64 %x) {
 define i32 @cttz_exact_shift_trunc_add_variable(i64 %x, i64 %k) {
 ; CHECK-LABEL: define i32 @cttz_exact_shift_trunc_add_variable(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[K:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], [[K]]
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
 ; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw nsw i64 [[COUNT]] to i32
-; CHECK-NEXT:    [[AMOUNT:%.*]] = trunc i64 [[K]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[NARROW]], [[AMOUNT]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 [[NARROW]]
 ;
   %shift = lshr exact i64 %x, %k
   %count = call i64 @llvm.cttz.i64(i64 %shift, i1 true)
@@ -280,9 +273,7 @@ define i32 @cttz_exact_shift_trunc_add_variable(i64 %x, i64 %k) {
 define <2 x i32> @cttz_exact_shift_add_vector(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x i32> @cttz_exact_shift_add_vector(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact <2 x i32> [[X]], <i32 1, i32 2>
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[SHIFT]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw <2 x i32> [[COUNT]], <i32 1, i32 2>
+; CHECK-NEXT:    [[RESULT:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
 ;
   %shift = lshr exact <2 x i32> %x, <i32 1, i32 2>
@@ -294,10 +285,8 @@ define <2 x i32> @cttz_exact_shift_add_vector(<2 x i32> %x) {
 define i4 @cttz_exact_shift_trunc_add_drop_nsw(i16 %x) {
 ; CHECK-LABEL: define i4 @cttz_exact_shift_trunc_add_drop_nsw(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i16 [[X]], 1
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[SHIFT]], i1 true)
-; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw nsw i16 [[COUNT]] to i4
-; CHECK-NEXT:    [[RESULT:%.*]] = add i4 [[NARROW]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw i16 [[TMP1]] to i4
 ; CHECK-NEXT:    ret i4 [[RESULT]]
 ;
   %shift = lshr exact i16 %x, 1
@@ -388,8 +377,7 @@ define i64 @cttz_exact_shift_add_shift_multiuse(i64 %x, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[X]], 1
 ; CHECK-NEXT:    store i64 [[SHIFT]], ptr [[P]], align 4
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[SHIFT]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i64 [[COUNT]], 1
+; CHECK-NEXT:    [[RESULT:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %shift = lshr exact i64 %x, 1

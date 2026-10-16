@@ -1607,6 +1607,36 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
   return BinaryOperator::CreateUDiv(NUWAdd, Y);
 }
 
+// cttz(lshr exact X, K, true) + K -> cttz(X, true), optionally truncated.
+static Value *foldAddOfCttz(BinaryOperator &I,
+                            InstCombiner::BuilderTy &Builder) {
+  Value *Shifted, *Addend;
+  if (!match(&I, m_c_Add(m_OneUse(m_TruncOrSelf(
+                             m_OneUse(m_Cttz(m_Value(Shifted), m_One())))),
+                         m_Value(Addend))))
+    return nullptr;
+
+  Value *X, *ShiftAmt;
+  if (!match(Shifted, m_Exact(m_LShr(m_Value(X), m_Value(ShiftAmt)))))
+    return nullptr;
+
+  // The addend must be the shift amount, truncated to the result type if
+  // needed.
+  if (!match(Addend, m_TruncOrSelf(m_Specific(ShiftAmt)))) {
+    auto *C = dyn_cast<Constant>(ShiftAmt);
+    if (!C || C->getType() == I.getType() ||
+        Addend != ConstantExpr::getTrunc(C, I.getType()))
+      return nullptr;
+  }
+
+  // Exactness makes the discarded bits zero; the intrinsic's true argument
+  // makes a zero shifted value poison. Neither requires a nonzero input proof.
+  Value *Cttz =
+      Builder.CreateBinaryIntrinsic(Intrinsic::cttz, X, Builder.getTrue());
+  // The new count can be larger, so do not copy flags from the original trunc.
+  return Builder.CreateTrunc(Cttz, I.getType());
+}
+
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1631,6 +1661,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   if (Instruction *R = factorizeMathWithShlOps(I, Builder))
     return R;
+
+  if (Value *V = foldAddOfCttz(I, Builder))
+    return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldAddWithConstant(I))
     return X;
