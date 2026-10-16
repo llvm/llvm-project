@@ -981,13 +981,15 @@ void AMDGPUToolChain::addClangTargetOptions(
       return;
   }
 
+  // Use internal library instead of device library
+  if (UsesLLVMOffloading){
+      addOpenCLBuiltinsLib(getDriver(), getEffectiveTriple(), DriverArgs,
+                           CC1Args);
+    return;
+  }
+
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
-    return;
-
-  // With an LLVM environment, only use libraries provided by the resource
-  // directory.
-  if (getEffectiveTriple().getEnvironment() == llvm::Triple::LLVM)
     return;
 
   // Link device libraries for OpenCL, HIP, and OpenMP
