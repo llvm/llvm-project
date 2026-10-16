@@ -534,8 +534,7 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   llvm::Value *argB = mt.lookupValue(thisOp.getB());
   llvm::Value *argC = mt.lookupValue(thisOp.getC());
 
-  // The out-of-bounds variants have their own overloaded intrinsics, which
-  // only support the RN rounding mode and take no rounding-mode operand.
+  // The oob variants only support RN and take no rounding-mode operand.
   if (isOOB) {
     llvm::Intrinsic::ID id = isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
                                     : llvm::Intrinsic::nvvm_fma_rn_oob;
@@ -544,14 +543,12 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     return;
   }
 
-  // Overloaded fma intrinsic IDs, indexed by [`.ftz`][`.sat`/`.relu`].
   static constexpr llvm::Intrinsic::ID fmaIDs[2][3] = {
       {llvm::Intrinsic::nvvm_fma, llvm::Intrinsic::nvvm_fma_sat,
        llvm::Intrinsic::nvvm_fma_relu},
       {llvm::Intrinsic::nvvm_fma_ftz, llvm::Intrinsic::nvvm_fma_ftz_sat,
        llvm::Intrinsic::nvvm_fma_ftz_relu}};
 
-  // Op verifier ensures that sat and relu are mutually exclusive.
   llvm::Intrinsic::ID id = fmaIDs[isFTZ][isSat ? 1 : (isRelu ? 2 : 0)];
   llvm::Value *rnd = builder.getInt32(
       static_cast<int>(getLLVMRoundingModeForFPArith(rndMode)));

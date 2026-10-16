@@ -159,8 +159,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::floor, FTZ_MustBeOn};
     case Intrinsic::nvvm_fma:
     case Intrinsic::nvvm_fma_ftz: {
-      // Only fma with the round-to-nearest-even rounding mode matches the
-      // semantics of llvm.fma.
+      // Only replace if the rounding mode is RN.
       if (nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3)) !=
           APFloat::rmNearestTiesToEven)
         return {};
@@ -169,7 +168,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       if (EltTy->isDoubleTy())
         return IsFTZ ? SimplifyAction{}
                      : SimplifyAction{Intrinsic::fma, FTZ_Any};
-      // ftz is not supported for bf16.
       if (EltTy->isBFloatTy() && IsFTZ)
         return {};
       const bool IsHalfTy = EltTy->isHalfTy() || EltTy->isBFloatTy();
@@ -318,8 +316,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   // Simplify to target-generic intrinsic.
   if (Action.IID) {
     SmallVector<Value *, 4> Args(II->args());
-    // The overloaded NVVM fma intrinsics have a trailing rounding-mode
-    // operand that llvm.fma does not take; it is known to be RN here.
+    // llvm.fma does not take the trailing rounding-mode operand.
     if (II->getIntrinsicID() == Intrinsic::nvvm_fma ||
         II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz)
       Args.pop_back();

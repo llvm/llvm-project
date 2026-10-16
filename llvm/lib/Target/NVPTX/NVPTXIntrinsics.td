@@ -2383,7 +2383,7 @@ foreach ftz = ["", "ftz"] in {
 defm FMA_RND_F64 :
   F_MATH_3_RNDOP_TY<"fma.${rnd}.f64", F64RT, int_nvvm_fma>;
 
-// Mixed precision
+// Mixed Precision
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
 
