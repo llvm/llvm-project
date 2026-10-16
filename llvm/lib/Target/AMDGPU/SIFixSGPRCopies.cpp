@@ -607,11 +607,13 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
         B++;
 
       unsigned Remaining = 50;
-      auto InsertPt = MI->getIterator();
+      MachineBasicBlock::iterator MIIt(MI);
+      auto InsertPt = MIIt;
       // Search for a place to insert the initialization, examining at most 50
       // non-debug instructions before reaching B.
       for (MachineInstr &ScanMI : instructionsWithoutDebug(
-               std::next(MI->getReverseIterator()), B.getInstrIterator())) {
+               std::next(MI->getReverseIterator()), B.getInstrIterator(),
+               /*SkipPseudoOp=*/false)) {
         if (!Remaining)
           break;
         --Remaining;
@@ -624,10 +626,10 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
         InsertPt = ScanMI.getIterator();
       }
 
-      if (InsertPt != MI->getIterator()) {
+      if (InsertPt != MIIt) {
         // A DBG_VALUE of Reg crossed by MI would describe the new value too
         // early. Mark only those crossed locations as unavailable.
-        for (MachineInstr &DbgMI : make_range(InsertPt, MI->getIterator()))
+        for (MachineInstr &DbgMI : make_range(InsertPt, MIIt))
           if (DbgMI.isDebugValue() && DbgMI.readsRegister(Reg, TRI))
             DbgMI.setDebugValueUndef();
         // Move MI before the earliest crossed non-debug instruction.
