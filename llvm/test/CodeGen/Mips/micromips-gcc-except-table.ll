@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=mips-linux-gnu -mcpu=mips32r2 -mattr=+micromips -O3 -filetype=obj < %s | llvm-objdump -s -j .gcc_except_table - | FileCheck %s
 
 ; CHECK: Contents of section .gcc_except_table:
-; CHECK-NEXT: 0000 ff9b1501 0c001000 00100e1e 011e1800
+; CHECK-NEXT: 0000 ff9b1501 0c000e00 000e101e 011e1800
 ; CHECK-NEXT: 0010 00010000 00000000
 
 @_ZTIi = external constant ptr

@@ -146,6 +146,10 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
+  // Returns the even and odd GPRs that make up a GPRPair register. X0_Pair has
+  // no real odd subregister, so both halves are X0.
+  std::pair<Register, Register> getGPRPairSubRegs(MCRegister Pair) const;
+
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
 
   float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;

@@ -443,8 +443,12 @@ void CIRGenModule::constructAttributeList(
       addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
     }
 
-    // TODO(cir): Add noalias to returns for malloc-like functions
-    // (__attribute__((malloc)) / __declspec(restrict)).
+    // Both __attribute__((malloc)) and __declspec(restrict) are represented by
+    // RestrictAttr. Only forms without a deallocator imply a noalias return.
+    if (const auto *restrictAttr = targetDecl->getAttr<RestrictAttr>();
+        restrictAttr && restrictAttr->getDeallocator() == nullptr)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
 
     if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !codeGenOpts.NullPointerIsValid)

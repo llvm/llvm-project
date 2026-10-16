@@ -8,8 +8,9 @@
 ;; uncountable exit condition has a second user (the store).
 define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) !dbg !10 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
-; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Early exit loop with store but no supported condition load
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Unable to determine early exit condition for loop with side effects.
+; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Unable to determine early exit condition for loop with side effects
 entry:
   br label %loop, !dbg !11
 
@@ -1109,6 +1110,33 @@ for.inc:
 exit:
   %res = phi i64 [ %j, %for.body ], [ %j.next, %for.inc ]
   ret i64 %res
+}
+
+define void @loop_contains_store_condition_load_has_two_users(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_has_two_users'
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, %ee.val
+  store i16 %inc, ptr %st.addr, align 2
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
 }
 
 

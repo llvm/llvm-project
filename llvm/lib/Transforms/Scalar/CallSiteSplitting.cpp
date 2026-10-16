@@ -407,7 +407,7 @@ static void splitCallSite(CallBase &CB,
 // constant incoming values.
 static bool isPredicatedOnPHI(CallBase &CB) {
   BasicBlock *Parent = CB.getParent();
-  if (&CB != &*Parent->getFirstNonPHIOrDbg())
+  if (&CB != &*Parent->getFirstNonPHIOrPseudoProbe())
     return false;
 
   for (auto &PN : Parent->phis()) {
@@ -497,7 +497,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
   for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
-    auto II = BB.getFirstNonPHIOrDbg()->getIterator();
+    auto II = BB.getFirstNonPHIOrPseudoProbe()->getIterator();
     auto IE = BB.getTerminator()->getIterator();
     // Iterate until we reach the terminator instruction. tryToSplitCallSite
     // can replace BB's terminator in case BB is a successor of itself. In that
