@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRX86Transforms
   ShuffleVectorFMAOps.cpp
   VectorContractToAMXDotProduct.cpp
   MoveAccumulatorForContractLoop.cpp
+  VectorContractMultiLevelUnroll.cpp
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
