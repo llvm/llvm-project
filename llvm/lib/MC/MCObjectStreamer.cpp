@@ -764,6 +764,9 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
         "'.fill' directive with negative repeat count has no effect");
     return;
   }
+  // A zero size emits nothing, matching GNU as.
+  if (Size == 0)
+    return;
 
   assert(getCurrentSectionOnly() && "need a section");
   newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
