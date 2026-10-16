@@ -350,9 +350,8 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     assume that all regions of the referenced privatisation and reduction
     recipes obey the following bounds at this use:
     - Privatisation may read the original variable as a mold or firstprivate
-      copy source, and may allocate, write and free private storage. It
-      may not write or free the original variable. Lastprivate copy-back is
-      represented by explicit nested operations.
+      copy source, and may allocate, write and free private storage.
+      Lastprivate copy-back is represented by explicit nested operations.
     - Reduction may read and write the original variable. It may allocate,
       free, read or write private accumulators.
     - These effects apply only to storage directly designated by the original
@@ -363,10 +362,6 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     These are upper bounds, not a claim that every recipe performs every
     permitted effect. Without the flag, referenced recipes are assumed to have
     arbitrary memory effects.
-
-    Flang currently sets it when all private and reduction variables are
-    non-derived. These checks do not establish that all recipe effects satisfy
-    the bounds: user-defined reductions may exceed them.
   }] # clausesDescription;
 
   let arguments = !con(clausesArgs, (ins

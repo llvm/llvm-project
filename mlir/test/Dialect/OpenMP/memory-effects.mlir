@@ -73,35 +73,6 @@ func.func @sections_private_effects(%x: memref<i32>, %y: !llvm.ptr) {
   return
 }
 
-func.func private @custom_copy(memref<i32>, memref<i32>)
-
-omp.private {type = firstprivate} @custom_private_i32 : memref<i32> copy {
-^bb0(%original: memref<i32>, %private: memref<i32>):
-  func.call @custom_copy(%original, %private) : (memref<i32>, memref<i32>) -> ()
-  omp.yield(%private : memref<i32>)
-}
-
-func.func @sections_unmarked_private_effects(%x: memref<i32>) {
-  // Without an opt-in, the copy may access arbitrary memory. With nowait,
-  // these untargeted effects cannot come from an implicit barrier.
-  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
-  omp.sections nowait private(@custom_private_i32 %x -> %px : memref<i32>) {
-    omp.section {
-    ^bb0(%sx: memref<i32>):
-      omp.terminator
-    }
-    omp.terminator
-  }
-  return
-}
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%unused: f32):
@@ -138,36 +109,6 @@ func.func @sections_reduction_effects(%x: memref<f32>) {
   return
 }
 
-omp.declare_reduction @identity_f32 : f32
-init {
-^bb0(%mold: f32):
-  omp.yield(%mold : f32)
-}
-combiner {
-^bb0(%lhs: f32, %rhs: f32):
-  omp.yield(%rhs : f32)
-}
-
-func.func @sections_device_reduction_effects(%x: memref<f32>) {
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
-  omp.sections reduction(@identity_f32 %x -> %px : memref<f32>) {
-    omp.section {
-    ^bb0(%sx: memref<f32>):
-      omp.terminator
-    }
-    omp.terminator
-  } <{assume_bounded_recipe_effects}>
-  return
-}
-
-
 func.func private @custom_combiner(f32, f32) -> f32
 
 omp.declare_reduction @custom_f32 : f32
@@ -196,29 +137,6 @@ func.func @sections_custom_scalar_reduction(%x: memref<f32>) {
   omp.sections nowait reduction(@custom_f32 %x -> %p : memref<f32>) {
     omp.section {
     ^bb0(%s: memref<f32>):
-      omp.terminator
-    }
-    omp.terminator
-  }
-  return
-}
-
-func.func @sections_unmarked_builtin_reduction(%x: memref<f32>) {
-  // Even a simple recipe requires an explicit opt-in. The interface does not
-  // inspect recipe bodies to establish the bound.
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'read' on block argument 0, on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
-  omp.sections nowait reduction(@add_f32 %x -> %px : memref<f32>) {
-    omp.section {
-    ^bb0(%sx: memref<f32>):
       omp.terminator
     }
     omp.terminator

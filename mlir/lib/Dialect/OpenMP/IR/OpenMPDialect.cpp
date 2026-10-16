@@ -3478,11 +3478,14 @@ static void addUnknownMemoryEffects(
 /// Privatisation may read the original as a mold or firstprivate copy source.
 /// Any lastprivate copy-back is explicit in the nested operations.
 static void getPrivatisationEffects(
-    SectionsOp op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
-  for (auto [source, priv] : llvm::zip_equal(op.getPrivateVarsMutable(),
-                                             iface.getPrivateBlockArgs())) {
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
+
+  OperandRange sourceVars = iface.getPrivateVars();
+  for (OpOperand &source :
+       MutableArrayRef(sourceVars.getBase(), sourceVars.size()))
     effects.emplace_back(MemoryEffects::Read::get(), &source);
+  for (BlockArgument priv : iface.getPrivateBlockArgs()) {
     effects.emplace_back(MemoryEffects::Write::get(), priv);
     effects.emplace_back(MemoryEffects::Allocate::get(), priv);
     effects.emplace_back(MemoryEffects::Free::get(), priv);
@@ -3490,22 +3493,31 @@ static void getPrivatisationEffects(
 }
 
 /// Reductions initialise private accumulators and combine them into the
-/// original variables.
+/// original variables. Account for all three reduction clauses.
 static void
-getReductionEffects(SectionsOp op,
+getReductionEffects(Operation *op,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
-  for (auto [source, priv] : llvm::zip_equal(op.getReductionVarsMutable(),
-                                             iface.getReductionBlockArgs())) {
-    effects.emplace_back(MemoryEffects::Read::get(), &source);
-    effects.emplace_back(MemoryEffects::Write::get(), &source);
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
 
-    effects.emplace_back(MemoryEffects::Allocate::get(), priv);
-    effects.emplace_back(MemoryEffects::Free::get(), priv);
+  auto addEffects = [&](OperandRange sourceVars,
+                        ArrayRef<BlockArgument> privateArgs) {
+    for (OpOperand &source :
+         MutableArrayRef(sourceVars.getBase(), sourceVars.size())) {
+      effects.emplace_back(MemoryEffects::Read::get(), &source);
+      effects.emplace_back(MemoryEffects::Write::get(), &source);
+    }
 
-    effects.emplace_back(MemoryEffects::Read::get(), priv);
-    effects.emplace_back(MemoryEffects::Write::get(), priv);
-  }
+    for (BlockArgument priv : privateArgs) {
+      effects.emplace_back(MemoryEffects::Allocate::get(), priv);
+      effects.emplace_back(MemoryEffects::Free::get(), priv);
+      effects.emplace_back(MemoryEffects::Read::get(), priv);
+      effects.emplace_back(MemoryEffects::Write::get(), priv);
+    }
+  };
+
+  addEffects(iface.getReductionVars(), iface.getReductionBlockArgs());
+  addEffects(iface.getInReductionVars(), iface.getInReductionBlockArgs());
+  addEffects(iface.getTaskReductionVars(), iface.getTaskReductionBlockArgs());
 }
 
 static void getBarrierEffects(
@@ -3526,12 +3538,17 @@ void SectionsOp::getEffects(
   if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
     getBarrierEffects(effects);
   }
-
-  getPrivatisationEffects(*this, effects);
-  getReductionEffects(*this, effects);
-  if (!getAssumeBoundedRecipeEffects() &&
-      (!getPrivateVars().empty() || !getReductionVars().empty()))
-    addUnknownMemoryEffects(effects);
+  bool hasReduction = !getReductionVars().empty();
+  bool hasPrivatisation = !getPrivateVars().empty();
+  if (getAssumeBoundedRecipeEffects()) {
+    if (hasPrivatisation)
+      getPrivatisationEffects(*this, effects);
+    if (hasReduction)
+      getReductionEffects(*this, effects);
+  } else {
+    if (hasReduction || hasPrivatisation)
+      addUnknownMemoryEffects(effects);
+  }
 }
 
 //===----------------------------------------------------------------------===//

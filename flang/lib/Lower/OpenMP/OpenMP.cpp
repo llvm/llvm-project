@@ -3569,8 +3569,8 @@ static bool isNonDerived(const semantics::Symbol &sym) {
   return type && type->AsIntrinsic();
 }
 
-static bool isNonDerivedItem(const semantics::Symbol *sym) {
-  const auto &ultimate = sym->GetUltimate();
+static bool isNonDerivedItem(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
   // May be a common block
   if (const auto *common =
           ultimate.detailsIf<semantics::CommonBlockDetails>()) {
@@ -3583,8 +3583,7 @@ static bool isNonDerivedItem(const semantics::Symbol *sym) {
 
 static bool isDerivedVariable(mlir::Value variable) {
   mlir::Type type = variable.getType();
-  return !fir::isa_derived(fir::getFortranElementType(type)) &&
-         !fir::isa_volatile_type(type);
+  return !fir::isa_derived(fir::getFortranElementType(type));
 }
 
 static mlir::omp::SectionsOp
@@ -3680,9 +3679,11 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // SECTIONS construct.
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
-  // Because Flang uses eager privatisation clausOps.privateVars is empty.
-  bool allPrivateVarsEligible =
-      llvm::all_of(dsp.getAllSymbolsToPrivatize(), isNonDerivedItem);
+  // TODO: sections still uses eager privatisation. Use clauseOps.privateVars
+  // once delayedPrivatization is turned on.
+  bool allPrivateVarsEligible = llvm::all_of(
+      dsp.getAllSymbolsToPrivatize(),
+      [](const semantics::Symbol *sym) { return isNonDerivedItem(*sym); });
 
   bool allReductionVarsEligible =
       llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
