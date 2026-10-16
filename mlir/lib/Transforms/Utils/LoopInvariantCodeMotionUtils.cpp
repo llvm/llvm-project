@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/LoopInvariantConditionInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
@@ -116,6 +117,69 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
       },
       [&](Operation *op, Region *) { return isPure(op); },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
+}
+
+static void hoistFromApprovedRegion(RewriterBase &rewriter,
+                                    LoopLikeOpInterface loopLike,
+                                    Region &region, size_t &numHoisted) {
+  for (Operation &nestedOp : llvm::make_early_inc_range(region.front())) {
+    if (nestedOp.hasTrait<OpTrait::IsTerminator>())
+      continue;
+    auto innerCondOp = dyn_cast<LoopInvariantConditionOpInterface>(nestedOp);
+    if (!innerCondOp)
+      continue;
+    for (Region &innerRegion : innerCondOp->getRegions()) {
+      if (innerRegion.empty())
+        continue;
+      if (!innerCondOp.isRegionAlwaysEnteredInLoop(innerRegion, loopLike))
+        continue;
+      hoistFromApprovedRegion(rewriter, loopLike, innerRegion, numHoisted);
+    }
+  }
+
+  Operation *insertionPoint = region.getParentOp();
+  llvm::SmallPtrSet<Value, 8> hoistedResults;
+  for (Operation &nestedOp : llvm::make_early_inc_range(region.front())) {
+    if (nestedOp.hasTrait<OpTrait::IsTerminator>())
+      continue;
+    if (!isPure(&nestedOp))
+      continue;
+    bool operandsOk = llvm::all_of(nestedOp.getOperands(), [&](Value v) {
+      if (loopLike.isDefinedOutsideOfLoop(v) || hoistedResults.contains(v))
+        return true;
+      Operation *def = v.getDefiningOp();
+      return def && !region.isAncestor(def->getParentRegion());
+    });
+    if (!operandsOk)
+      continue;
+    rewriter.moveOpBefore(&nestedOp, insertionPoint);
+    hoistedResults.insert(nestedOp.getResults().begin(),
+                          nestedOp.getResults().end());
+    ++numHoisted;
+  }
+}
+
+// hoists when a dialect's
+// LoopInvariantConditionOpInterface implementation proves the region is
+// entered on every loop iteration.
+size_t mlir::hoistFromInvariantConditions(RewriterBase &rewriter,
+                                          LoopLikeOpInterface loopLike) {
+  size_t numHoisted = 0;
+  for (Region *loopRegion : loopLike.getLoopRegions()) {
+    for (Operation &op : loopRegion->getOps()) {
+      auto condOp = dyn_cast<LoopInvariantConditionOpInterface>(op);
+      if (!condOp)
+        continue;
+      for (Region &nested : condOp->getRegions()) {
+        if (nested.empty())
+          continue;
+        if (!condOp.isRegionAlwaysEnteredInLoop(nested, loopLike))
+          continue;
+        hoistFromApprovedRegion(rewriter, loopLike, nested, numHoisted);
+      }
+    }
+  }
+  return numHoisted;
 }
 
 namespace {
