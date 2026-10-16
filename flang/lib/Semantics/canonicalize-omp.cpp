@@ -47,18 +47,18 @@ private:
   void MakeExecutableAllocateFromOmps(
       std::list<parser::OpenMPDeclarativeConstruct> &omps, parser::Block &body);
 
-  void CanonicalizeUtilityConstructs(parser::SpecificationPart &spec);
+  void CanonicalizeUtilityDirectives(parser::SpecificationPart &spec);
 
-  void MoveUtilityConstructsFromDecls(
+  void MoveUtilityDirectivesFromDecls(
       std::list<parser::DeclarationConstruct> &decls, parser::Block &block);
 
-  void MoveUtilityConstructsFromOmps(
+  void MoveUtilityDirectivesFromOmps(
       std::list<parser::OpenMPDeclarativeConstruct> &omps,
       parser::Block &block);
 
   // Mapping from the specification parts to the blocks that follow in the
-  // same construct. This is for converting utility constructs to executable
-  // constructs.
+  // same program unit/construct. This is for converting utility directives
+  // to executable constructs.
   std::map<parser::SpecificationPart *, parser::Block *> blockForSpec_;
   parser::Messages &messages_;
 };
@@ -101,7 +101,7 @@ bool CanonicalizationOfOmp::Pre(parser::SeparateModuleSubprogram &x) {
 }
 
 void CanonicalizationOfOmp::Post(parser::SpecificationPart &spec) {
-  CanonicalizeUtilityConstructs(spec);
+  CanonicalizeUtilityDirectives(spec);
   CanonicalizeAllocateDirectives(spec);
 }
 
@@ -144,7 +144,7 @@ void CanonicalizationOfOmp::CanonicalizeAllocateDirectives(
   };
 
   if (!block.empty() && isAllocateStmt(block.front())) {
-    // There are two places where an OpenMP declarative construct can
+    // There are two places where an OpenMP declarative directive can
     // show up in the tuple in specification part:
     // (1) in std::list<OpenMPDeclarativeConstruct>, or
     // (2) in std::list<DeclarationConstruct>.
@@ -240,10 +240,10 @@ void CanonicalizationOfOmp::MakeExecutableAllocateFromOmps(
   }
 }
 
-// Canonicalization of utility constructs.
+// Canonicalization of utility directives.
 //
-// This addresses the issue of utility constructs that appear at the
-// boundary between the specification and the execution parts, e.g.
+// This addresses the issue of directives that appear at the boundary
+// between the specification and the execution parts, e.g.
 //   subroutine foo
 //     integer :: x     ! Specification
 //     !$omp nothing
@@ -251,25 +251,25 @@ void CanonicalizationOfOmp::MakeExecutableAllocateFromOmps(
 //     ...
 //   end
 //
-// Utility constructs (error and nothing) can appear in both the
+// Utility directives (error and nothing) can appear in both the
 // specification part and the execution part, except "error at(execution)",
 // which cannot be present in the specification part (whereas any utility
-// construct can be in the execution part).
-// When a utility construct is at the boundary, it should preferably be
+// directive can be in the execution part).
+// When a utility directive is at the boundary, it should preferably be
 // parsed as an element of the execution part, but since the specification
-// part is parsed first, the utility construct ends up belonging to the
+// part is parsed first, the utility diretives ends up belonging to the
 // specification part.
 //
 // To allow the likes of the following code to compile, move all utility
-// construct that are at the end of the specification part to the beginning
+// directives that are at the end of the specification part to the beginning
 // of the execution part.
 //
 // subroutine foo
-//   !$omp error at(execution)  ! Initially parsed as declarative construct.
+//   !$omp error at(execution)  ! Initially parsed as declarative directive.
 //                              ! Move it to the execution part.
 // end
 
-void CanonicalizationOfOmp::CanonicalizeUtilityConstructs(
+void CanonicalizationOfOmp::CanonicalizeUtilityDirectives(
     parser::SpecificationPart &spec) {
   auto found = blockForSpec_.find(&spec);
   if (found == blockForSpec_.end()) {
@@ -278,7 +278,7 @@ void CanonicalizationOfOmp::CanonicalizeUtilityConstructs(
   }
   parser::Block &block = *found->second;
 
-  // There are two places where an OpenMP declarative construct can
+  // There are two places where an OpenMP declarative directive can
   // show up in the tuple in specification part:
   // (1) in std::list<OpenMPDeclarativeConstruct>, or
   // (2) in std::list<DeclarationConstruct>.
@@ -288,16 +288,16 @@ void CanonicalizationOfOmp::CanonicalizeUtilityConstructs(
   auto &decls = std::get<std::list<parser::DeclarationConstruct>>(spec.t);
 
   if (!decls.empty()) {
-    MoveUtilityConstructsFromDecls(decls, block);
+    MoveUtilityDirectivesFromDecls(decls, block);
   } else {
-    MoveUtilityConstructsFromOmps(omps, block);
+    MoveUtilityDirectivesFromOmps(omps, block);
   }
 }
 
-void CanonicalizationOfOmp::MoveUtilityConstructsFromDecls(
+void CanonicalizationOfOmp::MoveUtilityDirectivesFromDecls(
     std::list<parser::DeclarationConstruct> &decls, parser::Block &block) {
   // Find the trailing range of DeclarationConstructs that are OpenMP
-  // utility construct, that are to be moved to the execution part.
+  // utility directive, that are to be moved to the execution part.
   std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
     for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
       parser::DeclarationConstruct &dc = *rit;
@@ -310,7 +310,7 @@ void CanonicalizationOfOmp::MoveUtilityConstructsFromDecls(
       if (!std::holds_alternative<OpenMPDeclarativeConstruct>(sc.u)) {
         return rit;
       }
-      // Got OpenMPDeclarativeConstruct. If it's not a utility construct
+      // Got OpenMPDeclarativeConstruct. If it's not a utility directive
       // then stop.
       auto &odc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
       if (!std::holds_alternative<parser::OmpUtilityDirective>(odc.u)) {
@@ -335,11 +335,11 @@ void CanonicalizationOfOmp::MoveUtilityConstructsFromDecls(
   decls.erase(rlast.base(), decls.end());
 }
 
-void CanonicalizationOfOmp::MoveUtilityConstructsFromOmps(
+void CanonicalizationOfOmp::MoveUtilityDirectivesFromOmps(
     std::list<parser::OpenMPDeclarativeConstruct> &omps, parser::Block &block) {
   using OpenMPDeclarativeConstruct = parser::OpenMPDeclarativeConstruct;
   // Find the trailing range of OpenMPDeclarativeConstruct that are OpenMP
-  // utility construct, that are to be moved to the execution part.
+  // utility directive, that are to be moved to the execution part.
   std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
     for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
       OpenMPDeclarativeConstruct &dc = *rit;
