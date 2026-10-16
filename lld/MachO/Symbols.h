@@ -391,8 +391,12 @@ T *replaceSymbol(Symbol *s, ArgT &&...arg) {
 inline bool needsBinding(const Symbol *sym) {
   if (isa<DylibSymbol>(sym))
     return true;
+  // Weak definitions in a kext are not coalesced by the kernel linker, so
+  // references to them are rebased rather than bound.
   if (const auto *defined = dyn_cast<Defined>(sym))
-    return defined->isExternalWeakDef() || defined->interposable;
+    return (defined->isExternalWeakDef() &&
+            config->outputType != llvm::MachO::MH_KEXT_BUNDLE) ||
+           defined->interposable;
   return false;
 }
 

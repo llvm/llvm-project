@@ -123,6 +123,13 @@ Error Object::removeSections(
       OldIndexToSection[(*I)->Index] = I->get();
       (*I)->Index = NextSectionIndex++;
     }
+    for (auto I = It, End = LC.Sections.end(); I != End; ++I)
+      for (const RelocationInfo &R : LocalRelocations)
+        if (R.Sec && *R.Sec == I->get())
+          return createStringError(std::errc::invalid_argument,
+                                   "section '%s' cannot be removed because it "
+                                   "is referenced by a local relocation",
+                                   (*I)->CanonicalName.c_str());
     LC.Sections.erase(It, LC.Sections.end());
   }
 
@@ -147,6 +154,14 @@ Error Object::removeSections(
                                    (*R.Symbol)->Name.c_str(),
                                    *((*R.Symbol)->section()),
                                    Sec->CanonicalName.c_str());
+  for (const RelocationInfo &R : ExternalRelocations)
+    if (R.Symbol && *R.Symbol && DeadSymbols.count(*R.Symbol))
+      return createStringError(std::errc::invalid_argument,
+                               "symbol '%s' defined in section with index "
+                               "'%u' cannot be removed because it is "
+                               "referenced by an external relocation",
+                               (*R.Symbol)->Name.c_str(),
+                               *((*R.Symbol)->section()));
   SymTable.removeSymbols(IsDead);
   for (std::unique_ptr<SymbolEntry> &S : SymTable.Symbols)
     if (S->section())

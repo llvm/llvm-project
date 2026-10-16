@@ -309,6 +309,10 @@ struct Object {
   LazyBindInfo LazyBinds;
   ExportInfo Exports;
   IndirectSymbolTable IndirectSymTable;
+  /// External and local relocation entries of a linked image (e.g. a kext
+  /// bundle), described by the LC_DYSYMTAB load command.
+  std::vector<RelocationInfo> ExternalRelocations;
+  std::vector<RelocationInfo> LocalRelocations;
   LinkData DataInCode;
   LinkData LinkerOptimizationHint;
   LinkData FunctionStarts;
