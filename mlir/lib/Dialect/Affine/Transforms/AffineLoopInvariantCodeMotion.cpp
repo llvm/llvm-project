@@ -166,6 +166,20 @@ checkInvarianceOfNestedIfOps(AffineIfOp ifOp, AffineForOp loop,
   return true;
 }
 
+/// Hoists pure ops nested in `ifOp` whose operands are invariant on `loop`.
+static void hoistInvariantOpsFromIf(AffineIfOp ifOp, AffineForOp loop) {
+  ifOp->walk<WalkOrder::PreOrder>([&](Operation *op) {
+    if (op == ifOp.getOperation() || isa<AffineIfOp>(op))
+      return WalkResult::advance();
+    if (op->getNumRegions() == 0 && !op->hasTrait<OpTrait::IsTerminator>() &&
+        isPure(op) && llvm::all_of(op->getOperands(), [&](Value v) {
+          return loop.isDefinedOutsideOfLoop(v);
+        }))
+      loop.moveOutOfLoop(op);
+    return WalkResult::skip();
+  });
+}
+
 void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   // This is the place where hoisted instructions would reside.
   OpBuilder b(forOp.getOperation());
@@ -204,6 +218,10 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   for (auto *op : opsToMove) {
     op->moveBefore(forOp);
   }
+
+  // Affine.if ops left in the loop may still contain invariant ops.
+  for (auto ifOp : forOp.getBody()->getOps<AffineIfOp>())
+    hoistInvariantOpsFromIf(ifOp, forOp);
 }
 
 void LoopInvariantCodeMotion::runOnOperation() {
