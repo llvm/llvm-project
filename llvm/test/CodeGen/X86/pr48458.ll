@@ -4,9 +4,8 @@
 define i1 @foo(ptr %0) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %top
-; CHECK-NEXT:    movq $-2147483648, %rax # imm = 0x80000000
-; CHECK-NEXT:    testq %rax, (%rdi)
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    cmpq $2147483647, (%rdi) # imm = 0x7FFFFFFF
+; CHECK-NEXT:    setbe %al
 ; CHECK-NEXT:    retq
 top:
   %1 = load i64, ptr %0, !range !0, !noundef !{}
