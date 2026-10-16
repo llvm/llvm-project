@@ -17,35 +17,30 @@ import sys
 import tabulate
 import urllib.error
 import urllib.parse
-import urllib.request
 
 
-# LNT instances can be slow: timeout after that many seconds.
-TIMEOUT_SECONDS = 120
+# How many runs to ask for at once. This is the largest page size LNT allows.
+PAGE_SIZE = 10000
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
 
-class LNTError(Exception):
-    pass
-
 
 def get(url: str) -> Optional[dict]:
     """GET a JSON resource, returning None if the server answers 404."""
     logging.debug(f'GET {url}')
     try:
-        with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode())
+        return common.lnt_request(url)
     except urllib.error.HTTPError as error:
         if error.code == 404:
             return None
-        raise LNTError(f'GET {url} failed with HTTP {error.code}: {error.reason}')
+        raise common.LNTError(f'GET {url} failed with HTTP {error.code}: {error.reason}')
     except urllib.error.URLError as error:
-        raise LNTError(f'GET {url} failed: {error.reason}')
+        raise common.LNTError(f'GET {url} failed: {error.reason}')
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
-        raise LNTError(f'GET {url} returned a malformed response: {error}')
+        raise common.LNTError(f'GET {url} returned a malformed response: {error}')
 
 
 def benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Optional[Dict[str, int]]:
@@ -53,25 +48,28 @@ def benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Optional
     Return {commit: number of runs} for a machine, or None if the instance has no
     such machine.
     """
-    base = f'{lnt_url.rstrip("/")}/api/db_default/v4/{test_suite}'
-    result = get(f'{base}/machines/{urllib.parse.quote(machine)}')
-    if result is None:
-        listing = get(f'{base}/machines')
-        if listing is None:
-            raise LNTError(f'{lnt_url} has no test suite named {test_suite}')
-        named = [m for m in listing.get('machines', []) if m.get('name') == machine]
-        if len(named) > 1:
-            ids = ', '.join(str(m.get('id')) for m in named)
-            raise LNTError(f'ambiguous name: {lnt_url} has {len(named)} machines named {machine} (ids {ids})')
-        return None
+    base = common.lnt_suite_url(lnt_url, test_suite)
+    # Listing runs answers 404 both for an unknown suite and for an unknown machine: tell them apart.
+    if get(base) is None:
+        raise common.LNTError(f'{lnt_url} has no test suite named {test_suite}')
 
     counts: Dict[str, int] = {}
-    for run in result.get('runs', []):
-        if 'git_sha' not in run:
-            raise LNTError(f'run {run.get("id")} has no git_sha field. Is {test_suite} the right test suite?')
-        commit = str(run['git_sha']).strip().lower() # normalize commit SHAs
-        counts[commit] = counts.get(commit, 0) + 1
-    return counts
+    params = {'machine': machine, 'limit': PAGE_SIZE}
+    while True:
+        page = get(f'{base}/runs?{urllib.parse.urlencode(params)}')
+        if page is None:
+            if 'cursor' in params:
+                raise common.LNTError(f'machine {machine} disappeared from {lnt_url} while listing its runs')
+            return None
+        for run in page.get('items', []):
+            if 'commit' not in run:
+                raise common.LNTError(f'run {run.get("uuid")} has no commit')
+            commit = str(run['commit']).strip().lower() # normalize commit SHAs
+            counts[commit] = counts.get(commit, 0) + 1
+        cursor = (page.get('cursor') or {}).get('next')
+        if cursor is None:
+            return counts
+        params['cursor'] = cursor
 
 
 def plan(commits: Sequence[str],
@@ -197,5 +195,5 @@ def main(argv: List[str]) -> int:
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv[1:]))
-    except (ValueError, OSError, LNTError) as error:
+    except (ValueError, OSError, common.LNTError) as error:
         sys.exit(f'error: {error}')

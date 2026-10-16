@@ -38,6 +38,7 @@ struct AArch64PostLegalizerLoweringImplRuleConfig;
 namespace llvm {
 
 class AArch64RegisterBankInfo;
+struct AArch64Options;
 class AArch64Subtarget;
 class AArch64TargetMachine;
 enum class CodeGenOptLevel;
@@ -159,7 +160,8 @@ FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombinerLegacy(bool IsOptNone);
 FunctionPass *createAArch64PostLegalizerLowering();
 FunctionPass *createAArch64PostSelectOptimize();
-FunctionPass *createAArch64StackTaggingPass(bool IsOptNone);
+FunctionPass *createAArch64StackTaggingPass(const AArch64Options &CLOpts,
+                                            bool IsOptNone);
 FunctionPass *createAArch64StackTaggingPreRALegacyPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 

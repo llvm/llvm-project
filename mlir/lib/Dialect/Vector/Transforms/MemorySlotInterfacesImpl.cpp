@@ -1,4 +1,4 @@
-//===- MemorySlotOpInterfaceImpl.cpp - Mem2Reg for Vector ops -------------===//
+//===- MemorySlotInterfacesImpl.cpp - Mem2Reg for Vector ops --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,11 +27,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Vector/Transforms/MemorySlotOpInterfaceImpl.h"
+#include "mlir/Dialect/Vector/Transforms/MemorySlotInterfacesImpl.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/MemRef/Transforms/MemorySlotOpInterfaceImpl.h"
+#include "mlir/Dialect/MemRef/Transforms/MemorySlotInterfacesImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"

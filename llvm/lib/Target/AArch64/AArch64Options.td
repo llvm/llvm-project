@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def AArch64Options : OptionsStruct<prefix = "aarch64-", perContext = false>;
+def AArch64Options : OptionsStruct<prefix = "aarch64-">;
 
 // AArch64A57FPLoadBalancing.cpp
 // Enforce the algorithm to use the scavenged register even when the original
