@@ -621,6 +621,9 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
 
   // Put Checksum at a scope where it will persist past the createFile call.
   SmallString<64> Checksum;
+  // Reuse the checksum CreateCompileUnit already computed for the main file.
+  if (!CSInfo && FID == SM.getMainFileID() && TheCU)
+    CSInfo = TheCU->getFile()->getChecksum();
   if (!CSInfo) {
     std::optional<llvm::DIFile::ChecksumKind> CSKind =
       computeChecksum(FID, Checksum);
