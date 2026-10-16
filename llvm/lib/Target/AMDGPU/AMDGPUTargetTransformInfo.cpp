@@ -352,15 +352,7 @@ bool GCNTTIImpl::preferSLPInstCountCheck() const {
   return !ST->hasGFX940Insts() && !ST->hasGFX950Insts();
 }
 
-bool GCNTTIImpl::preferSLPOnceUsedSeeds() const {
-  // A tree seeded by a single-use instruction is often profitable only through
-  // its leaves (e.g. two adjacent loads merged), while every 32-bit integer
-  // bundle above them costs the same as its scalars, since there are no packed
-  // 32-bit integer ALU ops. Legalization splits those bundles again, and the
-  // scalar combines they block are lost: a select of a single bit becomes
-  // v_and + v_cmp + v_cndmask instead of v_bfe_i32 + v_and.
-  return false;
-}
+bool GCNTTIImpl::preferSLPOnceUsedSeeds() const { return false; }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                          unsigned ChainSizeInBytes,
