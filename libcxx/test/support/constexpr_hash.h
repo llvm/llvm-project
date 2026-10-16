@@ -20,6 +20,7 @@
 #include <concepts>
 #include <bit>
 #include <cstddef>
+#include <cmath>
 #include <array>
 
 namespace support {
@@ -58,10 +59,11 @@ concept UnqualifiedArithmeticOrEnum =
 
 template <size_t N>
 constexpr std::size_t array_hash(std::array<std::byte, N> arr) {
-  // use a simple implementation for "hash"-ing
-  std::size_t res{0};
+  // based on fnv-1
+  std::size_t res{14695981039346656037ULL};
   for (auto c : arr) {
     res ^= (std::size_t)c;
+    res *= 1099511628211ULL;
   }
   return res;
 }
@@ -78,6 +80,26 @@ struct constexpr_hash<Key> {
     } else if constexpr (std::floating_point<Key>) {
       if (key == 0.0f)
         return 0;
+      if (std::isnan(key)) {
+        return 0xc3a5c85c97cb3127ULL;
+      }
+      if (std::isinf(key)) {
+        return std::signbit(key) ? 0xb492b66fbe98f273ULL : 0x9ae16a3b2f90404fULL;
+      }
+
+      if constexpr (std::is_same_v<Key, long double>) {
+        // long double can have padding on certain platforms which are uninitialized, and hence, can't be used during constant evaluation
+        // to get around that we break it down to 2 double (which have all bits initialized).
+
+        double hi = static_cast<double>(key);
+        double lo = static_cast<double>(key - static_cast<long double>(hi));
+
+        struct Pair {
+          double hi, low;
+        } pair = {hi, lo};
+
+        return array_hash(std::bit_cast<std::array<std::byte, sizeof(Pair)>>(pair));
+      }
 
       return array_hash(std::bit_cast<std::array<std::byte, sizeof(Key)>>(key));
 
