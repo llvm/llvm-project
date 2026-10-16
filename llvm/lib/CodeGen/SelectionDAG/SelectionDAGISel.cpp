@@ -1730,13 +1730,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         }
       }
 
-      if (AllPredsVisited) {
-        for (const PHINode &PN : LLVMBB->phis())
-          FuncInfo->ComputePHILiveOutRegInfo(&PN);
-      } else {
-        for (const PHINode &PN : LLVMBB->phis())
-          FuncInfo->InvalidatePHILiveOutRegInfo(&PN);
-      }
+      for (const PHINode &PN : LLVMBB->phis())
+        FuncInfo->ComputePHILiveOutRegInfo(&PN, AllPredsVisited);
 
       FuncInfo->VisitedBBs[LLVMBB->getNumber()] = true;
     }

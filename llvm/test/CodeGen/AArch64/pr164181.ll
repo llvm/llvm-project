@@ -121,7 +121,7 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    str x12, [sp, #40] // 8-byte Spill
 ; CHECK-NEXT:    cmn x24, #30
 ; CHECK-NEXT:    mov x12, #-30 // =0xffffffffffffffe2
-; CHECK-NEXT:    add x19, x4, w8, sxtw #2
+; CHECK-NEXT:    add x19, x4, w8, uxtw #2
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    csel x12, x24, x12, lo
 ; CHECK-NEXT:    mov w4, w30
@@ -149,11 +149,11 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    mov w12, wzr
 ; CHECK-NEXT:    str wzr, [sp, #132] // 4-byte Spill
 ; CHECK-NEXT:    mov w30, w4
-; CHECK-NEXT:    madd x8, x9, x14, x8
+; CHECK-NEXT:    umaddl x8, w9, w14, x8
 ; CHECK-NEXT:    mov w14, #1 // =0x1
 ; CHECK-NEXT:    str x8, [sp, #120] // 8-byte Spill
-; CHECK-NEXT:    add x8, x9, x9, lsl #1
-; CHECK-NEXT:    lsl x26, x8, #4
+; CHECK-NEXT:    lsl x8, x9, #4
+; CHECK-NEXT:    orr x26, x8, x9, lsl #5
 ; CHECK-NEXT:    sxtb w8, w23
 ; CHECK-NEXT:    mov w23, w25
 ; CHECK-NEXT:    str w8, [sp, #116] // 4-byte Spill
@@ -332,7 +332,7 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    mov x24, x27
 ; CHECK-NEXT:    lsl x23, x14, #1
 ; CHECK-NEXT:    mov x27, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    madd x14, x14, x3, x11
+; CHECK-NEXT:    umaddl x14, w14, w3, x11
 ; CHECK-NEXT:    mov w28, w30
 ; CHECK-NEXT:    mov w3, #-7680 // =0xffffe200
 ; CHECK-NEXT:    b .LBB0_36

@@ -30,7 +30,6 @@ define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    andi s0, s0, 1
 ; RV32-NEXT:    lw a0, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    add s0, s0, a0
 ; RV32-NEXT:    mv a0, s1

@@ -80,7 +80,7 @@ define i32 @pr155828() {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    testb $1, %cl
+; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    jne .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %if.else.i.i.i
 ; CHECK-NEXT:    xorl %eax, %eax

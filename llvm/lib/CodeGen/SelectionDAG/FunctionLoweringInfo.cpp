@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -429,7 +430,11 @@ FunctionLoweringInfo::GetLiveOutRegInfo(Register Reg, unsigned BitWidth) {
 
 /// ComputePHILiveOutRegInfo - Compute LiveOutInfo for a PHI's destination
 /// register based on the LiveOutInfo of its operands.
-void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
+void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN,
+                                                    bool AllPredsVisited) {
+  if (!AllPredsVisited)
+    InvalidatePHILiveOutRegInfo(PN);
+
   Type *Ty = PN->getType();
   if (!Ty->isIntegerTy())
     return;
@@ -456,20 +461,63 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     return;
   assert(BaseReg.isVirtual() && "Expected a virtual reg");
 
+  SmallVector<const Value *, 8> IncomingValues;
+  if (AllPredsVisited) {
+    append_range(IncomingValues, PN->incoming_values());
+  } else {
+    // Start with single-register values. A machine PHI copies the incoming
+    // register without changing any bits, including the extension bits of a
+    // promoted integer. Consequently, facts shared by every input to a
+    // PHI-only cycle hold throughout the cycle.
+    if (NumRegisters != 1)
+      return;
+
+    SmallVector<const PHINode *, 8> Worklist{PN};
+    SmallPtrSet<const PHINode *, 8> Seen;
+    while (!Worklist.empty()) {
+      const PHINode *Phi = Worklist.pop_back_val();
+      if (!Seen.insert(Phi).second)
+        continue;
+      // Bound the work when several PHIs share a large cyclic graph.
+      if (Seen.size() > 32)
+        return;
+
+      for (const Value *V : Phi->incoming_values()) {
+        if (const auto *I = dyn_cast<Instruction>(V);
+            I && !VisitedBBs[I->getParent()->getNumber()]) {
+          const auto *IncomingPhi = dyn_cast<PHINode>(I);
+          // Do not assume that an operation on a backedge preserves the
+          // register representation of its input. Wait for its actual DAG
+          // facts, even if the IR value has known bits in its original type.
+          if (!IncomingPhi)
+            return;
+          Worklist.push_back(IncomingPhi);
+        } else {
+          IncomingValues.push_back(V);
+        }
+      }
+    }
+
+    // A cycle without any external inputs cannot establish any facts.
+    if (IncomingValues.empty())
+      return;
+  }
+
   for (unsigned RegIdx = 0; RegIdx < NumRegisters; ++RegIdx) {
     // Split registers are assigned sequentially.
     Register DestReg = BaseReg.id() + RegIdx;
     LiveOutRegInfo.grow(DestReg);
     LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
+    DestLOI.IsValid = true;
 
-    Value *V = PN->getIncomingValue(0);
+    const Value *V = IncomingValues[0];
     if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
       DestLOI.NumSignBits = 1;
       DestLOI.Known = KnownBits(BitWidth);
       continue;
     }
 
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+    if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       APInt Val;
       if (TLI->signExtendConstant(CI))
         Val = CI->getValue().sext(BitWidth * NumRegisters);
@@ -501,15 +549,15 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
            DestLOI.Known.One.getBitWidth() == BitWidth &&
            "Masks should have the same bit width as the type.");
 
-    for (unsigned i = 1, e = PN->getNumIncomingValues(); i != e; ++i) {
-      Value *V = PN->getIncomingValue(i);
+    for (unsigned i = 1, e = IncomingValues.size(); i != e; ++i) {
+      const Value *V = IncomingValues[i];
       if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
         DestLOI.NumSignBits = 1;
         DestLOI.Known = KnownBits(BitWidth);
         break;
       }
 
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+      if (const auto *CI = dyn_cast<ConstantInt>(V)) {
         APInt Val;
         if (TLI->signExtendConstant(CI))
           Val = CI->getValue().sext(BitWidth * NumRegisters);
