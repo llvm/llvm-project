@@ -340,7 +340,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         // A direct output is the call's result, with no address to write to.
         if (!OpInfo.isIndirect) {
           emitInlineAsmError(MIRBuilder, Call,
-                             "cannot handle direct memory outputs yet for "
+                             "cannot handle direct memory outputs for "
                              "constraint '" +
                                  Twine(OpInfo.ConstraintCode) + "'",
                              GetOrCreateVRegs(Call));
