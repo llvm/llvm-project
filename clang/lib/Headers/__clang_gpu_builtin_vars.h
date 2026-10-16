@@ -52,11 +52,16 @@ __GPU_COORD_BUILTIN(__gpu_builtin_gridDim_t, __gpu_num_blocks_x(),
 #pragma pop_macro("__GPU_COORD_BUILTIN")
 #pragma pop_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
 
-static inline const
-    __attribute__((device)) __gpu_builtin_threadIdx_t threadIdx{};
-static inline const __attribute__((device)) __gpu_builtin_blockIdx_t blockIdx{};
-static inline const __attribute__((device)) __gpu_builtin_blockDim_t blockDim{};
-static inline const __attribute__((device)) __gpu_builtin_gridDim_t gridDim{};
+#pragma push_macro("__GPU_BUILTIN_VAR")
+#define __GPU_BUILTIN_VAR                                                      \
+  extern const __attribute__((device)) __attribute__((weak))
+
+__GPU_BUILTIN_VAR __gpu_builtin_threadIdx_t threadIdx;
+__GPU_BUILTIN_VAR __gpu_builtin_blockIdx_t blockIdx;
+__GPU_BUILTIN_VAR __gpu_builtin_blockDim_t blockDim;
+__GPU_BUILTIN_VAR __gpu_builtin_gridDim_t gridDim;
+
+#pragma pop_macro("__GPU_BUILTIN_VAR")
 
 #endif // device compile
 #endif // __CLANG_GPU_BUILTIN_VARS_H__
