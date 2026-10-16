@@ -2217,8 +2217,8 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  IRBuilder ChkBuilder(Loc->getIterator(),
-                       InstSimplifyFolder(Loc->getDataLayout()));
+  const DataLayout &DL = Loc->getDataLayout();
+  IRBuilder ChkBuilder(Loc->getIterator(), InstSimplifyFolder(DL));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
@@ -2226,11 +2226,13 @@ Value *llvm::addRuntimeChecks(
     // Check if two pointers (A and B) conflict where conflict is computed as:
     // start(A) <= end(B) && start(B) <= end(A)
 
-    assert((A.Start->getType()->getPointerAddressSpace() ==
-            B.End->getType()->getPointerAddressSpace()) &&
-           (B.Start->getType()->getPointerAddressSpace() ==
-            A.End->getType()->getPointerAddressSpace()) &&
-           "Trying to bounds check pointers with different address spaces");
+    // Compare B's bounds in A's address space; LAA ensures casts are no-ops.
+    Type *PtrTy = A.Start->getType();
+    assert(DL.getPointerTypeSizeInBits(PtrTy) ==
+               DL.getPointerTypeSizeInBits(B.Start->getType()) &&
+           "Expected bounds with the same pointer size");
+    Value *BStart = ChkBuilder.CreateAddrSpaceCast(B.Start, PtrTy);
+    Value *BEnd = ChkBuilder.CreateAddrSpaceCast(B.End, PtrTy);
 
     // [A|B].Start points to the first accessed byte under base [A|B].
     // [A|B].End points to the last accessed byte, plus one.
@@ -2240,8 +2242,8 @@ Value *llvm::addRuntimeChecks(
     // bound0 = (B.Start < A.End)
     // bound1 = (A.Start < B.End)
     //  IsConflict = bound0 & bound1
-    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
-    Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
+    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, BEnd, "bound0");
+    Value *Cmp1 = ChkBuilder.CreateICmpULT(BStart, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     if (A.StrideToCheck) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(
