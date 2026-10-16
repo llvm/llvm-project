@@ -30,17 +30,17 @@ end subroutine target_allocatable
 ! CPU:  ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]], %[[PRIV_ALLOC:.*]]: [[TYPE]]):
 
 ! CPU-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]] : [[TYPE]]
-! CPU-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : ([[DESC_TYPE]]) -> !fir.heap<i32>
-! CPU-NEXT:   %[[PRIV_ARG_ADDR:.*]] = fir.convert %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> i64
+! CPU-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : ([[DESC_TYPE]]){{.*}} -> !fir.heap<i32>
+! CPU-NEXT:   %[[PRIV_ARG_ADDR:.*]] = fir.convert %[[PRIV_ARG_BOX]] : (!fir.heap<i32>){{.*}} -> i64
 ! CPU-NEXT:   %[[C0:.*]] = arith.constant 0 : i64
 ! CPU-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CPU-NEXT:   fir.if %[[ALLOC_COND]] {
-! CPU-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
+! CPU-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] : (!fir.heap<i32>){{.*}} -> [[DESC_TYPE]]
 ! CPU-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
 ! CPU-NEXT:   } else {
 ! CPU-NEXT:     %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32
-! CPU-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
+! CPU-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>){{.*}} -> [[DESC_TYPE]]
 ! CPU-NEXT:     fir.store %[[PRIV_ALLOCMEM_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
 ! CPU-NEXT:   }
 
@@ -68,10 +68,10 @@ end subroutine target_allocatable
 ! CPU:  %[[VAR_ALLOC:.*]] = fir.alloca [[DESC_TYPE]]
 ! CPU-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CPU:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
-! CPU:  %[[BASE_ADDR:.*]] = fir.box_offset %[[VAR_DECL]]#0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> [[MEMBER_TYPE:.*]]
-! CPU:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]], i32) name("alloc_var") -> {{.*}}
-! CPU:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses({{.*}}to{{.*}}) capture(ByRef) members(%[[MEMBER]] : [0] : [[MEMBER_TYPE]]) name("alloc_var") -> !fir.ref<!fir.box<!fir.heap<i32>>>
-! CPU:  %[[ATTACH:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE]], i32) name("alloc_var") -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CPU:  %[[BASE_ADDR:.*]] = fir.box_offset %[[VAR_DECL]]#0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>){{.*}} -> [[MEMBER_TYPE:.*]]
+! CPU:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]], i32){{.*}} name("alloc_var"){{.*}} -> {{.*}}
+! CPU:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses({{.*}}) capture(ByRef){{.*}} members(%[[MEMBER]] : [0] : [[MEMBER_TYPE]]){{.*}} name("alloc_var"){{.*}} -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CPU:  %[[ATTACH:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE]], i32){{.*}} name("alloc_var"){{.*}} -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
 ! CPU:  omp.target kernel_type(generic) map_entries(%[[MAP_VAR]] -> %arg0, %[[ATTACH]] -> %arg1, %[[MEMBER]] -> %arg2 : [[TYPE]], [[TYPE]], [[MEMBER_TYPE]]) private(
 ! CPU-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} [map_idx=0] : [[TYPE]]) {
