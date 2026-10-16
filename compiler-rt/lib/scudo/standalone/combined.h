@@ -751,20 +751,15 @@ public:
     const uptr From = Base;
     const uptr To = Base + Size;
     const Options Options = Primary.Options.load();
-    bool MayHaveTaggedPrimary = useMemoryTagging<AllocatorConfig>(Options);
-    auto Lambda = [this, From, To, MayHaveTaggedPrimary, Callback,
+    bool MemoryTaggingEnabled = useMemoryTagging<AllocatorConfig>(Options);
+    auto Lambda = [this, From, To, MemoryTaggingEnabled, Callback,
                    Arg](uptr Block) {
       if (Block < From || Block >= To)
         return;
       uptr Chunk;
       Chunk::UnpackedHeader Header;
-      if (UNLIKELY(MayHaveTaggedPrimary)) {
-        // A chunk header can either have a zero tag (tagged primary) or the
-        // header tag (secondary, or untagged primary). We don't know which so
-        // try both.
-        ScopedDisableMemoryTagChecks x;
-        if (!getChunkFromBlock(Block, &Chunk, &Header) &&
-            !getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
+      if (UNLIKELY(MemoryTaggingEnabled)) {
+        if (!getChunkFromBlock(loadTag(Block), &Chunk, &Header))
           return;
       } else if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header)) {
         return;
@@ -777,7 +772,7 @@ public:
       if (allocatorSupportsMemoryTagging<AllocatorConfig>())
         TaggedChunk = untagPointer(TaggedChunk);
       uptr Size;
-      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Primary.Options.load()))) {
+      if (UNLIKELY(MemoryTaggingEnabled)) {
         TaggedChunk = loadTag(Chunk);
         Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
       } else if (AllocatorConfig::getExactUsableSize()) {
@@ -899,10 +894,10 @@ public:
   // Returns true if the pointer provided was allocated by the current
   // allocator instance, which is compliant with tcmalloc's ownership concept.
   // A corrupted chunk will not be reported as owned, which is WAI.
-  bool isOwned(const void *Ptr) {
+  bool isOwnedTestOnly(const void *Ptr) {
     initThreadMaybe();
     // If the allocation is not owned, the tags could be wrong.
-    ScopedDisableMemoryTagChecks x(
+    ScopedTestOnlyDisableMemoryTagChecks x(
         useMemoryTagging<AllocatorConfig>(Primary.Options.load()));
 #ifdef GWP_ASAN_HOOKS
     if (GuardedAlloc.pointerIsMine(Ptr))
