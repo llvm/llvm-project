@@ -34,7 +34,6 @@
 namespace llvm {
 cl::opt<bool>
     EnableSingleByteCoverage("enable-single-byte-coverage",
-                             llvm::cl::ZeroOrMore,
                              llvm::cl::desc("Enable single byte coverage"),
                              llvm::cl::Hidden, llvm::cl::init(false));
 } // namespace llvm

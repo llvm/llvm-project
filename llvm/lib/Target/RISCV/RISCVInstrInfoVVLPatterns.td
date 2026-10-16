@@ -42,6 +42,13 @@ def riscv_tuple_extract : RVSDNode<"TUPLE_EXTRACT",
                                    SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                         SDTCisVT<2, i32>]>>;
 
+// Reinterprets a RISC-V vector tuple value as a different vector tuple type
+// with the same register class (i.e. same NF and LMUL), but a different
+// minimum number of elements per field. This is a no-op at the register
+// level, unlike TUPLE_INSERT/TUPLE_EXTRACT which operate on individual
+// vector subregisters.
+def riscv_tuple_cast : RVSDNode<"TUPLE_CAST", SDTypeProfile<1, 1, []>>;
+
 
 //===----------------------------------------------------------------------===//
 // Helpers to define the VL patterns.
@@ -61,18 +68,6 @@ def SDT_RISCVIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCVecEltisVT<4, i1>,
                                                 SDTCisSameNumEltsAs<0, 4>,
                                                 SDTCisVT<5, XLenVT>]>;
-
-// Input: (vector, vector/scalar, passthru, mask, roundmode, vl)
-def SDT_RISCVVNBinOp_RM_VL : SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisInt<0>,
-                                                  SDTCisSameAs<0, 3>,
-                                                  SDTCisSameNumEltsAs<0, 1>,
-                                                  SDTCisVec<1>,
-                                                  SDTCisOpSmallerThanOp<2, 1>,
-                                                  SDTCisSameAs<0, 2>,
-                                                  SDTCisSameNumEltsAs<0, 4>,
-                                                  SDTCVecEltisVT<4, i1>,
-                                                  SDTCisVT<5, XLenVT>,
-                                                  SDTCisVT<6, XLenVT>]>;
 
 def SDT_RISCVFPUnOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisVec<0>, SDTCisFP<0>,
@@ -784,28 +779,6 @@ class VPatUnaryVL_V<SDPatternOperator vop,
                    result_reg_class:$passthru,
                    op1_reg_class:$rs2,
                    (mask_type VMV0:$vm), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
-
-class VPatUnaryVLNoMask_V<SDPatternOperator vop,
-                          string instruction_name,
-                          string suffix,
-                          ValueType result_type,
-                          ValueType op1_type,
-                          int log2sew,
-                          LMULInfo vlmul,
-                          VReg result_reg_class,
-                          VReg op1_reg_class,
-                          bit isSEWAware = 0>
-    : Pat<(result_type (vop
-                       (op1_type op1_reg_class:$rs2),
-                       (result_type result_reg_class:$passthru),
-                       VLOpFrag)),
-      (!cast<Instruction>(
-                   !if(isSEWAware,
-                       instruction_name#"_"#suffix#"_"#vlmul.MX#"_E"#!shl(1, log2sew),
-                       instruction_name#"_"#suffix#"_"#vlmul.MX))
-                   result_reg_class:$passthru,
-                   op1_reg_class:$rs2,
-                   GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
 class VPatBinaryVL_V<SDPatternOperator vop,
                      string instruction_name,

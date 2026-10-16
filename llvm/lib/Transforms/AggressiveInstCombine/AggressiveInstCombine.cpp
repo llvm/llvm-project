@@ -56,6 +56,8 @@ STATISTIC(NumSelectCTTZFolded,
 STATISTIC(NumSelectCTLZFolded,
           "Number of select-based split ctlz patterns folded");
 STATISTIC(NumMemSetsGuarded, "Number of memsets guarded for a zero length");
+STATISTIC(NumTableBasedLowBitsMask,
+          "Number of low-bits mask table loads folded to (1 << i) - 1");
 
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
@@ -310,7 +312,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
                          m_SpecificBB(PhiBB), m_SpecificBB(FunnelBB))))
     return false;
 
-  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+  IRBuilder<> Builder(PhiBB->getFirstInsertionPt());
 
   if (ShVal0 == ShVal1)
     ++NumGuardedRotates;
@@ -463,21 +465,14 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
 }
 
 /// Helper function to replace an instruction with a popcount intrinsic.
-/// This creates the ctpop intrinsic with an optional truncation appended at the
-/// end, and replaces all uses of the instruction.
+/// This creates the ctpop intrinsic with an optional zero-extension or
+/// truncation appended at the end, and replaces all uses of the instruction.
 static void replaceWithPopCount(Instruction &I, Value *Root) {
   LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-  Type *RootTy = Root->getType();
-  Type *OrigTy = I.getType();
-
   IRBuilder<> Builder(&I);
-  Value *NewVal = Builder.CreateIntrinsic(Intrinsic::ctpop, RootTy, {Root});
-  if (OrigTy != RootTy) {
-    assert(RootTy->getScalarSizeInBits() > OrigTy->getScalarSizeInBits() &&
-           "Only truncation is supported for now");
-    NewVal = Builder.CreateTrunc(NewVal, OrigTy);
-  }
-  I.replaceAllUsesWith(NewVal);
+  Value *NewVal =
+      Builder.CreateIntrinsic(Intrinsic::ctpop, Root->getType(), {Root});
+  I.replaceAllUsesWith(Builder.CreateZExtOrTrunc(NewVal, I.getType()));
   ++NumPopCountRecognized;
 }
 
@@ -960,7 +955,7 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
 //
 // This shares its initial match (load from a GEP into a constant table with
 // a single variable index) with tryToRecognizeTableBasedLog2() below; see
-// tryToRecognizeTableBasedCttzOrLog2().
+// tryToRecognizeTableBasedPatterns().
 static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
                                          GlobalVariable *GVTable, Value *GepIdx,
                                          const APInt &GEPScale,
@@ -1019,6 +1014,39 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
 
   LI->replaceAllUsesWith(Res);
 
+  return true;
+}
+
+// Recognise ctpop table lookups:
+//
+// %gep = getelementptr [256 x i8], ptr @ctpop.table, i32 0, i8 %x
+// %ctpop = load i8, ptr %gep
+// ->
+// %ctpop = call i8 llvm.ctpop(i8 %x)
+static bool tryToRecognizeTableBasedCtpop(LoadInst *LI, Type *AccessType,
+                                          GlobalVariable *GVTable,
+                                          Value *GepIdx, const APInt &GEPScale,
+                                          const DataLayout &DL,
+                                          const TargetTransformInfo &TTI) {
+  Type *IdxTy = GepIdx->getType();
+  unsigned IdxBits = IdxTy->getIntegerBitWidth();
+  if (!LI->isSimple() || !isPowerOf2_32(IdxBits) ||
+      TTI.getPopcntSupport(IdxBits) != TargetTransformInfo::PSK_FastHardware)
+    return false;
+
+  uint64_t TableSize = DL.getTypeAllocSize(GVTable->getValueType());
+  unsigned AccessSize = DL.getTypeStoreSize(AccessType);
+  if (GEPScale != AccessSize)
+    return false;
+  uint64_t NumEntries = TableSize / AccessSize;
+  for (uint64_t I = 0; I < NumEntries; I++) {
+    auto *C = dyn_cast_or_null<ConstantInt>(ConstantFoldLoadFromConst(
+        GVTable->getInitializer(), AccessType, I * GEPScale, DL));
+    if (!C || C->getValue() != popcount(I))
+      return false;
+  }
+
+  replaceWithPopCount(*LI, GepIdx);
   return true;
 }
 
@@ -1124,7 +1152,7 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 //
 // This shares its initial match (load from a GEP into a constant table with
 // a single variable index) with tryToRecognizeTableBasedCttz() above; see
-// tryToRecognizeTableBasedCttzOrLog2().
+// tryToRecognizeTableBasedPatterns().
 static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
                                          GlobalVariable *GVTable, Value *GepIdx,
                                          const APInt &GEPScale,
@@ -1238,12 +1266,95 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
   return true;
 }
 
-// Match a table-based cttz or log2 implementation. These patterns share a
-// load from a global table pattern that we match first. Then we try the
-// specific matches for the cttz and log2 patterns.
-static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
-                                               const DataLayout &DL,
-                                               TargetTransformInfo &TTI) {
+// Recognize a load from a "low bits mask" table, tbl[j] == (1 << j) - 1:
+//
+//   static const uintN_t tbl[K] = { 0, 1, 3, 7, ... };
+//   ... x & tbl[i] ...
+//
+// The loaded value equals the arithmetic mask (1 << i) - 1, so replace the load
+// with that expression and drop the table. On X86+BMI2 a surrounding `and` then
+// selects to a single `bzhi`; on other targets it is a shift and a decrement.
+//
+// Shares the load/GEP/offset match with the cttz and log2 recognizers above;
+// see tryToRecognizeTableBasedPatterns().
+static bool tryToRecognizeTableBasedLowBitsMask(LoadInst *LI, Type *AccessType,
+                                                GlobalVariable *GVTable,
+                                                Value *GepIdx,
+                                                const APInt &GEPScale,
+                                                const DataLayout &DL) {
+  // The value must be exactly the table element; refuse volatile/atomic loads.
+  if (!LI->isSimple())
+    return false;
+
+  // The table must be [K x AccessType] of integers; a narrower load would read
+  // only part of an element.
+  auto *ArrTy = dyn_cast<ArrayType>(GVTable->getValueType());
+  if (!ArrTy || ArrTy->getElementType() != AccessType ||
+      !AccessType->isIntegerTy())
+    return false;
+
+  unsigned EltBits = AccessType->getIntegerBitWidth();
+  uint64_t EltBytes = DL.getTypeAllocSize(AccessType).getFixedValue();
+  uint64_t K = ArrTy->getNumElements();
+
+  // Only fire when the element type fits in a legal integer, so the emitted
+  // shift is a cheap (possibly promoted) instruction rather than a runtime
+  // libcall (e.g. __ashlti3 for i128) -- which would be worse than the load
+  // and is unavailable in freestanding environments that do not link a
+  // runtime library.
+  if (!DL.fitsInLegalInteger(EltBits))
+    return false;
+
+  // The rewrite is only valid for indices inside the table. The nusw the
+  // shared matcher requires keeps the address computation from wrapping but
+  // does not keep it inside the object: a nusw-only GEP with i >= K is a
+  // well-defined pointer past the table, and a load through it (into
+  // whatever follows) is not (1 << i) - 1. With inbounds such a GEP is poison
+  // and the load is UB, so every executed load has 0 <= i < K.
+  auto *GEP = cast<GetElementPtrInst>(LI->getPointerOperand());
+  if (!GEP->isInBounds())
+    return false;
+
+  // K <= EltBits then guarantees i < EltBits, so the emitted `1 << i` never
+  // shifts by >= bitwidth (no poison). A table with EltBits + 1 entries (whose
+  // last element is the all-ones mask, needing a shift by EltBits) is
+  // therefore rejected.
+  if (K == 0 || K > EltBits)
+    return false;
+
+  // The index must step by exactly one element, so the runtime index value is
+  // the shift amount; a different scale would load tbl[c * i].
+  if (GEPScale != EltBytes)
+    return false;
+
+  // Every element must be the low-bits mask for its position.
+  for (uint64_t J = 0; J < K; ++J) {
+    Constant *Elt = ConstantFoldLoadFromConst(
+        GVTable->getInitializer(), AccessType,
+        APInt(GEPScale.getBitWidth(), J) * GEPScale, DL);
+    auto *CI = dyn_cast_or_null<ConstantInt>(Elt);
+    if (!CI || CI->getValue() != APInt::getLowBitsSet(EltBits, J))
+      return false;
+  }
+
+  // Emit (1 << i) - 1 in the element type and replace the load. A later
+  // InstCombine canonicalizes this to ~(-1 << i); X86 lowers both to bzhi.
+  IRBuilder<> Builder(LI);
+  Value *Idx = Builder.CreateZExtOrTrunc(GepIdx, AccessType);
+  Value *Mask =
+      Builder.CreateSub(Builder.CreateShl(ConstantInt::get(AccessType, 1), Idx),
+                        ConstantInt::get(AccessType, 1));
+  LI->replaceAllUsesWith(Mask);
+  ++NumTableBasedLowBitsMask;
+  return true;
+}
+
+// Match a table-based cttz, log2, or low-bits-mask implementation. These
+// patterns share a load from a global table that we match first; then we
+// try the specific matches.
+static bool tryToRecognizeTableBasedPatterns(Instruction &I,
+                                             const DataLayout &DL,
+                                             TargetTransformInfo &TTI) {
   LoadInst *LI = dyn_cast<LoadInst>(&I);
   if (!LI)
     return false;
@@ -1273,8 +1384,16 @@ static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
                                    DL))
     return true;
 
-  return tryToRecognizeTableBasedLog2(LI, AccessType, GVTable, GepIdx, GEPScale,
-                                      DL, TTI);
+  if (tryToRecognizeTableBasedCtpop(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                    DL, TTI))
+    return true;
+
+  if (tryToRecognizeTableBasedLog2(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                   DL, TTI))
+    return true;
+
+  return tryToRecognizeTableBasedLowBitsMask(LI, AccessType, GVTable, GepIdx,
+                                             GEPScale, DL);
 }
 
 /// This is used by foldLoadsRecursive() to capture a Root Load node which is
@@ -1951,7 +2070,7 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(*CI->getModule());
   // We want these instructions to be recognized as inlined instructions for the
   // compare call, but we don't have a source location for the definition of
   // that function, since we're generating that code now. Because the generated
@@ -2553,7 +2672,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedCttzOrLog2(I, DL, TTI);
+      MadeChange |= tryToRecognizeTableBasedPatterns(I, DL, TTI);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);

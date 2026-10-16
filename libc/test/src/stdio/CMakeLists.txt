@@ -10,6 +10,7 @@ add_libc_test(
     libc.include.stdio
     libc.hdr.fcntl_macros
     libc.hdr.stdio_macros
+    libc.src.__support.CPP.scope
     libc.src.__support.macros.properties.os
     libc.src.errno.errno
     libc.src.fcntl.fcntl
@@ -482,6 +483,19 @@ add_libc_test(
     libc.src.stdio.stderr
 )
 
+set(fopen_test_deps)
+if(LIBC_TARGET_OS STREQUAL "linux")
+  list(APPEND fopen_test_deps
+    libc.hdr.fcntl_macros
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.stdio.fileno
+    libc.src.stdio.remove
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+  )
+endif()
+
 add_libc_test(
   fopen_test
   SUITE
@@ -489,7 +503,9 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    ${fopen_test_deps}
     libc.src.__support.CPP.scope
+    libc.src.__support.macros.properties.os
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.fclose
@@ -547,6 +563,29 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 
   add_libc_test(
+    renameat_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      renameat_test.cpp
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
+      libc.hdr.unistd_macros
+      libc.src.__support.CPP.scope
+      libc.src.errno.errno
+      libc.src.fcntl.open
+      libc.src.stdio.renameat
+      libc.src.unistd.access
+      libc.src.unistd.close
+      libc.src.unistd.unlink
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
+
+
+  add_libc_test(
     fdopen_test
     SUITE
       libc_stdio_unittests
@@ -555,6 +594,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     DEPENDS
       libc.hdr.fcntl_macros
       libc.hdr.sys_stat_macros
+      libc.src.__support.CPP.scope
+      libc.src.fcntl.fcntl
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
@@ -665,6 +706,92 @@ add_libc_test(
     libc.src.stdio.fseek
     libc.src.stdio.ftell
     libc.src.stdio.fwrite
+)
+
+add_libc_test(
+  fgetpos_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fgetpos_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wint_t
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.fgetpos
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.stdio.remove
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.src.wchar.mbsinit
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fsetpos_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fsetpos_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wint_t
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fgetpos
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fsetpos
+    libc.src.stdio.fwrite
+    libc.src.stdio.remove
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.src.wchar.mbsinit
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  tmpnam_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    tmpnam_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.src.stdio.tmpnam
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
 )
 
 # Create an output directory for any temporary test files.

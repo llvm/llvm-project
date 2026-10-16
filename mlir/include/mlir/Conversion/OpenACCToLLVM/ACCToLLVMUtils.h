@@ -79,6 +79,13 @@ Value createIdent(Location loc, StringRef functionName, OpBuilder &builder,
 /// for values like queue numbers.
 Value castToI64(Location loc, Value value, OpBuilder &builder);
 
+/// Creates an i64 constant.
+Value constantI64(Location loc, int64_t value, OpBuilder &builder);
+
+/// Returns the value \p value was converted to, or \p value itself when the
+/// conversion left it as it was. Returns a null value for a null \p value.
+Value remapOrSelf(Value value, ConversionPatternRewriter &rewriter);
+
 /// Returns the queue an `async` clause selects: the value of the clause when it
 /// has one, the queue standing for an `async` clause without a value when
 /// \p asyncOnly is set, and the synchronous queue when there is no clause at
@@ -90,10 +97,13 @@ Value getAsyncQueue(Location loc, Value asyncOperand, bool asyncOnly,
 /// which is what a `wait` clause or an `acc.wait` directive asks for. An empty
 /// \p waitOperands waits for every queue, as a `wait` clause without values
 /// does. The values must already be converted to the LLVM dialect.
+/// If provided, \p deviceNum must be an i32 value; otherwise the device number
+/// defaults to zero.
 LogicalResult emitWaitCall(Location loc, ValueRange waitOperands,
                            Value asyncQueue, OpBuilder &builder,
                            Region &globalSymbolRegion, SymbolTable &symbolTable,
-                           const ACCRuntimeCallConfig &config);
+                           const ACCRuntimeCallConfig &config,
+                           Value deviceNum = {});
 
 /// Emits the runtime call that asks for the device address the object of the
 /// data clause \p clauseOp is mapped to, which is what a `use_device` clause

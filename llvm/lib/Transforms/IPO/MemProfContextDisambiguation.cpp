@@ -5712,12 +5712,12 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // when they both have the same root name with "." suffixes stripped.
   // If we pick the wrong one then this could lead to incorrect ICP and calling
   // a memprof clone that we don't actually create (resulting in linker unsats).
-  // What this means is that the GUID of the function (or its PGOFuncName
-  // metadata) *must* match that in the VP metadata to allow promotion.
-  // In practice this should not be a limitation, since local functions should
-  // have PGOFuncName metadata and global function names shouldn't need any
-  // special handling (they should not get the ".llvm.*" suffix that the
-  // canonicalization handling is attempting to strip).
+  // What this means is that the GUID of the function *must* match that in the
+  // VP metadata to allow promotion. In practice this should not be a
+  // limitation, since local functions have a GUID from before they were
+  // promoted and global function names shouldn't need any special handling
+  // (they should not get the ".llvm.*" suffix that the canonicalization
+  // handling is attempting to strip).
   if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
@@ -5736,6 +5736,17 @@ static void checkAllocContextIds(
   auto MIBIter = AllocNode.MIBs.begin();
   for (auto &MDOp : MemProfMD->operands()) {
     assert(MIBIter != AllocNode.MIBs.end());
+    // The combined index may have been written without the MIB contexts (see
+    // -combined-index-memprof-context, which defaults to false in NDEBUG
+    // builds), e.g. if the thin link was performed by a release build while
+    // this backend has assertions enabled. Since the MIB context in the summary
+    // can never be empty after trimming the allocation's callsite context, an
+    // empty list means the context was not serialized, and there is nothing to
+    // check.
+    if (MIBIter->StackIdIndices.empty()) {
+      MIBIter++;
+      continue;
+    }
     auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
     auto *MIBMD = cast<const MDNode>(MDOp);
     MDNode *StackMDNode = getMIBStackNode(MIBMD);

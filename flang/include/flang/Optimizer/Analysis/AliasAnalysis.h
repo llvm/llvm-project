@@ -47,7 +47,16 @@ struct AliasAnalysis {
   // Structures to describe the memory source of a value.
 
   /// Kind of the memory source referenced by a value.
+  ///
+  /// Ordered from a source that designates no object toward an unknown
+  /// source. `alias()` treats `kind >= Indirect` as MayAlias, so any kind
+  /// that can be disambiguated has to stay before `Indirect`.
   ENUM_CLASS(SourceKind,
+             /// A null address. Under the LLVM language reference's pointer
+             /// aliasing rules, a null pointer in the default address space
+             /// is associated with no address:
+             /// https://llvm.org/docs/LangRef.html#pointer-aliasing-rules
+             Null,
              /// Unique memory allocated by an operation, e.g.
              /// by fir::AllocaOp or fir::AllocMemOp.
              Allocate,

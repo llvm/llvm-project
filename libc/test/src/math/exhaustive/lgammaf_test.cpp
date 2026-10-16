@@ -10,8 +10,6 @@
 #include "src/math/lgammaf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcLgammafTest = LIBC_NAMESPACE::testing::FPTest<float>;
-
 using LlvmLibcLgammafExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Lgamma,
                                       LIBC_NAMESPACE::lgammaf>;

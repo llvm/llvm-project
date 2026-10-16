@@ -14,6 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+extern "C" void (*const __asan_dso_reg_hook)();
+
 #if defined(SANITIZER_STATIC_RUNTIME_THUNK) || \
     defined(SANITIZER_DYNAMIC_RUNTIME_THUNK)
 #  include "sanitizer_common/sanitizer_win_defs.h"

@@ -86,7 +86,7 @@ private:
   std::unique_ptr<Impl> PImpl;
 
   ErrorOr<CallableTool> findTool(StringRef Name) const;
-  ToolContext makeContext(StringRef InvokedName, const char *PrependArg);
+  ToolContext makeContext(StringRef RegisteredName, const char *PrependArg);
 
   friend class ToolContext;
 };

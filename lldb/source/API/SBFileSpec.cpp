@@ -15,6 +15,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/ADT/SmallString.h"
 
@@ -109,7 +110,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 const char *SBFileSpec::GetFilename() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_up->GetFilename()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(m_opaque_up->GetFilename());
 }
 
 const char *SBFileSpec::GetDirectory() const {
@@ -117,7 +118,7 @@ const char *SBFileSpec::GetDirectory() const {
 
   FileSpec directory{*m_opaque_up};
   directory.ClearFilename();
-  return ConstString(directory.GetPath()).GetCString();
+  return StringPool::GetSystemPool().Intern(directory.GetPath());
 }
 
 void SBFileSpec::SetFilename(const char *filename) {
