@@ -1,5 +1,5 @@
-# This test checks that splitting functions which contain short range
-# conditional branches does not work outside compact code model.
+# This test checks that the stub-insertion pass does not support
+# splitting functions containing short range conditional branches.
 
 # REQUIRES: system-linux, asserts
 
@@ -48,4 +48,4 @@ large_function:
 ## Force relocation mode.
 .reloc 0, R_AARCH64_NONE
 
-# CHECK: BOLT-ERROR: short range branch not supported outside compact code model
+# CHECK: BOLT-ERROR: short range branch not supported by the stub-insertion pass

@@ -13,15 +13,21 @@
 
 // RUN: split-file %s %t
 
-// RUN: %clang --target=aarch64-unknown-linux-gnu -mbranch-protection=standard \
-// RUN: -no-pie %t/bti-plt.c -o %t.exe -Wl,-q -fuse-ld=lld \
-// RUN: -Wl,-T,%t/link.ld  -Wl,-z,force-bti
+// RUN: %clang --target=aarch64-unknown-linux-gnu \
+// RUN:   -mbranch-protection=standard -no-pie %t/bti-plt.c -o %t.exe \
+// RUN:   -Wl,-q -fuse-ld=lld -Wl,-T,%t/link.ld  -Wl,-z,force-bti
+// RUN: llvm-objdump -d -j .plt %t.exe | FileCheck %s --check-prefix=CHECK-EXE
+
 // RUN: llvm-bolt %t.exe -o %t.bolt | FileCheck %s
-// RUN: llvm-bolt %t.exe -o %t.cluster.bolt --relax-exp | FileCheck %s
+// RUN: llvm-objdump -d -j .plt %t.bolt | FileCheck %s --check-prefix=CHECK-BOLT
+
+// RUN: llvm-bolt %t.exe -o %t.bolt --relax-with-clusters=false | FileCheck %s
+// RUN: llvm-objdump -d -j .plt %t.bolt | FileCheck %s --check-prefix=CHECK-BOLT
+
 // CHECK: BOLT-INFO: binary is using BTI
 
 // Checking PLT entries before running BOLT
-// RUN: llvm-objdump -d -j .plt %t.exe | FileCheck %s --check-prefix=CHECK-EXE
+//
 // CHECK-EXE: <abort@plt>
 // CHECK-EXE-NEXT: adrp    x16, {{0x[0-9a-f]+}}
 // CHECK-EXE-NEXT: ldr     x17, [x16, #{{0x[0-9a-f]+}}]
@@ -31,10 +37,7 @@
 // CHECK-EXE-NEXT: nop
 
 // Checking PLT entries after patching them in BOLT
-// RUN: llvm-objdump -d -j .plt %t.bolt | FileCheck %s \
-// RUN: --check-prefix=CHECK-BOLT
-// RUN: llvm-objdump -d -j .plt %t.cluster.bolt | FileCheck %s \
-// RUN: --check-prefix=CHECK-BOLT
+//
 // CHECK-BOLT: <abort@plt>
 // CHECK-BOLT-NEXT: bti     c
 // CHECK-BOLT-NEXT: adrp    x16, {{0x[0-9a-f]+}}
