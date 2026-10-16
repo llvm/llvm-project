@@ -17,7 +17,8 @@ define i32 @loop_carried_min(ptr %xxtrt, ptr %n_ptr) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[W]], [[PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[MINIDX:%.*]] = phi i32 [ [[N]], [[PH]] ], [ [[MINSEL:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr [4 x i8], ptr [[XXTRT]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[XXTRT]], i64 [[IV]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -4
 ; CHECK-NEXT:    [[VI:%.*]] = load float, ptr [[PI]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = fcmp nnan olt float [[VI]], [[VM]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[IV_NEXT]] to i32
@@ -76,7 +77,8 @@ define float @loop_carried_min_live_out(ptr %xxtrt, ptr %n_ptr) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[W]], [[PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[MINIDX:%.*]] = phi i32 [ [[N]], [[PH]] ], [ [[MINSEL:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr [4 x i8], ptr [[XXTRT]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[XXTRT]], i64 [[IV]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -4
 ; CHECK-NEXT:    [[VI:%.*]] = load float, ptr [[PI]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = fcmp nnan olt float [[VI]], [[VM]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[IV_NEXT]] to i32
@@ -134,7 +136,8 @@ define i64 @unrolled_chain_min(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[V1]], float [[VMIN]])
 ; CHECK-NEXT:    [[IDX1:%.*]] = select i1 [[C1]], i64 [[IV]], i64 [[MINIDX]]
 ; CHECK-NEXT:    [[IV1:%.*]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[IV1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    [[V2:%.*]] = load float, ptr [[P2]], align 4
 ; CHECK-NEXT:    [[C2:%.*]] = fcmp nnan olt float [[V2]], [[SEL1]]
 ; CHECK-NEXT:    [[SEL2]] = call nnan nsz float @llvm.minnum.f32(float [[V2]], float [[SEL1]])

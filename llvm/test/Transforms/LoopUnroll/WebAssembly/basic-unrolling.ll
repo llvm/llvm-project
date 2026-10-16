@@ -76,23 +76,26 @@ define hidden void @compile_time_partial(ptr nocapture %a, ptr nocapture readonl
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[I]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A:%.*]], i32 [[I_07]]
 ; CHECK-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX2]], align 2
-; CHECK-NEXT:    [[INC:%.*]] = or disjoint i32 [[I_07]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i32 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i32 2
 ; CHECK-NEXT:    [[I_1:%.*]] = load i16, ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[I_1]], 1
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i32 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 2
 ; CHECK-NEXT:    store i16 [[ADD_1]], ptr [[ARRAYIDX2_1]], align 2
-; CHECK-NEXT:    [[INC_1:%.*]] = or disjoint i32 [[I_07]], 2
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i32 [[INC_1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i32 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 4
 ; CHECK-NEXT:    [[I_2:%.*]] = load i16, ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[I_2]], 1
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i32 [[INC_1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i32 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP3]], i32 4
 ; CHECK-NEXT:    store i16 [[ADD_2]], ptr [[ARRAYIDX2_2]], align 2
-; CHECK-NEXT:    [[INC_2:%.*]] = or disjoint i32 [[I_07]], 3
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i32 [[INC_2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i32 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i32 6
 ; CHECK-NEXT:    [[I_3:%.*]] = load i16, ptr [[ARRAYIDX_3]], align 2
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[I_3]], 1
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i32 [[INC_2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i32 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP5]], i32 6
 ; CHECK-NEXT:    store i16 [[ADD_3]], ptr [[ARRAYIDX2_3]], align 2
 ; CHECK-NEXT:    [[INC_3]] = add nuw nsw i32 [[I_07]], 4
 ; CHECK-NEXT:    [[EXITCOND_NOT_3:%.*]] = icmp eq i32 [[INC_3]], 1000
@@ -155,13 +158,15 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I1]], [[I]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i32 [[I_09]]
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[INC:%.*]] = or disjoint i32 [[I_09]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i8], ptr [[B]], i32 [[I_09]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i8, ptr [[TMP1]], i32 4
 ; CHECK-NEXT:    [[I_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds [4 x i8], ptr [[C]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [4 x i8], ptr [[C]], i32 [[I_09]]
+; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr i8, ptr [[TMP2]], i32 4
 ; CHECK-NEXT:    [[I1_1:%.*]] = load i32, ptr [[ARRAYIDX1_1]], align 4
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[I1_1]], [[I_1]]
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [4 x i8], ptr [[A]], i32 [[I_09]]
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr i8, ptr [[TMP3]], i32 4
 ; CHECK-NEXT:    store i32 [[MUL_1]], ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[INC_1]] = add nuw i32 [[I_09]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i32 [[NITER]], 2
