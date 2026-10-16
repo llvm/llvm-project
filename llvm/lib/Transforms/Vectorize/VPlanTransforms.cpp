@@ -3842,9 +3842,15 @@ static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
 }
 
 /// Returns true if the narrow \p Mul in ext(mul(ext(A), ext(B))) or
-/// ext(mul(ext(A), C)) cannot wrap.
-static bool canFoldOuterExtendIntoMul(ExtendKind ExtKind, VPWidenRecipe *Mul,
-                                      Type *LHSSrcTy, Type *RHSSrcTy) {
+/// ext(mul(ext(A), C)) cannot wrap. The kind of the inner extends selects
+/// whether nuw (zext) or nsw (sext) is required on \p Mul.
+static bool canFoldOuterExtendIntoMul(VPWidenRecipe *Mul) {
+  auto *LHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
+  auto *RHS = dyn_cast<VPWidenCastRecipe>(Mul->getOperand(1));
+  Type *LHSSrcTy = LHS->getOperand(0)->getScalarType();
+  // A constant RHS must fit in the source type of the LHS.
+  Type *RHSSrcTy = RHS ? RHS->getOperand(0)->getScalarType() : LHSSrcTy;
+  ExtendKind ExtKind = getPartialReductionExtendKind(LHS);
   if (Mul->getScalarType()->getScalarSizeInBits() >=
       LHSSrcTy->getScalarSizeInBits() + RHSSrcTy->getScalarSizeInBits())
     return true;
@@ -5216,9 +5222,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
     assert(Mul->hasOneUse() && Ext->getOpcode() == MulLHS->getOpcode() &&
            MulLHS->getOpcode() == MulRHS->getOpcode() &&
-           canFoldOuterExtendIntoMul(getPartialReductionExtendKind(Ext), Mul,
-                                     MulLHS->getOperand(0)->getScalarType(),
-                                     MulRHS->getOperand(0)->getScalarType()) &&
+           canFoldOuterExtendIntoMul(Mul) &&
            "Expected the outer extend to be foldable");
     VPBuilder Builder(Mul);
     auto *NewLHS = Builder.createWidenCast(
@@ -5550,8 +5554,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // The outer extend can only be treated as extending the operands of the mul
   // if the narrow mul cannot wrap.
   if (OuterExtKind && MulOp->getOpcode() == Instruction::Mul &&
-      !canFoldOuterExtendIntoMul(*OuterExtKind, MulOp, LHSInputType,
-                                 RHSInputType))
+      !canFoldOuterExtendIntoMul(MulOp))
     return std::nullopt;
 
   return ExtendedReductionOperand{
