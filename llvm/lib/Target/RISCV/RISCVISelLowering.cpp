@@ -6616,10 +6616,10 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 //   <a1, b0, a3, b2, ...> -> ppairoe.*
 //   <a1, b1, a3, b3, ...> -> ppairo.*
 static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
-                                          SelectionDAG &DAG) {
+                                          SelectionDAG &DAG, bool IsRV64) {
   MVT VT = SVN->getSimpleValueType(0);
   if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v2i16 &&
-      VT != MVT::v4i16)
+      VT != MVT::v4i16 && !(IsRV64 && VT == MVT::v2i32))
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
@@ -6740,7 +6740,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (SDValue V =
             lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
       return V;
-    if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG))
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG, Subtarget.is64Bit()))
       return V;
     return SDValue();
   }
