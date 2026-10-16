@@ -157,6 +157,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
 }
 
 omp.private {type = private} @parallel_allocate_private : memref<i32>
+omp.private {type = private} @parallel_allocate_associated_private : memref<i32>
 
 func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %allocator : si32) -> () {
  // CHECK: omp.parallel
@@ -201,6 +202,16 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
+ // CHECK: omp.parallel allocate(
+ // CHECK-SAME: allocate_private_indices([0, 1])
+ // CHECK-SAME: private(@parallel_allocate_private %[[STORAGE:.*]] -> {{.*}}, @parallel_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+ omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>,
+                       %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+     private(@parallel_allocate_private %data_var -> %private.x,
+             @parallel_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+   omp.terminator
+ }
+
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
  omp.parallel {
@@ -214,6 +225,32 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
  omp.parallel num_threads(%num_threads : i32) if(%if_cond) proc_bind(close) {
    omp.terminator
  }
+
+  return
+}
+
+omp.private {type = private} @scope_allocate_private : memref<i32>
+omp.private {type = private} @scope_allocate_associated_private : memref<i32>
+
+// CHECK-LABEL: omp_scope_pretty
+func.func @omp_scope_pretty(%data_var : memref<i32>, %allocator : si32) -> () {
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_alignments([64]) allocate_private_indices([0])
+  // CHECK-SAME: private(
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>) allocate_alignments([64]) allocate_private_indices([0])
+      private(@scope_allocate_private %data_var -> %private : memref<i32>) {
+    omp.terminator
+  }
+
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_private_indices([0, 1])
+  // CHECK-SAME: private(@scope_allocate_private %[[STORAGE:.*]] -> {{.*}}, @scope_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>,
+                     %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+      private(@scope_allocate_private %data_var -> %private.x,
+              @scope_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+    omp.terminator
+  }
 
   return
 }
@@ -4233,6 +4270,27 @@ func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
+// CHECK-LABEL: func.func @omp_iterator_multi_block
+func.func @omp_iterator_multi_block(%a : !llvm.ptr, %b : !llvm.ptr) -> () {
+  // CHECK: omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   %[[C:.*]] = arith.cmpi eq, %[[IV]], %{{.*}} : index
+  // CHECK:   cf.cond_br %[[C]], ^[[BB1:.*]](%{{.*}} : !llvm.ptr), ^[[BB1]](%{{.*}} : !llvm.ptr)
+  // CHECK: ^[[BB1]](%[[P:.*]]: !llvm.ptr):
+  // CHECK:   omp.yield(%[[P]] : !llvm.ptr)
+  // CHECK: } -> !omp.iterated<!llvm.ptr>
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    %c = arith.cmpi eq, %iv, %lb : index
+    cf.cond_br %c, ^bb1(%a : !llvm.ptr), ^bb1(%b : !llvm.ptr)
+  ^bb1(%p : !llvm.ptr):
+    omp.yield(%p : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  return
+}
+
 // CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
 func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
                                        %addr : !llvm.ptr, %len : i64) -> () {
@@ -4515,3 +4573,121 @@ func.func @omp_interop_depend(%obj : !llvm.ptr, %dep : !llvm.ptr) -> () {
   omp.interop.destroy %obj : !llvm.ptr depend(taskdependout -> %dep : !llvm.ptr)
   return
 }
+
+// -----
+
+// Variant selection (e.g. from Fortran `declare variant`) is resolved by the
+// producer of the region, so at the MLIR level the dispatch region simply wraps
+// a call to the selected variant procedure.
+
+// CHECK-LABEL: func.func @omp_dispatch
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch(%x : memref<i32>) -> () {
+  // CHECK: omp.dispatch {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// Test that the generic form of omp.dispatch roundtrips to pretty-printed form.
+// CHECK-LABEL: func.func @omp_dispatch_generic_to_pretty
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_generic_to_pretty(%x : memref<i32>) -> () {
+  // A plain call (outside any dispatch region) is left untouched.
+  // CHECK: call @omp_dispatch(%[[X]]) : (memref<i32>) -> ()
+  func.call @omp_dispatch(%x) : (memref<i32>) -> ()
+  // CHECK: omp.dispatch {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  "omp.dispatch" () ({
+    func.call @variant(%x) : (memref<i32>) -> ()
+    "omp.terminator" () : () -> ()
+  }) : () -> ()
+  return
+}
+
+// Test the nowait clause on omp.dispatch.
+// CHECK-LABEL: func.func @omp_dispatch_nowait
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nowait(%x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nowait {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nowait {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// novariants clause round-trip; the producer of the region materializes the
+// base/variant selection inside the region.
+// CHECK-LABEL: func.func @omp_dispatch_novariants
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_novariants(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch novariants(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch novariants(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// novariants and nowait together.
+// CHECK-LABEL: func.func @omp_dispatch_novariants_nowait
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_novariants_nowait(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch novariants(%[[COND]]) nowait {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch novariants(%cond) nowait {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// nocontext clause round-trip; the producer of the region materializes the
+// base/variant selection inside the region.
+// CHECK-LABEL: func.func @omp_dispatch_nocontext
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nocontext(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nocontext(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nocontext(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// nocontext and novariants together.
+// CHECK-LABEL: func.func @omp_dispatch_nocontext_novariants
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nocontext_novariants(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nocontext(%[[COND]]) novariants(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nocontext(%cond) novariants(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func private @variant(memref<i32>)
+func.func private @variant(memref<i32>) -> ()

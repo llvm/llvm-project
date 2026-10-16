@@ -543,20 +543,21 @@ exit:
   ret void
 }
 
-; TODO: Even though %num is known to divide by 4, and the loop's IV advances by 4, SCEV can't compute the trip count.
+; %num is known to divide by 4, and the loop's IV advances by 4.
 define void @test_trip_multiple_4_vectorized_iv(i32 %num) {
 ; CHECK-LABEL: 'test_trip_multiple_4_vectorized_iv'
 ; CHECK-NEXT:  Classifying expressions for: @test_trip_multiple_4_vectorized_iv
 ; CHECK-NEXT:    %u = urem i32 %num, 4
 ; CHECK-NEXT:    --> (zext i2 (trunc i32 %num to i2) to i32) U: [0,4) S: [0,4)
 ; CHECK-NEXT:    %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-; CHECK-NEXT:    --> {0,+,4}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {0,+,4}<nuw><%for.body> U: [0,-7) S: [-2147483648,2147483645) Exits: (4 * ((-1 + (4 umax %num)) /u 4))<nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %inc = add i32 %i.010, 4
-; CHECK-NEXT:    --> {4,+,4}<%for.body> U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {4,+,4}<nuw><%for.body> U: [4,-3) S: [-2147483648,2147483645) Exits: (4 + (4 * ((-1 + (4 umax %num)) /u 4))<nuw>)<u nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_trip_multiple_4_vectorized_iv
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + (4 umax %num)) /u 4)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 1073741822
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + (4 umax %num)) /u 4)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %u = urem i32 %num, 4

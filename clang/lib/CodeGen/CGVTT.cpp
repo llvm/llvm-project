@@ -70,39 +70,41 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
              "Did not find ctor vtable address point!");
     }
 
-     llvm::Value *Idxs[] = {
-       llvm::ConstantInt::get(CGM.Int32Ty, 0),
-       llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
-       llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
-     };
+    llvm::Constant *Idxs[] = {
+        llvm::ConstantInt::get(CGM.Int32Ty, 0),
+        llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.VTableIndex),
+        llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
+    };
 
-     // Add inrange attribute to indicate that only the VTableIndex can be
-     // accessed.
-     unsigned ComponentSize =
-         CGM.getDataLayout().getTypeAllocSize(getVTableComponentType());
-     unsigned VTableSize = CGM.getDataLayout().getTypeAllocSize(
-         cast<llvm::StructType>(VTable->getValueType())
-             ->getElementType(AddressPoint.VTableIndex));
-     unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
-     llvm::ConstantRange InRange(
-         llvm::APInt(32, (int)-Offset, true),
-         llvm::APInt(32, (int)(VTableSize - Offset), true));
-     llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
-         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
+    // Add inrange attribute to indicate that only the VTableIndex can be
+    // accessed.
+    unsigned ComponentSize =
+        CGM.getDataLayout().getTypeAllocSize(getVTableComponentType());
+    unsigned VTableSize = CGM.getDataLayout().getTypeAllocSize(
+        cast<llvm::StructType>(VTable->getValueType())
+            ->getElementType(AddressPoint.VTableIndex));
+    unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
+    llvm::ConstantRange InRange(
+        llvm::APInt(32, (int)-Offset, true),
+        llvm::APInt(32, (int)(VTableSize - Offset), true));
+    llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), VTable->getValueType(), VTable, Idxs,
+        llvm::GEPNoWrapFlags::inBounds(), InRange);
 
-     if (auto PAuthQual =
-             CGM.getVTablePointerAuthentication(VTTVT.getBase(),
-                                                /*IsVTTEntry=*/true)) {
-       llvm::Constant *Address = nullptr;
-       if (PAuthQual->isAddressDiscriminated())
-         Address = llvm::ConstantExpr::getGetElementPtr(
-             VTT->getType(), VTT, llvm::ConstantInt::get(CGM.Int32Ty, Idx));
-       auto *Discriminator = llvm::ConstantInt::get(
-           CGM.IntPtrTy, PAuthQual->getExtraDiscriminator());
-       Init = CGM.getConstantSignedPointer(Init, PAuthQual->getKey(), Address,
-                                           Discriminator);
-     }
-     VTTComponents.push_back(Init);
+    if (auto PAuthQual =
+            CGM.getVTablePointerAuthentication(VTTVT.getBase(),
+                                               /*IsVTTEntry=*/true)) {
+      llvm::Constant *Address = nullptr;
+      if (PAuthQual->isAddressDiscriminated())
+        Address = llvm::ConstantExpr::getGetElementPtr(
+            CGM.getDataLayout(), VTT->getType(), VTT,
+            llvm::ConstantInt::get(CGM.Int32Ty, Idx));
+      auto *Discriminator = llvm::ConstantInt::get(
+          CGM.IntPtrTy, PAuthQual->getExtraDiscriminator());
+      Init = CGM.getConstantSignedPointer(Init, PAuthQual->getKey(), Address,
+                                          Discriminator);
+    }
+    VTTComponents.push_back(Init);
   }
 
   llvm::Constant *Init = llvm::ConstantArray::get(ArrayType, VTTComponents);

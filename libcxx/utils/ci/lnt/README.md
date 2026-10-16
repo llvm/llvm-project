@@ -62,26 +62,61 @@ it for each machine defined in `machines.json` on a schedule.
 
 ## Configuring the benchmark machines
 
-`machines.json` describes the machines we benchmark on. It is the single source of truth
-for both the workflow that runs the benchmarks (`libcxx-benchmark-commit.yml`) and the cron
-that requests those runs (`libcxx-benchmark-cron.yml`). Each entry contains variables used
-by the various workflows and the LNT machine name that the results will be reported under.
+`machines.json` describes the machines we benchmark on and their configuration. It is the
+single source of truth for all workflows that run benchmarks (PR benchmarking, running
+historical benchmarks, etc). Each entry contains variables used by the various workflows
+and the LNT machine name that the results will be reported under.
+
+The `setup` key describes how benchmarks are run on that machine. It contains the following
+entries:
+
+- `runner`: the GitHub Actions runner(s) to benchmark on.
+- `container`: the image to use if running in a container. Otherwise, the benchmarks run directly
+               on the host.
+- `cxx`: the C++ compiler to use.
+- `xcode-version`: the version of Xcode to use (only relevant on macOS).
+- `benchmark-suite-version`: the version of the benchmark suite to use (a LLVM monorepo SHA).
+- `cmake-cache`: the CMake cache to use when building libc++ before running the benchmarks (only
+                 relevant when benchmarking libc++).
+- `test-config`: the Lit testing configuration used to run the benchmarks against that build (only
+                 relevant when benchmarking libc++).
+- `lit-params`: additional Lit parameters to pass when running the benchmarks.
+
+The `coverage` key establishes how far back and at which frequency performance should be measured
+for that configuration. A machine without a `coverage` entry can be defined, but it won't result
+in historical data.
+
+The `pr-benchmarks` key determines whether the machine is used when benchmarking pull requests
+with `/libcxx-bot benchmark`.
 
 ## Running benchmarks locally
 
-On GitHub, the `libcxx-benchmark-commit.yml` workflow is used to run benchmarks and report
+On GitHub, the `libcxx-lnt-pipeline.yml` workflow is used to run benchmarks and report
 results to a LNT instance. This workflow wraps the `libcxx/utils/ci/lnt/run-benchmarks` script,
 which can be used to benchmark locally:
 
 ```
-run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>    \
-               --compiler clang++ --benchmark-commit <SHA2>      \
-               --output result.json
+run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>                 \
+               --compiler clang++ --benchmark-commit <SHA2>                   \
+               --test-config installed-libc++.cfg.in                          \
+               --output result.json                                           \
+               -- --param std=c++26 --param optimization=speed                \
+                  --param libcxx_installation=<PATH>
 ```
 
-This will run the benchmarks (using the test suite at the specified `SHA1`) against libc++
-as-of the specified `SHA2`, and produce a LNT-ready JSON report. The results can then be
-submitted to a LNT instance if desired.
+This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
+of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
+The results can then be submitted to a LNT instance if desired.
+
+Note that `run-benchmarks` does not build anything: the library being benchmarked must have been built
+or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters
+passed.
+
+## Test suite schemas
+
+`schemas/` holds the schemas of the `libcxx` and `libstdcxx` test suites as we submit them to LNT.
+This describes the various metrics and fields we submit to the instance. For the `libcxx` test suite,
+the ordinal (the ordering between commits) is obtained by `git rev-list --count`.
 
 ## Setting up a local LNT instance
 
@@ -97,7 +132,7 @@ lnt_url: "http://localhost:8000"
 database: default
 auth_token: example_token
 EOF
-lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schema.yaml
+lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schemas/libcxx.yaml
 
 # Then submit to the local instance
 submit-benchmarks --lnt-url http://localhost:8000 --test-suite libcxx result.json

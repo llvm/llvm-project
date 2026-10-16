@@ -85,13 +85,13 @@ let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
 def IsFP64bit        : Predicate<"Subtarget->isFP64bit()">,
                        AssemblerPredicate<(all_of FeatureFP64Bit)>;
 def NotFP64bit       : Predicate<"!Subtarget->isFP64bit()">,
-                       AssemblerPredicate<(all_of (not FeatureFP64Bit))>;
+                       AssemblerPredicate<(none_of FeatureFP64Bit)>;
 def IsSingleFloat    : Predicate<"Subtarget->isSingleFloat()">,
                        AssemblerPredicate<(all_of FeatureSingleFloat)>;
 def IsNotSingleFloat : Predicate<"!Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<(all_of (not FeatureSingleFloat))>;
+                       AssemblerPredicate<(none_of FeatureSingleFloat)>;
 def IsNotSoftFloat   : Predicate<"!Subtarget->useSoftFloat()">,
-                       AssemblerPredicate<(all_of (not FeatureSoftFloat))>;
+                       AssemblerPredicate<(none_of FeatureSoftFloat)>;
 def HasMips3D        : Predicate<"Subtarget->has3D()">,
                        AssemblerPredicate<(all_of FeatureMips3D)>;
 
@@ -266,7 +266,7 @@ class BC1F_FT<string opstr, DAGOperand opnd,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   let hasFCCRegOperand = 1;
 }
 
@@ -277,7 +277,7 @@ class BC1XL_FT<string opstr, DAGOperand opnd> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   let hasFCCRegOperand = 1;
 }
 
@@ -864,12 +864,7 @@ class ExtractElementF64Base<RegisterOperand RO> :
   PseudoSE<(outs GPR32Opnd:$dst), (ins RO:$src, i32imm:$n),
            [(set GPR32Opnd:$dst, (MipsExtractElementF64 RO:$src, imm:$n))]>;
 
-class ExtractElementF64Base_FPR<RegisterOperand RO> :
-  PseudoSE<(outs FGR32Opnd:$dst), (ins RO:$src, i32imm:$n),
-           [(set FGR32Opnd:$dst, (MipsExtractElementF64_FPR RO:$src, imm:$n))]>;
-
 def ExtractElementF64 : ExtractElementF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
-def ExtractElementF64_FPR : ExtractElementF64Base_FPR<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def ExtractElementF64_64 : ExtractElementF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
 def PseudoTRUNC_W_S : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
@@ -1025,8 +1020,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//
-def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>, ISA_MIPS1;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0), (MTC1 R0)>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 R0))>, ISA_MIPS1;
 
 def : MipsPat<(f32 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
@@ -1059,9 +1054,15 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 (CVT_D32_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_32;
 }
 
-def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
-def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
+def : MipsPat<(f64 fpimm0), (DMTC1 R0_64)>, ISA_MIPS3, GPR_64, FGR_64;
+def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 R0_64))>, ISA_MIPS3, GPR_64,
       FGR_64;
+
+def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 0)),
+              (EXTRACT_SUBREG AFGR64Opnd:$src, sub_lo)>;
+
+def : MipsPat<(f32 (MipsExtractElementF64_FPR AFGR64Opnd:$src, 1)),
+              (EXTRACT_SUBREG AFGR64Opnd:$src, sub_hi)>;
 
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)), 
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;

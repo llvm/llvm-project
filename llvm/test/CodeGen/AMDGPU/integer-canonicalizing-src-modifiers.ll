@@ -106,7 +106,7 @@ define half @v_uitofp_i16_to_f16_abs(i16 %arg0) nounwind {
 ; GFX11-TRUE16-LABEL: v_uitofp_i16_to_f16_abs:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -142,7 +142,7 @@ define half @v_uitofp_i16_to_f16_neg(i16 %arg0) nounwind {
 ; GFX11-TRUE16-LABEL: v_uitofp_i16_to_f16_neg:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0x8000, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0x8000
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_u16_e32 v0.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]

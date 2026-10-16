@@ -17,6 +17,7 @@
 #include <limits>
 
 namespace llvm {
+class DataLayout;
 class FixedVectorType;
 class TargetTransformInfo;
 class Type;
@@ -81,9 +82,13 @@ bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2);
 /// phase. If the type is going to be scalarized or does not use whole
 /// registers, returns 1.
 unsigned
-getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
-                 bool ReVec,
-                 unsigned Limit = std::numeric_limits<unsigned>::max());
+getNumberOfPartsOrRegs(bool QueryNumParts, const TargetTransformInfo &TTI,
+                       Type *VecTy, Type *ScalarTy, bool ReVec,
+                       unsigned Limit = std::numeric_limits<unsigned>::max());
+
+/// Returns true if the type limit of the smax (\p IsMax) or smin lane \p V
+/// stays neutral after narrowing.
+bool isTypeLimitNeutral(const Value *V, bool IsMax, const DataLayout &DL);
 
 } // namespace llvm::slpvectorizer
 

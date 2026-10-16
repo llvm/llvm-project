@@ -13,7 +13,7 @@ from lit.llvm.subst import ToolSubst, FindTool
 config.name = "libsycl"
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".cpp"]
+config.suffixes = [".cpp", ".test"]
 
 config.excludes = ["Inputs"]
 

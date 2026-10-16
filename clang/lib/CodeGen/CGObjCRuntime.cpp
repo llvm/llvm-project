@@ -150,9 +150,9 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   if (S.getNumCatchStmts())
     Cont = CGF.getJumpDestInCurrentScope("eh.cont");
 
-  bool useFunclets = EHPersonality::get(CGF).usesFuncletPads();
-  bool IsWasm = EHPersonality::get(CGF).isWasmPersonality();
-  bool IsMSVC = EHPersonality::get(CGF).isMSVCPersonality();
+  bool useFunclets = getEHPersonality(CGF).usesFuncletPads();
+  bool IsWasm = getEHPersonality(CGF).isWasmPersonality();
+  bool IsMSVC = getEHPersonality(CGF).isMSVCPersonality();
 
   CodeGenFunction::FinallyInfo FinallyInfo;
   if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
@@ -178,6 +178,26 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
     }
   }
+
+  if (useFunclets)
+    if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
+      CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
+      if (!CGF.CurSEHParent)
+        CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
+      // Outline the finally block.
+      const Stmt *FinallyBlock = Finally->getFinallyBody();
+      HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/ false, FinallyBlock);
+
+      // Emit the original filter expression, convert to i32, and return.
+      HelperCGF.EmitStmt(FinallyBlock);
+
+      HelperCGF.FinishFunction(FinallyBlock->getEndLoc());
+
+      llvm::Function *FinallyFunc = HelperCGF.CurFn;
+
+      // Push a cleanup for __finally blocks.
+      CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
+    }
 
   SmallVector<CatchHandler, 8> Handlers;
 
@@ -312,8 +332,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   CGF.Builder.restoreIP(SavedIP);
 
   // Pop out of the finally.
-  if (!useFunclets && S.getFinallyStmt())
-    FinallyInfo.exit(CGF);
+  if (S.getFinallyStmt()) {
+    if (useFunclets) {
+      CGF.PopCleanupBlock();
+    } else {
+      FinallyInfo.exit(CGF);
+    }
+  }
 
   if (Cont.isValid())
     CGF.EmitBlock(Cont.getBlock());

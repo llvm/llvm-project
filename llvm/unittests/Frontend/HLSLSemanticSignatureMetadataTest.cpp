@@ -220,8 +220,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementDerivedMasks) {
   // ((1 << 2) - 1) << 1 == 0b0110
   EXPECT_EQ(Elem->getDeclaredMask(), 0x6);
   EXPECT_EQ(Elem->getAlwaysReadsMask(), 0x2);
-  // ~0x2 & 0x6 == 0x4
-  EXPECT_EQ(Elem->getNeverWritesMask(), 0x4);
+  // NeverWrites includes components outside the declared mask: ~0x2 & 0xF.
+  EXPECT_EQ(Elem->getNeverWritesMask(), 0xD);
 }
 
 // A geometry shader output carries a non-zero stream index

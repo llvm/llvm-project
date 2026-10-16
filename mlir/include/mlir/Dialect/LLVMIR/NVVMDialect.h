@@ -18,13 +18,13 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
@@ -61,13 +61,14 @@ std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
                                              int nCol,
                                              mlir::MLIRContext *context);
 } // namespace NVVM
+namespace LLVM {
+class ModuleTranslation;
+} // namespace LLVM
 } // namespace mlir
 
 ///// Ops /////
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.h.inc"
-
-#include "mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.h.inc"

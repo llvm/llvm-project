@@ -2100,8 +2100,9 @@ func.func @remove_empty_forall(%in: tensor<8x8xf32>) -> tensor<8x8xf32> {
 }
 // CHECK-LABEL: @remove_empty_forall
 // CHECK-NOT:   scf.forall
+// CHECK-NOT:   arith.constant
 // CHECK:       %[[EMPTY:.*]] = tensor.empty
-// CHECK:       return %[[EMPTY]]
+// CHECK-NEXT:  return %[[EMPTY]]
 
 // -----
 
@@ -2170,7 +2171,7 @@ module {
       %4 = affine.min #map2(%arg3)[%dim, %arg0]
       %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.elementwise <exp> ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -2184,7 +2185,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
-//       CHECK:      %[[ELEM:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.elementwise <exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
 //  CHECK-NEXT:      }
@@ -2210,7 +2211,7 @@ module {
       %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.elementwise <exp> ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -2227,7 +2228,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
-//       CHECK:      %[[ELEM:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.elementwise <exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
 //  CHECK-NEXT:      }
@@ -2401,4 +2402,38 @@ func.func @fold_tensor_cast_into_forall_non_sequential_writes(
   }
   // %0#0 contains %arg1 data; %0#1 contains %arg0 data.
   return %0#0, %0#1 : tensor<?x32xf32>, tensor<?x32xf32>
+}
+
+// -----
+
+// The order of insertions is the reverse of the shared output order.
+// CHECK-LABEL: func @promote_reversed_outputs
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<2xf32>, %[[ARG1:.*]]: tensor<2xf32>, %[[ARG2:.*]]: tensor<2xf32>, %[[ARG3:.*]]: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
+//       CHECK:   return %[[ARG0]], %[[ARG1]] : tensor<2xf32>, tensor<2xf32>
+func.func @promote_reversed_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a: tensor<2xf32>, %init_b: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
+  %r:2 = scf.forall (%i) in (1) shared_outs(%x = %init_a, %y = %init_b) -> (tensor<2xf32>, tensor<2xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %b into %y[0] [2] [1] : tensor<2xf32> into tensor<2xf32>
+      tensor.parallel_insert_slice %a into %x[0] [2] [1] : tensor<2xf32> into tensor<2xf32>
+    }
+  }
+  return %r#0, %r#1 : tensor<2xf32>, tensor<2xf32>
+}
+
+// -----
+
+// Partial insertions must preserve both the destination and result association.
+// CHECK-LABEL: func @promote_partial_outputs
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<2xf32>, %[[ARG1:.*]]: tensor<2xf32>, %[[ARG2:.*]]: tensor<4xf32>, %[[ARG3:.*]]: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+//       CHECK:   %[[INSERT_SLICE_0:.*]] = tensor.insert_slice %[[ARG0]] into %[[ARG2]][0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+//       CHECK:   %[[INSERT_SLICE_1:.*]] = tensor.insert_slice %[[ARG1]] into %[[ARG3]][2] [2] [1] : tensor<2xf32> into tensor<4xf32>
+//       CHECK:   return %[[INSERT_SLICE_0]], %[[INSERT_SLICE_1]] : tensor<4xf32>, tensor<4xf32>
+func.func @promote_partial_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a: tensor<4xf32>, %init_b: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+  %r:2 = scf.forall (%i) in (1) shared_outs(%x = %init_a, %y = %init_b) -> (tensor<4xf32>, tensor<4xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %b into %y[2] [2] [1] : tensor<2xf32> into tensor<4xf32>
+      tensor.parallel_insert_slice %a into %x[0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+    }
+  }
+  return %r#0, %r#1 : tensor<4xf32>, tensor<4xf32>
 }

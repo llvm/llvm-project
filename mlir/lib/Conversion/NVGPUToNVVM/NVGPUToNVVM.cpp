@@ -319,9 +319,9 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
 static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
   Type elType = getElementTypeOrSelf(t);
   if (elType.isInteger(8))
-    return NVVM::MMATypes::s8;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u8 : NVVM::MMATypes::s8;
   if (elType.isInteger(4))
-    return NVVM::MMATypes::s4;
+    return elType.isUnsignedInteger() ? NVVM::MMATypes::u4 : NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
   if (elType.isBF16())
@@ -864,7 +864,7 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier, Value{});
     return success();
   }
 };
@@ -1249,7 +1249,7 @@ struct NVGPUWarpgroupMmaOpLowering
       } else if (inputElemType.isF16() || inputElemType.isBF16()) {
         wgmmaK = 16;
       } else if (isa<Float8E4M3FNType, Float8E5M2Type>(inputElemType) ||
-                 inputElemType.isInteger(16)) {
+                 inputElemType.isInteger(8)) {
         wgmmaK = 32;
       } else if (inputElemType.isInteger(1)) {
         wgmmaK = 256;
