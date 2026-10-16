@@ -240,7 +240,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
       Code << "    if (!resTy)\n";
-      Code << "      return mlir::failure();\n";
+      Code << "      return op.emitError() << \"ClangIR lowering NYI: cannot "
+              "convert \" << op.getType();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
            << Properties << ");\n";
