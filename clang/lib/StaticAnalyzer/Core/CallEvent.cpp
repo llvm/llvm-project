@@ -754,6 +754,18 @@ const FunctionDecl *CXXInstanceCall::getDecl() const {
   return getSVal(CE->getCallee()).getAsFunctionDecl();
 }
 
+static bool hasConstObjectParameter(const CXXMethodDecl *MD) {
+  if (!MD->isExplicitObjectMemberFunction())
+    return MD->isConst();
+
+  // An explicit object parameter has its own qualifiers instead of
+  // being described by the const-qualifier of the function type.
+  QualType ObjTy = MD->getParamDecl(0)->getType();
+  if (const auto *RT = ObjTy->getAs<ReferenceType>())
+    return RT->getPointeeType().isConstQualified();
+  return true;
+}
+
 void CXXInstanceCall::getExtraInvalidatedValues(
     ValueList &Values, RegionAndSymbolInvalidationTraits *ETraits) const {
   SVal ThisVal = getCXXThisVal();
@@ -761,7 +773,7 @@ void CXXInstanceCall::getExtraInvalidatedValues(
 
   // Don't invalidate if the method is const and there are no mutable fields.
   if (const auto *D = cast_or_null<CXXMethodDecl>(getDecl())) {
-    if (!D->isConst())
+    if (!hasConstObjectParameter(D))
       return;
 
     // Get the record decl for the class of 'This'. D->getParent() may return
