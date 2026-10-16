@@ -494,12 +494,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
     if (Subtarget.is64Bit())
-      setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON}, MVT::i32, Custom);
+      setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON, ISD::ABDU, ISD::ABDS},
+                         MVT::i32, Custom);
   } else if (Subtarget.hasShortForwardBranchIALU()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
   } else if (Subtarget.is64Bit()) {
-    setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON}, MVT::i32, Custom);
+    setOperationAction({ISD::ABS, ISD::ABS_MIN_POISON, ISD::ABDU, ISD::ABDS},
+                       MVT::i32, Custom);
   }
 
   if (!Subtarget.useMIPSCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
@@ -2032,9 +2034,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        ISD::AND, ISD::OR, ISD::XOR, ISD::SETCC, ISD::SELECT,
                        ISD::SRA});
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
-
-  if (Subtarget.is64Bit())
-    setTargetDAGCombine({ISD::ABDS, ISD::ABDU});
 
   if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
@@ -17488,6 +17487,26 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
+  case ISD::ABDU:
+  case ISD::ABDS: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    SDValue LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+    LHS = DAG.getFreeze(LHS);
+    RHS = DAG.getFreeze(RHS);
+    SDValue Diff = DAG.getNode(ISD::SUB, DL, MVT::i64, LHS, RHS);
+    Diff = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Diff,
+                       DAG.getValueType(MVT::i32));
+    SDValue SignFill = DAG.getNode(ISD::SRA, DL, MVT::i64, Diff,
+                                   DAG.getConstant(31, DL, MVT::i64));
+    SDValue NewRes = DAG.getNode(ISD::XOR, DL, MVT::i64, Diff, SignFill);
+    NewRes = DAG.getNode(ISD::SUB, DL, MVT::i64, NewRes, SignFill);
+    NewRes = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, NewRes,
+                         DAG.getValueType(MVT::i32));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes));
+    return;
+  }
   case ISD::ABS:
   case ISD::ABS_MIN_POISON: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
@@ -24681,39 +24700,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default:
     break;
-  case ISD::ABDU:
-  case ISD::ABDS: {
-    // On RV64, i32 abdu/abds gets legalized to i64 then expanded to 9 generic
-    // instructions. Fold to bltu+subw instead.
-    if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i64)
-      break;
-    if (Subtarget.hasStdExtZbb())
-      break;
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    auto PeelZExtI32 = [](SDValue V) -> SDValue {
-      ConstantSDNode *C;
-      if (V.getOpcode() == ISD::AND &&
-          (C = dyn_cast<ConstantSDNode>(V.getOperand(1))) &&
-          C->getZExtValue() == 0xFFFFFFFFULL)
-        return V.getOperand(0);
-      return SDValue();
-    };
-    SDValue A = PeelZExtI32(LHS);
-    SDValue B = PeelZExtI32(RHS);
-    if (!A || !B)
-      break;
-    bool IsSigned = N->getOpcode() == ISD::ABDS;
-    ISD::CondCode CC = IsSigned ? ISD::SETLT : ISD::SETULT;
-    SDValue Cond = DAG.getSetCC(DL, Subtarget.getXLenVT(), A, B, CC);
-    auto MakeSubW = [&](SDValue X, SDValue Y) {
-      SDValue S = DAG.getNode(ISD::SUB, DL, MVT::i64, X, Y);
-      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, S,
-                         DAG.getValueType(MVT::i32));
-    };
-    return DAG.getNode(ISD::SELECT, DL, MVT::i64, Cond, MakeSubW(B, A),
-                       MakeSubW(A, B));
-  }
   case RISCVISD::SplitF64: {
     SDValue Op0 = N->getOperand(0);
     // If the input to SplitF64 is just BuildPairF64 then the operation is

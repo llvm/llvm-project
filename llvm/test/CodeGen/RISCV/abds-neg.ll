@@ -1209,10 +1209,8 @@ define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_minmax_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    srai a1, a0, 63
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1226,11 +1224,10 @@ define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_minmax_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sext.w a1, a1
-; RV64ZBB-NEXT:    sext.w a0, a0
-; RV64ZBB-NEXT:    max a2, a0, a1
-; RV64ZBB-NEXT:    min a0, a0, a1
-; RV64ZBB-NEXT:    subw a0, a0, a2
+; RV64ZBB-NEXT:    sub a0, a0, a1
+; RV64ZBB-NEXT:    sraiw a1, a0, 31
+; RV64ZBB-NEXT:    xor a0, a0, a1
+; RV64ZBB-NEXT:    subw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %min = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %max = call i32 @llvm.smax.i32(i32 %a, i32 %b)
@@ -1658,10 +1655,8 @@ define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: abd_cmp_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    srai a1, a0, 63
+; RV64I-NEXT:    sraiw a1, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    subw a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1675,11 +1670,10 @@ define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV64ZBB-LABEL: abd_cmp_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sext.w a1, a1
-; RV64ZBB-NEXT:    sext.w a0, a0
-; RV64ZBB-NEXT:    max a2, a0, a1
-; RV64ZBB-NEXT:    min a0, a0, a1
-; RV64ZBB-NEXT:    subw a0, a0, a2
+; RV64ZBB-NEXT:    sub a0, a0, a1
+; RV64ZBB-NEXT:    sraiw a1, a0, 31
+; RV64ZBB-NEXT:    xor a0, a0, a1
+; RV64ZBB-NEXT:    subw a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %cmp = icmp sge i32 %a, %b
   %ab = sub i32 %a, %b
