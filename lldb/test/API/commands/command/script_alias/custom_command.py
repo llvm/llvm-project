@@ -3,8 +3,8 @@ import lldb
 
 def some_command_here(debugger, command, result, d):
     if command == "a":
-        print("Victory is mine", file=result)
+        print("Script command invoked", file=result)
         return True
     else:
-        print("Sadness for all", file=result)
+        print("Script command received unexpected arguments", file=result)
         return False
