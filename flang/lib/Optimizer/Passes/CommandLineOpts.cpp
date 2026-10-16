@@ -47,7 +47,7 @@ cl::opt<bool> skipExternalRttiDefinition(
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
 llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
-    llvm::cl::init(true));
+                                 llvm::cl::init(true));
 
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
