@@ -3,10 +3,10 @@ RUN: echo a > %t
 RUN: echo ab >> %t
 RUN: echo abc >> %t
 RUN: echo abcd >> %t
-# UTF-8 encoding of U+2027 HYPHENATION POINT (printable)
-RUN: printf 'bcde\342\200\247\n' >> %t
-# UTF-8 encoding of U+200B ZERO WIDTH SPACE (non-printable)
-RUN: printf 'cdef\342\200\247\342\200\250\n' >> %t
+# UTF-8 encoding of U+00A0 NON-BREAKING SPACE (which we treat as printable)
+RUN: printf 'bcde\302\240\n' >> %t
+# UTF-8 encoding of U+009F APPLICATION PROGRAM COMMAND (non-printable)
+RUN: printf 'cdef\302\240\302\237\n' >> %t
 
 # Check that partial and invalid UTF-8 characters do not interfere with
 # preceding and subsequent strings.
@@ -39,20 +39,20 @@ CHECK-ASCII:cdef
 CHECK-ASCII:defg
 CHECK-ASCII:efgh
 
-# In -e S, any bytes of U+200A and U+200B may or may not be included depending
+# In -e S, any bytes of U+00A0 and U+009F may or may not be included depending
 # on the locale in effect. The locale in effect may also be altered by llvm-lit.
 # Make sure if changing the test that the byte representations should not allow
 # this to be split into multiple strings in non-UTF-8 locales.
-CHECK-LOCALE:bcde{{(\xe2(\x80\xa7?)?)?}}
-CHECK-LOCALE:cdef{{(\xe2(\x80(\xa7(\xe2(\x80\xa8?)?)?)?)?)?}}
+CHECK-LOCALE:bcde{{(\xc2\xa0?)?}}
+CHECK-LOCALE:cdef{{(\xc2(\xa0(\xc2\x9f?)?)?)?}}
 CHECK-LOCALE:{{\xe2?}}defg{{\xe2?}}
 CHECK-LOCALE:{{(\xe2?\x80)?}}efgh{{(\xe2\x80?)?}}
 
-# In -e utf8, all bytes of U+200A should be included, but none of U+200B. The
+# In -e utf8, all bytes of U+00A0 should be included, but none of U+009F. The
 # partial multibyte characters should not prevent abcd from being detected as a
 # string.
-CHECK-UTF8:bcde{{\xe2\x80\xa7}}
-CHECK-UTF8:cdef{{\xe2\x80\xa7}}
+CHECK-UTF8:bcde{{\xc2\xa0}}
+CHECK-UTF8:cdef{{\xc2\xa0}}
 CHECK-UTF8:defg
 CHECK-UTF8:efgh
 
@@ -70,22 +70,22 @@ CHECK-ERROR: error: 'x' is not a valid value for '--encoding='
 # already be reached before the chunk boundary, and the character that crosses
 # the boundary may or may not be printable.
 #
-#                                        v chunk boundary
-RUN: printf "%16378s\342\200\247e\342\200\247e\342\200\247e\342\200\247" | \
+#                                v chunk boundary
+RUN: printf "%16380s\302\240e\302\240e\302\240e\302\240" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-#                           v chunk boundary
-RUN: printf "%16374s\342\200\247e\342\200\247e\342\200\247e\342\200\247" | \
+#                       v chunk boundary
+RUN: printf "%16383s\302\240e\302\240e\302\240e\302\240" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-CHECK-UTF8-CHUNK-A:{{\xe2\x80\xa7e\xe2\x80\xa7e\xe2\x80\xa7e\xe2\x80\xa7}}
+CHECK-UTF8-CHUNK-A:{{\xc2\xa0e\xc2\xa0e\xc2\xa0e\xc2\xa0}}
 
-#                                         v chunk boundary
-RUN: printf "%16377se\342\200\247e\342\200\250e\342\200\247e\342\200\247e" | \
+#                                 v chunk boundary
+RUN: printf "%16379se\302\240e\302\237e\302\240e\302\240e" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-#                            v chunk boundary
-RUN: printf "%16373se\342\200\250e\342\200\247e\342\200\247e\342" | \
+#                        v chunk boundary
+RUN: printf "%16382se\302\237e\302\240e\302\240e\342" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-CHECK-UTF8-CHUNK-B:{{e\xe2\x80\xa7e\xe2\x80\xa7e}}
+CHECK-UTF8-CHUNK-B:{{e\xc2\xa0e\xc2\xa0e}}
