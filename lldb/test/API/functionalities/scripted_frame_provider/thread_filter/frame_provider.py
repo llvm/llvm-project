@@ -16,6 +16,12 @@ from lldb.plugins.scripted_process import ScriptedFrame
 from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
 
 
+def function_name(frame):
+    # Frames in code without symbols, such as the statically linked C++
+    # standard library on Windows, have no function name.
+    return frame.GetFunctionName() or ""
+
+
 class PrefixedFrame(ScriptedFrame):
     """A frame that wraps a real frame but transforms the function name."""
 
@@ -63,7 +69,7 @@ class EvenThreadProvider(ScriptedFrameProvider):
     def get_frame_at_index(self, idx):
         if idx < len(self.input_frames):
             frame = self.input_frames[idx]
-            name = self.PREFIX + frame.GetFunctionName()
+            name = self.PREFIX + function_name(frame)
             return PrefixedFrame(self.thread, idx, name)
         return None
 
@@ -87,7 +93,7 @@ class OddThreadProvider(ScriptedFrameProvider):
     def get_frame_at_index(self, idx):
         if idx < len(self.input_frames):
             frame = self.input_frames[idx]
-            name = self.PREFIX + frame.GetFunctionName()
+            name = self.PREFIX + function_name(frame)
             return PrefixedFrame(self.thread, idx, name)
         return None
 
@@ -105,6 +111,6 @@ class UpperCaseProvider(ScriptedFrameProvider):
     def get_frame_at_index(self, idx):
         if idx < len(self.input_frames):
             frame = self.input_frames[idx]
-            name = frame.GetFunctionName().upper()
+            name = function_name(frame).upper()
             return PrefixedFrame(self.thread, idx, name)
         return None
