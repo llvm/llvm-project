@@ -1,11 +1,13 @@
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info -spirv-debug-lexical-block-discriminator-scope=false %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -spirv-debug-lexical-block-discriminator-scope=false -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-;; Verify that a DILocation whose scope is a DILexicalBlockFile resolves to the
-;; underlying DISubprogram's DebugFunction, not to the DebugCompilationUnit.
-;; DILexicalBlockFile's SPIR-V counterpart (DebugLexicalBlockDiscriminator)
-;; cannot be used as a scope, so resolveScope() must unwrap it.
-;; Also tests the nested case (DILexicalBlockFile wrapping DILexicalBlockFile).
+;; With -spirv-debug-lexical-block-discriminator-scope=false, a DILocation
+;; whose scope is a DILexicalBlockFile resolves to the underlying
+;; DISubprogram's DebugFunction, not to the DebugCompilationUnit.
+;; Also tests the nested case (DILexicalBlockFile wrapping
+;; DILexicalBlockFile).
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
