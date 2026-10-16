@@ -2721,8 +2721,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       return VMI.HasNonConstantUserCondition;
     });
 
-    if (HasUserCondition &&
-        getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
+    if (HasUserCondition && getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
       // OpenMP 5.2, 7.4: without an 'otherwise' clause the effect is as if one
       // was specified without an associated directive variant. Only
       // 'otherwise' (or the deprecated 'default') has no context selectors.
