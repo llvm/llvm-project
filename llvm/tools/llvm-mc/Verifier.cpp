@@ -89,9 +89,14 @@ void MCVerifier::process(const SMDiagnostic &Diag) {
       Buf = SrcMgr.getMemoryBuffer(ID);
   }
 
+  // SMDiagnostic::getColumnNo() is 0-based; -verify directives are written
+  // against the printed (1-based) column, matching what a user actually sees
+  // in "file:line:col:" diagnostic output.
   auto Result = Verifier.process(
       errs(), SrcMgr, Diag.getKind(), HasLoc, Buf,
-      HasLoc ? static_cast<unsigned>(Diag.getLineNo()) : 0, Diag.getMessage());
+      HasLoc ? static_cast<unsigned>(Diag.getLineNo()) : 0,
+      HasLoc ? static_cast<unsigned>(Diag.getColumnNo()) + 1 : 0,
+      Diag.getMessage());
   if (Result == SourceMgrDiagnosticVerifier::MatchResult::Unexpected)
     SrcMgr.PrintMessage(errs(), Diag);
 }

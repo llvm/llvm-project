@@ -28,7 +28,8 @@ SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
   }
   Expected = Regex("(" + PrefixAlt +
                    ")-(error|note|remark|warning)(-re)? "
-                   "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
+                   "*(@([+-][0-9]+|above|below|unknown))?(:([0-9]+))? "
+                   "*{{(.*)}}$");
 }
 
 /// Given a diagnostic kind, return a human readable string for it.
@@ -140,7 +141,7 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &OS,
                                              : Line.substr(CommentStart);
     }
 
-    SmallVector<StringRef, 5> Matches;
+    SmallVector<StringRef, 9> Matches;
     if (!Expected.match(Line, &Matches)) {
       // Check for designators that apply to this line.
       if (!DesignatorsForNextLine.empty()) {
@@ -166,11 +167,22 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &OS,
       assert(Matches[2] == "note");
       Kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag Record(Kind, LineNo + 1, ExpectedStart, Matches[6]);
+    ExpectedDiag Record(Kind, LineNo + 1, ExpectedStart, Matches[8]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
     if (!Matches[3].empty() && !Record.computeRegex(OS, Mgr)) {
       OK = false;
+      continue;
+    }
+
+    // Parse an optional ':<col>' column requirement. Applied before the
+    // offset handling below since some offset forms (e.g. '@unknown')
+    // 'continue' early, and a column requirement should still take effect
+    // for those.
+    if (!Matches[7].empty() &&
+        (Matches[7].getAsInteger(10, Record.ColNo) || Record.ColNo == 0)) {
+      OK = false;
+      Record.emitError(OS, Mgr, "invalid column '" + Matches[6] + "'");
       continue;
     }
 
@@ -240,8 +252,8 @@ SourceMgrDiagnosticVerifier::getExpectedDiags(StringRef BufName) {
 
 SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
     raw_ostream &OS, SourceMgr &Mgr, SourceMgr::DiagKind Kind, bool HasLoc,
-    const MemoryBuffer *Buf, unsigned LineNo, StringRef Message,
-    bool ReportUnexpected) {
+    const MemoryBuffer *Buf, unsigned LineNo, unsigned ColNo,
+    StringRef Message, bool ReportUnexpected) {
   MutableArrayRef<ExpectedDiag> Diags;
   if (HasLoc) {
     // If the buffer couldn't be resolved, `Diags` stays empty: a diagnostic
@@ -260,6 +272,10 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
   for (auto &E : Diags) {
     // File line must match (unless it's an unknown location).
     if (HasLoc && E.LineNo != LineNo)
+      continue;
+    // Column is only checked against expected diagnostics that requested one
+    // (via ':<col>'); others match on line alone.
+    if (HasLoc && E.ColNo != 0 && E.ColNo != ColNo)
       continue;
     if (E.match(Message)) {
       if (E.Kind == Kind) {

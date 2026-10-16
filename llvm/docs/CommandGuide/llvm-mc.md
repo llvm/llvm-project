@@ -166,23 +166,30 @@ comma-separated list of prefixes to recognize; a bare `--verify` (with no
 `=<prefixes>`) is equivalent to `--verify=expected`.
 
 A directive has the form:
-```asm
-<prefix>-<kind>[-re][@<offset>] {{<text>}}
-```
+
+``asm
+<prefix>-<kind>[-re][@<offset>][:<col>] {{<text>}}
+``
 
 `<kind>` is one of `error`, `warning`, `note` or `remark`. Without
 an `@<offset>`, the directive applies to its own line; `@+N`/`@-N`
 apply to the line `N` lines below/above, and `@above`/`@below` apply to
-the nearest non-directive line above/below. By default `<text>` is matched
-as a substring of the diagnostic's message; with the `-re` suffix, any
-`{{...}}` block nested inside `<text>` is matched as a regular
-expression instead (the rest of `<text>` is matched literally), for
-example:
+the nearest non-directive line above/below. An optional `:<col>` (matching
+the column shown in the tool's own `file:line:col:` diagnostic output)
+additionally requires the diagnostic to be at that exact column; without it,
+only the line is checked. By default `<text>` is matched as a substring of
+the diagnostic's message; with the `-re` suffix, any `{{...}}` block
+nested inside `<text>` is matched as a regular expression instead (the
+rest of `<text>` is matched literally), for example::
 
 ```asm
-## Matches only diagnostics containing this exact text.
+## Matches only diagnostics containing this exact text, on this line.
 .foo
 # expected-error@-1 {{unknown directive}}
+
+## Also requires the diagnostic to be at column 1.
+.foo
+# expected-error@-1:1 {{unknown directive}}
 
 ## Matches any diagnostic starting with "unknown" and ending with
 ## "directive"; only the nested {{.*}} is a regex, the surrounding text

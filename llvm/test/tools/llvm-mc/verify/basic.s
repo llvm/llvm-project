@@ -4,9 +4,15 @@
 # RUN: rm -rf %t && split-file %s %t
 
 ## Matching expected-error directives: a plain substring match, a '-re'
-## regex match (note the nested {{...}} for the regex portion itself), and
-## an '@+1' forward offset all pass.
+## regex match (note the nested {{...}} for the regex portion itself), an
+## '@+1' forward offset, a bare ':<col>' column check, and a combined
+## '@offset:col' all pass.
 # RUN: llvm-mc -triple riscv32 -verify %t/match.s
+
+## A directive with a column that doesn't match the actual diagnostic's
+## column fails verification, same as a line mismatch would.
+# RUN: not llvm-mc -triple riscv32 -verify %t/wrong-column.s 2>&1 \
+# RUN:   | FileCheck %t/wrong-column.s --check-prefix=WRONG-COLUMN
 
 ## A custom '-verify=<prefix>' prefix is recognized instead of 'expected'.
 # RUN: llvm-mc -triple riscv32 -verify=check %t/match-custom-prefix.s
@@ -65,6 +71,16 @@
 
 # expected-error@+1 {{unknown directive}}
 .baz_directive
+
+.qux_directive # expected-error:1 {{unknown directive}}
+
+.quux_directive
+# expected-error@-1:1 {{unknown directive}}
+
+#--- wrong-column.s
+.foo_directive # expected-error:99 {{unknown directive}}
+# WRONG-COLUMN: error: unknown directive
+# WRONG-COLUMN: expected error "unknown directive" was not produced
 
 #--- match-custom-prefix.s
 .foo_directive
