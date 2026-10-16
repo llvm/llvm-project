@@ -113,4 +113,6 @@ namespace N {
   extern "C" int _namespace_b; // expected-warning {{identifier '_namespace_b' is reserved because it starts with '_' and has C language linkage}}
   void _namespace_c();
   extern "C" void _namespace_d(); // expected-warning {{identifier '_namespace_d' is reserved because it starts with '_' and has C language linkage}}
+  auto _namespace_e = []{};   // no-warning
+  auto _namespace_f = 0;      // no-warning
 }
