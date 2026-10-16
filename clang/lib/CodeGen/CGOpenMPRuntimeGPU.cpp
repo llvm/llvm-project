@@ -706,8 +706,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
-static bool isNoLoopCompatibleSchedule(ASTContext &Ctx,
-                                       const OMPLoopDirective &LD) {
+static bool isPromotableLoopSchedule(ASTContext &Ctx,
+                                     const OMPLoopDirective &LD) {
   const auto *C = LD.getSingleClause<OMPScheduleClause>();
   if (!C)
     return true;
@@ -728,16 +728,20 @@ static bool isNoLoopCompatibleSchedule(ASTContext &Ctx,
   }
 }
 
-static bool isNoLoopEligible(ASTContext &Ctx, const OMPExecutableDirective &D) {
+static llvm::omp::OMPTgtExecModeFlags
+getSPMDExecMode(ASTContext &Ctx, const OMPExecutableDirective &D) {
   const LangOptions &LangOpts = Ctx.getLangOpts();
-  if (!LangOpts.OpenMPTeamSubscription || !LangOpts.OpenMPThreadSubscription)
-    return false;
+  bool OneIterationPerThread =
+      LangOpts.OpenMPTeamSubscription && LangOpts.OpenMPThreadSubscription;
 
   const OMPExecutableDirective *Nested = &D;
   while (true) {
-    if (Nested->hasClausesOfKind<OMPNumTeamsClause>() ||
-        Nested->hasClausesOfKind<OMPReductionClause>())
-      return false;
+    if (Nested->hasClausesOfKind<OMPReductionClause>())
+      return OMP_TGT_EXEC_MODE_SPMD;
+
+    if (Nested->hasClausesOfKind<OMPNumTeamsClause>())
+      OneIterationPerThread = false;
+
     OpenMPDirectiveKind DKind = Nested->getDirectiveKind();
     if (DKind != OMPD_target && DKind != OMPD_target_teams &&
         DKind != OMPD_teams)
@@ -749,31 +753,50 @@ static bool isNoLoopEligible(ASTContext &Ctx, const OMPExecutableDirective &D) {
                         CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body))
                   : nullptr;
     if (!Nested)
-      return false;
+      return OMP_TGT_EXEC_MODE_SPMD;
   }
 
   const auto *LD = dyn_cast<OMPLoopDirective>(Nested);
   // Do not filter out 'ordered' since Sema rejects it on these directives.
-  if (!LD || LD->getLoopsNumber() != 1 ||
-      !isNoLoopCompatibleSchedule(Ctx, *LD) ||
+  if (!LD || LD->getLoopsNumber() != 1 || !isPromotableLoopSchedule(Ctx, *LD) ||
       LD->getSingleClause<OMPDistScheduleClause>())
-    return false;
+    return OMP_TGT_EXEC_MODE_SPMD;
+
+  for (const auto *C : LD->getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() != OMPD_unknown &&
+        C->getNameModifier() != OMPD_parallel)
+      continue;
+    bool CondVal;
+    if (!C->getCondition()->EvaluateAsBooleanCondition(CondVal, Ctx) ||
+        !CondVal)
+      return OMP_TGT_EXEC_MODE_SPMD;
+  }
+
+  auto getLoopSPMDMode = [&](bool Promotable = true) {
+    if (!Promotable)
+      return OMP_TGT_EXEC_MODE_SPMD;
+    return OneIterationPerThread ? OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
+                                 : OMP_TGT_EXEC_MODE_SPMD_STRIDED_LOOP;
+  };
 
   if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(LD))
-    return TTLD->canBeParallelFor();
+    return getLoopSPMDMode(TTLD->canBeParallelFor());
   if (const auto *TLD = dyn_cast<OMPTeamsGenericLoopDirective>(LD))
-    return TLD->canBeParallelFor();
+    return getLoopSPMDMode(TLD->canBeParallelFor());
+
   if (!isOpenMPDistributeDirective(LD->getDirectiveKind()) ||
       !isOpenMPParallelDirective(LD->getDirectiveKind()))
-    return false;
+    return OMP_TGT_EXEC_MODE_SPMD;
+
   if (const auto *TTD =
           dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(LD))
-    return !TTD->hasCancel();
+    return getLoopSPMDMode(!TTD->hasCancel());
   if (const auto *TD = dyn_cast<OMPTeamsDistributeParallelForDirective>(LD))
-    return !TD->hasCancel();
+    return getLoopSPMDMode(!TD->hasCancel());
   if (const auto *DD = dyn_cast<OMPDistributeParallelForDirective>(LD))
-    return !DD->hasCancel();
-  return true;
+    return getLoopSPMDMode(!DD->hasCancel());
+
+  return getLoopSPMDMode();
 }
 
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
@@ -834,13 +857,11 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   KernelAttrs = {};
-  if (IsSPMD && isNoLoopEligible(CGM.getContext(), D))
-    KernelAttrs.ExecFlags =
-        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  if (IsSPMD)
+    KernelAttrs.ExecFlags = getSPMDExecMode(CGM.getContext(), D);
   else
     KernelAttrs.ExecFlags =
-        IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
-               : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
   computeMinAndMaxThreadsAndTeams(D, CGF, KernelAttrs);
 

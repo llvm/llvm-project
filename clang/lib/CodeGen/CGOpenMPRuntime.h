@@ -674,6 +674,11 @@ public:
   /// promotion path.
   virtual bool canPromoteToNoLoop() const { return false; }
 
+  /// Check whether the target kernel being emitted is tagged
+  /// SPMD_STRIDED_LOOP, to complete the promotion to a strided-loop SPMD
+  /// kernel.
+  virtual bool canPromoteToStridedLoop() const { return false; }
+
   /// Get call to __kmpc_alloc_shared
   virtual std::pair<llvm::Value *, llvm::Value *>
   getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) {
