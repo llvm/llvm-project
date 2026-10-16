@@ -5,11 +5,11 @@
 ; RUN: FileCheck %s --input-file=%t --check-prefix=REMARK
 
 ; The scalars of the copyable lanes in the combined chain are removed too.
-; REMARK-LABEL: Function: pack_bytes
+; REMARK-LABEL: Function:        pack_bytes
 ; REMARK:       Args:
-; REMARK-NEXT:    - String: 'Vectorizing horizontal reduction is possible '
-; REMARK-NEXT:    - String: 'but not beneficial with cost '
-; REMARK-NEXT:    - Cost: '21'
+; REMARK-NEXT:   - String: 'Vectorizing horizontal reduction is possible '
+; REMARK-NEXT:   - String: 'but not beneficial with cost '
+; REMARK-NEXT:   - Cost: '21'
 
 ; The or reduction packs per-lane byte fields extracted at a uniform bit offset
 ; of vectorized lanes (loads or other vectorized nodes); model as a lshr + byte
@@ -469,9 +469,9 @@ define i64 @pack_rev(ptr %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <6 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP12:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP12]], splat (i16 255)
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP5]] to <6 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <6 x i16> [[TMP3]], splat (i16 4)
+; CHECK-NEXT:    [[TMP12:%.*]] = and <6 x i16> [[TMP4]], splat (i16 255)
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <6 x i16> [[TMP12]] to <6 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw <6 x i64> [[TMP6]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i16 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i16 [[TMP1]], 255
@@ -480,8 +480,8 @@ define i64 @pack_rev(ptr %p) {
 ; CHECK-NEXT:    [[R_SROA_4_0_INSERT_SHIFT_MASKED:%.*]] = zext i16 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.or.v6i64(<6 x i64> [[TMP7]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP11]], [[R_SROA_4_0_INSERT_SHIFT_MASKED]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[OP_RDX]], [[R_SROA_0_0_INSERT_EXT]]
-; CHECK-NEXT:    ret i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[OP_RDX]], [[R_SROA_0_0_INSERT_EXT]]
+; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
 ; BE-LABEL: define i64 @pack_rev(
 ; BE-SAME: ptr [[P:%.*]]) {
