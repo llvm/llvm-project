@@ -416,6 +416,10 @@ public:
   /// exhibit a conflict as a result of the change.
   void regChangedGroup(OptReg &Reg, BitVector &ScoreChanged);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  Printable print(const VirtRegMap &VRM) const;
+#endif
+
 private:
   /// Result of BitVector::find* methods when no bit was found.
   static constexpr int NoBit = -1;
@@ -1053,7 +1057,7 @@ MSBGroup ModeSetOptimizer::selectPreferredMSBGroup(const OptReg &Reg) const {
     // Among MSB groups with the same number of pinned neighbors, favor the one
     // with highest number of unpinned neighbors.
     unsigned TotalScore = Reg.getGroupScore(Group);
-    if (PinnedScore == MaxPinnedScore && MaxTotalScore > TotalScore)
+    if (PinnedScore == MaxPinnedScore && MaxTotalScore >= TotalScore)
       continue;
 
     BestGroup = Group;
@@ -1070,6 +1074,9 @@ void ModeSetOptimizer::placeJustBefore(unsigned MBBIdx, unsigned InstrIdx) {
                               MBB.getFirstInstrFrom(InstrIdx, Oprd), Oprd);
   }
   ModeSetPlacement[MBBIdx].set(InstrIdx);
+  LLVM_DEBUG(dbgs() << "  | Placed MODE-set before MODE-using instruction "
+                    << InstrIdx << " in MBB#"
+                    << ModeUsage[MBBIdx].MBB.getNumber() << '\n');
 }
 
 void ModeSetOptimizer::placeJustAfter(unsigned MBBIdx, unsigned InstrIdx) {
@@ -1079,6 +1086,9 @@ void ModeSetOptimizer::placeJustAfter(unsigned MBBIdx, unsigned InstrIdx) {
                               MBB.getFirstInstrAfter(InstrIdx, Oprd), Oprd);
   }
   ModeSetPlacement[MBBIdx].set(InstrIdx + 1);
+  LLVM_DEBUG(dbgs() << "  | Placed MODE-set after MODE-using instruction "
+                    << InstrIdx << " in MBB#"
+                    << ModeUsage[MBBIdx].MBB.getNumber() << '\n');
 }
 
 void ModeSetOptimizer::breakNeighborRelationship(unsigned MBBIdx,
@@ -1093,16 +1103,20 @@ void ModeSetOptimizer::breakNeighborRelationship(unsigned MBBIdx,
     // This may break the relationship between an optimizable register and the
     // entry block pin.
     Register BeforeReg = Instructions[BeforeIdx].Oprds[Oprd];
-    if (OptRegs[BeforeReg] && !hasModeSetBefore(MBBIdx, BeforeIdx))
+    if (OptRegs[BeforeReg] && !hasModeSetBefore(MBBIdx, BeforeIdx)) {
       OptRegs[BeforeReg]->removeBlockBoundaryPin();
+      CheckShouldBePinned.set(BeforeReg.virtRegIndex());
+    }
     return;
   }
   if (BeforeIdx == ModeInstr::NoIdx) {
     // This may break the relationship between an optimizable register and the
     // exit block pin.
     Register AfterReg = Instructions[AfterIdx].Oprds[Oprd];
-    if (OptRegs[AfterReg] && !hasModeSetAfter(MBBIdx, AfterIdx))
+    if (OptRegs[AfterReg] && !hasModeSetAfter(MBBIdx, AfterIdx)) {
       OptRegs[AfterReg]->removeBlockBoundaryPin();
+      CheckShouldBePinned.set(AfterReg.virtRegIndex());
+    }
     return;
   }
   assert(AfterIdx < BeforeIdx && "incoherent indices");
@@ -1168,7 +1182,7 @@ void ModeSetOptimizer::resolveConflictWithNeighbor(
     if ((this->*HasModeSetBetween)(MBBIdx, InstrIdx))
       return;
 
-    LLVM_DEBUG(dbgs() << "    Resolving default pin " << printOprdType(Oprd)
+    LLVM_DEBUG(dbgs() << "    Resolving default pin for " << printOprdType(Oprd)
                       << " in MBB#" << MBB.MBB.getNumber() << '\n');
     (this->*PlaceAround)(MBBIdx, InstrIdx);
     return;
@@ -1218,7 +1232,7 @@ bool ModeSetOptimizer::resolveConflictingPins(OptReg &Reg) {
                                                             Position);
   }
 
-  LLVM_DEBUG(dbgs() << "  | Updated register: " << Reg.print(VRM) << '\n');
+  LLVM_DEBUG(dbgs() << "  | New register score: " << Reg.print(VRM) << '\n');
 
   // It is possible that the number of pinned groups was reduced to zero when
   // all of the preferred group's pins were close to other groups' respective
@@ -1241,8 +1255,6 @@ bool ModeSetOptimizer::pinIfEligible(OptReg &Reg) {
   if (Reg.isPinned() || !shouldBePinned(Reg))
     return false;
   Reg.pinMSBGroup();
-  LLVM_DEBUG(dbgs() << "  Pinned " << Reg.print(VRM) << " to "
-                    << printGroup(Reg.getMSB()) << '\n');
   // Neighbors of registers which became pinned may now have conflicts.
   for (const auto &[NeighborReg, _] : Reg.getNeighbors())
     CheckResolveConflict.set(NeighborReg->getVirtIndex());
@@ -1253,12 +1265,18 @@ void ModeSetOptimizer::regChangedGroup(OptReg &Reg, BitVector &ScoreChanged) {
   // The candidate register and its neighbors had their score changed; they may
   // also be eligible for pinning.
   pinIfEligible(Reg);
+  LLVM_DEBUG({
+    if (Reg.isPinned())
+      dbgs() << "  | Pinned " << Reg.print(VRM) << '\n';
+  });
   ScoreChanged.set(Reg.getVirtIndex());
 
   for (const auto &[NeighborReg, _] : Reg.getNeighbors()) {
     ScoreChanged.set(NeighborReg->getVirtIndex());
     if (!pinIfEligible(*NeighborReg))
       continue;
+    LLVM_DEBUG(dbgs() << "  | Pinned " << NeighborReg->print(VRM) << '\n');
+
     // Pinning a register impacts its neighbors' respective score. However, they
     // cannot become newly pinnable themselves because pin-eligibility is
     // independent of whether score contributions come from pinned or unpinned
@@ -1276,8 +1294,13 @@ bool ModeSetOptimizer::resolveConflictsAndPinRegs() {
   bool AnyChange = false;
   do {
     // Pin eligible registers.
-    for (unsigned VirtRegIdx : CheckShouldBePinned.set_bits())
-      AnyChange |= pinIfEligible(OptRegs[VirtRegIdx]);
+    for (unsigned VirtRegIdx : CheckShouldBePinned.set_bits()) {
+      if (!pinIfEligible(OptRegs[VirtRegIdx]))
+        continue;
+      LLVM_DEBUG(dbgs() << "  Pinned " << OptRegs[VirtRegIdx].print(VRM)
+                        << '\n');
+      AnyChange = true;
+    }
     CheckShouldBePinned.reset();
 
     // Conflict resolution.
@@ -1542,29 +1565,21 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
   ModeUsage.reserve(MF.getNumBlockIDs());
   for (const MachineBasicBlock &MBB : MF)
     ModeUsage.emplace_back(MBB, OptVirtRegs, Pinned);
-
-  // Initialize all optimizable registers.
-  OptimizableRegs OptRegs(OptVirtRegs, Pinned, ModeUsage, VRM);
-
   LLVM_DEBUG({
     dbgs() << "* Per-block MODE-usage:\n";
     for (const MBBModeUsage &MBB : ModeUsage) {
       dbgs() << "  MBB #" << MBB.MBB.getNumber() << ":\n" << MBB.print(VRM);
     }
-    dbgs() << "* Neighborhoods:\n";
-    for (const OptReg &Reg : OptRegs) {
-      dbgs() << "  " << Reg.print(VRM) << '\n';
-      for (const auto &[NeighborReg, NumOcc] : Reg.getNeighbors()) {
-        dbgs() << "    [" << NumOcc << "] " << NeighborReg->print(VRM) << '\n';
-      }
-    }
   });
 
+  OptimizableRegs OptRegs(OptVirtRegs, Pinned, ModeUsage, VRM);
   ModeSetOptimizer Optimizer(OptRegs, ModeUsage, VRM);
   VirtRegReMap VRRM(LRM, LIS, MF, VRM);
 
   bool Changed = false;
   do {
+    LLVM_DEBUG(dbgs() << Optimizer.print(VRM));
+
     // Constructs a max-heap with all remaining unpinned registers that are
     // candidates for re-assignment.
     //
@@ -1587,10 +1602,11 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
     // is upper-bounded by the number of neighboring relationships between all
     // registers (itself only decreasing after initialization).
     while (OptRegCandidate *Candidate = AllCandidates.getMostProfitable()) {
+      OptReg &Reg = Candidate->Reg;
       LLVM_DEBUG({
-        dbgs() << "| Attempting re-assignment of " << Candidate->print(VRM)
+        dbgs() << "  Attempting re-assignment of " << Candidate->print(VRM)
                << '\n';
-        for (const auto &[NeighborReg, _] : Candidate->Reg.getNeighbors())
+        for (const auto &[NeighborReg, _] : Reg.getNeighbors())
           dbgs() << "    " << NeighborReg->print(VRM) << '\n';
       });
 
@@ -1606,13 +1622,13 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
       ScoreChanged.set(Candidate->Reg.getVirtIndex());
 
       // Attempts re-assignment to a better MSB group.
-      if (VRRM.tryReAssign(Candidate->Reg, Candidate->Targets)) {
+      if (VRRM.tryReAssign(Reg, Candidate->Targets)) {
         LLVM_DEBUG(dbgs() << "  | SUCCESS: Assigned to free physical register "
-                          << printReg(VRM.getPhys(Candidate->Reg.getVirt()),
+                          << printReg(VRM.getPhys(Reg.getVirt()),
                                       ST.getRegisterInfo(), 0, &MF.getRegInfo())
                           << '\n');
         ++Epoch;
-        Optimizer.regChangedGroup(Candidate->Reg, ScoreChanged);
+        Optimizer.regChangedGroup(Reg, ScoreChanged);
       }
 
       // Optimizable registers whose score changed need to be re-ordered within
@@ -1623,6 +1639,7 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
     Changed |= (Epoch != OptRegCandidate::StartEpoch + 1);
   } while (Optimizer.resolveConflictsAndPinRegs());
 
+  LLVM_DEBUG(dbgs() << Optimizer.print(VRM));
   return Changed;
 }
 
@@ -1688,6 +1705,30 @@ Printable OptReg::print(const VirtRegMap &VRM) const {
         OS << ", ";
     }
     OS << ']';
+  });
+}
+
+Printable ModeSetOptimizer::print(const VirtRegMap &VRM) const {
+  return Printable([&](raw_ostream &OS) {
+    OS << "* Optimization status:\n  Optimizable registers:\n";
+    for (const OptReg &Reg : OptRegs) {
+      OS << "  " << Reg.print(VRM) << '\n';
+      for (const auto &[NeighborReg, NumOcc] : Reg.getNeighbors())
+        OS << "    [" << NumOcc << "] " << NeighborReg->print(VRM) << '\n';
+    }
+
+    OS << "  MODE-set placement:\n";
+    unsigned NumModeSetPlaced = 0;
+    for (const auto &[MBBIdx, MBB] : enumerate(ModeUsage)) {
+      unsigned NumModeSetInBlock = ModeSetPlacement[MBBIdx].count();
+      if (NumModeSetInBlock == 0)
+        continue;
+      OS << "    MBB #" << MBB.MBB.getNumber() << " has " << NumModeSetInBlock
+         << " simulated MODE-sets\n";
+      NumModeSetPlaced += NumModeSetInBlock;
+    }
+    OS << "  " << NumModeSetPlaced
+       << " simulated MODE-sets were placed in total\n";
   });
 }
 
@@ -1766,13 +1807,13 @@ Printable MaxHeap::print(const VirtRegMap &VRM,
       CandsPerMBB[MBB].push_back(&Cand);
     }
 
-    OS << "* Starting re-assignment phase with registers:\n| Candidates are:\n";
-    OS << "    Global (" << CandsPerMBB[nullptr].size() << " registers):\n";
+    OS << "* Starting re-assignment phase with registers:\n";
+    OS << "  | Global (" << CandsPerMBB[nullptr].size() << " registers):\n";
     PrintRegs(CandsPerMBB[nullptr]);
     for (const auto &[MBB, Cands] : CandsPerMBB) {
       if (!MBB)
         continue;
-      OS << "    MBB #" << MBB->getNumber() << " (" << Cands.size()
+      OS << "  | MBB #" << MBB->getNumber() << " (" << Cands.size()
          << " registers)\n";
       PrintRegs(Cands);
     }

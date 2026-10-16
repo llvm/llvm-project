@@ -588,8 +588,8 @@ TEST_F(AMDGPUOptimizeVGPREncodingTest, ReassignToDefaultGroupVOP3Conflict) {
 /// Each VOP3 has each of its register in a different group, and consecutive
 /// VOP3 have matching operands in different groups. There is a single free
 /// register in each group, which makes it hard for the pass to find
-/// re-assignments, even though there is a solution that only requires a single
-/// MODE-setting instruction.
+/// re-assignments, even though there is a solution that only requires a
+/// MODE-setting instruction at each of the block's boundary.
 TEST_F(AMDGPUOptimizeVGPREncodingTest, SingleFreeRegPerGroup) {
   SmallVector<VirtVGPRDef> VirtDefs{
       {"%0:vgpr_32", 0, 0},  {"%1:vgpr_32", 1, 0},  {"%2:vgpr_32", 2, 0},
@@ -606,7 +606,7 @@ TEST_F(AMDGPUOptimizeVGPREncodingTest, SingleFreeRegPerGroup) {
       ModeUsingInstr::createVOP3("%12", "%13", "%14", "%15")};
   ASSERT_TRUE(createMIRAndAssign(VirtDefs, {}, {&Instructions}, 5));
   runPass();
-  expectNumModeSetChange(5, 3);
+  expectNumModeSetChange(5, 4);
 }
 
 /// Tests re-assignment priority w.r.t. the number of neighbors in each
