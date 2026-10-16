@@ -1006,6 +1006,9 @@ public:
   /// to \a DISubprogram.
   DISubprogram *getSubprogram() const;
 
+  void setFLContext(MDFunctionLocalContext *FLContext);
+  MDFunctionLocalContext *getFLContext() const;
+
   /// Returns true if we should emit debug info for profiling.
   bool shouldEmitDebugInfoForProfiling() const;
 

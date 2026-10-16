@@ -85,6 +85,7 @@
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -1176,6 +1177,61 @@ static bool isType(const Metadata *MD) { return !MD || isa<DIType>(MD); }
 static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
 static bool isMDTuple(const Metadata *MD) { return !MD || isa<MDTuple>(MD); }
+
+void Verifier::visitMDFunctionLocalContext(const MDFunctionLocalContext &N) {
+  bool IsNonDebugFLContext = N.isNonDebug();
+  CheckDI(IsNonDebugFLContext || isa<DISubprogram>(N.getScopes()[0].get()),
+          "The first scope in an MDFunctionLocalContext with debug info must "
+          "be the function DISubprogram",
+          &N, N.getScopes()[0].get());
+  DISubprogram *FnSP = cast<DISubprogram>(N.getScope(0).get());
+
+  // Validate scopes.
+  for (FLScope Scope : drop_begin(N.getScopes())) {
+    CheckDI(!isa<DISubprogram>(Scope.get()),
+            "DISubprogram should only appear as the first scope in a "
+            "function-local context",
+            Scope, FnSP, &N);
+    CheckDI(Scope.get()->getSubprogram() == FnSP,
+            "scope in function-local context points at wrong subprogram for "
+            "function",
+            Scope, FnSP, &N);
+  }
+
+  // Validate indexes for SrcLocs and InlinedCalls.
+  for (FLSrcLoc SrcLoc : N.getSrcLocs())
+    CheckDI(SrcLoc.ScopeIdx.get() < N.getScopes().size(),
+            "FLSrcLoc has invalid ScopeIdx", SrcLoc.ScopeIdx.get(),
+            &N);
+  for (auto [Idx, InlinedCall] : enumerate(N.getInlinedCalls())) {
+    if (!InlinedCall.SrcLocIdx) {
+      CheckDI(IsNonDebugFLContext && !InlinedCall.isInlined(),
+              "FLInlinedCall must have a SrcLocIdx unless it is a nodebug "
+              "inlined call",
+              &N);
+      continue;
+    }
+    if (InlinedCall.isInlined()) {
+      CheckDI(InlinedCall.InlinedAtIdx.get() < Idx,
+              "FLInlinedCall's InlinedAtIdx cannot point to a later "
+              "FLInlinedCall entry", InlinedCall.InlinedAtIdx.get(), &N);
+      auto *InlinedFLMD = InlinedCall.getInlinedAt(&N).InlineeContext;
+      CheckDI(InlinedCall.SrcLocIdx.get() < InlinedFLMD->getSrcLocs().size(),
+              "Inlined FLInlinedCall has invalid SrcLocIdx",
+              InlinedCall.SrcLocIdx.get(), &N, InlinedFLMD);
+    } else {
+      CheckDI(InlinedCall.SrcLocIdx.get() < N.getSrcLocs().size(),
+              "FLInlinedCall has invalid SrcLocIdx",
+              InlinedCall.SrcLocIdx.get(), &N);
+    }
+  }
+  // Visit referenced MDNodes from here; most of the actual validation for the
+  // contents of this class happen in vistFunction, where we have more context.
+  SmallVector<MDNode*> NodesToVisit;
+  N.getUsedMDNodes(NodesToVisit);
+  for (auto *Node : NodesToVisit)
+    visitMDNode(*Node, AreDebugLocsAllowed::No);
+}
 
 void Verifier::visitDILocation(const DILocation &N) {
   CheckDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
@@ -3468,7 +3524,7 @@ void Verifier::visitFunction(const Function &F) {
     }
 
     unsigned NumDebugAttachments = 0, NumProfAttachments = 0,
-             NumKCFIAttachments = 0;
+             NumKCFIAttachments = 0, NumFLMDAttachments = 0;
     // Visit metadata attachments.
     for (const auto &I : MDs) {
       // Verify that the attachment is legal.
@@ -3504,6 +3560,11 @@ void Verifier::visitFunction(const Function &F) {
         Check(NumKCFIAttachments == 1,
               "function must have a single !kcfi_type attachment", &F,
               I.second);
+        break;
+      case LLVMContext::MD_flmd:
+        ++NumFLMDAttachments;
+        Check(NumFLMDAttachments == 1,
+              "function must have a single !flmd attachment", &F, I.second);
         break;
       }
 
@@ -3619,6 +3680,26 @@ void Verifier::visitFunction(const Function &F) {
       if (BrokenDebugInfo)
         return;
     }
+
+  // Now check that the debug info recorded in the FLContext is valid.
+  MDNode *RawFLContext = F.getMetadata(LLVMContext::MD_flmd);
+  if (RawFLContext) {
+    CheckDI(isa<MDFunctionLocalContext>(RawFLContext),
+            "Unexpected !flmd attachment to function", &F, RawFLContext);
+    auto *FLContext = cast<MDFunctionLocalContext>(RawFLContext);
+
+    // Validate that the correct subprogram is present.
+    CheckDI(!FLContext->getScopes().empty(),
+            "Function-local context should contain a subprogram pointing at "
+            "the function",
+            FLContext, &F);
+    CheckDI(!FLContext->getScopes().empty() &&
+                isa<DISubprogram>(FLContext->getScope(0).get()) &&
+                cast<DISubprogram>(FLContext->getScope(0).get())->describes(&F),
+            "First scope in function-local context should be subprogram "
+            "pointing at the function",
+            FLContext, &F, FLContext->getScope(0).get());
+  }
 }
 
 // verifyBasicBlock - Verify that a basic block is well formed...
