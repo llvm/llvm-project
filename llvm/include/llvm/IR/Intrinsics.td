@@ -811,7 +811,9 @@ class TypeInfoGen<list<LLVMType> RetTypes, list<LLVMType> ParamTypes> {
 //    The empty string means no target features are required. The expression
 //    uses feature names from the target's subtarget feature table. Comma means
 //    AND, | means OR, comma has higher precedence than |, and parentheses group
-//    expressions.
+//    expressions. The special "$custom" marker may be used as the entire
+//    expression or as a standalone term within it. The target evaluates this
+//    term using a call-dependent check.
 //
 class Intrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
@@ -859,7 +861,9 @@ class MSBuiltin<string name> {
 /// this specifies the required feature expression using feature names from the
 /// target's subtarget feature table. The expression grammar matches Clang
 /// builtins: comma means AND, | means OR, comma has higher precedence than |,
-/// and parentheses group expressions.
+/// and parentheses group expressions. The special "$custom" marker may be used
+/// as the entire expression or as a standalone term within it. The target
+/// evaluates this term using a call-dependent check.
 class RequiresTargetFeatures<string features> {
   string TargetFeatures = features;
 }
