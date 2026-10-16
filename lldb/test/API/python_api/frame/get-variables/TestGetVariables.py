@@ -17,6 +17,8 @@ def get_names_from_value_list(value_list):
 
 
 class TestGetVariables(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
