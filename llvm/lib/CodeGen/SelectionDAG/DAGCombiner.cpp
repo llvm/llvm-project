@@ -5322,6 +5322,32 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+/// If dividing by \p C can be done as a multiply by its reciprocal, return
+/// that reciprocal.
+static std::optional<APFloat>
+getReciprocalForMul(SDValue C, EVT VT, SDNodeFlags Flags, bool LegalOperations,
+                    bool ForCodeSize, const TargetLowering &TLI) {
+  auto *CFP = isConstOrConstSplatFP(C, true);
+  if (!CFP)
+    return std::nullopt;
+  // Compute the reciprocal 1.0 / C.
+  const APFloat &APF = CFP->getValueAPF();
+  APFloat Recip = APFloat::getOne(APF.getSemantics());
+  APFloat::opStatus st = Recip.divide(APF, APFloat::rmNearestTiesToEven);
+  // Only do the transform if the reciprocal is a legal fp immediate that
+  // isn't too nasty (eg NaN, denormal, ...).
+  if (((st == APFloat::opOK && !Recip.isDenormal()) ||
+       (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
+      (!LegalOperations ||
+       // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
+       // backend)... we should handle this gracefully after Legalize.
+       // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
+       TLI.isOperationLegal(ISD::ConstantFP, VT) ||
+       TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
+    return Recip;
+  return std::nullopt;
+}
+
 SDValue DAGCombiner::visitSDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -20328,24 +20354,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
   // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
   // the loss is acceptable with AllowReciprocal.
-  if (auto *N1CFP = isConstOrConstSplatFP(N1, true)) {
-    // Compute the reciprocal 1.0 / c2.
-    const APFloat &N1APF = N1CFP->getValueAPF();
-    APFloat Recip = APFloat::getOne(N1APF.getSemantics());
-    APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
-    // Only do the transform if the reciprocal is a legal fp immediate that
-    // isn't too nasty (eg NaN, denormal, ...).
-    if (((st == APFloat::opOK && !Recip.isDenormal()) ||
-         (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
-        (!LegalOperations ||
-         // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
-         // backend)... we should handle this gracefully after Legalize.
-         // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
-         TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-         TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
-      return DAG.getNode(ISD::FMUL, DL, VT, N0,
-                         DAG.getConstantFP(Recip, DL, VT));
-  }
+  if (std::optional<APFloat> Recip = getReciprocalForMul(
+          N1, VT, Flags, LegalOperations, ForCodeSize, TLI))
+    return DAG.getNode(ISD::FMUL, DL, VT, N0,
+                       DAG.getConstantFP(*Recip, DL, VT));
 
   if (Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
