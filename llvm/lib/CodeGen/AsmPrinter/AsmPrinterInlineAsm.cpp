@@ -10,11 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -22,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
@@ -131,16 +135,62 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   Parser->setTargetParser(*TAP);
 
   emitInlineAsmStart();
+  const MDNode *InlineAsmSourceLocs =
+      MI ? InlineAsm::getSourceLocMetadata(LocMDNode) : nullptr;
+  if (InlineAsmSourceLocs) {
+    SmallVector<unsigned, 16> Offsets;
+    for (unsigned I = 1; I < InlineAsmSourceLocs->getNumOperands(); I += 3)
+      Offsets.push_back(
+          mdconst::extract<ConstantInt>(InlineAsmSourceLocs->getOperand(I))
+              ->getZExtValue());
+    // The offsets have already been remapped to the parser's input buffer.
+    // Keep the callback's lookup table alive until parsing finishes.
+    OutStreamer->setInlineAsmSourceLocCallback(
+        [this, &SrcMgr, BufNum, Offsets = std::move(Offsets),
+         InlineAsmSourceLocs, MI](SMLoc Loc) {
+          if (!Loc.isValid() || SrcMgr.FindBufferContainingLoc(Loc) != BufNum)
+            return;
+
+          size_t Offset = Loc.getPointer() -
+                          SrcMgr.getMemoryBuffer(BufNum)->getBufferStart();
+          auto It = llvm::upper_bound(Offsets, Offset);
+          if (It == Offsets.begin())
+            return;
+          unsigned LocIdx = (It - Offsets.begin() - 1) * 3 + 2;
+
+          const auto *Line = mdconst::dyn_extract<ConstantInt>(
+              InlineAsmSourceLocs->getOperand(LocIdx));
+          const auto *Column = mdconst::dyn_extract<ConstantInt>(
+              InlineAsmSourceLocs->getOperand(LocIdx + 1));
+          if (!Line || !Column || Line->isZero())
+            return;
+
+          DebugLoc BaseDL = MI->getDebugLoc();
+          if (!BaseDL)
+            return;
+
+          auto *DIL = DILocation::get(
+              MI->getMF()->getFunction().getContext(), Line->getZExtValue(),
+              Column->getZExtValue(), BaseDL->getScope(),
+              BaseDL->getInlinedAt(), BaseDL->isImplicitCode(),
+              BaseDL->getAtomGroup(), BaseDL->getAtomRank());
+          for (auto &Handler : Handlers)
+            Handler->beginInlineAsmInstruction(MI, DIL);
+        });
+  }
   // Don't implicitly switch to the text section before the asm.
   (void)Parser->Run(/*NoInitialTextSection*/ true,
                     /*NoFinalize*/ true);
+  if (InlineAsmSourceLocs)
+    OutStreamer->setInlineAsmSourceLocCallback(nullptr);
   emitInlineAsmEnd(STI, &TAP->getSTI(), MI);
 }
 
 static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                              MachineModuleInfo *MMI, const MCAsmInfo &MAI,
                              AsmPrinter *AP, uint64_t LocCookie,
-                             raw_ostream &OS) {
+                             raw_ostream &OS,
+                             SmallVectorImpl<unsigned> *SourceOffsets) {
   bool InputIsIntelDialect = MI->getInlineAsmDialect() == InlineAsm::AD_Intel;
 
   if (InputIsIntelDialect) {
@@ -163,6 +213,15 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
     OS << '\t';
 
   while (*LastEmitted) {
+    // Synthetic text (e.g. .intel_syntax) has no template position. Literal
+    // bytes map one-to-one; all bytes of a substituted operand map to its '$'.
+    if (SourceOffsets)
+      SourceOffsets->resize(OS.tell(), ~0U);
+    unsigned TemplateOffset = LastEmitted - AsmStr;
+    auto RecordOffsets = llvm::scope_exit([&] {
+      if (SourceOffsets)
+        SourceOffsets->resize(OS.tell(), TemplateOffset);
+    });
     switch (*LastEmitted) {
     default: {
       // Not a special case, emit the string section literally.
@@ -170,8 +229,12 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
       while (*LiteralEnd && *LiteralEnd != '{' && *LiteralEnd != '|' &&
              *LiteralEnd != '}' && *LiteralEnd != '$' && *LiteralEnd != '\n')
         ++LiteralEnd;
-      if (CurVariant == -1 || CurVariant == AsmPrinterVariant)
+      if (CurVariant == -1 || CurVariant == AsmPrinterVariant) {
         OS.write(LastEmitted, LiteralEnd - LastEmitted);
+        if (SourceOffsets)
+          for (const char *P = LastEmitted; P != LiteralEnd; ++P)
+            SourceOffsets->push_back(P - AsmStr);
+      }
       LastEmitted = LiteralEnd;
       break;
     }
@@ -365,7 +428,42 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) {
   raw_svector_ostream OS(StringData);
 
   AsmPrinter *AP = const_cast<AsmPrinter*>(this);
-  EmitInlineAsmStr(AsmStr, MI, MMI, MAI, AP, LocCookie, OS);
+  const MDNode *SourceLocs = MI->getInlineAsmSourceLocMD();
+  SmallVector<unsigned, 256> SourceOffsets;
+  EmitInlineAsmStr(AsmStr, MI, MMI, MAI, AP, LocCookie, OS,
+                   SourceLocs ? &SourceOffsets : nullptr);
+
+  if (SourceLocs) {
+    // Convert template offsets to offsets in StringData, following the
+    // selected dialect alternative and the actual operand spellings.
+    SmallVector<Metadata *, 16> Entries;
+    Entries.push_back(SourceLocs->getOperand(0));
+    unsigned Next = 1, Current = 0, Previous = 0;
+    for (unsigned I = 0; I < SourceOffsets.size(); ++I) {
+      unsigned Offset = SourceOffsets[I];
+      if (Offset == ~0U)
+        continue;
+      while (Next < SourceLocs->getNumOperands() &&
+             mdconst::extract<ConstantInt>(SourceLocs->getOperand(Next))
+                     ->getZExtValue() <= Offset) {
+        Current = Next;
+        Next += 3;
+      }
+      if (!Current || Current == Previous)
+        continue;
+      Entries.push_back(ConstantAsMetadata::get(ConstantInt::get(
+          Type::getInt32Ty(MF->getFunction().getContext()), I)));
+      Entries.push_back(SourceLocs->getOperand(Current + 1));
+      Entries.push_back(SourceLocs->getOperand(Current + 2));
+      Previous = Current;
+    }
+    SmallVector<Metadata *, 8> Locs;
+    for (unsigned I = 0; I + 1 < LocMD->getNumOperands(); ++I)
+      Locs.push_back(LocMD->getOperand(I));
+    if (Entries.size() > 1)
+      Locs.push_back(MDNode::get(MF->getFunction().getContext(), Entries));
+    LocMD = MDNode::get(MF->getFunction().getContext(), Locs);
+  }
 
   // Emit warnings if we use reserved registers on the clobber list, as
   // that might lead to undefined behaviour.
