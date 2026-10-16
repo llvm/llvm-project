@@ -11820,7 +11820,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   // schedulable.
   BasicBlock *BB = S.getMainOp()->getParent();
 
-  if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+  if (BB->isEHPad() || isa<UnreachableInst>(BB->getTerminator()) ||
       !DT->isReachableFromEntry(BB)) {
     // Don't go into unreachable blocks. They may contain instructions with
     // dependency cycles which confuse the final scheduling.
@@ -20542,7 +20542,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       continue;
     BasicBlock *UserParent = cast<Instruction>(EU.User)->getParent();
     if (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
-        isa_and_present<UnreachableInst>(UserParent->getTerminator()))
+        isa<UnreachableInst>(UserParent->getTerminator()))
       continue;
     BasicBlock *UseBlock = nullptr;
     if (auto *PHI = dyn_cast<PHINode>(EU.User)) {
@@ -20599,7 +20599,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
         (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
-         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
+         isa<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // No extract cost for vector "scalar" if REVEC is disabled.
@@ -25875,8 +25875,6 @@ bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
 
 bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
   assert(BB && "Expected a block to version for runtime checks.");
-  if (!BB->getTerminator())
-    return false;
   // Versioning duplicates the block body, increasing code size on the guarded
   // path; do not version when the function is optimized for size (-Os/-Oz).
   if (F->hasOptSize())
@@ -26135,7 +26133,6 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   Function *Fn = BB->getParent();
   LLVMContext &Ctx = BB->getContext();
   Instruction *Term = BB->getTerminator();
-  assert(Term && "Versioned block must have a terminator");
 
   // Build the diamond:
   //   BB (header: PHIs + guard) -> {VecBB, ScalarBB} -> Tail (terminator).
@@ -29653,8 +29650,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   // Scan the blocks in the function in post order.
   auto POT = post_order(&F.getEntryBlock());
   for (auto *BB : make_filter_range(POT, [](auto *BB) {
-         return !BB->isEHPad() &&
-                !isa_and_nonnull<UnreachableInst>(BB->getTerminator());
+         return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
        })) {
     // Skip scalar fallback blocks created by runtime alias check versioning:
     // they duplicate the original scalar code and must not be vectorized again.
@@ -29706,7 +29702,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     auto OnceUsedPOT = post_order(&F.getEntryBlock());
     for (auto *BB : make_filter_range(OnceUsedPOT, [&](auto *BB) {
            return !BB->isEHPad() &&
-                  !isa_and_nonnull<UnreachableInst>(BB->getTerminator()) &&
+                  !isa<UnreachableInst>(BB->getTerminator()) &&
                   !R.isScalarFallbackBlock(BB);
          })) {
       R.clearReductionData();
@@ -30898,6 +30894,13 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool Changed = false;
   bool CandidateFound = false;
   InstructionCost MinCost = R.getCostThreshold();
+  // The trees of the PHI nodes may walk the loop-carried chains, so the
+  // overlapping windows of a long list rebuild almost the same large trees.
+  // Limit total size to avoid compile time blow up.
+  const unsigned RejectedTreesBudget =
+      isa<PHINode>(I0) ? Opts->slp_phi_list_budget
+                       : std::numeric_limits<unsigned>::max();
+  unsigned RejectedTreesSize = 0;
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
@@ -30912,7 +30915,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     // The window revisiting the dependent seeds skipped by the last vectorized
     // window, 0 if there is none.
     unsigned RevisitI = 0;
-    for (unsigned I = NextInst; I < MaxInst; ++I) {
+    for (unsigned I = NextInst;
+         I < MaxInst && RejectedTreesSize <= RejectedTreesBudget; ++I) {
       // The skipped seeds are revisited, continue as if they were not skipped.
       if (RevisitI && I > RevisitI) {
         I = NextInst - 1;
@@ -30985,6 +30989,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       R.buildTree(Ops);
       if (R.isTreeTinyAndNotFullyVectorizable()) {
+        RejectedTreesSize += R.getTreeSize();
         R.analyzedBundle(Ops);
         if (StandaloneSeeds)
           I += ActualVF - 1;
@@ -31022,6 +31027,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         I = FirstSkipped.value_or(NextInst) - 1;
         Changed = true;
       } else {
+        RejectedTreesSize += R.getTreeSize();
         R.analyzedBundle(Ops);
         if (StandaloneSeeds)
           I += ActualVF - 1;

@@ -1,10 +1,12 @@
-//===- MemorySlotOpInterfaceImpl.cpp - Mem2Reg for MemRef ops -------------===//
+//===- MemorySlotInterfacesImpl.cpp - Mem2Reg for MemRef ops -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// External-model-based implementation of Memory Slot Interfaces for MemRef Ops.
 //
 // This file implements memory slot interface models used by Mem2Reg to promote
 // a memref to a single vector SSA value. `PromotableAliaserInterface` exposes
@@ -40,7 +42,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MemRef/Transforms/MemorySlotOpInterfaceImpl.h"
+#include "mlir/Dialect/MemRef/Transforms/MemorySlotInterfacesImpl.h"
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"

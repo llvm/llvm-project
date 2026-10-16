@@ -15,6 +15,7 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
@@ -164,6 +165,18 @@ bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
       return false;
   }
 
+  // Salvage the debug users of Lo's result by subtracting the offset again.
+  SmallVector<uint64_t, 3> UndoOffset;
+  DIExpression::appendOffset(UndoOffset, -Offset);
+  for (MachineOperand &MO : MRI->use_operands(Lo.getOperand(0).getReg())) {
+    MachineInstr &DbgMI = *MO.getParent();
+    if (!DbgMI.isDebugValue())
+      continue;
+    DbgMI.getDebugExpressionOp().setMetadata(
+        DIExpression::appendOpsToArg(DbgMI.getDebugExpression(), UndoOffset,
+                                     DbgMI.getDebugOperandIndex(&MO)));
+  }
+
   // Put the offset back in Hi and the Lo
   Hi.getOperand(1).setOffset(Offset);
   if (Hi.getOpcode() != RISCV::AUIPC && Hi.getOpcode() != RISCV::QC_E_LI)
@@ -209,7 +222,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
   Register Reg = Rs == GAReg ? Rt : Rs;
 
   // Can't fold if the register has more than one use.
-  if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
+  if (!Reg.isVirtual() || !MRI->hasOneNonDBGUse(Reg))
     return false;
   // This can point to an ADDI(W) or a LUI:
   MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
@@ -239,7 +252,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
     if (OffsetLui.getOpcode() != RISCV::LUI ||
         LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
-        !MRI->hasOneUse(OffsetLui.getOperand(0).getReg()))
+        !MRI->hasOneNonDBGUse(OffsetLui.getOperand(0).getReg()))
       return false;
     int64_t Offset = SignExtend64<32>(LuiImmOp.getImm() << 12);
     Offset += OffLo;
@@ -296,7 +309,7 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
   Register Rs1 = TailShXAdd.getOperand(1).getReg();
 
   // Can't fold if the register has more than one use.
-  if (!Rs1.isVirtual() || !MRI->hasOneUse(Rs1))
+  if (!Rs1.isVirtual() || !MRI->hasOneNonDBGUse(Rs1))
     return false;
   // This can point to an ADDI X0, C.
   MachineInstr &OffsetTail = *MRI->getVRegDef(Rs1);
@@ -334,11 +347,11 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
   // Look for arithmetic instructions we can get an offset from.
   // We might be able to remove the arithmetic instructions by folding the
   // offset into the LUI+ADDI.
-  if (!MRI->hasOneUse(DestReg))
+  if (!MRI->hasOneNonDBGUse(DestReg))
     return false;
 
   // Lo has only one use.
-  MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
+  MachineInstr &Tail = *MRI->use_instr_nodbg_begin(DestReg);
   switch (Tail.getOpcode()) {
   default:
     LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr: "
@@ -352,8 +365,8 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
     if (Tail.getOpcode() == RISCV::ADDI) {
       // We might have two ADDIs in a row.
       Register TailDestReg = Tail.getOperand(0).getReg();
-      if (MRI->hasOneUse(TailDestReg)) {
-        MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
+      if (MRI->hasOneNonDBGUse(TailDestReg)) {
+        MachineInstr &TailTail = *MRI->use_instr_nodbg_begin(TailDestReg);
         if (TailTail.getOpcode() == RISCV::ADDI) {
           Offset += TailTail.getOperand(2).getImm();
           LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);

@@ -6,13 +6,93 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Callable, NamedTuple
+from typing import Callable, Dict, Iterable, List, NamedTuple, Optional
 import argparse
+import datetime
 import json
+import pathlib
+import urllib.parse
+import urllib.request
+import uuid
+
+
+# The User-Agent we send to LNT. This is set explicitly since some deployments
+# reject requests made with the default User-Agent of urllib.
+USER_AGENT = 'libcxx-lnt-tooling'
+
+# LNT instances can be slow: timeout after that many seconds.
+LNT_TIMEOUT_SECONDS = 120
+
+
+class LNTError(Exception):
+    pass
 
 
 def is_sha(string: str) -> bool:
     return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
+
+
+def lnt_suite_url(lnt_url: str, test_suite: str) -> str:
+    """Return the URL of a test suite in the REST API of a LNT instance."""
+    return f'{lnt_url.rstrip("/")}/api/suites/{urllib.parse.quote(test_suite, safe="")}'
+
+
+def lnt_request(url: str, body: Optional[bytes] = None, token: Optional[str] = None) -> dict:
+    """
+    Send a request to LNT and return its JSON response. If a body is provided, this issues
+    a POST request, otherwise a GET. Errors are raised as urllib raises them.
+    """
+    headers = {'User-Agent': USER_AGENT}
+    if token is not None:
+        headers['Authorization'] = f'Bearer {token}'
+    if body is not None:
+        headers['Content-Type'] = 'application/json'
+    request = urllib.request.Request(url, data=body, headers=headers)
+    with urllib.request.urlopen(request, timeout=LNT_TIMEOUT_SECONDS) as response:
+        return json.loads(response.read().decode())
+
+
+def write_lnt_report(path: pathlib.Path, machine: str, machine_fields: dict, commit: dict, tests: List[dict],
+                     measured_at: datetime.datetime, run_parameters: Optional[dict] = None) -> None:
+    """Write a LNT v5 run submission, ready to be submitted with submit-benchmarks."""
+    report = {
+        'format_version': '5',
+        # Pick the UUID ourselves so that we can safely retry submitting this run if needed without
+        # running the risk of storing the same run twice.
+        'uuid': str(uuid.uuid4()),
+        'measured_at': measured_at.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'machine': {'name': machine, 'fields': machine_fields},
+        'commit': commit,
+        'run_parameters': run_parameters or {},
+        'tests': tests,
+    }
+    with open(path, 'w') as f:
+        json.dump(report, f, indent=2, allow_nan=False)
+
+
+def parse_lnt_results(lines: Iterable[str]) -> List[dict]:
+    """
+    Turn `<test>.<metric> <value>` lines (as produced by consolidate-benchmarks) into the list
+    of tests expected in a LNT v5 run submission.
+
+    A test can have several values for the same metric, for example when it was repeated. The
+    n-th value of each metric is taken to belong to the n-th sample of that test.
+    """
+    tests: Dict[str, Dict[str, List[float]]] = {}
+    for line in lines:
+        if not line.strip():
+            continue
+        (key, value) = line.split()
+        (name, metric) = key.rsplit('.', 1)
+        tests.setdefault(name, {}).setdefault(metric, []).append(float(value))
+
+    result = []
+    for (name, metrics) in tests.items():
+        count = max(len(values) for values in metrics.values())
+        samples = [{metric: values[i] for (metric, values) in metrics.items() if i < len(values)}
+                   for i in range(count)]
+        result.append({'name': name, 'samples': samples})
+    return result
 
 
 def at_least(minimum: int) -> Callable[[str], int]:

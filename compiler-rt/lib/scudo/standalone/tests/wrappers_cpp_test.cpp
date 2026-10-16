@@ -186,10 +186,10 @@ static void stressNew() {
 TEST_F(ScudoWrappersCppTest, ThreadedNew) {
   // TODO: Investigate why libc sometimes crashes with tag mismatch in
   // __pthread_clockjoin_ex.
-  std::unique_ptr<scudo::ScopedDisableMemoryTagChecks> NoTags;
+  std::unique_ptr<scudo::ScopedTestOnlyDisableMemoryTagChecks> NoTags;
   if (!SCUDO_ANDROID && scudo::archSupportsMemoryTagging() &&
       scudo::systemSupportsMemoryTagging())
-    NoTags = std::make_unique<scudo::ScopedDisableMemoryTagChecks>();
+    NoTags = std::make_unique<scudo::ScopedTestOnlyDisableMemoryTagChecks>();
 
   Ready = false;
   std::thread Threads[32];
