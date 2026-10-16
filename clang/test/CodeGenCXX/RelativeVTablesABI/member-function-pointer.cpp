@@ -7,9 +7,8 @@
 // CHECK-NEXT:   [[fn_ptr:%.+]] = extractvalue [2 x i64] %fn.coerce, 0
 // CHECK-NEXT:   [[adjust:%.+]] = extractvalue [2 x i64] %fn.coerce, 1
 // CHECK-NEXT:   [[this_adj:%.+]] = getelementptr inbounds i8, ptr %a, i64 [[adjust]]
-// CHECK-NEXT:   [[virtbit:%.+]] = and i64 [[fn_ptr]], 1
-// CHECK-NEXT:   [[isvirt:%.+]] = icmp eq i64 [[virtbit]], 0
-// CHECK-NEXT:   br i1 [[isvirt]], label %[[nonvirt:.+]], label %[[virt:.+]]
+// CHECK-NEXT:   [[isvirt:%.+]] = trunc i64 [[fn_ptr]] to i1
+// CHECK-NEXT:   br i1 [[isvirt]], label %[[virt:.+]], label %[[nonvirt:.+]]
 // CHECK:      [[virt]]:
 
 // The loading of the virtual function here should be replaced with a llvm.load.relative() call.
