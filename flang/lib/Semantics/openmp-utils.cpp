@@ -2526,6 +2526,13 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
   // the selector itself implies the property.
   if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
     AppendConstructTraitsForDirective(*dir, vmi);
+  } else if (const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(
+                 &traitName.u)}) {
+    // SIMD is a predefined selector name because it can take clause
+    // properties, unlike the other construct selectors.
+    if (*value == parser::OmpTraitSelectorName::Value::Simd) {
+      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
+    }
   }
 }
 
@@ -2970,7 +2977,10 @@ OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
           std::move(targetOffloadTriple), /*DeviceNum=*/-1),
       features_(std::move(targetFeatures)) {
   for (llvm::omp::TraitProperty trait : constructTraits) {
-    addTrait(trait);
+    if (trait == llvm::omp::TraitProperty::invalid)
+      addUnknownConstruct();
+    else
+      addTrait(trait);
   }
 }
 
@@ -2982,6 +2992,16 @@ OmpVariantMatchContext::OmpVariantMatchContext(const SemanticsContext &context,
               ? llvm::Triple()
               : context.langOptions().OMPTargetTriples.front(),
           context.targetFeatures(), constructTraits) {}
+
+void AppendDirectiveContextTraits(llvm::omp::Directive directive,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  for (llvm::omp::TraitProperty trait :
+      llvm::omp::getConstructTraits(directive)) {
+    if (trait == llvm::omp::TraitProperty::construct_target_target)
+      constructTraits.clear();
+    constructTraits.push_back(trait);
+  }
+}
 
 bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   // The target feature list is a comma-separated string such as

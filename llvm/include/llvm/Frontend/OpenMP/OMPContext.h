@@ -158,6 +158,12 @@ struct VariantMatchInfo {
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
 };
 
+/// Return the construct traits that \p Kind contributes to a context, in
+/// source order. Constructs without selector properties use invalid
+/// placeholders to retain scoring depth. DISPATCH is omitted; callers handle
+/// its target call separately.
+LLVM_ABI SmallVector<TraitProperty, 8> getConstructTraits(Directive Kind);
+
 /// The context for a source location is made up of active property traits,
 /// e.g., device={kind(host)}, and constructs traits which describe the nesting
 /// in OpenMP constructs at the location.
@@ -175,12 +181,20 @@ struct OMPContext {
       ConstructTraits.push_back(Property);
   }
 
+  /// Record an enclosing construct that has no construct selector property.
+  void addUnknownConstruct() {
+    ConstructTraits.push_back(TraitProperty::invalid);
+  }
+
   /// Hook for users to check if an ISA trait matches. The trait is described as
   /// the string that got parsed and it depends on the target and context if
   /// this matches or not.
   virtual bool matchesISATrait(StringRef) const { return false; }
 
   BitVector ActiveTraits = BitVector(unsigned(TraitProperty::Last) + 1);
+  /// Enclosing constructs in outermost-to-innermost order. An `invalid`
+  /// entry represents a construct that cannot itself appear in a construct
+  /// selector, but which still contributes to scoring depth.
   SmallVector<TraitProperty, 8> ConstructTraits;
 };
 
