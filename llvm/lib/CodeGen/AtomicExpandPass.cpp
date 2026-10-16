@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -2388,12 +2389,19 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Args.push_back(AllocaResult);
   }
 
+  // The ordering arguments are C ints, which may need to be extended.
+  Attribute::AttrKind OrderingExt = TargetLibraryInfo::getExtAttrForI32Param(
+      M->getTargetTriple(), /*Signed=*/true);
+
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
+  Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
 
   // 'failure_order' argument, if present.
-  if (Ordering2Val)
+  if (Ordering2Val) {
     Args.push_back(Ordering2Val);
+    Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  }
 
   // Now, the return type.
   if (CASExpected) {

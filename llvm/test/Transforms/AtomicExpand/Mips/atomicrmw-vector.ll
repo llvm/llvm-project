@@ -50,7 +50,7 @@ define <2 x ptr> @test_atomicrmw_xchg_v2p0(ptr %ptr, <2 x ptr> %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_v2p0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[VALUE:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = call i128 @__atomic_exchange_16(ptr [[PTR:%.*]], i128 [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i128 @__atomic_exchange_16(ptr [[PTR:%.*]], i128 [[TMP2]], i32 signext 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i128 [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i64> [[TMP4]] to <2 x ptr>
 ; CHECK-NEXT:    ret <2 x ptr> [[TMP5]]
