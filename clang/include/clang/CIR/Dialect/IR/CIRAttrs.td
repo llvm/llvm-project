@@ -529,11 +529,11 @@ def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
     (`mlir::TypedAttribute`).
 
     These must be initialized with a set of types that exactly match the type of
-    the attribute, with one exception: flexible array members.  If the last
-    member of the struct type is a zero-length array, the `ConstRecordAttr` is
-    allowed to hold an unbounded number of elements. This is necessary to
-    support global and static storage duration variables that use the flexible
-    array member functionality.
+    the attribute, with one exception: flexible array members. If the last
+    member of a struct type or a member of a union type is a zero-length array,
+    the `ConstRecordAttr` may initialize it with a larger array of the same
+    element type. This is necessary to support global and static storage
+    duration variables that use the flexible array member functionality.
 
     Example:
     ```

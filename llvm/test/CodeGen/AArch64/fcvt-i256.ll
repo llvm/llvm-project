@@ -98,7 +98,7 @@ define float @s256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:  .LBB0_5: // %itofp-sw-epilog
 ; CHECK-NEXT:    ubfx w11, w10, #2, #1
 ; CHECK-NEXT:    orr x10, x10, x11
-; CHECK-NEXT:    adds x10, x10, #1
+; CHECK-NEXT:    add x10, x10, #1
 ; CHECK-NEXT:    tbnz w10, #26, .LBB0_11
 ; CHECK-NEXT:  // %bb.6:
 ; CHECK-NEXT:    lsr x10, x10, #2
@@ -233,7 +233,7 @@ define float @u256_to_f32(i256 %val) nounwind {
 ; CHECK-NEXT:  .LBB1_5: // %itofp-sw-epilog
 ; CHECK-NEXT:    ubfx w10, w0, #2, #1
 ; CHECK-NEXT:    orr x10, x0, x10
-; CHECK-NEXT:    adds x10, x10, #1
+; CHECK-NEXT:    add x10, x10, #1
 ; CHECK-NEXT:    tbnz w10, #26, .LBB1_11
 ; CHECK-NEXT:  // %bb.6:
 ; CHECK-NEXT:    lsr x10, x10, #2

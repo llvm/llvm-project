@@ -66,7 +66,8 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors).
+///   * at least one dim is dynamic (in both the input and output tensors),
+/// or if the strides are not 1.
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -1991,6 +1992,13 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   auto sourceType = source.getType();
   if (!VectorType::isValidElementType(sourceType.getElementType()))
     return failure();
+
+  // The write is a vector.transfer_write at the slice offsets, which cannot
+  // express a stride.
+  if (!sliceOp.hasUnitStride()) {
+    LDBG() << "Only unit strides are supported";
+    return failure();
+  }
 
   // Get the pad value.
   // TransferReadOp (which is used to vectorize InsertSliceOp), requires a

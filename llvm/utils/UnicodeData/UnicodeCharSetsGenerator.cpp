@@ -71,7 +71,9 @@ struct Properties {
   unsigned XIDContinue : 1;
   unsigned MathStart : 1;
   unsigned MathContinue : 1;
+  unsigned Char : 1;
   unsigned Printable : 1;
+  unsigned Control : 1;
   unsigned Format : 1;
   unsigned Combining : 1;
   unsigned DoubleWidth : 1;
@@ -135,6 +137,7 @@ static CharacterDatabase loadDatabase(StringRef Path) {
     while (xmlTextReaderMoveToNextAttribute(Reader.get()) == 1) {
       StringRef Name = fromXmlChar(xmlTextReaderConstLocalName(Reader.get()));
       StringRef Value = fromXmlChar(xmlTextReaderConstValue(Reader.get()));
+      P.Char = Element == "char";
       if (Name == "cp" || Name == "first-cp") {
         if (Value.getAsInteger(16, First))
           break;
@@ -158,6 +161,7 @@ static CharacterDatabase loadDatabase(StringRef Path) {
         ++Found;
       } else if (Name == "gc") {
         P.Printable = isPrintableGC(Value);
+        P.Control = Value == "Cc";
         P.Format = Value == "Cf";
         P.Combining = Value == "Mn" || Value == "Me";
         ++Found;
@@ -242,9 +246,13 @@ int main(int argc, char **argv) {
   });
   writeFile(
       LLVMOutput, "llvm::sys::unicode", UCD.Version, [&](raw_ostream &OS) {
+        emitTable(OS, "GeneratedCharacterRanges", "Characters", Chars,
+                  [](Properties P) { return P.Char; });
         emitTable(OS, "GeneratedPrintableRanges",
                   "General_Category=L|M|N|P|S|Zs", Chars,
                   [](Properties P) { return P.Printable; });
+        emitTable(OS, "GeneratedControlCharacterRanges", "General_Category=Cc",
+                  Chars, [](Properties P) { return P.Control; });
         emitTable(OS, "GeneratedFormatCharacterRanges", "General_Category=Cf",
                   Chars, [](Properties P) { return P.Format; });
         emitTable(OS, "GeneratedCombiningCharacterRanges",

@@ -644,7 +644,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrPseudoProbe());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -809,7 +809,7 @@ static DebugLoc getFirstNonZeroLocAfterSuspend(Instruction *ActiveSuspend) {
     auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
     if (!Branch)
       break;
-    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrPseudoProbe();
   }
 
   BasicBlock *PBB = Successor->getParent();
