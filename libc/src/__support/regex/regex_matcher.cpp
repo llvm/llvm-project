@@ -24,6 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace regex {
 
 ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool) {
+  // Copy the 16-byte node by value as recursive calls below mutate pool.
   const Expr e = pool.get(id);
   switch (e.kind) {
   case ExprKind::EmptySet:
@@ -38,13 +39,13 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool) {
     ErrorOr<ExprId> d_l = derivative(e.bin.left, c, pool);
     if (!d_l.has_value())
       return d_l;
-    ErrorOr<ExprId> lhs = pool.make_concat(d_l.value(), e.bin.right);
+    ErrorOr<ExprId> lhs = pool.make_concat(*d_l, e.bin.right);
     if (!lhs.has_value() || !left_nullable)
       return lhs;
     ErrorOr<ExprId> d_r = derivative(e.bin.right, c, pool);
     if (!d_r.has_value())
       return d_r;
-    return pool.make_alt(lhs.value(), d_r.value());
+    return pool.make_alt(*lhs, *d_r);
   }
   case ExprKind::Alt: {
     // Sum Rule: D_c(L | R) = D_c(L) | D_c(R)
@@ -54,7 +55,7 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool) {
     ErrorOr<ExprId> d_r = derivative(e.bin.right, c, pool);
     if (!d_r.has_value())
       return d_r;
-    return pool.make_alt(d_l.value(), d_r.value());
+    return pool.make_alt(*d_l, *d_r);
   }
   }
   __builtin_unreachable();
@@ -74,12 +75,12 @@ MatchResult match(ExprPool &pool, const ExprId pattern,
     ErrorOr<ExprId> d = derivative(state, c, pool);
     if (!d.has_value())
       return MatchResult::OutOfMemory;
-    if (pool.is_nullable(d.value()))
+    if (pool.is_nullable(*d))
       return MatchResult::Match;
-    ErrorOr<ExprId> next = pool.make_alt(pattern, d.value());
+    ErrorOr<ExprId> next = pool.make_alt(pattern, *d);
     if (!next.has_value())
       return MatchResult::OutOfMemory;
-    state = next.value();
+    state = *next;
   }
 
   return MatchResult::NoMatch;

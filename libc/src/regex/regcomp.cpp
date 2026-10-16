@@ -63,14 +63,14 @@ LLVM_LIBC_FUNCTION(int, regcomp,
       delete internal;
       return lit.error();
     }
-    cur = internal->pool.make_concat(cur.value(), lit.value());
+    cur = internal->pool.make_concat(*cur, *lit);
     if (!cur.has_value()) {
       delete internal;
       return cur.error();
     }
   }
 
-  internal->root = cur.value();
+  internal->root = *cur;
   internal->cflags = cflags;
   preg->__internal = internal;
   return 0;
