@@ -1427,6 +1427,16 @@ getLLVMSyncScope(std::optional<cir::SyncScopeKind> syncScope,
   return std::nullopt;
 }
 
+static void forwardAMDGPUNoPrivateAddrSpace(mlir::Operation *op,
+                                            mlir::Operation *llvmOp,
+                                            mlir::Value llvmPtr) {
+  llvm::StringRef name = cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName();
+  auto ptrTy = mlir::cast<mlir::LLVM::LLVMPointerType>(llvmPtr.getType());
+  mlir::Attribute a = op->getAttr(name);
+  if (a && ptrTy.getAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS)
+    llvmOp->setAttr(name, a);
+}
+
 mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
     cir::AtomicCmpXchgOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1443,6 +1453,7 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
   cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
   cmpxchg.setVolatile_(adaptor.getIsVolatile());
+  forwardAMDGPUNoPrivateAddrSpace(op, cmpxchg, adaptor.getPtr());
 
   // Check result and apply stores accordingly.
   auto old = mlir::LLVM::ExtractValueOp::create(rewriter, op.getLoc(),
@@ -1461,9 +1472,10 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(adaptor.getMemOrder());
   llvm::StringRef llvmSyncScope = getLLVMSyncScope(
       op.getSyncScope(), op->getParentOfType<mlir::ModuleOp>());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
+  auto xchg = rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
       llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
+  forwardAMDGPUNoPrivateAddrSpace(op, xchg, adaptor.getPtr());
   return mlir::success();
 }
 
@@ -1676,6 +1688,7 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
         cir::CIRDialect::getAMDGPUIgnoreDenormalModeAttrName()})
     if (mlir::Attribute a = op->getAttr(marker))
       rmwVal->setAttr(marker, a);
+  forwardAMDGPUNoPrivateAddrSpace(op, rmwVal, adaptor.getPtr());
 
   // The AMDGPU raw hardware atomic builtins need metadata for the backend to
   // select the native instruction. LDS atomics are always native, so the
