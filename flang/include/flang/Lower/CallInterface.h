@@ -293,6 +293,14 @@ public:
   mlir::Location getCalleeLocation() const;
   Fortran::evaluate::characteristics::Procedure characterize() const;
 
+  /// Is the procedure called through an implicit interface? Such calls,
+  /// including calls to an external procedure defined in the same
+  /// compilation unit that can be called through an implicit interface, are
+  /// prepared according to the actual arguments (see characterize()).
+  bool isCalledThroughImplicitInterface() const {
+    return calledThroughImplicitInterface;
+  }
+
   const Fortran::evaluate::ProcedureRef &getCallDescription() const {
     return procRef;
   }
@@ -410,6 +418,8 @@ private:
   const Fortran::evaluate::ProcedureRef &procRef;
   llvm::SmallVector<mlir::Value> actualInputs;
   std::optional<mlir::Value> originalPassArg;
+  /// Set by characterize().
+  mutable bool calledThroughImplicitInterface = false;
 };
 
 //===----------------------------------------------------------------------===//
