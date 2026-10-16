@@ -72,6 +72,8 @@ private:
   llvm::StringMap<mlir::LLVM::DICommonBlockAttr> commonBlockMap;
   /// Whether this module is being compiled for an OpenMP target device.
   bool isTargetDevice = false;
+  /// Whether this module is being compiled for AMDGPU.
+  bool isAMDGPU = false;
   // List of GlobalVariableExpressionAttr that are attached to a given global
   // that represents the storage for common block.
   llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<mlir::Attribute>>
@@ -405,6 +407,44 @@ static void InsertFakeUseForDebugVar(mlir::OpBuilder &builder, Op declOp,
   }
 }
 
+// Check if \p declOp is in the entry block and declares a variable whose
+// address is passed in an argument.
+static bool isDeclaredOnArgument(fir::cg::XDeclareOp declOp) {
+  auto arg = mlir::dyn_cast<mlir::BlockArgument>(declOp.getMemref());
+  auto funcOp = declOp->getParentOfType<mlir::func::FuncOp>();
+  return arg && funcOp && mlir::isa<fir::ReferenceType>(arg.getType()) &&
+         arg.getOwner() == &funcOp.getBody().front() &&
+         declOp->getBlock() == arg.getOwner();
+}
+
+// Check if the procedure that contains \p op returns from its entry block.
+static bool returnsFromEntryBlock(mlir::Operation *op) {
+  auto funcOp = op->getParentOfType<mlir::func::FuncOp>();
+  return funcOp && mlir::isa<mlir::func::ReturnOp>(
+                       funcOp.getBody().front().getTerminator());
+}
+
+// Spill the address of the variable declared by \p declOp to a stack slot, and
+// make \p declOp use the address reloaded from the slot.
+static void spillAndReloadAddress(fir::cg::XDeclareOp declOp) {
+  // Generate the slot and its accesses with UnknownLoc so that they don't
+  // impact the line table.
+  mlir::OpBuilder builder(declOp);
+  mlir::Location loc = builder.getUnknownLoc();
+  mlir::Value addr = declOp.getMemref();
+  mlir::Type slotTy =
+      fir::LLVMPointerType::get(fir::unwrapRefType(addr.getType()));
+  builder.setInsertionPointToStart(
+      fir::getAllocaBlock(*declOp->getParentRegion()));
+  fir::AllocaOp slot = fir::AllocaOp::create(builder, loc, slotTy);
+  builder.setInsertionPoint(declOp);
+  fir::StoreOp::create(
+      builder, loc, fir::ConvertOp::create(builder, loc, slotTy, addr), slot);
+  mlir::Value copy = fir::ConvertOp::create(
+      builder, loc, addr.getType(), fir::LoadOp::create(builder, loc, slot));
+  declOp.getMemrefMutable().assign(copy);
+}
+
 template <typename Op>
 void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
                                            mlir::LLVM::DIFileAttr fileAttr,
@@ -428,6 +468,11 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
       argNo = *argNoOpt;
       if (emitFakeUseForDebugVars) {
         if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
+          // Work around the AMDGPU backend losing the location of a pointer
+          // argument that is only used in the entry block.
+          if (isAMDGPU && isDeclaredOnArgument(declOp) &&
+              returnsFromEntryBlock(declOp))
+            spillAndReloadAddress(declOp);
           InsertFakeUseForDebugVar(builder, declOp, declOp.getMemref());
         }
       }
@@ -1199,6 +1244,7 @@ void AddDebugInfoPass::runOnOperation() {
   if (auto offloadMod =
           mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*module))
     isTargetDevice = offloadMod.getIsTargetDevice();
+  isAMDGPU = fir::getTargetTriple(module).isAMDGPU();
   buildModuleDebugImportsMap(module);
   buildDefinedModuleNames(module);
   llvm::StringRef fileName;
