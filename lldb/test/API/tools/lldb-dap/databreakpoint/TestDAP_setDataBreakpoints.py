@@ -299,6 +299,47 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.continue_to_exit()
 
     @skipIfWindows
+    def test_remove_hit_condition(self):
+        """Tests removing hitCondition restores a stopping data breakpoint."""
+        source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        second_loop_break_line = line_number(source, "// second loop breakpoint")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(source, [second_loop_break_line])
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
+
+        top_frame_ctx = session.top_frame_from(stop_event)
+        frame_id = top_frame_ctx.frame.id
+        locals_ref = top_frame_ctx.locals.variablesReference
+        response_x = session.data_breakpoint_info("x", locals_ref, frame_id)
+        x_data_id = self.expect_not_none(response_x.body.dataId)
+        session.set_source_breakpoints(source, [])
+
+        # Set a hitCondition, then omit it before any hits consume the ignore count.
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="write", hitCondition="3")]
+        )
+        [bp_hit] = set_response.body.breakpoints
+        self.assertTrue(bp_hit.verified)
+        x_bp_id = self.expect_not_none(bp_hit.id)
+
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="write")]
+        )
+        [bp_clear] = set_response.body.breakpoints
+        self.assertTrue(bp_clear.verified)
+        self.assertEqual(bp_clear.id, x_bp_id)
+
+        # Check that the updated data breakpoint stops at the next write.
+        stop_event = session.continue_to_breakpoint(x_bp_id)
+        top_frame = session.top_frame_from(stop_event)
+        self.assertEqual(top_frame.locals["x"].value, "2")
+
+        session.set_data_breakpoints([])
+        session.continue_to_exit()
+
+    @skipIfWindows
     def test_type_change_recreates(self):
         """Test setDataBreakpoints recreates watchpoint in case of changing type."""
         source = "main.cpp"
