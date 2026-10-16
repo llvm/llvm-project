@@ -199,3 +199,39 @@ class B3 : A3 {
 }; B3(); // expected-error {{deduction guide declaration without trailing return type}} \
          // expected-note {{while building implicit deduction guide first needed here}}
 }
+
+// Also make sure we don't consider conversion functions for copy elision when
+// initializing a base class subobject.
+namespace GH59922 {
+struct Base {
+  Base();
+  Base(Base&&) = delete; // expected-note {{'Base' has been explicitly marked deleted here}}
+};
+
+Base make_base();
+
+template<typename F>
+struct call_wrapper {
+  F&& f;
+  constexpr operator decltype(auto)() && {
+    return static_cast<F&&>(f)();
+  }
+};
+template<typename F>
+call_wrapper(F&&) -> call_wrapper<F>;
+
+struct Derived : Base {
+  Derived() : Base(call_wrapper{make_base}) {} // expected-error {{call to deleted constructor of 'Base'}}
+};
+
+struct A {
+  A();
+  A(const A&) = delete; // expected-note {{'A' has been explicitly marked deleted here}}
+};
+struct ToA {
+  operator A();
+};
+struct B : A {
+  B() : A(ToA()) {} // expected-error {{call to deleted constructor of 'A'}}
+};
+}
