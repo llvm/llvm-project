@@ -1,0 +1,47 @@
+# REQUIRES: aarch64
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/1.ll -o %t/1.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts -e main -T %t/script.t -plugin-opt=O0 \
+# RUN:   -plugin-opt=-data-sections -plugin-opt=-function-sections %t/1.o -o %t/out
+# RUN: llvm-readelf -S %t/out | FileCheck %s --check-prefix=SEC
+
+# SEC:  .myrodata         PROGBITS{{.*}}000004
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+@.str = private unnamed_addr constant [4 x i8] c"100\00", section ".rodata.str"
+@s = global ptr @.str, section ".data.s", align 8
+
+define i32 @bar() section ".text.bar" {
+  %p = load ptr, ptr @s, align 8
+  %c0 = load i8, ptr %p, align 1
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  %c1 = load i8, ptr %p1, align 1
+  %i0 = sext i8 %c0 to i32
+  %i1 = sext i8 %c1 to i32
+  %sum = add i32 %i0, %i1
+  ret i32 %sum
+}
+
+define i32 @main(i32 %a) section ".text.main" {
+  %f = ptrtoint ptr @bar to i64
+  %f32 = trunc i64 %f to i32
+  %p = load ptr, ptr @s, align 8
+  %p3 = getelementptr inbounds i8, ptr %p, i64 3
+  %c3 = load i8, ptr %p3, align 1
+  %i3 = sext i8 %c3 to i32
+  %sum = add i32 %f32, %i3
+  ret i32 %sum
+}
+
+#--- script.t
+SECTIONS {
+  .text.main : { *1.o(.text.main) }
+  .text.bar : { *1.o(.text.bar) }
+  .myrodata : { *1.o(.rodata*)  }
+  .mydata : { *1.o(.data.s) }
+  .unrecognized : { *1.o(*) }
+}
