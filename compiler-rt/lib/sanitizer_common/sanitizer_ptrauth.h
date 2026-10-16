@@ -11,11 +11,14 @@
 
 #if __has_feature(ptrauth_intrinsics)
 #  include <ptrauth.h>
-#elif defined(__ARM_FEATURE_PAC_DEFAULT) && !defined(__APPLE__)
-// On the stack the link register is protected with Pointer
-// Authentication Code when compiled with -mbranch-protection.
-// Let's stripping the PAC unconditionally because xpaclri is in
-// the NOP space so will do nothing when it is not enabled or not available.
+#elif defined(__aarch64__) && !defined(__APPLE__)
+// On the stack the link register is protected with a Pointer Authentication
+// Code when the code that spilled it was compiled with -mbranch-protection.
+// That is a property of the code being unwound, not of this runtime, so it
+// cannot be tested for here (__ARM_FEATURE_PAC_DEFAULT would describe the
+// wrong binary). Strip unconditionally instead: xpaclri is in the NOP space,
+// so it does nothing where pointer authentication is not enabled or not
+// available, and it is the identity on an unsigned canonical address.
 #  define ptrauth_strip(__value, __key) \
     ({                                  \
       __typeof(__value) ret;            \
