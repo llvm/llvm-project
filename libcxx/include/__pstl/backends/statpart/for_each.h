@@ -34,17 +34,34 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
+template <class _Iterator, class _DifferenceType, class _Function>
+_LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
+  _PSTL_PRAGMA_SIMD
+  for (_DifferenceType __i = 0; __i < __n; ++__i)
+    __f(__first[__i]);
+
+  return __first + __n;
+}
+
 template <class _ExecutionPolicy>
 struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Function>
   _LIBCPP_HIDE_FROM_ABI optional<__empty>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Function __func) const noexcept {
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Function __func) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       return __statpart::__for_each(
           std::move(__first), std::move(__last), [&](auto __partition_first, auto __partition_last) {
-            std::for_each(__partition_first, __partition_last, __func);
+            using _ForEachUnseq =
+                __pstl::__for_each<__statpart_backend_tag, __remove_parallel_policy_t<_ExecutionPolicy>>;
+            [[maybe_unused]] auto __res =
+                _ForEachUnseq()(std::__remove_parallel_policy(__policy), __partition_first, __partition_last, __func);
+            _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
           });
+    } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
+                         __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      __pstl::__simd_for_each(__first, __last - __first, __func);
+      return __empty{};
     } else {
       std::for_each(std::move(__first), std::move(__last), std::move(__func));
       return __empty{};
