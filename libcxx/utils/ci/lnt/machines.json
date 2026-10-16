@@ -15,8 +15,7 @@
       "since": "2023-01-01",
       "every": "week",
       "samples": 3,
-      "max-in-flight": 4,
-      "lnt-url": "https://lnt.llvm.org"
+      "max-in-flight": 4
     }
   },
   {
@@ -35,8 +34,7 @@
       "since": "2023-12-01",
       "every": "week",
       "samples": 3,
-      "max-in-flight": 4,
-      "lnt-url": "https://lnt.llvm.org"
+      "max-in-flight": 4
     }
   },
   {
@@ -55,8 +53,7 @@
       "since": "2023-01-01",
       "every": "week",
       "samples": 3,
-      "max-in-flight": 8,
-      "lnt-url": "https://lnt.llvm.org"
+      "max-in-flight": 8
     }
   },
   {
