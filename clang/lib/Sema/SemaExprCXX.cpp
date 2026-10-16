@@ -1570,10 +1570,10 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
   } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
-    if (ListInitialization) {
-      auto *ILE = cast<InitListExpr>(Exprs[0]);
-      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
-    }
+    SmallVector<Expr *, 8> ExpandedInits;
+    if (ListInitialization)
+      Inits = getInitsWithEmbedExpanded(cast<InitListExpr>(Exprs[0]),
+                                        ExpandedInits);
 
     if (Ty->getAs<AutoType>())
       DiagCompat(TyBeginLoc, diag_compat::auto_expr) << FullRange;
@@ -2235,11 +2235,11 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       return ExprError();
   } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
+    SmallVector<Expr *, 8> ExpandedInits;
     bool Braced = (InitStyle == CXXNewInitializationStyle::Braces);
-    if (Braced) {
-      auto *ILE = cast<InitListExpr>(Exprs[0]);
-      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
-    }
+    if (Braced)
+      Inits = getInitsWithEmbedExpanded(cast<InitListExpr>(Exprs[0]),
+                                        ExpandedInits);
 
     if (InitStyle == CXXNewInitializationStyle::None || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
