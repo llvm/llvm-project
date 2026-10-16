@@ -83,8 +83,10 @@ struct ExecutionEngineOptions {
   ArrayRef<StringRef> sharedLibPaths = {};
 
   /// Specifies an existing `sectionMemoryMapper` to be associated with the
-  /// compiled code. If none is provided, a default memory mapper that directly
-  /// calls into the operating system is used.
+  /// compiled code using RuntimeDyld. RISC-V64 and LoongArch64 require JITLink
+  /// and return an error if a mapper is supplied. If none is provided, a
+  /// default memory mapper that directly calls into the operating system is
+  /// used.
   llvm::SectionMemoryManager::MemoryMapper *sectionMemoryMapper = nullptr;
 
   /// If `enableObjectCache` is set, the JIT compiler will create one to store
@@ -92,12 +94,20 @@ struct ExecutionEngineOptions {
   /// be dumped to a file via the `dumpToObjectFile` method.
   bool enableObjectDump = false;
 
-  /// If enable `enableGDBNotificationListener` is set, the JIT compiler will
-  /// notify the llvm's global GDB notification listener.
+  /// If `enableGDBNotificationListener` is set, the JIT compiler will
+  /// notify LLVM's global GDB notification listener when using RuntimeDyld.
+  /// GDB/perf notifications require RuntimeDyld. JITLink does not register
+  /// listeners, and this option does not change the selected linker. Set
+  /// `enableGDBNotificationListener = false` to disable GDB notifications.
+  /// Notifications are available only on targets that use RuntimeDyld.
   bool enableGDBNotificationListener = true;
 
   /// If `enablePerfNotificationListener` is set, the JIT compiler will notify
-  /// the llvm's global Perf notification listener.
+  /// LLVM's global Perf notification listener when using RuntimeDyld.
+  /// JITLink does not register listeners, and this option does not change the
+  /// selected linker. Set `enablePerfNotificationListener = false` to disable
+  /// profiling notifications. Notifications are available only on targets
+  /// that use RuntimeDyld.
   bool enablePerfNotificationListener = true;
 };
 
