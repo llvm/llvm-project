@@ -2,6 +2,7 @@
 Test LLDB's handling of qSymbol sequences.
 """
 
+from pathlib import Path
 from textwrap import dedent
 import lldb
 from lldbsuite.test.lldbtest import *
@@ -12,15 +13,19 @@ from lldbsuite.support.seven import hexlify, unhexlify
 
 
 class MyResponder(MockGDBServerResponder):
-    def __init__(self, test_obj):
+    def __init__(self, test_obj, wanted_symbols=None):
         super().__init__()
-        self.wanted_symbols = [
-            "main",
-            "local_address",
-            "global_value",
-            "local_value",
-            "not_a_symbol",
-        ]
+        self.wanted_symbols = (
+            wanted_symbols
+            if wanted_symbols is not None
+            else [
+                "main",
+                "local_address",
+                "global_value",
+                "local_value",
+                "not_a_symbol",
+            ]
+        )
         self.last_symbol_request = None
         self.symbol_results = {}
         self.test_obj = test_obj
@@ -80,3 +85,43 @@ class TestQSymbol(GDBRemoteTestBase):
             ]
         )
         self.assertEqual(expected_results, self.server.responder.symbol_results)
+
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_dispatch_symbol_uses_linkage_name(self):
+        self.check_dispatch_symbol(has_dispatch_data=True)
+
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_missing_dispatch_symbol_rejects_cpp_basename(self):
+        self.check_dispatch_symbol(has_dispatch_data=False)
+
+    def check_dispatch_symbol(self, has_dispatch_data):
+        self.runCmd("settings set target.preload-symbols false")
+        fixture = Path(self.getSourceDir()) / "test_qsymbol.yaml"
+        if not has_dispatch_data:
+            missing = Path(self.getBuildArtifact("qsymbol-missing.yaml"))
+            missing.write_text(
+                fixture.read_text().replace(
+                    "Name: dispatch_queue_offsets", "Name: unrelated_dispatch_data"
+                )
+            )
+            fixture = missing
+        target = self.createTarget(str(fixture))
+        self.server.responder = MyResponder(
+            self, ["dispatch_queue_offsets", "other_wire_request"]
+        )
+        process = self.connect(target)
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+        self.assertFalse(self.server.responder.wanted_symbols)
+        # The known dispatch ABI must not resolve to the C++ function basename
+        # at 0x1008. Other requests keep their C++ basename lookup behavior.
+        self.assertEqual(
+            self.server.responder.symbol_results,
+            {
+                "dispatch_queue_offsets": 0x2000 if has_dispatch_data else None,
+                "other_wire_request": 0x1009,
+            },
+        )
