@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s %link_libcxx_tsan -fsanitize=thread -o %t
-// RUN: %run %t 128
+// RUN: %run %t 512
 
 #include <cstdlib>
 #include <mutex>
