@@ -1704,16 +1704,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     MI.eraseFromParent();
     return true;
   }
-  case TargetOpcode::G_FCONSTANT: {
-    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
-
-    // Convert G_FCONSTANT to G_CONSTANT.
-    Register DstReg = MI.getOperand(0).getReg();
-    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
-
-    MI.eraseFromParent();
-    return true;
-  }
+  case TargetOpcode::G_FCONSTANT:
+    return Helper.lowerFConstantAsConstant(MI) == LegalizerHelper::Legalized;
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||

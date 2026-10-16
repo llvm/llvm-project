@@ -3755,6 +3755,14 @@ LegalizerHelper::lowerFConstant(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFConstantAsConstant(MachineInstr &MI) {
+  const APFloat &Val = MI.getOperand(1).getFPImm()->getValueAPF();
+  MIRBuilder.buildConstant(MI.getOperand(0), Val.bitcastToAPInt());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitcast(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
   if (SrcTy.isVector()) {

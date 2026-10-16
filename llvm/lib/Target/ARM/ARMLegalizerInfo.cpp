@@ -472,14 +472,8 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
       return Helper.lowerConstant(MI) == LegalizerHelper::Legalized;
     return true;
   }
-  case G_FCONSTANT: {
-    // Convert to integer constants, while preserving the binary representation.
-    auto AsInteger =
-        MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
-    MIRBuilder.buildConstant(MI.getOperand(0),
-                             *ConstantInt::get(Ctx, AsInteger));
-    break;
-  }
+  case G_FCONSTANT:
+    return Helper.lowerFConstantAsConstant(MI) == LegalizerHelper::Legalized;
   case G_SET_FPMODE: {
     // New FPSCR = (FPSCR & FPStatusBits) | (Modes & ~FPStatusBits)
     LLT FPEnvTy = LLT::scalar(32);

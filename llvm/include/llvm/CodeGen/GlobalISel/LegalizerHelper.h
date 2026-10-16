@@ -514,6 +514,8 @@ public:
 
   LLVM_ABI LegalizeResult lowerConstant(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFConstant(MachineInstr &MI);
+  /// Replace a G_FCONSTANT with a G_CONSTANT of the same bits.
+  LLVM_ABI LegalizeResult lowerFConstantAsConstant(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBitcast(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerLoad(GAnyLoad &MI);
   LLVM_ABI LegalizeResult lowerStore(GStore &MI);
