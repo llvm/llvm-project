@@ -1867,6 +1867,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_prefetch_data, amdgcn_s_prefetch_inst})
       .Any({{_, Ptr32}, {{}, {}, DeletePrefetch}})
+      .Any({{_, P8}, {{}, {}, DeletePrefetch}})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_class})
