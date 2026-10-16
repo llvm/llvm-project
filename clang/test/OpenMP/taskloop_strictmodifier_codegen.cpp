@@ -134,11 +134,11 @@ struct S {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8, !tbaa [[LONG_TBAA29:![0-9]+]]
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8, !tbaa [[LONG_TBAA30:![0-9]+]]
-// CHECK-NEXT:    [[SEXT_I:%.*]] = shl i64 [[TMP3]], 32
-// CHECK-NEXT:    [[TMP6:%.*]] = ashr exact i64 [[SEXT_I]], 32
+// CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 32
+// CHECK-NEXT:    [[TMP7:%.*]] = ashr exact i64 [[TMP6]], 32
 // CHECK-NEXT:    br label %[[OMP_INNER_FOR_COND_I:.*]]
 // CHECK:       [[OMP_INNER_FOR_COND_I]]:
-// CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[OMP_INNER_FOR_COND_I]] ], [ [[TMP6]], %[[ENTRY]] ]
+// CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[OMP_INNER_FOR_COND_I]] ], [ [[TMP7]], %[[ENTRY]] ]
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i64 [[TMP5]], [[INDVARS_IV_I]]
 // CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add nsw i64 [[INDVARS_IV_I]], 1
 // CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[DOTOMP_OUTLINED__1_EXIT:.*]], label %[[OMP_INNER_FOR_COND_I]]
@@ -183,11 +183,11 @@ struct S {
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8, !tbaa [[LONG_TBAA29]]
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8, !tbaa [[LONG_TBAA30]]
-// CHECK-NEXT:    [[SEXT_I:%.*]] = shl i64 [[TMP3]], 32
-// CHECK-NEXT:    [[TMP6:%.*]] = ashr exact i64 [[SEXT_I]], 32
+// CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 32
+// CHECK-NEXT:    [[TMP7:%.*]] = ashr exact i64 [[TMP6]], 32
 // CHECK-NEXT:    br label %[[OMP_INNER_FOR_COND_I:.*]]
 // CHECK:       [[OMP_INNER_FOR_COND_I]]:
-// CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[OMP_INNER_FOR_COND_I]] ], [ [[TMP6]], %[[ENTRY]] ]
+// CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[OMP_INNER_FOR_COND_I]] ], [ [[TMP7]], %[[ENTRY]] ]
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i64 [[TMP5]], [[INDVARS_IV_I]]
 // CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add nsw i64 [[INDVARS_IV_I]], 1
 // CHECK-NEXT:    br i1 [[CMP_NOT_I]], label %[[DOTOMP_OUTLINED__3_EXIT:.*]], label %[[OMP_INNER_FOR_COND_I]]
@@ -308,11 +308,11 @@ struct S {
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i32 [[TMP9]], 0
 // CHECK-NEXT:    br i1 [[CMP_I]], label %[[TASKLOOP_IF_THEN_I:.*]], label %[[DOTOMP_OUTLINED__9_EXIT:.*]]
 // CHECK:       [[TASKLOOP_IF_THEN_I]]:
-// CHECK-NEXT:    [[SEXT_I:%.*]] = shl i64 [[TMP4]], 32
-// CHECK-NEXT:    [[TMP10:%.*]] = ashr exact i64 [[SEXT_I]], 32
+// CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP4]], 32
+// CHECK-NEXT:    [[TMP11:%.*]] = ashr exact i64 [[TMP10]], 32
 // CHECK-NEXT:    br label %[[OMP_INNER_FOR_COND_I:.*]]
 // CHECK:       [[OMP_INNER_FOR_COND_I]]:
-// CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[OMP_INNER_FOR_COND_I]] ], [ [[TMP10]], %[[TASKLOOP_IF_THEN_I]] ]
+// CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[OMP_INNER_FOR_COND_I]] ], [ [[TMP11]], %[[TASKLOOP_IF_THEN_I]] ]
 // CHECK-NEXT:    [[CMP8_NOT_I:%.*]] = icmp ult i64 [[TMP6]], [[INDVARS_IV_I]]
 // CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add nsw i64 [[INDVARS_IV_I]], 1
 // CHECK-NEXT:    br i1 [[CMP8_NOT_I]], label %[[DOTOMP_OUTLINED__9_EXIT]], label %[[OMP_INNER_FOR_COND_I]]
@@ -356,10 +356,10 @@ struct S {
 // CHECK: [[LONG_TBAA30]] = !{[[META22]], [[META17]], i64 48}
 // CHECK: [[META31]] = !{[[META32:![0-9]+]]}
 // CHECK: [[META32]] = distinct !{[[META32]], [[META33:![0-9]+]], !".omp_outlined.: %.privates."}
-// CHECK: [[META33]] = distinct !{[[META33]], i1 false, !".omp_outlined."}
+// CHECK: [[META33]] = distinct !{[[META33]], i1 true, !".omp_outlined."}
 // CHECK: [[META34]] = !{[[META35:![0-9]+]]}
 // CHECK: [[META35]] = distinct !{[[META35]], [[META36:![0-9]+]], !".omp_outlined..5: %__context"}
-// CHECK: [[META36]] = distinct !{[[META36]], i1 false, !".omp_outlined..5"}
+// CHECK: [[META36]] = distinct !{[[META36]], i1 true, !".omp_outlined..5"}
 // CHECK: [[INTPTR_TBAA37]] = !{[[META38:![0-9]+]], [[META25]], i64 0}
 // CHECK: [[META38]] = !{!"_ZTSZ4mainE3$_3", [[META25]], i64 0, [[META27]], i64 8}
 // CHECK: [[META39]] = !{}
@@ -372,7 +372,7 @@ struct S {
 // CHECK: [[META46]] = !{!"p1 _ZTS1S", [[META11]], i64 0}
 // CHECK: [[META47]] = !{[[META48:![0-9]+]]}
 // CHECK: [[META48]] = distinct !{[[META48]], [[META49:![0-9]+]], !".omp_outlined..9: %__context"}
-// CHECK: [[META49]] = distinct !{[[META49]], i1 false, !".omp_outlined..9"}
+// CHECK: [[META49]] = distinct !{[[META49]], i1 true, !".omp_outlined..9"}
 // CHECK: [[INTPTR_TBAA50]] = !{[[META51:![0-9]+]], [[META25]], i64 8}
 // CHECK: [[META51]] = !{!"_ZTSZN1SC1EiEUt_", [[META46]], i64 0, [[META25]], i64 8}
 //.

@@ -202,8 +202,10 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     if (StateInfo && !StateInfo->AttachEntries.empty())
       Rc = processAttachEntries(*DeviceOrErr, *StateInfo, AsyncInfo);
 
-    if (Rc == OFFLOAD_SUCCESS)
+    if (Rc == OFFLOAD_SUCCESS) {
+      printSyncInfo(Loc, DeviceId, AsyncInfo);
       Rc = AsyncInfo.synchronize();
+    }
   }
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -459,13 +461,18 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
-  
-  if (Rc == OFFLOAD_SUCCESS)
-    Rc = AsyncInfo.synchronize();
-
+  { // required to show synchronization
+    TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
+    if (Rc == OFFLOAD_SUCCESS) {
+      printSyncInfo(Loc, DeviceId, AsyncInfo);
+      Rc = AsyncInfo.synchronize();
+    }
+  }
+#if 1
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
   assert(Rc == OFFLOAD_SUCCESS && "offload failed");
   assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
+#endif//>>>>>>> ec94ac53962a569a9d26cf107c3663a6880fe446
 
   return OMP_TGT_SUCCESS;
 }

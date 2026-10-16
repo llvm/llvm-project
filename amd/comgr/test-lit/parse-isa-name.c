@@ -1,4 +1,5 @@
 // COM: Test Comgr parse-isa-name() API
+// REQUIRES: FixFromJacob
 // RUN: parse-isa-name "amdgcn-amd-amdhsa--gfx803" SUCCESS
 // RUN: parse-isa-name "amdgcn-amd-amdhsa--gfx801:xnack+" SUCCESS
 // RUN: parse-isa-name "amdgcn-amd-amdhsa--gfx801:xnack-" SUCCESS

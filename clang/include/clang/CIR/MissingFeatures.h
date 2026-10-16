@@ -68,18 +68,13 @@ struct MissingFeatures {
   static bool opFuncArmNewAttr() { return false; }
   static bool opFuncArmStreamingAttr() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
-  static bool opFuncColdHotAttr() { return false; }
   static bool opFuncExceptions() { return false; }
   static bool opFuncExtraAttrs() { return false; }
   static bool opFuncCallingConv() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
-  static bool opFuncMinSizeAttr() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncMultiVersioning() { return false; }
-  static bool opFuncNakedAttr() { return false; }
-  static bool opFuncNoDuplicateAttr() { return false; }
   static bool opFuncOperandBundles() { return false; }
-  static bool opFuncOptNoneAttr() { return false; }
   static bool opFuncParameterAttributes() { return false; }
   static bool opFuncReadOnly() { return false; }
   static bool opFuncWillReturn() { return false; }
@@ -131,6 +126,7 @@ struct MissingFeatures {
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
   static bool checkAliases() { return false; }
+  static bool emitModuleLinkOptions() { return false; }
   static bool shouldSkipAliasEmission() { return false; }
 
   // CXXABI
@@ -191,7 +187,6 @@ struct MissingFeatures {
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool asmGoto() { return false; }
-  static bool asmLabelAttr() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
   static bool asmUnwindClobber() { return false; }
@@ -304,7 +299,6 @@ struct MissingFeatures {
   static bool targetCIRGenInfoOS() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool thunks() { return false; }
-  static bool tryEmitAsConstant() { return false; }
   static bool typeAwareAllocation() { return false; }
   static bool typeChecks() { return false; }
   static bool useEHCleanupForArray() { return false; }

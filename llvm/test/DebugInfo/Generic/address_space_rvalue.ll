@@ -6,8 +6,7 @@
 
 ; CHECK: DW_TAG_rvalue_reference_type
 ; CHECK-NOT: DW_TAG
-; CHECK-NOT: DW_AT_address_class
-; CHECK: DW_AT_LLVM_address_space (0x00000001)
+; CHECK: DW_AT_address_class	(0x00000001)
 
 @y = global ptr null, align 8, !dbg !0
 
