@@ -8214,14 +8214,13 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         if (Constant *SplatC = C->getSplatValue())
           if (isa<ConstantInt>(SplatC) || isa<ConstantFP>(SplatC))
             return true;
-      } else {
-        if (auto *CA = dyn_cast<ConstantAggregate>(C))
-          return all_of(CA->operands(), [&](const Use &Op) {
-            return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
-                                                    Depth + 1, Kind);
-          });
-        if (isa<ConstantData>(C))
-          return true;
+      } else if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
+        return all_of(CA->operands(), [&](const Use &Op) {
+          return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
+                                                  Depth + 1, Kind);
+        });
+      } else if (isa<ConstantData>(C)) {
+        return true;
       }
     }
   }
