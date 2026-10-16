@@ -44,7 +44,9 @@
 ! UNIX-F128NONE-NOT: lang_rt.quadmath
 ! SOLARIS-F128NONE-NOT: flang_rt.quadmath
 ! UNIX-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
+! UNIX-F128LIBM-SAME: "-lflang_rt.quadmath" "--as-needed" "-lm" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "-z" "ignore" "-lquadmath" "-z" "record"
+! SOLARIS-F128LIBM-SAME: "-lflang_rt.quadmath" "-z" "ignore" "-lm" "-z" "record"
 ! UNIX-SAME: "-lflang_rt.runtime" "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 ! UNIX-STATIC-FLANGRT:   "{{.*}}{{\\|/}}libflang_rt.runtime.a"
@@ -53,6 +55,7 @@
 ! BSD-SAME: "[[object_file]]"
 ! BSD-F128NONE-NOT: flang_rt.quadmath
 ! BSD-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
+! BSD-F128LIBM-SAME: "-lflang_rt.quadmath" "--as-needed" "-lm" "--no-as-needed"
 ! BSD-SAME: -lflang_rt.runtime
 ! BSD-SAME: -lexecinfo
 ! BSD-STATIC-FLANGRT: "{{.*}}{{\\|/}}libflang_rt.runtime.a"
@@ -61,6 +64,7 @@
 ! DARWIN-SAME: "[[object_file]]"
 ! DARWIN-F128NONE-NOT: libflang_rt.quadmath
 ! DARWIN-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
+! DARWIN-F128LIBM-SAME: "-lflang_rt.quadmath" "--as-needed" "-lm" "--no-as-needed"
 ! DARWIN-SAME: -lflang_rt.runtime
 ! DARWIN-STATIC-FLANGRT: "{{.*}}{{\\|/}}libclang_rt.runtime_osx.a"
 
@@ -68,6 +72,7 @@
 ! HAIKU-SAME: "[[object_file]]"
 ! HAIKU-F128NONE-NOT: libflang_rt.quadmath
 ! HAIKU-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
+! HAIKU-F128LIBM-SAME: "-lflang_rt.quadmath" "--as-needed" "-lm" "--no-as-needed"
 ! HAIKU-SAME: "-lflang_rt.runtime"
 ! HAIKU-STATIC-FLANGRT: "{{.*}}{{\\|/}}libflang_rt.runtime.a"
 
@@ -75,6 +80,7 @@
 ! MINGW-SAME: "[[object_file]]"
 ! MINGW-F128NONE-NOT: libflang_rt.quadmath
 ! MINGW-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
+! MINGW-F128LIBM-SAME: "-lflang_rt.quadmath" "--as-needed" "-lm" "--no-as-needed"
 ! MINGW-SAME: -lflang_rt.runtime
 ! MINGW-STATIC-FLANGRT: "{{.*}}{{\\|/}}libflang_rt.runtime.a"
 
