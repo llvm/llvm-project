@@ -91,13 +91,13 @@ static inline bool MulOverflow(
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
   if (isNegative) {
-    return ux >
-        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) +
-            std::uint64_t{1}) /
+    return ux > (static_cast<std::uint64_t>(
+                     common::numeric_limits<std::int64_t>::max()) +
+                    std::uint64_t{1}) /
         uy;
   } else {
-    return ux >
-        (static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) /
+    return ux > (static_cast<std::uint64_t>(
+                    common::numeric_limits<std::int64_t>::max())) /
         uy;
   }
 #endif
