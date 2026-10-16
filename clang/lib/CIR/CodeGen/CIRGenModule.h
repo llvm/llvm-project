@@ -92,6 +92,10 @@ private:
   /// A "module" matches a c/cpp source file: containing a list of functions.
   mlir::ModuleOp theModule;
 
+  /// Cached data layout for the module. Built lazily: the layout spec is
+  /// attached after construction, in CIRGenerator::Initialize.
+  mutable std::optional<cir::CIRDataLayout> dataLayout;
+
   clang::DiagnosticsEngine &diags;
 
   const clang::TargetInfo &target;
@@ -207,10 +211,10 @@ public:
   CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
-  const cir::CIRDataLayout getDataLayout() const {
-    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
-    // attribute for the CIRModule class.
-    return cir::CIRDataLayout(theModule);
+  const cir::CIRDataLayout &getDataLayout() const {
+    if (!dataLayout)
+      dataLayout.emplace(theModule);
+    return *dataLayout;
   }
 
   /// -------
