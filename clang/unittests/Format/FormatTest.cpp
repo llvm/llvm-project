@@ -2928,6 +2928,20 @@ TEST_F(FormatTest, FormatsSwitchStatementCompactCaseLabels) {
                "    bar();\n"
                "}",
                Style);
+
+  Style.AllowShortCaseLabelsOnASingleLine = true;
+  Style.AlignConsecutiveShortCaseStatements.Enabled = true;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:  b = false;\n"
+               "  break; default: b = true;\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  case 0:         b = false;\n"
+               "  break; default: b = true;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, CaseRanges) {

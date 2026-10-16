@@ -288,7 +288,10 @@ private:
         TheLine->Level <= NextLine.Level + 1 &&
         canJoinWithCaseLabel(TheLine, *NextLine.First)) {
       IndentTracker.nextLine(NextLine);
-      return 1;
+      unsigned MergedLinesInCaseBody = Style.AllowShortCaseLabelsOnASingleLine
+                 ? tryMergeShortCaseLabels(I + 1, E, Limit)
+                 : 0;
+      return 1 + MergedLinesInCaseBody;
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
@@ -855,10 +858,16 @@ private:
           EndsWithComment) {
         return 0;
       }
+      const auto *J = I + 2 + NumStmts;
+      if (Style.CompactCaseLabels && J != E &&
+          (*J)->First->isOneOf(tok::kw_case, tok::kw_default) &&
+          canJoinWithCaseLabel(Line, *(*J)->First)) {
+        break;
+      }
+
       if (Line->First->is(tok::comment)) {
         if (Level != Line->Level)
           return 0;
-        const auto *J = I + 2 + NumStmts;
         for (; J != E; ++J) {
           Line = *J;
           if (Line->InPPDirective != InPPDirective)
