@@ -5,10 +5,11 @@
 ; RUN: FileCheck %s --input-file=%t --check-prefix=REMARK
 
 ; The scalars of the copyable lanes in the combined chain are removed too.
-; REMARK-LABEL: Function: pack_bytes
-; REMARK:       Args:
+; REMARK-LABEL: Name: VectorizedHorizontalReduction
+; REMARK-NEXT:  Function: pack_bytes
+; REMARK-NEXT:  Args:
 ; REMARK-NEXT:    - String: 'Vectorized horizontal reduction with cost '
-; REMARK-NEXT:    - Cost: '-26'
+; REMARK-NEXT:    - Cost: '-7'
 
 ; The or reduction packs per-lane byte fields extracted at a uniform bit offset
 ; of vectorized lanes (loads or other vectorized nodes); model as a lshr + byte
