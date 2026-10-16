@@ -728,9 +728,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
 
   // When folding tail by masking, the masked-off lanes are never used, so it is
   // safe to use the Flags.
-  VPIRFlags Flags = vputils::getFlagsForInduction(
-      IndDesc, PhiR,
-      *max_element(Plan.vectorFactors(), ElementCount::isKnownLT));
+  VPIRFlags Flags = vputils::getFlagsForInduction(IndDesc, PhiR);
 
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);

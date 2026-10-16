@@ -1692,7 +1692,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; IF-EVL:       middle.block:
@@ -1734,7 +1734,7 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
 ; NO-VP:       middle.block:
@@ -1817,7 +1817,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; IF-EVL:       middle.block:
@@ -1859,7 +1859,7 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP40:![0-9]+]]
 ; NO-VP:       middle.block:
@@ -1942,7 +1942,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; IF-EVL:       middle.block:
@@ -1984,7 +1984,7 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; NO-VP:       middle.block:
@@ -2067,7 +2067,7 @@ define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; IF-EVL:       middle.block:
@@ -2109,7 +2109,7 @@ define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; NO-VP-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP44:![0-9]+]]
 ; NO-VP:       middle.block:

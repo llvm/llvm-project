@@ -717,7 +717,7 @@ VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
 }
 
 VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
-                                        const VPPhi *PhiR, ElementCount MaxVF) {
+                                        const VPPhi *PhiR) {
   // It is always safe to use the FastMath flags from the induction descriptor.
   if (ID.getKind() == InductionDescriptor::IK_FpInduction)
     return ID.getInductionBinOp()->getFastMathFlags();
@@ -726,22 +726,13 @@ VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
   VPValue *Inc = PhiR->getOperand(1);
   if (match(Inc, m_CombineOr(m_c_Add(m_Specific(PhiR), m_VPValue()),
                              m_Sub(m_Specific(PhiR), m_VPValue())))) {
-    ConstantInt *Step = ID.getConstIntStepValue();
-    VPIRFlags::WrapFlagsTy WrapFlags =
-        cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone();
     // The step of a sub induction is negated, so NUW cannot be preserved. NSW
-    // can be preserved if multiplying the step with the MaxVF doesn't overflow.
-    bool NUW =
-        WrapFlags.HasNUW && match(Inc, m_VPInstruction<Instruction::Add>());
-    bool NSW = false;
-    // TODO: We could use the vscale_range for scalable VFs.
-    if (MaxVF.isFixed() && Step) {
-      bool Overflow;
-      (void)Step->getValue().smul_ov(
-          APInt(Step->getBitWidth(), MaxVF.getFixedValue()), Overflow);
-      NSW = WrapFlags.HasNSW && !Overflow;
-    }
-    return VPIRFlags::WrapFlagsTy(NUW, NSW);
+    // can only be speculated, and concretized late when we have VF and UF
+    // information.
+    return cast<VPInstruction>(Inc)
+        ->getNoWrapFlagsOrNone()
+        .toSpeculativeNoSignedWrap()
+        .withNoUnsignedWrapIf(match(Inc, m_VPInstruction<Instruction::Add>()));
   }
 
   return VPIRFlags::WrapFlagsTy(false, false);
