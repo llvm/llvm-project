@@ -474,6 +474,7 @@ cc_test(
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:InstCombine",
         "//llvm:Passes",
         "//llvm:Plugins",
         "//llvm:Scalar",

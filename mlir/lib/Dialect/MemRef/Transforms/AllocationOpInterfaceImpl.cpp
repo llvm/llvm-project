@@ -51,7 +51,7 @@ struct DefaultAutomaticAllocationHoistingInterface
 
 struct DefaultReallocationInterface
     : public bufferization::AllocationOpInterface::ExternalModel<
-          DefaultAllocationInterface, memref::ReallocOp> {
+          DefaultReallocationInterface, memref::ReallocOp> {
   static std::optional<Operation *> buildDealloc(OpBuilder &builder,
                                                  Value realloc) {
     return memref::DeallocOp::create(builder, realloc.getLoc(), realloc)

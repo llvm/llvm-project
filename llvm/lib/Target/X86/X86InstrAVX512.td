@@ -3142,6 +3142,11 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v2f64x_info, v8f64_info>;
 }
 
+let Predicates = [HasFP16, NoVLX] in {
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v16f16x_info, v32f16_info>;
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v8f16x_info, v32f16_info>;
+}
+
 let Predicates = [HasBWI, NoVLX] in {
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPB", v32i8x_info, v64i8_info>;
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUB", v32i8x_info, v64i8_info>;

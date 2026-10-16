@@ -45,9 +45,9 @@ auto three_way_strong(int x, int y) {
 // FINAL-NEXT:   cir.return %[[COERCED]] : !s8i
 
 // LLVM: define dso_local i8 @_Z16three_way_strongii(i32 noundef %[[X:.*]], i32 noundef %[[Y:.*]])
+// LLVM:   %[[RETVAL:.*]] = alloca %"class.std::__1::strong_ordering", align 1
 // LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[Y_ADDR:.*]] = alloca i32, align 4
-// LLVM:   %[[RETVAL:.*]] = alloca %"class.std::__1::strong_ordering", align 1
 // LLVM:   store i32 %[[X]], ptr %[[X_ADDR]], align 4
 // LLVM-NEXT:   store i32 %[[Y]], ptr %[[Y_ADDR]], align 4
 // LLVM-NEXT:   %[[LHS:.*]] = load i32, ptr %[[X_ADDR]], align 4
@@ -99,9 +99,9 @@ auto three_way_partial(float x, float y) {
 // FINAL-NEXT:   cir.return %[[COERCED]] : !s8i
 
 // LLVM: define dso_local i8 @_Z17three_way_partialff(float noundef %[[X:.*]], float noundef %[[Y:.*]])
+// LLVM:   %[[RETVAL:.*]] = alloca %"class.std::__1::partial_ordering", align 1
 // LLVM:   %[[X_ADDR:.*]] = alloca float, align 4
 // LLVM:   %[[Y_ADDR:.*]] = alloca float, align 4
-// LLVM:   %[[RETVAL:.*]] = alloca %"class.std::__1::partial_ordering", align 1
 // LLVM:   store float %[[X]], ptr %[[X_ADDR]], align 4
 // LLVM-NEXT:   store float %[[Y]], ptr %[[Y_ADDR]], align 4
 // LLVM-NEXT:   %[[LHS:.*]] = load float, ptr %[[X_ADDR]], align 4
@@ -145,9 +145,9 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH: cir.store {{.*}}%[[CALL_RES]], %[[G_ALLOCA]] : !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
 
   // BOTH: cir.func {{.*}}@_ZNK9HasMemberssERKS_(%{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}, %{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
+  // BOTH: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[LHS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasMember>>
   // BOTH: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasMember>>
-  // BOTH: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[LHS_LOAD:.*]] = cir.load deref %[[LHS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasMember>>, !cir.ptr<!rec_HasMember>
   // BOTH: cir.scope {
   // BOTH:   %[[CMP_RES:.*]] = cir.alloca "cmp" {{.*}} init : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
@@ -196,18 +196,16 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   store %struct.HasMember poison, ptr %[[M2_ALLOCA]]
   // LLVM:   %[[CALL_RES:.*]] = call i8 @_ZNK9HasMemberssERKS_(ptr {{.*}}%[[M1_ALLOCA]], ptr {{.*}}%[[M2_ALLOCA]])
   // LLVM:   store i8 %[[CALL_RES]], ptr %[[RETVAL]]
-  // LLVM:   %[[RETVAL_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RETVAL]]
-  // LLVM:   store %"class.std::__1::strong_ordering" %[[RETVAL_LOAD]], ptr %[[G_ALLOCA]]
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[G_ALLOCA]], ptr align 1 %[[RETVAL]], i64 1, i1 false)
   // LLVM:   ret void
   // LLVM: }
 
   // LLVM: define {{.*}} i8 @_ZNK9HasMemberssERKS_(ptr {{.*}}, ptr {{.*}})
-  // LLVM:   %[[CMP_COPY:.*]] = alloca %"class.std::__1::strong_ordering"
-  // LLVM:   %[[CMP_TEMP:.*]] = alloca %"class.std::__1::strong_ordering"
-  // LLVM:   %[[VALUE_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[RESULT_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[LHS_ALLOCA:.*]] = alloca ptr
   // LLVM:   %[[RHS_ALLOCA:.*]] = alloca ptr
-  // LLVM:   %[[RESULT_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[CMP_COPY:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[CMP_TEMP:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[LHS_LOAD:.*]] = load ptr, ptr %[[LHS_ALLOCA]]
   // LLVM:   br label %[[ENTRY_CONT:.*]]
   //
@@ -243,10 +241,8 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM: [[COPY_BLOCK]]:
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_COPY]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_TEMP]], ptr align 1 %[[CMP_COPY]], i64 1, i1 false)
-  // LLVM:   %[[CMP_TEMP_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[CMP_TEMP]]
-  // LLVM:   store %"class.std::__1::strong_ordering" %[[CMP_TEMP_LOAD]], ptr %[[VALUE_SLOT]]
-  // LLVM:   %[[CMP_I8:.*]] = load i8, ptr %[[VALUE_SLOT]]
-  // LLVM:   %[[SO_NE_RES:.*]] = call noundef zeroext i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(i8 %[[CMP_I8]], i64 0, i64 0)
+  // LLVM-NEXT:   %[[CMP_I8:.*]] = load i8, ptr %[[CMP_TEMP]], align 1
+  // LLVM-NEXT:   %[[SO_NE_RES:.*]] = call noundef zeroext i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(i8 %[[CMP_I8]], i64 0, i64 0)
   // LLVM:   br i1 %[[SO_NE_RES]], label %[[SO_NE_RES_TRUE:.*]], label %[[SO_NE_RES_FALSE:.*]]
   //
   // LLVM: [[SO_NE_RES_TRUE]]:
