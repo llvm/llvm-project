@@ -2639,8 +2639,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
       // Go through all predecessors and add terminators for analysis.
       for (const BasicBlock *Pred : predecessors(CurrBB))
-        if (const Instruction *Terminator = Pred->getTerminator())
-          Worklist.push_back(Terminator);
+        Worklist.push_back(Pred->getTerminator());
     }
 
     return ReplVal;

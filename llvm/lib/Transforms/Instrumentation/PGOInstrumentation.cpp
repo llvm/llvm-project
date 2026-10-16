@@ -1642,7 +1642,7 @@ void PGOUseFunc::setBlockUniformityAttribute() {
 
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
-    if (!BB || !BB->getTerminator())
+    if (!BB)
       continue;
     bool IsUniform = ProfileRecord.isBlockUniform(I);
     auto *MD = MDNode::get(
