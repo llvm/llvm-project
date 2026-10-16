@@ -11256,14 +11256,42 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_exp10f_integer_eval",
+    hdrs = ["src/__support/math/exp10f_integer_eval.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
+        ":__support_frac64",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_exp2f_integer_utils",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_static_rounding_exp10f",
+    hdrs = ["shared/math/static_rounding/exp10f.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_math_exp10f_integer_eval",
+        ":shared_libc_common",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp10f",
     hdrs = ["src/__support/math/exp10f.h"],
     deps = [
         ":__support_common",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":__support_math_exp10f_double_eval",
         ":__support_math_exp10f_float_eval",
+        ":__support_math_exp10f_integer_eval",
     ],
 )
 
@@ -13496,6 +13524,7 @@ libc_math_function(
     name = "exp10f",
     additional_deps = [
         ":__support_math_exp10f",
+        ":__support_math_static_rounding_exp10f",
         ":errno",
     ],
 )

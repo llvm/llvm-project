@@ -4614,15 +4614,32 @@ add_header_library(
 )
 
 add_header_library(
+  exp10f_integer_eval
+  HDRS
+    exp10f_integer_eval.h
+  DEPENDS
+    .exp2f_integer_utils
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.frac64
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   exp10f
   HDRS
     exp10f.h
   DEPENDS
     .exp10f_double_eval
     .exp10f_float_eval
+    .exp10f_integer_eval
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
