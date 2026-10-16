@@ -2279,8 +2279,7 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   OptPrimType ElemT = S.getContext().classify(ElemTy);
   if (!ElemT || !isIntegerOrBoolType(*ElemT))
     return false;
-  unsigned BitWidth = ByteWidth * 8;
-  APInt Result = APInt::getZero(BitWidth);
+  uint64_t Result = 0;
 
   if (IsArray) {
     // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
@@ -2291,21 +2290,20 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
       if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
         return false;
       INT_TYPE_SWITCH(*ElemT, {
-        Result |= APInt(BitWidth, BytePtr.load<T>().toAPSInt().getZExtValue())
-                  << (8 * I);
+        Result |= BytePtr.load<T>().toAPSInt().getZExtValue() << (8 * I);
       });
     }
   } else {
     assert(ByteWidth == 1 && "non-array pointer, expected a 1-byte load");
     if (!CheckLoad(S, OpPC, Ptr, AK_Read))
       return false;
-    INT_TYPE_SWITCH(*ElemT, {
-      Result = APInt(BitWidth, Ptr.load<T>().toAPSInt().getZExtValue());
-    });
+    INT_TYPE_SWITCH(*ElemT,
+                    { Result = Ptr.load<T>().toAPSInt().getZExtValue(); });
   }
 
   bool IsSigned = Call->getType()->isSignedIntegerType();
-  pushInteger(S, APSInt(Result, !IsSigned), Call->getType());
+  pushInteger(S, APSInt(APInt(ByteWidth * 8, Result), !IsSigned),
+              Call->getType());
   return true;
 }
 

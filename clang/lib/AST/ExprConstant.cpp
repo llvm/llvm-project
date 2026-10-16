@@ -17134,29 +17134,24 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
     return false;
   }
 
-  // Load bytes sequentially, then assemble per C2y §7.18.21:
+  // Load the bytes and assemble them per C2y §7.18.21:
   // result = sum(b_index * 2^(8*index)) where b_index = ptr[index] (LE)
   // or ptr[N/8 - index - 1] (BE).
-  SmallVector<uint64_t, 8> Bytes(ByteWidth);
+  uint64_t ResultBits = 0;
   LValue BytePtr = Ptr;
   for (unsigned I = 0; I < ByteWidth; ++I) {
     APValue ByteVal;
     if (!handleLValueToRValueConversion(Info, E, CharTy, BytePtr, ByteVal))
       return false;
-    Bytes[I] = ByteVal.getInt().getZExtValue();
+    unsigned Shift = 8 * (IsBE ? ByteWidth - I - 1 : I);
+    ResultBits |= ByteVal.getInt().getZExtValue() << Shift;
     if (I + 1 < ByteWidth)
       if (!HandleLValueArrayAdjustment(Info, E, BytePtr, CharTy, 1))
         return false;
   }
 
-  APInt ResultBits = APInt::getZero(ByteWidth * 8);
-  for (unsigned I = 0; I < ByteWidth; ++I) {
-    unsigned SrcIdx = IsBE ? (ByteWidth - I - 1) : I;
-    ResultBits |= APInt(ByteWidth * 8, Bytes[SrcIdx]) << (8 * I);
-  }
-
   bool IsSigned = E->getType()->isSignedIntegerType();
-  Result = APSInt(ResultBits, !IsSigned);
+  Result = APSInt(APInt(ByteWidth * 8, ResultBits), !IsSigned);
   return true;
 }
 
