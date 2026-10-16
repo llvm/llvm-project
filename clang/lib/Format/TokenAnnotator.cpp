@@ -1,3 +1,4 @@
+
 //===--- TokenAnnotator.cpp - Format C++ code -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -163,8 +164,14 @@ private:
     const auto *BeforeLess = Left->Previous;
 
     if (BeforeLess) {
-      if (BeforeLess->Tok.isLiteral())
+      bool isUDLOperator = BeforeLess->is(tok::string_literal) &&
+                           BeforeLess->Previous &&
+                           BeforeLess->Previous->is(tok::kw_operator);
+      if (BeforeLess->Tok.isLiteral()) {
+        if (isUDLOperator)
+          return true;
         return false;
+      }
       if (BeforeLess->is(tok::r_brace))
         return false;
       if (BeforeLess->is(tok::r_paren) && Contexts.size() > 1 &&
@@ -5235,6 +5242,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (IsCpp) {
     if (Left.is(TT_OverloadedOperator) &&
         Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
+      if (Left.is(tok::string_literal) && Left.Previous &&
+          Left.Previous->is(tok::kw_operator)) {
+        return false;
+      }
       return true;
     }
     // Space between UDL and dot: auto b = 4s .count();
