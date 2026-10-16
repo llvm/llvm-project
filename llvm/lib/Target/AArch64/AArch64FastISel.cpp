@@ -3218,7 +3218,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // The weak function target may be zero; in that case we must use indirect
   // addressing via a stub on windows as it may be out of range for a
   // PC-relative jump.
-  if (Subtarget->isTargetWindows() && Addr.getGlobalValue() &&
+  if (Subtarget->isTargetWindowsOrUEFI() && Addr.getGlobalValue() &&
       Addr.getGlobalValue()->hasExternalWeakLinkage())
     return false;
 
