@@ -850,10 +850,9 @@ bool DarwinAsmParser::parseDirectiveTBSS(StringRef, SMLoc) {
     return Error(SizeLoc, "invalid '.tbss' directive size, can't be less than"
                  "zero");
 
-  // FIXME: Diagnose overflow.
-  if (Pow2Alignment < 0)
-    return Error(Pow2AlignmentLoc, "invalid '.tbss' alignment, can't be less"
-                 "than zero");
+  if (Pow2Alignment < 0 || Pow2Alignment > 63)
+    return Error(Pow2AlignmentLoc, "invalid '.tbss' alignment, must be in the "
+                                   "range [0, 63]");
 
   if (!Sym->isUndefined())
     return Error(IDLoc, "invalid symbol redefinition");
@@ -934,10 +933,9 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
 
   // NOTE: The alignment in the directive is a power of 2 value, the assembler
   // may internally end up wanting an alignment in bytes.
-  // FIXME: Diagnose overflow.
-  if (Pow2Alignment < 0)
+  if (Pow2Alignment < 0 || Pow2Alignment > 63)
     return Error(Pow2AlignmentLoc, "invalid '.zerofill' directive alignment, "
-                 "can't be less than zero");
+                                   "must be in the range [0, 63]");
 
   if (!Sym->isUndefined())
     return Error(IDLoc, "invalid symbol redefinition");
