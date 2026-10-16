@@ -64,8 +64,11 @@ void thread::detach() {
     std::__throw_system_error(ec, "thread::detach failed");
 }
 
-// Defined here only for backwards compatibility
-unsigned thread::hardware_concurrency() noexcept { return __thread_hardware_concurrency(); }
+// Defined here only for backwards compatibility.
+// No backward compatibility on Windows, since otherwise static-linked libc++ defines this symbol twice.
+if !defined (_WIN32)
+  unsigned thread::hardware_concurrency() noexcept { return __thread_hardware_concurrency(); }
+#endif
 
 namespace this_thread {
 
