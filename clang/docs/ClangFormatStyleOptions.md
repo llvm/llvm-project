@@ -154,14 +154,15 @@ the configuration (without a prefix: `Auto`).
     A style complying with [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html)
   - `Chromium`
     A style complying with [Chromium's style guide](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/styleguide/styleguide.md)
-  - `Mozilla`
-    A style complying with [Mozilla's style guide](https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html)
   - `WebKit`
     A style complying with [WebKit's style guide](https://www.webkit.org/coding/coding-style.html)
   - `Microsoft`
     A style complying with [Microsoft's style guide](https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference)
   - `GNU`
     A style complying with the [GNU coding standards](https://www.gnu.org/prep/standards/standards.html)
+  - `Mozilla`
+    The Mozilla coding style is deprecated upstream and retained for legacy
+    support.
   - `InheritParentConfig`
     Not a real style, but allows to use the `.clang-format` file from the
     parent directory (or its parent if there is none). If there is no parent
