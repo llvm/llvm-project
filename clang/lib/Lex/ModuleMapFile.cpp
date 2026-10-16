@@ -116,6 +116,8 @@ struct ModuleMapFileParser {
   std::optional<HeaderDecl> parseHeaderDecl(MMToken::TokenKind LeadingToken,
                                             SourceLocation LeadingLoc);
   std::optional<ExcludeDecl> parseExcludeDecl(clang::SourceLocation LeadingLoc);
+  std::optional<ExcludeDirDecl>
+  parseExcludeUmbrellaDecl(clang::SourceLocation LeadingLoc);
   std::optional<UmbrellaDirDecl>
   parseUmbrellaDirDecl(SourceLocation UmbrellaLoc);
   std::optional<LinkDecl> parseLinkDecl();
@@ -393,6 +395,8 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
       SourceLocation ExcludeLoc = consumeToken();
       if (Tok.is(MMToken::HeaderKeyword))
         SubDecl = parseHeaderDecl(MMToken::ExcludeKeyword, ExcludeLoc);
+      else if (Tok.is(MMToken::UmbrellaKeyword))
+        SubDecl = parseExcludeUmbrellaDecl(ExcludeLoc);
       else
         SubDecl = parseExcludeDecl(ExcludeLoc);
       break;
@@ -799,6 +803,30 @@ ModuleMapFileParser::parseExcludeDecl(clang::SourceLocation LeadingLoc) {
   return std::move(ED);
 }
 
+/// Parse an exclude umbrella directory declaration.
+///
+///   exclude-umbrella-dir-declaration:
+///     'exclude' 'umbrella' string-literal
+std::optional<ExcludeDirDecl> ModuleMapFileParser::parseExcludeUmbrellaDecl(
+    clang::SourceLocation LeadingLoc) {
+  assert(Tok.is(MMToken::UmbrellaKeyword));
+  consumeToken(); // 'umbrella' keyword
+
+  ExcludeDirDecl EDD;
+  EDD.Location = LeadingLoc;
+  // Parse the directory name.
+  if (!Tok.is(MMToken::StringLiteral)) {
+    Diags.Report(Tok.getLocation(), diag::err_mmap_expected_header)
+        << "exclude umbrella";
+    HadError = true;
+    return std::nullopt;
+  }
+
+  EDD.Path = Tok.getString();
+  consumeToken();
+  return std::move(EDD);
+}
+
 /// Parse an umbrella directory declaration.
 ///
 ///   umbrella-dir-declaration:
@@ -1180,6 +1208,10 @@ static void dumpDecls(ArrayRef<Decl> Decls, llvm::raw_ostream &out, int depth) {
                    [&](const UmbrellaDirDecl &UDD) {
                      out.indent(depth * 2);
                      out << "umbrella\n";
+                   },
+                   [&](const ExcludeDirDecl &EDD) {
+                     out.indent(depth * 2);
+                     out << "exclude umbrella \"" << EDD.Path << "\"\n";
                    },
                    [&](const ModuleDecl &MD) { dumpModule(MD, out, depth); },
                    [&](const ExcludeDecl &ED) {
