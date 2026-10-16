@@ -201,41 +201,39 @@ bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
   //     if (comp1) goto B2 else B3;
   //   B2:
   //     comp2 = icmp <opcode> ...;
+  //     comp2 = __builtin_bpf_passthrough(seq_num, comp2);
   //     if (comp2) goto B4 else B5;
   //   B4:
   //     ...
 
-  // Check basic predecessors, if two of them (say B1, B2) are using
-  // icmp instructions to generate conditions and one is the predesessor
-  // of another (e.g., B1 is the predecessor of B2). Add a passthrough
-  // barrier after icmp inst of block B1.
-  BasicBlock *B2 = BB.getSinglePredecessor();
-  if (!B2)
-    return false;
-
+  // Check basic blocks, if two of them (say B1, B2) are using
+  // icmp instructions to generate conditions and one is the predecessor
+  // of another (e.g., B1 is the predecessor of B2). Add passthrough
+  // barriers after the icmp insts of blocks B1 and B2.
+  BasicBlock *B2 = &BB;
   BasicBlock *B1 = B2->getSinglePredecessor();
   if (!B1)
     return false;
 
-  Instruction *TI = B2->getTerminator();
-  auto *BI = dyn_cast<CondBrInst>(TI);
-  if (!BI)
+  Instruction *TI2 = B2->getTerminator();
+  auto *BI2 = dyn_cast<CondBrInst>(TI2);
+  if (!BI2)
     return false;
-  auto *Cond = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!Cond || &*B2->getFirstNonPHIIt() != Cond)
+  auto *Cond2 = dyn_cast<ICmpInst>(BI2->getCondition());
+  if (!Cond2 || &*B2->getFirstNonPHIIt() != Cond2)
     return false;
-  Value *B2Op0 = Cond->getOperand(0);
-  auto Cond2Op = Cond->getPredicate();
+  Value *B2Op0 = Cond2->getOperand(0);
+  auto Cond2Op = Cond2->getPredicate();
 
-  TI = B1->getTerminator();
-  BI = dyn_cast<CondBrInst>(TI);
-  if (!BI)
+  Instruction *TI1 = B1->getTerminator();
+  auto *BI1 = dyn_cast<CondBrInst>(TI1);
+  if (!BI1)
     return false;
-  Cond = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!Cond)
+  auto *Cond1 = dyn_cast<ICmpInst>(BI1->getCondition());
+  if (!Cond1)
     return false;
-  Value *B1Op0 = Cond->getOperand(0);
-  auto Cond1Op = Cond->getPredicate();
+  Value *B1Op0 = Cond1->getOperand(0);
+  auto Cond1Op = Cond1->getPredicate();
 
   if (B1Op0 != B2Op0)
     return false;
@@ -256,8 +254,8 @@ bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
     return false;
   }
 
-  PassThroughInfo Info(Cond, BI, 0);
-  PassThroughs.push_back(Info);
+  PassThroughs.emplace_back(Cond1, BI1, 0);
+  PassThroughs.emplace_back(Cond2, BI2, 0);
 
   return true;
 }
