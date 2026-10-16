@@ -326,7 +326,8 @@ public:
   // Check whether the origin region behind \p Element (like the actual array
   // region \p Element is from) is initialized.
   ProgramStateRef checkInit(CheckerContext &C, ProgramStateRef state,
-                            AnyArgExpr Buffer, SVal Element, SVal Size) const;
+                            AnyArgExpr Buffer, SVal Element, SVal Size,
+                            CharKind CK) const;
   ProgramStateRef CheckLocation(CheckerContext &C, ProgramStateRef state,
                                 AnyArgExpr Buffer, SVal Element,
                                 AccessKind Access,
@@ -447,16 +448,104 @@ static void printIdxWithOrdinalSuffix(llvm::raw_ostream &Os, unsigned Idx) {
   Os << Idx << llvm::getOrdinalSuffix(Idx);
 }
 
+static const FieldRegion *findUninitializedField(ProgramStateRef State,
+                                                 const TypedValueRegion *R) {
+  QualType Ty = R->getValueType();
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
+  MemRegionManager &MRMgr = SVB.getRegionManager();
+
+  if (R->getValueType()->isUnionType())
+  return nullptr;
+
+  if (Ty->isArrayType()) {
+    const auto *First = R;
+    const auto *Last = R;
+
+    while (const auto *AT = Ctx.getAsConstantArrayType(Ty)) {
+      if (AT->getSize().isZero())
+        return nullptr;
+
+      Ty = AT->getElementType();
+      First = MRMgr.getElementRegion(Ty, SVB.makeZeroArrayIndex(), First, Ctx);
+      Last = MRMgr.getElementRegion(
+          Ty, SVB.makeArrayIndex(AT->getSize().getZExtValue() - 1), Last, Ctx);
+    }
+
+    if (!Ty->isStructureType())
+      return nullptr;
+
+    if (const auto *FR = findUninitializedField(State, First))
+      return FR;
+
+    return First == Last ? nullptr : findUninitializedField(State, Last);
+  }
+
+  const auto *RT = Ty->getAsStructureType();
+  if (!RT)
+    return nullptr;
+  const auto *RD = RT->getDecl()->getDefinition();
+  if (!RD)
+    return nullptr;
+
+  for (const auto *FD : RD->fields()) {
+    if (!FD->getIdentifier())
+      continue;
+
+    const auto *FR = MRMgr.getFieldRegion(FD, R);
+    if (FD->getType()->isStructureType()) {
+      if (const auto *Uninit = findUninitializedField(State, FR))
+        return Uninit;
+    } else if (!FD->getType()->isAggregateType() && State->getSVal(FR).isUndef())
+      return FR;
+  }
+  return nullptr;
+}
+
 ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
                                           ProgramStateRef State,
                                           AnyArgExpr Buffer, SVal Element,
-                                          SVal Size) const {
+                                          SVal Size, CharKind CK) const {
 
   // If a previous check has failed, propagate the failure.
   if (!State)
     return nullptr;
 
   SVal BufVal = C.getSVal(Buffer.Expression);
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
+
+  // Field initialization is meaningful only when the entire source object is
+  // read. Do not widen partial copies or nonzero offsets to their base object
+  if (UninitializedRead.isEnabled()) {
+    const auto *BufR = BufVal.getAsRegion();
+    const auto *Object = llvm::dyn_cast_or_null<TypedValueRegion>(
+        BufR ? BufR->StripCasts(false) : nullptr);
+
+    if (Object && !isa<ElementRegion>(Object)) {
+      QualType Ty = Object->getValueType();
+      const llvm::APSInt *Length = SVB.getKnownValue(State, Size);
+      CharUnits CharSize = Ctx.getTypeSizeInChars(
+          CK == CharKind::Regular ? Ctx.CharTy : Ctx.WideCharTy);
+
+      if (Ctx.getBaseElementType(Ty)->isStructureType() &&
+          !Ty->isIncompleteType() && !Ty->isVariablyModifiedType() && Length &&
+          Ctx.getTypeSizeInChars(Ty).isMultipleOf(CharSize) &&
+          *Length == Ctx.getTypeSizeInChars(Ty) / CharSize) {
+        if (const auto *FR = findUninitializedField(State, Object)) {
+          SmallString<128> Buf;
+          llvm::raw_svector_ostream OS(Buf);
+          OS << "The ";
+          printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
+          OS << " argument contains uninitialized data (e.g., field: '"
+             << FR->getDecl()->getName() << "')";
+          emitUninitializedReadBug(C, State, Buffer.Expression, FR, OS.str());
+          return nullptr;
+        }
+      }
+    }
+  }
+
   const auto *ER = dyn_cast_or_null<ElementRegion>(BufVal.getAsRegion());
   if (!ER)
     return State;
@@ -469,9 +558,6 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   // UninitializedObjectChecker could help?
   if (!SuperR->getValueType()->isArrayType())
     return State;
-
-  SValBuilder &SVB = C.getSValBuilder();
-  ASTContext &Ctx = SVB.getContext();
 
   const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
 
@@ -670,7 +756,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
         svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
     State = CheckLocation(C, State, Buffer, BufEnd, Access, CK);
     if (Access == AccessKind::read)
-      State = checkInit(C, State, Buffer, BufStart, *Length);
+      State = checkInit(C, State, Buffer, BufStart, *Length, CK);
 
     // If the buffer isn't large enough, abort.
     if (!State)
