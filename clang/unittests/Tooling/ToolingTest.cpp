@@ -996,6 +996,18 @@ TEST(addTargetAndModeForProgramName, IgnoresExistingTarget) {
             ArgsAlt);
 }
 
+
+TEST(addTargetAndModeForProgramName, DoesNotConfuseTargetSuboptions) {
+  llvm::InitializeAllTargets();
+  std::string Target = getAnyTargetForTesting();
+  ASSERT_FALSE(Target.empty());
+
+  std::vector<std::string> Args = {
+      "clang", "--target-cpu=cortex-a53", "-foo"};
+  addTargetAndModeForProgramName(Args, Target + "-g++");
+
+  EXPECT_TRUE(llvm::is_contained(Args, "--target=" + Target));
+}
 TEST(addTargetAndModeForProgramName, IgnoresExistingMode) {
   llvm::InitializeAllTargets();
   std::string Target = getAnyTargetForTesting();
