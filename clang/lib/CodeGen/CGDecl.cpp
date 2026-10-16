@@ -1680,6 +1680,44 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     }
 
+    // Under -fstack-protector (but not -fstack-protector-strong or
+    // -fstack-protector-all), pass down which parts of the type are padding so
+    // that we can ignore it when deciding whether to stack protect the alloca.
+    //
+    // The structure of the metadata is:
+    //   !{i64 Size, i64 Offset0, i64 Length0, i64 Offset1, i64 Length1, ...}
+    //
+    // For example -- struct alignas(16) S { int a; } becomes:
+    //   %struct.S = type { i32, [12 x i8] }
+    //   %s = alloca %struct.S, align 16, !stack-protector-padding !0
+    //   !0 = !{i64 16, i64 4, i64 12}
+    if (getLangOpts().getStackProtector() == LangOptions::SSPOn &&
+        Ty->isRecordType()) {
+      if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
+        uint64_t CharWidth = getContext().getCharWidth();
+        auto Size = getContext().getTypeSizeInChars(Ty).getQuantity();
+        SmallVector<llvm::Metadata *, 8> Ops = {
+            llvm::ConstantAsMetadata::get(Builder.getInt64(Size))};
+
+        // Strip qualifiers (padding is the same) for more cache hits.
+        auto Padding = getContext().getPaddingIntervals(Ty.getUnqualifiedType());
+        for (ASTContext::BitInterval I : Padding) {
+          // On bitfields, padding can be individual bits. Only use whole bytes
+          // of padding here.
+          uint64_t First = llvm::divideCeil(I.First, CharWidth);
+          uint64_t Last = I.Last / CharWidth;
+          if (Last <= First)
+            continue;
+
+          Ops.push_back(llvm::ConstantAsMetadata::get(Builder.getInt64(First)));
+          Ops.push_back(
+              llvm::ConstantAsMetadata::get(Builder.getInt64(Last - First)));
+        }
+        AI->setMetadata("stack-protector-padding",
+                        llvm::MDNode::get(getLLVMContext(), Ops));
+      }
+    }
+
     if (D.hasAttr<StackProtectorIgnoreAttr>()) {
       if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
         llvm::LLVMContext &Ctx = Builder.getContext();
