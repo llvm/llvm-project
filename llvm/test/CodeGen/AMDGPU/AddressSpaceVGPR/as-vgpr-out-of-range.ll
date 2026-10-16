@@ -5,8 +5,7 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.42-- < %s | FileCheck %s --check-prefixes=GFX942,GFX942-GISEL
 
 ; An access past the addressable VGPRs is undefined behavior but must still
-; compile. SelectionDAG folds these constant offsets into the move's base
-; register, which is masked into the addressable range.
+; compile.
 
 define void @load_past_end(ptr addrspace(1) %out, i32 inreg %i) {
 ; GFX12-SDAG-LABEL: load_past_end:
@@ -16,8 +15,8 @@ define void @load_past_end(ptr addrspace(1) %out, i32 inreg %i) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v44
+; GFX12-SDAG-NEXT:    s_add_co_i32 m0, s0, 0x12c
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v0
 ; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -38,8 +37,9 @@ define void @load_past_end(ptr addrspace(1) %out, i32 inreg %i) {
 ; GFX942-SDAG-LABEL: load_past_end:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_addk_i32 s0, 0x12c
 ; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v44
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
 ; GFX942-SDAG-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -72,8 +72,8 @@ define void @store_past_end(i32 inreg %i, i32 %v) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v44, v0
+; GFX12-SDAG-NEXT:    s_add_co_i32 m0, s0, 0x12c
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: store_past_end:
@@ -92,8 +92,9 @@ define void @store_past_end(i32 inreg %i, i32 %v) {
 ; GFX942-SDAG-LABEL: store_past_end:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_addk_i32 s0, 0x12c
 ; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(DST)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v44, v0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, v0
 ; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
 ; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -121,11 +122,12 @@ define void @load_straddling_end(ptr addrspace(1) %out, i32 inreg %i) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v254
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v3, v255
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v4, v0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v5, v1
+; GFX12-SDAG-NEXT:    s_add_co_i32 m0, s0, 0xfe
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v0
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v3, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v4, v2
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v5, v3
 ; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -150,11 +152,12 @@ define void @load_straddling_end(ptr addrspace(1) %out, i32 inreg %i) {
 ; GFX942-SDAG-LABEL: load_straddling_end:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_addk_i32 s0, 0xfe
 ; GFX942-SDAG-NEXT:    s_set_gpr_idx_on s0, gpr_idx(SRC0)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v254
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v255
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v1
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v1
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v2
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX942-SDAG-NEXT:    s_set_gpr_idx_off
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
