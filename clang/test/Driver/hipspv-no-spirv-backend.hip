@@ -14,7 +14,7 @@
 // RUN:   -nohipwrapperinc %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN: 2>&1 | FileCheck --check-prefix=RDC-JOB %s
 
-// RDC-JOB: "-cc1" "-triple" "spirv64"
+// RDC-JOB: "-cc1" "-triple" "spirv64-unknown-unknown"
 // RDC-JOB-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // RDC-JOB-SAME: "-emit-llvm-bc"
 // RDC-JOB-SAME: "-fcuda-is-device"
