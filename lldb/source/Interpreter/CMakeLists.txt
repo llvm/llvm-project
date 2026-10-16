@@ -10,6 +10,10 @@ lldb_tablegen(OptionGroupWatchpointEnums.inc -gen-lldb-option-enum-defs
   SOURCE OptionGroupWatchpointEnums.td
   TARGET LLDBOptionGroupWatchpointEnumsGen)
 
+lldb_tablegen(OptionGroupWatchpointEnums.json -dump-json
+  SOURCE OptionGroupWatchpointEnums.td
+  TARGET LLDBOptionGroupWatchpointEnumsJsonGen)
+
 lldb_tablegen(InterpreterProperties.json -dump-json
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesJsonGen)
