@@ -1200,11 +1200,14 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   return CallStack;
 }
 
+DIGlobal ProfiledBinary::symbolizeData(uint64_t Address) {
+  return unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
+                                                 getSectionedAddress(Address)),
+                       SymbolizerPath);
+}
+
 StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
-  DIGlobal DataDIGlobal =
-      unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
-                                              getSectionedAddress(Address)),
-                    SymbolizerPath);
+  DIGlobal DataDIGlobal = symbolizeData(Address);
   return NameStrings.insert(DataDIGlobal.Name).first->getKey();
 }
 

@@ -439,6 +439,9 @@ public:
   ///   generation.
   void load(StringRef TripleStr = "");
 
+  /// Symbolize a data address and return the DIGlobal info.
+  DIGlobal symbolizeData(uint64_t Address);
+
   /// Symbolize an address and return the symbol name. The returned StringRef is
   /// owned by this ProfiledBinary object.
   StringRef symbolizeDataAddress(uint64_t Address);
