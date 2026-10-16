@@ -29,7 +29,7 @@ template <typename T>
 class TemplateClass {
   T a;
 public:
-  TemplateClass() { throw 1;}
+  TemplateClass() { throw 1;} // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
   T f_method() const { return a; }
 };
 
@@ -43,7 +43,7 @@ int baz4() { return 5; }
 
 template <typename T>
 T FA() {
-  TemplateClass<T> s;
+  TemplateClass<T> s; // expected-note {{called by 'FA<int>'}}
   return s.f_method();
 }
 
@@ -71,7 +71,7 @@ int maini1() {
     // expected-note@+1 {{called by 'maini1'}}
     S s(a);
     static long aaa = 23;
-    a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note{{called by 'maini1'}}
+    a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note 2 {{called by 'maini1'}}
     if (!a)
       throw "Error"; // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
   }
