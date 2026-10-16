@@ -160,12 +160,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                          bool IsInput) {
     if (!Val.isDenormal())
       return Val;
-    if (IsInput) {
-      // Non-deterministically choose between flushing or preserving the
-      // denormal value.
-      if (Ctx.getRandomBool())
-        return Val;
-    }
+    // Input flushing is required, but output flushing is optional. Model both
+    // permitted output behaviors when the mode allows flushing.
+    if (!IsInput &&
+        (Mode == DenormalMode::PositiveZero ||
+         Mode == DenormalMode::PreserveSign) &&
+        Ctx.getRandomBool())
+      return Val;
     if (Mode == DenormalMode::PositiveZero)
       return APFloat::getZero(Val.getSemantics(), false);
     if (Mode == DenormalMode::PreserveSign)
@@ -2501,15 +2502,16 @@ public:
         return AnyValue::poison();
 
       FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
-      DenormalMode DenormMode =
+      DenormalMode InputDenormMode =
           getCurrentDenormalMode(I.getOperand(0)->getType());
+      DenormalMode OutputDenormMode = getCurrentDenormalMode(I.getType());
 
       auto ValidatedOperand = handleFMFFlags(Operand, FMF, /*IsInput=*/true);
       if (ValidatedOperand.isPoison())
         return ValidatedOperand;
 
-      APFloat FOperand = handleDenormal(ValidatedOperand.asFloat(),
-                                        DenormMode.Input, /*IsInput=*/true);
+      APFloat FOperand = handleDenormal(
+          ValidatedOperand.asFloat(), InputDenormMode.Input, /*IsInput=*/true);
       APFloat SourceNaN = FOperand;
 
       bool LosesInfo;
@@ -2519,7 +2521,8 @@ public:
           ValidateRes.isPoison())
         return ValidateRes;
 
-      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
+      FOperand = handleDenormal(std::move(FOperand), OutputDenormMode.Output,
+                                /*IsInput=*/false);
 
       return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}));
     });
