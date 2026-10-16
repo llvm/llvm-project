@@ -72,8 +72,7 @@ enum CheckCondition {
   allOf
 };
 
-using VersionedTypeInfo =
-    std::pair<ArrayRef<TypeInfo>, SpecificationVersion>;
+using VersionedTypeInfo = std::pair<ArrayRef<TypeInfo>, SpecificationVersion>;
 
 template <typename T>
 struct OpComplianceInfo {
