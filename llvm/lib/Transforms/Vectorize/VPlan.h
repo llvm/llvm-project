@@ -2613,8 +2613,6 @@ public:
 /// converted to concrete recipes before executing.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
                                       public VPIRFlags {
-  TruncInst *Trunc;
-
   // If this recipe is unrolled it will have 2 additional operands.
   bool isUnrolled() const { return getNumOperands() == 5; }
 
@@ -2625,23 +2623,18 @@ public:
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
                                Start, Step, IndDesc, Start->getScalarType(),
                                DL),
-        VPIRFlags(Flags), Trunc(nullptr) {
+        VPIRFlags(Flags) {
     addOperand(VF);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, const VPIRFlags &Flags,
+                                Type *ResultTy, const VPIRFlags &Flags,
                                 DebugLoc DL)
-      : VPWidenInductionRecipe(
-            VPRecipeBase::VPWidenIntOrFpInductionSC, IV, Start, Step, IndDesc,
-            Trunc ? Trunc->getType() : Start->getScalarType(), DL),
-        VPIRFlags(Flags), Trunc(Trunc) {
+      : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
+                               Start, Step, IndDesc, ResultTy, DL),
+        VPIRFlags(Flags) {
     addOperand(VF);
-    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
-    if (Trunc)
-      getMetadataToPropagate(Trunc, Metadata);
-    assert(Metadata.empty() && "unexpected metadata on Trunc");
   }
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
@@ -2649,7 +2642,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), Trunc, *this, getDebugLoc());
+        getInductionDescriptor(), getScalarType(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)
@@ -2670,10 +2663,13 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
-  /// Returns the first defined value as TruncInst, if it is one or nullptr
-  /// otherwise.
-  TruncInst *getTruncInst() { return Trunc; }
-  const TruncInst *getTruncInst() const { return Trunc; }
+  /// Returns true if this induction is evaluated in a narrower type than the
+  /// start value.
+  bool isTruncated() const {
+    return getStartValue() && getScalarType()->isIntegerTy() &&
+           getScalarType()->getPrimitiveSizeInBits() <
+               getStartValue()->getScalarType()->getPrimitiveSizeInBits();
+  }
 
   /// Return the cost of this VPWidenIntOrFpInductionRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -4110,7 +4106,7 @@ protected:
 /// index. It starts at the start value of the canonical induction and gets
 /// incremented by the number of scalar iterations processed by the vector loop
 /// iteration. The increment does not have to be loop invariant.
-class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
+class LLVM_ABI_FOR_TEST VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
       : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
@@ -4146,8 +4142,8 @@ public:
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 

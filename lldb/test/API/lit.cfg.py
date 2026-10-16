@@ -138,7 +138,12 @@ if is_configured("llvm_use_sanitizer"):
             )
 
     if "Thread" in config.llvm_use_sanitizer:
-        config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+        tsan_suppressions = os.path.join(
+            os.path.dirname(config.test_source_root), "tsan-suppressions.txt"
+        )
+        config.environment["TSAN_OPTIONS"] = (
+            "halt_on_error=1:suppressions=" + tsan_suppressions
+        )
         if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"

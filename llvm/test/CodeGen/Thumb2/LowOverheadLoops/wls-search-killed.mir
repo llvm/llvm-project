@@ -114,7 +114,7 @@ body:             |
   ; CHECK:   t2STRi12 [[COPY8]], [[PHI]], 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv + 4, basealign 8)
   ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[PHI]], 8, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[COPY11:%[0-9]+]]:gpr = COPY [[t2ADDri]]
-  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def $cpsr
+  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def dead $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
