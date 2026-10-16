@@ -313,4 +313,16 @@ double test_fma_f64(double a, double b, double c) {
   // OGCG: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
   return __builtin_fma(a, b, c);
 }
+void test_vfmadd(__m128d a, __m128d b, __m128d c) {
+    // CIR-LABEL: cl.func @test_vfmadd
+      // CIR: cir.call @_builtin_ia32_vfmaddpd
+        // LLVM-LABEL: @test_vfmadd
+          // LLVM: call <2 x double> @llvm.x86.fma.vfmadd.pd
+            // OGCG-LABEL: @test_vfmadd
+              // OGCG: call <2 x double> @llvm.x86.fma.vfmadd.pd
+                __builtin_ia32_vfmaddpd(a, b, c);
+                }
+              
+
+
 
