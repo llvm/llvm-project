@@ -997,17 +997,29 @@ namespace detail {
 /// may be destroyed while a thread that skipped its erase still names it.
 static std::atomic<uint64_t> nextHandlerUniqueID{1};
 
-/// The handler, if any, whose order id for the current thread is held in
-/// `threadOrderID` rather than in the handler's `threadToOrderID` map. A
-/// parallel loop sets and erases a thread's order id once per element, and
-/// doing that under the handler's mutex made the mutex the most contended lock
-/// of a loop over many small elements. A thread processes one element at a
-/// time for each handler, so one slot covers every thread whose loop is not
-/// nested in another loop on the same thread; a nested loop's handler falls
-/// back to the map. Reentrant use of the same handler on one thread remains
-/// unsupported, as before.
-static LLVM_THREAD_LOCAL uint64_t threadHandlerUniqueID = 0;
-static LLVM_THREAD_LOCAL size_t threadOrderID = 0;
+/// One entry of the thread-local nesting stack: the handler an element
+/// belongs to and its order id. Plain data so the thread-locals below stay
+/// trivially destructible.
+struct ThreadOrderEntry {
+  uint64_t handlerID;
+  size_t orderID;
+};
+
+/// How many nested parallel loops one thread tracks without a lock. Past
+/// this the handler's map is the overflow.
+constexpr unsigned kMaxThreadOrderEntries = 4;
+
+/// The order ids for the current thread, one entry per enclosing parallel
+/// loop, innermost last. A parallel loop sets and erases a thread's order id
+/// once per element, and doing that under the handler's mutex made the mutex
+/// the most contended lock of a loop over many small elements. A thread
+/// processes one element at a time for each handler, so a small stack covers
+/// every realistic nesting depth. Erases are LIFO, matching loop nesting.
+/// Reentrant use of the same handler on one thread remains unsupported, as
+/// before.
+static LLVM_THREAD_LOCAL ThreadOrderEntry
+    threadOrderStack[kMaxThreadOrderEntries];
+static LLVM_THREAD_LOCAL unsigned threadOrderDepth = 0;
 
 struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   struct ThreadDiagnostic {
@@ -1026,14 +1038,17 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   ParallelDiagnosticHandlerImpl(MLIRContext *ctx) : context(ctx) {
     handlerID = ctx->getDiagEngine().registerHandler([this](Diagnostic &diag) {
-      // Fast path: this thread's order id is in the slot, so looking it up
-      // needs no lock. Appending below still locks.
-      if (threadHandlerUniqueID == handlerUniqueID) {
-        llvm::sys::SmartScopedLock<true> lock(mutex);
-        diagnostics.emplace_back(threadOrderID, std::move(diag));
-        return success();
+      // Fast path: scan the thread-local stack for this handler, no lock.
+      // Appending below still locks.
+      for (unsigned i = threadOrderDepth; i > 0; --i) {
+        if (threadOrderStack[i - 1].handlerID == handlerUniqueID) {
+          llvm::sys::SmartScopedLock<true> lock(mutex);
+          diagnostics.emplace_back(threadOrderStack[i - 1].orderID,
+                                   std::move(diag));
+          return success();
+        }
       }
-      // Slow path: a nested loop on this thread, consult the map. If this
+      // Slow path: nested past the stack, consult the map. If this
       // thread is not tracked, return failure to let another handler
       // process this diagnostic.
       uint64_t tid = llvm::get_threadid();
@@ -1074,9 +1089,13 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// Set the order id for the current thread.
   void setOrderIDForThread(size_t orderID) {
-    if (!threadHandlerUniqueID || threadHandlerUniqueID == handlerUniqueID) {
-      threadHandlerUniqueID = handlerUniqueID;
-      threadOrderID = orderID;
+    if (threadOrderDepth > 0 &&
+        threadOrderStack[threadOrderDepth - 1].handlerID == handlerUniqueID) {
+      threadOrderStack[threadOrderDepth - 1].orderID = orderID;
+      return;
+    }
+    if (threadOrderDepth < kMaxThreadOrderEntries) {
+      threadOrderStack[threadOrderDepth++] = {handlerUniqueID, orderID};
       return;
     }
     uint64_t tid = llvm::get_threadid();
@@ -1086,8 +1105,9 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
   /// Remove the order id for the current thread.
   void eraseOrderIDForThread() {
-    if (threadHandlerUniqueID == handlerUniqueID) {
-      threadHandlerUniqueID = 0;
+    if (threadOrderDepth > 0 &&
+        threadOrderStack[threadOrderDepth - 1].handlerID == handlerUniqueID) {
+      --threadOrderDepth;
       return;
     }
     uint64_t tid = llvm::get_threadid();
@@ -1130,12 +1150,11 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   /// A smart mutex to lock access to the internal state.
   llvm::sys::SmartMutex<true> mutex;
 
-  /// Order ids, keyed by thread id, for threads whose thread-local slot is
-  /// owned by another handler: a loop nested inside another parallel loop on
-  /// the same thread. Idle workers running nested elements use the slot, so
-  /// this map only holds threads that are also inside an enclosing loop.
-  /// Guarded by `mutex`. A thread in neither the slot nor this map is not
-  /// tracked, and its diagnostics pass on to the next handler.
+  /// Order ids, keyed by thread id, for threads nested past what the
+  /// thread-local stack holds: more enclosing parallel loops on one thread
+  /// than entries. Guarded by `mutex`. A thread in neither the stack nor
+  /// this map is not tracked, and its diagnostics pass on to the next
+  /// handler.
   DenseMap<uint64_t, size_t> threadToOrderID;
 
   /// An unordered list of diagnostics that were emitted.
@@ -1144,7 +1163,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   /// The unique id for the parallel handler.
   DiagnosticEngine::HandlerID handlerID = 0;
 
-  /// Unique id naming this handler in the thread-local order-id slot.
+  /// Unique id naming this handler in the thread-local order-id stack.
   const uint64_t handlerUniqueID =
       nextHandlerUniqueID.fetch_add(1, std::memory_order_relaxed);
 

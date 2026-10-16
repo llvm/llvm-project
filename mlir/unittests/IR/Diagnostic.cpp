@@ -108,7 +108,7 @@ TEST(SourceMgrDiagnosticVerifierHandler, ErasesOwnRegistration) {
   EXPECT_EQ(seen, 1u);
 }
 
-TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
+TEST(ParallelDiagnosticHandler, NestedStackPreservesOrder) {
   MLIRContext ctx;
   std::vector<std::string> seen;
   ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
@@ -124,7 +124,7 @@ TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
     outer.setOrderIDForThread(1);
     {
       ParallelDiagnosticHandler inner(&ctx);
-      // The slot is taken by outer, so these go through the map fallback.
+      // Outer sits at the bottom of the stack, so inner pushes above it.
       // Inner ids are deliberately disjoint from outer's 0/1.
       inner.setOrderIDForThread(12);
       emitError(UnknownLoc::get(&ctx), "inner-12");
@@ -132,7 +132,7 @@ TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
       emitError(UnknownLoc::get(&ctx), "inner-11");
       inner.eraseOrderIDForThread();
     } // inner emits sorted: inner-11, inner-12.
-    // The slot still names outer after the nested use: the inner flush was
+    // Inner popped, so outer is on top again: the inner flush was
     // attributed to outer's element, and this is held with id 1, so the
     // id-0 diagnostic below sorts first.
     emitError(UnknownLoc::get(&ctx), "outer-A");
@@ -145,6 +145,74 @@ TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
   EXPECT_NE(seen[1].find("inner-11"), std::string::npos);
   EXPECT_NE(seen[2].find("inner-12"), std::string::npos);
   EXPECT_NE(seen[3].find("outer-A"), std::string::npos);
+}
+
+TEST(ParallelDiagnosticHandler, DeepNestingOverflowPreservesOrder) {
+  MLIRContext ctx;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  // Five nested handlers: the thread-local stack holds four, so the
+  // innermost falls back to the map.
+  constexpr unsigned kDepth = 5;
+  std::vector<std::unique_ptr<ParallelDiagnosticHandler>> handlers;
+  for (unsigned i = 0; i < kDepth; ++i) {
+    handlers.push_back(std::make_unique<ParallelDiagnosticHandler>(&ctx));
+    handlers.back()->setOrderIDForThread(0);
+  }
+  handlers.back()->setOrderIDForThread(2);
+  emitError(UnknownLoc::get(&ctx), "x-2");
+  handlers.back()->setOrderIDForThread(1);
+  emitError(UnknownLoc::get(&ctx), "x-1");
+  for (auto it = handlers.rbegin(); it != handlers.rend(); ++it)
+    (*it)->eraseOrderIDForThread();
+  // Destroy innermost first: the handler impl is a pretty-stack-trace entry,
+  // which requires LIFO destruction.
+  while (!handlers.empty())
+    handlers.pop_back();
+
+  ASSERT_EQ(seen.size(), 2u);
+  EXPECT_NE(seen[0].find("x-1"), std::string::npos);
+  EXPECT_NE(seen[1].find("x-2"), std::string::npos);
+}
+
+TEST(ParallelDiagnosticHandler, InterleavedNestingFindsDeeperEntry) {
+  MLIRContext ctx;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  {
+    ParallelDiagnosticHandler a(&ctx); // Registered first, fires last.
+    ParallelDiagnosticHandler b(&ctx); // Registered later, fires first.
+    // b's loop is outer on this thread, a's nested inside it: the stack
+    // holds b below a, so b's callback must scan past the top to find
+    // itself.
+    b.setOrderIDForThread(0);
+    a.setOrderIDForThread(7);
+    emitError(UnknownLoc::get(&ctx), "d1");
+    a.eraseOrderIDForThread();
+    b.setOrderIDForThread(1);
+    emitError(UnknownLoc::get(&ctx), "d2");
+    b.eraseOrderIDForThread();
+  } // b flushes both, sorted.
+
+  // b holds both, sorted: d1, d2. If b's lookup only saw the top of the
+  // stack, d1 would land in a and flush after d2.
+  ASSERT_EQ(seen.size(), 2u);
+  EXPECT_NE(seen[0].find("d1"), std::string::npos);
+  EXPECT_NE(seen[1].find("d2"), std::string::npos);
 }
 
 TEST(ParallelDiagnosticHandler, MultithreadedOrderingHonored) {
