@@ -232,3 +232,28 @@ module {
 // CHECK-LABEL: func.func @reuse_existing()
 // CHECK: func.call @existing_target() : () -> ()
 // CHECK-NOT: func.func private @existing_target
+
+// -----
+
+// A GPU-local routine must take precedence over an identically named outer
+// routine when looking up both the callee and its routine metadata.
+module {
+  acc.routine @r_shadow func(@wrapped_shadow) seq bind("outer_target")
+  func.func private @wrapped_shadow()
+      attributes {acc.routine_info = #acc.routine_info<[@r_shadow]>}
+  gpu.module @shadowed_scope {
+    acc.routine @r_shadow func(@wrapped_shadow) seq bind("inner_target")
+    func.func private @wrapped_shadow()
+        attributes {acc.routine_info = #acc.routine_info<[@r_shadow]>}
+    gpu.func @caller() {
+      func.call @wrapped_shadow() : () -> ()
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: gpu.module @shadowed_scope
+// CHECK-LABEL: gpu.func @caller
+// CHECK: func.call @inner_target() : () -> ()
+// CHECK: func.func private @inner_target()
+// CHECK-NOT: func.func private @outer_target
