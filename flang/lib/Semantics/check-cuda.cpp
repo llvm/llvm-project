@@ -155,7 +155,7 @@ private:
             }
             if (*attrs == common::CUDASubprogramAttrs::Device &&
                 callContext_ == CallContext::HostDevice) {
-              return CallError(x, calleeAttrs);
+              return CallError(x, calleeAttrs, /*inHostCode=*/true);
             }
             return {};
           }
@@ -189,7 +189,7 @@ private:
     if (callContext_ == CallContext::GuardedHostDevice) {
       return {};
     }
-    return CallError(x, calleeAttrs);
+    return CallError(x, calleeAttrs, /*inHostCode=*/false);
   }
 
   SemanticsContext &context_;
@@ -197,15 +197,17 @@ private:
 
 private:
   Result CallError(const evaluate::ProcedureDesignator &proc,
-      common::CUDASubprogramAttrs calleeAttrs) const {
+      common::CUDASubprogramAttrs calleeAttrs, bool inHostCode) const {
     const std::string procedureType{
         calleeAttrs == common::CUDASubprogramAttrs::HostDevice
             ? "HOST,DEVICE"
             : parser::ToUpperCaseLetters(common::EnumToString(calleeAttrs))};
+    // clang-format off
     const char *codeContext{callContext_ == CallContext::HostDevice
-            ? "HOST,DEVICE code without a guard using ON_DEVICE() from the "
-              "CUDADEVICE module"
-            : "DEVICE code"};
+            ? "HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module"
+            : inHostCode ? "HOST code"
+                         : "DEVICE code"};
+    // clang-format on
     if (auto generic{proc.genericName()}) {
       const Symbol *specific{proc.GetInterfaceSymbol()};
       const std::string specificName{specific
