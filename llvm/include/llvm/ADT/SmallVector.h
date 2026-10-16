@@ -150,7 +150,9 @@ protected:
   /// Put this vector in a state of being small.
   void resetToSmall() {
     this->BeginX = getFirstEl();
-    this->Size = this->Capacity = 0; // FIXME: Setting Capacity to 0 is suspect.
+    // The inline capacity is unknown here. SmallVector restores it when moving
+    // from the same concrete type; moves through SmallVectorImpl leave it at 0.
+    this->Size = this->Capacity = 0;
   }
 
   /// Return true if V is an internal reference to the given range.
@@ -614,6 +616,22 @@ protected:
     this->Size = RHS.Size;
     this->Capacity = RHS.Capacity;
     RHS.resetToSmall();
+  }
+
+  void moveConstructFrom(SmallVectorImpl &&RHS) {
+    assert(this->empty() && "move construction requires an empty vector");
+    if (!RHS.isSmall()) {
+      assignRemote(std::move(RHS));
+      return;
+    }
+
+    // Construct inline elements directly instead of requiring T to be move
+    // assignable through the general move-assignment implementation.
+    size_type RHSSize = RHS.size();
+    reserve(RHSSize);
+    this->uninitialized_move(RHS.begin(), RHS.end(), this->begin());
+    this->set_size(RHSSize);
+    RHS.clear();
   }
 
   ~SmallVectorImpl() {
@@ -1281,19 +1299,41 @@ public:
     return *this;
   }
 
+  // Reuse the move-assignment instantiation for trivially move-assignable
+  // elements. Calling moveConstructFrom unconditionally would emit an
+  // additional per-T wrapper at -O0, increasing object size.
+  // std::is_move_assignable_v<T> is too broad: it can be a false positive for
+  // types with an unconstrained assignment operator whose body is ill-formed.
   SmallVector(SmallVector &&RHS) : SmallVectorImpl<T>(N) {
-    if (!RHS.empty())
-      SmallVectorImpl<T>::operator=(::std::move(RHS));
+    if (!RHS.empty()) {
+      bool StoleAllocation = N > 0 && !RHS.isSmall();
+      if constexpr (std::is_trivially_move_assignable_v<T>)
+        SmallVectorImpl<T>::operator=(::std::move(RHS));
+      else
+        this->moveConstructFrom(::std::move(RHS));
+      if constexpr (N > 0) {
+        if (StoleAllocation)
+          RHS.set_allocation_range(RHS.begin(), N);
+      }
+    }
   }
 
   SmallVector(SmallVectorImpl<T> &&RHS) : SmallVectorImpl<T>(N) {
-    if (!RHS.empty())
-      SmallVectorImpl<T>::operator=(::std::move(RHS));
+    if (!RHS.empty()) {
+      if constexpr (std::is_trivially_move_assignable_v<T>)
+        SmallVectorImpl<T>::operator=(::std::move(RHS));
+      else
+        this->moveConstructFrom(::std::move(RHS));
+    }
   }
 
   SmallVector &operator=(SmallVector &&RHS) {
     if (N) {
+      bool StoleAllocation = this != &RHS && !RHS.isSmall();
       SmallVectorImpl<T>::operator=(::std::move(RHS));
+      // Restore the inline capacity after stealing RHS's allocation.
+      if (StoleAllocation)
+        RHS.set_allocation_range(RHS.begin(), N);
       return *this;
     }
     // SmallVectorImpl<T>::operator= does not leverage N==0. Optimize the

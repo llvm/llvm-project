@@ -56,6 +56,7 @@ add_lldb_library(lldbTarget
   StructuredDataPlugin.cpp
   SystemRuntime.cpp
   Target.cpp
+  TargetAPIMutex.cpp
   TargetList.cpp
   Thread.cpp
   ThreadCollection.cpp
@@ -67,6 +68,7 @@ add_lldb_library(lldbTarget
   ThreadPlanCallOnFunctionExit.cpp
   ThreadPlanCallUserExpression.cpp
   ThreadPlanRunToAddress.cpp
+  ThreadPlanRunToBreakpoint.cpp
   ThreadPlanSingleThreadTimeout.cpp
   ThreadPlanShouldStopHere.cpp
   ThreadPlanStepInRange.cpp

@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self,
@@ -68,29 +68,73 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertIn(thread_id, stacks_to_registers_map)
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
-            # explicitly verify we collected fs and gs base for x86_64
-            explicit_registers = ["fs_base", "gs_base"]
-            for reg in explicit_registers:
-                register = frame_register_list.GetFirstValueByName(reg)
-                self.assertNotEqual(None, register)
-                self.assertEqual(
-                    register.GetValueAsUnsigned(),
-                    stacks_to_registers_map[thread_id]
-                    .GetFirstValueByName("fs_base")
-                    .GetValueAsUnsigned(),
-                )
 
-            for x in register_val_list:
-                self.assertEqual(
-                    x.GetValueAsUnsigned(),
-                    frame_register_list.GetFirstValueByName(
-                        x.GetName()
-                    ).GetValueAsUnsigned(),
+            if self.getArchitecture() == "x86_64":
+                # explicitly verify we collected fs and gs base for x86_64
+                general_purpose_registers = frame_register_list.GetValueAtIndex(0)
+                explicit_registers = ["fs_base", "gs_base"]
+                for reg in explicit_registers:
+                    register = general_purpose_registers.GetChildMemberWithName(reg)
+                    self.assertTrue(register.IsValid(), f"{reg} is not valid.")
+                    self.assertEqual(
+                        register.GetValueAsUnsigned(),
+                        stacks_to_registers_map[thread_id]
+                        .GetValueAtIndex(0)
+                        .GetChildMemberWithName(reg)
+                        .GetValueAsUnsigned(),
+                    )
+
+            # The live process may have had register sets that are not saved to
+            # the minidump. Even when a set is saved, it may not be complete.
+            for frame_regset in frame_register_list:
+                register_val_regset = register_val_list.GetFirstValueByName(
+                    frame_regset.GetName()
                 )
+                self.assertTrue(register_val_regset.IsValid())
+                for reg in frame_regset:
+                    reg_name = reg.GetName()
+                    if self.getArchitecture() == "x86_64" and reg_name == "sp":
+                        # No way to get "sp" because it always gets redirected to
+                        # "rsp". https://github.com/llvm/llvm-project/issues/212778
+                        continue
+                    register_val_reg = register_val_regset.GetChildMemberWithName(
+                        reg_name
+                    )
+
+                    if not register_val_reg.IsValid() and reg.IsValid():
+                        # Somehow some registers are valid in the minidump but not
+                        # the live process.
+                        continue
+
+                    self.assertEqual(reg.IsValid(), register_val_reg.IsValid())
+
+                    if self.getArchitecture() == "x86_64":
+                        known_mismatches = [
+                            "xmm13",
+                            "fctrl",
+                            "ftag",
+                            "mxcsr",
+                            "mxcsrmask",
+                        ]
+                    elif self.getArchitecture() == "aarch64":
+                        known_mismatches = [
+                            *[f"d{n}" for n in range(32)],
+                            *[f"s{n}" for n in range(32)],
+                        ]
+
+                    if reg_name in known_mismatches:
+                        # These values are "valid", but different from the live process.
+                        continue
+
+                    self.assertEqual(
+                        reg.GetValueAsUnsigned(),
+                        register_val_reg.GetValueAsUnsigned(),
+                        f"Values for register {reg_name} did not match.",
+                    )
 
         self.dbg.DeleteTarget(target)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):
         """Test that we can save a Linux mini dump."""
@@ -235,8 +279,11 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(core_sb_full):
                 os.unlink(core_sb_full)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
+    # We try to read Linux /proc files from the host not the remote:
+    # https://github.com/llvm/llvm-project/issues/231472
+    @skipIfRemote
     def test_save_linux_mini_dump_thread_options(self):
         """Test that we can save a Linux mini dump
         with a subset of threads"""
@@ -244,6 +291,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         thread_subset_dmp = self.getBuildArtifact("core.thread.subset.dmp")
+        core_target = None
+        target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -286,11 +335,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             )
 
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(thread_subset_dmp):
                 os.unlink(thread_subset_dmp)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump_default_options(self):
         """Test that we can save a Linux mini dump with default SBSaveCoreOptions"""
@@ -346,7 +398,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             if os.path.isfile(default_value_file):
                 os.unlink(default_value_file)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_save_linux_minidump_one_region(self):
         """Test that we can save a Linux mini dump with one region in sbsavecore regions"""
@@ -354,6 +406,8 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         one_region_file = self.getBuildArtifact("core.one_region.dmp")
+        target = None
+        core_target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -400,11 +454,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(err.Fail(), "Should fail to read memory")
 
         finally:
-            self.assertTrue(self.dbg.DeleteTarget(target))
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(one_region_file):
                 os.unlink(one_region_file)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style(self):
         """Test that verifies a custom and unspecified save style fails for
@@ -437,8 +494,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 os.unlink(custom_file)
 
     def save_core_with_region(self, process, region_index):
+        custom_file = self.getBuildArtifact("core.custom.dmp")
+        core_target = None
         try:
-            custom_file = self.getBuildArtifact("core.custom.dmp")
             memory_region = lldb.SBMemoryRegionInfo()
             memory_list = process.GetMemoryRegions()
             memory_list.GetMemoryRegionAtIndex(0, memory_region)
@@ -468,10 +526,12 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 )
                 range_set.add(mem_tuple)
         finally:
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(custom_file):
                 os.unlink(custom_file)
 
-    @skipUnlessArch("x86_64")
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
     def test_save_minidump_custom_save_style_duplicated_regions(self):
         """Test that verifies a custom and unspecified save style fails for
@@ -608,8 +668,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
 
     @skipUnlessPlatform(["linux"])
-    @skipUnlessArch("x86_64")
-    def minidump_saves_tls(self):
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    # We find the variable but its value is 0.
+    @expectedFailureAll(archs=["x86_64", "aarch64"])
+    def test_minidump_saves_tls(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
         try:
@@ -630,21 +692,23 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             core_target = self.dbg.CreateTarget(None)
             core_proc = core_target.LoadCore(tls_file)
             frame = core_proc.GetThreadAtIndex(0).GetFrameAtIndex(0)
-            tls_val = frame.FindValue("lf")
+            tls_val = frame.FindValue("lf", lldb.eValueTypeVariableGlobal)
             self.assertEqual(tls_val.GetValueAsUnsigned(), 42)
 
-        except:
+        finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(tls_file):
                 os.unlink(tls_file)
 
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     @skipUnlessPlatform(["linux"])
-    @skipUnlessArch("x86_64")
     def test_invalid_custom_regions_not_included(self):
         options = lldb.SBSaveCoreOptions()
         self.build()
         exe = self.getBuildArtifact("a.out")
         output_file = self.getBuildArtifact("no_empty_regions.dmp")
+        target = None
+        core_target = None
         try:
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
@@ -674,5 +738,9 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             )
             self.assertNotIn(empty_region, core_process.GetMemoryRegions())
         finally:
+            if target:
+                self.assertTrue(self.dbg.DeleteTarget(target))
+            if core_target:
+                self.assertTrue(self.dbg.DeleteTarget(core_target))
             if os.path.isfile(output_file):
                 os.unlink(output_file)

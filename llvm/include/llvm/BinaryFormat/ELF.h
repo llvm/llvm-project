@@ -842,7 +842,8 @@ enum {
   X(0x5e, EF_AMDGPU_MACH_AMDGCN_GFX1171, "gfx1171")                            \
   X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")              \
   X(0x62, EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC, "gfx11-7-generic")            \
-  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")
+  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")                \
+  X(0xeb, EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT, "gfx1250-strict")
 
 enum : unsigned {
   // clang-format off
@@ -875,7 +876,7 @@ enum : unsigned {
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -903,7 +904,7 @@ enum : unsigned {
   //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V4.
   EF_AMDGPU_FEATURE_XNACK_V4 = 0x300,
-  // XNACK is not supported.
+  // XNACK mode selection is not supported.
   EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 = 0x000,
   // XNACK is any/default/unspecified.
   EF_AMDGPU_FEATURE_XNACK_ANY_V4 = 0x100,
@@ -916,7 +917,7 @@ enum : unsigned {
   //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V4.
   EF_AMDGPU_FEATURE_SRAMECC_V4 = 0xc00,
-  // SRAMECC is not supported.
+  // SRAMECC mode selection is not supported.
   EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 = 0x000,
   // SRAMECC is any/default/unspecified.
   EF_AMDGPU_FEATURE_SRAMECC_ANY_V4 = 0x400,
@@ -973,6 +974,7 @@ enum : unsigned {
   EF_CUDA_SM100 = 0x64,
   EF_CUDA_SM101 = 0x65,
   EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM107 = 0x6b,
   EF_CUDA_SM110 = 0x6e,
   EF_CUDA_SM120 = 0x78,
   EF_CUDA_SM121 = 0x79,
@@ -1196,6 +1198,7 @@ enum : unsigned {
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
   SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
+  SHT_LLVM_DYNDBG_ELF = 0x6fff4c10,         // LLVM Dynamic Debugging ELF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1361,6 +1364,12 @@ enum : unsigned {
   GRP_MASKPROC = 0xf0000000
 };
 
+// Combine a symbol's binding and type into st_info (ELF32_ST_INFO,
+// ELF64_ST_INFO).
+constexpr uint8_t getSymbolInfo(uint8_t Binding, uint8_t Type) {
+  return (Binding << 4) | (Type & 0x0f);
+}
+
 // Symbol table entries for ELF32.
 struct Elf32_Sym {
   Elf32_Word st_name;     // Symbol name (index into string table)
@@ -1377,7 +1386,7 @@ struct Elf32_Sym {
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = getSymbolInfo(b, t);
   }
 };
 
@@ -1397,7 +1406,7 @@ struct Elf64_Sym {
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = getSymbolInfo(b, t);
   }
 };
 
@@ -1807,6 +1816,7 @@ enum : unsigned {
 // LLVM-specific notes.
 enum {
   NT_LLVM_HWASAN_GLOBALS = 3,
+  NT_LLVM_DYNAMIC_DEBUGGING = 4,
 };
 
 // GNU note types.
@@ -1970,6 +1980,7 @@ enum {
   NT_OPENBSD_FPREGS = 21,
   NT_OPENBSD_XFPREGS = 22,
   NT_OPENBSD_WCOOKIE = 23,
+  NT_OPENBSD_PACMASK = 24,
 };
 
 // AMDGPU-specific section indices.

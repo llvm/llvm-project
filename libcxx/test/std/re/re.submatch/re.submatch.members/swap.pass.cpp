@@ -73,4 +73,6 @@ int main(int, char**) {
     ASSERT_NOEXCEPT(sm1.swap(sm2));
   }
 #endif
+
+  return 0;
 }

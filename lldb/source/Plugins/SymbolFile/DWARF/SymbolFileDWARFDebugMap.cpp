@@ -450,6 +450,8 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
               "debug map object file \"%s\" containing debug info does not "
               "exist, debug info will not be loaded",
               comp_unit_info->oso_path.GetCString());
+          obj_file->GetModule()->ReportError(
+              "{0}", comp_unit_info->oso_load_error.AsCString());
           return nullptr;
         }
       }
@@ -686,7 +688,8 @@ SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
   return eLanguageTypeUnknown;
 }
 
-XcodeSDK SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
+XcodeSDKAndSysroot
+SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
@@ -1305,7 +1308,7 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
                                                oso_file, oso_object,
                                                /*must_exist=*/false)) {
       spec.GetFileSpec() = oso_file;
-      spec.GetObjectName() = oso_object;
+      spec.SetObjectName(oso_object.GetStringRef().str());
     } else {
       spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
     }
@@ -1640,6 +1643,18 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
     oso_dwarf.GetCompileOptions(args);
     return IterationAction::Continue;
   });
+}
+
+lldb::TypeSP
+SymbolFileDWARFDebugMap::GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+  lldb::TypeSP type;
+  ForEachSymbolFile("Looking up enclosing type for variable",
+                    [&](SymbolFileDWARF &oso_dwarf) {
+                      type = oso_dwarf.GetTypeEnclosingVariableUID(uid);
+                      return type ? IterationAction::Stop
+                                  : IterationAction::Continue;
+                    });
+  return type;
 }
 
 llvm::Expected<SymbolContext>

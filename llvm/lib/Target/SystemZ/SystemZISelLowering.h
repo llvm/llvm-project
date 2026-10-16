@@ -52,29 +52,8 @@ public:
     // want to clobber the upper 32 bits of a GPR unnecessarily.
     return 32;
   }
-  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
-    const override {
-    // Widen subvectors to the full width rather than promoting integer
-    // elements.  This is better because:
-    //
-    // (a) it means that we can handle the ABI for passing and returning
-    //     sub-128 vectors without having to handle them as legal types.
-    //
-    // (b) we don't have instructions to extend on load and truncate on store,
-    //     so promoting the integers is less efficient.
-    //
-    // (c) there are no multiplication instructions for the widest integer
-    //     type (v2i64).
-
-    // Expand (narrow) f16 vectors during type legalization to avoid
-    // operations for all elements as with expansion after widening.
-    if (VT.getScalarType() == MVT::f16)
-      return VT.getVectorElementCount().isScalar() ? TypeScalarizeVector
-                                                   : TypeSplitVector;
-    if (VT.getScalarSizeInBits() % 8 == 0)
-      return TypeWidenVector;
-    return TargetLoweringBase::getPreferredVectorAction(VT);
-  }
+  TargetLoweringBase::LegalizeTypeAction
+  getPreferredVectorAction(MVT VT) const override;
   unsigned
   getNumRegisters(LLVMContext &Context, EVT VT,
                   std::optional<MVT> RegisterVT) const override {
@@ -226,12 +205,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   /// Override to support customized stack guard loading.
   bool useLoadStackGuardNode(const Module &M) const override { return true; }
@@ -435,15 +416,6 @@ private:
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue unwrapAddress(SDValue N) const override;
-
-  // If the last instruction before MBBI in MBB was some form of COMPARE,
-  // try to replace it with a COMPARE AND BRANCH just before MBBI.
-  // CCMask and Target are the BRC-like operands for the branch.
-  // Return true if the change was made.
-  bool convertPrevCompareToBranch(MachineBasicBlock *MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  unsigned CCMask,
-                                  MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
   MachineBasicBlock *emitAdjCallStack(MachineInstr &MI,

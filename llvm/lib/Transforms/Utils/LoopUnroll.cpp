@@ -319,6 +319,8 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
         if (Value *M =
                 getMatchingValue(LV, Load, CurrentGeneration, BAA, GetMSSA)) {
           if (LI.replacementPreservesLCSSAForm(Load, M)) {
+            combineMetadataForCSE(cast<Instruction>(M), Load,
+                                  /*DoesKMove=*/false);
             Load->replaceAllUsesWith(M);
             Load->eraseFromParent();
           }
@@ -424,26 +426,6 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
     // the block we're iterating through.
     RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
   }
-}
-
-// Loops containing convergent instructions that are uncontrolled or controlled
-// from outside the loop must have a count that divides their TripMultiple.
-LLVM_ATTRIBUTE_USED
-static bool canHaveUnrollRemainder(const Loop *L) {
-  if (getLoopConvergenceHeart(L))
-    return false;
-
-  // Check for uncontrolled convergent operations.
-  for (auto &BB : L->blocks()) {
-    for (auto &I : *BB) {
-      if (isa<ConvergenceControlInst>(I))
-        return true;
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isConvergent())
-          return CB->getConvergenceControlToken();
-    }
-  }
-  return true;
 }
 
 // If LoopUnroll has proven OriginalLoopProb is incorrect for some iterations
@@ -632,7 +614,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   //   search the problem space.
 
   // When iterating for a solution, we stop early if we find probabilities
-  // that produce a Freq whose difference from FreqDesired is small
+  // that produce a Freq whose relative difference from FreqDesired is small
   // (FreqPrec).  Otherwise, we expect to compute a solution at least that
   // accurate (but surely far more accurate).
   const double FreqPrec = 1e-6;
@@ -663,7 +645,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     // If it computes an invalid Prob, FreqDesired is impossibly low or high.
     // Otherwise, Prob should produce nearly FreqDesired.
     assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
+            fabs(ComputeFreq(Prob) - FreqDesired) / FreqDesired < FreqPrec) &&
            "Expected accurate frequency when linear case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
@@ -682,7 +664,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     // If it computes an invalid Prob, FreqDesired is impossibly low or high.
     // Otherwise, Prob should produce nearly FreqDesired.
     assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
+            fabs(ComputeFreq(Prob) - FreqDesired) / FreqDesired < FreqPrec) &&
            "Expected accurate frequency when quadratic case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
@@ -844,7 +826,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double FreqBefore = -1, FreqAfter = -1; // Inits expected to be unused.
     for (unsigned I = 0; I != CondLatches.size(); ++I) {
       double Freq = AdjustProb(I, ProbBefore, ProbAfter, FreqBefore, FreqAfter);
-      if (fabs(Freq - FreqDesired) < FreqPrec)
+      if (fabs(Freq - FreqDesired) / FreqDesired < FreqPrec)
         break;
     }
   } else {
@@ -855,7 +837,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     auto TryProb = [&](double Prob) {
       ProbPrev = Prob;
       double FreqDelta = ComputeFreq(Prob) - FreqDesired;
-      if (fabs(FreqDelta) < FreqPrec)
+      if (fabs(FreqDelta) / FreqDesired < FreqPrec)
         return 0;
       if (FreqDelta < 0) {
         ProbMin = Prob;
@@ -865,8 +847,11 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
       return 1;
     };
     // If Prob == 0 is too small and Prob == 1 is too large, bisect between
-    // them.  To place a hard upper limit on the search time, stop bisecting
-    // when Prob stops changing (ProbDelta) by much (ProbPrec).
+    // them.  Accuracy (relative difference) is controlled by FreqPrec above.
+    // However, to place a hard upper limit on the search time, we stop
+    // bisecting when Prob stops changing (ProbDelta) by much (ProbPrec).  In
+    // this case, we compute an absolute difference not a relative difference,
+    // which could produce more search time for smaller probabilities.
     if (TryProb(0.) < 0 && TryProb(1.) > 0) {
       assert(ProbMin == 0 && ProbMax == 1 &&
              "expected probability bounds to be initialized");
@@ -961,7 +946,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
@@ -1191,6 +1175,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
 
+  // Snapshot the blocks to be cloned after remainder generation, which may
+  // delete blocks from L, but before cloning adds new blocks to L.
+  const std::vector<BasicBlock *> PostRemainderLoopBlocks = L->getBlocks();
+
   // Loop Unrolling might create new loops. While we do preserve LoopInfo, we
   // might break loop-simplified form for these loops (as they, e.g., would
   // share the same exit blocks). We'll keep track of loops for which we can
@@ -1204,7 +1192,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (!I.isDebugOrPseudoInst())
+        if (!isa<PseudoProbeInst>(I))
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(ULO.Count);
             if (NewDIL)
@@ -1409,7 +1397,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // routes which can lead to the exit: we can now reach it from the copied
   // iterations too.
   if (ULO.Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
+    for (auto *BB : PostRemainderLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
       SmallVector<BasicBlock *, 16> ChildrenToUpdate;
       for (auto *ChildDomNode : BBDomNode->children()) {
@@ -1619,7 +1607,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         continue;
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
-        IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        IRBuilder Builder(ExitBlock->getFirstNonPHIIt());
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
@@ -1769,11 +1757,8 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
-    MDNode *MD = dyn_cast<MDNode>(MDO);
-    if (!MD)
-      continue;
-
+  for (MDNode *MD :
+       make_isa_range<MDNode>(llvm::drop_begin(LoopID->operands()))) {
     MDString *S = dyn_cast<MDString>(MD->getOperand(0));
     if (!S)
       continue;

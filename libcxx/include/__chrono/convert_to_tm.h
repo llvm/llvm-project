@@ -67,11 +67,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // the year 2038 valid, so instead do the transformation manually.
 template <class _Tm, class _Date>
   requires(same_as<_Date, chrono::year_month_day> || same_as<_Date, chrono::year_month_day_last>)
-_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _Date& __date, chrono::weekday __weekday) {
+_Tm __convert_to_tm(const _Date& __date, chrono::weekday __weekday) {
   _Tm __result = {};
-#  ifdef __GLIBC__
-  __result.tm_zone = "UTC";
-#  endif
+  if constexpr (requires { __result.tm_zone = const_cast<char*>("UTC"); })
+    __result.tm_zone = const_cast<char*>("UTC");
   __result.tm_year = static_cast<int>(__date.year()) - 1900;
   __result.tm_mon  = static_cast<unsigned>(__date.month()) - 1;
   __result.tm_mday = static_cast<unsigned>(__date.day());
@@ -85,7 +84,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _Date& __date, chrono::weekday _
 }
 
 template <class _Tm, class _Duration>
-_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp) {
+_Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp) {
   chrono::sys_days __days = chrono::floor<chrono::days>(__tp);
   chrono::year_month_day __ymd{__days};
 
@@ -106,7 +105,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp
 #    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 template <class _Tm, class _Duration>
-_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::utc_time<_Duration> __tp) {
+_Tm __convert_to_tm(chrono::utc_time<_Duration> __tp) {
   _Tm __result = std::__convert_to_tm<_Tm>(chrono::utc_clock::to_sys(__tp));
 
   if (chrono::get_leap_second_info(__tp).is_leap_second)
@@ -116,7 +115,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::utc_time<_Duration> __tp) {
 }
 
 template <class _Tm, class _Duration>
-_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
+_Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
   using _Rp = common_type_t<_Duration, chrono::seconds>;
   // The time between the TAI epoch (1958-01-01) and UNIX epoch (1970-01-01).
   // This avoids leap second conversion when going from TAI to UTC.
@@ -126,7 +125,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
 }
 
 template <class _Tm, class _Duration>
-_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
+_Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
   using _Rp = common_type_t<_Duration, chrono::seconds>;
   // The time between the GPS epoch (1980-01-06) and UNIX epoch (1970-01-01).
   constexpr chrono::seconds __offset{3657 * 24 * 60 * 60};
@@ -139,11 +138,10 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
 // Convert a chrono (calendar) time point, or dururation to the given _Tm type,
 // which must have the same properties as std::tm.
 template <class _Tm, class _ChronoT>
-_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
+_Tm __convert_to_tm(const _ChronoT& __value) {
   _Tm __result = {};
-#  ifdef __GLIBC__
-  __result.tm_zone = "UTC";
-#  endif
+  if constexpr (requires { __result.tm_zone = const_cast<char*>("UTC"); })
+    __result.tm_zone = const_cast<char*>("UTC");
 
   if constexpr (__is_time_point<_ChronoT>) {
     if constexpr (same_as<typename _ChronoT::clock, chrono::file_clock>)

@@ -682,10 +682,47 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+LongDoubleFormat Module::getLongDoubleFormat() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
+    if (std::optional<LongDoubleFormat> Format =
+            parseLongDoubleFormat(Val->getString()))
+      return *Format;
+  }
+
+  return getTargetTriple().getDefaultLongDoubleFormat();
+}
+
+void Module::setLongDoubleFormat(LongDoubleFormat Format) {
+  addModuleFlag(ModFlagBehavior::Error, "long-double-type",
+                MDString::get(getContext(), getLongDoubleFormatName(Format)));
+}
+
 FloatABI::ABIType Module::getFloatABI() const {
-  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
-    return FloatABI::parseABIType(Val->getString()).value_or(FloatABI::Default);
-  return FloatABI::Default;
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+  // Without an explicit flag, fall back to the ABI implied by the target
+  // triple.
+  return getTargetTriple().getDefaultFloatABI();
+}
+
+ThreadModel Module::getThreadModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("thread-model")))
+    return *parseThreadModel(Val->getString());
+  return getTargetTriple().getDefaultThreadModel();
+}
+
+void Module::setThreadModel(ThreadModel Model) {
+  addModuleFlag(ModFlagBehavior::Error, "thread-model",
+                MDString::get(getContext(), getThreadModelName(Model)));
+}
+
+ExceptionHandling Module::getExceptionModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("exception-model")))
+    return *parseExceptionModel(Val->getString());
+
+  // TODO: Return getDefaultExceptionHandling when TargetOptions field is
+  // deleted.
+  return ExceptionHandling::Default;
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
@@ -967,8 +1004,7 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
 
 StringRef Module::getTargetABIFromMD() {
   StringRef TargetABI;
-  if (auto *TargetABIMD =
-          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+  if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();
   return TargetABI;
 }

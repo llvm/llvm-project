@@ -257,6 +257,7 @@ public:
 /// Represents a C++ struct/union/class.
 class CXXRecordDecl : public RecordDecl {
   friend class ASTDeclMerger;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -691,6 +692,10 @@ public:
   bool hasFriends() const {
     return data().FirstFriend.isValid();
   }
+
+  bool hasLazyFriends() const { return data().FirstFriend.isOffset(); }
+
+  void loadLazyFriends();
 
   /// \c true if a defaulted copy constructor for this class would be
   /// deleted.
@@ -1574,7 +1579,7 @@ public:
     if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
       return RD->isLocalClass();
 
-    return dyn_cast<FunctionDecl>(getDeclContext());
+    return getDeclContext()->getEnclosingFunction();
   }
 
   FunctionDecl *isLocalClass() {
@@ -2219,6 +2224,10 @@ public:
                                               bool IsAppleKext) const {
     return const_cast<CXXMethodDecl *>(this)->getDevirtualizedMethod(
         Base, IsAppleKext);
+  }
+
+  CXXSpecialMemberKind getSpecialMemberKind() const {
+    return getDefaultedFunctionKind().asSpecialMember();
   }
 
   /// Determine whether this is a usual deallocation function (C++
@@ -4205,7 +4214,7 @@ public:
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.
-  ValueDecl *Decomp = nullptr;
+  DecompositionDecl *Decomp = nullptr;
   /// The binding represented by this declaration. References to this
   /// declaration are effectively equivalent to this expression (except
   /// that it is only evaluated once at the point of declaration of the
@@ -4236,7 +4245,7 @@ public:
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
-  ValueDecl *getDecomposedDecl() const { return Decomp; }
+  DecompositionDecl *getDecomposedDecl() const { return Decomp; }
 
   /// Set the binding for this BindingDecl, along with its declared type (which
   /// should be a possibly-cv-qualified form of the type of the binding, or a
@@ -4247,7 +4256,7 @@ public:
   }
 
   /// Set the decomposed variable for this BindingDecl.
-  void setDecomposedDecl(ValueDecl *Decomposed) { Decomp = Decomposed; }
+  void setDecomposedDecl(DecompositionDecl *Decomposed) { Decomp = Decomposed; }
 
   /// Get the variable (if any) that holds the value of evaluating the binding.
   /// Only present for user-defined bindings for tuple-like types.
@@ -4335,6 +4344,24 @@ public:
   SourceLocation getRSquareLoc() const { return RSquareLoc; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
+
+  /// Result of attempting to extract the original variable from a
+  /// DecompositionDecl.
+  struct OriginalVarResult {
+    enum DiagnosticKind {
+      CallExpr = 0,     // Function call.
+      InitListExpr = 1, // Initializer list.
+      Temporary = 2,    // Temporary object.
+      MoveExpr = 3,     // Move expression.
+    };
+    const VarDecl *Var = nullptr;
+    DiagnosticKind DiagKind = Temporary;
+  };
+
+  /// If this decomposition was initialized from a variable (e.g., auto [a,b] =
+  /// p), returns the variable. Otherwise returns nullptr with a diagnostic kind
+  /// indicating why extraction failed.
+  OriginalVarResult getOriginalVar() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }

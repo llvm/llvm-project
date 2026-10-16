@@ -1,0 +1,62 @@
+{
+  "members": [
+    {
+      "data": [],
+      "id_table": [
+        {
+          "id": 0,
+          "name": {
+            "suffix": "",
+            "usr": "c:@F@only_in_b#"
+          }
+        }
+      ],
+      "linkage_table": [
+        {
+          "id": 0,
+          "linkage": {
+            "type": "Internal"
+          }
+        }
+      ],
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "tu-b.cpp"
+      },
+      "type": "TUSummary"
+    },
+    {
+      "data": [],
+      "id_table": [
+        {
+          "id": 0,
+          "name": {
+            "suffix": "",
+            "usr": "c:@F@only_in_a#"
+          }
+        }
+      ],
+      "linkage_table": [
+        {
+          "id": 0,
+          "linkage": {
+            "type": "Internal"
+          }
+        }
+      ],
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "tu-a.cpp"
+      },
+      "type": "TUSummary"
+    }
+  ],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libord"
+  },
+  "target_triple": "arm64-apple-macosx",
+  "type": "StaticLibrary"
+}

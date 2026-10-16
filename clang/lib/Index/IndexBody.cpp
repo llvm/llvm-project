@@ -500,14 +500,14 @@ public:
   }
 
   bool VisitConceptSpecializationExpr(ConceptSpecializationExpr *R) {
-    IndexCtx.handleReference(R->getNamedConcept(), R->getConceptNameLoc(),
+    IndexCtx.handleReference(R->getConceptDecl(), R->getConceptNameLoc(),
                              Parent, ParentDC);
     return true;
   }
 
   bool TraverseTypeConstraint(const TypeConstraint *C) {
-    IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
-                             Parent, ParentDC);
+    IndexCtx.handleReference(C->getNamedConcept().getAsTemplateDecl(),
+                             C->getConceptNameLoc(), Parent, ParentDC);
     return RecursiveASTVisitor::TraverseTypeConstraint(C);
   }
 };

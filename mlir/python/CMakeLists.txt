@@ -327,6 +327,15 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/MathTransformOps.td
+  SOURCES
+    dialects/transform/math.py
+  DIALECT_NAME transform
+  EXTENSION_NAME math_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/VectorTransformOps.td
   SOURCES
     dialects/transform/vector.py
@@ -568,8 +577,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     # Headers must be included explicitly so they are installed.
     Pass.h
     Rewrite.h
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIDebug
     MLIRCAPIIR
@@ -591,8 +598,6 @@ declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     RegisterEverything.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIConversion
     MLIRCAPITransforms
@@ -605,8 +610,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectLinalg.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILinalg
@@ -618,8 +621,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectGPU.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIGPU
@@ -631,8 +632,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectLLVM.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
@@ -646,8 +645,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectQuant.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIQuant
@@ -659,8 +656,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectNVGPU.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPINVGPU
@@ -672,8 +667,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectPDL.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIPDL
@@ -685,8 +678,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectSparseTensor.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPISparseTensor
@@ -700,7 +691,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
     DialectTransform.cpp
     Rewrite.h
   PRIVATE_LINK_LIBS
-    LLVMSupport
     MLIRPythonExtension.Core
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
@@ -713,8 +703,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.IRDL.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectIRDL.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIIRDL
@@ -726,8 +714,6 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     AsyncPasses.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIAsync
 )
@@ -739,8 +725,6 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
     ROOT_DIR "${PYTHON_SOURCE_DIR}"
     SOURCES
       ExecutionEngineModule.cpp
-    PRIVATE_LINK_LIBS
-      LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIExecutionEngine
   )
@@ -752,8 +736,6 @@ declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     GPUPasses.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIGPU
 )
@@ -764,8 +746,6 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     LinalgPasses.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPILinalg
 )
@@ -776,8 +756,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectSMT.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPISMT
@@ -790,8 +768,6 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     SparseTensorPasses.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPISparseTensor
 )
@@ -802,8 +778,6 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     TransformInterpreter.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPITransformDialectTransforms
 )
@@ -814,8 +788,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.AMDGPU.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectAMDGPU.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIAMDGPU
@@ -861,8 +833,6 @@ if(MLIR_INCLUDE_TESTS)
     ROOT_DIR "${MLIR_SOURCE_DIR}/test/python/lib"
     SOURCES
       PythonTestModuleNanobind.cpp
-    PRIVATE_LINK_LIBS
-      LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIPythonTestDialect
   )
@@ -877,6 +847,7 @@ declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
     Globals.cpp
     IRAttributes.cpp
     IRCore.cpp
+    IRRemarks.cpp
     IRTypes.cpp
 )
 

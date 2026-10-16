@@ -34,7 +34,7 @@ class RWMutexImpl {
 public:
   /// Initializes the lock but doesn't acquire it.
   /// Default Constructor.
-  explicit RWMutexImpl();
+  LLVM_ABI explicit RWMutexImpl();
 
   /// @}
   /// @name Do Not Implement
@@ -45,7 +45,7 @@ public:
 
   /// Releases and removes the lock
   /// Destructor
-  ~RWMutexImpl();
+  LLVM_ABI ~RWMutexImpl();
 
   /// @}
   /// @name Methods
@@ -56,32 +56,32 @@ public:
   /// the lock.
   /// @returns false if any kind of error occurs, true otherwise.
   /// Unconditionally acquire the lock in reader mode.
-  bool lock_shared();
+  LLVM_ABI bool lock_shared();
 
   /// Attempts to release the lock in reader mode.
   /// @returns false if any kind of error occurs, true otherwise.
   /// Unconditionally release the lock in reader mode.
-  bool unlock_shared();
+  LLVM_ABI bool unlock_shared();
 
   /// Attempts to acquire the lock in reader mode. Returns immediately.
   /// @returns true on successful lock acquisition, false otherwise.
-  bool try_lock_shared();
+  LLVM_ABI bool try_lock_shared();
 
   /// Attempts to unconditionally acquire the lock in reader mode. If the
   /// lock is held by any readers, this method will wait until it can
   /// acquire the lock.
   /// @returns false if any kind of error occurs, true otherwise.
   /// Unconditionally acquire the lock in writer mode.
-  bool lock();
+  LLVM_ABI bool lock();
 
   /// Attempts to release the lock in writer mode.
   /// @returns false if any kind of error occurs, true otherwise.
   /// Unconditionally release the lock in write mode.
-  bool unlock();
+  LLVM_ABI bool unlock();
 
   /// Attempts to acquire the lock in writer mode. Returns immediately.
   /// @returns true on successful lock acquisition, false otherwise.
-  bool try_lock();
+  LLVM_ABI bool try_lock();
 
   //@}
   /// @name Platform Dependent Data

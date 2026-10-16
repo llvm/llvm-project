@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Target/Cpp/CppEmitter.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/Support/CommandLine.h"

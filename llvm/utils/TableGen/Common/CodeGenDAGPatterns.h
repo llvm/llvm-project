@@ -180,7 +180,6 @@ raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  unsigned AddrSpace = std::numeric_limits<unsigned>::max();
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
@@ -206,11 +205,13 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   bool isPossible() const;
 
-  bool isPointer() const { return getValueTypeByHwMode().isPointer(); }
+  bool isPointer() const {
+    return PtrAddrSpace != std::numeric_limits<unsigned>::max();
+  }
 
   unsigned getPtrAddrSpace() const {
     assert(isPointer());
-    return getValueTypeByHwMode().PtrAddrSpace;
+    return PtrAddrSpace;
   }
 
   bool insert(const ValueTypeByHwMode &VVT);
