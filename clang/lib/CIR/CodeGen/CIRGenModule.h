@@ -595,6 +595,13 @@ public:
     return vtables.getItaniumVTableContext();
   }
 
+  MicrosoftVTableContext &getMicrosoftVTableContext() {
+    return vtables.getMicrosoftVTableContext();
+  }
+  const MicrosoftVTableContext &getMicrosoftVTableContext() const {
+    return vtables.getMicrosoftVTableContext();
+  }
+
   /// This contains all the decls which have definitions but which are deferred
   /// for emission and therefore should only be output if they are actually
   /// used. If a decl is in this, then it is known to have not been referenced
