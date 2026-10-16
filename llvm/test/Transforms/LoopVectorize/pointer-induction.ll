@@ -513,51 +513,36 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ;
 ; STRIDED-LABEL: @ivopt_widen_ptr_indvar_2(
 ; STRIDED-NEXT:  entry:
-; STRIDED-NEXT:    [[TMP0:%.*]] = shl i64 [[STRIDE:%.*]], 3
 ; STRIDED-NEXT:    [[TMP1:%.*]] = add i64 [[N:%.*]], 1
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; STRIDED:       vector.scevcheck:
+; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE:%.*]], 1
+; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
-; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[TMP0]]
+; STRIDED-NEXT:    [[TMP2:%.*]] = shl i64 [[N_VEC]], 3
 ; STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
-; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; STRIDED-NEXT:    [[TMP4:%.*]] = mul i64 [[INDEX]], [[TMP0]]
-; STRIDED-NEXT:    [[TMP5:%.*]] = mul i64 1, [[TMP0]]
-; STRIDED-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
-; STRIDED-NEXT:    [[TMP7:%.*]] = mul i64 2, [[TMP0]]
-; STRIDED-NEXT:    [[TMP8:%.*]] = add i64 [[TMP4]], [[TMP7]]
-; STRIDED-NEXT:    [[TMP9:%.*]] = mul i64 3, [[TMP0]]
-; STRIDED-NEXT:    [[TMP10:%.*]] = add i64 [[TMP4]], [[TMP9]]
-; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP4]]
-; STRIDED-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr null, i64 [[TMP6]]
-; STRIDED-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr null, i64 [[TMP8]]
+; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; STRIDED-NEXT:    [[TMP10:%.*]] = shl i64 [[INDEX]], 3
 ; STRIDED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP10]]
 ; STRIDED-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
-; STRIDED-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 0
-; STRIDED-NEXT:    store i64 [[TMP12]], ptr [[NEXT_GEP]], align 8
-; STRIDED-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 1
-; STRIDED-NEXT:    store i64 [[TMP13]], ptr [[NEXT_GEP1]], align 8
-; STRIDED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 2
-; STRIDED-NEXT:    store i64 [[TMP14]], ptr [[NEXT_GEP2]], align 8
-; STRIDED-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 3
-; STRIDED-NEXT:    store i64 [[TMP15]], ptr [[NEXT_GEP3]], align 8
+; STRIDED-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[NEXT_GEP3]], align 8
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; STRIDED:       middle.block:
-; STRIDED-NEXT:    [[TMP17:%.*]] = sub i64 0, [[TMP0]]
-; STRIDED-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP17]]
+; STRIDED-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -8
 ; STRIDED-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 3
 ; STRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; STRIDED:       scalar.ph:
-; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; STRIDED-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ]
+; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_PH]] ]
+; STRIDED-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ], [ null, [[VECTOR_PH]] ]
 ; STRIDED-NEXT:    br label [[FOR_BODY:%.*]]
 ; STRIDED:       for.body:
 ; STRIDED-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
