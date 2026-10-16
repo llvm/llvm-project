@@ -3122,6 +3122,21 @@ int32_t test_mulhrsu_i32(int32_t rs1, uint32_t rs2) {
   return __riscv_mulhrsu_i32(rs1, rs2);
 }
 
+// Scalar "Q-format" multiplication
+// CHECK-LABEL: test_mulq_i32:
+// RV32:        mulq{{[[:space:]]}}
+// RV64:        pmulq.w
+int32_t test_mulq_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_mulq_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_mulqr_i32:
+// RV32:        mulqr{{[[:space:]]}}
+// RV64:        pmulqr.w
+int32_t test_mulqr_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_mulqr_i32(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pmulh_i16x2:
 // CHECK:       pmulh.h
 int16x2_t test_pmulh_i16x2(int16x2_t rs1, int16x2_t rs2) {

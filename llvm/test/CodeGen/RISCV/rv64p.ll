@@ -1897,3 +1897,21 @@ define i32 @test_asubu_u32(i32 %a, i32 %b) {
   %res = call i32 @llvm.riscv.asubu.u32(i32 %a, i32 %b)
   ret i32 %res
 }
+
+define i32 @test_mulq_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_mulq_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulq.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulq.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mulqr_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_mulqr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulqr.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulqr.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
