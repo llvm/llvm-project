@@ -87,25 +87,37 @@ class TestUnregisteredMacho(TestBase):
         self.assertEqual(image["mach_header"]["cpusubtype"], 5)
         self.assertEqual(image["min_version_os_name"], "macosx")
         self.assertEqual(image["min_version_os_sdk"], version)
-        self.assertEqual(image["segments"], [
-            {
-                "name": "1234567890abcdef", "vmaddr": 0x123456789ABCDEF0,
-                "vmsize": 0x10000, "fileoff": 0x1000, "filesize": 0x2000,
-                "maxprot": 7,
-            },
-            {
-                "name": "__TEXT32", "vmaddr": 0x5000, "vmsize": 0x1000,
-                "fileoff": 0x20, "filesize": 0x200, "maxprot": 5,
-            },
-        ])
+        self.assertEqual(
+            image["segments"],
+            [
+                {
+                    "name": "1234567890abcdef",
+                    "vmaddr": 0x123456789ABCDEF0,
+                    "vmsize": 0x10000,
+                    "fileoff": 0x1000,
+                    "filesize": 0x2000,
+                    "maxprot": 7,
+                },
+                {
+                    "name": "__TEXT32",
+                    "vmaddr": 0x5000,
+                    "vmsize": 0x1000,
+                    "fileoff": 0x20,
+                    "filesize": 0x200,
+                    "maxprot": 5,
+                },
+            ],
+        )
 
     @no_debug_info_test
     @skipUnlessDarwin
     def test_load_command_prefixes_across_cache_boundaries(self):
         target, process = self.start_load_command_fixture()
-        for name, version in [("crossing_image", "13.2.1"),
-                              ("large_image", "10.12"),
-                              ("unreadable_unknown_image", "13.2.1")]:
+        for name, version in [
+            ("crossing_image", "13.2.1"),
+            ("large_image", "10.12"),
+            ("unreadable_unknown_image", "13.2.1"),
+        ]:
             address = self.image_address(target, name)
             images = self.image_info(address)
             self.assertEqual(len(images), 1, name)
@@ -131,8 +143,11 @@ class TestUnregisteredMacho(TestBase):
     @skipUnlessDarwin
     def test_unreadable_optional_load_command_payloads(self):
         target, process = self.start_load_command_fixture()
-        for name in ["unreadable_uuid_image", "unreadable_version_image",
-                     "huge_size_image"]:
+        for name in [
+            "unreadable_uuid_image",
+            "unreadable_version_image",
+            "huge_size_image",
+        ]:
             images = self.image_info(self.image_address(target, name))
             self.assertEqual(len(images), 1, name)
             self.assertEqual(images[0]["segments"], [])
@@ -144,7 +159,13 @@ class TestUnregisteredMacho(TestBase):
     @skipUnlessDarwin
     def test_malformed_load_command_prefixes(self):
         target, process = self.start_load_command_fixture()
-        for name in ["invalid_size_image", "invalid_count_image",
-                     "invalid_prefix_image", "invalid_overrun_image"]:
-            self.assertEqual(self.image_info(self.image_address(target, name)), [], name)
+        for name in [
+            "invalid_size_image",
+            "invalid_count_image",
+            "invalid_prefix_image",
+            "invalid_overrun_image",
+        ]:
+            self.assertEqual(
+                self.image_info(self.image_address(target, name)), [], name
+            )
         self.assertEqual(self.image_info((1 << 64) - 8), [])
