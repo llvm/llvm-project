@@ -9,6 +9,7 @@
 #include "LTO.h"
 #include "Config.h"
 #include "InputFiles.h"
+#include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
@@ -245,6 +246,8 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 
   ArrayRef<Symbol *> syms = f.getSymbols();
   ArrayRef<lto::InputFile::Symbol> objSyms = obj.symbols();
+  if (ctx.arg.ltoLinkerScripts && ctx.script)
+    ctx.script->ltoInputFileMapping[obj.getName()] = &f;
   std::vector<lto::SymbolResolution> resols(syms.size());
 
   // Provide a resolution to the LTO API for each symbol.
@@ -296,6 +299,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // (with --wrap) symbols because otherwise LTO would inline them while
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
+
+    StringRef inputSection = objSym.getSectionName();
+    if (!inputSection.empty() && ctx.script && ctx.arg.ltoLinkerScripts) {
+      r.VisibleToRegularObj |= ctx.script->shouldKeep(inputSection, &f);
+      r.OutputSectionName = ctx.script->mapLTOSectionName(inputSection, &f);
+    }
   }
   checkError(ctx.e, ltoObj->add(std::move(f.obj), resols));
 }
