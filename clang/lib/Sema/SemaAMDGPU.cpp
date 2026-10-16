@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -220,6 +221,22 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk32_f32_fp6:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case AMDGPU::BI__builtin_amdgcn_asyncmark:
+  case AMDGPU::BI__builtin_amdgcn_wait_asyncmark: {
+    bool IsMark = BuiltinID == AMDGPU::BI__builtin_amdgcn_asyncmark;
+
+    // Check the sequence length limit is a constant.
+    llvm::APSInt NumMarks;
+    if (!IsMark && SemaRef.BuiltinConstantArg(TheCall, 0, NumMarks))
+      return true;
+
+    // The stage mask names the stages to act on, so every combination of known
+    // stage bits is meaningful, including none of them: the zero mask names
+    // every stage.
+    unsigned MaskArgNum = IsMark ? 0 : 1;
+    return SemaRef.BuiltinConstantArgRange(TheCall, MaskArgNum, 0,
+                                           llvm::AMDGPU::AsyncStages::ALL);
+  }
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
     return checkAVLoadStore(TheCall, /*IsStore=*/false);
   case AMDGPU::BI__builtin_amdgcn_av_store_b128:

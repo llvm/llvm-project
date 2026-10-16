@@ -1341,15 +1341,22 @@ llvm.func @rocdl.s.wait.tensorcnt() {
 
 llvm.func @rocdl.asyncmark() {
   // CHECK-LABEL: rocdl.asyncmark
-  // CHECK: rocdl.asyncmark
+  // `all` is the default, so it is not printed.
+  // CHECK: rocdl.asyncmark{{$}}
+  // CHECK: rocdl.asyncmark{{$}}
+  // CHECK: rocdl.asyncmark stages tensor|global_load_async_to_lds_mcast{{$}}
   rocdl.asyncmark
+  rocdl.asyncmark stages all
+  rocdl.asyncmark stages global_load_async_to_lds_mcast|tensor
   llvm.return
 }
 
 llvm.func @rocdl.wait.asyncmark() {
   // CHECK-LABEL: rocdl.wait.asyncmark
-  // CHECK: rocdl.wait.asyncmark 0
+  // CHECK: rocdl.wait.asyncmark 0{{$}}
+  // CHECK: rocdl.wait.asyncmark 2 stages global_load_async_to_lds|buffer_global_load{{$}}
   rocdl.wait.asyncmark 0
+  rocdl.wait.asyncmark 2 stages global_load_async_to_lds|buffer_global_load
   llvm.return
 }
 
