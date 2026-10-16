@@ -9,7 +9,6 @@
 
 declare void @use(ptr)
 declare void @make(ptr sret([64 x i8]))
-declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 ;; --- Unmarked allocas --------------------------------------------------------
 
@@ -94,90 +93,14 @@ define void @small_alloca() #0 {
 
 ;; --- Indirect return slots ---------------------------------------------------
 
-; MSVC gives an object it is free to relocate and that only ever receives a
-; call's indirect return value a frame slot the cookie does not guard. The
-; frontend cannot see that, so the second metadata operand tells the backend the
-; object is trivial and the backend checks the uses.
-; CHECK-LABEL: sret_only:
-; CHECK-NOT:     __security_cookie
-; CHECK:       .seh_endproc
-define void @sret_only() #0 {
-  %a = alloca [64 x i8], !stack-protector !3
-  call void @make(ptr sret([64 x i8]) %a)
-  %v = load i8, ptr %a
-  store i8 %v, ptr %a
-  ret void
-}
-
-; Reading and writing through the pointer, including with a memcpy, is not an
-; escape, and several returns into the same slot are still just returns.
-; CHECK-LABEL: sret_twice_and_memcpy:
-; CHECK-NOT:     __security_cookie
-; CHECK:       .seh_endproc
-define void @sret_twice_and_memcpy(ptr %p) #0 {
-  %a = alloca [64 x i8], !stack-protector !3
-  call void @make(ptr sret([64 x i8]) %a)
-  call void @make(ptr sret([64 x i8]) %a)
-  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %a, i64 64, i1 false)
-  ret void
-}
-
-; As soon as the address reaches anywhere else, MSVC moves the object into the
-; guarded region instead.
-; CHECK-LABEL: sret_escapes:
+; A marked alloca is protected even when all it does is receive a call's
+; indirect return value. cl.exe leaves such a slot alone, but telling that apart
+; from a buffer that is merely returned into needs more than the backend can
+; see, so it is protected like any other marked alloca.
+; CHECK-LABEL: sret_slot:
 ; CHECK:         __security_cookie
-define void @sret_escapes() #0 {
-  %a = alloca [64 x i8], !stack-protector !3
-  call void @make(ptr sret([64 x i8]) %a)
-  call void @use(ptr %a)
-  ret void
-}
-
-; A derived pointer escaping counts just the same.
-; CHECK-LABEL: sret_gep_escapes:
-; CHECK:         __security_cookie
-define void @sret_gep_escapes() #0 {
-  %a = alloca [64 x i8], !stack-protector !3
-  call void @make(ptr sret([64 x i8]) %a)
-  %g = getelementptr [64 x i8], ptr %a, i64 0, i64 8
-  call void @use(ptr %g)
-  ret void
-}
-
-; Storing the pointer itself is an escape; storing through it is not.
-; CHECK-LABEL: sret_pointer_stored:
-; CHECK:         __security_cookie
-define void @sret_pointer_stored(ptr %p) #0 {
-  %a = alloca [64 x i8], !stack-protector !3
-  call void @make(ptr sret([64 x i8]) %a)
-  store ptr %a, ptr %p
-  ret void
-}
-
-; Without an indirect return there is nothing to exempt.
-; CHECK-LABEL: trivial_without_sret:
-; CHECK:         __security_cookie
-define void @trivial_without_sret() #0 {
-  %a = alloca [64 x i8], !stack-protector !3
-  store i8 0, ptr %a
-  ret void
-}
-
-; The exemption needs the object to be one MSVC may relocate, which is what the
-; second operand says. Without it the slot is protected.
-; CHECK-LABEL: nontrivial_sret:
-; CHECK:         __security_cookie
-define void @nontrivial_sret() #0 {
+define void @sret_slot() #0 {
   %a = alloca [64 x i8], !stack-protector !2
-  call void @make(ptr sret([64 x i8]) %a)
-  ret void
-}
-
-; The exemption is specific to the /GS heuristic.
-; CHECK-LABEL: strong_sret:
-; CHECK:         __security_cookie
-define void @strong_sret() #2 {
-  %a = alloca [64 x i8], !stack-protector !3
   call void @make(ptr sret([64 x i8]) %a)
   ret void
 }
@@ -243,4 +166,3 @@ attributes #2 = { sspstrong uwtable }
 !0 = !{i32 0}
 !1 = !{i32 1}
 !2 = !{i32 2}
-!3 = !{i32 2, i1 true}

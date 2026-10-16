@@ -3629,11 +3629,7 @@ public:
   /// If this function uses MSVC's /GS (Buffer Security Check) heuristic, mark
   /// \p AI as a "GS buffer", so that the function requires a stack protector.
   /// \p IsLarge says the buffer should be laid out closest to the guard.
-  /// \p IsTrivial says the allocation holds an object of trivial type, which
-  /// cl.exe is willing to leave in the unguarded temporary area; see the
-  /// "stack-protector" metadata in LLVM's LangRef.
-  void MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge,
-                          bool IsTrivial = false);
+  void MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge);
 
   void EmitAutoVarInit(const AutoVarEmission &emission);
   void EmitAutoVarCleanups(const AutoVarEmission &emission);

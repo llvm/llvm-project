@@ -38,16 +38,14 @@ void discard_trivial() { makeBuf(); }
 void discard_dtor() { makeDtor(); }
 
 // A temporary the source binds to a reference is a declared object, so it is
-// classified even when trivial. The second operand lets the backend drop it
-// again if its address turns out to be used for nothing but the return value;
-// see llvm/test/CodeGen/X86/stack-protector-gs-buffer.ll.
+// classified even when trivial.
 // CHECK-LABEL: @"?bind_trivial@@YAXXZ"
-// CHECK:         alloca %struct.Buf, align 1, !stack-protector ![[LARGE_TRIV:[0-9]+]]
+// CHECK:         alloca %struct.Buf, align 1, !stack-protector ![[LARGE]]
 void bind_trivial() { const Buf &r = makeBuf(); use(&r); }
 
 // Likewise a declared local, which clang gives to the callee directly.
 // CHECK-LABEL: @"?local_from_call@@YAXXZ"
-// CHECK:         alloca %struct.Buf, align 1, !stack-protector ![[LARGE_TRIV]]
+// CHECK:         alloca %struct.Buf, align 1, !stack-protector ![[LARGE]]
 void local_from_call() { Buf b = makeBuf(); use(&b); }
 
 //--- Outgoing by-value arguments ----------------------------------------------
@@ -90,7 +88,7 @@ void param(Buf b) { use(&b); }
 // a slot of this frame's own, which the guard already covers. Nothing has to be
 // relocated, but it is still a declared object and still gets classified.
 // CHECK-LABEL: @"?param_in_register@@YAXUSmallBuf@@@Z"
-// CHECK:         alloca %struct.SmallBuf, align 1, !stack-protector ![[LARGE_TRIV]]
+// CHECK:         alloca %struct.SmallBuf, align 1, !stack-protector ![[LARGE]]
 // CHECK-NOT:     call void @llvm.memcpy
 // CHECK:       }
 void param_in_register(SmallBuf b) { use(&b); }
@@ -102,4 +100,3 @@ void param_in_register(SmallBuf b) { use(&b); }
 void param_int(int n) { use(&n); }
 
 // CHECK-DAG: ![[LARGE]] = !{i32 2}
-// CHECK-DAG: ![[LARGE_TRIV]] = !{i32 2, i1 true}

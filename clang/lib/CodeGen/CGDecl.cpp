@@ -1718,8 +1718,7 @@ static bool isGSBuffer(const ASTContext &Ctx, QualType Ty,
   return NeedsProtector;
 }
 
-void CodeGenFunction::MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge,
-                                         bool IsTrivial) {
+void CodeGenFunction::MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge) {
   if (!MarkGSBuffers || !AI)
     return;
 
@@ -1727,15 +1726,12 @@ void CodeGenFunction::MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge,
   if (AI->getMetadata("stack-protector"))
     return;
 
-  // 2 is a large buffer and 1 a small one. The second operand says the object
-  // is trivial, and is left out when it is not, which is the common case; see
-  // the "stack-protector" metadata in LLVM's LangRef.
+  // 2 is a large buffer and 1 a small one; see the "stack-protector" metadata
+  // in LLVM's LangRef.
   llvm::LLVMContext &Ctx = Builder.getContext();
-  SmallVector<llvm::Metadata *, 2> Ops = {
-      llvm::ConstantAsMetadata::get(Builder.getInt32(IsLarge ? 2 : 1))};
-  if (IsTrivial)
-    Ops.push_back(llvm::ConstantAsMetadata::get(Builder.getTrue()));
-  AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, Ops));
+  auto *Operand =
+      llvm::ConstantAsMetadata::get(Builder.getInt32(IsLarge ? 2 : 1));
+  AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, {Operand}));
 }
 
 void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
@@ -1752,8 +1748,7 @@ void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
   // does not analyse; it protects the callee instead (see
   // EmitGSBufferParamCopy). Once the type needs a constructor or a destructor
   // the temporary becomes a real object, and cl.exe covers it.
-  bool IsTrivial = Ty.isTrivialType(getContext());
-  if (Kind != GSObjectKind::Named && IsTrivial)
+  if (Kind != GSObjectKind::Named && Ty.isTrivialType(getContext()))
     return;
 
   // For an outgoing by-value argument that is a real object, cl.exe only gets
@@ -1774,7 +1769,7 @@ void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
                   IsLarge))
     return;
 
-  MarkGSBufferAlloca(AI, IsLarge, IsTrivial);
+  MarkGSBufferAlloca(AI, IsLarge);
 }
 
 Address CodeGenFunction::EmitGSBufferParamCopy(const VarDecl &D,
@@ -1796,11 +1791,9 @@ Address CodeGenFunction::EmitGSBufferParamCopy(const VarDecl &D,
       Ty, getContext().getDeclAlign(&D), D.getName() + "$GSCopy$");
   EmitAggregateCopy(MakeAddrLValue(GSCopy, Ty), MakeAddrLValue(ParamAddr, Ty),
                     Ty, AggValueSlot::DoesNotOverlap);
-  // This copy exists only so that the object sits inside the guarded region,
-  // so it is never a candidate for the unguarded temporary area.
   MarkGSBufferAlloca(
       dyn_cast<llvm::AllocaInst>(GSCopy.getPointer()->stripPointerCasts()),
-      IsLarge, /*IsTrivial=*/false);
+      IsLarge);
   return GSCopy;
 }
 

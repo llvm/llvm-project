@@ -80,86 +80,17 @@ enum SSPAllocaMD : uint32_t {
   SSPAMD_LargeBuffer = 2,
 };
 
-/// Read the "stack-protector" metadata of \p AI, if it has any. \p IsTrivial is
-/// set from the optional second operand, which says the allocation holds an
-/// object of trivial type.
-static std::optional<uint32_t> getSSPAllocaMD(const AllocaInst &AI,
-                                              bool &IsTrivial) {
-  IsTrivial = false;
+/// Read the "stack-protector" metadata of \p AI, if it has any.
+static std::optional<uint32_t> getSSPAllocaMD(const AllocaInst &AI) {
   const MDNode *MD = AI.getMetadata("stack-protector");
-  if (!MD || MD->getNumOperands() < 1 || MD->getNumOperands() > 2)
+  if (!MD || MD->getNumOperands() != 1)
     return std::nullopt;
   const auto *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
   if (!CI)
     return std::nullopt;
-  if (MD->getNumOperands() == 2)
-    if (const auto *Flag = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1)))
-      IsTrivial = !Flag->isZero();
   // Clamp, so that a value from a newer producer errs towards more protection
   // rather than less.
   return CI->getLimitedValue(SSPAMD_LargeBuffer);
-}
-
-/// Returns true if the only thing \p AI's address is ever used for, besides
-/// being read and written here, is receiving the indirect return value of a
-/// call.
-///
-/// cl.exe gives such an allocation a slot in the frame's temporary area, which
-/// the cookie does not cover, and leaves it out of the GS analysis: the only
-/// code that writes it from outside is a callee, and a callee writes exactly
-/// one object of the type it returns. As soon as the address reaches anywhere
-/// else, cl.exe relocates the object into the protected region instead, so look
-/// for that here rather than in the frontend, which cannot see the uses.
-///
-/// Only an object cl.exe is free to relocate can end up in that area, which is
-/// why the caller also requires the allocation to hold a trivial object.
-static bool isIndirectReturnSlot(const AllocaInst &AI) {
-  bool FoundSRet = false;
-  SmallVector<const Instruction *, 8> Worklist = {&AI};
-  SmallPtrSet<const Instruction *, 8> Visited = {&AI};
-
-  while (!Worklist.empty()) {
-    for (const Use &U : Worklist.pop_back_val()->uses()) {
-      const auto *User = cast<Instruction>(U.getUser());
-
-      if (const auto *CB = dyn_cast<CallBase>(User)) {
-        const auto *II = dyn_cast<IntrinsicInst>(CB);
-        if (II && (II->isLifetimeStartOrEnd() || II->isAssumeLikeIntrinsic()))
-          continue;
-        // A memory intrinsic reads or writes through the pointer, just as a
-        // load or a store does, and does not let it escape.
-        if (isa_and_nonnull<MemIntrinsic>(II))
-          continue;
-        if (!CB->isArgOperand(&U) ||
-            !CB->paramHasAttr(CB->getArgOperandNo(&U), Attribute::StructRet))
-          return false;
-        FoundSRet = true;
-        continue;
-      }
-
-      switch (User->getOpcode()) {
-      case Instruction::Load:
-        continue;
-      case Instruction::Store:
-        // Writing through the pointer is fine; writing the pointer itself
-        // somewhere else lets it escape.
-        if (U.getOperandNo() != StoreInst::getPointerOperandIndex())
-          return false;
-        continue;
-      case Instruction::BitCast:
-      case Instruction::AddrSpaceCast:
-      case Instruction::GetElementPtr:
-      case Instruction::PHI:
-      case Instruction::Select:
-        if (Visited.insert(User).second)
-          Worklist.push_back(User);
-        continue;
-      default:
-        return false;
-      }
-    }
-  }
-  return FoundSRet;
 }
 
 /// InsertStackProtectors - Insert code into the prologue and epilogue of the
@@ -572,14 +503,8 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-        bool IsTrivial = false;
-        if (std::optional<uint32_t> MD = getSSPAllocaMD(*AI, IsTrivial)) {
+        if (std::optional<uint32_t> MD = getSSPAllocaMD(*AI)) {
           if (*MD == SSPAMD_Ignore)
-            continue;
-
-          // MSVC leaves a trivial object that is only an indirect-return
-          // destination out of its GS analysis.
-          if (GSBuffer && IsTrivial && isIndirectReturnSlot(*AI))
             continue;
 
           // The frontend classified this allocation as a buffer, which is

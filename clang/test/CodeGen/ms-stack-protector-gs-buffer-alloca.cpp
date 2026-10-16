@@ -218,20 +218,20 @@ void holds_reference(int &x) { HoldsReference s(x); use(&s); }
 // constant count does not stay one for long -- InstCombine folds it into the
 // allocated type -- so the classification is recorded here as well.
 // CHECK-LABEL: @"?alloca_large@@YAXXZ"
-// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE_NT:[0-9]+]]
+// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE]]
 void alloca_large() { use(_alloca(64)); }
 
 // Below ssp-buffer-size, but still a GS buffer: _alloca has no threshold.
 // CHECK-LABEL: @"?alloca_small@@YAXXZ"
-// CHECK:         alloca i8, i64 3, align 16, !stack-protector ![[SMALL_NT:[0-9]+]]
+// CHECK:         alloca i8, i64 3, align 16, !stack-protector ![[SMALL]]
 void alloca_small() { use(_alloca(3)); }
 
 // CHECK-LABEL: @"?alloca_dynamic@@YAXH@Z"
-// CHECK:         alloca i8, i64 %{{.*}}, align 16, !stack-protector ![[LARGE_NT]]
+// CHECK:         alloca i8, i64 %{{.*}}, align 16, !stack-protector ![[LARGE]]
 void alloca_dynamic(int n) { use(_alloca(n)); }
 
 // CHECK-LABEL: @"?alloca_with_align@@YAXXZ"
-// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE_NT]]
+// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE]]
 void alloca_with_align() { use(__builtin_alloca_with_align(64, 128)); }
 
 //--- Left to the backend ------------------------------------------------------
@@ -263,10 +263,6 @@ __declspec(safebuffers) void safe() { char a[64]; use(a); }
 // CHECK:         alloca [64 x i8], align 1{{$}}
 __declspec(strict_gs_check) void strict() { char a[64]; use(a); }
 
-// The second operand says the object is trivial, and so is one the backend may
-// leave in the unguarded temporary area; see ms-stack-protector-gs-buffer-temp.
-// CHECK-DAG: ![[LARGE]] = !{i32 2, i1 true}
-// CHECK-DAG: ![[SMALL]] = !{i32 1, i1 true}
-// CHECK-DAG: ![[LARGE_NT]] = !{i32 2}
-// CHECK-DAG: ![[SMALL_NT]] = !{i32 1}
+// CHECK-DAG: ![[LARGE]] = !{i32 2}
+// CHECK-DAG: ![[SMALL]] = !{i32 1}
 // CHECK-DAG: ![[IGNORE]] = !{i32 0}

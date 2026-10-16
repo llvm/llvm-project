@@ -9216,7 +9216,7 @@ and `"stack-protector-gs-buffer"` function attributes would otherwise apply.
 The function may still use a stack protector, if other criteria determine it
 needs one.
 
-The metadata contains an integer, and optionally a second, boolean operand:
+The metadata contains a single integer:
 
 - `0` opts the given alloca out of requiring a stack protector.
 - `1` marks the given alloca as a buffer that requires a stack protector, and
@@ -9228,19 +9228,12 @@ The non-zero values let a frontend classify an allocation itself, which is
 necessary when the decision depends on source-level information that lowering
 to IR does not preserve.
 
-A second operand of `i1 true` says the allocation holds an object of trivial
-type, one the backend is therefore free to relocate. Only the
-`"stack-protector-gs-buffer"` heuristic reads it, and only to leave out an
-allocation whose address is used for nothing but receiving the indirect return
-value of a call: MSVC gives such an object a slot outside the region the stack
-cookie guards. The operand may be omitted, and is then taken as `false`.
-
 ```
  %a = alloca [1000 x i8], align 1, !stack-protector !0
  %b = alloca [1000 x i8], align 1, !stack-protector !1
 
 !0 = !{i32 0}
-!1 = !{i32 2, i1 true}
+!1 = !{i32 2}
 ```
 
 #### '`implicit.ref`' Metadata
