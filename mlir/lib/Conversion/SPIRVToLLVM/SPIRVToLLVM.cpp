@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1241,6 +1242,82 @@ public:
   }
 };
 
+/// Converts `spirv.CopyMemory` to `llvm.intr.memcpy`.
+class CopyMemoryPattern : public SPIRVToLLVMConversion<spirv::CopyMemoryOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CopyMemoryOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CopyMemoryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type pointeeType =
+        cast<spirv::PointerType>(op.getTarget().getType()).getPointeeType();
+    Type dstPointeeType = getTypeConverter()->convertType(pointeeType);
+    if (!dstPointeeType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    // A 0-element LLVM array is the conversion of `spirv.rtarray`, which has
+    // no fixed size (and is forbidden by the SPIR-V spec for CopyMemory).
+    if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(dstPointeeType))
+      if (arrayType.getNumElements() == 0)
+        return rewriter.notifyMatchFailure(op, "pointee has no static size");
+
+    llvm::TypeSize typeSize =
+        DataLayout::closest(op).getTypeSize(dstPointeeType);
+    if (typeSize.isScalable())
+      return rewriter.notifyMatchFailure(op, "pointee has scalable size");
+
+    // In SPIR-V < 1.4, a single memory-operands mask applies to both Target
+    // and Source; in SPIR-V >= 1.4, a second mask (if present) applies to
+    // Source while the first applies to Target.
+    using spirv::MemoryAccess;
+    constexpr MemoryAccess supportedMask = MemoryAccess::Aligned |
+                                           MemoryAccess::Volatile |
+                                           MemoryAccess::Nontemporal;
+    MemoryAccess targetAccess =
+        op.getMemoryAccess().value_or(MemoryAccess::None);
+    bool hasSourceAccess = op.getSourceMemoryAccess().has_value();
+    MemoryAccess sourceAccess =
+        hasSourceAccess ? *op.getSourceMemoryAccess() : targetAccess;
+    if (((targetAccess | sourceAccess) & ~supportedMask) != MemoryAccess::None)
+      return rewriter.notifyMatchFailure(
+          op, "unsupported memory access attributes");
+
+    bool isVolatile = spirv::bitEnumContainsAny(targetAccess | sourceAccess,
+                                                MemoryAccess::Volatile);
+    uint32_t targetAlign =
+        spirv::bitEnumContainsAny(targetAccess, MemoryAccess::Aligned)
+            ? op.getAlignment().value_or(0)
+            : 0;
+    uint32_t sourceAlign =
+        spirv::bitEnumContainsAny(sourceAccess, MemoryAccess::Aligned)
+            ? (hasSourceAccess ? op.getSourceAlignment().value_or(0)
+                               : targetAlign)
+            : 0;
+
+    Location loc = op.getLoc();
+    Value size = LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI64Type(),
+        rewriter.getI64IntegerAttr(typeSize.getFixedValue()));
+    auto memcpy = rewriter.replaceOpWithNewOp<LLVM::MemcpyOp>(
+        op, adaptor.getTarget(), adaptor.getSource(), size, isVolatile);
+
+    if (targetAlign || sourceAlign) {
+      auto makeAlignDict = [&](uint32_t align) {
+        if (!align)
+          return rewriter.getDictionaryAttr({});
+        return rewriter.getDictionaryAttr(
+            {rewriter.getNamedAttr(LLVM::LLVMDialect::getAlignAttrName(),
+                                   rewriter.getI64IntegerAttr(align))});
+      };
+      memcpy.setArgAttrsAttr(rewriter.getArrayAttr(
+          {makeAlignDict(targetAlign), makeAlignDict(sourceAlign),
+           rewriter.getDictionaryAttr({})}));
+    }
+    return success();
+  }
+};
+
 /// Converts `spirv.Not` and `spirv.LogicalNot` into LLVM dialect.
 template <typename SPIRVOp>
 class NotPattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -2398,8 +2475,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       NotPattern<spirv::LogicalNotOp>,
 
       // Memory ops
-      AccessChainPattern, AddressOfPattern, LoadStorePattern<spirv::LoadOp>,
-      LoadStorePattern<spirv::StoreOp>, VariablePattern,
+      AccessChainPattern, AddressOfPattern, CopyMemoryPattern,
+      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
+      VariablePattern,
 
       // Miscellaneous ops
       CompositeExtractPattern, CompositeInsertPattern,
