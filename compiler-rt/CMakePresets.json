@@ -1,0 +1,234 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 31,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "description": "Base configuration for compiler-rt presets",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build_${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "COMPILER_RT_INCLUDE_TESTS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "hidden": true,
+      "description": "Debug build configuration with runtime assertions",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "COMPILER_RT_DEBUG": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "hidden": true,
+      "description": "Release build configuration optimized for performance",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "COMPILER_RT_DEBUG": "OFF"
+      }
+    },
+    {
+      "name": "relwithdebinfo",
+      "hidden": true,
+      "description": "RelWithDebInfo build configuration with debug symbols",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "asan-flags",
+      "hidden": true,
+      "description": "Flags to instrument runtime tests with AddressSanitizer",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "32bit-flags",
+      "hidden": true,
+      "description": "Flags to build for 32-bit (x86) targets",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-m32",
+        "CMAKE_CXX_FLAGS": "-m32"
+      }
+    },
+    {
+      "name": "runtime-scudo",
+      "hidden": true,
+      "description": "Scudo standalone runtime configuration",
+      "cacheVariables": {
+        "COMPILER_RT_BUILD_SANITIZERS": "ON",
+        "COMPILER_RT_HAS_SCUDO_STANDALONE": "ON",
+        "COMPILER_RT_SANITIZERS_TO_BUILD": "scudo_standalone",
+        "COMPILER_RT_ENABLE_TEST_SUITES": "scudo_standalone",
+        "COMPILER_RT_BUILD_BUILTINS": "OFF"
+      }
+    },
+    {
+      "name": "scudo-debug",
+      "inherits": [
+        "base",
+        "debug",
+        "runtime-scudo"
+      ],
+      "displayName": "Scudo (Debug)",
+      "description": "Debug build with assertions and verbose Scudo debug checks"
+    },
+    {
+      "name": "scudo-release",
+      "inherits": [
+        "base",
+        "release",
+        "runtime-scudo"
+      ],
+      "displayName": "Scudo (Release / Benchmarks)",
+      "description": "Optimized Release build for benchmarking and performance regression testing"
+    },
+    {
+      "name": "scudo-asan",
+      "inherits": [
+        "base",
+        "relwithdebinfo",
+        "asan-flags",
+        "runtime-scudo"
+      ],
+      "displayName": "Scudo with ASan (Meta-Sanitizer)",
+      "description": "Build Scudo unit tests instrumented with AddressSanitizer to find memory bugs in allocator internals"
+    },
+    {
+      "name": "scudo-32bit",
+      "inherits": [
+        "base",
+        "debug",
+        "32bit-flags",
+        "runtime-scudo"
+      ],
+      "displayName": "Scudo (32-bit x86)",
+      "description": "Test Scudo's 32-bit primary allocator (SizeClassAllocator32) and small VA constraints"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "target-scudo",
+      "hidden": true,
+      "description": "Target: Scudo standalone runtime libraries",
+      "targets": [
+        "scudo_standalone"
+      ]
+    },
+    {
+      "name": "target-scudo-tests",
+      "hidden": true,
+      "description": "Target: Scudo standalone test suite (lit + unit tests)",
+      "targets": [
+        "check-scudo_standalone"
+      ]
+    },
+    {
+      "name": "target-scudo-unit-tests",
+      "hidden": true,
+      "description": "Target: Scudo unit test binaries",
+      "targets": [
+        "ScudoUnitTests"
+      ]
+    },
+    {
+      "name": "build-scudo-debug",
+      "inherits": "target-scudo",
+      "configurePreset": "scudo-debug",
+      "displayName": "Build Scudo (Debug)",
+      "description": "Build Scudo standalone runtime library in Debug mode"
+    },
+    {
+      "name": "build-scudo-release",
+      "inherits": "target-scudo",
+      "configurePreset": "scudo-release",
+      "displayName": "Build Scudo (Release)",
+      "description": "Build Scudo standalone runtime library in Release mode"
+    },
+    {
+      "name": "test-scudo-debug",
+      "inherits": "target-scudo-tests",
+      "configurePreset": "scudo-debug",
+      "displayName": "Run Scudo Tests (Debug)",
+      "description": "Run full Scudo standalone test suite in Debug mode"
+    },
+    {
+      "name": "test-scudo-release",
+      "inherits": "target-scudo-tests",
+      "configurePreset": "scudo-release",
+      "displayName": "Run Scudo Tests (Release)",
+      "description": "Run full Scudo standalone test suite in Release mode"
+    },
+    {
+      "name": "test-scudo-asan",
+      "inherits": "target-scudo-tests",
+      "configurePreset": "scudo-asan",
+      "displayName": "Run Scudo Tests (ASan Instrumented)",
+      "description": "Run full Scudo standalone test suite instrumented with AddressSanitizer"
+    },
+    {
+      "name": "test-scudo-32bit",
+      "inherits": "target-scudo-tests",
+      "configurePreset": "scudo-32bit",
+      "displayName": "Run Scudo Tests (32-bit)",
+      "description": "Run full Scudo standalone test suite for 32-bit architecture"
+    },
+    {
+      "name": "test-scudo-unit-debug",
+      "inherits": "target-scudo-unit-tests",
+      "configurePreset": "scudo-debug",
+      "displayName": "Run Scudo Unit Tests (Debug)",
+      "description": "Run Scudo standalone unit tests in Debug mode"
+    },
+    {
+      "name": "test-scudo-unit-release",
+      "inherits": "target-scudo-unit-tests",
+      "configurePreset": "scudo-release",
+      "displayName": "Run Scudo Unit Tests (Release)",
+      "description": "Run Scudo standalone unit tests in Release mode"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "ci-scudo",
+      "displayName": "CI Scudo (Debug)",
+      "description": "Configure and test Scudo standalone in Debug mode",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "scudo-debug"
+        },
+        {
+          "type": "build",
+          "name": "test-scudo-debug"
+        }
+      ]
+    },
+    {
+      "name": "ci-scudo-release",
+      "displayName": "CI Scudo (Release)",
+      "description": "Configure and test Scudo standalone in Release mode",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "scudo-release"
+        },
+        {
+          "type": "build",
+          "name": "test-scudo-release"
+        }
+      ]
+    }
+  ]
+}
