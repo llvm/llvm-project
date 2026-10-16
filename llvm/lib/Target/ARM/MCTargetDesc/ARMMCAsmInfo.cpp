@@ -182,6 +182,9 @@ void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
   case ARM::S_LO_0_7:
     OS << ":lower0_7:";
     break;
+  case ARM::S_COFF_SECREL:
+    OS << ":SECREL32:";
+    break;
   }
 
   const MCExpr *Sub = Expr.getSubExpr();
