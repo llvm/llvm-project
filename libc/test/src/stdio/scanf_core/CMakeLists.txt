@@ -3,6 +3,14 @@ if(NOT(LLVM_LIBC_FULL_BUILD))
   libc_set_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
+set(free_dep)
+if(NOT LIBC_CONF_SCANF_DISABLE_ALLOCATION)
+  list(APPEND free_dep
+    libc.hdr.func.free
+    libc.src.__support.CPP.scope
+  )
+endif()
+
 add_libc_test(
   parser_test
   SUITE
@@ -47,6 +55,7 @@ add_libc_test(
     libc.src.stdio.scanf_core.converter
     libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
+    ${free_dep}
   COMPILE_OPTIONS
     ${use_system_file}
 )
