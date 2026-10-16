@@ -64,6 +64,21 @@ void constexpr_conditions(int condition) {
   // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
 }
 
+// Both operands can contain warning candidates. Sharing a condition's result
+// must preserve the warnings in the selected or potentially selected operands.
+void shared_condition_results(bool condition) {
+  signed char true_selected = is_zero(0) ? 128 : 129;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char false_selected = is_zero(1) ? 128 : 129;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 129 to -127}}
+  signed char either_selected = condition ? 128 : 129;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  // expected-warning@-2 {{implicit conversion from 'int' to 'signed char' changes value from 129 to -127}}
+
+  // An unknown outer condition does not prevent proving an inner operand dead.
+  signed char nested_dead = condition ? (false ? 128 : 1) : 1;
+}
+
 void local_initializers(bool condition) {
   constexpr signed char constexpr_dead = false ? 128 : 1;
   constexpr signed char constexpr_live = true ? 128 : 1;
@@ -109,6 +124,12 @@ void default_arg_truncation_live(signed char = true ? 256 : 1);
 int consume(signed char);
 signed char sink;
 int total;
+
+// Multiple conversions in the same operand reuse the enclosing path.
+void repeated_conversions_dead(int = is_zero(1) ? consume(128) + consume(129) : 1);
+void repeated_conversions_live(int = is_zero(0) ? consume(128) + consume(129) : 1);
+// expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+// expected-warning@-2 {{implicit conversion from 'int' to 'signed char' changes value from 129 to -127}}
 
 // Preserve the outer conditional's reachability when recursing through
 // calls, comparisons, assignments, and compound assignments.

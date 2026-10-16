@@ -114,6 +114,12 @@ void GH223923(int condition) {
   signed char binary_dead = 1 ?: 128;
   signed char binary_live = 0 ?: 128;
   // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  // Conditional-operand suppression does not change ordinary if statements.
+  if (0) {
+    short statement = 32768;
+    // expected-warning@-1 {{implicit conversion from 'int' to 'short' changes value from 32768 to -32768}}
+  }
 }
 
 #define CONDITION_FALSE 0
