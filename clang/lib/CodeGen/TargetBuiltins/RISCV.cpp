@@ -1719,6 +1719,26 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Scalar Multiply High Accumulate
+  case RISCV::BI__builtin_riscv_mhacc_i32:
+    ID = Intrinsic::riscv_mhacc_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mhracc_i32:
+    ID = Intrinsic::riscv_mhracc_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mhaccu_u32:
+    ID = Intrinsic::riscv_mhaccu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_mhraccu_u32:
+    ID = Intrinsic::riscv_mhraccu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_mhaccsu_i32:
+    ID = Intrinsic::riscv_mhaccsu_i32;
+    break;
+  case RISCV::BI__builtin_riscv_mhraccsu_i32:
+    ID = Intrinsic::riscv_mhraccsu_i32;
+    break;
+
   // Scalar "Q-format" Multiplication
   case RISCV::BI__builtin_riscv_mulq_i32:
     ID = Intrinsic::riscv_mulq_i32;

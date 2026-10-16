@@ -1315,10 +1315,6 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
           continue;
 
         if (!Br->getMetadata(UniformMDKindID)) {
-          // Early exit if we cannot have relaxed uniform regions.
-          if (!ScalarOptions::Global.structurizecfg_relaxed_uniform_regions)
-            return false;
-
           SubRegionsAreUniform = false;
           break;
         }

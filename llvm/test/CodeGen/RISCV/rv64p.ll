@@ -1898,6 +1898,60 @@ define i32 @test_asubu_u32(i32 %a, i32 %b) {
   ret i32 %res
 }
 
+define i32 @test_mhacc_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhacc_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhacc.w a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhacc.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhracc_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhracc_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhracc.w a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhracc.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhaccu_u32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhaccu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhaccu.w a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhaccu.u32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhraccu_u32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhraccu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhraccu.w a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhraccu.u32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhaccsu_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhaccsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhaccsu.w a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhaccsu.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_mhraccsu_i32(i32 %rd, i32 %a, i32 %b) {
+; CHECK-LABEL: test_mhraccsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhraccsu.w a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mhraccsu.i32(i32 %rd, i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i32 @test_mulq_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_mulq_i32:
 ; CHECK:       # %bb.0:
