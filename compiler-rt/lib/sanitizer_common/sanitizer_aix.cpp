@@ -24,23 +24,14 @@
 #  include <string.h>
 #  include <sys/errno.h>
 #  include <sys/mman.h>
-#  include <sys/procfs.h>
 #  include <sys/stat.h>
-#  include <sys/thread.h>
 #  include <sys/time.h>
 #  include <sys/types.h>
-#  include <sys/ucontext.h>
 #  include <unistd.h>
 
-#  include "interception/interception.h"
 #  include "sanitizer_aix.h"
 #  include "sanitizer_common.h"
-#  include "sanitizer_file.h"
 #  include "sanitizer_libc.h"
-#  include "sanitizer_procmaps.h"
-
-extern char** environ;
-extern char** p_xargv;
 
 namespace __sanitizer {
 
@@ -90,10 +81,6 @@ int internal_madvise(uptr addr, uptr length, int advice) {
   char* raddr = reinterpret_cast<char*>(addr);
   DEFINE__REAL(int, madvise, char* raddr, uptr length, int advice)
   return _REAL(madvise, raddr, length, advice);
-}
-
-uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
-  return -1;  // Not supported.
 }
 
 uptr internal_close(fd_t fd) {
@@ -179,10 +166,6 @@ uptr internal_sched_yield() {
   return _REAL(sched_yield);
 }
 
-void FutexWait(atomic_uint32_t* p, u32 cmp) { internal_sched_yield(); }
-
-void FutexWake(atomic_uint32_t* p, u32 count) {}
-
 void internal__exit(int exitcode) {
   DEFINE__REAL(void, _exit, int exitcode);
   _REAL(_exit, exitcode);
@@ -198,8 +181,6 @@ uptr internal_getpid() {
   DEFINE__REAL(uptr, getpid);
   return _REAL(getpid);
 }
-
-int internal_dlinfo(void* handle, int request, void* p) { return 0; }
 
 int internal_sigaction(int signum, const void* act, void* oldact) {
   DEFINE__REAL(int, sigaction, int signum, const void* act, void* oldact);
@@ -277,226 +258,6 @@ uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void* tp) {
   DEFINE__REAL(uptr, clock_gettime, clock_t rclk_id, struct timespec* rtp);
   return _REAL(clock_gettime, rclk_id, rtp);
 }
-
-void GetThreadStackTopAndBottom(bool at_initialization, uptr* stack_top,
-                                uptr* stack_bottom) {
-  CHECK(stack_top);
-  CHECK(stack_bottom);
-  if (at_initialization) {
-    // This is the main thread. Libpthread may not be initialized yet.
-    struct rlimit rl;
-    CHECK_EQ(getrlimit(RLIMIT_STACK, &rl), 0);
-
-    // Find the mapping that contains a stack variable.
-    MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-    if (proc_maps.Error()) {
-      *stack_top = *stack_bottom = 0;
-      return;
-    }
-    MemoryMappedSegment segment;
-    uptr prev_end = 0;
-    while (proc_maps.Next(&segment)) {
-      if ((uptr)&rl < segment.end)
-        break;
-      prev_end = segment.end;
-    }
-
-    CHECK((uptr)&rl >= segment.start && (uptr)&rl < segment.end);
-
-    // Get stacksize from rlimit, but clip it so that it does not overlap
-    // with other mappings.
-    uptr stacksize = rl.rlim_cur;
-    if (stacksize > segment.end - prev_end)
-      stacksize = segment.end - prev_end;
-    // When running with unlimited stack size, we still want to set some limit.
-    // The unlimited stack size is caused by 'ulimit -s unlimited'.
-    // Also, for some reason, GNU make spawns subprocesses with unlimited stack.
-    if (stacksize > kMaxThreadStackSize)
-      stacksize = kMaxThreadStackSize;
-    *stack_top = segment.end;
-    *stack_bottom = segment.end - stacksize;
-    return;
-  }
-  uptr stacksize = 0;
-  void* stackaddr = nullptr;
-  pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
-  internal_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
-  pthread_attr_destroy(&attr);
-
-  *stack_top = (uptr)stackaddr;
-  *stack_bottom = (uptr)stackaddr - stacksize;
-}
-
-void GetThreadStackAndTls(bool main, uptr* stk_begin, uptr* stk_end,
-                          uptr* tls_begin, uptr* tls_end) {
-  // FIXME: handle TLS related flag
-  *tls_begin = 0;
-  *tls_end = 0;
-
-  uptr stack_top, stack_bottom;
-  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_begin = stack_bottom;
-  *stk_end = stack_top;
-}
-
-const char* GetEnv(const char* name) { return getenv(name); }
-
-ThreadID GetTid() { return thread_self(); }
-
-uptr ReadBinaryName(char* buf, uptr buf_len) {
-  struct stat statData;
-  struct psinfo psinfoData;
-
-  char FilePsinfo[100] = {};
-  internal_snprintf(FilePsinfo, 100, "/proc/%d/psinfo", internal_getpid());
-  CHECK_EQ(internal_stat(FilePsinfo, &statData), 0);
-
-  const int fd = internal_open(FilePsinfo, O_RDONLY);
-  ssize_t readNum = internal_read(fd, &psinfoData, sizeof(psinfoData));
-  CHECK_GE(readNum, 0);
-
-  internal_close(fd);
-  char* binary_name = (reinterpret_cast<char***>(psinfoData.pr_argv))[0][0];
-
-  // This is an absolute path.
-  if (binary_name[0] == '/')
-    return internal_snprintf(buf, buf_len, "%s", binary_name);
-
-  // This is a relative path to the binary, starts with ./ or ../
-  if (binary_name[0] == '.') {
-    char* path = nullptr;
-    if ((path = internal_getcwd(buf, buf_len)) != nullptr)
-      return internal_snprintf(buf + internal_strlen(path),
-                               buf_len - internal_strlen(path), "/%s",
-                               binary_name) +
-             internal_strlen(path);
-  }
-
-  // This is running a raw binary in the dir where it is from.
-  char* path = nullptr;
-  if ((path = internal_getcwd(buf, buf_len)) != nullptr) {
-    char fullName[kMaxPathLength] = {};
-    internal_snprintf(fullName, kMaxPathLength, "%s/%s", path, binary_name);
-    if (FileExists(fullName))
-      return internal_snprintf(buf + internal_strlen(path),
-                               buf_len - internal_strlen(path), "/%s",
-                               binary_name) +
-             internal_strlen(path);
-  }
-
-  // Find the binary in the env PATH.
-  if ((path = FindPathToBinary(binary_name)) != nullptr)
-    return internal_snprintf(buf, buf_len, "%s", path);
-
-  return 0;
-}
-
-// https://www.ibm.com/docs/en/aix/7.3?topic=concepts-system-memory-allocation-using-malloc-subsystem
-uptr GetMaxVirtualAddress() {
-#  if SANITIZER_WORDSIZE == 64
-  return (1ULL << 60) - 1;
-#  else
-  return 0xffffffff;
-#  endif
-}
-
-uptr GetMaxUserVirtualAddress() { return GetMaxVirtualAddress(); }
-
-uptr ReadLongProcessName(/*out*/ char* buf, uptr buf_len) {
-  return ReadBinaryName(buf, buf_len);
-}
-
-void InitializePlatformCommonFlags(CommonFlags* cf) {}
-
-void InitializePlatformEarly() {
-  // Do nothing.
-}
-
-uptr GetPageSize() { return getpagesize(); }
-
-void CheckASLR() {
-  // Do nothing
-}
-
-HandleSignalMode GetHandleSignalMode(int signum) {
-  switch (signum) {
-    case SIGABRT:
-      return common_flags()->handle_abort;
-    case SIGILL:
-      return common_flags()->handle_sigill;
-    case SIGTRAP:
-      return common_flags()->handle_sigtrap;
-    case SIGFPE:
-      return common_flags()->handle_sigfpe;
-    case SIGSEGV:
-      return common_flags()->handle_segv;
-    case SIGBUS:
-      return common_flags()->handle_sigbus;
-  }
-  return kHandleSignalNo;
-}
-
-void InitTlsSize() {}
-
-bool FileExists(const char* filename) {
-  struct stat st;
-  if (internal_stat(filename, &st))
-    return false;
-  // Sanity check: filename is a regular file.
-  return S_ISREG(st.st_mode);
-}
-
-bool DirExists(const char* path) {
-  struct stat st;
-  if (internal_stat(path, &st))
-    return false;
-  return S_ISDIR(st.st_mode);
-}
-
-uptr GetTlsSize() {
-  // FIXME: implement this interface.
-  return 0;
-}
-
-SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
-  return SignalContext::Unknown;
-}
-
-bool SignalContext::IsTrueFaultingAddress() const { return true; }
-
-void SignalContext::InitPcSpBp() {
-  ucontext_t* ucontext = (ucontext_t*)context;
-  pc = ucontext->uc_mcontext.jmp_context.iar;
-  sp = ucontext->uc_mcontext.jmp_context.gpr[1];
-  // The powerpc{,64} ABIs do not specify r31 as the frame pointer, but compiler
-  // always uses r31 when we need a frame pointer.
-  bp = ucontext->uc_mcontext.jmp_context.gpr[31];
-}
-
-void SignalContext::DumpAllRegisters(void* context) {}
-
-char** GetEnviron() { return environ; }
-
-char** GetArgv() { return p_xargv; }
-
-void ListOfModules::init() {
-  clearOrInit();
-  MemoryMappingLayout memory_mapping(false);
-  memory_mapping.DumpListOfModules(&modules_);
-}
-
-void ListOfModules::fallbackInit() { clear(); }
-
-u64 MonotonicNanoTime() {
-  timespec ts;
-  internal_clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
-}
-
-// FIXME implement on this platform.
-void GetMemoryProfile(fill_profile_f cb, uptr* stats) {}
 
 }  // namespace __sanitizer
 
