@@ -3067,6 +3067,11 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
     // that exists. Note that we never include libc++ twice -- we take the first
     // path that exists and don't send the other paths to CC1 (otherwise
     // include_next could break).
+    //
+    // A toolchain built with per-target runtime directories has no
+    // __config_site in (1), only in the per-target include directories of the
+    // targets it has libc++ for, which Darwin does not use. Its headers are
+    // only used if the SDK has none.
 
     // Check for (1)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
@@ -3074,10 +3079,13 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
     // parent_path.
     llvm::SmallString<128> InstallBin(getDriver().Dir); // <install>/bin
     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
-    if (getVFS().exists(InstallBin)) {
+    llvm::SmallString<128> InstallBinConfigSite(InstallBin);
+    llvm::sys::path::append(InstallBinConfigSite, "__config_site");
+    bool InstallBinExists = getVFS().exists(InstallBin);
+    if (getVFS().exists(InstallBinConfigSite)) {
       addSystemInclude(DriverArgs, CC1Args, InstallBin);
       return;
-    } else if (DriverArgs.hasArg(options::OPT_v)) {
+    } else if (!InstallBinExists && DriverArgs.hasArg(options::OPT_v)) {
       llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
                    << "\"\n";
     }
@@ -3093,7 +3101,9 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // Otherwise, don't add any path.
+    // Otherwise, use (1) even without a __config_site, if it exists.
+    if (InstallBinExists)
+      addSystemInclude(DriverArgs, CC1Args, InstallBin);
     break;
   }
 

@@ -5,6 +5,7 @@
 // By default, we should search for libc++ next to the driver.
 // RUN: mkdir -p %t/bin
 // RUN: mkdir -p %t/include/c++/v1
+// RUN: touch %t/include/c++/v1/__config_site
 // RUN: %clang -target aarch64-linux-gnu -ccc-install-dir %/t/bin \
 // RUN:   -stdlib=libc++ -fsyntax-only %s -### 2>&1 | \
 // RUN:   FileCheck -check-prefix=LIBCXX %s

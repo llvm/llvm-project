@@ -3281,7 +3281,8 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   if (SysRoot.empty())
     SysRoot = llvm::sys::path::get_separator();
 
-  auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false) {
+  auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false,
+                            bool ConfigSiteRequired = false) {
     std::string Version = detectLibcxxVersion(Path);
     if (Version.empty())
       return false;
@@ -3300,9 +3301,16 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
     if (TargetDirRequired && !TargetDirExists)
       return false;
 
-    // Second add the generic one.
+    // Second add the generic one, which has the __config_site if there is no
+    // per-target include path.
     SmallString<128> GenericDir(Path);
     llvm::sys::path::append(GenericDir, "c++", Version);
+    if (ConfigSiteRequired && !TargetDirExists) {
+      SmallString<128> ConfigSite(GenericDir);
+      llvm::sys::path::append(ConfigSite, "__config_site");
+      if (!D.getVFS().exists(ConfigSite))
+        return false;
+    }
     addSystemInclude(DriverArgs, CC1Args, GenericDir);
     return true;
   };
@@ -3310,10 +3318,16 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   // Android only uses the libc++ headers installed alongside the toolchain if
   // they contain an Android-specific target include path, otherwise they're
   // incompatible with the NDK libraries.
+  //
+  // Elsewhere, they come before the sysroot's if they have a __config_site for
+  // this target. A toolchain built with per-target runtime directories has
+  // none in the generic include path, and none for the targets it has no
+  // per-target include path for.
   SmallString<128> DriverIncludeDir(getDriver().Dir);
   llvm::sys::path::append(DriverIncludeDir, "..", "include");
   if (AddIncludePath(DriverIncludeDir,
-                     /*TargetDirRequired=*/getTriple().isAndroid()))
+                     /*TargetDirRequired=*/getTriple().isAndroid(),
+                     /*ConfigSiteRequired=*/true))
     return;
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
@@ -3326,6 +3340,8 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   llvm::sys::path::append(UsrIncludeDir, "usr", "include");
   if (AddIncludePath(UsrIncludeDir))
     return;
+  AddIncludePath(DriverIncludeDir,
+                 /*TargetDirRequired=*/getTriple().isAndroid());
 }
 
 static bool addLibStdCXXIncludePaths(llvm::vfs::FileSystem &vfs,
