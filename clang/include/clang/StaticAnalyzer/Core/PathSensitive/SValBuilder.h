@@ -275,6 +275,33 @@ public:
                      integer->getType()->isUnsignedIntegerOrEnumerationType()));
   }
 
+  /// Whether a nonloc::ConcreteFloat may hold \p V.
+  ///
+  /// Infinities and NaNs are not modeled: the semantics of which depend on
+  /// IEC 60559 conformance which is not readily available to the analyzer, so
+  /// we leave these as unknowns. NaNs we can never model, since LangRef
+  /// dictates their bit patterns are non-deterministic. Subnormals are not
+  /// modeled because their semantics depend on hardware and compiler denormal
+  /// modes which the analyzer cannot see. IBM double-double is also not modeled
+  /// because some of its operations are inaccurately emulated.
+  static bool isModeledFloatValue(const llvm::APFloat &V) {
+    return V.isFinite() && !V.isDenormal() &&
+           llvm::APFloat::SemanticsToEnum(V.getSemantics()) !=
+               llvm::APFloat::S_PPCDoubleDouble;
+  }
+
+  /// Create a concrete floating-point value. If the value \p F does not
+  /// satisfy \c isModeledFloatValue, then create \c std::nullopt.
+  std::optional<nonloc::ConcreteFloat> makeFloatVal(const FloatingLiteral *F) {
+    return makeFloatVal(F->getValue());
+  }
+
+  std::optional<nonloc::ConcreteFloat> makeFloatVal(const llvm::APFloat &F) {
+    if (!isModeledFloatValue(F))
+      return std::nullopt;
+    return nonloc::ConcreteFloat(BasicVals.getFloatValue(F));
+  }
+
   nonloc::ConcreteInt makeBoolVal(const ObjCBoolLiteralExpr *boolean) {
     return makeTruthVal(boolean->getValue(), boolean->getType());
   }

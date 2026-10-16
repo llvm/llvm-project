@@ -95,6 +95,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::CharacterLiteralClass:
   case Stmt::CXXBoolLiteralExprClass:
   case Stmt::CXXScalarValueInitExprClass:
+  case Stmt::FloatingLiteralClass:
   case Stmt::ImplicitValueInitExprClass:
   case Stmt::IntegerLiteralClass:
   case Stmt::ObjCBoolLiteralExprClass:
