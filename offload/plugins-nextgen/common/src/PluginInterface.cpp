@@ -45,13 +45,6 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
   LocalAsyncInfo.ProfilerData = nullptr;
 }
 
-Error AsyncInfoWrapperTy::synchronize() {
-  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
-
-  // Synchronize with the async info's operations without releasing the queue.
-  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
-}
-
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
@@ -122,39 +115,11 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
         error::ErrorCode::INVALID_ARGUMENT,
         "Requested block memory size (static + dynamic) exceeds maximum");
 
-  RecordReplayTy::HandleTy RRHandle;
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
-  if (RecordReplay) {
-    // Record replay requires synchronization of any previous operation.
-    if (auto Err = AsyncInfoWrapper.synchronize())
-      return Err;
-
-    // Record the kernel prologue data before kernel launch.
-    auto RRHandleOrErr = RecordReplay->recordPrologue(
-        *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
-        LaunchArgs.DynCGroupMem);
-    if (!RRHandleOrErr)
-      return RRHandleOrErr.takeError();
-    RRHandle = *RRHandleOrErr;
-  }
-
   Profiler.handlePreKernelLaunch(&GenericDevice, EffectiveNumBlocks,
                                  AsyncInfoWrapper);
 
-  if (auto Err =
-          launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
-                     LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper))
-    return Err;
-
-  if (RecordReplay) {
-    // Record replay requires synchronization.
-    if (auto Err = AsyncInfoWrapper.synchronize())
-      return Err;
-
-    // Record the epilogue data after kernel synchronization.
-    return RecordReplay->recordEpilogue(*this, RRHandle);
-  }
-  return Plugin::success();
+  return launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
+                    LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper);
 }
 
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,

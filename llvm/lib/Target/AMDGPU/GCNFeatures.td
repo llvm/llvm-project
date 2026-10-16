@@ -2591,6 +2591,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2628,6 +2629,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2668,6 +2670,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 
@@ -2693,6 +2696,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    ])>;
 

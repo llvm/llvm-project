@@ -7824,6 +7824,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return V;
         break;
       case ISD::BITCAST:
+        if (C->isOpaque())
+          break;
         if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
           return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
         if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)

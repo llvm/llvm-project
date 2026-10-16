@@ -258,6 +258,8 @@ defm : BoolField<"slp-non-vectorizables-as-reductions", "false",
 // that bridge values from outer loop nests into an inner loop.
 defm : BoolField<"slp-per-lane-gather-scale", "true",
   "Use per-lane execution scale for gather/buildvector tree entries to model LICM-hoistable buildvector sequences">;
+defm : ValueField<"slp-phi-list-budget", "unsigned", "1024",
+  "Maximum size of the phi list to be vectorized">;
 defm : ValueField<"slp-phi-vectorization-budget", "unsigned", "1024",
   "Do not vectorize a bundle of PHI nodes if the product of the bundle size and the number of incoming values exceeds this value, to limit the compile time spent on wide PHIs">;
 defm : BoolField<"slp-postprocess-stores-operands", "false",
