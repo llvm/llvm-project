@@ -26,6 +26,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -52,25 +53,69 @@ namespace {
 /// * IR does not verify after pattern application / folding.
 /// * Pattern returns "failure" but the IR has changed.
 /// * Pattern returns "success" but the IR has not changed.
+/// * A pattern inserts IR without the rewriter, or a fold hook inserts IR.
 ///
-/// This struct stores finger prints of ops to determine whether the IR has
-/// changed or not.
+/// This struct stores finger prints of ops and tracks inserted ops/blocks to
+/// determine whether the IR has changed through the proper APIs.
 struct ExpensiveChecks : public RewriterBase::ForwardingListener {
-  ExpensiveChecks(RewriterBase::Listener *driver, Operation *topLevel)
-      : RewriterBase::ForwardingListener(driver), topLevel(topLevel) {}
+  ExpensiveChecks(RewriterBase::Listener *driver)
+      : RewriterBase::ForwardingListener(driver) {}
 
-  /// Compute finger prints of the given op and its nested ops.
-  void computeFingerPrints(Operation *topLevel) {
+  /// Record the IR that exists at the beginning of a worklist processing run.
+  void startTracking(Operation *topLevel) {
     this->topLevel = topLevel;
-    this->topLevelFingerPrint.emplace(topLevel);
+    if (topLevel)
+      recordIR(topLevel);
+  }
+
+  void stopTracking() {
+    clearFingerPrints();
+    topLevel = nullptr;
+    knownOps.clear();
+    knownBlocks.clear();
+  }
+
+  /// A fold hook cannot create IR, even if it uses a builder with this
+  /// listener.
+  void startFolding() { folding = true; }
+
+  void finishFolding() {
+    checkForNewIR(/*inFold=*/true);
+    folding = false;
+  }
+
+  /// Check live IR in the scope. Detached or already erased IR is not visible.
+  void checkForNewIR(bool inFold = false) const {
+    if (!topLevel)
+      return;
+    const char *opError = inFold
+                              ? "fold hook created an operation"
+                              : "operation created without using the rewriter";
+    const char *blockError = inFold
+                                 ? "fold hook created a block"
+                                 : "block created without using the rewriter";
+    topLevel->walk([&](Operation *op) {
+      if (!knownOps.contains(op))
+        llvm::report_fatal_error(opError);
+    });
+    topLevel->walk([&](Block *block) {
+      if (!knownBlocks.contains(block))
+        llvm::report_fatal_error(blockError);
+    });
+  }
+
+  /// Compute finger prints of the top-level op and its nested ops.
+  void computeFingerPrints() {
+    if (!topLevel)
+      return;
+    topLevelFingerPrint.emplace(topLevel);
     topLevel->walk([&](Operation *op) {
       fingerprints.try_emplace(op, op, /*includeNested=*/false);
     });
   }
 
   /// Clear all finger prints.
-  void clear() {
-    topLevel = nullptr;
+  void clearFingerPrints() {
     topLevelFingerPrint.reset();
     fingerprints.clear();
   }
@@ -130,11 +175,32 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
   }
 
 protected:
+  /// Record an inserted op or block and everything nested in it. An op or
+  /// block may already contain IR when it is inserted with the rewriter.
+  template <typename RootTy>
+  void recordIR(RootTy *root) {
+    root->walk([&](Operation *op) { knownOps.insert(op); });
+    root->walk([&](Block *block) { knownBlocks.insert(block); });
+  }
+
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
   void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
 
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    RewriterBase::ForwardingListener::notifyBlockInserted(block, previous,
+                                                          previousIt);
+    Operation *parentOp = block->getParentOp();
+    if (topLevel && !folding && parentOp && topLevel->isAncestor(parentOp))
+      recordIR(block);
+    invalidateFingerPrint(parentOp);
+    if (previous)
+      invalidateFingerPrint(previous->getParentOp());
+  }
+
   void notifyBlockErased(Block *block) override {
     RewriterBase::ForwardingListener::notifyBlockErased(block);
+    knownBlocks.erase(block);
 
     // The block structure (number of blocks, types of block arguments, etc.)
     // is part of the fingerprint of the parent op.
@@ -147,7 +213,11 @@ protected:
   void notifyOperationInserted(Operation *op,
                                OpBuilder::InsertPoint previous) override {
     RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
+    if (topLevel && !folding && topLevel->isAncestor(op))
+      recordIR(op);
     invalidateFingerPrint(op->getParentOp());
+    if (previous.isSet())
+      invalidateFingerPrint(previous.getBlock()->getParentOp());
   }
 
   void notifyOperationModified(Operation *op) override {
@@ -157,7 +227,10 @@ protected:
 
   void notifyOperationErased(Operation *op) override {
     RewriterBase::ForwardingListener::notifyOperationErased(op);
-    op->walk([this](Operation *op) { invalidateFingerPrint(op); });
+    op->walk([this](Operation *op) {
+      invalidateFingerPrint(op);
+      knownOps.erase(op);
+    });
   }
 
   /// Operation finger prints to detect invalid pattern API usage. IR is checked
@@ -165,8 +238,16 @@ protected:
   /// where IR was modified directly, bypassing the rewriter API.
   DenseMap<Operation *, OperationFingerPrint> fingerprints;
 
-  /// Top-level operation of the current greedy rewrite.
+  /// Ops and blocks known to exist or inserted through the rewriter during the
+  /// current worklist processing run.
+  DenseSet<Operation *> knownOps;
+  DenseSet<Block *> knownBlocks;
+
+  /// Top-level operation of the current worklist processing run.
   Operation *topLevel = nullptr;
+
+  /// Whether a fold hook is currently running. Fold hooks cannot create IR.
+  bool folding = false;
 
   /// Finger print of the top-level operation.
   std::optional<OperationFingerPrint> topLevelFingerPrint;
@@ -420,10 +501,7 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     : rewriter(ctx), config(config), matcher(patterns)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
-      , expensiveChecks(
-          /*driver=*/this,
-          /*topLevel=*/config.getScope() ? config.getScope()->getParentOp()
-                                         : nullptr)
+      , expensiveChecks(/*driver=*/this)
 // clang-format on
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 {
@@ -441,6 +519,14 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 }
 
 bool GreedyPatternRewriteDriver::processWorklist() {
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  // The region driver may change IR while preparing the worklist and between
+  // iterations. Take one baseline for each call to processWorklist.
+  expensiveChecks.startTracking(
+      config.getScope() ? config.getScope()->getParentOp() : nullptr);
+  llvm::scope_exit stopTracking([&]() { expensiveChecks.stopTracking(); });
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
 #ifndef NDEBUG
   const char *logLineComment =
       "//===-------------------------------------------===//\n";
@@ -497,7 +583,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // is then put on the worklist.
     if (config.isFoldingEnabled() && !op->hasTrait<OpTrait::ConstantLike>()) {
       SmallVector<OpFoldResult> foldResults;
-      if (succeeded(op->fold(foldResults))) {
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      expensiveChecks.startFolding();
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      LogicalResult foldResult = op->fold(foldResults);
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      expensiveChecks.finishFolding();
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+      if (succeeded(foldResult)) {
         LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
 #ifndef NDEBUG
         Operation *dumpRootOp = getDumpRootOp(op);
@@ -557,6 +650,12 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           replacements.push_back(constOp->getResult(0));
         }
 
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+        // Constant materialization also receives the rewriter and must use it
+        // for any newly inserted IR.
+        expensiveChecks.checkForNewIR();
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
         if (materializationSucceeded) {
           rewriter.replaceOp(op, replacements);
           changed = true;
@@ -611,14 +710,17 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 #endif // NDEBUG
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-    if (config.getScope()) {
-      expensiveChecks.computeFingerPrints(config.getScope()->getParentOp());
-    }
-    llvm::scope_exit clearFingerprints([&]() { expensiveChecks.clear(); });
+    expensiveChecks.computeFingerPrints();
+    llvm::scope_exit clearFingerprints(
+        [&]() { expensiveChecks.clearFingerPrints(); });
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     LogicalResult matchResult =
         matcher.matchAndRewrite(op, rewriter, canApply, onFailure, onSuccess);
+
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+    expensiveChecks.checkForNewIR();
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     if (succeeded(matchResult)) {
       LLVM_DEBUG(logResultWithLine("success", "at least one pattern matched"));
