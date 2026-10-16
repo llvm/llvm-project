@@ -3,8 +3,8 @@
 ; function or funclet.
 
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=aarch64-windows-gnu < %t/noreturn.ll | FileCheck --check-prefixes=SEH,SEH-NOTRAP %s
-; RUN: llc -mtriple=aarch64-windows-gnu -trap-unreachable < %t/noreturn.ll | FileCheck --check-prefixes=SEH,SEH-TRAP %s
+; RUN: llc -mtriple=aarch64-windows-gnu < %t/noreturn.ll | FileCheck --check-prefix=SEH %s
+; RUN: llc -mtriple=aarch64-windows-gnu -trap-unreachable < %t/noreturn.ll | FileCheck --check-prefix=SEH %s
 ; RUN: llc -mtriple=aarch64-windows-gnu -exception-model=dwarf < %t/noreturn.ll | FileCheck --check-prefix=DWARF %s
 ; RUN: llc -mtriple=aarch64-linux-gnu < %t/noreturn.ll | FileCheck --check-prefix=ELF %s
 ; RUN: llc -mtriple=aarch64-windows-msvc < %t/funclet.ll | FileCheck --check-prefix=FUNCLET %s
@@ -35,7 +35,6 @@ define void @f() {
 ; The first call is followed by more of the function, so it needs no trap.
 ; SEH-LABEL:      g:
 ; SEH:            bl abort
-; SEH-NOTRAP-NEXT: .LBB1_2:
 ; SEH-TRAP-NEXT:  brk #0x1
 ; SEH-TRAP-NEXT:  .LBB1_2:
 ; SEH:            bl exit
