@@ -29,6 +29,9 @@ using namespace llvm;
 #define DEBUG_TYPE "fatlto-cleanup"
 
 PreservedAnalyses FatLtoCleanup::run(Module &M, ModuleAnalysisManager &AM) {
+  // Undo the frontend checked-load instrumentation: it is not correct for
+  // the non-LTO part of a FatLTO object, where whole-program metadata is
+  // unavailable, and the backend cannot select these intrinsics anyway.
   Function *TypeCheckedLoadFn =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelFn = Intrinsic::getDeclarationIfExists(

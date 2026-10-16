@@ -1,10 +1,10 @@
-; Dropping type tests must also drop @llvm.type.checked.load, but only when
-; dropping everything. Only WholeProgramDevirt and FatLTOCleanup remove those
-; otherwise, so a pipeline that drops the tests and then goes on to codegen
-; without them would carry them into ISel, which rejects them with "intrinsic
-; must be lowered by the LowerTypeTests pass before code generation". In the
-; default Assume mode the loads stay: there they may feed a CFI trap check,
-; which must keep diagnosing loudly.
+;; Dropping type tests must also drop @llvm.type.checked.load, but only when
+;; dropping everything. Only WholeProgramDevirt and FatLTOCleanup remove those
+;; otherwise, so a pipeline that drops the tests and then goes on to codegen
+;; without them would carry them into ISel, which rejects them with "intrinsic
+;; must be lowered by the LowerTypeTests pass before code generation". In the
+;; default Assume mode the loads stay: there they may feed a CFI trap check,
+;; which must keep diagnosing loudly.
 
 ; RUN: opt -S -passes="drop-type-tests<all>" < %s | FileCheck %s
 ; RUN: opt -S -passes="drop-type-tests" < %s | FileCheck %s --check-prefix=ASSUME
