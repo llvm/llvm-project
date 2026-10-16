@@ -1044,7 +1044,7 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   assert(Src != Dst && "Passed in same source as destination");
 
   Instruction *TI = Src->getTerminator();
-  if (!TI || TI->getNumSuccessors() == 0)
+  if (TI->getNumSuccessors() == 0)
     return BranchProbability::getZero();
 
   SmallVector<uint32_t, 4> Weights;
