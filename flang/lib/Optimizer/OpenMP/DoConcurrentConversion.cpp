@@ -524,10 +524,20 @@ public:
       for (auto &info : localInitCopies) {
         // Resolve the private block arg. On the device path, privates are on
         // omp.parallel; on the host path, they are on omp.wsloop.
+        //
+        // We use BlockArgOpenMPOpInterface::getPrivateBlockArgs() rather than
+        // raw getRegion().getArgument(idx) because the block arg layout
+        // depends on which clause types are present. The layout order is:
+        //   hasDeviceAddr, hostEval, inReduction, map, private, reduction, ...
+        // Using getPrivateBlockArgs() correctly accounts for any preceding
+        // clause block args, making the indexing robust if new clause types
+        // are added to the op in the future.
+        mlir::Operation *privArgOwner =
+            mapToDevice ? parallelOp.getOperation() : wsLoopOp.getOperation();
+        auto blockArgIface =
+            mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(privArgOwner);
         mlir::Value privateBlockArg =
-            mapToDevice
-                ? parallelOp.getRegion().getArgument(info.privateVarIdx)
-                : wsLoopOp.getRegion().getArgument(info.privateVarIdx);
+            blockArgIface.getPrivateBlockArgs()[info.privateVarIdx];
 
         if (mlir::failed(looputils::inlineCopyRegionToLoopBody(
                 rewriter, info.localizer.getCopyRegion(), info.originalVar,
