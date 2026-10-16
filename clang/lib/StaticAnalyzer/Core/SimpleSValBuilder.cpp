@@ -401,8 +401,6 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     return std::nullopt;
   }
 
-  assert(!SingleTy.isNull() && "We should have figured out the type by now!");
-
   // Rearrange signed symbolic expressions only
   // FIXME: This should also handle unsigned, at least for additive operations.
   if (!SingleTy->isSignedIntegerOrEnumerationType())
