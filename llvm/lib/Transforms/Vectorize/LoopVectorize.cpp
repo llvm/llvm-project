@@ -6461,6 +6461,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  *OrigLoop);
   RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
                  OrigLoop);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
                  PSE);
 
