@@ -13,7 +13,7 @@
 ; CHECK: memw
 ; CHECK: }
 ; CHECK: += mpyi
-; CHECK-NOT: }
+; CHECK: }
 ; CHECK: jumpr
 ; CHECK: }
 

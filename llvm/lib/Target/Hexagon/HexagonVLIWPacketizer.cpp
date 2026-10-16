@@ -1429,8 +1429,24 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     if (I.isCall() || HII->isJumpR(I) || I.isReturn() || HII->isTailCall(I)) {
       if (!isRegDependence(DepType))
         continue;
-      if (!isCallDependent(I, DepType, SUJ->Succs[i].getReg()))
+      if (!isCallDependent(I, DepType, SUJ->Succs[i].getReg())) {
+        // The register dependence normally looks benign for a call (the
+        // implicit arg register is materialised in the same packet). But
+        // multi-cycle scalar producers (TC3x scalar multiply and TC4x scalar
+        // floating-point) commit their writes too late for the consumer to
+        // observe the up-to-date register at packet exit, so the def and the
+        // call must live in different packets. The same hazard applies to
+        // tail calls (jump-with-symbol), to indirect tail calls (J2_jumpr)
+        // and to returns (PS_jmpret / L4_return, which consume the ABI
+        // return-value register implicitly).
+        if (DepType == SDep::Data &&
+            HII->hasMultiCycleDefLatency(ResourceTracker->getInstrItins(), J, I,
+                                         SUJ->Succs[i].getReg())) {
+          Dependence = true;
+          return false;
+        }
         continue;
+      }
     }
 
     if (DepType == SDep::Data) {

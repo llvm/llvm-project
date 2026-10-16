@@ -7,4 +7,7 @@ define void @foo(i32 %a) {
   call void @bar(i32 %b)
   ret void
 }
-; CHECK:     0x4 R_HEX_B22_PCREL bar 0x4
+; The scalar multiply on SLOT2/SLOT3 is a multi-cycle (TC3x) producer whose
+; write reaches the register file too late to be observed by a co-packetized
+; call, so the multiply and the call must live in separate packets.
+; CHECK:     0x8 R_HEX_B22_PCREL bar 0x0
