@@ -340,4 +340,58 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
   ];
 }
 
+def CopyToContiguousPass : Pass<"memref-copy-to-contiguous"> {
+  let summary = "Split non-contiguous memref.copy into loops over contiguous "
+                "blocks";
+  let description = [{
+    The MemRef-to-LLVM lowering emits `llvm.intr.memcpy` for a `memref.copy`
+    only when both operands are statically shaped and contiguous in row-major
+    order; every other copy is lowered to a call to the `memrefCopy` runtime
+    function, which visits the iteration space one element at a time.
+
+    A copy whose operands have a contiguous trailing block but a mismatched
+    leading stride -- a copy into a padded buffer, or an insert into a larger
+    buffer -- takes the element-wise path for the whole copy. This pass
+    rewrites such a copy into an `scf.for` nest over the leading dimensions
+    around a `memref.copy` between rank-preserving subviews of the contiguous
+    suffix, so that the inner copy lowers to `memcpy`.
+
+    The contiguous suffix is determined with the same predicate the lowering
+    uses (`memref::isStaticShapeAndContiguousRowMajor`), so the rewritten
+    copies are guaranteed to take the `memcpy` path. Copies with dynamic
+    shapes or strides, and copies that are already contiguous, are left
+    unchanged.
+
+    Example:
+
+    ```mlir
+    memref.copy %s, %d : memref<15x64x163xf32>
+                      to memref<15x64x163xf32, strided<[11264, 176, 1]>>
+    ```
+
+    becomes
+
+    ```mlir
+    scf.for %i = %c0 to %c15 step %c1 {
+      scf.for %j = %c0 to %c64 step %c1 {
+        %ss = memref.subview %s[%i, %j, 0] [1, 1, 163] [1, 1, 1]
+        %ds = memref.subview %d[%i, %j, 0] [1, 1, 163] [1, 1, 1]
+        memref.copy %ss, %ds
+      }
+    }
+    ```
+  }];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect"
+  ];
+  let options = [
+    Option<"minSuffixElements", "min-suffix-elements", "int64_t",
+           /*default=*/"1",
+           "Leave a copy alone if its contiguous suffix has fewer elements "
+           "than this">
+  ];
+}
+
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES

@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   AllocationOpInterfaceImpl.cpp
   BufferViewFlowOpInterfaceImpl.cpp
   ComposeSubView.cpp
+  CopyToContiguous.cpp 
   ElideReinterpretCast.cpp
   ExpandOps.cpp
   ExpandRealloc.cpp
