@@ -1505,6 +1505,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                 DW_OP_value_to_name(opcode));
     }
 
+    if (op->hasError(
+            llvm::DWARFExpression::Operation::ErrorKind::OperandDecode))
+      return llvm::createStringError(
+          "unable to decode operands for %s at offset 0x%" PRIx64,
+          DW_OP_value_to_name(opcode), op_offset);
+
     if (std::optional<unsigned> arity = OperationArity(opcode)) {
       if (stack.size() < *arity)
         return llvm::createStringError(
