@@ -761,10 +761,6 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
     // allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
     //
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
-    size_t __bytes = __elements == 0 ? sizeof(__unbounded_array_control_block)
-                                     : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(__unbounded_array_control_block);
-
     if (__builtin_add_overflow(__bytes, __align - 1, &__bytes))
       std::__throw_bad_array_new_length();
     return __bytes & ~(__align - 1);

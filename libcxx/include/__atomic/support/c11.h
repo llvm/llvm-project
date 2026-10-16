@@ -115,13 +115,6 @@ _Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_
       std::addressof(__a->__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
 }
 
-inline _LIBCPP_CONSTEXPR memory_order __to_failure_order(memory_order __order) {
-  // Avoid switch statement to make this a constexpr.
-  return __order == memory_order_release
-           ? memory_order_relaxed
-           : (__order == memory_order_acq_rel ? memory_order_acquire : __order);
-}
-
 template <class _Tp>
 bool __cxx_atomic_compare_exchange_strong(
     __cxx_atomic_base_impl<_Tp> volatile* __a,
