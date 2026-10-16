@@ -170,7 +170,7 @@ define void @test_siblings(i1 %b1, i1 %b2, i1 %b3, i1 %b4, i1 %b5, i1 %b6, i1 %b
 ; CHECK:       Flow:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[TMP0]], [[FLOW1:%.*]] ], [ [[B2]], [[IF_ELSE]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP5:%.*]], [[FLOW1]] ], [ [[B2_INV]], [[IF_ELSE]] ], [ false, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[FLOW1]] ], [ false, [[IF_ELSE]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ true, [[FLOW1]] ], [ false, [[IF_ELSE]] ], [ true, [[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP1_HEADER:%.*]], label [[FLOW1]]
 ; CHECK:       loop1.header:
 ; CHECK-NEXT:    br i1 [[B3_INV]], label [[LOOP1_BODY:%.*]], label [[FLOW2:%.*]]
@@ -181,21 +181,24 @@ define void @test_siblings(i1 %b1, i1 %b2, i1 %b3, i1 %b4, i1 %b5, i1 %b6, i1 %b
 ; CHECK:       loop1.latch:
 ; CHECK-NEXT:    br label [[FLOW3]]
 ; CHECK:       Flow1:
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i1 [ [[TMP16:%.*]], [[FLOW3]] ], [ true, [[FLOW]] ]
 ; CHECK-NEXT:    [[TMP5]] = phi i1 [ [[TMP6:%.*]], [[FLOW3]] ], [ [[TMP1]], [[FLOW]] ]
-; CHECK-NEXT:    br i1 true, label [[FLOW4:%.*]], label [[FLOW]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[FLOW4:%.*]], label [[FLOW]]
 ; CHECK:       loop1.body:
 ; CHECK-NEXT:    br label [[FLOW2]]
 ; CHECK:       Flow3:
+; CHECK-NEXT:    [[TMP16]] = phi i1 [ [[B4_INV]], [[LOOP1_LATCH]] ], [ true, [[FLOW2]] ]
 ; CHECK-NEXT:    [[TMP6]] = phi i1 [ false, [[LOOP1_LATCH]] ], [ [[TMP3]], [[FLOW2]] ]
 ; CHECK-NEXT:    br label [[FLOW1]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, [[FLOW5:%.*]] ], [ [[TMP5]], [[FLOW1]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ true, [[FLOW5:%.*]] ], [ [[TMP5]], [[FLOW1]] ]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP2_HEADER:%.*]], label [[FLOW5]]
 ; CHECK:       loop2.header:
 ; CHECK-NEXT:    br i1 [[B6_INV]], label [[LOOP2_BODY:%.*]], label [[FLOW6:%.*]]
 ; CHECK:       Flow5:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ [[TMP11:%.*]], [[FLOW7:%.*]] ], [ false, [[FLOW4]] ]
-; CHECK-NEXT:    br i1 true, label [[FLOW8:%.*]], label [[FLOW4]]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i1 [ [[TMP18:%.*]], [[FLOW7:%.*]] ], [ true, [[FLOW4]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ [[TMP11:%.*]], [[FLOW7]] ], [ false, [[FLOW4]] ]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[FLOW8:%.*]], label [[FLOW4]]
 ; CHECK:       loop2.body:
 ; CHECK-NEXT:    br label [[FLOW6]]
 ; CHECK:       Flow6:
@@ -205,11 +208,12 @@ define void @test_siblings(i1 %b1, i1 %b2, i1 %b3, i1 %b4, i1 %b5, i1 %b6, i1 %b
 ; CHECK:       loop2.latch:
 ; CHECK-NEXT:    br label [[FLOW7]]
 ; CHECK:       Flow7:
+; CHECK-NEXT:    [[TMP18]] = phi i1 [ [[B8_INV]], [[LOOP2_LATCH]] ], [ true, [[FLOW6]] ]
 ; CHECK-NEXT:    [[TMP11]] = phi i1 [ false, [[LOOP2_LATCH]] ], [ [[TMP9]], [[FLOW6]] ]
 ; CHECK-NEXT:    br label [[FLOW5]]
 ; CHECK:       Flow8:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, [[FLOW10:%.*]] ], [ [[TMP0]], [[FLOW5]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[FLOW10]] ], [ [[TMP8]], [[FLOW5]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ true, [[FLOW10]] ], [ [[TMP8]], [[FLOW5]] ]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[LOOP3_HEADER:%.*]], label [[FLOW9:%.*]]
 ; CHECK:       loop3.header:
 ; CHECK-NEXT:    br label [[FLOW9]]
@@ -219,7 +223,8 @@ define void @test_siblings(i1 %b1, i1 %b2, i1 %b3, i1 %b4, i1 %b5, i1 %b6, i1 %b
 ; CHECK:       loop3.latch:
 ; CHECK-NEXT:    br label [[FLOW10]]
 ; CHECK:       Flow10:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[FLOW8]]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi i1 [ [[B9_INV]], [[LOOP3_LATCH]] ], [ true, [[FLOW9]] ]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[EXIT:%.*]], label [[FLOW8]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
