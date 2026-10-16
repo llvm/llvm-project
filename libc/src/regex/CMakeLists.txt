@@ -5,13 +5,14 @@ add_entrypoint_object(
   HDRS
     regcomp.h
   DEPENDS
-    libc.hdr.types.regex_t
     libc.hdr.regex_macros
-    libc.src.__support.common
+    libc.hdr.types.regex_t
+    libc.src.__support.alloc_checker
     libc.src.__support.CPP.new
     libc.src.__support.CPP.string_view
-    libc.src.__support.alloc_checker
-    libc.src.string.memory_utils.inline_memcpy
+    libc.src.__support.error_or
+    libc.src.__support.macros.null_check
+    libc.src.__support.regex.regex_internal
 )
 
 add_entrypoint_object(
@@ -21,12 +22,15 @@ add_entrypoint_object(
   HDRS
     regexec.h
   DEPENDS
+    libc.hdr.regex_macros
     libc.hdr.types.regex_t
     libc.hdr.types.regmatch_t
     libc.hdr.types.size_t
-    libc.hdr.regex_macros
-    libc.src.__support.common
-    libc.src.string.memory_utils.inline_strstr
+    libc.src.__support.CPP.mutex
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.null_check
+    libc.src.__support.regex.regex_internal
+    libc.src.__support.regex.regex_matcher
 )
 
 add_entrypoint_object(
@@ -52,6 +56,7 @@ add_entrypoint_object(
     regfree.h
   DEPENDS
     libc.hdr.types.regex_t
-    libc.src.__support.common
     libc.src.__support.CPP.new
+    libc.src.__support.macros.null_check
+    libc.src.__support.regex.regex_internal
 )

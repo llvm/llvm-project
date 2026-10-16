@@ -319,6 +319,8 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
         if (Value *M =
                 getMatchingValue(LV, Load, CurrentGeneration, BAA, GetMSSA)) {
           if (LI.replacementPreservesLCSSAForm(Load, M)) {
+            combineMetadataForCSE(cast<Instruction>(M), Load,
+                                  /*DoesKMove=*/false);
             Load->replaceAllUsesWith(M);
             Load->eraseFromParent();
           }

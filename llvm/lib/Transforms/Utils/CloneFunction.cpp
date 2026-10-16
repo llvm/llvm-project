@@ -690,7 +690,6 @@ void PruningFunctionCloner::CloneBlock(
     // If we didn't create a new terminator, clone DbgVariableRecords from the
     // old terminator onto the new terminator.
     Instruction *NewInst = NewBB->getTerminator();
-    assert(NewInst);
 
     CloneDbgRecordsToHere(NewInst, OldTI->getIterator());
   }
