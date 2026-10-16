@@ -13,13 +13,8 @@
 
 namespace llvm {
 
-class TargetMachine;
-
 class SjLjEHPreparePass : public RequiredPassInfoMixin<SjLjEHPreparePass> {
-  const TargetMachine *TM;
-
 public:
-  explicit SjLjEHPreparePass(const TargetMachine *TM) : TM(TM) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
