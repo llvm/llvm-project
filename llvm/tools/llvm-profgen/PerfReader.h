@@ -383,7 +383,7 @@ using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // <<inst-addr, vtable-data-symbol>, count> map for vtable access samples.
 // The instruction address is the virtual address in the binary.
 using VTableAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
-// <data-addr, count> map for data access samples.
+// <data-addr, count> map for global data access samples.
 using DataAccessSample = MapVector<uint64_t, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {

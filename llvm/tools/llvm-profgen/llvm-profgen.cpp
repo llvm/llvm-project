@@ -92,16 +92,21 @@ static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
                                     cl::desc("Path of raw ETM/ITM trace file"),
                                     cl::cat(ProfGenCategory));
 
-// Different debug probes use different ARM CoreSight Trace IDs in the 0x01-0x6F
-// range (e.g., 0x01 for ETM and 0x11 for ITM).
+// Per the Arm CoreSight specification, each trace source in a shared stream has
+// its own 7-bit Trace ID (0x01-0x6F), configured in separate hardware registers
+// for ETM (TRCTRACEIDR) and ITM (ITM_TCR). Since the specification does not
+// define fixed IDs, different debug probes use different values (e.g., 0x01
+// for ETM and 0x11 for ITM).
 static cl::opt<unsigned> ETMTraceID(
     "etm-trace-id", cl::init(0x01),
-    cl::desc("ARM CoreSight Trace ID (CSID) used to route ETM trace data."),
+    cl::desc("ARM CoreSight Trace ID (CSID) used to route ETM trace data "
+             "(default: 0x01)."),
     cl::cat(ProfGenCategory));
 
 static cl::opt<unsigned> ITMTraceID(
     "itm-trace-id", cl::init(0x11),
-    cl::desc("ARM CoreSight Trace ID (CSID) used to route ITM trace data."),
+    cl::desc("ARM CoreSight Trace ID (CSID) used to route ITM trace data "
+             "(default: 0x11)."),
     cl::cat(ProfGenCategory));
 
 static cl::opt<std::string>

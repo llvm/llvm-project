@@ -48,8 +48,8 @@ public:
     Cfg.arch_ver = ArchVer;
     Cfg.core_prof = profile_CortexM;
 
-    // The CoreSight Trace ID (CSID) is a hardware-assigned 7-bit identifier
-    // used to route trace data.
+    // The 7-bit CoreSight Trace ID is stored in bits [6:0] of the ETMv4 Trace
+    // ID Register (TRCTRACEIDR).
     Cfg.reg_traceidr = TraceID;
   }
 
@@ -86,8 +86,11 @@ class ETMDecoderImpl : public ETMDecoder {
 
   uint64_t resolveDataAddress(const swt_itm_info &ITM) const {
     // ITM data address packets carry a 1-, 2-, or 4-byte address payload.
+    assert((ITM.payload_size == 1 || ITM.payload_size == 2 ||
+            ITM.payload_size == 4) &&
+           "Invalid ITM payload size");
     uint64_t Address = ITM.value;
-    if (ITM.payload_size >= 4)
+    if (ITM.payload_size == 4)
       return Address;
 
     // For 1- or 2-byte packets, the hardware omits the upper address bytes;
@@ -169,6 +172,9 @@ class ETMDecoderImpl : public ETMDecoder {
   }
 
   // Iterate through the ELF sections to collect data and BSS regions.
+  // Unlike CodeRegions, which requires file offsets from program headers for
+  // OpenCSD, DataRegions only needs runtime address ranges, and the input
+  // binary always has section headers for symbolization.
   void collectDataRegions(const object::Binary &SourceBin) {
     const auto *Obj = dyn_cast<object::ObjectFile>(&SourceBin);
     if (!Obj)
@@ -186,7 +192,7 @@ class ETMDecoderImpl : public ETMDecoder {
   }
 
   Error createETMDecoder(dcd_tree_handle_t DcdTree) {
-    // Configure and initialize the instruction-level decoder.
+    // Configure and initialize the ETMv4 instruction-level decoder.
     ETMTraceConfig ETMConfig(TargetTriple, ETMTraceID);
     if (Error E = ETMConfig.validate())
       return E;
@@ -354,7 +360,7 @@ public:
         continue;
       }
 
-      // ETM synchronization packet: >= 11 zero bytes followed by 0x80.
+      // ETMv4 synchronization packet: >= 11 zero bytes followed by 0x80.
       // (00 00 00 00 00 00 00 00 00 00 00 80)
       if (TraceData[I] == 0x80 && NumZeros >= 11)
         return decodeDcdTree(ETMDcdTree, TraceData.slice(I - NumZeros));

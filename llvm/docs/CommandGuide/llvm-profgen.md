@@ -24,7 +24,7 @@ with `-b`.
 :::
 
 :::{option} --etm=<string>
-Path of the ETM/ITM trace file created by ARM CoreSight trace tools.
+Path of the ETMv4/ITM trace file created by ARM CoreSight trace tools.
 Requires the OpenCSD library version 1.7.1 or higher to be enabled during the build.
 :::
 
@@ -96,6 +96,16 @@ it instead of the executable binary.
 :::{option} --target-triple=<triple>
 Override the target triple for the binary. This is useful for ETM trace
 decoding to specify the correct Arm M-profile target.
+:::
+
+:::{option} --etm-trace-id=<id>
+ARM CoreSight Trace ID (CSID) in the `0x01-0x6F` range used to route ETM
+instruction trace data (default: `0x01`).
+:::
+
+:::{option} --itm-trace-id=<id>
+ARM CoreSight Trace ID (CSID) in the `0x01-0x6F` range used to route ITM data
+trace packets (default: `0x11`).
 :::
 
 :::{option} --pid
