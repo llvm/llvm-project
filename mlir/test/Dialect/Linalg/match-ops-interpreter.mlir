@@ -1141,3 +1141,53 @@ module attributes { transform.target_tag = "start_here" } {
     return %result : tensor<8x32x32x16xf32>
   }
 }
+
+// -----
+
+// A rank-0 generic without inputs has zero loops and zero inputs; matching
+// [all] of them produces empty lists rather than failing.
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match_empty(%arg0: !transform.any_op {transform.readonly})
+      -> (!transform.any_op, !transform.param<i64>, !transform.any_value) {
+    %outs:2 = transform.match.structured failures(propagate) %arg0
+      : (!transform.any_op) -> (!transform.param<i64>, !transform.any_value) {
+    ^bb0(%arg1: !transform.any_op):
+      %0 = transform.match.structured.dim %arg1[all] : (!transform.any_op) -> !transform.param<i64>
+      %1 = transform.match.structured.input %arg1[all] : (!transform.any_op) -> !transform.any_value
+      transform.match.structured.yield %0, %1 : !transform.param<i64>, !transform.any_value
+    }
+    transform.yield %arg0, %outs#0, %outs#1 : !transform.any_op, !transform.param<i64>, !transform.any_value
+  }
+
+  transform.named_sequence @print_empty(%arg0: !transform.any_op {transform.readonly},
+                                        %dims: !transform.param<i64> {transform.readonly},
+                                        %inputs: !transform.any_value {transform.readonly}) {
+    %nd = transform.num_associations %dims : (!transform.param<i64>) -> !transform.param<i64>
+    %ni = transform.num_associations %inputs : (!transform.any_value) -> !transform.param<i64>
+    transform.debug.emit_remark_at %arg0, "matched empty" : !transform.any_op
+    transform.debug.emit_param_as_remark %nd, "num dims" at %arg0 : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %ni, "num inputs" at %arg0 : !transform.param<i64>, !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.consumed}) {
+    transform.foreach_match in %arg0
+      @match_empty -> @print_empty
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  func.func @rank_zero_no_inputs(%out: tensor<f32>) -> tensor<f32>
+      attributes { transform.target_tag = "start_here" } {
+    // expected-remark @below {{matched empty}}
+    // expected-remark @below {{num dims 0}}
+    // expected-remark @below {{num inputs 0}}
+    %result = linalg.generic {indexing_maps = [affine_map<() -> ()>], iterator_types = []}
+        outs(%out : tensor<f32>) {
+    ^bb0(%o: f32):
+      %c = arith.constant 1.0 : f32
+      linalg.yield %c : f32
+    } -> tensor<f32>
+    return %result : tensor<f32>
+  }
+}
