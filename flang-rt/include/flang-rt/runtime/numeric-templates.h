@@ -251,8 +251,11 @@ inline RT_API_ATTRS T RealMod(
   }
   T aAbs{ABSTy<T>::compute(a)};
   T pAbs{ABSTy<T>::compute(p)};
-  if (aAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max()) &&
-      pAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max())) {
+  // The fast path converts both operands to std::int64_t and divides, so it
+  // needs magnitudes strictly below 2**63.  INT64_MAX rounds up to 2**63 in
+  // float and double, so compare against 2**63 itself, which is exact.
+  constexpr T int64Limit{0x1p63};
+  if (aAbs < int64Limit && pAbs < int64Limit) {
     if (auto aInt{static_cast<std::int64_t>(a)}; a == aInt) {
       if (auto pInt{static_cast<std::int64_t>(p)}; p == pInt) {
         // Fast exact case for integer operands
