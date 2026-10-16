@@ -18880,7 +18880,6 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     const KnownBits RHSKnown = DAG.computeKnownBits(RHS);
     const KnownBits LHSKnownLo32 = LHSKnown.trunc(32);
     const KnownBits RHSKnownLo32 = RHSKnown.trunc(32);
-    bool IsIntegerSetCC = true;
     // Truncate 64-bit setcc to test only upper 32-bits of its operands in the
     // following cases where information about the lower 32-bits of its operands
     // is known:
@@ -18904,7 +18903,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
 
     switch (CC) {
     default:
-      IsIntegerSetCC = false;
+      llvm_unreachable("Unexpected condition code for integer setcc");
       break;
     case ISD::SETEQ: {
       const std::optional<bool> KnownEq =
@@ -18970,37 +18969,35 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
 
     // Truncate 64-bit setcc to test only lower 32-bits when upper 32-bits are
     // known equal.
-    if (IsIntegerSetCC) {
-      const KnownBits LHSKnownHi32 = LHSKnown.extractBits(32, 32);
-      const KnownBits RHSKnownHi32 = RHSKnown.extractBits(32, 32);
-      const std::optional<bool> KnownEq =
-          KnownBits::eq(LHSKnownHi32, RHSKnownHi32);
+    const KnownBits LHSKnownHi32 = LHSKnown.extractBits(32, 32);
+    const KnownBits RHSKnownHi32 = RHSKnown.extractBits(32, 32);
+    const std::optional<bool> KnownEq =
+        KnownBits::eq(LHSKnownHi32, RHSKnownHi32);
 
-      if (KnownEq && *KnownEq) {
-        ISD::CondCode NewCC = CC;
+    if (KnownEq && *KnownEq) {
+      ISD::CondCode NewCC = CC;
 
-        // For signed comparisons, convert to unsigned since upper halves match
-        switch (CC) {
-        case ISD::SETGT:
-          NewCC = ISD::SETUGT;
-          break;
-        case ISD::SETGE:
-          NewCC = ISD::SETUGE;
-          break;
-        case ISD::SETLT:
-          NewCC = ISD::SETULT;
-          break;
-        case ISD::SETLE:
-          NewCC = ISD::SETULE;
-          break;
-        default:
-          break;
-        }
-
-        SDValue LHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
-        SDValue RHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
-        return DAG.getSetCC(SL, N->getValueType(0), LHSLo, RHSLo, NewCC);
+      // For signed comparisons, convert to unsigned since upper halves match
+      switch (CC) {
+      case ISD::SETGT:
+        NewCC = ISD::SETUGT;
+        break;
+      case ISD::SETGE:
+        NewCC = ISD::SETUGE;
+        break;
+      case ISD::SETLT:
+        NewCC = ISD::SETULT;
+        break;
+      case ISD::SETLE:
+        NewCC = ISD::SETULE;
+        break;
+      default:
+        break;
       }
+
+      SDValue LHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+      SDValue RHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
+      return DAG.getSetCC(SL, N->getValueType(0), LHSLo, RHSLo, NewCC);
     }
   }
 
