@@ -543,8 +543,6 @@ if.else:
   ret i1 false
 }
 
-declare void @use(i1)
-
 define i1 @PR232565(double %numerator) {
 ; CHECK-LABEL: define i1 @PR232565(
 ; CHECK-SAME: double [[NUMERATOR:%.*]]) {
@@ -554,7 +552,8 @@ define i1 @PR232565(double %numerator) {
 ; CHECK-NEXT:    [[NEGATIVE_OR_NAN:%.*]] = fcmp ult double [[RESULT]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[NEGATIVE_OR_NAN]], label [[NEGATIVE:%.*]], label [[EXIT:%.*]]
 ; CHECK:       negative:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[NONPOSITIVE:%.*]] = fcmp ole double [[RESULT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[NONPOSITIVE]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -569,3 +568,5 @@ negative:
 exit:
   ret i1 false
 }
+
+declare void @use(i1)
