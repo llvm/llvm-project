@@ -282,11 +282,9 @@ void TableGenIndex::initialize(const RecordKeeper &records) {
     if (!isDef)
       sym->references.push_back(refLoc);
   };
-  auto classes =
-      llvm::make_pointee_range(llvm::make_second_range(records.getClasses()));
-  auto defs =
-      llvm::make_pointee_range(llvm::make_second_range(records.getDefs()));
-  for (const Record &def : llvm::concat<Record>(classes, defs)) {
+  auto classes = llvm::make_pointee_range(records.getClasses());
+  auto defs = llvm::make_pointee_range(records.getDefs());
+  for (const Record &def : llvm::concat<const Record>(classes, defs)) {
     auto *sym = getOrInsertDef(&def);
     insertRef(sym, sym->defLoc, /*isDef=*/true);
 
