@@ -3386,10 +3386,15 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
+  // Linker inputs go straight to the linker, so they should not be counted
+  // toward the compiler outputs that /Fo and /Fa name.
+  unsigned NumCompiledInputs = llvm::count_if(
+      Inputs, [](const InputTy &I) { return I.first != types::TY_Object; });
+
   // Diagnose misuse of /Fo.
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
     StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
+    if (NumCompiledInputs > 1 && !V.empty() &&
         !llvm::sys::path::is_separator(V.back())) {
       // Check whether /Fo tries to name an output file for multiple inputs.
       Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
@@ -3401,7 +3406,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   // Diagnose misuse of /Fa.
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
     StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
+    if (NumCompiledInputs > 1 && !V.empty() &&
         !llvm::sys::path::is_separator(V.back())) {
       // Check whether /Fa tries to name an asm file for multiple inputs.
       Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
