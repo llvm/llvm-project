@@ -584,6 +584,7 @@ namespace clang {
     ExpectedDecl VisitConceptDecl(ConceptDecl* D);
     ExpectedDecl VisitRequiresExprBodyDecl(RequiresExprBodyDecl* E);
     ExpectedDecl VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl* D);
+    ExpectedDecl VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
 
     // Importing statements
     ExpectedStmt VisitStmt(Stmt *S);
@@ -6997,6 +6998,53 @@ ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(
   ImplicitConceptSpecializationDecl *To;
   if (GetImportedOrCreateDecl(To, D, Importer.getToContext(), DC, ToSL, ToArgs))
     return To;
+  To->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(To);
+  return To;
+}
+
+ExpectedDecl
+ASTNodeImporter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  Error Err = ImportDeclContext(D, DC, LexicalDC);
+  auto ToSpecialization = importChecked(Err, D->getSpecialization());
+  auto ToExternLoc = importChecked(Err, D->getExternLoc());
+  auto ToTemplateLoc = importChecked(Err, D->getTemplateLoc());
+  auto ToQualifierLoc = importChecked(Err, D->getQualifierLoc());
+  auto ToNameLoc = importChecked(Err, D->getNameLoc());
+  auto ToTypeAsWritten = importChecked(Err, D->getTypeAsWritten());
+  if (Err)
+    return std::move(Err);
+
+  const ASTTemplateArgumentListInfo *ToArgsAsWritten = nullptr;
+  if (auto NumArgs = D->getNumTemplateArgs(); NumArgs) {
+    auto ToTemplateArgsLAngleLoc =
+        importChecked(Err, D->getTemplateArgsLAngleLoc());
+    auto ToTemplateArgsRAngleLoc =
+        importChecked(Err, D->getTemplateArgsRAngleLoc());
+    if (Err)
+      return std::move(Err);
+
+    TemplateArgumentListInfo Args(ToTemplateArgsLAngleLoc,
+                                  ToTemplateArgsRAngleLoc);
+    for (unsigned I = 0; I < *NumArgs; ++I) {
+      Expected<TemplateArgumentLoc> ToArgLocOrErr =
+          import(D->getTemplateArg(I));
+      if (!ToArgLocOrErr)
+        return ToArgLocOrErr.takeError();
+      Args.addArgument(*ToArgLocOrErr);
+    }
+    ToArgsAsWritten =
+        ASTTemplateArgumentListInfo::Create(Importer.getToContext(), Args);
+  }
+
+  ExplicitInstantiationDecl *To;
+  if (GetImportedOrCreateDecl(
+          To, D, Importer.getToContext(), DC, ToSpecialization, ToExternLoc,
+          ToTemplateLoc, ToQualifierLoc, ToArgsAsWritten, ToNameLoc,
+          ToTypeAsWritten, D->getTemplateSpecializationKind()))
+    return To;
+
   To->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(To);
   return To;
