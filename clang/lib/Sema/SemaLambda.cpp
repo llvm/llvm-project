@@ -489,9 +489,6 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
-  if (Method->getType()->containsErrors())
-    return;
-
   ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
@@ -1534,7 +1531,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   if (LangOpts.OpenMP)
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Method);
 
-  handleLambdaNumbering(Class, Method);
+  if (!Method->getType()->containsErrors())
+    handleLambdaNumbering(Class, Method);
 
   for (auto &&C : LSI->Captures) {
     if (!C.isVariableCapture())
