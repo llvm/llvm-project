@@ -12439,6 +12439,37 @@ static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVScalarMulHighAccumulateOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable(
+        "Unexpected RISC-V scalar multiply high accumulate intrinsic");
+  case Intrinsic::riscv_mhacc_i32:
+    return RISCVISD::MHACC;
+  case Intrinsic::riscv_mhracc_i32:
+    return RISCVISD::MHRACC;
+  case Intrinsic::riscv_mhaccu_u32:
+    return RISCVISD::MHACCU;
+  case Intrinsic::riscv_mhraccu_u32:
+    return RISCVISD::MHRACCU;
+  case Intrinsic::riscv_mhaccsu_i32:
+    return RISCVISD::MHACCSU;
+  case Intrinsic::riscv_mhraccsu_i32:
+    return RISCVISD::MHRACCSU;
+  }
+}
+
+static unsigned getRVScalarQFormatMulOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar Q-format multiply intrinsic");
+  case Intrinsic::riscv_mulq_i32:
+    return RISCVISD::MULQ;
+  case Intrinsic::riscv_mulqr_i32:
+    return RISCVISD::MULQR;
+  }
+}
+
 static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
@@ -13368,6 +13399,24 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // RV32 maps the non-rounding forms onto the M extension and the rounding
     // forms onto the scalar P instructions. RV64 goes via ReplaceNodeResults.
     unsigned Opc = getRVScalarMulHighOpcode(IntNo);
+    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_mhacc_i32:
+  case Intrinsic::riscv_mhracc_i32:
+  case Intrinsic::riscv_mhaccu_u32:
+  case Intrinsic::riscv_mhraccu_u32:
+  case Intrinsic::riscv_mhaccsu_i32:
+  case Intrinsic::riscv_mhraccsu_i32: {
+    // RV64 goes via ReplaceNodeResults.
+    unsigned Opc = getRVScalarMulHighAccumulateOpcode(IntNo);
+    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2),
+                       Op.getOperand(3));
+  }
+  case Intrinsic::riscv_mulq_i32:
+  case Intrinsic::riscv_mulqr_i32: {
+    // RV32 selects the scalar P instructions directly. RV64 goes via
+    // ReplaceNodeResults.
+    unsigned Opc = getRVScalarQFormatMulOpcode(IntNo);
     return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::riscv_pmhacc:
@@ -18049,6 +18098,43 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!Subtarget.is64Bit() || VT != MVT::i32)
         return;
       unsigned Opc = getRVScalarMulHighOpcode(IntNo);
+      SDValue Rs1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue Rs2 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mhacc_i32:
+    case Intrinsic::riscv_mhracc_i32:
+    case Intrinsic::riscv_mhaccu_u32:
+    case Intrinsic::riscv_mhraccu_u32:
+    case Intrinsic::riscv_mhaccsu_i32:
+    case Intrinsic::riscv_mhraccsu_i32: {
+      // RV64 has no scalar mhacc; use pmhacc.w on the low words.
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::i32)
+        return;
+      unsigned Opc = getRVScalarMulHighAccumulateOpcode(IntNo);
+      SDValue Rd =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue Rs1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Rs2 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(3));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mulq_i32:
+    case Intrinsic::riscv_mulqr_i32: {
+      // RV64 has no scalar Q-format multiply instructions; reuse the packed
+      // pmulq.w family on the low words, whose element 0 is the scalar result.
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::i32)
+        return;
+      unsigned Opc = getRVScalarQFormatMulOpcode(IntNo);
       SDValue Rs1 =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
       SDValue Rs2 =

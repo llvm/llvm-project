@@ -1734,6 +1734,9 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.glob.glob
       libc.src.glob.globfree
 
+      # libintl.h entrypoints
+      libc.src.libintl.textdomain
+
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex

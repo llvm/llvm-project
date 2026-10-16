@@ -215,7 +215,6 @@ class PredNewRel: PredRel;
 class NewValueRel: PredNewRel;
 class AddrModeRel: NewValueRel;
 class PostInc_BaseImm;
-class IntrinsicsRel;
 // ... through here.
 
 //===----------------------------------------------------------------------===//
@@ -397,13 +396,6 @@ def takenBranchPrediction : InstrMapping {
   let ValueCols = [["true"]];
 }
 
-def getRealHWInstr : InstrMapping {
-  let FilterClass = "IntrinsicsRel";
-  let RowFields = ["BaseOpcode"];
-  let ColFields = ["InstrType"];
-  let KeyCol = ["Pseudo"];
-  let ValueCols = [["Pseudo"], ["Real"]];
-}
 //===----------------------------------------------------------------------===//
 // Register File, Instruction Descriptions
 //===----------------------------------------------------------------------===//

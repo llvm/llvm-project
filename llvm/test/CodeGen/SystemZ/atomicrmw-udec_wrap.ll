@@ -11,11 +11,10 @@ define i64 @f1(ptr %src, i64 %b) {
 ; CHECK: csg [[RI]], [[RO:%r[0-9]+]], 0([[SRC]])
 ; CHECK: je [[L4:\.L.+]]
 ; CHECK: [[L2]]:
-; CHECK: lgr [[RO]], [[RI]]
-; CHECK: slgfi [[RO]], 1
 ; CHECK: lgr [[RB:%r[0-9]+]], %r3
 ; CHECK: clgrjh [[RI]], %r3, [[L3:\.L.+]]
-; CHECK: lgr [[RB]], [[RO]]
+; CHECK: lgr [[RB]], [[RI]]
+; CHECK: slgfi [[RB]], 1
 ; CHECK: [[L3]]:
 ; CHECK: lgr [[RO]], [[RI]]
 ; CHECK: slgfi [[RO]], 1
