@@ -1256,7 +1256,7 @@ class JumpLinkR6<Instruction JumpInst, DAGOperand Opnd> :
   let isBarrier = 0;
   let hasDelaySlot = 0;
   let isCTI = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
@@ -1268,7 +1268,7 @@ class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
   let isBarrier = 1;
   let hasDelaySlot = 0;
   let isCTI = 1;
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 def JAL_R6 : JumpLinkR6<BALC, brtarget26>, ISA_MIPS32R6;
