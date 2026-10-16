@@ -9007,8 +9007,8 @@ void LLVMELFDumper<ELFT>::printStackSizeEntry(uint64_t Size,
                                               uint64_t Address) {
   DictScope D(W, "Entry");
   W.printList("Functions", FuncNames);
-  // Print the address only for a linked file. In a relocatable file the field
-  // holds a placeholder for the relocation that applies to it.
+  // Print the address only for a linked file. In a relocatable file the value
+  // stored in the entry is just the implicit addend of its relocation.
   if (this->Obj.getHeader().e_type != ELF::ET_REL)
     W.printHex("Address", Address);
   W.printHex("Size", Size);
