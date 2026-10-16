@@ -88,10 +88,11 @@ Error UnwindInfoRegistrationPlugin::addUnwindInfoRegistrationActions(
 
   SmallVector<ExecutorAddrRange> CodeRanges;
   for (auto *B : CodeBlocks) {
-    if (CodeRanges.empty() || CodeRanges.back().End != B->getAddress())
+    if (CodeRanges.empty() || CodeRanges.back().End < B->getAddress())
       CodeRanges.push_back(B->getRange());
     else
-      CodeRanges.back().End = B->getRange().End;
+      CodeRanges.back().End =
+          std::max(CodeRanges.back().End, B->getRange().End);
   }
 
   ExecutorAddr DSOBase;
