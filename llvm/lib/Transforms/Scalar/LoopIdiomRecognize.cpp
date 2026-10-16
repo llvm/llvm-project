@@ -2097,11 +2097,10 @@ public:
       const DataLayout &DL = LoopLoad->getDataLayout();
       Align OperandAlign = DL.getABITypeAlign(OperandType);
       if (LoopLoad->getAlign() < OperandAlign) {
-        // For null pointers the load base number of trailing zeros will be 64,
-        // which is larger than what `Align` allows. So take log2 of operand
-        // alignment instead and compare trailing zeros instead of alignments.
-        uint32_t LoadBaseTrailingZeros = SE->getMinTrailingZeros(LoadBaseEv);
-        if (LoadBaseTrailingZeros < Log2(OperandAlign))
+        // For null pointers the load base number of trailing zeros may be
+        // larger than what `Align` allows. So take log2 of operand alignment
+        // instead and compare trailing zeros instead of alignments.
+        if (SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
           return false;
       }
     }
