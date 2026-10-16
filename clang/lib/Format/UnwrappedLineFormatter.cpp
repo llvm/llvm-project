@@ -288,9 +288,10 @@ private:
         TheLine->Level <= NextLine.Level + 1 &&
         canJoinWithCaseLabel(TheLine, *NextLine.First)) {
       IndentTracker.nextLine(NextLine);
-      unsigned MergedLinesInCaseBody = Style.AllowShortCaseLabelsOnASingleLine
-                 ? tryMergeShortCaseLabels(I + 1, E, Limit)
-                 : 0;
+      unsigned MergedLinesInCaseBody =
+          Style.AllowShortCaseLabelsOnASingleLine
+              ? tryMergeShortCaseLabels(I + 1, E, Limit)
+              : 0;
       return 1 + MergedLinesInCaseBody;
     }
 
