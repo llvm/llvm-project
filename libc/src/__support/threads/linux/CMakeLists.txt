@@ -14,6 +14,21 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/tcb.h)
   )
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/unmap_and_exit.h)
+  add_header_library(
+    unmap_and_exit
+    HDRS
+      unmap_and_exit.h
+      ${LIBC_TARGET_ARCHITECTURE}/unmap_and_exit.h
+    DEPENDS
+      libc.hdr.types.size_t
+      libc.include.sys_syscall
+      libc.src.__support.macros.attributes
+      libc.src.__support.macros.config
+      libc.src.__support.macros.properties.architectures
+  )
+endif()
+
 add_header_library(
   futex_word_type
   HDRS
@@ -60,6 +75,7 @@ add_object_library(
     thread.cpp
   DEPENDS
     .futex_utils
+    .unmap_and_exit
     ${thread_tls_dep}
     libc.config.app_h
     libc.include.sys_syscall
@@ -75,6 +91,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.macros.attributes
     libc.src.__support.OSUtil.linux.syscall_wrappers.clone
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit
@@ -93,8 +110,6 @@ add_object_library(
     libc.src.__support.threads.thread_common
     libc.src.__support.threads.thread_attributes
     libc.src.string.memory_utils.inline_memset
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_header_library(

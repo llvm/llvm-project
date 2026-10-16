@@ -35,9 +35,11 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h" // For error macros
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/__support/threads/linux/futex_word.h"
+#include "src/__support/threads/linux/unmap_and_exit.h"
 #include "src/__support/threads/thread_attributes.h"
 #include "src/string/memory_utils/inline_memset.h"
 
@@ -118,11 +120,7 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
   return stack;
 }
 
-// This must always be inlined as we may be freeing the calling threads stack in
-// which case a normal return from the top the stack would cause an invalid
-// memory read.
-[[gnu::always_inline]] LIBC_INLINE void
-free_stack(void *stack, size_t stacksize, size_t guardsize) {
+LIBC_INLINE void free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
   stack = reinterpret_cast<void *>(stackaddr);
@@ -142,16 +140,33 @@ struct alignas(STACK_ALIGNMENT) StartArgs {
   void *arg;
 };
 
-// This must always be inlined as we may be freeing the calling threads stack in
-// which case a normal return from the top the stack would cause an invalid
-// memory read.
-[[gnu::always_inline]] LIBC_INLINE void
-cleanup_thread_resources(ThreadAttributes *attrib) {
-  // Cleanup the TLS before the stack as the TLS information is stored on
-  // the stack.
-  cleanup_tls(attrib->tls, attrib->tls_size);
-  if (attrib->owned_stack)
-    free_stack(attrib->stack, attrib->stacksize, attrib->guardsize);
+LIBC_INLINE void cleanup_thread_resources(ThreadAttributes *attrib) {
+  // Copy all needed fields from attrib before unmapping TLS or the stack, as
+  // attrib itself resides on the thread's stack.
+  void *stack = attrib->stack;
+  size_t stacksize = attrib->stacksize;
+  size_t guardsize = attrib->guardsize;
+  uintptr_t tls = attrib->tls;
+  uintptr_t tls_size = attrib->tls_size;
+  bool owned_stack = attrib->owned_stack;
+
+  if (attrib == current_thread().attrib) {
+    // Set the CLEAR_TID address to nullptr before unmapping the stack to
+    // prevent the kernel from signalling at a non-existent futex location.
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_set_tid_address, 0);
+
+    cleanup_tls(tls, tls_size);
+    if (owned_stack) {
+      uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack) - guardsize;
+      unmap_and_exit(reinterpret_cast<void *>(stackaddr),
+                     stacksize + guardsize);
+    }
+    linux_syscalls::exit(0);
+  }
+
+  cleanup_tls(tls, tls_size);
+  if (owned_stack)
+    free_stack(stack, stacksize, guardsize);
 }
 
 static int start_thread(void *arg) {
@@ -515,14 +530,6 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
     (void)linux_syscalls::rt_sigprocmask(SIG_BLOCK, &set, nullptr);
 
     cleanup_thread_resources(attrib);
-
-    // Set the CLEAR_TID address to nullptr to prevent the kernel
-    // from signalling at a non-existent futex location.
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_set_tid_address, 0);
-    // Return value for detached thread should be unused. We need to avoid
-    // referencing `style` or `retval.*` because they may be stored on the stack
-    // and we have deallocated our stack!
-    linux_syscalls::exit(0);
   }
 
   if (style == ThreadStyle::POSIX)
