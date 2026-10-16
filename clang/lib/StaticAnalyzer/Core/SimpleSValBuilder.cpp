@@ -379,9 +379,6 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   ProgramStateManager &StateMgr = State->getStateManager();
   SValBuilder &SVB = StateMgr.getSValBuilder();
 
-  // We expect everything to be of the same type - this type.
-  QualType SingleTy;
-
   // FIXME: This should be enabled by default, at least for additive operations.
   if (!SVB.getAnalyzerOptions().ShouldAggressivelySimplifyBinaryOperation)
     return std::nullopt;
@@ -390,13 +387,14 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (!LSym)
     return std::nullopt;
 
+  // We expect everything to be of the same type - this type.
+  QualType SingleTy = LSym->getType();
+
   if (BinaryOperator::isComparisonOp(Op)) {
-    SingleTy = LSym->getType();
     if (ResultTy != SVB.getConditionType())
       return std::nullopt;
   } else if (BinaryOperator::isAdditiveOp(Op)) {
-    SingleTy = ResultTy;
-    if (LSym->getType() != SingleTy)
+    if (ResultTy != SingleTy)
       return std::nullopt;
   } else {
     // Don't rearrange other operations.
