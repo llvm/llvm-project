@@ -606,13 +606,20 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   unsigned Size = 0;
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
-                               [&](ExtractElementInst *EE) {
-                                 Value *Vec = EE->getVectorOperand();
-                                 if (isa<UndefValue>(Vec))
-                                   return false;
-                                 return isGuaranteedNotToBePoison(Vec, AC);
-                               });
+  // The poison analysis is expensive, it is required only for the undef
+  // vectors.
+  std::optional<bool> HasNonUndefVec;
+  auto IsNonUndefVecPresent = [&]() {
+    if (!HasNonUndefVec)
+      HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                              [&](ExtractElementInst *EE) {
+                                Value *Vec = EE->getVectorOperand();
+                                if (isa<UndefValue>(Vec))
+                                  return false;
+                                return isGuaranteedNotToBePoison(Vec, AC);
+                              });
+    return *HasNonUndefVec;
+  };
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -647,7 +654,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     }
     // The width is defined only by the lanes that are present in the mask.
     Size = std::max(Size, getNumElements(Vec->getType()));
-    if (isUndefVector(Vec).all() && HasNonUndefVec)
+    if (isUndefVector(Vec).all() && IsNonUndefVecPresent())
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
     // in all extractelement instructions.

@@ -322,7 +322,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
     mlir::Type scalarTy = mlir::isa<cir::VectorType>(ty)
                               ? mlir::cast<cir::VectorType>(ty).getElementType()
                               : ty;
-    cir::CIRDataLayout dl = cgm.getDataLayout();
+    const cir::CIRDataLayout &dl = cgm.getDataLayout();
     return dl.getTypeSizeInBits(scalarTy).getFixedValue();
   };
 

@@ -1885,6 +1885,33 @@ inline bool isIntEqualitySetCC(CondCode Code) {
   return Code == SETEQ || Code == SETNE;
 }
 
+/// Convert a signed integer condition code to unsigned.
+/// For equality and unsigned conditions, returns the condition unchanged.
+/// For signed conditions, returns the corresponding unsigned condition.
+inline CondCode getUnsignedSetCC(CondCode Code) {
+  switch (Code) {
+  default:
+    llvm_unreachable("Non-integer setcc condition!");
+  case SETEQ:
+  case SETNE:
+  case SETUGT:
+  case SETULT:
+  case SETUGE:
+  case SETULE:
+  case SETTRUE:
+  case SETFALSE:
+    return Code;
+  case SETGT:
+    return SETUGT;
+  case SETLT:
+    return SETULT;
+  case SETGE:
+    return SETUGE;
+  case SETLE:
+    return SETULE;
+  }
+}
+
 /// Return true if this is a setcc instruction that performs an equality
 /// comparison when used with floating point operands.
 inline bool isFPEqualitySetCC(CondCode Code) {
