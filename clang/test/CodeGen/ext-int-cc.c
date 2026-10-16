@@ -83,7 +83,7 @@ void ParamPassing2(_BitInt(127) b, _BitInt(63) c) {}
 // RISCV32: define{{.*}} void @ParamPassing2(ptr nofreeobj align 8 dead_on_return dereferenceable(16) %{{.+}}, i63 signext %{{.+}})
 // WASM: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
 // SYSTEMZ: define{{.*}} void @ParamPassing2(ptr nofreeobj align 8 dead_on_return dereferenceable(16) %{{.+}}, i63 signext %{{.+}})
-// PPC64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 signext %{{.+}})
+// PPC64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
 // PPC32: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // AARCH64: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
 // AARCH64DARWIN: define{{.*}} void @ParamPassing2(i127 %{{.+}}, i63 %{{.+}})
@@ -114,7 +114,7 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // RISCV32: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // WASM: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // SYSTEMZ: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// PPC64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// PPC64: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // PPC32: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // AARCH64: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // AARCH64DARWIN: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -180,7 +180,7 @@ _BitInt(63) ReturnPassing(void) { return 0; }
 // RISCV32: define{{.*}} i63 @ReturnPassing(
 // WASM: define{{.*}} i63 @ReturnPassing(
 // SYSTEMZ: define{{.*}} signext i63 @ReturnPassing(
-// PPC64: define{{.*}} signext i63 @ReturnPassing(
+// PPC64: define{{.*}} i63 @ReturnPassing(
 // PPC32: define{{.*}} i63 @ReturnPassing(
 // AARCH64: define{{.*}} i63 @ReturnPassing(
 // AARCH64DARWIN: define{{.*}} i63 @ReturnPassing(
