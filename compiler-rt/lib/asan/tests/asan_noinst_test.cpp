@@ -181,7 +181,7 @@ TEST(AddressSanitizer, ThreadedQuarantineTest) {
   PTHREAD_CREATE(&t, NULL, ThreadedQuarantineTestWorker, 0);
   PTHREAD_JOIN(t, 0);
 
-  const int n_threads = 3000;
+  const int n_threads = ASAN_AVOID_EXPENSIVE_TESTS ? 90 : 3000;
   size_t mmaped1 = __sanitizer_get_heap_size();
   for (int i = 0; i < n_threads; i++) {
     pthread_t t;

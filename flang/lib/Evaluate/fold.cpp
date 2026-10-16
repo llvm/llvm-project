@@ -172,6 +172,9 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
   if (std::optional<Expr<SomeInteger>> stat{coarrayRef.stat()}) {
     folded.set_stat(Fold(context, std::move(*stat)));
   }
+  if (std::optional<Expr<SomeType>> notify{coarrayRef.notify()}) {
+    folded.set_notify(Fold(context, std::move(*notify)));
+  }
   if (std::optional<Expr<SomeType>> team{coarrayRef.team()}) {
     folded.set_team(Fold(context, std::move(*team)));
   }

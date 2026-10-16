@@ -978,12 +978,15 @@ TEST(ExternalIOTests, TestUCS) {
 }
 
 TEST(ExternalIOTests, BigUnitNumbers) {
-  if (std::numeric_limits<ExternalUnit>::max() <
-      std::numeric_limits<std::int64_t>::max()) {
-    std::int64_t unit64Ok = std::numeric_limits<ExternalUnit>::max();
+  if (Fortran::common::numeric_limits<ExternalUnit>::max() <
+      Fortran::common::numeric_limits<std::int64_t>::max()) {
+    std::int64_t unit64Ok =
+        Fortran::common::numeric_limits<ExternalUnit>::max();
     std::int64_t unit64Bad = unit64Ok + 1;
     std::int64_t unit64Bad2 =
-        static_cast<std::int64_t>(std::numeric_limits<ExternalUnit>::min()) - 1;
+        static_cast<std::int64_t>(
+            Fortran::common::numeric_limits<ExternalUnit>::min()) -
+        1;
     EXPECT_EQ(IONAME(CheckUnitNumberInRange64)(unit64Ok, true), IostatOk);
     EXPECT_EQ(IONAME(CheckUnitNumberInRange64)(unit64Ok, false), IostatOk);
     EXPECT_EQ(

@@ -10,7 +10,7 @@
 
 #include "NativeRegisterContextLinux_s390x.h"
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_s390x.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -107,7 +107,7 @@ static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
          "Register setting path assumes this is a 64-bit host");
-  return new RegisterContextLinux_s390x(target_arch);
+  return new RegisterInfoLinux_s390x(target_arch);
 }
 
 NativeRegisterContextLinux_s390x::NativeRegisterContextLinux_s390x(
