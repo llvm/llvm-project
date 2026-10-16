@@ -4210,7 +4210,7 @@ the configuration (without a prefix: `Auto`).
 
 (compactcaselabels)=
 
-**CompactCaseLabels** (`Boolean`) {ref}`¶ <CompactCaseLabels>`
+**CompactCaseLabels** (`Boolean`) {versionbadge}`clang-format 24` {ref}`¶ <CompactCaseLabels>`
 
 : Keep the break keyword and the following case label on the same line.
 
