@@ -868,6 +868,8 @@ def P : Flag<["-"], "P">,
   Group<Preprocessor_Group>,
   HelpText<"Disable linemarker output in -E mode">,
   MarshallingInfoNegativeFlag<PreprocessorOutputOpts<"ShowLineMarkers">>;
+def parallel_jobs_EQ : Joined<["-"], "parallel-jobs=">, Flags<[NoXarchOption]>,
+  HelpText<"Number of parallel jobs">;
 def Qy : Flag<["-"], "Qy">, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit metadata containing compiler name and version">;
 def Qn : Flag<["-"], "Qn">, Visibility<[ClangOption, CC1Option]>,
