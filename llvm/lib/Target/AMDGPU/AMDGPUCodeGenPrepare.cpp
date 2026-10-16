@@ -177,6 +177,9 @@ public:
   /// we expand some divisions here, we need to perform this before obscuring.
   bool foldBinOpIntoSelect(BinaryOperator &I) const;
 
+  /// Fold select (X == 0 || Y == 0), +0.0, X * Y into fmul_legacy(X, Y).
+  bool foldSelectToFMulLegacy(SelectInst &I);
+
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
@@ -1578,10 +1581,84 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
   return false;
 }
 
+// select (X == 0 || Y == 0), +0.0, (X * Y) -> fmul_legacy(X, Y)
+bool AMDGPUCodeGenPrepareImpl::foldSelectToFMulLegacy(SelectInst &I) {
+  if (!I.getType()->isFloatTy())
+    return false;
+
+  // Inverted form: select (X != 0 && Y != 0), X * Y, +0.0.
+  bool Inverted = match(I.getFalseValue(), m_PosZeroFP());
+  if (!Inverted && !match(I.getTrueValue(), m_PosZeroFP()))
+    return false;
+
+  Value *X, *Y;
+  if (!match(Inverted ? I.getTrueValue() : I.getFalseValue(),
+             m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
+    return false;
+
+  SmallVector<Value *, 4> Roots[2] = {{I.getCondition()}, {X, Y}};
+  SmallPtrSet<Value *, 4> Leaves[2];
+  for (auto [Worklist, Found] : zip(Roots, Leaves)) {
+    SmallPtrSet<Value *, 8> Visited;
+
+    while (!Worklist.empty()) {
+      Value *Cur = Worklist.pop_back_val();
+      if (!Visited.insert(Cur).second)
+        continue;
+
+      Value *Src, *LHS, *RHS;
+      if (Cur->getType()->isIntegerTy(1)) {
+        if (Inverted ? match(Cur, m_And(m_Value(LHS), m_Value(RHS)))
+                     : match(Cur, m_Or(m_Value(LHS), m_Value(RHS)))) {
+          Worklist.append({LHS, RHS});
+          continue;
+        }
+
+        if (!match(Cur, m_SpecificFCmp(Inverted ? FCmpInst::FCMP_UNE
+                                                : FCmpInst::FCMP_OEQ,
+                                       m_Value(Src), m_AnyZeroFP())))
+          return false;
+
+        Worklist.push_back(Src);
+        continue;
+      }
+
+      // Peeling a nnan/ninf op could expose poison that the select hides.
+      auto *FPOp = dyn_cast<FPMathOperator>(Cur);
+      if (FPOp && (FPOp->hasNoNaNs() || FPOp->hasNoInfs())) {
+        Found.insert(Cur);
+        continue;
+      }
+
+      // m_UnOp, not m_FNeg: fsub -0.0, X may flush a denormal result to zero.
+      if (match(Cur, m_CombineOr(m_UnOp(m_Value(Src)), m_FAbs(m_Value(Src))))) {
+        Worklist.push_back(Src);
+        continue;
+      }
+
+      Found.insert(Cur);
+    }
+  }
+
+  if (Leaves[0] != Leaves[1])
+    return false;
+
+  IRBuilder<> Builder(&I);
+  Value *LegacyMul =
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_fmul_legacy, {}, {X, Y});
+  LegacyMul->takeName(&I);
+  I.replaceAllUsesWith(LegacyMul);
+  DeadVals.push_back(&I);
+  return true;
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   FPMathOperator *FPOp = dyn_cast<FPMathOperator>(&I);
   if (!FPOp)
     return false;
+
+  if (foldSelectToFMulLegacy(I))
+    return true;
 
   Value *X;
   Value *Fract = nullptr;
