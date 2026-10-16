@@ -1796,10 +1796,11 @@ static unsigned estimateElementCount(ElementCount VF,
 /// module.
 static Function *getVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
                                             bool MaskRequired,
-                                            const TargetLibraryInfo *TLI) {
+                                            const TargetLibraryInfo *TLI,
+                                            const TargetTransformInfo &TTI) {
   if (!TLI || CI.isNoBuiltin())
     return nullptr;
-  for (const VFInfo &Info : VFDatabase::getMappings(CI))
+  for (const VFInfo &Info : VFDatabase::getMappings(CI, &TTI))
     if (Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()))
       if (Function *F = CI.getModule()->getFunction(Info.VectorName))
         return F;
@@ -1809,8 +1810,9 @@ static Function *getVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
 /// Returns true iff \p CI has a library vector variant usable at \p VF.
 static bool hasVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
                                        bool MaskRequired,
-                                       const TargetLibraryInfo *TLI) {
-  return getVectorLibraryVariantFor(CI, VF, MaskRequired, TLI) != nullptr;
+                                       const TargetLibraryInfo *TLI,
+                                       const TargetTransformInfo &TTI) {
+  return getVectorLibraryVariantFor(CI, VF, MaskRequired, TLI, TTI) != nullptr;
 }
 
 InstructionCost
@@ -1837,7 +1839,7 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
     Cost = std::min(Cost, getVectorIntrinsicCost(CI, VF));
 
   if (Function *Variant =
-          getVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI))
+          getVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI, TTI))
     Cost = std::min(Cost,
                     TTI.getCallInstrCost(
                         /*F=*/nullptr, Variant->getReturnType(),
@@ -2110,7 +2112,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     auto *CI = cast<CallInst>(I);
     // A vector intrinsic or library variant lowering avoids scalarization.
     return !getVectorIntrinsicIDForCall(CI, TLI) &&
-           !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI);
+           !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI, TTI);
   }
   case Instruction::Load:
   case Instruction::Store: {
