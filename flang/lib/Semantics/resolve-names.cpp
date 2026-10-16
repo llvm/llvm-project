@@ -1187,6 +1187,7 @@ public:
   void LegacyDataInitialization(const parser::Name &,
       const std::list<common::Indirection<parser::DataStmtValue>> &values);
   void CheckExplicitInterface(const parser::Name &);
+  void CheckInterfaceNameDeclaredBeforeUse(const parser::Name &);
   void CheckBindings(const parser::TypeBoundProcedureStmt::WithoutInterface &);
 
   const parser::Name *ResolveDesignator(const parser::Designator &);
@@ -8816,6 +8817,23 @@ void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
   }
 }
 
+// C1515: a name that is declared by a procedure-declaration-stmt may be
+// used as an interface name only after that declaration.
+void DeclarationVisitor::CheckInterfaceNameDeclaredBeforeUse(
+    const parser::Name &name) {
+  if (const Symbol * symbol{name.symbol}) {
+    if (!context().HasError(*symbol) && symbol->has<ProcEntityDetails>() &&
+        symbol->HasExplicitInterface() &&
+        context().allCookedSources().Precedes(name.source, symbol->name())) {
+      Say(name,
+          "'%s' must be declared before it is used as a procedure interface"_err_en_US,
+          symbol->name())
+          .Attach(symbol->name(), "Later declaration of '%s'"_en_US,
+              symbol->name());
+    }
+  }
+}
+
 // Create a symbol for a type parameter, component, or procedure binding in
 // the current derived type scope. Return false on error.
 Symbol *DeclarationVisitor::MakeTypeSymbol(
@@ -11977,6 +11995,7 @@ public:
   void Post(const parser::ProcInterface &pi) {
     if (const auto *name{std::get_if<parser::Name>(&pi.u)}) {
       resolver_.CheckExplicitInterface(*name);
+      resolver_.CheckInterfaceNameDeclaredBeforeUse(*name);
     }
   }
   bool Pre(const parser::EntityDecl &decl) {
