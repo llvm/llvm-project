@@ -27,6 +27,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarchtti"
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-loongarch-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 namespace {
 struct CostKindCosts {
   unsigned LatencyCost = ~0U;
@@ -513,4 +516,22 @@ InstructionCost LoongArchTTIImpl::getShuffleCost(
   }
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
                                Args, CxtI, VIC);
+}
+
+bool LoongArchTTIImpl::shouldTreatInstructionLikeSelect(
+    const Instruction *I) const {
+  if (EnableOrLikeSelectOpt) {
+    // For the binary operators (e.g. or) we need to be more careful than
+    // selects, here we only transform them if they are already at a natural
+    // break point in the code - the end of a block with an unconditional
+    // terminator.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<UncondBrInst>(I->getNextNode()))
+      return true;
+
+    if (I->getOpcode() == Instruction::Add ||
+        I->getOpcode() == Instruction::Sub)
+      return true;
+  }
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }
