@@ -497,12 +497,14 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.allowMultipleDefinition =
       hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
-                   OPT_no_allow_multiple_definition, false);
+                   OPT_no_allow_multiple_definition,
+                   ctx.arg.allowMultipleDefinition);
   ctx.arg.bsymbolic = args.hasArg(OPT_Bsymbolic);
-  ctx.arg.checkFeatures =
-      args.hasFlag(OPT_check_features, OPT_no_check_features, true);
+  ctx.arg.checkFeatures = args.hasFlag(
+      OPT_check_features, OPT_no_check_features, ctx.arg.checkFeatures);
   ctx.arg.compressRelocations = args.hasArg(OPT_compress_relocations);
-  ctx.arg.demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  ctx.arg.demangle =
+      args.hasFlag(OPT_demangle, OPT_no_demangle, ctx.arg.demangle);
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.emitRelocs = args.hasArg(OPT_emit_relocs);
   ctx.arg.entry = getEntry(args);
@@ -532,7 +534,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
   ctx.arg.cooperativeThreading = args.hasArg(OPT_cooperative_threading);
-  ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
+  ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, ctx.arg.ltoo);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
   unsigned ltoCgo =
@@ -541,11 +543,12 @@ static void readConfigs(opt::InputArgList &args) {
     ctx.arg.ltoCgo = *level;
   else
     error("invalid codegen optimization level for LTO: " + Twine(ltoCgo));
-  ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  ctx.arg.ltoPartitions =
+      args::getInteger(args, OPT_lto_partitions, ctx.arg.ltoPartitions);
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   ctx.arg.mapFile = args.getLastArgValue(OPT_Map);
-  ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
+  ctx.arg.optimize = args::getInteger(args, OPT_O, ctx.arg.optimize);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
   ctx.arg.relocatable = args.hasArg(OPT_relocatable);
   ctx.arg.rpath = args::getStrings(args, OPT_rpath);
@@ -556,16 +559,17 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.mergeDataSegments =
       args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
                    !ctx.arg.relocatable);
-  ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
-  ctx.arg.printGcSections =
-      args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, ctx.arg.pie);
+  ctx.arg.printGcSections = args.hasFlag(
+      OPT_print_gc_sections, OPT_no_print_gc_sections, ctx.arg.printGcSections);
   ctx.arg.saveTemps = args.hasArg(OPT_save_temps);
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);
   ctx.arg.shared = args.hasArg(OPT_shared);
   ctx.arg.shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   ctx.arg.stripAll = args.hasArg(OPT_strip_all);
   ctx.arg.stripDebug = args.hasArg(OPT_strip_debug);
-  ctx.arg.stackFirst = args.hasFlag(OPT_stack_first, OPT_no_stack_first, true);
+  ctx.arg.stackFirst =
+      args.hasFlag(OPT_stack_first, OPT_no_stack_first, ctx.arg.stackFirst);
   ctx.arg.trace = args.hasArg(OPT_trace);
   ctx.arg.thinLTOCacheDir = args.getLastArgValue(OPT_thinlto_cache_dir);
   ctx.arg.thinLTOCachePolicy = CHECK(
@@ -601,15 +605,18 @@ static void readConfigs(opt::InputArgList &args) {
   errorHandler().verbose = args.hasArg(OPT_verbose);
   LLVM_DEBUG(errorHandler().verbose = true);
 
-  ctx.arg.tableBase = args::getInteger(args, OPT_table_base, 0);
-  ctx.arg.globalBase = args::getInteger(args, OPT_global_base, 0);
-  ctx.arg.initialHeap = args::getInteger(args, OPT_initial_heap, 0);
-  ctx.arg.initialMemory = args::getInteger(args, OPT_initial_memory, 0);
-  ctx.arg.maxMemory = args::getInteger(args, OPT_max_memory, 0);
+  ctx.arg.tableBase = args::getInteger(args, OPT_table_base, ctx.arg.tableBase);
+  ctx.arg.globalBase =
+      args::getInteger(args, OPT_global_base, ctx.arg.globalBase);
+  ctx.arg.initialHeap =
+      args::getInteger(args, OPT_initial_heap, ctx.arg.initialHeap);
+  ctx.arg.initialMemory =
+      args::getInteger(args, OPT_initial_memory, ctx.arg.initialMemory);
+  ctx.arg.maxMemory = args::getInteger(args, OPT_max_memory, ctx.arg.maxMemory);
   ctx.arg.noGrowableMemory = args.hasArg(OPT_no_growable_memory);
   ctx.arg.zStackSize =
-      args::getZOptionValue(args, OPT_z, "stack-size", WasmDefaultPageSize);
-  ctx.arg.pageSize = args::getInteger(args, OPT_page_size, WasmDefaultPageSize);
+      args::getZOptionValue(args, OPT_z, "stack-size", ctx.arg.zStackSize);
+  ctx.arg.pageSize = args::getInteger(args, OPT_page_size, ctx.arg.pageSize);
   if (ctx.arg.pageSize != 1 && ctx.arg.pageSize != WasmDefaultPageSize)
     error("--page_size=N must be either 1 or 65536");
 
