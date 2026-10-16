@@ -2131,7 +2131,7 @@ define void @PR232596(ptr %p0, ptr %p1) {
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4096,16384,262144,1048576]
 ; AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
-; AVX1-NEXT:    movl $-1, 16(%rsi)
+; AVX1-NEXT:    movl $1, 16(%rsi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR232596:
@@ -2220,7 +2220,7 @@ define void @PR232596(ptr %p0, ptr %p1) {
 ; XOPAVX1-NEXT:    vpshld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vmovdqu %xmm0, (%rsi)
-; XOPAVX1-NEXT:    movl $-1, 16(%rsi)
+; XOPAVX1-NEXT:    movl $1, 16(%rsi)
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: PR232596:
