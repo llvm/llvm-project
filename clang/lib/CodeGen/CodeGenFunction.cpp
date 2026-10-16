@@ -962,12 +962,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (!Section.empty())
       Fn->addFnAttr("patchable-function-entry-section", Section);
   }
-  // Instruct that functions for COFF/CodeView targets should start with a
-  // patchable instruction, but only on x86/x64. Don't forward this to ARM/ARM64
-  // backends as they don't need it -- instructions on these architectures are
-  // always atomically patchable at runtime.
+  // Ensure that the function entry can be hotpatched. On x86, the first
+  // instruction must be at least two bytes, so that it can be atomically
+  // replaced by a short jump. AArch64 instructions are already atomically
+  // patchable, but an empty entry block would let branches to the next block
+  // target the function's first instruction.
   if (CGM.getCodeGenOpts().HotPatch &&
-      getContext().getTargetInfo().getTriple().isX86() &&
+      (getContext().getTargetInfo().getTriple().isX86() ||
+       getContext().getTargetInfo().getTriple().isAArch64()) &&
       getContext().getTargetInfo().getTriple().getEnvironment() !=
           llvm::Triple::CODE16)
     Fn->addFnAttr("patchable-function", "prologue-short-redirect");
