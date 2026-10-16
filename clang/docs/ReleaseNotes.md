@@ -1016,6 +1016,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when classifying a dependent call whose callee has already
   been substituted to a value of non-callable type. (#GH218323)
 
+- Fixed an issue where Clang would allow invoking consteval functions outside
+  of a manifestly constant evaluated context. (#GH183415, #GH169139)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
