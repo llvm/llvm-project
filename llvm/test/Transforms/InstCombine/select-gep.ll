@@ -384,3 +384,19 @@ define ptr @shared_select_cond_extra_use(ptr %p, ptr %q, i1 %c) {
   %result = select i1 %c, ptr %left, ptr %right
   ret ptr %result
 }
+
+; Vector variant of @shared_select_cond: the shared-condition inner select is
+; resolved, but the select of two GEPs is not folded into a single GEP.
+define <2 x ptr> @shared_select_cond_vec_gep(<2 x ptr> %p, <2 x i1> %c) {
+; CHECK-LABEL: @shared_select_cond_vec_gep(
+; CHECK-NEXT:    [[LEFT:%.*]] = getelementptr i8, <2 x ptr> [[P:%.*]], i64 48
+; CHECK-NEXT:    [[RIGHT:%.*]] = getelementptr i8, <2 x ptr> [[P]], i64 40
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x ptr> [[LEFT]], <2 x ptr> [[RIGHT]]
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
+;
+  %base = select <2 x i1> %c, <2 x ptr> %p, <2 x ptr> zeroinitializer
+  %left = getelementptr i8, <2 x ptr> %base, i64 48
+  %right = getelementptr i8, <2 x ptr> %p, i64 40
+  %r = select <2 x i1> %c, <2 x ptr> %left, <2 x ptr> %right
+  ret <2 x ptr> %r
+}
