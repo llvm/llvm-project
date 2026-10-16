@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
   printf("DevPtr %p\n", DevPtr);
   // CHECK: DevPtr [[DevPtr:0x.*]]
   fill<<<NBlocks, NThreads>>>(DevPtr);
+  cudaDeviceSynchronize();
   cudaMemcpy(Ptr, DevPtr, Size, cudaMemcpyDeviceToHost);
 
   for (int I = 0; I < NBlocks * NThreads; ++I) {
