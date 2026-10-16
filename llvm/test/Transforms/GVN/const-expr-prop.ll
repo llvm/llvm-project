@@ -1,15 +1,19 @@
-; RUN: opt -S -passes=gvn -gvn-const-expr-prop=true < %s | FileCheck %s
+; RUN: opt -S -passes=gvn -enable-fold-outside-const-expr=true < %s | FileCheck %s
+; RUN: opt -S -passes=gvn -enable-fold-outside-const-expr=false < %s | FileCheck %s --check-prefix=NOPROP
 
 declare void @llvm.fake.use(...)
 
 ; %a is built solely from %x but is defined *outside* the region dominated by
 ; the true edge of %c, so propagateEquality's direct-use replacement cannot
-; reach it. propagateConstExpressions should fold %a with %x substituted by
+; reach it. foldOutsideConstExpr should fold %a with %x substituted by
 ; the known constant 5, and rewrite the use in if.true.
 define i32 @add_outside_dominated_region(i32 %x) {
 ; CHECK-LABEL: @add_outside_dominated_region(
 ; CHECK: if.true:
 ; CHECK-NEXT: ret i32 6
+; NOPROP-LABEL: @add_outside_dominated_region(
+; NOPROP: if.true:
+; NOPROP-NEXT: ret i32 %a
   %a = add i32 %x, 1
   %c = icmp eq i32 %x, 5
   br i1 %c, label %if.true, label %if.false

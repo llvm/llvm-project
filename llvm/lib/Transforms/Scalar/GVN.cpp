@@ -453,8 +453,7 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
-  bool propagateConstExpressions(Value *LHS, Value *RHS,
-                                 const BasicBlockEdge &Root);
+  bool foldOutsideConstExpr(Value *LHS, Value *RHS, const BasicBlockEdge &Root);
   bool processFoldableCondBr(CondBrInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
@@ -3496,16 +3495,32 @@ static Value *trySimplifyExpr(Instruction &Expr,
   return SimplifiedExprs[&Expr];
 }
 
-bool GVNPassImpl::propagateConstExpressions(Value *LHS, Value *RHS,
-                                            const BasicBlockEdge &Root) {
-  if (!GVNPropagateConstExp)
+/// Given that 'LHS' and 'RHS' are known to be equal in the region dominated
+/// by 'Root'.
+/// For each expression defined outside the dominated region, if substituting
+/// 'RHS' for 'LHS' simplifies the expression to a constant, replace its uses
+/// in the dominated region with that constant. Returns whether a change was
+/// made.
+///
+/// For example, '%x' and 5 are equal on the edge into if.true:
+///
+///   %a = add i32 %x, 1
+///   %c = icmp eq i32 %x, 5
+///   br i1 %c, label %if.true, label %if.false
+/// if.true:
+///   ret i32 %a ; replaced with 6
+///
+/// %a stays intact because it is defined outside if.true.
+bool GVNPassImpl::foldOutsideConstExpr(Value *LHS, Value *RHS,
+                                       const BasicBlockEdge &Root) {
+  if (!Opts.enable_fold_outside_const_expr)
     return false;
 
   if (!LHS || !RHS || !DT)
     return false;
 
   // Restrict to integer type for now.
-  if (!LHS->getType()->isIntegerTy())
+  if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
     return false;
 
   // Exactly one of the two should be a constant.
@@ -3608,7 +3623,7 @@ bool GVNPassImpl::propagateEquality(
 
     // Fold outside integer expressions used in the dominated region.
     if (auto *Edge = std::get_if<BasicBlockEdge>(&Root))
-      Changed |= propagateConstExpressions(LHS, RHS, *Edge);
+      Changed |= foldOutsideConstExpr(LHS, RHS, *Edge);
 
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
