@@ -2316,8 +2316,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     Builder.CreateBr(*FiniBBOrErr);
     // There's currently a branch to omp.par.exit. Delete it. We will get there
     // via the fini block
-    if (Instruction *Term = Builder.GetInsertBlock()->getTerminator())
-      Term->eraseFromParent();
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
   }
 
   // Register the outlined info.
