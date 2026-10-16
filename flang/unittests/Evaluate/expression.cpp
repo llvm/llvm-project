@@ -12,6 +12,10 @@
 #include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/provenance.h"
+#include "flang/Semantics/scope.h"
+#include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Testing/testing.h"
 #include <cstdio>
 #include <cstdlib>
@@ -43,5 +47,70 @@ int main() {
   a = b;
   MATCH("2_4", a.AsFortran());
   MATCH("2_4", b.AsFortran());
+
+  Fortran::parser::AllSources allSources;
+  Fortran::parser::AllCookedSources cookedSources{allSources};
+  Fortran::common::LangOptions langOptions;
+  Fortran::semantics::SemanticsContext semantics{
+      defaults, languageFeatures, langOptions, cookedSources};
+  auto &scope{semantics.globalScope()};
+  const auto &integerType{
+      scope.MakeNumericType(TypeCategory::Integer, Expr<SubscriptInteger>{4})};
+  auto &coarray{scope.MakeSymbol(Fortran::parser::CharBlock{"a", 1}, {},
+      Fortran::semantics::ObjectEntityDetails{})};
+  auto &status{scope.MakeSymbol(Fortran::parser::CharBlock{"s", 1}, {},
+      Fortran::semantics::ObjectEntityDetails{})};
+  coarray.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
+  status.get<Fortran::semantics::ObjectEntityDetails>().set_type(integerType);
+  auto asExpr{[](const CoarrayRef &ref) {
+    return DefaultIntegerExpr{
+        Designator<DefaultIntegerExpr::Result>{DataRef{ref}}};
+  }};
+
+  CoarrayRef noNotify{DataRef{coarray},
+      {Expr<SubscriptInteger>{1} + Expr<SubscriptInteger>{1}}};
+  CoarrayRef withNotify{noNotify};
+  // Integer expressions exercise the type-independent specifier representation.
+  withNotify.set_notify(
+      AsGenericExpr(DefaultIntegerExpr{2} + DefaultIntegerExpr{3}));
+  MATCH("a[1_8+1_8,NOTIFY=2_4+3_4]", asExpr(withNotify).AsFortran());
+
+  auto foldedNotify{ExtractCoarrayRef(Fold(context, asExpr(withNotify)))};
+  TEST(foldedNotify.has_value());
+  if (foldedNotify) {
+    TEST(foldedNotify->notify().has_value());
+    MATCH("2_8", foldedNotify->cosubscript().front().AsFortran());
+    MATCH("a[2_8,NOTIFY=5_4]", asExpr(*foldedNotify).AsFortran());
+    if (auto notify{foldedNotify->notify()}) {
+      MATCH("5_4", notify->AsFortran());
+    }
+  }
+  auto foldedAbsent{ExtractCoarrayRef(Fold(context, asExpr(noNotify)))};
+  TEST(foldedAbsent.has_value());
+  if (foldedAbsent) {
+    TEST(!foldedAbsent->notify().has_value());
+    MATCH("a[2_8]", asExpr(*foldedAbsent).AsFortran());
+  }
+
+  CoarrayRef combined{withNotify};
+  combined.set_stat(AsCategoryExpr(DefaultIntegerExpr{
+      Designator<DefaultIntegerExpr::Result>{DataRef{status}}}));
+  combined.set_team(
+      AsGenericExpr(DefaultIntegerExpr{7} + DefaultIntegerExpr{1}));
+  auto foldedCombined{ExtractCoarrayRef(Fold(context, asExpr(combined)))};
+  TEST(foldedCombined.has_value());
+  if (foldedCombined) {
+    TEST(foldedCombined->notify().has_value());
+    TEST(foldedCombined->stat().has_value());
+    TEST(foldedCombined->team().has_value());
+    MATCH("a[2_8,STAT=s,NOTIFY=5_4,TEAM_NUMBER=8_4]",
+        asExpr(*foldedCombined).AsFortran());
+    if (auto stat{foldedCombined->stat()}) {
+      MATCH("s", stat->AsFortran());
+    }
+    if (auto team{foldedCombined->team()}) {
+      MATCH("8_4", team->AsFortran());
+    }
+  }
   return testing::Complete();
 }
