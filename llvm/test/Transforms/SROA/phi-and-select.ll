@@ -385,15 +385,13 @@ define float @test10(i32 %b, ptr %ptr) {
 ;
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca double, align 8
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TEST]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[PHI_SROA_SPECULATE_LOAD_THEN:%.*]] = load float, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE:%.*]] = load float, ptr [[F]], align 8
+; CHECK-NEXT:    [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE:%.*]] = extractelement <2 x float> zeroinitializer, i64 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI_SROA_SPECULATED:%.*]] = phi float [ [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE]], [[ELSE]] ], [ [[PHI_SROA_SPECULATE_LOAD_THEN]], [[THEN]] ]
@@ -422,11 +420,9 @@ define float @test11(i32 %b, ptr %ptr) {
 ;
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca double, align 8
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE:%.*]] = load float, ptr [[F]], align 8
+; CHECK-NEXT:    [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE:%.*]] = extractelement <2 x float> zeroinitializer, i64 0
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], float [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE]], float [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret float [[LOADED_SROA_SPECULATED]]
