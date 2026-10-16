@@ -250,10 +250,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       // to fsub, causing a libcall (which doesn't exist for bf16). Instead,
       // directly expand to widened v2bf16 operations.
       setOperationAction(ISD::FSUB, MVT::bf16, Custom);
+      setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, MVT::bf16,
+                         Promote);
       // Promote scalar operations to a v2bf16 operation with an unused high
       // lane.
-      for (unsigned Opc : {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMAXNUM,
-                           ISD::FMINNUM, ISD::FCANONICALIZE})
+      for (unsigned Opc :
+           {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMAXNUM, ISD::FMINNUM,
+            ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::FCANONICALIZE})
         AddPromotedToType(Opc, MVT::bf16, MVT::v2bf16);
     }
 
@@ -2500,6 +2503,10 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   // SimplifySetCC uses this function to determine whether or not it should
   // create setcc with i1 operands.  We don't have instructions for i1 setcc.
   if (VT == MVT::i1 && Op == ISD::SETCC)
+    return false;
+
+  if (VT.getScalarType() == MVT::i64 &&
+      (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
     return false;
 
   return TargetLowering::isTypeDesirableForOp(Op, VT);
@@ -10785,12 +10792,16 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     Ops.push_back(VAddr);
   SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
   EVT RsrcVT = Rsrc.getValueType();
-  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+  bool IndexedRsrc = IsGFX13 && RsrcVT == MVT::i32;
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32 && !IndexedRsrc)
     return Op;
   Ops.push_back(Rsrc);
+  bool IsSampIndexed = false;
   if (BaseOpcode->Sampler) {
     SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
-    if (Samp.getValueType() != MVT::v4i32)
+    EVT SampVT = Samp.getValueType();
+    IsSampIndexed = IsGFX13 && SampVT == MVT::i32;
+    if (SampVT != MVT::v4i32 && !IsSampIndexed)
       return Op;
     Ops.push_back(Samp);
   }
@@ -10829,8 +10840,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   int Opcode = -1;
 
   if (IsGFX13) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
@@ -19941,6 +19953,13 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
+
+    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
+    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
+        !TII->isLegalPkFMAF32OpSel(MI)) {
+      TII->decomposePkFMAF32(MI, MRI);
+      return;
+    }
 
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.

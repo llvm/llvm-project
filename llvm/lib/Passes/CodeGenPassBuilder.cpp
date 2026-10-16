@@ -228,12 +228,13 @@ void CodeGenPassBuilder::flushFPMsToMPM(PassManagerWrapper &PMW,
 Error CodeGenPassBuilder::buildPipeline(
     ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
     raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
+  auto StartStopInfo = TargetPassConfig::getStartStopInfo(TM, *PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
 
-  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  CompletesPipeline = StartStopInfo->StopPass.empty();
+  bool PrintAsm = CompletesPipeline;
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   PassManagerWrapper PMW(MPM);
@@ -875,6 +876,13 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
   addMachineFunctionPass(
       RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
+
+  // If enabled, run the SSA machine scheduler just before PHI elimination.
+  if (Opt.EnableSSAMachineScheduler) {
+    addMachineFunctionPass(
+        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+    addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
+  }
 
   // LiveIntervals is computed unconditionally before TwoAddressInstruction so
   // that pass can rely on it instead of LiveVariables. This is a step toward

@@ -13,9 +13,12 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64EXPANDIMM_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64EXPANDIMM_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
+
+class AArch64Subtarget;
 
 namespace AArch64_IMM {
 
@@ -34,6 +37,9 @@ void expandMOVImm(uint64_t Imm, unsigned BitSize,
 
 void expandMOVAddr(unsigned Opcode, unsigned TargetFlags, bool IsTargetMachO,
                    SmallVectorImpl<AddrInsnModel> &Insn);
+
+bool expandVectorMOVImm(APInt Imm, SmallVectorImpl<ImmInsnModel> &Insn,
+                        const AArch64Subtarget &ST);
 
 } // end namespace AArch64_IMM
 

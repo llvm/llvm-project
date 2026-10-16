@@ -17,6 +17,7 @@ namespace Fortran::parser {
 class ContextualMessages;
 struct AssignmentStmt;
 struct EndWhereStmt;
+struct ImageSelectorSpec;
 struct MaskedElsewhereStmt;
 struct PointerAssignmentStmt;
 struct WhereConstructStmt;
@@ -40,6 +41,7 @@ public:
   void Enter(const parser::OmpDeclareReductionDirective &x);
   void Enter(const parser::AssignmentStmt &);
   void Enter(const parser::PointerAssignmentStmt &);
+  void Enter(const parser::ImageSelectorSpec &);
   void Enter(const parser::WhereStmt &);
   void Leave(const parser::WhereStmt &);
   void Enter(const parser::WhereConstructStmt &);

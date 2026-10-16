@@ -51,7 +51,8 @@ module attributes {
   // CHECK:        %[[RET:.*]] = cir.call @returns_pair() : () -> !s64i
   // CHECK:        cir.store %[[RET]], %{{.*}} : !s64i, !cir.ptr<!s64i>
   // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
-  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:        %[[R:.*]] = cir.alloca "r" {{.*}} : !cir.ptr<!rec_Pair>
+  // CHECK:        cir.copy %[[RCAST]] align(8) to %[[R]] align(4) : !cir.ptr<!rec_Pair>
   // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
 
 }
