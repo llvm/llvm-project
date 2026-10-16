@@ -27,7 +27,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPDialect
-  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMConversion
   MLIROpenMPToLLVMIRTranslation
   MLIROpenMPTransforms
   MLIRIR
