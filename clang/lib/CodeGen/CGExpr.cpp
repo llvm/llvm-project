@@ -6586,7 +6586,7 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
 
 LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
                                            CallArgList &Args, QualType Ty,
-                                           bool IsImplicitObject) {
+                                           bool IsImplicit) {
 
   auto [BaseLV, TempLV] = EmitHLSLOutArgLValues(E, Ty);
 
@@ -6595,7 +6595,7 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
-  if (!IsImplicitObject)
+  if (!IsImplicit)
     Args.add(RValue::get(TmpAddr, *this), Ty);
   return TempLV;
 }

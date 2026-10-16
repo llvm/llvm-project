@@ -136,6 +136,7 @@ groupshared G g;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
 // CHECK-NEXT: BinaryOperator {{.*}} 'G' lvalue '='
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
@@ -143,6 +144,7 @@ groupshared G g;
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
 void case7() {
   g.f();
@@ -158,6 +160,7 @@ void case7() {
 // CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
 // CHECK-NEXT: BinaryOperator {{.*}} 'G' lvalue '='
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
@@ -165,6 +168,7 @@ void case7() {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
 // CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
 // CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'V' 'int'

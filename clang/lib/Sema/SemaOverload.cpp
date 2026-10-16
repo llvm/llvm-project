@@ -34,6 +34,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
@@ -6354,27 +6355,17 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
                                     FPOptionsOverride());
   } else if (getLangOpts().HLSL && FromAS == LangAS::hlsl_groupshared) {
     ASTContext &Ctx = SemaRef.getASTContext();
-    QualType Ty =
-        From->getType().getLocalUnqualifiedType().getNonLValueExprType(Ctx);
-    InitializedEntity Entity = InitializedEntity::InitializeTemporary(Ty);
-    auto *FromOpV = new (Ctx) OpaqueValueExpr(
-        From->getBeginLoc(), From->getType().getLocalUnqualifiedType(),
-        VK_LValue, OK_Ordinary, From);
+    QualType Ty = From->getType().getLocalUnqualifiedType();
     ExprResult Res =
-        SemaRef.PerformCopyInitialization(Entity, From->getBeginLoc(), From);
+        SemaRef.HLSL()
+            .CreateOutArgExprHelper(From, Ty, Ty,
+                                    InitializedEntity::InitializeTemporary(
+                                        Ty.getNonLValueExprType(Ctx)),
+                                    From->getBeginLoc(), /*IsInOut=*/true)
+            .get();
     if (Res.isInvalid())
       return ExprError();
-    Expr *Base = Res.get();
-    auto *OpV = new (Ctx)
-        OpaqueValueExpr(From->getBeginLoc(), Ty, VK_LValue, OK_Ordinary, Base);
-
-    Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), From->getBeginLoc(),
-                             tok::equal, FromOpV, OpV);
-    if (Res.isInvalid())
-      return ExprError();
-    Expr *Writeback = Res.get();
-    From = HLSLOutArgExpr::Create(Ctx, Ty, FromOpV, OpV, Writeback,
-                                  /*IsInOut=*/true);
+    From = Res.get();
   }
 
   Expr::Classification FromClassification;

@@ -278,7 +278,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  LValue HLSLThisLValue;
+  std::optional<LValue> HLSLThisLValue;
   if (auto *HLSLOutArg = dyn_cast<HLSLOutArgExpr>(Base)) {
     if (!RtlArgs)
       RtlArgs = &RtlArgStorage;
@@ -298,8 +298,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
                             BaseInfo, TBAAInfo);
     }
-    if (isa<HLSLOutArgExpr>(Base))
-      return HLSLThisLValue;
+    if (HLSLThisLValue)
+      return *HLSLThisLValue;
     if (EmitCheckedForStore)
       return EmitCheckedLValue(Base, TCK_Store);
     return EmitLValue(Base);
