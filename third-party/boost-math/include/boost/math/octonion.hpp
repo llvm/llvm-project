@@ -942,6 +942,10 @@ namespace boost
                 b /= rhs;                                               \
                 c /= rhs;                                               \
                 d /= rhs;                                               \
+                e /= rhs;                                               \
+                f /= rhs;                                               \
+                g /= rhs;                                               \
+                h /= rhs;                                               \
                                                                         \
                 return(*this);                                          \
             }
