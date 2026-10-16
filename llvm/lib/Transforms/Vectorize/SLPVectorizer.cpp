@@ -33264,6 +33264,12 @@ public:
       };
       bool AnyVectorized = false;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
+      // The overlapping windows of the same width rebuild almost the same
+      // trees. Limit total number of scalars in the rejected trees per width
+      // to avoid compile time blow up, the wider types get the lower limit.
+      SmallDenseMap<unsigned, unsigned, 8> RejectedTreesSize;
+      const unsigned RejectedTreesBudget =
+          Opts.slp_reduction_width_budget / EltSize;
       // Same small-group allowance for the vector width, if it covers the
       // whole group.
       const unsigned MinReduxWidth =
@@ -33281,8 +33287,9 @@ public:
         }
         PrevReduxWidth = ReduxWidth;
         ArrayRef<Value *> VL(std::next(Candidates.begin(), Pos), ReduxWidth);
-        // Been analyzed already - skip.
-        if (IgnoredCandidates.contains(std::make_pair(Pos, ReduxWidth)) ||
+        // Been analyzed already or out of budget - skip.
+        if (RejectedTreesSize.lookup(ReduxWidth) > RejectedTreesBudget ||
+            IgnoredCandidates.contains(std::make_pair(Pos, ReduxWidth)) ||
             (!has_single_bit(ReduxWidth) &&
              (IgnoredCandidates.contains(
                   std::make_pair(Pos, bit_floor(ReduxWidth))) ||
@@ -33306,6 +33313,7 @@ public:
         }
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
+          RejectedTreesSize[ReduxWidth] += ReduxWidth * V.getTreeSize();
           constexpr unsigned CandidatesLimit = 64;
           if (!AdjustReducedVals(RK == ReductionOrdering::Ordered &&
                                  Candidates.size() >= CandidatesLimit))
@@ -33431,6 +33439,7 @@ public:
                    << " and threshold "
                    << ore::NV("Threshold", -V.getCostThreshold());
           });
+          RejectedTreesSize[ReduxWidth] += ReduxWidth * V.getTreeSize();
           if (!AdjustReducedVals()) {
             MarkAnalyzedVals(VL);
             unsigned Offset = Pos == Start ? Pos : Pos - 1;
