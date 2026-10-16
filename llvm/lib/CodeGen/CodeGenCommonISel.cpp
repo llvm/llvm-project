@@ -266,6 +266,10 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONSTANT:
+    if (MI.getOperand(1).getCImm()->getBitWidth() <= 64)
+      return &MI.getOperand(1);
+    return nullptr;
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
   case TargetOpcode::COPY:
@@ -307,14 +311,22 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     auto Op0 = salvageDebugInfoImpl(MRI, MI, Ops);
     if (!Op0)
       continue;
-    SalvagedExpr = DIExpression::appendOpsToArg(SalvagedExpr, Ops, 0, true);
+    if (Op0->isReg())
+      SalvagedExpr = DIExpression::appendOpsToArg(SalvagedExpr, Ops, 0, true);
 
     bool IsValidSalvageExpr =
         SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (IsValidSalvageExpr) {
       auto &UseMO = DbgMI->getOperand(UseMOIdx);
-      UseMO.setReg(Op0->getReg());
-      UseMO.setSubReg(Op0->getSubReg());
+      if (Op0->isReg()) {
+        UseMO.setReg(Op0->getReg());
+        UseMO.setSubReg(Op0->getSubReg());
+      } else {
+        assert(Op0->isCImm());
+        const ConstantInt *CI = Op0->getCImm();
+        UseMO.ChangeToImmediate(CI->getBitWidth() == 1 ? CI->getZExtValue()
+                                                       : CI->getSExtValue());
+      }
       DbgMI->getDebugExpressionOp().setMetadata(SalvagedExpr);
 
       LLVM_DEBUG(dbgs() << "SALVAGE: " << *DbgMI << '\n');
