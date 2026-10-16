@@ -45,13 +45,6 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
   LocalAsyncInfo.ProfilerData = nullptr;
 }
 
-Error AsyncInfoWrapperTy::synchronize() {
-  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
-
-  // Synchronize with the async info's operations without releasing the queue.
-  return Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
-}
-
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
