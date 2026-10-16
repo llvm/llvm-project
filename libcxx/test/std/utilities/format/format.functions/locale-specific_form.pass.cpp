@@ -1731,6 +1731,17 @@ void test_floating_point_general_lower_case() {
   test(SV("$$$-1_23_4#57"), loc, SV("{:$>13.6Lg}"), F(-1.234567e3));
   test(SV("$-1_23_4#57$$"), loc, SV("{:$^13.6Lg}"), F(-1.234567e3));
   test(SV("-0001_23_4#57"), loc, SV("{:013.6Lg}"), F(-1.234567e3));
+
+  // *** alternate form: for 0 < |value| < 1 the leading zeros are not significant digits ***
+  std::locale::global(en_US);
+  test(SV("0.500000"), SV("{:#Lg}"), F(0.5));
+  test(SV("-0.250000"), SV("{:#.6Lg}"), F(-0.25));
+  test(SV("0.500000"), en_US, SV("{:#Lg}"), F(0.5));
+
+  std::locale::global(loc);
+  test(SV("0#500000"), SV("{:#Lg}"), F(0.5));
+  test(SV("-0#250000"), SV("{:#.6Lg}"), F(-0.25));
+  test(SV("0#500000"), loc, SV("{:#Lg}"), F(0.5));
 }
 
 template <class F, class CharT>
