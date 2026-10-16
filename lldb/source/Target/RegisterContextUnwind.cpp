@@ -75,20 +75,6 @@ static bool IsClangOutlinedFunction(const SymbolContext &sym_ctx) {
   return false;
 }
 
-/// Return the start of the function containing \p pc according to the object
-/// file's own unwind info (the .pdata RUNTIME_FUNCTION on PE/COFF x64), or an
-/// invalid address if there is none.
-static Address GetFunctionStartFromObjectFileUnwindInfo(const Address &pc) {
-  ModuleSP module_sp = pc.GetModule();
-  if (!module_sp)
-    return Address();
-  CallFrameInfo *cfi = module_sp->GetUnwindTable().GetObjectFileUnwindInfo();
-  AddressRange range;
-  if (!cfi || !cfi->GetAddressRange(pc, range))
-    return Address();
-  return range.GetBaseAddress();
-}
-
 #define UNWIND_LOG_IMPL(LOG_FN, log, ...)                                      \
   LOG_FN(log, "{0}th{1}/fr{2} {3}",                                            \
          llvm::indent(std::min(m_frame_number, 100U)), m_thread.GetIndexID(),  \
@@ -238,7 +224,10 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     }
     m_current_offset_backed_up_one = m_current_offset;
   } else if (Address start =
-                 GetFunctionStartFromObjectFileUnwindInfo(m_current_pc);
+                 pc_module_sp ? pc_module_sp->GetUnwindTable()
+                                    .GetFunctionStartFromObjectFileUnwindInfo(
+                                        m_current_pc)
+                              : Address();
              start.IsValid()) {
     m_start_pc = start;
     m_current_offset =
@@ -935,9 +924,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
 
   // No FuncUnwinders available for this pc (stripped function symbols, lldb
   // could not augment its function table with another source, like
-  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame or the
-  // .ARM.exidx tables have unwind information for this address, else fall back
-  // to the architectural default unwind.
+  // LC_FUNCTION_STARTS or eh_frame in ObjectFileMachO). See if eh_frame, the
+  // .ARM.exidx tables or the object file's own unwind info (e.g. the PE EH info
+  // in .pdata) have unwind information for this address, else fall back to the
+  // architectural default unwind.
   if (!func_unwinders_sp) {
     m_frame_type = eNormalFrame;
 
@@ -949,8 +939,8 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // track.
     if (DWARFCallFrameInfo *eh_frame =
             pc_module_sp->GetUnwindTable().GetEHFrameInfo()) {
-      if (std::unique_ptr<UnwindPlan> plan_up = eh_frame->GetUnwindPlan(
-              {AddressRange(m_current_pc, 1)}, m_start_pc))
+      if (std::unique_ptr<UnwindPlan> plan_up =
+              eh_frame->GetUnwindPlan(m_current_pc, m_start_pc))
         return plan_up;
     }
 
