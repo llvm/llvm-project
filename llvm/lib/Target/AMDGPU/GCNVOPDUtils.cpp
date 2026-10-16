@@ -541,7 +541,7 @@ loadsMayOverlap([[maybe_unused]] SUnit &I, ArrayRef<SUnit *> ILoadSuccs,
   for (SUnit *ILoad : ILoadSuccs) {
     SmallPtrSet<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
     if (!LoadPredsComputed.test(ILoad->NodeNum)) {
-      SmallVector<SUnit *> Loads;
+      SmallVector<SUnit *, 8> Loads;
       collectLoads(Loads, Scratch, *ILoad, /*Forward=*/false,
                    /*StopAtLoads=*/false);
       ILoadDeps.insert(Loads.begin(), Loads.end());
