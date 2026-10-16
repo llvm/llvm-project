@@ -684,6 +684,8 @@ static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
 
 /// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
 /// uses.  Conventions the classifier does not distinguish fall back to C.
+/// FIXME: Only the AMDGPU kernel convention is mapped. Every other convention
+/// is classified as C.
 static llvm::CallingConv::ID convertCallingConv(cir::CallingConv cc) {
   if (cc == cir::CallingConv::AMDGPUKernel)
     return llvm::CallingConv::AMDGPU_KERNEL;
@@ -1013,16 +1015,6 @@ void CallConvLoweringPass::runOnOperation() {
   std::unique_ptr<llvm::abi::TargetInfo> amdgpuTarget;
   if (useAbiClassifier)
     abiTypeMapper.emplace(dl);
-  if (isAMDGPU) {
-    // HIP passes a generic pointer kernel argument as a global one.
-    bool isHIP = false;
-    if (auto langOpts = moduleOp->getAttrOfType<cir::LoweringLangOptionsAttr>(
-            cir::CIRDialect::getLoweringLangOptionsAttrName()))
-      isHIP = langOpts.getHip();
-    amdgpuTarget = llvm::abi::createAMDGPUTargetInfo(
-        abiTypeMapper->getTypeBuilder(),
-        /*CoerceGenericPtrArgToGlobal=*/isHIP);
-  }
   auto x86TargetFor =
       [&](llvm::abi::X86AVXABILevel level) -> const llvm::abi::TargetInfo & {
     assert(static_cast<unsigned>(level) < numAvxLevels &&
@@ -1041,12 +1033,30 @@ void CallConvLoweringPass::runOnOperation() {
       return baseAvxLevel;
     return funcAvxLevel(func, baseAvxLevel);
   };
+  auto amdgpuTargetFor = [&]() -> const llvm::abi::TargetInfo & {
+    if (!amdgpuTarget) {
+      // HIP passes a generic pointer kernel argument as a global one.
+      auto langOpts = moduleOp->getAttrOfType<cir::LoweringLangOptionsAttr>(
+          cir::CIRDialect::getLoweringLangOptionsAttrName());
+      amdgpuTarget = llvm::abi::createAMDGPUTargetInfo(
+          abiTypeMapper->getTypeBuilder(),
+          /*CoerceGenericPtrArgToGlobal=*/langOpts && langOpts.getHip());
+    }
+    return *amdgpuTarget;
+  };
   // The classifier to use for a function/call reached from \p func.  AMDGPU has
   // a single classifier; x86_64 picks the one matching func's AVX level.
   auto targetInfoFor = [&](cir::FuncOp func) -> const llvm::abi::TargetInfo & {
-    if (isAMDGPU)
-      return *amdgpuTarget;
-    return x86TargetFor(avxLevelFor(func));
+    switch (target) {
+    case cir::CallConvTarget::X86_64:
+      return x86TargetFor(avxLevelFor(func));
+    case cir::CallConvTarget::AMDGPU:
+      return amdgpuTargetFor();
+    case cir::CallConvTarget::None:
+    case cir::CallConvTarget::Test:
+      break;
+    }
+    llvm_unreachable("targetInfoFor needs an LLVM ABI library target");
   };
 
   // Classify every cir.func up front.  No IR mutation happens here, so

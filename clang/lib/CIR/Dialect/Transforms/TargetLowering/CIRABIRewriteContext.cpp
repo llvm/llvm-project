@@ -496,6 +496,8 @@ emitAddrSpaceCoercion(mlir::OpBuilder &builder, mlir::Location loc,
   if (offset || !srcPtrTy || !dstPtrTy ||
       srcPtrTy.getPointee() != dstPtrTy.getPointee())
     return {};
+  assert(srcPtrTy.getAddrSpace() != dstPtrTy.getAddrSpace() &&
+         "pointers to the same pointee must differ in address space");
   auto cast = cir::CastOp::create(builder, loc, dstTy,
                                   cir::CastKind::address_space, src);
   createdOps.insert(cast);
