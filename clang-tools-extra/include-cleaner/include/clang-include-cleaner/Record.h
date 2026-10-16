@@ -132,7 +132,7 @@ struct RecordedAST {
   std::vector<Decl *> Roots;
 };
 
-/// Recorded main-file preprocessor events relevant to include-cleaner.
+/// Recorded preprocessor events relevant to include-cleaner.
 ///
 /// This doesn't include facts that we record globally for the whole TU, even
 /// when they occur in the main file (e.g. IWYU pragmas).
@@ -140,7 +140,8 @@ struct RecordedPP {
   /// The callback (when installed into clang) tracks macros/includes in this.
   std::unique_ptr<PPCallbacks> record(const Preprocessor &PP);
 
-  /// Describes where macros were used in the main file.
+  /// Describes where macros were used in the main file or in files directly
+  /// included by the main file.
   std::vector<SymbolReference> MacroReferences;
 
   /// The include directives seen in the main file.
