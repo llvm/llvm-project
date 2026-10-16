@@ -1,0 +1,53 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+module callee_kinds
+  interface grid_generic
+    module procedure grid_kernel
+  end interface
+contains
+  attributes(grid_global) subroutine grid_kernel()
+  end subroutine
+
+  attributes(global) subroutine global_kernel()
+  end subroutine
+
+  attributes(device) subroutine device_caller()
+    !ERROR: The GRID_GLOBAL procedure 'grid_kernel' may not be called in DEVICE code
+    call grid_kernel<<<1,1>>>()
+    !ERROR: The GRID_GLOBAL procedure 'grid_generic' (specific procedure 'grid_kernel') may not be called in DEVICE code
+    call grid_generic<<<1,1>>>()
+    !ERROR: not yet implemented: CUDA dynamic parallelism
+    call global_kernel<<<1,1>>>()
+  end subroutine
+
+  attributes(global) subroutine global_caller()
+    !ERROR: The GRID_GLOBAL procedure 'grid_kernel' may not be called in DEVICE code
+    call grid_kernel<<<1,1>>>()
+  end subroutine
+
+  attributes(grid_global) subroutine grid_caller()
+    !ERROR: The GRID_GLOBAL procedure 'grid_kernel' may not be called in DEVICE code
+    call grid_kernel<<<1,1>>>()
+  end subroutine
+
+  attributes(host,device) subroutine both_caller()
+    !ERROR: The GRID_GLOBAL procedure 'grid_kernel' may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
+    call grid_kernel<<<1,1>>>()
+    !ERROR: The GRID_GLOBAL procedure 'grid_generic' (specific procedure 'grid_kernel') may not be called in HOST,DEVICE code without a guard using ON_DEVICE() from the CUDADEVICE module
+    call grid_generic<<<1,1>>>()
+  end subroutine
+
+  subroutine host_caller()
+    call grid_kernel<<<1,1>>>()
+    call grid_generic<<<1,1>>>()
+  end subroutine
+end module
+
+module imported_callee_kind
+  use callee_kinds, only: renamed_kernel => grid_kernel
+contains
+  attributes(device) subroutine imported_caller()
+    !ERROR: The GRID_GLOBAL procedure 'renamed_kernel' may not be called in DEVICE code
+    call renamed_kernel<<<1,1>>>()
+  end subroutine
+end module

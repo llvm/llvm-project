@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -128,6 +129,7 @@ private:
     if (IsOnDevice(x)) {
       return {};
     }
+    common::CUDASubprogramAttrs calleeAttrs{common::CUDASubprogramAttrs::Host};
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
       const Symbol &ultimate{sym->GetUltimate()};
       const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
@@ -142,6 +144,7 @@ private:
           return (*this)(*stmtFunction);
         }
         if (auto attrs{subp->cudaSubprogramAttrs()}) {
+          calleeAttrs = *attrs;
           if (*attrs == common::CUDASubprogramAttrs::HostDevice ||
               *attrs == common::CUDASubprogramAttrs::Device) {
             if (warpFunctions_.contains(sym->name().ToString()) &&
@@ -152,7 +155,7 @@ private:
             }
             if (*attrs == common::CUDASubprogramAttrs::Device &&
                 callContext_ == CallContext::HostDevice) {
-              return CallError(x, true);
+              return CallError(x, calleeAttrs);
             }
             return {};
           }
@@ -186,21 +189,23 @@ private:
     if (callContext_ == CallContext::GuardedHostDevice) {
       return {};
     }
-    return CallError(x, false);
+    return CallError(x, calleeAttrs);
   }
 
   SemanticsContext &context_;
   CallContext callContext_;
 
 private:
-  Result CallError(
-      const evaluate::ProcedureDesignator &proc, bool inHostCode) const {
-    const char *procedureType{inHostCode ? "DEVICE" : "HOST"};
+  Result CallError(const evaluate::ProcedureDesignator &proc,
+      common::CUDASubprogramAttrs calleeAttrs) const {
+    const std::string procedureType{
+        calleeAttrs == common::CUDASubprogramAttrs::HostDevice
+            ? "HOST,DEVICE"
+            : parser::ToUpperCaseLetters(common::EnumToString(calleeAttrs))};
     const char *codeContext{callContext_ == CallContext::HostDevice
             ? "HOST,DEVICE code without a guard using ON_DEVICE() from the "
               "CUDADEVICE module"
-            : inHostCode ? "HOST code"
-                         : "DEVICE code"};
+            : "DEVICE code"};
     if (auto generic{proc.genericName()}) {
       const Symbol *specific{proc.GetInterfaceSymbol()};
       const std::string specificName{specific
