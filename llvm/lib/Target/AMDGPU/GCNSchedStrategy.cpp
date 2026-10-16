@@ -2515,43 +2515,26 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) {
   if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
 
-  // Temporary workaround: if this MFMA's src2 (accumulator) reads a value that
-  // was produced by a non-undef subreg def overwriting a previously full
-  // register value (a mid-chain RMW), the whole-register reaching-def/recolor
-  // logic does not yet handle it and produces invalid live intervals ("Multiple
-  // connected components"). Exclude such MFMAs until subreg-aware reaching-def
-  // handling lands. The check is tied to the specific value this src2 reads
-  // (via its reaching defs), so benign piecewise initialization, or a subreg
-  // overwrite that happens only *after* this MFMA, does not exclude it.
+  // v1 (broad WA, reconstructed -- romanovvlad's WrittenPiecewise): reject this
+  // MFMA if its dst or src2 is written piecewise (has any non-undef subreg def
+  // anywhere). Over-broad (reverts many benign lane-by-lane accumulators) but
+  // the only form that covers the src2<-earlier-dst chain; temporary until the
+  // real subreg-aware reaching-def / forward-exclusion fix lands.
   const TargetRegisterInfo *TRI = DAG.MRI.getTargetRegisterInfo();
-  auto Src2ReadsSplicedValue = [&](MachineOperand &Src2MO) {
-    Register Reg = Src2MO.getReg();
-    if (!Reg.isVirtual() || !DAG.LIS->hasInterval(Reg))
+  auto WrittenPiecewise = [&](Register Reg) {
+    if (!Reg.isVirtual())
       return false;
-    const LiveInterval &LI = DAG.LIS->getInterval(Reg);
-    SmallVector<SlotIndex, 8> ReachingDefs;
-    findReachingDefs(Src2MO, DAG.LIS, ReachingDefs);
-    for (SlotIndex RDIdx : ReachingDefs) {
-      MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-      if (!RD)
-        continue;
-      const MachineOperand *DMO = RD->findRegisterDefOperand(Reg, TRI);
-      if (!DMO || DMO->getSubReg() == 0 || DMO->isUndef())
-        continue; // not a non-undef subreg (overwrite) def
-      const VNInfo *Prev = LI.getVNInfoBefore(RDIdx);
-      if (!Prev || Prev->isUnused() || Prev->isPHIDef())
-        continue;
-      const MachineInstr *PrevDef = DAG.LIS->getInstructionFromIndex(Prev->def);
-      if (!PrevDef || PrevDef == RD)
-        continue;
-      const MachineOperand *FD = PrevDef->findRegisterDefOperand(Reg, TRI);
-      if (FD && FD->getSubReg() == 0)
-        return true; // subreg def overwrote a full value that this src2 reads
+    for (MachineInstr &DefMI : DAG.MRI.def_instructions(Reg)) {
+      const MachineOperand *DMO = DefMI.findRegisterDefOperand(Reg, TRI);
+      if (DMO && DMO->getSubReg() != 0 && !DMO->isUndef())
+        return true;
     }
     return false;
   };
+  if (WrittenPiecewise(MI->getOperand(0).getReg()))
+    return false;
   MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-  return !Src2 || !Src2->isReg() || !Src2ReadsSplicedValue(*Src2);
+  return !Src2 || !Src2->isReg() || !WrittenPiecewise(Src2->getReg());
 }
 
 bool RewriteMFMAFormStage::initHeuristics(
