@@ -250,6 +250,7 @@ public:
     return const_cast<Comdat *>(
                            static_cast<const GlobalValue *>(this)->getComdat());
   }
+  LLVM_ABI bool isComdatLeader() const;
 
   VisibilityTypes getVisibility() const { return VisibilityTypes(Visibility); }
   bool hasDefaultVisibility() const { return Visibility == DefaultVisibility; }
