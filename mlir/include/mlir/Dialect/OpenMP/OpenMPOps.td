@@ -345,7 +345,36 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     implicit task.
     Block arguments for reduction variables should be mirrored in enclosed
     `omp.section` operations.
+
+    The `assume_bounded_recipe_effects` flag makes the memory-effect interface
+    assume that all regions of the referenced privatisation and reduction
+    recipes obey the following bounds at this use:
+    - Privatisation may read the original variable as a mold or firstprivate
+      copy source, and may allocate, write and free private storage. It
+      may not write or free the original variable. Lastprivate copy-back is
+      represented by explicit nested operations.
+    - Reduction may read and write the original variable. It may allocate,
+      free, read or write private accumulators.
+    - These effects apply only to storage directly designated by the original
+      variables and their corresponding private block arguments.
+    - They may not access other storage, including globals or pointees reached
+      by loading pointers from these variables. Such accesses, or allocations
+      and frees of other storage, are outside the assumed bounds.
+
+    These are upper bounds, not a claim that every recipe performs every
+    permitted effect. The flag applies only to implicit recipe effects;
+    explicit nested operations and barrier effects are modelled separately.
+    Without the flag, referenced recipes are assumed to have arbitrary memory
+    effects.
+
+    Flang currently sets it when all private and reduction variables are
+    non-derived. These checks do not establish that all recipe effects satisfy
+    the bounds: user-defined reductions may exceed them.
   }] # clausesDescription;
+
+  let arguments = !con(clausesArgs, (ins
+    UnitAttr:$assume_bounded_recipe_effects
+  ));
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
@@ -357,7 +386,7 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
         $private_syms, $private_needs_barrier, $reduction_mod, $reduction_vars,
-        type($reduction_vars), $reduction_byref, $reduction_syms) attr-dict
+        type($reduction_vars), $reduction_byref, $reduction_syms) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;

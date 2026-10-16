@@ -24,7 +24,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -3438,7 +3437,8 @@ void SectionsOp::build(OpBuilder &builder, OperationState &state,
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
                     clauses.reductionMod, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                    makeArrayAttr(ctx, clauses.reductionSyms));
+                    makeArrayAttr(ctx, clauses.reductionSyms),
+                    /*assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult SectionsOp::verify() {
@@ -3466,59 +3466,6 @@ LogicalResult SectionsOp::verifyRegions() {
   return success();
 }
 
-using RecipeEffectTarget = std::variant<OpOperand *, BlockArgument>;
-
-/// Follow views to the underlying value, which may be a recipe argument.
-static Value getRecipeEffectBase(Value value) {
-  while (value) {
-    auto view = value.getDefiningOp<ViewLikeOpInterface>();
-    if (!view || value != view.getViewDest())
-      break;
-    value = view.getViewSource();
-  }
-  return value;
-}
-
-/// Append argument mappings for private variable recipes.
-static void populateRecipeEffectMapping(
-    PrivateClauseOp recipe, OpOperand &sourceVar, BlockArgument privateVar,
-    SmallVectorImpl<std::pair<Value, RecipeEffectTarget>> &mapping) {
-  auto add = [&](BlockArgument arg, RecipeEffectTarget target) {
-    if (arg)
-      mapping.emplace_back(arg, target);
-  };
-
-  add(recipe.getInitMoldArg(), &sourceVar);
-  add(recipe.getInitPrivateArg(), privateVar);
-  add(recipe.getCopyMoldArg(), &sourceVar);
-  add(recipe.getCopyPrivateArg(), privateVar);
-  add(recipe.getDeallocMoldArg(), privateVar);
-}
-
-/// Append argument mappings for a reduction recipe.
-static void populateRecipeEffectMapping(
-    DeclareReductionOp recipe, OpOperand &sourceVar,
-    BlockArgument privateAccumulator,
-    SmallVectorImpl<std::pair<Value, RecipeEffectTarget>> &mapping) {
-  auto mapRegion = [&](Region &region, ArrayRef<RecipeEffectTarget> targets) {
-    if (region.empty())
-      return;
-    
-    for (auto [arg, target] : llvm::zip(region.getArguments(), targets))
-      mapping.emplace_back(arg, target);
-  };
-
-  mapRegion(recipe.getAllocRegion(), {&sourceVar});
-  // Not all combiner recipes are the same, some arguments may not always 
-  // be the same variable.
-  mapRegion(recipe.getInitializerRegion(), {&sourceVar, privateAccumulator});
-  mapRegion(recipe.getReductionRegion(), {&sourceVar, privateAccumulator});
-  mapping.emplace_back(recipe.getReductionLhsArg(), privateAccumulator);
-  mapRegion(recipe.getAtomicReductionRegion(),
-            {&sourceVar, privateAccumulator});
-  mapRegion(recipe.getCleanupRegion(), {privateAccumulator});
-}
-
 /// Add arbitrary read, write, allocate, and free effects.
 static void addUnknownMemoryEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
@@ -3528,119 +3475,36 @@ static void addUnknownMemoryEffects(
   effects.emplace_back(MemoryEffects::Free::get());
 }
 
-/// Add the effects of a symbol-referenced recipe to the corresponding
-/// variables in its directive.
-static void
-getRecipeEffects(Operation *recipe,
-                 ArrayRef<std::pair<Value, RecipeEffectTarget>> mapping,
-                 SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (Region &region : recipe->getRegions()) {
-    region.walk([&](Operation *op) {
-      auto recipeEffects = dyn_cast<MemoryEffectOpInterface>(op);
-      if (!recipeEffects) {
-        if (hasUnknownEffects(op)) {
-          // An operation without known effects may access arbitrary memory.
-          addUnknownMemoryEffects(effects);
-        }
-        return;
-      }
-
-      SmallVector<MemoryEffects::EffectInstance> opEffects;
-      recipeEffects.getEffects(opEffects);
-      for (const MemoryEffects::EffectInstance &effect : opEffects) {
-        Value affectedValue = effect.getValue();
-        Value base = getRecipeEffectBase(effect.getValue());
-        bool affectsFullRegion =
-            effect.getEffectOnFullRegion() && affectedValue == base;
-        bool mapped = false;
-        for (const auto &[arg, target] : mapping) {
-          // Check if the operand corresponds to a recipe argument
-          if (arg != base)
-            continue;
-          mapped = true;
-          std::visit(
-              [&](auto mappedValue) {
-                effects.emplace_back(effect.getEffect(), mappedValue,
-                                     effect.getParameters(), affectsFullRegion,
-                                     effect.getResource());
-              },
-              target);
-        }
-        if (!mapped) {
-          effects.emplace_back(effect.getEffect(), effect.getParameters(),
-                               false, effect.getResource());
-        }
-      }
-    });
-  }
-}
-
-/// Model private storage and the effects of privatisation recipes.
-template <typename OpType>
+/// Privatisation may read the original as a mold or firstprivate copy source.
+/// Any lastprivate copy-back is explicit in the nested operations.
 static void getPrivatisationEffects(
-    OpType op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    SectionsOp op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
-  MutableOperandRange privateVars = op.getPrivateVarsMutable();
-  Block::BlockArgListType privateArgs = iface.getPrivateBlockArgs();
-  std::optional<ArrayAttr> privateSyms = op.getPrivateSyms();
-  if (!privateSyms)
-    return;
-
-  for (auto [sourceVar, privateVar, privateSym] :
-       llvm::zip_equal(privateVars, privateArgs, *privateSyms)) {
-    // Storage is allocated by the directive even if the recipe has no regions.
-    // Implicit stack storage is released by the enclosing allocation scope.
-    effects.emplace_back(MemoryEffects::Allocate::get(), privateVar);
-
-    auto privatiser = SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(
-        op, cast<SymbolRefAttr>(privateSym));
-    if (!privatiser) {
-      continue;
-    }
-
-    SmallVector<std::pair<Value, RecipeEffectTarget>> mapping;
-    populateRecipeEffectMapping(privatiser, sourceVar, privateVar, mapping);
-    getRecipeEffects(privatiser, mapping, effects);
+  for (auto [source, priv] : llvm::zip_equal(op.getPrivateVarsMutable(),
+                                             iface.getPrivateBlockArgs())) {
+    effects.emplace_back(MemoryEffects::Read::get(), &source);
+    effects.emplace_back(MemoryEffects::Write::get(), priv);
+    effects.emplace_back(MemoryEffects::Allocate::get(), priv);
+    effects.emplace_back(MemoryEffects::Free::get(), priv);
   }
 }
 
-/// Model accumulator initialisation and destruction and referenced recipes for
-/// a reduction clause.
-template <typename OpType>
+/// Reductions initialise private accumulators and combine them into the
+/// original variables.
 static void
-getReductionEffects(OpType op,
+getReductionEffects(SectionsOp op,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
-  auto reductionVars = op.getReductionVarsMutable();
-  auto reductionArgs = iface.getReductionBlockArgs();
-  auto reductionSyms = op.getReductionSyms();
-  auto reductionByref = op.getReductionByref();
+  for (auto [source, priv] : llvm::zip_equal(op.getReductionVarsMutable(),
+                                             iface.getReductionBlockArgs())) {
+    effects.emplace_back(MemoryEffects::Read::get(), &source);
+    effects.emplace_back(MemoryEffects::Write::get(), &source);
 
-  if (!reductionSyms)
-    return;
+    effects.emplace_back(MemoryEffects::Allocate::get(), priv);
+    effects.emplace_back(MemoryEffects::Free::get(), priv);
 
-  for (auto [index, sourceVar, privateAccumulator, recipeSym] :
-       llvm::enumerate(reductionVars, reductionArgs, *reductionSyms)) {
-    if (!reductionByref || !(*reductionByref)[index]) {
-      // By-value recipes operate on scalar values. The directive allocates
-      // accumulator storage and loads/stores values around recipe invocations.
-      // By-reference recipes account for these effects in their bodies.
-      effects.emplace_back(MemoryEffects::Allocate::get(), privateAccumulator);
-      effects.emplace_back(MemoryEffects::Read::get(), &sourceVar);
-      effects.emplace_back(MemoryEffects::Write::get(), privateAccumulator);
-      effects.emplace_back(MemoryEffects::Read::get(), privateAccumulator);
-      effects.emplace_back(MemoryEffects::Write::get(), &sourceVar);
-    }
-
-    auto recipe = SymbolTable::lookupNearestSymbolFrom<DeclareReductionOp>(
-        op, cast<SymbolRefAttr>(recipeSym));
-    if (!recipe) {
-      continue;
-    }
-
-    SmallVector<std::pair<Value, RecipeEffectTarget>> mapping;
-    populateRecipeEffectMapping(recipe, sourceVar, privateAccumulator, mapping);
-    getRecipeEffects(recipe, mapping, effects);
+    effects.emplace_back(MemoryEffects::Read::get(), priv);
+    effects.emplace_back(MemoryEffects::Write::get(), priv);
   }
 }
 
@@ -3665,6 +3529,9 @@ void SectionsOp::getEffects(
 
   getPrivatisationEffects(*this, effects);
   getReductionEffects(*this, effects);
+  if (!getAssumeBoundedRecipeEffects() &&
+      (!getPrivateVars().empty() || !getReductionVars().empty()))
+    addUnknownMemoryEffects(effects);
 }
 
 //===----------------------------------------------------------------------===//

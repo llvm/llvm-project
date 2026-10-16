@@ -3564,6 +3564,28 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
+static bool isNonDerived(const semantics::Symbol &sym) {
+  const auto *type = sym.GetUltimate().GetType();
+  return type && type->AsIntrinsic();
+}
+
+static bool isNonDerivedItem(const semantics::Symbol *sym) {
+  const auto &ultimate = sym->GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [](const auto &member) {
+      return isNonDerived(*member);
+    });
+  }
+  return isNonDerived(ultimate);
+}
+
+static bool isDerivedVariable(mlir::Value variable) {
+  mlir::Type type = variable.getType();
+  return !fir::isa_derived(fir::getFortranElementType(type)) &&
+         !fir::isa_volatile_type(type);
+}
+
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3657,6 +3679,21 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // SECTIONS construct.
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
+  // Becuase Flang uses eager privatisation clausOps.privateVars is empty.
+  bool allPrivateVarsEligible =
+      llvm::all_of(dsp.getAllSymbolsToPrivatize(), isNonDerivedItem);
+
+  bool allReductionVarsEligible =
+      llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
+        // The generated conditional-lastprivate recipe only accesses the
+        // intrinsic value and index fields of its accumulator, despite its
+        // record type.
+        return variable == lpAlloca ||
+               isDerivedVariable(variable);
+      });
+
+  if (allPrivateVarsEligible && allReductionVarsEligible)
+    sectionsOp.setAssumeBoundedRecipeEffects(true);
 
   // Create entry block with reduction variables as arguments.
   ObjectEntryBlockArgs args;
