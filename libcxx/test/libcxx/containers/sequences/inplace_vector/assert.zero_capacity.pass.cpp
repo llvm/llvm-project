@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers, std-at-least-c++26
+// REQUIRES: std-at-least-c++26
 // UNSUPPORTED: libcpp-has-no-experimental-inplace-vector
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-fast
 
 // <inplace_vector>
 
