@@ -18,9 +18,8 @@ define i32 @load_i32(ptr %p, i64 %x) {
 define void @store_i64(ptr %p, i64 %x, i64 %v) {
 ; CHECK-LABEL: store_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    str x2, [x0, x8]
+; CHECK-NEXT:    lsr x8, x1, #4
+; CHECK-NEXT:    str x2, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -31,10 +30,9 @@ define void @store_i64(ptr %p, i64 %x, i64 %v) {
 define void @load_store_shared_offset(ptr %p, ptr %q, i64 %x) {
 ; CHECK-LABEL: load_store_shared_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x2, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    ldr x9, [x0, x8]
-; CHECK-NEXT:    str x9, [x1, x8]
+; CHECK-NEXT:    lsr x8, x2, #4
+; CHECK-NEXT:    ldr x9, [x0, x8, lsl #3]
+; CHECK-NEXT:    str x9, [x1, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g1 = getelementptr i64, ptr %p, i64 %i
@@ -47,11 +45,10 @@ define void @load_store_shared_offset(ptr %p, ptr %q, i64 %x) {
 define void @load_store_shared_address(ptr %p, i64 %x) {
 ; CHECK-LABEL: load_store_shared_address:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    ldr x9, [x0, x8]
+; CHECK-NEXT:    lsr x8, x1, #4
+; CHECK-NEXT:    ldr x9, [x0, x8, lsl #3]
 ; CHECK-NEXT:    add x9, x9, #1
-; CHECK-NEXT:    str x9, [x0, x8]
+; CHECK-NEXT:    str x9, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -62,13 +59,27 @@ define void @load_store_shared_address(ptr %p, i64 %x) {
 }
 
 define void @load_store_shared_offset_i16(ptr %p, ptr %q, i64 %x) {
-; CHECK-LABEL: load_store_shared_offset_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x2, #3
-; CHECK-NEXT:    and x8, x8, #0x1ffffffffffffffe
-; CHECK-NEXT:    ldrh w9, [x0, x8]
-; CHECK-NEXT:    strh w9, [x1, x8]
-; CHECK-NEXT:    ret
+; DEFAULT-LABEL: load_store_shared_offset_i16:
+; DEFAULT:       // %bb.0:
+; DEFAULT-NEXT:    lsr x8, x2, #4
+; DEFAULT-NEXT:    ldrh w9, [x0, x8, lsl #1]
+; DEFAULT-NEXT:    strh w9, [x1, x8, lsl #1]
+; DEFAULT-NEXT:    ret
+;
+; ALU-LSL-FAST-LABEL: load_store_shared_offset_i16:
+; ALU-LSL-FAST:       // %bb.0:
+; ALU-LSL-FAST-NEXT:    lsr x8, x2, #4
+; ALU-LSL-FAST-NEXT:    ldrh w9, [x0, x8, lsl #1]
+; ALU-LSL-FAST-NEXT:    strh w9, [x1, x8, lsl #1]
+; ALU-LSL-FAST-NEXT:    ret
+;
+; ADDR-LSL-SLOW-14-LABEL: load_store_shared_offset_i16:
+; ADDR-LSL-SLOW-14:       // %bb.0:
+; ADDR-LSL-SLOW-14-NEXT:    lsr x8, x2, #3
+; ADDR-LSL-SLOW-14-NEXT:    and x8, x8, #0x1ffffffffffffffe
+; ADDR-LSL-SLOW-14-NEXT:    ldrh w9, [x0, x8]
+; ADDR-LSL-SLOW-14-NEXT:    strh w9, [x1, x8]
+; ADDR-LSL-SLOW-14-NEXT:    ret
   %i = lshr i64 %x, 4
   %g1 = getelementptr i16, ptr %p, i64 %i
   %g2 = getelementptr i16, ptr %q, i64 %i
@@ -80,10 +91,9 @@ define void @load_store_shared_offset_i16(ptr %p, ptr %q, i64 %x) {
 define void @shared_offset_lsr_lt_lsl(ptr %p, ptr %q, i64 %x) {
 ; CHECK-LABEL: shared_offset_lsr_lt_lsl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl x8, x2, #2
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff8
-; CHECK-NEXT:    ldr x9, [x0, x8]
-; CHECK-NEXT:    str x9, [x1, x8]
+; CHECK-NEXT:    lsr x8, x2, #1
+; CHECK-NEXT:    ldr x9, [x0, x8, lsl #3]
+; CHECK-NEXT:    str x9, [x1, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 1
   %g1 = getelementptr i64, ptr %p, i64 %i
@@ -120,9 +130,8 @@ define <4 x i32> @load_v4i32(ptr %p, i64 %x) {
 define i64 @atomic_load_monotonic(ptr %p, i64 %x) {
 ; CHECK-LABEL: atomic_load_monotonic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    lsr x8, x1, #4
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -133,9 +142,8 @@ define i64 @atomic_load_monotonic(ptr %p, i64 %x) {
 define void @atomic_store_monotonic(ptr %p, i64 %x, i64 %v) {
 ; CHECK-LABEL: atomic_store_monotonic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    str x2, [x0, x8]
+; CHECK-NEXT:    lsr x8, x1, #4
+; CHECK-NEXT:    str x2, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -146,9 +154,8 @@ define void @atomic_store_monotonic(ptr %p, i64 %x, i64 %v) {
 define void @prefetch_scale_3(ptr %p, i64 %x) {
 ; CHECK-LABEL: prefetch_scale_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    prfm pldl1keep, [x0, x8]
+; CHECK-NEXT:    lsr x8, x1, #4
+; CHECK-NEXT:    prfm pldl1keep, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -339,17 +346,40 @@ define i64 @add_extended_operand(i64 %x, i32 %y) {
 ; The shifts are assumed to fold even though the loads, later LD1R, only take a
 ; base register. The left shift still folds into the ADDs with +alu-lsl-fast.
 define void @shared_ld1r(ptr %p, ptr %q, ptr %r1, ptr %r2, i64 %x) {
-; CHECK-LABEL: shared_ld1r:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x4, #2
-; CHECK-NEXT:    and x8, x8, #0x3ffffffffffffffc
-; CHECK-NEXT:    add x9, x0, x8
-; CHECK-NEXT:    add x8, x1, x8
-; CHECK-NEXT:    ld1r { v0.2s }, [x9]
-; CHECK-NEXT:    ld1r { v1.2s }, [x8]
-; CHECK-NEXT:    str d0, [x2]
-; CHECK-NEXT:    str d1, [x3]
-; CHECK-NEXT:    ret
+; DEFAULT-LABEL: shared_ld1r:
+; DEFAULT:       // %bb.0:
+; DEFAULT-NEXT:    lsr x8, x4, #4
+; DEFAULT-NEXT:    lsl x8, x8, #2
+; DEFAULT-NEXT:    add x9, x0, x8
+; DEFAULT-NEXT:    add x8, x1, x8
+; DEFAULT-NEXT:    ld1r { v0.2s }, [x9]
+; DEFAULT-NEXT:    ld1r { v1.2s }, [x8]
+; DEFAULT-NEXT:    str d0, [x2]
+; DEFAULT-NEXT:    str d1, [x3]
+; DEFAULT-NEXT:    ret
+;
+; ALU-LSL-FAST-LABEL: shared_ld1r:
+; ALU-LSL-FAST:       // %bb.0:
+; ALU-LSL-FAST-NEXT:    lsr x8, x4, #4
+; ALU-LSL-FAST-NEXT:    add x9, x0, x8, lsl #2
+; ALU-LSL-FAST-NEXT:    add x8, x1, x8, lsl #2
+; ALU-LSL-FAST-NEXT:    ld1r { v0.2s }, [x9]
+; ALU-LSL-FAST-NEXT:    ld1r { v1.2s }, [x8]
+; ALU-LSL-FAST-NEXT:    str d0, [x2]
+; ALU-LSL-FAST-NEXT:    str d1, [x3]
+; ALU-LSL-FAST-NEXT:    ret
+;
+; ADDR-LSL-SLOW-14-LABEL: shared_ld1r:
+; ADDR-LSL-SLOW-14:       // %bb.0:
+; ADDR-LSL-SLOW-14-NEXT:    lsr x8, x4, #4
+; ADDR-LSL-SLOW-14-NEXT:    lsl x8, x8, #2
+; ADDR-LSL-SLOW-14-NEXT:    add x9, x0, x8
+; ADDR-LSL-SLOW-14-NEXT:    add x8, x1, x8
+; ADDR-LSL-SLOW-14-NEXT:    ld1r { v0.2s }, [x9]
+; ADDR-LSL-SLOW-14-NEXT:    ld1r { v1.2s }, [x8]
+; ADDR-LSL-SLOW-14-NEXT:    str d0, [x2]
+; ADDR-LSL-SLOW-14-NEXT:    str d1, [x3]
+; ADDR-LSL-SLOW-14-NEXT:    ret
   %i = lshr i64 %x, 4
   %g1 = getelementptr i32, ptr %p, i64 %i
   %g2 = getelementptr i32, ptr %q, i64 %i
@@ -392,7 +422,3 @@ define void @shared_ld1r_size_mismatch(ptr %p, ptr %q, ptr %r1, ptr %r2, i64 %x)
   store <2 x i32> %b2, ptr %r2
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; ADDR-LSL-SLOW-14: {{.*}}
-; ALU-LSL-FAST: {{.*}}
-; DEFAULT: {{.*}}

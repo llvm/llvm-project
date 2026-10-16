@@ -17,10 +17,9 @@ define <vscale x 2 x i64> @load_nxv2i64(ptr %p, i64 %x) {
 define void @store_nxv2i64(ptr %p, i64 %x, <vscale x 2 x i64> %v) {
 ; CHECK-LABEL: store_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x1, #1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    lsr x8, x1, #4
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -32,8 +31,7 @@ define <vscale x 2 x i64> @masked_load_nxv2i64(ptr %p, i64 %x, <vscale x 2 x i1>
 ; CHECK-LABEL: masked_load_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x1, #4
-; CHECK-NEXT:    add x8, x0, x8, lsl #3
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -45,8 +43,7 @@ define void @masked_store_nxv2i64(ptr %p, i64 %x, <vscale x 2 x i1> %m, <vscale 
 ; CHECK-LABEL: masked_store_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x1, #4
-; CHECK-NEXT:    add x8, x0, x8, lsl #3
-; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g = getelementptr i64, ptr %p, i64 %i
@@ -57,11 +54,10 @@ define void @masked_store_nxv2i64(ptr %p, i64 %x, <vscale x 2 x i1> %m, <vscale 
 define void @load_store_nxv2i64_shared_offset(ptr %p, ptr %q, i64 %x) {
 ; CHECK-LABEL: load_store_nxv2i64_shared_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x2, #1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffff8
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
-; CHECK-NEXT:    st1b { z0.b }, p0, [x1, x8]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    lsr x8, x2, #4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 4
   %g1 = getelementptr i64, ptr %p, i64 %i
@@ -75,8 +71,7 @@ define <vscale x 2 x i64> @masked_extending_load(ptr %p, i64 %x, <vscale x 2 x i
 ; CHECK-LABEL: masked_extending_load:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x1, #3
-; CHECK-NEXT:    add x8, x0, x8, lsl #1
-; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ret
   %index = lshr i64 %x, 3
   %a = getelementptr i16, ptr %p, i64 %index
@@ -88,9 +83,8 @@ define <vscale x 2 x i64> @masked_extending_load(ptr %p, i64 %x, <vscale x 2 x i
 define <vscale x 2 x i64> @masked_load_nxv2i64_equal_shifts(ptr %p, i64 %x, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: masked_load_nxv2i64_equal_shifts:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x1, #0xfffffffffffffff8
-; CHECK-NEXT:    add x8, x0, x8
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    lsr x8, x1, #3
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %i = lshr i64 %x, 3
   %g = getelementptr i64, ptr %p, i64 %i
