@@ -10,41 +10,28 @@
 define <8 x i64> @test_div7_8i64(<8 x i64> %a) nounwind {
 ; NODQ-LABEL: test_div7_8i64:
 ; NODQ:       # %bb.0:
-; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; NODQ-NEXT:    vpextrq $1, %xmm1, %rax
-; NODQ-NEXT:    movabsq $5270498306774157605, %rcx # imm = 0x4924924924924925
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm2
-; NODQ-NEXT:    vmovq %xmm1, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm1
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
-; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm3
-; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm2
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; NODQ-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm3
-; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm2
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm3
-; NODQ-NEXT:    vmovq %xmm0, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm0
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; NODQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; NODQ-NEXT:    vpsraq $32, %zmm0, %zmm1
+; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
+; NODQ-NEXT:    vpmuludq %zmm2, %zmm1, %zmm3
+; NODQ-NEXT:    vpsrlq $32, %zmm1, %zmm4
+; NODQ-NEXT:    vpmuludq %zmm2, %zmm4, %zmm5
+; NODQ-NEXT:    vpsllq $32, %zmm5, %zmm5
+; NODQ-NEXT:    vpaddq %zmm5, %zmm3, %zmm3
+; NODQ-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
+; NODQ-NEXT:    vpsrlq $32, %zmm2, %zmm2
+; NODQ-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; NODQ-NEXT:    vpsraq $32, %zmm2, %zmm3
+; NODQ-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm2
+; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513]
+; NODQ-NEXT:    vpmuludq %zmm5, %zmm0, %zmm0
+; NODQ-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; NODQ-NEXT:    vpsraq $32, %zmm0, %zmm0
+; NODQ-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
+; NODQ-NEXT:    vpmuludq %zmm5, %zmm1, %zmm1
+; NODQ-NEXT:    vpmuludq %zmm5, %zmm4, %zmm2
+; NODQ-NEXT:    vpsllq $32, %zmm2, %zmm2
+; NODQ-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; NODQ-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; NODQ-NEXT:    vpsrlq $63, %zmm0, %zmm1
 ; NODQ-NEXT:    vpsraq $1, %zmm0, %zmm0
 ; NODQ-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
@@ -271,41 +258,28 @@ define <64 x i8> @test_divconstant_64i8(<64 x i8> %a) nounwind {
 define <8 x i64> @test_rem7_8i64(<8 x i64> %a) nounwind {
 ; NODQ-LABEL: test_rem7_8i64:
 ; NODQ:       # %bb.0:
-; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; NODQ-NEXT:    vpextrq $1, %xmm1, %rax
-; NODQ-NEXT:    movabsq $5270498306774157605, %rcx # imm = 0x4924924924924925
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm2
-; NODQ-NEXT:    vmovq %xmm1, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm1
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
-; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm3
-; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm2
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; NODQ-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm3
-; NODQ-NEXT:    vmovq %xmm2, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm2
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm3
-; NODQ-NEXT:    vmovq %xmm0, %rax
-; NODQ-NEXT:    imulq %rcx
-; NODQ-NEXT:    vmovq %rdx, %xmm4
-; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
-; NODQ-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; NODQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; NODQ-NEXT:    vpsraq $32, %zmm0, %zmm1
+; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
+; NODQ-NEXT:    vpmuludq %zmm2, %zmm1, %zmm3
+; NODQ-NEXT:    vpsrlq $32, %zmm1, %zmm4
+; NODQ-NEXT:    vpmuludq %zmm2, %zmm4, %zmm5
+; NODQ-NEXT:    vpsllq $32, %zmm5, %zmm5
+; NODQ-NEXT:    vpaddq %zmm5, %zmm3, %zmm3
+; NODQ-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
+; NODQ-NEXT:    vpsrlq $32, %zmm2, %zmm2
+; NODQ-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; NODQ-NEXT:    vpsraq $32, %zmm2, %zmm3
+; NODQ-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm2
+; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513]
+; NODQ-NEXT:    vpmuludq %zmm5, %zmm0, %zmm6
+; NODQ-NEXT:    vpaddq %zmm2, %zmm6, %zmm2
+; NODQ-NEXT:    vpsraq $32, %zmm2, %zmm2
+; NODQ-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; NODQ-NEXT:    vpmuludq %zmm5, %zmm1, %zmm1
+; NODQ-NEXT:    vpmuludq %zmm5, %zmm4, %zmm3
+; NODQ-NEXT:    vpsllq $32, %zmm3, %zmm3
+; NODQ-NEXT:    vpaddq %zmm3, %zmm1, %zmm1
+; NODQ-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; NODQ-NEXT:    vpsrlq $63, %zmm1, %zmm2
 ; NODQ-NEXT:    vpsraq $1, %zmm1, %zmm1
 ; NODQ-NEXT:    vpaddq %zmm2, %zmm1, %zmm1

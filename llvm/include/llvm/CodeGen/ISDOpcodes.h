@@ -725,6 +725,14 @@ enum NodeType {
   AVGCEILS,
   AVGCEILU,
 
+  /// AVGSUBFLOORS/AVGSUBFLOORU - Averaging subtract - Subtract two integers
+  /// using an integer of type i[N+1], halving the result by shifting it one bit
+  /// right, i.e. rounding towards negative infinity. This is a signed
+  /// difference, not an absolute difference like ABDS/ABDU.
+  /// shr(sub(ext(X), ext(Y)), 1)
+  AVGSUBFLOORS,
+  AVGSUBFLOORU,
+
   /// ABDS/ABDU - Absolute difference - Return the absolute difference between
   /// two numbers interpreted as signed/unsigned.
   /// i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
@@ -1638,6 +1646,10 @@ enum NodeType {
   /// node supports result types which are wider than i1, where the high
   /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
+
+  /// Has one mask vector operand. Returns a mask with all ones up to but not
+  /// including the first active element in the input, followed by zeroes.
+  MASK_BEFOREFIRST,
 
   /// VECTOR_MATCH - this corresponds to the llvm.experimental.vector.match
   /// intrinsic.

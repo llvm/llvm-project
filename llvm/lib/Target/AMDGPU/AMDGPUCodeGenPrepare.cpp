@@ -958,7 +958,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (IsFloat && ReqdAccuracy < 1.0f)
     return false;
 
-  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
+  IRBuilder<> Builder(std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(DivFMF);
   Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
 
@@ -1881,7 +1881,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption ==
+  if (!BreakLargePHIs || getCGPassBuilderOption(TM).EnableGlobalISelOption ==
                              cl::boolOrDefault::BOU_TRUE)
     return false;
 

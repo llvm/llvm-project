@@ -269,7 +269,7 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_i32(<32 x i32> %x, <32 x i32> %
   ; CHECK-NEXT:   $v16m8 = COPY [[INSERT_SUBVECTOR1]](<vscale x 16 x s32>)
   ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; CHECK-NEXT:   $x11 = COPY [[ANYEXT1]](s64)
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @ext2, csr_ilp32d_lp64d, implicit-def $x1, implicit $v8m8, implicit $v16m8, implicit $x10, implicit $x11, implicit-def $v8m8
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @ext2, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $v8m8, implicit $v16m8, implicit $x10, implicit $x11, implicit-def $v8m8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
   ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR2:%[0-9]+]]:_(<32 x s32>) = G_EXTRACT_SUBVECTOR [[COPY3]](<vscale x 16 x s32>), 0
@@ -308,7 +308,7 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x, <32 x
   ; CHECK-NEXT:   $x10 = COPY [[PTRTOINT]](s64)
   ; CHECK-NEXT:   $x11 = COPY [[ANYEXT]](s64)
   ; CHECK-NEXT:   $x12 = COPY [[ANYEXT1]](s64)
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @ext3, csr_ilp32d_lp64d, implicit-def $x1, implicit $v8m8, implicit $v16m8, implicit $x10, implicit $x11, implicit $x12, implicit-def $v8m8
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @ext3, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $v8m8, implicit $v16m8, implicit $x10, implicit $x11, implicit $x12, implicit-def $v8m8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
   ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR2:%[0-9]+]]:_(<32 x s32>) = G_EXTRACT_SUBVECTOR [[COPY4]](<vscale x 16 x s32>), 0
@@ -384,7 +384,7 @@ define <32 x i32> @call_split_vector_args(ptr %pa, ptr %pb) {
   ; CHECK-NEXT:   $v16m8 = COPY [[INSERT_SUBVECTOR5]](<vscale x 16 x s32>)
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[FRAME_INDEX]](p0)
   ; CHECK-NEXT:   $x10 = COPY [[PTRTOINT]](s64)
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @split_vector_args, csr_ilp32d_lp64d, implicit-def $x1, implicit $v8, implicit $v9, implicit $v10, implicit $v11, implicit $v12, implicit $v16m8, implicit $x10, implicit-def $v8m8
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @split_vector_args, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $v8, implicit $v9, implicit $v10, implicit $v11, implicit $v12, implicit $v16m8, implicit $x10, implicit-def $v8m8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
   ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<32 x s32>) = G_EXTRACT_SUBVECTOR [[COPY2]](<vscale x 16 x s32>), 0
@@ -490,7 +490,7 @@ define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x
   ; CHECK-NEXT:   $v8m8 = COPY [[INSERT_SUBVECTOR]](<vscale x 16 x s32>)
   ; CHECK-NEXT:   [[INSERT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 16 x s32>) = G_INSERT_SUBVECTOR [[DEF]], [[BUILD_VECTOR]](<32 x s32>), 0
   ; CHECK-NEXT:   $v16m8 = COPY [[INSERT_SUBVECTOR1]](<vscale x 16 x s32>)
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @vector_arg_via_stack, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $v8m8, implicit $v16m8, implicit-def $v8m8
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @vector_arg_via_stack, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $v8m8, implicit $v16m8, implicit-def $v8m8
   ; CHECK-NEXT:   ADJCALLSTACKUP 136, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
   ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR2:%[0-9]+]]:_(<32 x s32>) = G_EXTRACT_SUBVECTOR [[COPY4]](<vscale x 16 x s32>), 0
@@ -595,7 +595,7 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INSERT_SUBVECTOR2:%[0-9]+]]:_(<vscale x 2 x s1>) = G_INSERT_SUBVECTOR [[DEF1]], [[EXTRACT_SUBVECTOR]](<4 x s1>), 0
   ; CHECK-NEXT:   $v0 = COPY [[INSERT_SUBVECTOR2]](<vscale x 2 x s1>)
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @vector_mask_arg_via_stack, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $v8m8, implicit $v16m8, implicit $v0, implicit-def $v0
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @vector_mask_arg_via_stack, csr_ilp32d_lp64d, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $v8m8, implicit $v16m8, implicit $v0, implicit-def $v0
   ; CHECK-NEXT:   ADJCALLSTACKUP 137, 0, implicit-def $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(<vscale x 2 x s1>) = COPY $v0
   ; CHECK-NEXT:   [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<4 x s1>) = G_EXTRACT_SUBVECTOR [[COPY6]](<vscale x 2 x s1>), 0

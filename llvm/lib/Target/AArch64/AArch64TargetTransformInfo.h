@@ -282,6 +282,11 @@ public:
   bool isLegalSpeculativeLoad(Type *DataType,
                               unsigned AddressSpace) const override;
 
+  bool hasMultiVectorLoadStore(
+      unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+      bool IsStore,
+      std::optional<Instruction::CastOps> CastHint) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
@@ -320,6 +325,12 @@ public:
       if (Bits != 64 && Bits != 128)
         return false; // Fall back to scalarization of masked operations.
     }
+
+    // Type legalization cannot scalarize the data of a masked load/store.
+    // Reject types that would be legalized to a scalar (e.g. <1 x half>).
+    if (isa<FixedVectorType>(DataType) &&
+        !getTypeLegalizationCost(DataType).second.isVector())
+      return false;
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }

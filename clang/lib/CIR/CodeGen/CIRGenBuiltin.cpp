@@ -26,7 +26,8 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -83,6 +84,15 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
                                Args... args) {
   mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
   return RValue::get(createBuiltinBitOp<Op>(cgf, e, arg, args...));
+}
+
+template <typename Op>
+static RValue emitBuiltinVectorReduction(CIRGenFunction &cgf,
+                                         const CallExpr *e) {
+  mlir::Value input = cgf.emitScalarExpr(e->getArg(0));
+  return RValue::get(
+      Op::create(cgf.getBuilder(), cgf.getLoc(e->getExprLoc()), input)
+          .getResult());
 }
 
 /// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg.
@@ -485,6 +495,8 @@ static RValue emitAtomicIsLockFree(CIRGenFunction &cgf, const CallExpr *e,
   cir::FuncOp func = cgf.cgm.createRuntimeFunction(
       cir::FuncType::get({sizeTy, builder.getVoidPtrTy()}, builder.getBoolTy()),
       "__atomic_is_lock_free");
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   return RValue::get(
       builder.createCallOp(loc, func, mlir::ValueRange{size, ptr}).getResult());
 }
@@ -588,8 +600,7 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
 
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
-  mlir::Type ty = cgf.convertType(e.getType());
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  auto call = Op::create(cgf.getBuilder(), loc, arg0, arg1);
 
   return RValue::get(call->getResult(0));
 }
@@ -634,9 +645,7 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
 
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
-  mlir::Type ty = cgf.convertType(e.getType());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1,
+  auto call = Op::create(cgf.getBuilder(), loc, arg0, arg1,
                          cgf.getBuilder().getConstrainedFPAttr());
   return call->getResult(0);
 }
@@ -1825,12 +1834,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_coro_done:
     return RValue::get(emitCoroDoneBuiltinCall(e).getResult());
-  case Builtin::BI__builtin_coro_suspend:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_suspend: {
+    mlir::Value result = emitCoroSuspendBuiltinCall(e).getResult();
+    return RValue::get(
+        builder.createIntCast(result, convertType(e->getType())));
+  }
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroAlignBuiltinCall(e).getResult());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
@@ -1918,8 +1928,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_readcyclecounter:
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "readcyclecounter", builder.getUInt64Ty()));
   case Builtin::BI__builtin_readsteadycounter:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "readsteadycounter", builder.getUInt64Ty()));
   case Builtin::BI__builtin___clear_cache: {
     mlir::Value begin =
         builder.createPtrBitcast(emitScalarExpr(e->getArg(0)), cgm.voidTy);
@@ -2193,60 +2206,57 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
-    auto getIntrinsicName = [this, builtinIDIfNoAsmLabel](QualType type) {
-      if (const auto *vecTy = type->getAs<VectorType>())
-        type = vecTy->getElementType();
-      else if (type->isSizelessVectorType())
-        type = type->getSizelessVectorEltType(getContext());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
+    QualType type = e->getArg(0)->getType();
+    if (const auto *vecTy = type->getAs<VectorType>())
+      type = vecTy->getElementType();
+    else if (type->isSizelessVectorType())
+      type = type->getSizelessVectorEltType(getContext());
 
-      if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max) {
-        if (type->isSignedIntegerType())
-          return "vector.reduce.smax";
-        if (type->isUnsignedIntegerType())
-          return "vector.reduce.umax";
-        assert(type->isFloatingType() && "must have a float here");
-        return "vector.reduce.fmax";
-      }
+    mlir::Value input = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+    const bool isMax = builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max;
 
-      if (type->isSignedIntegerType())
-        return "vector.reduce.smin";
-      if (type->isUnsignedIntegerType())
-        return "vector.reduce.umin";
-      assert(type->isFloatingType() && "must have a float here");
-      return "vector.reduce.fmin";
-    };
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, getIntrinsicName(e->getArg(0)->getType()),
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    if (type->isSignedIntegerType()) {
+      if (isMax)
+        return RValue::get(
+            cir::VecReduceSMaxOp::create(builder, loc, input).getResult());
+      return RValue::get(
+          cir::VecReduceSMinOp::create(builder, loc, input).getResult());
+    }
+
+    if (type->isUnsignedIntegerType()) {
+      if (isMax)
+        return RValue::get(
+            cir::VecReduceUMaxOp::create(builder, loc, input).getResult());
+      return RValue::get(
+          cir::VecReduceUMinOp::create(builder, loc, input).getResult());
+    }
+
+    assert(type->isFloatingType() && "must have a float here");
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(getCurrentFastMathFlags());
+    if (isMax)
+      return RValue::get(
+          cir::VecReduceFMaxOp::create(builder, loc, input, fastMath)
+              .getResult());
+    return RValue::get(
+        cir::VecReduceFMinOp::create(builder, loc, input, fastMath)
+            .getResult());
   }
   case Builtin::BI__builtin_reduce_add:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.add",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceAddOp>(*this, e);
   case Builtin::BI__builtin_reduce_mul:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.mul",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceMulOp>(*this, e);
   case Builtin::BI__builtin_reduce_xor:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.xor",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceXorOp>(*this, e);
   case Builtin::BI__builtin_reduce_or:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.or",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceOrOp>(*this, e);
   case Builtin::BI__builtin_reduce_and:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.and",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceAndOp>(*this, e);
   case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     bool isAssociative =
         builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd;
 
@@ -2273,15 +2283,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                                   /*Negative=*/true)));
     }
 
-    SmallVector<mlir::Value, 2> args = {startValue, vector};
-    cir::FastMathFlagsAttr fastMath;
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
     if (isAssociative)
-      fastMath = cir::FastMathFlagsAttr::get(&getMLIRContext(),
-                                             cir::FastMathFlags::reassoc);
+      fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
 
-    mlir::Value result = builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd",
-                                                     scalarTy, fastMath, args);
-    return RValue::get(result);
+    auto reduction = cir::VecReduceFAddOp::create(builder, loc, startValue,
+                                                  vector, fastMath);
+    return RValue::get(reduction.getResult());
   }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
@@ -2308,7 +2317,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         loc, resultType, dataPtr, stride, isVolatile);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_matrix_column_major_store:
+  case Builtin::BI__builtin_matrix_column_major_store: {
+    mlir::Value matrix = emitScalarExpr(e->getArg(0));
+    Address dst = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value stride = emitScalarExpr(e->getArg(2));
+
+    auto *ptrTy = e->getArg(1)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg1 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+
+    emitNonNullArgCheck(RValue::get(dst.emitRawPointer()),
+                        e->getArg(1)->getType(), e->getArg(1)->getExprLoc(), fd,
+                        0);
+    builder.createMatrixColumnMajorStore(loc, matrix, dst.emitRawPointer(),
+                                         stride, isVolatile);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_masked_load:
   case Builtin::BI__builtin_masked_expand_load:
   case Builtin::BI__builtin_masked_gather:
@@ -3167,7 +3191,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         (getTarget().getTriple().isSPIRV() &&
          getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
       if (getTarget().getTriple().isNVPTX())
-        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+        return RValue::get(emitDevicePrintfCallExpr(e));
       if ((getTarget().getTriple().isAMDGCN() ||
            getTarget().getTriple().isSPIRV()) &&
           getLangOpts().HIP)
@@ -3457,11 +3481,21 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
   // to build this up so provide a small stack buffer to handle the vast
   // majority of names.
   llvm::SmallString<64> name;
-
-  assert(!cir::MissingFeatures::asmLabelAttr());
-  name = astContext.BuiltinInfo.getName(builtinID).substr(10);
-
   GlobalDecl d(fd);
+
+  // If the builtin has been declared explicitly with an assembler label,
+  // use the mangled name. This differs from the plain label on platforms
+  // that prefix labels.
+  if (fd->hasAttr<AsmLabelAttr>())
+    name = getMangledName(d);
+  else if (llvm::StringRef targetName =
+               CodeGenUtils::getTargetBuiltinLibFunctionName(builtinID,
+                                                             getTarget());
+           !targetName.empty())
+    name = targetName;
+  else
+    name = astContext.BuiltinInfo.getName(builtinID).substr(10);
+
   mlir::Type type = convertType(fd->getType());
   return getOrCreateCIRFunction(name, type, d, /*forVTable=*/false);
 }
@@ -3572,4 +3606,46 @@ mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
     return builder.getConstInt(getLoc(e->getSourceRange()), resType,
                                *objectSize);
   return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
+}
+
+// Emit a device printf as a cir.offload.printf. Unlike classic codegen, which
+// emits each target's printf runtime interface here, CIR leaves that to the
+// target-specific lowering of the op.
+mlir::Value CIRGenFunction::emitDevicePrintfCallExpr(const CallExpr *expr) {
+  assert(cgm.getTriple().isNVPTX() || cgm.getTriple().isAMDGCN() ||
+         (cgm.getTriple().isSPIRV() &&
+          cgm.getTriple().getVendor() == llvm::Triple::AMD));
+  assert(expr->getBuiltinCallee() == Builtin::BIprintf ||
+         expr->getBuiltinCallee() == Builtin::BI__builtin_printf);
+  assert(expr->getNumArgs() >= 1); // printf always has at least one arg.
+  CallArgList args;
+  emitCallArgs(args,
+               expr->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
+               expr->arguments(), expr->getDirectCallee());
+
+  mlir::Location loc = getLoc(expr->getBeginLoc());
+
+  // We don't know how to emit non-scalar varargs, nor scalars that
+  // cir.offload.printf does not accept.
+  bool hasNonScalar =
+      llvm::any_of(llvm::drop_begin(args), [&](const CallArg &a) {
+        if (a.hasLValue() || !a.getKnownRValue().isScalar())
+          return true;
+        mlir::Type ty = a.getKnownRValue().getValue().getType();
+        return !mlir::isa<cir::IntType, cir::PointerType, cir::DataMemberType,
+                          cir::VectorType>(ty) &&
+               !cir::isAnyFloatingPointType(ty);
+      });
+  if (hasNonScalar) {
+    cgm.errorUnsupported(expr, "non-scalar args to printf");
+    return builder.getConstInt(loc, builder.getSInt32Ty(), 0);
+  }
+
+  llvm::SmallVector<mlir::Value, 8> callArgs;
+  for (const CallArg &a : args)
+    callArgs.push_back(a.getKnownRValue().getValue());
+
+  return cir::OffloadPrintfOp::create(builder, loc, builder.getSInt32Ty(),
+                                      callArgs.front(),
+                                      llvm::drop_begin(callArgs));
 }
