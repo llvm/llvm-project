@@ -140,6 +140,8 @@ public:
                              lldb::tid_t thread_id) override;
   void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                      uint16_t length_lower_word) override;
+  bool HasDeferredStop() const { return m_deferred_stop; }
+  void ReportDeferredStop();
 
 protected:
   NativeThreadWindows *GetThreadByID(lldb::tid_t thread_id);
@@ -166,6 +168,9 @@ private:
 
   NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                        NativeDelegate &delegate, llvm::Error &E);
+
+  /// Stop the process without notifying the delegate yet.
+  void DeferStop();
 
   /// A breakpoint trap whose debug event was only delivered after the client
   /// removed that breakpoint: the thread executed the trap before the stop
@@ -195,6 +200,14 @@ private:
 
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
+
+  /// Set by DeferStop(), cleared once the stop is reported or the process
+  /// exits.
+  bool m_deferred_stop = false;
+
+  /// The thread whose debug event started the deferred stop. Reported as the
+  /// stop's thread even if later events made another thread current.
+  lldb::tid_t m_deferred_stop_tid = LLDB_INVALID_THREAD_ID;
 
   bool m_client_supports_libraries_read = false;
 
@@ -263,6 +276,10 @@ public:
   void OnDebuggerError(const Status &error, uint32_t type) override {
     return m_process.OnDebuggerError(error, type);
   }
+
+  bool HasDeferredStop() override { return m_process.HasDeferredStop(); }
+
+  void ReportDeferredStop() override { m_process.ReportDeferredStop(); }
 
 private:
   NativeProcessWindows &m_process;
