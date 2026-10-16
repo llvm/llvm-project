@@ -1015,18 +1015,16 @@ struct VectorContractToAMXDotProduct
               size_t numOffsets = indicesRhs.size();
               SmallVector<Value> indices(numOffsets, c0);
               indices[numOffsets - 2] = iv;
-              ValueRange range1(indices);
               auto vec1 = vector::LoadOp::create(
                   rewriter, loc,
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
-                  range1);
+                  indices);
 
               indices[numOffsets - 2] = i1_load;
-              ValueRange range2(indices);
               auto vec2 = vector::LoadOp::create(
                   rewriter, loc,
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
-                  range2);
+                  indices);
 
               vector::ShuffleOp writeVal1;
               vector::ShuffleOp writeVal2;
