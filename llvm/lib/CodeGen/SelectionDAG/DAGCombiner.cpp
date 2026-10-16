@@ -20433,8 +20433,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
   // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
   // the loss is acceptable with AllowReciprocal.
-  if (std::optional<APFloat> Recip = getReciprocalForMul(
-          N1, VT, Flags, LegalOperations, ForCodeSize, TLI))
+  if (std::optional<APFloat> Recip =
+          getReciprocalForMul(N1, VT, Flags, LegalOperations, ForCodeSize, TLI))
     return DAG.getNode(ISD::FMUL, DL, VT, N0,
                        DAG.getConstantFP(*Recip, DL, VT));
 
