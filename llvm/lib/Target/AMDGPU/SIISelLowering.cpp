@@ -18975,25 +18975,8 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
         KnownBits::eq(LHSKnownHi32, RHSKnownHi32);
 
     if (KnownEq && *KnownEq) {
-      ISD::CondCode NewCC = CC;
-
       // For signed comparisons, convert to unsigned since upper halves match
-      switch (CC) {
-      case ISD::SETGT:
-        NewCC = ISD::SETUGT;
-        break;
-      case ISD::SETGE:
-        NewCC = ISD::SETUGE;
-        break;
-      case ISD::SETLT:
-        NewCC = ISD::SETULT;
-        break;
-      case ISD::SETLE:
-        NewCC = ISD::SETULE;
-        break;
-      default:
-        break;
-      }
+      ISD::CondCode NewCC = ISD::getUnsignedSetCC(CC);
 
       SDValue LHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
       SDValue RHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
