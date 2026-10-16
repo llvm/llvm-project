@@ -141,7 +141,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
     bool vtableHasLocalLinkage) {
   const VTableComponent &component = layout.vtable_components()[componentIndex];
 
-  CIRGenBuilderTy builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 

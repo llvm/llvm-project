@@ -1320,7 +1320,7 @@ insertDivByZeroTrap(const MipsMCOptions &MCCLOpts, MachineInstr &MI,
     // slot.
     BuildMI(&MBB, DL, TII.get(Mips::BNE))
         .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addMBB(SinkMBB);
 
     // BreakMBB: break 7
@@ -1341,7 +1341,7 @@ insertDivByZeroTrap(const MipsMCOptions &MCCLOpts, MachineInstr &MI,
                 TII.get(TrapKind == DivByZeroTrapKind::TeqMM ? Mips::TEQ_MM
                                                              : Mips::TEQ))
             .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-            .addReg(Mips::ZERO)
+            .addReg(Mips::R0)
             .addImm(7);
 
   // Use the 32-bit sub-register if this is a 64-bit division.
@@ -1876,10 +1876,11 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
   }
   BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::ZERO).addImm(MaskImm);
+      .addReg(Mips::R0)
+      .addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::R0).addReg(Mask);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Incr2).addReg(Incr).addReg(ShiftAmt);
 
 
@@ -2064,10 +2065,11 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
     BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
   }
   BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::ZERO).addImm(MaskImm);
+      .addReg(Mips::R0)
+      .addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::R0).addReg(Mask);
   BuildMI(BB, DL, TII->get(Mips::ANDi), MaskedCmpVal)
     .addReg(CmpVal).addImm(MaskImm);
   BuildMI(BB, DL, TII->get(Mips::SLLV), ShiftedCmpVal)
@@ -2125,7 +2127,7 @@ SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
     // TODO: DAG.getConstant(0) should be optimized to avoid generate an extra
     // instr `addiu $x, $zero, 0`.
     SDValue Low =
-        DAG.getCopyFromReg(DAG.getEntryNode(), DL, Mips::ZERO, MVT::i32);
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, Mips::R0, MVT::i32);
     SDValue Hi = DAG.getConstant(INTVal.extractBits(32, 32), DL, MVT::i32);
     return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Low, Hi);
   }
@@ -2619,7 +2621,7 @@ SDValue MipsTargetLowering::lowerFABS32(SDValue Op, SelectionDAG &DAG,
   // Clear MSB.
   if (HasExtractInsert)
     Res = DAG.getNode(MipsISD::Ins, DL, MVT::i32,
-                      DAG.getRegister(Mips::ZERO, MVT::i32),
+                      DAG.getRegister(Mips::R0, MVT::i32),
                       DAG.getConstant(31, DL, MVT::i32), Const1, X);
   else {
     // TODO: Provide DAG patterns which transform (and x, cst)
@@ -2655,7 +2657,7 @@ SDValue MipsTargetLowering::lowerFABS64(SDValue Op, SelectionDAG &DAG,
   // Clear MSB.
   if (HasExtractInsert)
     Res = DAG.getNode(MipsISD::Ins, DL, MVT::i64,
-                      DAG.getRegister(Mips::ZERO_64, MVT::i64),
+                      DAG.getRegister(Mips::R0_64, MVT::i64),
                       DAG.getConstant(63, DL, MVT::i32), Const1, X);
   else {
     SDValue SllX = DAG.getNode(ISD::SHL, DL, MVT::i64, X, Const1);
@@ -3144,10 +3146,10 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     // shadow the register lost to alignment requirements.
     if (ArgFlags.isSplit()) {
       Reg = State.AllocateReg(FloatVectorIntRegs);
-      if (Reg == Mips::A2)
-        State.AllocateReg(Mips::A1);
+      if (Reg == IntRegs[2])
+        State.AllocateReg(IntRegs[1]);
       else if (Reg == 0)
-        State.AllocateReg(Mips::A3);
+        State.AllocateReg(IntRegs[3]);
     } else {
       // If we're an intermediate component of the split, we can just attempt to
       // allocate a register directly.
@@ -3158,14 +3160,14 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
     Reg = State.AllocateReg(IntRegs);
     // If this is the first part of an i64 arg,
     // the allocated register must be either A0 or A2.
-    if (isI64 && (Reg == Mips::A1 || Reg == Mips::A3))
+    if (isI64 && (Reg == IntRegs[1] || Reg == IntRegs[3]))
       Reg = State.AllocateReg(IntRegs);
     LocVT = MVT::i32;
   } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
     // Allocate int register and shadow next int register. If first
-    // available register is Mips::A1 or Mips::A3, shadow it too.
+    // available register is $a1 or $a3, shadow it too.
     Reg = State.AllocateReg(IntRegs);
-    if (Reg == Mips::A1 || Reg == Mips::A3)
+    if (Reg == IntRegs[1] || Reg == IntRegs[3])
       Reg = State.AllocateReg(IntRegs);
 
     if (Reg) {
@@ -3189,7 +3191,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
       Reg = State.AllocateReg(F64Regs);
       // Shadow int registers
       MCRegister Reg2 = State.AllocateReg(IntRegs);
-      if (Reg2 == Mips::A1 || Reg2 == Mips::A3)
+      if (Reg2 == IntRegs[1] || Reg2 == IntRegs[3])
         State.AllocateReg(IntRegs);
       State.AllocateReg(IntRegs);
     }
@@ -4896,7 +4898,7 @@ MachineBasicBlock *MipsTargetLowering::emitPseudoSELECT(MachineInstr &MI,
     // bne rs, $0, sinkMBB
     BuildMI(BB, DL, TII->get(Opc))
         .addReg(MI.getOperand(1).getReg())
-        .addReg(Mips::ZERO)
+        .addReg(Mips::R0)
         .addMBB(sinkMBB);
   }
 
@@ -4967,7 +4969,7 @@ MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
   // bne rs, $0, sinkMBB
   BuildMI(BB, DL, TII->get(Mips::BNE))
       .addReg(MI.getOperand(2).getReg())
-      .addReg(Mips::ZERO)
+      .addReg(Mips::R0)
       .addMBB(sinkMBB);
 
   //  copy0MBB:
