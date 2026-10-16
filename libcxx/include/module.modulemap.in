@@ -1271,6 +1271,7 @@ module std {
 
   module execution {
     header "execution"
+    header "__execution/completion_functions.h"
     export *
   }
 
