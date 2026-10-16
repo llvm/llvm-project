@@ -595,8 +595,8 @@ public:
   lldb::ValueObjectSP GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
                                                 bool can_create);
 
-  lldb::ValueObjectSP GetSyntheticExpressionPathChild(const char *expression,
-                                                      bool can_create);
+  lldb::ValueObjectSP
+  GetSyntheticExpressionPathChild(llvm::StringRef expression, bool can_create);
 
   virtual lldb::ValueObjectSP
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,

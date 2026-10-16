@@ -13,7 +13,7 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_x86.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 #include <optional>
@@ -145,8 +145,8 @@ private:
 
   void UpdateXSTATEforWrite(uint32_t reg_index);
 
-  RegisterContextLinux_x86 &GetRegisterInfo() const {
-    return static_cast<RegisterContextLinux_x86 &>(
+  RegisterInfoLinux_x86 &GetRegisterInfo() const {
+    return static_cast<RegisterInfoLinux_x86 &>(
         *m_register_info_interface_up);
   }
 };
