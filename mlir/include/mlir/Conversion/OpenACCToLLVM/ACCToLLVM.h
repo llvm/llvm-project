@@ -90,6 +90,21 @@ void populateACCHostDataPatterns(LLVMTypeConverter &converter,
                                  SymbolTable &symbolTable,
                                  const acc::ACCRuntimeCallConfig &config = {});
 
+/// Configure conversion legality for `acc.kernel_environment`. The
+/// `gpu.launch_func` operations it contains are lowered together with it.
+void configureACCKernelLaunchConversionLegality(ConversionTarget &target);
+
+/// Populate patterns that lower an `acc.kernel_environment` and all
+/// `gpu.launch_func` operations in its body together. The environment becomes
+/// an implicit data region and each launch becomes `__tgt_acc_kernel`. The
+/// async and wait clauses are taken from the ones that apply to
+/// \p clauseDeviceType. The runtime calls are made for the default device type.
+void populateACCKernelLaunchPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    acc::OpenACCSupport &accSupport, Region &globalSymbolRegion,
+    SymbolTable &symbolTable, const acc::ACCRuntimeCallConfig &config = {},
+    acc::DeviceType clauseDeviceType = acc::DeviceType::None);
+
 /// Populate the patterns that remove OpenACC data clause operations once the
 /// constructs holding them have turned their mappings into runtime calls. A
 /// data entry operation is replaced by the address of the object it named, and

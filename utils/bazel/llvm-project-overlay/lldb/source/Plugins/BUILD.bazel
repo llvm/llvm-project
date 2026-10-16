@@ -444,6 +444,25 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginObjectContainerClangOffloadBundle",
+    srcs = glob(["ObjectContainer/Clang-Offload-Bundle/*.cpp"]),
+    hdrs = glob(["ObjectContainer/Clang-Offload-Bundle/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "StructuredDataDarwinLogProperties",
     strip_include_prefix = "StructuredData/DarwinLog",
@@ -786,6 +805,25 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginFortranLanguage",
+    srcs = glob(["Language/Fortran/*.cpp"]),
+    hdrs = glob(["Language/Fortran/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:DataFormatters",
+        "//lldb:Expression",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1210,6 +1248,30 @@ cc_library(
         "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginArchitectureRISCV",
+    srcs = glob(["Architecture/RISCV/*.cpp"]),
+    hdrs = glob(["Architecture/RISCV/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginArchitectureWasm",
+    srcs = glob(["Architecture/Wasm/*.cpp"]),
+    hdrs = glob(["Architecture/Wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Utility",
     ],
 )
 

@@ -4435,11 +4435,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Changed = ChangeStatus::CHANGED;
 
     // Do not use instruction guards when no parallel is present inside
-    // the target region.
-    if (mayContainParallelRegion())
+    // the target region. Instead, only the main thread of each team executes
+    // the user code, so there is no need to launch more threads.
+    if (mayContainParallelRegion()) {
       insertInstructionGuardsHelper(A);
-    else
+    } else {
       forceSingleThreadPerWorkgroupHelper(A);
+      setMaxThreadsOfKernelEnvironment(
+          ConstantInt::get(Type::getInt32Ty(Kernel->getContext()), 1));
+    }
 
     // Adjust the global exec mode flag that tells the runtime what mode this
     // kernel is executed in.
