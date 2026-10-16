@@ -496,6 +496,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[]`
      - Marks a point in the code that should never be reached, enabling optimizations by indicating unreachable code paths.
+   * - `int_spv_debug_break`
+     - None
+     - `[]`
+     - Requests a debugger breakpoint (HLSL `DebugBreak()`). Lowered to the `DebugBreak` instruction of the `NonSemantic.DebugBreak` extended instruction set, which requires SPIR-V 1.6 or the `SPV_KHR_non_semantic_info` extension.
    * - `int_spv_alloca`
      - Type
      - `[]`

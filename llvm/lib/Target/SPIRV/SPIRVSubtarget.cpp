@@ -170,6 +170,12 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
   }
 }
 
+void SPIRVSubtarget::accountForNonSemanticDebugBreak() {
+  if (isAtLeastSPIRVVer(VersionTuple(1, 6)) ||
+      canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
+    AvailableExtInstSets.insert(SPIRV::InstructionSet::NonSemantic_DebugBreak);
+}
+
 // TODO: use command line args for this rather than just defaults.
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableExtInstSets() {
@@ -181,6 +187,7 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 
   // Handle extended instruction sets from extensions.
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }
 
 void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
@@ -257,4 +264,5 @@ void SPIRVSubtarget::initAvailableExtensions(
   }
 
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }

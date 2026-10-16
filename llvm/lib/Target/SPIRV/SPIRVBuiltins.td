@@ -28,6 +28,7 @@ def GLSL_std_450 : InstructionSet<1>;
 def SPV_AMD_shader_trinary_minmax : InstructionSet<2>;
 def NonSemantic_Shader_DebugInfo_100 : InstructionSet<3>;
 def NonSemantic_AuxData : InstructionSet<4>;
+def NonSemantic_DebugBreak : InstructionSet<5>;
 
 // Define various builtin groups
 def BuiltinGroup : GenericEnum {
@@ -205,6 +206,17 @@ def NonSemanticExtInst : GenericEnum {
 }
 
 class NonSemanticExtInst<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+def NonSemanticDebugBreakExtInst : GenericEnum {
+  let FilterClass = "NonSemanticDebugBreakExtInst";
+  let NameField = "Name";
+  let ValueField = "Value";
+}
+
+class NonSemanticDebugBreakExtInst<string name, bits<32> value> {
   string Name = name;
   bits<32> Value = value;
 }
@@ -522,6 +534,9 @@ defm : DemangledExtendedBuiltin<"DebugBuildIdentifier", NonSemantic_Shader_Debug
 defm : DemangledExtendedBuiltin<"DebugStoragePath", NonSemantic_Shader_DebugInfo_100, 106>;
 defm : DemangledExtendedBuiltin<"DebugEntryPoint", NonSemantic_Shader_DebugInfo_100, 107>;
 defm : DemangledExtendedBuiltin<"DebugTypeMatrix", NonSemantic_Shader_DebugInfo_100, 108>;
+// NonSemantic.DebugBreak extended instruction set.
+def : ExtendedBuiltin<"DebugBreak", NonSemantic_DebugBreak, 1>;
+def : NonSemanticDebugBreakExtInst<"DebugBreak", 1>;
 //===----------------------------------------------------------------------===//
 // Class defining an native builtin record used for direct translation into a
 // SPIR-V instruction.

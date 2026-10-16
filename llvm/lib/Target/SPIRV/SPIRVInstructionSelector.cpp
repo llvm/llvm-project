@@ -248,6 +248,8 @@ private:
                        MachineInstr &I) const;
   bool selectPrefetch(MachineInstr &I) const;
 
+  bool selectDebugBreak(MachineInstr &I) const;
+
   bool selectIntegerDot(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, bool Signed) const;
 
@@ -1486,6 +1488,20 @@ bool SPIRVInstructionSelector::selectPrefetch(MachineInstr &I) const {
                          {AddrVal, ConstIntOne});
   }
   return true;
+}
+
+bool SPIRVInstructionSelector::selectDebugBreak(MachineInstr &I) const {
+  if (!STI.canUseExtInstSet(SPIRV::InstructionSet::NonSemantic_DebugBreak))
+    return diagnoseUnsupported(
+        I, "llvm.spv.debug.break requires SPIR-V 1.6 or the following SPIR-V "
+           "extension: SPV_KHR_non_semantic_info");
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst VoidTy = GR.getOpTypeVoid(MIRBuilder);
+  Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(VoidTy));
+  return selectExtInst(ExtReg, VoidTy, I,
+                       {{SPIRV::InstructionSet::NonSemantic_DebugBreak,
+                         SPIRV::NonSemanticDebugBreakExtInst::DebugBreak}},
+                       /*setMIFlags=*/false, /*useMISrc=*/false);
 }
 
 bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
@@ -5900,6 +5916,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_debug_break:
+    return selectDebugBreak(I);
+
   case Intrinsic::spv_resource_nonuniformindex: {
     return selectResourceNonUniformIndex(ResVReg, ResType, I);
   }

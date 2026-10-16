@@ -242,6 +242,8 @@ std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
     return "NonSemantic.AuxData";
   case SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax:
     return "SPV_AMD_shader_trinary_minmax";
+  case SPIRV::InstructionSet::NonSemantic_DebugBreak:
+    return "NonSemantic.DebugBreak";
   }
   return "UNKNOWN_EXT_INST_SET";
 }
@@ -251,7 +253,8 @@ getExtInstSetFromString(std::string SetName) {
   for (auto Set :
        {SPIRV::InstructionSet::GLSL_std_450, SPIRV::InstructionSet::OpenCL_std,
         SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100,
-        SPIRV::InstructionSet::NonSemantic_AuxData}) {
+        SPIRV::InstructionSet::NonSemantic_AuxData,
+        SPIRV::InstructionSet::NonSemantic_DebugBreak}) {
     if (SetName == getExtInstSetName(Set))
       return Set;
   }
