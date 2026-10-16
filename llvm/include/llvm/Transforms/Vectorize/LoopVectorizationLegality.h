@@ -635,11 +635,14 @@ private:
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
   struct SafeAccessInfo {
-    SmallVector<TypeSize, 1> Sizes;
+    // Fixed and scalable sizes need separate maxima: neither a larger fixed
+    // size nor a smaller scalable size necessarily covers the other.
+    TypeSize MaxFixedSize = TypeSize::getFixed(0);
+    TypeSize MaxScalableSize = TypeSize::getScalable(0);
     Align Alignment = Align(1);
   };
 
-  /// Maps a pointer to access sizes and alignment known to be safe.
+  /// Maps a pointer to maximum access sizes and alignment known to be safe.
   using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
 
   /// Return true if all of the instructions in the block can be speculatively

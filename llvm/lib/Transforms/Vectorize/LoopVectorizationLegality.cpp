@@ -1370,11 +1370,8 @@ bool LoopVectorizationLegality::blockCanBePredicated(
       auto It = SafeAccesses.find(LI->getPointerOperand());
       TypeSize Size = LI->getDataLayout().getTypeStoreSize(LI->getType());
       if (It == SafeAccesses.end() || It->second.Alignment < LI->getAlign() ||
-          !any_of(
-              It->second.Sizes,
-              [&](TypeSize SafeSize) {
-                return TypeSize::isKnownGE(SafeSize, Size);
-              }))
+          (!TypeSize::isKnownGE(It->second.MaxFixedSize, Size) &&
+           !TypeSize::isKnownGE(It->second.MaxScalableSize, Size)))
         MaskedOp.insert(LI);
       continue;
     }
@@ -1405,9 +1402,10 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   assert(TheLoop->getNumBlocks() > 1 && "Single block loops are vectorizable");
 
-  // Record the access sizes and alignment known to be safe for each pointer
-  // in every executed iteration. A later load can use the size and alignment
-  // established by different accesses to the same pointer.
+  // Record the maximum fixed and scalable access sizes and alignment known to
+  // be safe for each pointer in every executed iteration. A later load can use
+  // the size and alignment established by different accesses to the same
+  // pointer.
   SafeAccessesTy SafeAccesses;
   auto RecordSafeAccess = [&SafeAccesses](Instruction &I) {
     Value *Ptr = getLoadStorePointerOperand(&I);
@@ -1417,10 +1415,10 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     Align Alignment = getLoadStoreAlignment(&I);
     auto &Info = SafeAccesses[Ptr];
     Info.Alignment = std::max(Info.Alignment, Alignment);
-    if (none_of(Info.Sizes, [&](TypeSize SafeSize) {
-          return TypeSize::isKnownGE(SafeSize, Size);
-        }))
-      Info.Sizes.push_back(Size);
+    TypeSize &MaxSize =
+        Size.isScalable() ? Info.MaxScalableSize : Info.MaxFixedSize;
+    if (TypeSize::isKnownGT(Size, MaxSize))
+      MaxSize = Size;
   };
 
   // Collect safe accesses.
