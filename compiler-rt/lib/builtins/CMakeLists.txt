@@ -438,6 +438,9 @@ if (NOT MSVC)
   # Darwin x86_64 Haswell
   set(x86_64h_SOURCES ${x86_64_SOURCES})
 
+  # x86_64 LFI
+  set(x86_64_lfi_SOURCES ${x86_64_SOURCES})
+
   if (WIN32)
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
@@ -891,7 +894,6 @@ set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
 set(arm64ec_SOURCES ${aarch64_SOURCES})
 set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
-set(x86_64_lfi_SOURCES ${x86_64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})
