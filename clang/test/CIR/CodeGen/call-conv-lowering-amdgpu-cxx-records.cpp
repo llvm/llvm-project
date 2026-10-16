@@ -11,7 +11,7 @@
 
 // TODO(cir): Add the C++ record cases still NYI in CallConvLowering:
 // - Non-trivial records as arguments. Classic passes them indirectly as
-//   ptr addrspace(5), but the bridge drops the indirect address space.
+//   ptr addrspace(5), which the bridge cannot express yet.
 // - Member function pointers, lowered to a 128-bit pair that the bridge
 //   cannot coerce yet.
 // - Records of 33 to 64 bits, such as a base plus a field, which classic

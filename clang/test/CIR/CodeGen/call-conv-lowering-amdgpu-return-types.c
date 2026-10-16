@@ -15,7 +15,7 @@
 // - Aggregates over 64 bits that fit the 16-register budget. The classifier
 //   returns Direct with no coerce type, which the bridge rejects.
 // - Larger aggregates, returned through sret in addrspace(5). The bridge
-//   drops the indirect address space.
+//   cannot express an indirect address space yet.
 // - Structs with a flexible array member. The bridge does not set that
 //   record flag yet.
 // - 3-element vector returns, blocked on CIRGen's vec3 load and store NYI.
