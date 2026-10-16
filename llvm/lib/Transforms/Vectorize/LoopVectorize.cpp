@@ -487,11 +487,6 @@ public:
         TheLoop(L), PSE(PSE), LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC),
         ORE(ORE), GetBFI(GetBFI), TheFunction(F), InterleaveInfo(IAI) {}
 
-  /// \return An upper bound for the vectorization factors (both fixed and
-  /// scalable). If the factors are 0, vectorization and interleaving should be
-  /// avoided up front.
-  FixedScalableVFPair computeMaxVF(ElementCount UserVF, unsigned UserIC);
-
   /// Memory access instruction may be vectorized in more than one way.
   /// Form of instruction after vectorization depends on cost.
   /// This function takes cost-based decisions for Load/Store instructions
@@ -2630,16 +2625,16 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 }
 
 FixedScalableVFPair
-LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
+LoopVectorizationPlanner::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // Make sure once we return PartialAliasMaskingStatus is not "NotDecided".
   scope_exit EnsureAliasMaskingStatusIsDecidedOnReturn([this] {
-    if (PartialAliasMaskingStatus == AliasMaskingStatus::NotDecided)
-      PartialAliasMaskingStatus = AliasMaskingStatus::Disabled;
+    if (CM->PartialAliasMaskingStatus == AliasMaskingStatus::NotDecided)
+      CM->PartialAliasMaskingStatus = AliasMaskingStatus::Disabled;
   });
 
   // For outer loops, use simple type-based heuristic VF. No cost model or
   // memory dependence analysis is available.
-  if (!TheLoop->isInnermost()) {
+  if (!OrigLoop->isInnermost()) {
     return Config.computeVPlanOuterloopVF(UserVF);
   }
 
@@ -2649,15 +2644,15 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     reportVectorizationFailure(
         "Not inserting runtime ptr check for divergent target",
         "runtime pointer checks needed. Not enabled for divergent target",
-        "CantVersionLoopWithDivergentTarget", ORE, TheLoop);
+        "CantVersionLoopWithDivergentTarget", ORE, OrigLoop);
     return FixedScalableVFPair::getNone();
   }
 
   ScalarEvolution *SE = PSE.getSE();
-  ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
+  ElementCount TC = getSmallConstantTripCount(SE, OrigLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
-  if (!MaxTC && EpilogueLoweringStatus == CM_EpilogueAllowed)
-    MaxTC = getMaxTCFromNonZeroRange(PSE, TheLoop);
+  if (!MaxTC && CM->EpilogueLoweringStatus == CM_EpilogueAllowed)
+    MaxTC = getMaxTCFromNonZeroRange(PSE, OrigLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
@@ -2665,14 +2660,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     reportVectorizationFailure(
         "Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
-        "SingleIterationLoop", ORE, TheLoop);
+        "SingleIterationLoop", ORE, OrigLoop);
     return FixedScalableVFPair::getNone();
   }
 
   // If BTC matches the widest induction type and is -1 then the trip count
   // computation will wrap to 0 and the vector trip count will be 0. Do not try
   // to vectorize.
-  const SCEV *BTC = SE->getBackedgeTakenCount(TheLoop);
+  const SCEV *BTC = SE->getBackedgeTakenCount(OrigLoop);
   if (!isa<SCEVCouldNotCompute>(BTC) &&
       BTC->getType()->getScalarSizeInBits() >=
           Legal->getWidestInductionType()->getScalarSizeInBits() &&
@@ -2681,17 +2676,18 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     reportVectorizationFailure(
         "Trip count computation wrapped",
         "backedge-taken count is -1, loop trip count wrapped to 0",
-        "TripCountWrapped", ORE, TheLoop);
+        "TripCountWrapped", ORE, OrigLoop);
     return FixedScalableVFPair::getNone();
   }
 
-  assert(WideningDecisions.empty() && Uniforms.empty() && Scalars.empty() &&
+  assert(CM->WideningDecisions.empty() && CM->Uniforms.empty() &&
+         CM->Scalars.empty() &&
          "No cost-modeling decisions should have been taken at this point");
 
-  switch (EpilogueLoweringStatus) {
+  switch (CM->EpilogueLoweringStatus) {
   case CM_EpilogueAllowed:
     return Config.computeFeasibleMaxVF(MaxTC, UserVF, UserIC, false,
-                                       requiresScalarEpilogue(true));
+                                       CM->requiresScalarEpilogue(true));
   case CM_EpilogueNotAllowedFoldTail:
     [[fallthrough]];
   case CM_EpilogueNotNeededFoldTail:
@@ -2702,7 +2698,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   case CM_EpilogueNotAllowedLowTripLoop:
     // fallthrough as a special case of OptForSize
   case CM_EpilogueNotAllowedOptSize:
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
+    if (CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize)
       LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to -Os/-Oz.\n");
     else
       LLVM_DEBUG(dbgs() << "LV: Not allowing epilogue due to low trip "
@@ -2723,11 +2719,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (!useMaskedInterleavedAccesses(Opts, TTI)) {
     // Note: There is no need to invalidate any cost modeling decisions here, as
     // none were taken so far (see assertion above).
-    InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
+    CM->InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
   FixedScalableVFPair MaxFactors = Config.computeFeasibleMaxVF(
-      MaxTC, UserVF, UserIC, true, requiresScalarEpilogue(true));
+      MaxTC, UserVF, UserIC, true, CM->requiresScalarEpilogue(true));
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
@@ -2735,7 +2731,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
     if (std::optional<uint64_t> MaxRuntimeScalableVF =
-            getMaxRuntimeElementCount(MaxFactors.ScalableVF, *TheFunction))
+            getMaxRuntimeElementCount(MaxFactors.ScalableVF, *CM->TheFunction))
       MaxPowerOf2RuntimeVF =
           std::max(*MaxPowerOf2RuntimeVF, *MaxRuntimeScalableVF);
     else
@@ -2745,7 +2741,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   auto NoScalarEpilogueNeeded = [this, &UserIC](uint64_t MaxRuntimeVF) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
-    if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
+    if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
     uint64_t MaxVFtimesIC = MaxRuntimeVF * std::max<uint64_t>(UserIC, 1);
@@ -2760,7 +2756,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     const SCEV *ExitCount = SE->getAddExpr(
         BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
     const SCEV *Rem = SE->getURemExpr(
-        SE->applyLoopGuards(ExitCount, TheLoop),
+        SE->applyLoopGuards(ExitCount, OrigLoop),
         SE->getConstant(BackedgeTakenCount->getType(), MaxVFtimesIC));
     return Rem->isZero();
   };
@@ -2775,14 +2771,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     }
   }
 
-  auto ExpectedTC = getSmallBestKnownTC(Opts, PSE, TheLoop);
+  auto ExpectedTC = getSmallBestKnownTC(Opts, PSE, OrigLoop);
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
           TTI.getMinTripCountTailFoldingThreshold()) {
     // If we have a low-trip-count, and the fixed-width VF is known to divide
     // the trip count the fixed-width factor in preference to allow the
     // generation of a non-predicated loop.
-    if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+    if (CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
         NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
       LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                            "remain for any chosen VF.\n");
@@ -2807,7 +2803,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
         !Config.OptForSize) {
       unsigned NumOfInstructions = llvm::sum_of(
-          llvm::map_range(TheLoop->blocks(),
+          llvm::map_range(OrigLoop->blocks(),
                           [](BasicBlock *BB) { return BB->size(); }),
           unsigned(0));
       if (NumOfInstructions > Opts.low_trip_count_loop_body_size_limit) {
@@ -2823,7 +2819,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     reportVectorizationFailure(
         "The trip count is below the minial threshold value.",
         "loop trip count is too low, avoiding vectorization", "LowTripCount",
-        ORE, TheLoop);
+        ORE, OrigLoop);
     return FixedScalableVFPair::getNone();
   }
 
@@ -2832,9 +2828,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
-  setTailFoldingStyle(ContainsScalableVF, UserIC);
-  if (foldTailByMasking()) {
-    if (foldTailWithEVL()) {
+  CM->setTailFoldingStyle(ContainsScalableVF, UserIC);
+  if (CM->foldTailByMasking()) {
+    if (CM->foldTailWithEVL()) {
       LLVM_DEBUG(
           dbgs()
           << "LV: tail is folded with EVL, forcing unroll factor to be 1. Will "
@@ -2847,21 +2843,21 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
       MaxFactors.FixedVF = ElementCount::getFixed(1);
     } else {
-      tryToEnablePartialAliasMasking();
+      CM->tryToEnablePartialAliasMasking();
     }
     return MaxFactors;
   }
 
   // If there was a tail-folding hint/switch, but we can't fold the tail by
   // masking, fallback to a vectorization with an epilogue.
-  if (EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail) {
+  if (CM->EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with an "
                          "epilogue instead.\n");
-    EpilogueLoweringStatus = CM_EpilogueAllowed;
+    CM->EpilogueLoweringStatus = CM_EpilogueAllowed;
     return MaxFactors;
   }
 
-  if (EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail) {
+  if (CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail) {
     LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
     return FixedScalableVFPair::getNone();
   }
@@ -2869,7 +2865,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (TC.isZero()) {
     reportVectorizationFailure(
         "unable to calculate the loop count due to complex control flow",
-        "UnknownLoopCountComplexCFG", ORE, TheLoop);
+        "UnknownLoopCountComplexCFG", ORE, OrigLoop);
     return FixedScalableVFPair::getNone();
   }
 
@@ -2878,7 +2874,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       "cannot optimize for size and vectorize at the same time. "
       "Enable vectorization of this loop with '#pragma clang loop "
       "vectorize(enable)' when compiling with -Os/-Oz",
-      "NoTailLoopWithOptForSize", ORE, TheLoop);
+      "NoTailLoopWithOptForSize", ORE, OrigLoop);
   return FixedScalableVFPair::getNone();
 }
 
@@ -5100,7 +5096,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   CM->collectValuesToIgnore();
   Config.collectElementTypesForWidening(&CM->ValuesToIgnore);
 
-  FixedScalableVFPair MaxFactors = CM->computeMaxVF(UserVF, UserIC);
+  FixedScalableVFPair MaxFactors = computeMaxVF(UserVF, UserIC);
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 

@@ -1067,6 +1067,11 @@ private:
   /// be built.
   VPlanPtr tryToBuildVPlan1();
 
+  /// Compute upper bounds for the fixed and scalable vectorization factors and
+  /// select tail folding before building the initial VPlan. If the factors are
+  /// 0, vectorization and interleaving should be avoided up front.
+  FixedScalableVFPair computeMaxVF(ElementCount UserVF, unsigned UserIC);
+
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
   /// conversion only. For inner loops, \p Range's largest included VF is
