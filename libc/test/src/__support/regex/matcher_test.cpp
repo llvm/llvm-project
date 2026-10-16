@@ -65,24 +65,24 @@ TEST(LlvmLibcRegexMatcherTest, DerivativeBaseCases) {
 
 TEST(LlvmLibcRegexMatcherTest, DerivativeConcatAndAltRules) {
   ExprPool pool;
-  ExprId lit_a = *pool.make_lit('a');
-  ExprId lit_b = *pool.make_lit('b');
-  ExprId empty_str = *pool.empty_str();
+  const ExprId lit_a = *pool.make_lit('a');
+  const ExprId lit_b = *pool.make_lit('b');
+  const ExprId empty_str = *pool.empty_str();
 
   // Non-nullable left: D_a(a . b) = b, D_b(a . b) = EmptySet.
-  ExprId ab = *pool.make_concat(lit_a, lit_b);
+  const ExprId ab = *pool.make_concat(lit_a, lit_b);
   EXPECT_EQ(*derivative(ab, 'a', pool), lit_b);
   EXPECT_EQ(*derivative(ab, 'b', pool), EMPTY_SET_ID);
 
   // Nullable left: D_b((a | EmptyStr) . b) = EmptyStr.
-  ExprId opt_a = *pool.make_alt(lit_a, empty_str);
-  ExprId opt_a_b = *pool.make_concat(opt_a, lit_b);
+  const ExprId opt_a = *pool.make_alt(lit_a, empty_str);
+  const ExprId opt_a_b = *pool.make_concat(opt_a, lit_b);
   EXPECT_EQ(*derivative(opt_a_b, 'a', pool), lit_b);
   EXPECT_EQ(*derivative(opt_a_b, 'b', pool), EMPTY_STR_ID);
 
   // Sum rule: D_a(a | b) = EmptyStr, D_b(a | b) = EmptyStr, D_c(a | b) =
   // EmptySet.
-  ExprId a_or_b = *pool.make_alt(lit_a, lit_b);
+  const ExprId a_or_b = *pool.make_alt(lit_a, lit_b);
   EXPECT_EQ(*derivative(a_or_b, 'a', pool), EMPTY_STR_ID);
   EXPECT_EQ(*derivative(a_or_b, 'b', pool), EMPTY_STR_ID);
   EXPECT_EQ(*derivative(a_or_b, 'c', pool), EMPTY_SET_ID);
@@ -122,21 +122,21 @@ TEST(LlvmLibcRegexMatcherTest, OverlappingPrefixMatch) {
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   ExprPool pool;
-  ExprId empty_str = *pool.empty_str();
-  ExprId lit_a = *pool.make_lit('a');
-  ExprId lit_b = *pool.make_lit('b');
-  ExprId lit_c = *pool.make_lit('c');
+  const ExprId empty_str = *pool.empty_str();
+  const ExprId lit_a = *pool.make_lit('a');
+  const ExprId lit_b = *pool.make_lit('b');
+  const ExprId lit_c = *pool.make_lit('c');
 
-  ExprId ab = *pool.make_concat(lit_a, lit_b);
-  ExprId opt_a = *pool.make_alt(lit_a, empty_str);
-  ExprId opt_ab = *pool.make_concat(opt_a, lit_b);
+  const ExprId ab = *pool.make_concat(lit_a, lit_b);
+  const ExprId opt_a = *pool.make_alt(lit_a, empty_str);
+  const ExprId opt_ab = *pool.make_concat(opt_a, lit_b);
   // D_a(((a | "") . b) . c) = b . c, which requires interning Concat(b, c).
-  ExprId need_bc = *pool.make_concat(opt_ab, lit_c);
-  ExprId concat_left_fail = *pool.make_concat(need_bc, lit_a);
-  ExprId concat_right_fail = *pool.make_concat(opt_a, need_bc);
-  ExprId alt_right_fail = *pool.make_alt(lit_a, need_bc);
-  ExprId lit_d = *pool.make_lit('d');
-  ExprId alt_left_fail = *pool.make_alt(need_bc, lit_d);
+  const ExprId need_bc = *pool.make_concat(opt_ab, lit_c);
+  const ExprId concat_left_fail = *pool.make_concat(need_bc, lit_a);
+  const ExprId concat_right_fail = *pool.make_concat(opt_a, need_bc);
+  const ExprId alt_right_fail = *pool.make_alt(lit_a, need_bc);
+  const ExprId lit_d = *pool.make_lit('d');
+  const ExprId alt_left_fail = *pool.make_alt(need_bc, lit_d);
 
   // Fill the remainder of the pool to MAX_NODE_LIMIT (10000 nodes).
   ExprId chain = lit_a;
