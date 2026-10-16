@@ -99,26 +99,34 @@ void f8(int arg) {
     return;
 }
 
-void f9(int x, int y) {
+int get_value();
+
+void f9(int arg) {
+  if (({ [[clang::nomerge]] arg = get_value(); }))
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+    return;
+}
+
+void f10(int x, int y) {
   if (({ x = 1; ({ y = 2; }); }))
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
     return;
 }
 
-void f10(int x) {
+void f11(int x) {
   if (({ ({ x = 1; }); }))
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
     return;
 }
 
-void f11(int arg) {
+void f12(int arg) {
   BrokenOperator bo1, bo2;
   if (({ bo1 = arg; ({ bo2 = arg; }); }))
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
     return;
 }
 
-void f12(int arg) {
+void f13(int arg) {
   BrokenOperator bo;
   if (({ ({ bo = arg; }); }))
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
