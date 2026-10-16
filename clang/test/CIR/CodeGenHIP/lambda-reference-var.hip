@@ -15,11 +15,15 @@
 // RUN:   %s -o %t-host.ll
 // RUN: FileCheck --check-prefix=HOST --input-file=%t-host.ll %s
 
+// TODO(cir): Drop -fno-clangir-call-conv-lowering once kernel byref arguments
+// are supported.
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -fclangir -emit-cir -I%S/../CodeGenCUDA/Inputs %s -o %t-dev.cir
+// RUN:   -fclangir -fno-clangir-call-conv-lowering -emit-cir \
+// RUN:   -I%S/../CodeGenCUDA/Inputs %s -o %t-dev.cir
 // RUN: FileCheck --check-prefix=CIR-DEV --input-file=%t-dev.cir %s
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn-amd-amdhsa -fcuda-is-device \
-// RUN:   -fclangir -emit-llvm -I%S/../CodeGenCUDA/Inputs %s -o %t-dev-cir.ll
+// RUN:   -fclangir -fno-clangir-call-conv-lowering -emit-llvm \
+// RUN:   -I%S/../CodeGenCUDA/Inputs %s -o %t-dev-cir.ll
 // RUN: FileCheck --check-prefix=DEV --input-file=%t-dev-cir.ll %s
 // RUN: %clang_cc1 -x hip -std=c++11 -triple amdgcn-amd-amdhsa -fcuda-is-device \
 // RUN:   -emit-llvm -I%S/../CodeGenCUDA/Inputs %s -o %t-dev.ll
