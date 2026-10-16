@@ -110,13 +110,18 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
     Reserved = RR;
   }
 
-  // Invalidate cached information from previous function.
+  unsigned NumPSets = TRI->getNumRegPressureSets();
+
+  // Invalidate cached register class information from the previous function.
   if (Update) {
-    unsigned NumPSets = TRI->getNumRegPressureSets();
     PSetLimits.reset(new unsigned[NumPSets]);
-    std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
     ++Tag;
   }
+
+  // Target pressure limits may depend on function-specific state that is not
+  // reflected in the register class information above. Always invalidate these
+  // limits when moving to a new function.
+  std::fill(&PSetLimits[0], &PSetLimits[NumPSets], 0);
 }
 
 void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
