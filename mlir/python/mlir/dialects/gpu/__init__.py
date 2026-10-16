@@ -306,6 +306,7 @@ class LaunchOp(LaunchOp):
             block_size_y,
             block_size_z,
             dynamicSharedMemorySize=dynamic_shared_memory_size,
+            calling_convention=[],
             loc=loc,
             ip=ip,
         )
