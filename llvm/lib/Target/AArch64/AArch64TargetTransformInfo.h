@@ -268,6 +268,12 @@ public:
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
   bool useNeonVector(const Type *Ty) const;
 
+  // The expansion uses overlapping unaligned accesses, which are split up under
+  // strict alignment, and MOPS has its own variable-length lowering.
+  uint64_t getMaxBoundedMemSetInlineSize() const override {
+    return ST->requiresStrictAlign() || ST->hasMOPS() ? 0 : 64;
+  }
+
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
