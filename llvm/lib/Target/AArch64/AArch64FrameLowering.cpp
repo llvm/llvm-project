@@ -2194,7 +2194,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
              "Expected callee save predicate to be handled first");
 #endif
 
-      assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR pair");
+      assert(RGI.Reg2 < RGI.Reg1 && "Expected reversed ZPR group");
       MIB.addReg((RGI.isQuad() ? AArch64::Z0_Z1_Z2_Z3 : AArch64::Z0_Z1) +
                  (RGI.Reg2 - AArch64::Z0));
 
