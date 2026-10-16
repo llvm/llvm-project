@@ -180,10 +180,10 @@ def olInit : Function {
     "- The host platform is always selected, whether listed or not.",
     "- Duplicate entries, unknown values, and backends not supported by this "
     "library are ignored.",
-    "`olInit` does not require the vendor runtimes to be installed. A "
-    "runtime is loaded the first time its platform is used, for example by "
-    "`olIteratePlatforms` or `olIterateDevices`. A platform whose runtime or "
-    "hardware is missing has no devices.",
+    "`olInit` does not require the vendor drivers to be installed. A "
+    "platform's driver is loaded the first time its devices are accessed, "
+    "for example by `olIterateDevices`. A platform whose driver cannot be "
+    "loaded reports no devices rather than an error.",
     "The environment variables `OFFLOAD_TRACE` and "
     "`OFFLOAD_DISABLE_VALIDATION` are read when `olInit` initializes the "
     "library. Changes made afterwards take effect at the next initialization.",

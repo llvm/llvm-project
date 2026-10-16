@@ -10,6 +10,7 @@
 // tests have to do it themselves
 
 #include "../common/Fixtures.hpp"
+#include "llvm/ADT/STLExtras.h"
 #include <OffloadAPI.h>
 #include <algorithm>
 #include <cstdlib>
@@ -56,11 +57,6 @@ static std::vector<ol_platform_backend_t> getBackends() {
       &Backends);
   std::sort(Backends.begin(), Backends.end());
   return Backends;
-}
-
-static bool hasBackend(const std::vector<ol_platform_backend_t> &Backends,
-                       ol_platform_backend_t Backend) {
-  return std::find(Backends.begin(), Backends.end(), Backend) != Backends.end();
 }
 
 TEST_F(olInitTest, Success) {
@@ -154,7 +150,7 @@ TEST_F(olInitTest, DefaultSelectsAllPlatforms) {
   ASSERT_SUCCESS(olShutDown());
 
   ASSERT_FALSE(Default.empty());
-  ASSERT_TRUE(hasBackend(Default, OL_PLATFORM_BACKEND_HOST));
+  ASSERT_TRUE(llvm::is_contained(Default, OL_PLATFORM_BACKEND_HOST));
   ASSERT_EQ(Default, Explicit);
 }
 
@@ -178,7 +174,7 @@ TEST_F(olInitTest, HostAlwaysSelected) {
   Args.Platforms = Backends;
   ASSERT_SUCCESS(olInit(&Args));
   auto Selected = getBackends();
-  ASSERT_TRUE(hasBackend(Selected, OL_PLATFORM_BACKEND_HOST));
+  ASSERT_TRUE(llvm::is_contained(Selected, OL_PLATFORM_BACKEND_HOST));
   for (auto Backend : Selected)
     ASSERT_TRUE(Backend == OL_PLATFORM_BACKEND_HOST ||
                 Backend == OL_PLATFORM_BACKEND_CUDA);
