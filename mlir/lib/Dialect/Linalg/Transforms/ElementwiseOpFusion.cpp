@@ -183,7 +183,7 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   // Ensure that the fusion does not remove size information required to
   // get the loop bounds. For non-reduction generics, this is trivially the
   // case due to the output operand. For reductions, we need to check that after
-  // the fusion, each loop dimension has at least one input that defines it.
+  // the fusion, each loop dimension has at least one operand that defines it.
   if ((consumer.getNumReductionLoops())) {
     BitVector coveredDims(consumer.getNumLoops(), false);
 
@@ -206,6 +206,19 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
       AffineMap newIndexingMap =
           getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
               operand, producerResultIndexMap, consumerIndexMap);
+      addToCoveredDims(newIndexingMap);
+    }
+
+    // Preserved producer outputs are also part of the fused op and may provide
+    // loop bounds that are not available from the producer inputs.
+    llvm::SmallDenseSet<int> preservedProducerResults =
+        getPreservedProducerResults(producer, consumer, fusedOperand);
+    for (const auto &operand : llvm::enumerate(producer.getDpsInitsMutable())) {
+      if (!preservedProducerResults.contains(operand.index()))
+        continue;
+      AffineMap newIndexingMap =
+          getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
+              &operand.value(), producerResultIndexMap, consumerIndexMap);
       addToCoveredDims(newIndexingMap);
     }
     if (!coveredDims.all())
