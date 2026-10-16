@@ -351,3 +351,132 @@ body: |
     $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM $sgpr6_sgpr7, 0, 0
     S_ENDPGM 0
 ...
+---
+# WAR at clause distance 6. This is beyond the scheduler lookahead window
+# (MaxLookAhead = 5), so the clause must be tracked statefully rather than
+# reconstructed from the emitted-instruction window.
+name: break_smem_clause_war_distance_6
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_war_distance_6
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    ; GCN-NEXT: $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    ; GCN-NEXT: $sgpr4 = S_LOAD_DWORD_IMM $sgpr18_sgpr19, 0, 0
+    ; GCN-NEXT: $sgpr5 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $sgpr10 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    $sgpr4 = S_LOAD_DWORD_IMM $sgpr18_sgpr19, 0, 0
+    $sgpr5 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+    $sgpr10 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+    S_ENDPGM 0
+...
+---
+# Same as above without the conflict: a long clause on its own must not get a
+# nop.
+name: smem_clause_distance_6_no_conflict
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: smem_clause_distance_6_no_conflict
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    ; GCN-NEXT: $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    ; GCN-NEXT: $sgpr4 = S_LOAD_DWORD_IMM $sgpr18_sgpr19, 0, 0
+    ; GCN-NEXT: $sgpr5 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+    ; GCN-NEXT: $sgpr6 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    $sgpr4 = S_LOAD_DWORD_IMM $sgpr18_sgpr19, 0, 0
+    $sgpr5 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+    $sgpr6 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+    S_ENDPGM 0
+...
+---
+# KILL is a meta instruction with no encoding, so it does not break the
+# hardware clause and the WAR across it must still be detected.
+name: kill_does_not_break_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: kill_does_not_break_smem_clause
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: KILL $sgpr8_sgpr9
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $sgpr10 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    KILL $sgpr8_sgpr9
+    $sgpr10 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# A KILL's operands are not part of the clause: overwriting them is fine.
+name: kill_operand_does_not_join_smem_clause
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: kill_operand_does_not_join_smem_clause
+    ; GCN: $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    ; GCN-NEXT: KILL $sgpr8_sgpr9
+    ; GCN-NEXT: $sgpr8 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    KILL $sgpr8_sgpr9
+    $sgpr8 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    S_ENDPGM 0
+...
+---
+# The shape SIFormMemoryClauses leaves at its 15-instruction limit: a run of
+# loads, the KILLs that ended the first bundle, then more loads. The KILLs do
+# not break the hardware clause, and load 17 overwrites load 1's address.
+name: break_smem_clause_kill_boundary_17_loads
+
+body: |
+  bb.0:
+    ; GCN-LABEL: name: break_smem_clause_kill_boundary_17_loads
+    ; GCN: $sgpr40 = S_LOAD_DWORD_IMM $sgpr2_sgpr3, 0, 0
+    ; GCN: $sgpr51 = S_LOAD_DWORD_IMM $sgpr24_sgpr25, 0, 0
+    ; GCN-NEXT: KILL killed renamable $sgpr2_sgpr3
+    ; GCN-NEXT: KILL killed renamable $sgpr4_sgpr5
+    ; GCN-NEXT: KILL killed renamable $sgpr6_sgpr7
+    ; GCN-NEXT: $sgpr52 = S_LOAD_DWORD_IMM $sgpr26_sgpr27, 0, 0
+    ; GCN-NEXT: $sgpr53 = S_LOAD_DWORD_IMM $sgpr28_sgpr29, 0, 0
+    ; GCN-NEXT: $sgpr54 = S_LOAD_DWORD_IMM $sgpr30_sgpr31, 0, 0
+    ; GCN-NEXT: $sgpr55 = S_LOAD_DWORD_IMM $sgpr32_sgpr33, 0, 0
+    ; XNACK-NEXT: S_NOP 0
+    ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr34_sgpr35, 0, 0
+    ; GCN-NEXT: S_ENDPGM 0
+    $sgpr40 = S_LOAD_DWORD_IMM $sgpr2_sgpr3, 0, 0
+    $sgpr41 = S_LOAD_DWORD_IMM $sgpr4_sgpr5, 0, 0
+    $sgpr42 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0
+    $sgpr43 = S_LOAD_DWORD_IMM $sgpr8_sgpr9, 0, 0
+    $sgpr44 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+    $sgpr45 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+    $sgpr46 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+    $sgpr47 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+    $sgpr48 = S_LOAD_DWORD_IMM $sgpr18_sgpr19, 0, 0
+    $sgpr49 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+    $sgpr50 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+    $sgpr51 = S_LOAD_DWORD_IMM $sgpr24_sgpr25, 0, 0
+    KILL killed renamable $sgpr2_sgpr3
+    KILL killed renamable $sgpr4_sgpr5
+    KILL killed renamable $sgpr6_sgpr7
+    $sgpr52 = S_LOAD_DWORD_IMM $sgpr26_sgpr27, 0, 0
+    $sgpr53 = S_LOAD_DWORD_IMM $sgpr28_sgpr29, 0, 0
+    $sgpr54 = S_LOAD_DWORD_IMM $sgpr30_sgpr31, 0, 0
+    $sgpr55 = S_LOAD_DWORD_IMM $sgpr32_sgpr33, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr34_sgpr35, 0, 0
+    S_ENDPGM 0
+...
