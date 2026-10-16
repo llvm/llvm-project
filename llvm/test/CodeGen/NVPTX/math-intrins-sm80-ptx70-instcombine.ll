@@ -274,7 +274,7 @@ define <2 x half> @fmax_ftz_nan_f16x2_no_attr(<2 x half> %0, <2 x half> %1) {
 define half @fma_rn_f16(half %0, half %1, half %2) {
   ; CHECK-NOT: @llvm.nvvm.fma.f16
   ; CHECK: @llvm.fma.f16
-  %res = call half @llvm.nvvm.fma.f16(half %0, half %1, half %2, i32 1)
+  %res = call half @llvm.nvvm.fma.f16(half %0, half %1, half %2, /* rnd=rn */ i32 1)
   ret half %res
 }
 
@@ -282,7 +282,7 @@ define half @fma_rn_f16(half %0, half %1, half %2) {
 define half @fma_rn_ftz_f16_no_attr(half %0, half %1, half %2) {
   ; CHECK-NOT: @llvm.fma.f16
   ; CHECK: @llvm.nvvm.fma.ftz.f16
-  %res = call half @llvm.nvvm.fma.ftz.f16(half %0, half %1, half %2, i32 1)
+  %res = call half @llvm.nvvm.fma.ftz.f16(half %0, half %1, half %2, /* rnd=rn */ i32 1)
   ret half %res
 }
 
@@ -290,7 +290,7 @@ define half @fma_rn_ftz_f16_no_attr(half %0, half %1, half %2) {
 define half @fma_rn_ftz_f16(half %0, half %1, half %2) #0 {
   ; CHECK-NOT: @llvm.nvvm.fma.ftz.f16
   ; CHECK: @llvm.fma.f16
-  %res = call half @llvm.nvvm.fma.ftz.f16(half %0, half %1, half %2, i32 1)
+  %res = call half @llvm.nvvm.fma.ftz.f16(half %0, half %1, half %2, /* rnd=rn */ i32 1)
   ret half %res
 }
 
@@ -298,7 +298,7 @@ define half @fma_rn_ftz_f16(half %0, half %1, half %2) #0 {
 define <2 x half> @fma_rn_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2) {
   ; CHECK-NOT: @llvm.nvvm.fma.v2f16
   ; CHECK: @llvm.fma.v2f16
-  %res = call <2 x half> @llvm.nvvm.fma.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, i32 1)
+  %res = call <2 x half> @llvm.nvvm.fma.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, /* rnd=rn */ i32 1)
   ret <2 x half> %res
 }
 
@@ -306,7 +306,7 @@ define <2 x half> @fma_rn_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2) {
 define <2 x half> @fma_rn_ftz_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2) #0 {
   ; CHECK-NOT: @llvm.nvvm.fma.ftz.v2f16
   ; CHECK: @llvm.fma.v2f16
-  %res = call <2 x half> @llvm.nvvm.fma.ftz.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, i32 1)
+  %res = call <2 x half> @llvm.nvvm.fma.ftz.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, /* rnd=rn */ i32 1)
   ret <2 x half> %res
 }
 
@@ -314,7 +314,7 @@ define <2 x half> @fma_rn_ftz_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2)
 define <2 x half> @fma_rn_ftz_f16x2_no_attr(<2 x half> %0, <2 x half> %1, <2 x half> %2) {
   ; CHECK-NOT: @llvm.fma.v2f16
   ; CHECK: @llvm.nvvm.fma.ftz.v2f16
-  %res = call <2 x half> @llvm.nvvm.fma.ftz.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, i32 1)
+  %res = call <2 x half> @llvm.nvvm.fma.ftz.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, /* rnd=rn */ i32 1)
   ret <2 x half> %res
 }
 

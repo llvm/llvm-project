@@ -16,7 +16,7 @@ define <2 x float> @fma_rn(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 1)
+  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rn */ i32 1)
   ret <2 x float> %r
 }
 
@@ -32,7 +32,7 @@ define <2 x float> @fma_rz(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rz.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 0)
+  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rz */ i32 0)
   ret <2 x float> %r
 }
 
@@ -48,7 +48,7 @@ define <2 x float> @fma_rm(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rm.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 3)
+  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rm */ i32 3)
   ret <2 x float> %r
 }
 
@@ -64,7 +64,7 @@ define <2 x float> @fma_rp(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rp.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 2)
+  %r = call <2 x float> @llvm.nvvm.fma.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rp */ i32 2)
   ret <2 x float> %r
 }
 
@@ -80,7 +80,7 @@ define <2 x float> @fma_rn_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rn.ftz.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 1)
+  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rn */ i32 1)
   ret <2 x float> %r
 }
 
@@ -96,7 +96,7 @@ define <2 x float> @fma_rz_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rz.ftz.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 0)
+  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rz */ i32 0)
   ret <2 x float> %r
 }
 
@@ -112,7 +112,7 @@ define <2 x float> @fma_rm_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rm.ftz.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 3)
+  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rm */ i32 3)
   ret <2 x float> %r
 }
 
@@ -128,6 +128,6 @@ define <2 x float> @fma_rp_ftz(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-NEXT:    fma.rp.ftz.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 2)
+  %r = call <2 x float> @llvm.nvvm.fma.ftz.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, /* rnd=rp */ i32 2)
   ret <2 x float> %r
 }

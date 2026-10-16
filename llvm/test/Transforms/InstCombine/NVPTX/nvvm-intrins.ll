@@ -84,21 +84,21 @@ define float @floor_float_ftz(float %a) #0 {
 ; CHECK-LABEL: @fma_double
 define double @fma_double(double %a, double %b, double %c) #0 {
 ; CHECK: call double @llvm.fma.f64
-  %ret = call double @llvm.nvvm.fma.f64(double %a, double %b, double %c, i32 1)
+  %ret = call double @llvm.nvvm.fma.f64(double %a, double %b, double %c, /* rnd=rn */ i32 1)
   ret double %ret
 }
 ; CHECK-LABEL: @fma_float
 define float @fma_float(float %a, float %b, float %c) #0 {
 ; NOFTZ: call float @llvm.fma.f32
 ; FTZ: call float @llvm.nvvm.fma.f32
-  %ret = call float @llvm.nvvm.fma.f32(float %a, float %b, float %c, i32 1)
+  %ret = call float @llvm.nvvm.fma.f32(float %a, float %b, float %c, /* rnd=rn */ i32 1)
   ret float %ret
 }
 ; CHECK-LABEL: @fma_float_ftz
 define float @fma_float_ftz(float %a, float %b, float %c) #0 {
 ; NOFTZ: call float @llvm.nvvm.fma.ftz.f32
 ; FTZ: call float @llvm.fma.f32
-  %ret = call float @llvm.nvvm.fma.ftz.f32(float %a, float %b, float %c, i32 1)
+  %ret = call float @llvm.nvvm.fma.ftz.f32(float %a, float %b, float %c, /* rnd=rn */ i32 1)
   ret float %ret
 }
 
