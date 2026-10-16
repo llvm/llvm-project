@@ -13,6 +13,23 @@ def build_accelerator: Separate<["--", "-"], "build-accelerator">,
   >;
 def: Joined<["--", "-"], "build-accelerator=">, Alias<build_accelerator>;
 
+def compress_debug_sections: Joined<["--"], "compress-debug-sections=">,
+  MetaVarName<"[none,zlib,zstd]">,
+  HelpText<"Compress debug sections(default: none, or the format of the input "
+  "debug sections if they are compressed)\n"
+  "    =none - Do not compress debug sections\n"
+  "    =zlib - Compress debug sections using zlib\n"
+  "    =zstd - Compress debug sections using zstd\n"
+  >;
+
+def: Flag<["--"], "compress-debug-sections">,
+  Alias<compress_debug_sections>, AliasArgs<["zlib"]>,
+  HelpText<"Alias for --compress-debug-sections=zlib">;
+
+def: Flag<["--"], "no-compress-debug-sections">,
+  Alias<compress_debug_sections>, AliasArgs<["none"]>,
+  HelpText<"Alias for --compress-debug-sections=none">;
+
 def help : Flag<["--"], "help">,
   HelpText<"Prints this help output">;
 
