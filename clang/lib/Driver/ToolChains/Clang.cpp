@@ -7794,12 +7794,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
+                             .Case("c++23", "-std=c++23")
                              // If you add cases below for spellings that are
                              // not in LangStandards.def, update
                              // TransferableCommand::tryParseStdArg() in
                              // lib/Tooling/InterpolatingCompilationDatabase.cpp
                              // to match.
-                             // TODO add c++23, c++26, c++29 when MSVC supports
+                             // TODO add c++26, c++29 when MSVC supports
                              // it.
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++26preview", "-std=c++26")

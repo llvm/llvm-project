@@ -1,4 +1,4 @@
-//===- MemRefMemorySlot.cpp - Memory Slot Interfaces ------------*- C++ -*-===//
+//===- MemorySlotInterfacesImpl.cpp - Memory Slot Interfaces ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces for MemRef dialect
-// operations.
+// Implementation of Memory Slot Interfaces for MemRef Ops.
+//
+// This file also implements DestructurableTypeInterface for MemRefType that is
+// required for some of the interfaces implemented here. This particular
+// interface is added as an external model - otherwise we would need to add it
+// to the MemRef builtin type and make the builtin dialect depend on
+// `DestructurableTypeInterface`.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
+#include "mlir/Dialect/MemRef/IR/MemorySlotInterfacesImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
@@ -60,10 +65,30 @@ static void walkIndicesAsAttr(MLIRContext *ctx, ArrayRef<int64_t> shape,
   } while (succeeded(nextIndex(shape, shapeIter)));
 }
 
-//===----------------------------------------------------------------------===//
-//  Interfaces for AllocaOp
-//===----------------------------------------------------------------------===//
+/// Returns the index of a memref in attribute form, given its indices. Returns
+/// a null pointer if whether the indices form a valid index for the provided
+/// MemRefType cannot be computed. The indices must come from a valid memref
+/// StoreOp or LoadOp.
+static Attribute getAttributeIndexFromIndexOperands(MLIRContext *ctx,
+                                                    ValueRange indices,
+                                                    MemRefType memrefType) {
+  SmallVector<Attribute> index;
+  for (auto [coord, dimSize] : llvm::zip(indices, memrefType.getShape())) {
+    IntegerAttr coordAttr;
+    if (!matchPattern(coord, m_Constant<IntegerAttr>(&coordAttr)))
+      return {};
+    // MemRefType shape dimensions are always positive (checked by verifier).
+    std::optional<uint64_t> coordInt = coordAttr.getValue().tryZExtValue();
+    if (!coordInt || coordInt.value() >= static_cast<uint64_t>(dimSize))
+      return {};
+    index.push_back(coordAttr);
+  }
+  return ArrayAttr::get(ctx, index);
+}
 
+//===----------------------------------------------------------------------===//
+// AllocaOp: PromotableAllocationOpInterface
+//===----------------------------------------------------------------------===//
 /// Returns the scalable vector width a `vscale`-sized memref maps to: the
 /// factor C when `size` is a known multiple of `vscale`.
 static std::optional<int64_t> matchVScaleMultiple(Value size) {
@@ -150,6 +175,9 @@ memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
   return std::nullopt;
 }
 
+//===----------------------------------------------------------------------===//
+// AllocaOp: DestructurableAllocationOpInterface
+//===----------------------------------------------------------------------===//
 void memref::AllocaOp::handleBlockArgument(const MemorySlot &slot,
                                            BlockArgument argument,
                                            OpBuilder &builder) {}
@@ -200,9 +228,8 @@ memref::AllocaOp::handleDestructuringComplete(
 }
 
 //===----------------------------------------------------------------------===//
-//  Interfaces for LoadOp/StoreOp
+//  LoadOp: PromotableMemOpInterface
 //===----------------------------------------------------------------------===//
-
 bool memref::LoadOp::loadsFrom(const MemorySlot &slot) {
   return getMemRef() == slot.ptr;
 }
@@ -236,27 +263,9 @@ DeletionKind memref::LoadOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
-/// Returns the index of a memref in attribute form, given its indices. Returns
-/// a null pointer if whether the indices form a valid index for the provided
-/// MemRefType cannot be computed. The indices must come from a valid memref
-/// StoreOp or LoadOp.
-static Attribute getAttributeIndexFromIndexOperands(MLIRContext *ctx,
-                                                    ValueRange indices,
-                                                    MemRefType memrefType) {
-  SmallVector<Attribute> index;
-  for (auto [coord, dimSize] : llvm::zip(indices, memrefType.getShape())) {
-    IntegerAttr coordAttr;
-    if (!matchPattern(coord, m_Constant<IntegerAttr>(&coordAttr)))
-      return {};
-    // MemRefType shape dimensions are always positive (checked by verifier).
-    std::optional<uint64_t> coordInt = coordAttr.getValue().tryZExtValue();
-    if (!coordInt || coordInt.value() >= static_cast<uint64_t>(dimSize))
-      return {};
-    index.push_back(coordAttr);
-  }
-  return ArrayAttr::get(ctx, index);
-}
-
+//===----------------------------------------------------------------------===//
+//  LoadOp: DestructurableAccessorOpInterface
+//===----------------------------------------------------------------------===//
 bool memref::LoadOp::canRewire(const DestructurableMemorySlot &slot,
                                SmallPtrSetImpl<Attribute> &usedIndices,
                                SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
@@ -295,6 +304,9 @@ Value memref::StoreOp::getStored(const MemorySlot &slot, OpBuilder &builder,
   return getValue();
 }
 
+//===----------------------------------------------------------------------===//
+//  StoreOp: PromotableMemOpInterface
+//===----------------------------------------------------------------------===//
 bool memref::StoreOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
@@ -313,6 +325,9 @@ DeletionKind memref::StoreOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+//===----------------------------------------------------------------------===//
+//  StoreOp: DestructurableAccessorOpInterface
+//===----------------------------------------------------------------------===//
 bool memref::StoreOp::canRewire(const DestructurableMemorySlot &slot,
                                 SmallPtrSetImpl<Attribute> &usedIndices,
                                 SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
@@ -340,11 +355,10 @@ DeletionKind memref::StoreOp::rewire(const DestructurableMemorySlot &slot,
 }
 
 //===----------------------------------------------------------------------===//
-//  Interfaces for destructurable types
+//  MemRefType: DestructurableTypeInterface
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 struct MemRefDestructurableTypeExternalModel
     : public DestructurableTypeInterface::ExternalModel<
           MemRefDestructurableTypeExternalModel, MemRefType> {
@@ -387,13 +401,11 @@ struct MemRefDestructurableTypeExternalModel
     return memrefType.getElementType();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
-//  Register external models
+//  Register MemRefDestructurableTypeExternalModel
 //===----------------------------------------------------------------------===//
-
 void mlir::memref::registerDestructurableTypeExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, BuiltinDialect *dialect) {
