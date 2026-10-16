@@ -202,7 +202,7 @@ def VR#I : LoongArchReg128<!cast<LoongArchReg64>("F"#I#"_64"), "vr"#I>,
            DwarfRegAlias<!cast<LoongArchReg64>("F"#I#"_64")>;
 
 def LSX128 : RegisterClass<"LoongArch",
-                           [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64],
+                           [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64, v1i128],
                            128, (sequence "VR%u", 0, 31)>;
 
 // LASX registers
@@ -212,7 +212,7 @@ def XR#I : LoongArchReg256<!cast<LoongArchReg128>("VR"#I), "xr"#I>,
            DwarfRegAlias<!cast<LoongArchReg128>("VR"#I)>;
 
 def LASX256 : RegisterClass<"LoongArch",
-                            [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64],
+                            [v8f32, v4f64, v32i8, v16i16, v8i32, v4i64, v2i128],
                             256, (sequence "XR%u", 0, 31)>;
 
 // Scratchpad registers
