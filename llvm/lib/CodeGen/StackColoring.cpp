@@ -1290,16 +1290,33 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   // into the bigger one and update the live interval. Remove the small alloca
   // and continue.
 
+  // A slot is only merged into a slot sorted before it, and remapInstructions()
+  // replaces the IR uses of the merged slot's alloca with the other slot's
+  // alloca. That alloca must not be smaller: alias analysis assumes accesses
+  // are in bounds of the underlying object, so it would conclude that pointers
+  // which may point to the merged slot cannot alias it. Zero-sized allocas
+  // still get a one-byte stack object, so for slots of equal size also sort by
+  // the size of the alloca.
+  const DataLayout &DL = MF->getDataLayout();
+  auto GetAllocaSize = [&](int Slot) -> uint64_t {
+    if (const AllocaInst *AI = MFI->getObjectAllocation(Slot))
+      if (std::optional<TypeSize> Size = AI->getAllocationSize(DL))
+        return Size->getKnownMinValue();
+    return MFI->getObjectSize(Slot);
+  };
+
   // Sort the slots according to their size. Place unused slots at the end.
   // Use stable sort to guarantee deterministic code generation.
-  llvm::stable_sort(SortedSlots, [this](int LHS, int RHS) {
+  llvm::stable_sort(SortedSlots, [&](int LHS, int RHS) {
     // We use -1 to denote a uninteresting slot. Place these slots at the end.
     if (LHS == -1)
       return false;
     if (RHS == -1)
       return true;
     // Sort according to size.
-    return MFI->getObjectSize(LHS) > MFI->getObjectSize(RHS);
+    if (MFI->getObjectSize(LHS) != MFI->getObjectSize(RHS))
+      return MFI->getObjectSize(LHS) > MFI->getObjectSize(RHS);
+    return GetAllocaSize(LHS) > GetAllocaSize(RHS);
   });
 
   for (auto &s : LiveStarts)
@@ -1351,6 +1368,8 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
           assert(MFI->getObjectSize(FirstSlot) >=
                  MFI->getObjectSize(SecondSlot) &&
                  "Merging a small object into a larger one");
+          assert(GetAllocaSize(FirstSlot) >= GetAllocaSize(SecondSlot) &&
+                 "Replacing an alloca with a smaller one");
 
           RemovedSlots+=1;
           ReducedSize += MFI->getObjectSize(SecondSlot);
