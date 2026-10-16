@@ -27,8 +27,9 @@ class PassBuilderCTest : public testing::Test {
     char *Err;
     LLVMTargetRef Target;
     if (LLVMGetTargetFromTriple(Triple, &Target, &Err)) {
-      FAIL() << "Failed to create target from default triple (" << Triple
-             << "): " << Err;
+      LLVMDisposeMessage(Err);
+      LLVMDisposeMessage(Triple);
+      GTEST_SKIP() << "Default target is not built";
     }
     TM = LLVMCreateTargetMachine(Target, Triple, "generic", "",
                                  LLVMCodeGenLevelDefault, LLVMRelocDefault,
@@ -42,22 +43,19 @@ class PassBuilderCTest : public testing::Test {
   }
 
   void TearDown() override {
-    char *Triple = LLVMGetDefaultTargetTriple();
-    if (strlen(Triple) == 0) {
-      LLVMDisposeMessage(Triple);
-      return; // Skipped, so nothing to tear down
-    }
-    LLVMDisposeMessage(Triple);
+    // SetUp skips when the default triple has no target, leaving these null.
+    if (!TM)
+      return;
     LLVMDisposeTargetMachine(TM);
     LLVMDisposeModule(Module);
     LLVMContextDispose(Context);
   }
 
 public:
-  LLVMTargetMachineRef TM;
-  LLVMModuleRef Module;
-  LLVMValueRef Function;
-  LLVMContextRef Context;
+  LLVMTargetMachineRef TM = nullptr;
+  LLVMModuleRef Module = nullptr;
+  LLVMValueRef Function = nullptr;
+  LLVMContextRef Context = nullptr;
 };
 
 TEST_F(PassBuilderCTest, Basic) {
