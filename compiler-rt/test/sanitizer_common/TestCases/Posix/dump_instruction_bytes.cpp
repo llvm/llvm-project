@@ -6,6 +6,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NODUMP
 
 // REQUIRES: x86-target-arch
+// UNSUPPORTED: rtsan
 
 int main() {
 #if defined(__x86_64__)

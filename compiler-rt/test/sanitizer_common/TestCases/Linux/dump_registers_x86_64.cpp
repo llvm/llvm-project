@@ -4,6 +4,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-DUMP --strict-whitespace
 //
 // REQUIRES: x86_64-target-arch && glibc
+// UNSUPPORTED: rtsan
 
 #include <signal.h>
 
