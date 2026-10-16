@@ -201,10 +201,10 @@
  * through the call. It is placed at the definition, and it implies
  * "inline".
  */
-#if defined(_MSC_VER) && !defined(__clang__)
-#define RT_FORCE_INLINE_ATTR __forceinline
-#elif __has_attribute(always_inline)
-#define RT_FORCE_INLINE_ATTR inline __attribute__((always_inline))
+#if __has_cpp_attribute(gnu::always_inline)
+#define RT_FORCE_INLINE_ATTR [[gnu::always_inline]] inline
+#elif __has_cpp_attribute(msvc::forceinline)
+#define RT_FORCE_INLINE_ATTR [[msvc::forceinline]] inline
 #else
 #define RT_FORCE_INLINE_ATTR inline
 #endif
