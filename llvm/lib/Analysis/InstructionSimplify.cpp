@@ -4812,6 +4812,61 @@ static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
+/// Fold a select of zero and a count whose input has a known end bit set on
+/// the zero arm. Use the condition as context rather than matching its shape.
+static Value *simplifySelectWithCountZeros(Value *Cond, Value *TrueVal,
+                                           Value *FalseVal,
+                                           const SimplifyQuery &Q) {
+  if (!TrueVal->getType()->isIntegerTy())
+    return nullptr;
+
+  bool Invert = false;
+  Value *CountVal;
+  if (match(TrueVal, m_Zero()))
+    CountVal = FalseVal;
+  else if (match(FalseVal, m_Zero())) {
+    CountVal = TrueVal;
+    Invert = true;
+  } else
+    return nullptr;
+
+  Value *Count = CountVal;
+  if (auto *Trunc = dyn_cast<TruncInst>(Count))
+    Count = Trunc->getOperand(0);
+  auto *II = dyn_cast<IntrinsicInst>(Count);
+  if (!II || (II->getIntrinsicID() != Intrinsic::cttz &&
+              II->getIntrinsicID() != Intrinsic::ctlz))
+    return nullptr;
+
+  // The zero arm may hide poison from a range annotation on the count.
+  if (II->hasPoisonGeneratingMetadata())
+    return nullptr;
+  if (auto Range = II->getRange();
+      Range &&
+      !Range->contains(APInt(Count->getType()->getIntegerBitWidth(), 0)))
+    return nullptr;
+
+  Value *X = II->getArgOperand(0);
+  // The condition and the count must observe the same, non-poison input.
+  if (!isGuaranteedNotToBeUndefOrPoison(X, Q.AC, Q.CtxI, Q.DT))
+    return nullptr;
+
+  CondContext CC(Cond);
+  CC.Invert = Invert;
+  findValuesAffectedByCondition(Cond, /*IsAssume=*/false,
+                                [&](Value *V) { CC.AffectedValues.insert(V); });
+  if (CC.AffectedValues.empty())
+    return nullptr;
+
+  KnownBits Known = computeKnownBits(X, Q.getWithCondContext(CC));
+  // A set end bit makes the count zero, so zero-poison and truncation flags
+  // cannot introduce poison on the arm where the count was previously unused.
+  if (II->getIntrinsicID() == Intrinsic::cttz ? Known.One[0]
+                                              : Known.One.isNegative())
+    return CountVal;
+  return nullptr;
+}
+
 /// Try to simplify a select instruction when its condition operand is an
 /// integer equality or floating-point equivalence comparison.
 static Value *simplifySelectWithEquivalence(
@@ -5272,6 +5327,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     return V;
 
   if (Value *V = simplifySelectWithBitTest(Cond, TrueVal, FalseVal))
+    return V;
+
+  if (Value *V = simplifySelectWithCountZeros(Cond, TrueVal, FalseVal, Q))
     return V;
 
   if (Value *V =

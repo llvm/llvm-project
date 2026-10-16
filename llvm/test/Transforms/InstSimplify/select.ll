@@ -1775,11 +1775,8 @@ define i8 @bittest_trunc_not_or(i8 %x) {
 ; The select condition proves that the count is also zero on the constant arm.
 define i32 @cttz_select_low_bit(i32 noundef %x) {
 ; CHECK-LABEL: @cttz_select_low_bit(
-; CHECK-NEXT:    [[BIT:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ODD:%.*]] = icmp ne i32 [[BIT]], 0
-; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ODD]], i32 0, i32 [[COUNT]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COUNT]]
 ;
   %bit = and i32 %x, 1
   %odd = icmp ne i32 %bit, 0
@@ -1790,11 +1787,9 @@ define i32 @cttz_select_low_bit(i32 noundef %x) {
 
 define i32 @cttz_select_truncated_count(i64 noundef %x) {
 ; CHECK-LABEL: @cttz_select_truncated_count(
-; CHECK-NEXT:    [[ODD:%.*]] = trunc i64 [[X:%.*]] to i1
-; CHECK-NEXT:    [[COUNT:%.*]] = call i64 @llvm.cttz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[COUNT:%.*]] = call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[NARROW:%.*]] = trunc nsw i64 [[COUNT]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ODD]], i32 0, i32 [[NARROW]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 [[NARROW]]
 ;
   %odd = trunc i64 %x to i1
   %count = call i64 @llvm.cttz.i64(i64 %x, i1 true)
@@ -1805,11 +1800,8 @@ define i32 @cttz_select_truncated_count(i64 noundef %x) {
 
 define i32 @cttz_select_low_bits_equal(i32 noundef %x) {
 ; CHECK-LABEL: @cttz_select_low_bits_equal(
-; CHECK-NEXT:    [[BITS:%.*]] = and i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[CONDITION:%.*]] = icmp ne i32 [[BITS]], 3
-; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 false)
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[CONDITION]], i32 [[COUNT]], i32 0
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[COUNT]]
 ;
   %bits = and i32 %x, 3
   %condition = icmp ne i32 %bits, 3
@@ -1820,10 +1812,8 @@ define i32 @cttz_select_low_bits_equal(i32 noundef %x) {
 
 define i32 @ctlz_select_negative(i32 noundef %x) {
 ; CHECK-LABEL: @ctlz_select_negative(
-; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[NEGATIVE]], i32 0, i32 [[COUNT]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    [[COUNT:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COUNT]]
 ;
   %negative = icmp slt i32 %x, 0
   %count = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
@@ -1847,10 +1837,8 @@ define i32 @cttz_select_range_excludes_zero(i32 noundef %x) {
 
 define i32 @cttz_select_range_includes_zero(i32 noundef %x) {
 ; CHECK-LABEL: @cttz_select_range_includes_zero(
-; CHECK-NEXT:    [[ODD:%.*]] = trunc i32 [[X:%.*]] to i1
-; CHECK-NEXT:    [[COUNT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ODD]], i32 0, i32 [[COUNT]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    [[COUNT:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[COUNT]]
 ;
   %odd = trunc i32 %x to i1
   %count = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -1858,7 +1846,7 @@ define i32 @cttz_select_range_includes_zero(i32 noundef %x) {
   ret i32 %result
 }
 
-; Without noundef, the condition and the count may observe different values.
+; Keep the fold conservative when the input may be undef or poison.
 define i32 @cttz_select_maybe_undef(i32 %x) {
 ; CHECK-LABEL: @cttz_select_maybe_undef(
 ; CHECK-NEXT:    [[ODD:%.*]] = trunc i32 [[X:%.*]] to i1
