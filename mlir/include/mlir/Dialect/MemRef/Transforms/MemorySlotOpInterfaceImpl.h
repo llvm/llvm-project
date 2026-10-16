@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_MEMREF_TRANSFORMS_MEMORYSLOTOPINTERFACEIMPL_H
 #define MLIR_DIALECT_MEMREF_TRANSFORMS_MEMORYSLOTOPINTERFACEIMPL_H
 
-#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 namespace mlir {
 class DialectRegistry;
@@ -19,13 +19,17 @@ class OpBuilder;
 namespace memref {
 void registerMemorySlotOpInterfaceExternalModels(DialectRegistry &registry);
 
-/// Returns whether `slotPtr` is a dynamic `memref.subview` that can be promoted
-/// as an alias of the whole parent vector.
-bool isDynamicSubViewSlot(Value slotPtr);
+/// Returns whether `slot` represents a supported dynamic `memref.subview`,
+/// optionally followed by `memref.expand_shape` or `memref.collapse_shape`.
+/// Such a slot retains the whole parent vector, so accesses must mask out
+/// elements outside the subview's runtime bounds.
+bool isPartialViewSlot(const MemorySlot &slot);
 
-/// Builds a mask for the subview's valid region in the parent vector, or
-/// returns null if `isDynamicSubViewSlot(slotPtr)` is false.
-Value buildDynamicSubViewMask(OpBuilder &builder, Location loc, Value slotPtr);
+/// Builds a mask of the subview's runtime bounds in the shape of
+/// `slot.valueType`, reshaping the mask if needed. Returns a null value for
+/// slots that do not require a subview mask. Expects a promotable vector slot.
+Value buildPartialViewMask(OpBuilder &builder, Location loc,
+                           const MemorySlot &slot);
 } // namespace memref
 } // namespace mlir
 

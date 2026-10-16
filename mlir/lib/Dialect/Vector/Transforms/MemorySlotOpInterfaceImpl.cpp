@@ -9,7 +9,7 @@
 // This file implements memory slot interface models for
 // `vector.transfer_read` and `vector.transfer_write`. These models implement
 // `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
-// and definitions of a vector SSA value. The models for `memref.subview`
+// and definitions of a vector SSA value. The models for the `memref` view ops
 // live in the MemRef dialect.
 //
 // A read uses the slot's current value; a write defines its next value.
@@ -19,7 +19,8 @@
 // whole static parent, and the subview's slot holds that whole vector. Reads
 // pad lanes outside the runtime extent, and writes preserve the previous value
 // of those lanes. `arith.select` implements this behavior and also handles
-// lanes disabled by a transfer's mask operand.
+// lanes disabled by a transfer's mask operand. For reads through reshaped
+// dynamic subviews, the subview mask is cast to the slot's vector shape.
 //
 // Transfers wrapped in `vector.mask` prevent promotion because that op does
 // not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
@@ -48,7 +49,7 @@ using namespace mlir::vector;
 /// value. The transfer's memref base must be the slot pointer, its vector type
 /// must equal `slot.valueType`, its indices must be zero, and its permutation
 /// map must be the identity. Out-of-bounds dimensions are allowed only for a
-/// supported dynamic subview.
+/// supported dynamic subview, possibly reached through a reassociative reshape.
 ///
 /// More general transfers may be supportable, but their value depends on
 /// motivating use cases, implementation complexity, and generated code quality.
@@ -82,7 +83,7 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
     return false;
 
   // Out-of-bounds is allowed only for a dynamic view.
-  if (xferOp.hasOutOfBoundsDim() && !memref::isDynamicSubViewSlot(slot.ptr))
+  if (xferOp.hasOutOfBoundsDim() && !memref::isPartialViewSlot(slot))
     return false;
 
   return true;
@@ -129,7 +130,7 @@ struct TransferReadOpMemOpModel
                      const DataLayout &dataLayout) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     Location loc = op->getLoc();
-    Value mask = memref::buildDynamicSubViewMask(builder, loc, slot.ptr);
+    Value mask = memref::buildPartialViewMask(builder, loc, slot);
     if (Value opMask = readOp.getMask())
       mask = mask
                  ? arith::AndIOp::create(builder, loc, mask, opMask).getResult()

@@ -8,13 +8,13 @@
 //
 // This file implements memory slot interface models used by Mem2Reg to promote
 // a memref to a single vector SSA value. `PromotableAliaserInterface` exposes
-// `memref.subview` aliases, and `PromotableOpInterface` removes the subviews
-// after promotion. Vector transfer ops are handled by the models in the
-// Vector dialect.
+// `memref.subview`, `memref.expand_shape` and `memref.collapse_shape` aliases,
+// and `PromotableOpInterface` removes those views after promotion. Vector
+// transfer ops are handled by the models in the Vector dialect.
 //
 // A memory slot pairs a memref with the vector type used to represent its
 // contents. Promotion replaces accesses to the slot with uses and definitions
-// of that vector value. All uses, including those through subviews, must be
+// of that vector value. All uses, including those through views, must be
 // supported by the models.
 //
 // The accesses are rewritten as follows:
@@ -31,12 +31,18 @@
 //       accesses to the subview's extent. The subview must start at the
 //       parent's origin.
 //
-// Subviews require a statically shaped parent buffer. A dynamically
-// shaped buffer can instead promote to a 1-D scalable vector through
-// whole-buffer transfers, but subviews are not supported.
+//   * A supported `memref.expand_shape` or `memref.collapse_shape` reshapes
+//     the parent slot's vector with `vector.shape_cast` in both directions.
+//     For a dynamic subview, the alias retains all elements of the parent
+//     vector; the subview mask is cast to the alias shape when reading.
+//
+// Views require a statically shaped parent buffer. A dynamically shaped buffer
+// can instead promote to a 1-D scalable vector through whole-buffer transfers,
+// but views are not supported.
 //
 // Unsupported accesses, such as dynamic subview offsets, rank reduction,
-// non-unit subview strides, or non-zero transfer indices, prevent promotion.
+// non-unit subview strides, reshapes that cannot be represented by
+// `vector.shape_cast`, or non-zero transfer indices, prevent promotion.
 //
 //===----------------------------------------------------------------------===//
 
@@ -130,54 +136,175 @@ static VectorType getWholeParentVectorType(memref::SubViewOp subView) {
   return VectorType::get(parentType.getShape(), parentType.getElementType());
 }
 
-/// If `slotPtr` is a dynamic subview, returns it.
-static memref::SubViewOp getDynamicSubView(Value slotPtr) {
-  auto subView = slotPtr.getDefiningOp<memref::SubViewOp>();
-  if (subView && isAliasableDynamicShapeSubView(subView))
-    return subView;
-  return {};
+/// Follows the sources of `memref.expand_shape` and `memref.collapse_shape` to
+/// find the underlying value. Used to locate a dynamic subview whose bounds
+/// still apply after reshaping.
+static Value skipReassociativeReshapes(Value viewPtr) {
+  while (Operation *def = viewPtr.getDefiningOp()) {
+    if (auto expand = dyn_cast<memref::ExpandShapeOp>(def))
+      viewPtr = expand.getSrc();
+    else if (auto collapse = dyn_cast<memref::CollapseShapeOp>(def))
+      viewPtr = collapse.getSrc();
+    else
+      break;
+  }
+  return viewPtr;
 }
 
-/// Builds the mask of `subView`'s valid region: a `vector.create_mask` of the
-/// subview's sizes, in the shape of the whole parent that its alias holds.
+/// Builds a mask from the subview's sizes in the parent vector's shape, then
+/// casts it to `vecType`'s shape if needed. Supported reshapes preserve element
+/// order, so a single cast also handles a chain of reshapes.
 static Value buildSubViewMask(OpBuilder &builder, Location loc,
-                              memref::SubViewOp subView) {
+                              memref::SubViewOp subView, VectorType vecType) {
   VectorType parentVecType = getWholeParentVectorType(subView);
   SmallVector<Value> bounds =
       getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
-  return vector::CreateMaskOp::create(
+  Value mask = vector::CreateMaskOp::create(
       builder, loc,
       VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
+  if (parentVecType.getShape() != vecType.getShape())
+    mask = vector::ShapeCastOp::create(
+        builder, loc, VectorType::get(vecType.getShape(), builder.getI1Type()),
+        mask);
+  return mask;
 }
 
-bool mlir::memref::isDynamicSubViewSlot(Value slotPtr) {
-  return static_cast<bool>(getDynamicSubView(slotPtr));
+/// Checks whether a reassociation group preserves the mapping of valid view
+/// elements to vector lanes. `viewExtents` are the memref dimensions;
+/// `aliasExtents` are the corresponding static vector dimensions.
+///
+/// Leading unit dimensions contribute no offset. The first non-unit dimension
+/// may differ because its extent does not affect its own row-major stride.
+/// All subsequent extents must match to keep that stride unchanged. Thus a
+/// supported group with a dynamic extent has the form
+/// `[1, ..., 1, dynamic, static, ..., static]`.
+static bool shapeCastModelsGroup(ArrayRef<int64_t> viewExtents,
+                                 ArrayRef<int64_t> aliasExtents) {
+  assert(viewExtents.size() == aliasExtents.size() && "group size mismatch");
+  // Leading unit dimensions always have index zero.
+  size_t pos = 0;
+  while (pos < viewExtents.size() && viewExtents[pos] == 1)
+    ++pos;
+  // Allow the first non-unit extent to differ, but require its stride factors
+  // (all following extents) to match.
+  if (pos < viewExtents.size())
+    ++pos;
+  for (; pos < viewExtents.size(); ++pos)
+    if (viewExtents[pos] != aliasExtents[pos])
+      return false;
+  return true;
 }
 
-Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
-                                            Value slotPtr) {
-  memref::SubViewOp subView = getDynamicSubView(slotPtr);
-  if (!subView)
+/// Computes the collapsed alias shape by multiplying the extents from
+/// `parentSlotShape` in each reassociation group. These are the parent slot's
+/// static vector extents, even when the source memref has dynamic dimensions.
+/// Fails if a group cannot be represented by `vector.shape_cast`.
+static FailureOr<SmallVector<int64_t>>
+getShapeCastableAliasShape(memref::CollapseShapeOp op,
+                           ArrayRef<int64_t> parentSlotShape) {
+  ArrayRef<int64_t> viewShape = op.getSrcType().getShape();
+  // Reassociation indices must address both the memref and vector shapes.
+  if (viewShape.size() != parentSlotShape.size())
+    return failure();
+
+  SmallVector<int64_t> aliasShape;
+  for (ReassociationIndices group : op.getReassociationIndices()) {
+    SmallVector<int64_t> viewExtents, aliasExtents;
+    for (int64_t dim : group) {
+      viewExtents.push_back(viewShape[dim]);
+      aliasExtents.push_back(parentSlotShape[dim]);
+    }
+    if (!shapeCastModelsGroup(viewExtents, aliasExtents))
+      return failure();
+    aliasShape.push_back(ShapedType::getNumElements(aliasExtents));
+  }
+  if (ShapedType::getNumElements(aliasShape) !=
+      ShapedType::getNumElements(parentSlotShape))
+    return failure();
+  return aliasShape;
+}
+
+/// Computes a static expanded alias shape from `parentSlotShape`, the parent
+/// slot's static vector extents. For each reassociation group, divides the
+/// corresponding extent from `parentSlotShape` by the static result extents,
+/// starting at the innermost dimension. The first dynamic dimension receives
+/// the remaining extent; dimensions before it remain 1.
+///
+/// Fails if the parent extent cannot be evenly divided among the static result
+/// dimensions, or if a group fails `shapeCastModelsGroup`. A group with
+/// dynamic dimensions must have the form
+/// `[1, ..., 1, dynamic, static, ..., static]`.
+static FailureOr<SmallVector<int64_t>>
+getShapeCastableAliasShape(memref::ExpandShapeOp op,
+                           ArrayRef<int64_t> parentSlotShape) {
+  ArrayRef<int64_t> viewShape = op.getType().getShape();
+  SmallVector<ReassociationIndices, 4> groups = op.getReassociationIndices();
+  if (groups.size() != parentSlotShape.size())
+    return failure();
+
+  SmallVector<int64_t> aliasShape(viewShape.size(), 1);
+  for (auto [srcDim, group] : llvm::enumerate(groups)) {
+    int64_t remaining = parentSlotShape[srcDim];
+    for (int64_t dim : llvm::reverse(group)) {
+      if (ShapedType::isDynamic(viewShape[dim])) {
+        aliasShape[dim] = remaining;
+        break;
+      }
+      if (viewShape[dim] == 0 || remaining % viewShape[dim] != 0)
+        return failure();
+      aliasShape[dim] = viewShape[dim];
+      remaining /= viewShape[dim];
+    }
+
+    SmallVector<int64_t> viewExtents, aliasExtents;
+    for (int64_t dim : group) {
+      viewExtents.push_back(viewShape[dim]);
+      aliasExtents.push_back(aliasShape[dim]);
+    }
+    if (!shapeCastModelsGroup(viewExtents, aliasExtents))
+      return failure();
+  }
+  if (ShapedType::getNumElements(aliasShape) !=
+      ShapedType::getNumElements(parentSlotShape))
+    return failure();
+  return aliasShape;
+}
+
+bool mlir::memref::isPartialViewSlot(const MemorySlot &slot) {
+  auto subView =
+      skipReassociativeReshapes(slot.ptr).getDefiningOp<memref::SubViewOp>();
+  return subView && isAliasableDynamicShapeSubView(subView);
+}
+
+Value mlir::memref::buildPartialViewMask(OpBuilder &builder, Location loc,
+                                         const MemorySlot &slot) {
+  auto subView =
+      skipReassociativeReshapes(slot.ptr).getDefiningOp<memref::SubViewOp>();
+  // Static subview slots contain only the selected slice and need no mask.
+  // Dynamic subviews reaching here have already passed alias eligibility
+  // checks when their slots were created.
+  if (!subView || subView.getType().hasStaticShape())
     return {};
-  return buildSubViewMask(builder, loc, subView);
+  return buildSubViewMask(builder, loc, subView,
+                          cast<VectorType>(slot.valueType));
 }
 
 namespace {
 //===----------------------------------------------------------------------===//
-//  PromotableOpInterface model for memref.subview
+//  PromotableOpInterface model for the memref view ops
 //===----------------------------------------------------------------------===//
 
-/// `PromotableOpInterface` model for `memref.subview`. Works with the
-/// `PromotableAliaserInterface` model below to remove the subview once its
-/// result's uses have been promoted.
-struct SubViewOpPromotableModel
-    : public PromotableOpInterface::ExternalModel<SubViewOpPromotableModel,
-                                                  memref::SubViewOp> {
+/// Removes `memref.subview`, `memref.expand_shape`, and `memref.collapse_shape`
+/// once all uses of their results have been promoted.
+template <typename OpTy>
+struct ViewOpPromotableModel
+    : public PromotableOpInterface::ExternalModel<ViewOpPromotableModel<OpTy>,
+                                                  OpTy> {
   bool canUsesBeRemoved(Operation *op,
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    // Removing the subview requires removing all uses of its memref result.
+    // Removing the view requires removing all uses of its memref result.
     for (OpOperand &use : op->getResult(0).getUses())
       newBlockingUses.push_back(&use);
     return true;
@@ -272,7 +399,8 @@ struct SubViewOpAliasModel
     // of the parent value untouched.
     if (isAliasableDynamicShapeSubView(subView)) {
       Location loc = op->getLoc();
-      Value mask = buildSubViewMask(builder, loc, subView);
+      VectorType parentVecType = getWholeParentVectorType(subView);
+      Value mask = buildSubViewMask(builder, loc, subView, parentVecType);
       return arith::SelectOp::create(builder, loc, mask, aliasValue,
                                      reachingDef);
     }
@@ -281,6 +409,70 @@ struct SubViewOpAliasModel
     SmallVector<int64_t> strides(offsets.size(), 1);
     return vector::InsertStridedSliceOp::create(
                builder, op->getLoc(), aliasValue, reachingDef, offsets, strides)
+        .getResult();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+//  PromotableAliaserInterface model for the memref reshape ops
+//===----------------------------------------------------------------------===//
+
+/// Exposes supported `memref.expand_shape` and `memref.collapse_shape` ops as
+/// aliases of vector slots. Both projections use `vector.shape_cast`, which
+/// preserves element order. `getShapeCastableAliasShape` checks eligibility
+/// and derives the alias shape from the parent vector's static extents.
+template <typename OpTy>
+struct ReassociativeViewOpAliasModel
+    : public PromotableAliaserInterface::ExternalModel<
+          ReassociativeViewOpAliasModel<OpTy>, OpTy> {
+  void getPromotableSlotAliases(Operation *op,
+                                OpOperand &aliasedSlotPointerOperand,
+                                const MemorySlot &parentSlot,
+                                SmallVectorImpl<MemorySlot> &newSlots) const {
+    auto viewOp = cast<OpTy>(op);
+    // Called once per operand holding the slot pointer; only the reshaped
+    // source exposes an alias.
+    if (aliasedSlotPointerOperand.get() != viewOp.getSrc())
+      return;
+
+    // Only fixed-size vector slots support these shape casts.
+    auto parentVecType = dyn_cast<VectorType>(parentSlot.valueType);
+    if (!parentVecType || parentVecType.isScalable())
+      return;
+
+    auto resType = cast<MemRefType>(viewOp.getResult().getType());
+    if (!VectorType::isValidElementType(resType.getElementType()) ||
+        resType.getElementType() != parentVecType.getElementType())
+      return;
+    FailureOr<SmallVector<int64_t>> aliasShape =
+        getShapeCastableAliasShape(viewOp, parentVecType.getShape());
+    if (failed(aliasShape))
+      return;
+    auto aliasVecType = VectorType::get(*aliasShape, resType.getElementType());
+    newSlots.push_back(MemorySlot{viewOp.getResult(), aliasVecType});
+  }
+
+  Value projectSlotValueToAliasValue(Operation *op,
+                                     OpOperand & /*aliasedSlotPointerOperand*/,
+                                     const MemorySlot & /*parentSlot*/,
+                                     const MemorySlot &aliasSlot,
+                                     Value slotValue,
+                                     OpBuilder &builder) const {
+    return vector::ShapeCastOp::create(builder, op->getLoc(),
+                                       cast<VectorType>(aliasSlot.valueType),
+                                       slotValue)
+        .getResult();
+  }
+
+  Value projectAliasValueToSlotValue(Operation *op,
+                                     OpOperand & /*aliasedSlotPointerOperand*/,
+                                     const MemorySlot &parentSlot,
+                                     const MemorySlot & /*aliasSlot*/,
+                                     Value aliasValue, Value /*reachingDef*/,
+                                     OpBuilder &builder) const {
+    return vector::ShapeCastOp::create(builder, op->getLoc(),
+                                       cast<VectorType>(parentSlot.valueType),
+                                       aliasValue)
         .getResult();
   }
 };
@@ -294,6 +486,15 @@ void mlir::memref::registerMemorySlotOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::SubViewOp::attachInterface<SubViewOpAliasModel>(*ctx);
-    memref::SubViewOp::attachInterface<SubViewOpPromotableModel>(*ctx);
+    memref::SubViewOp::attachInterface<
+        ViewOpPromotableModel<memref::SubViewOp>>(*ctx);
+    memref::ExpandShapeOp::attachInterface<
+        ReassociativeViewOpAliasModel<memref::ExpandShapeOp>>(*ctx);
+    memref::ExpandShapeOp::attachInterface<
+        ViewOpPromotableModel<memref::ExpandShapeOp>>(*ctx);
+    memref::CollapseShapeOp::attachInterface<
+        ReassociativeViewOpAliasModel<memref::CollapseShapeOp>>(*ctx);
+    memref::CollapseShapeOp::attachInterface<
+        ViewOpPromotableModel<memref::CollapseShapeOp>>(*ctx);
   });
 }
