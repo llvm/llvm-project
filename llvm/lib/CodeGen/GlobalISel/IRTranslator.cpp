@@ -2064,7 +2064,7 @@ bool IRTranslatorImpl::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
       FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+          DefaultMBB->getBasicBlock()->getFirstNonPHIOrPseudoProbe());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
