@@ -147,6 +147,36 @@ auto JIT = LLLazyJITBuilder()
 For users wanting to get started with LLJIT a minimal example program can be
 found at `llvm/examples/HowToUseLLJIT`.
 
+By default LLJIT allocates each linked object independently, so two objects that
+belong to the same JITDylib are not guaranteed to land within range of one
+another in the executor's address space. This matters under a small code model:
+the compiler emits direct, range-limited relocations for references within a
+program (such as the x86-64 REL32 relocation, which only reaches +/-2GB), so
+when a referenced object is allocated too far away JITLink has to route the
+reference through a stub instead. (References that cross JITDylibs or bind to
+external libraries are resolved indirectly regardless, so they are unaffected.)
+
+The `setColocatingSlabAllocator` builder option opts in to a slab-based memory
+manager that reserves a large region of address space per JITDylib and
+sub-allocates that JITDylib's objects from it, keeping them close enough to stay
+within range of one another:
+
+```c++
+// Use an in-process, per-JITDylib colocating slab allocator.
+auto JIT = LLJITBuilder()
+             .setColocatingSlabAllocator()
+             .create();
+```
+
+This option only affects the JITLink linking path. Targets that still default to
+RuntimeDyld (e.g. COFF today) are unaffected unless JITLink is also enabled (for
+example via `setObjectLinkingLayerCreator`).
+
+By default each JITDylib is restricted to a single slab, so an allocation that
+does not fit is rejected rather than silently spilling into another, possibly
+out-of-range, slab. A custom growth policy can be supplied as a second argument
+to `setColocatingSlabAllocator`.
+
 ## Design Overview
 
 ORC's JIT program model aims to emulate the linking and symbol resolution
