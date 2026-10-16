@@ -53,7 +53,7 @@ using namespace mlir::vector;
 template <typename LoadStoreOpTy>
 static bool
 isWholeBufferLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
-                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+                       const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
       op.getBase() != slot.ptr || op.getVectorType() != slot.valueType)
     return false;
@@ -170,7 +170,8 @@ struct StoreOpMemOpModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    return isWholeBufferLoadStore(cast<vector::StoreOp>(op), slot, blockingUses);
+    return isWholeBufferLoadStore(cast<vector::StoreOp>(op), slot,
+                                  blockingUses);
   }
 
   DeletionKind
