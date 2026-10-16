@@ -48,9 +48,9 @@ body: |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_128 = lr-split COPY [[KILL]]
   ; CHECK-NEXT:   KILL [[COPY]]
   ; CHECK-NEXT:   undef [[COPY1:%[0-9]+]].sub2_sub3:sgpr_128 = lr-split COPY [[COPY]].sub2_sub3
+  ; CHECK-NEXT:   KILL [[COPY1]].sub2_sub3
+  ; CHECK-NEXT:   KILL [[COPY1]].sub2_sub3
   ; CHECK-NEXT:   SI_SPILL_S128_SAVE [[COPY1]], %stack.4, implicit $exec, implicit $sgpr32 :: (store (s128) into %stack.4, align 4, addrspace 5)
-  ; CHECK-NEXT:   KILL [[COPY1]].sub2_sub3
-  ; CHECK-NEXT:   KILL [[COPY1]].sub2_sub3
   ; CHECK-NEXT:   KILL [[KILL]]
   ; CHECK-NEXT:   [[SI_SPILL_S128_RESTORE:%[0-9]+]]:sgpr_128 = SI_SPILL_S128_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_S128_RESTORE1:%[0-9]+]]:sgpr_128 = SI_SPILL_S128_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.1, align 4, addrspace 5)

@@ -320,6 +320,19 @@ static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
       LIS.getInterval(MO.getReg());
 }
 
+/// Return the lanes of \p LI that are live at \p Idx.
+static LaneBitmask getLiveLanesAt(const LiveInterval &LI, SlotIndex Idx,
+                                  const MachineRegisterInfo &MRI) {
+  if (!LI.hasSubRanges())
+    return LI.liveAt(Idx) ? MRI.getMaxLaneMaskForVReg(LI.reg())
+                          : LaneBitmask::getNone();
+  LaneBitmask LiveLanes;
+  for (const LiveInterval::SubRange &SR : LI.subranges())
+    if (SR.liveAt(Idx))
+      LiveLanes |= SR.LaneMask;
+  return LiveLanes;
+}
+
 /// isSnippet - Identify if a live interval is a snippet that should be spilled.
 /// It is assumed that SnipLI is a virtual register with the same original as
 /// Edit->getReg().
@@ -454,6 +467,17 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  // The spill below stores all of SrcReg into the stack slot shared by all
+  // siblings. If SrcReg lacks a lane of the original value that is live there,
+  // e.g. because it was created by a partial copy, the store would clobber
+  // that lane in the stack slot.
+  LiveInterval &OrigLI = LIS.getInterval(Original);
+  SlotIndex SpillIdx = SrcVNI->def.getRegSlot();
+  if ((getLiveLanesAt(OrigLI, SpillIdx, MRI) &
+       ~getLiveLanesAt(SrcLI, SpillIdx, MRI))
+          .any())
+    return false;
+
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
   if (SrcVNI->isPHIDef())
@@ -486,7 +510,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // value. We may be able to do better with stack slot coloring by being more
   // careful here.
   assert(StackInt && "No stack slot assigned yet.");
-  LiveInterval &OrigLI = LIS.getInterval(Original);
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(Idx);
   StackInt->MergeValueInAsValue(OrigLI, OrigVNI, StackInt->getValNumInfo(0));
   LLVM_DEBUG(dbgs() << "\tmerged orig valno " << OrigVNI->id << ": "
@@ -1382,7 +1405,34 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     // FIXME: Infer regclass from instruction alone.
     Register NewVReg = Edit->createFrom(Reg);
 
-    if (RI.Reads)
+    // An undef subregister def only defines some lanes of Reg, but the spill
+    // below stores all of them. Other lanes of the original value that are
+    // live here may be held in the stack slot by a sibling, so reload them
+    // instead of clobbering them.
+    bool ReloadUndefLanes = false;
+    if (RI.Writes && !RI.Reads) {
+      LaneBitmask DefLanes;
+      for (const std::pair<MachineInstr *, unsigned> &OpPair : Ops) {
+        const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+        if (MO.isDef() && !MO.isDead())
+          DefLanes |= MO.getSubReg()
+                          ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
+                          : MRI.getMaxLaneMaskForVReg(Reg);
+      }
+      LiveInterval &OrigLI = LIS.getInterval(Original);
+      // A sibling can only hold a subset of the original's lanes in the shared
+      // slot when the original has subregister liveness. Without it there is
+      // nothing to preserve and getLiveLanesAt conservatively reports all
+      // lanes.
+      if (DefLanes.any() && OrigLI.hasSubRanges() &&
+          (getLiveLanesAt(OrigLI, Idx, MRI) & ~DefLanes).any()) {
+        ReloadUndefLanes = true;
+        StackInt->MergeValueInAsValue(OrigLI, OrigLI.getVNInfoAt(Idx),
+                                      StackInt->getValNumInfo(0));
+      }
+    }
+
+    if (RI.Reads || ReloadUndefLanes)
       insertReload(NewVReg, Idx, &MI);
 
     // Rewrite instruction operands.
@@ -1396,6 +1446,8 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       } else {
         if (!MO.isDead())
           hasLiveDef = true;
+        if (ReloadUndefLanes)
+          MO.setIsUndef(false);
       }
     }
     LLVM_DEBUG(dbgs() << "\trewrite: " << Idx << '\t' << MI << '\n');
