@@ -386,3 +386,34 @@ define i64 @cttz_exact_shift_add_shift_multiuse(i64 %x, ptr %p) {
   %result = add i64 %count, 1
   ret i64 %result
 }
+
+; Non-splat shift amounts with a truncated count need not fold.
+define <2 x i32> @cttz_exact_shift_trunc_add_nonsplat(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i32> @cttz_exact_shift_trunc_add_nonsplat(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw nsw <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %shift = lshr exact <2 x i64> %x, <i64 1, i64 2>
+  %count = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %shift, i1 true)
+  %narrow = trunc <2 x i64> %count to <2 x i32>
+  %result = add <2 x i32> %narrow, <i32 1, i32 2>
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @cttz_exact_shift_trunc_add_splat(<2 x i64> %x) {
+; CHECK-LABEL: define <2 x i32> @cttz_exact_shift_trunc_add_splat(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X]], i1 true)
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw nsw <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %shift = lshr exact <2 x i64> %x, <i64 2, i64 2>
+  %count = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %shift, i1 true)
+  %narrow = trunc <2 x i64> %count to <2 x i32>
+  %result = add <2 x i32> %narrow, <i32 2, i32 2>
+  ret <2 x i32> %result
+}
+
+declare <2 x i64> @llvm.cttz.v2i64(<2 x i64>, i1)
