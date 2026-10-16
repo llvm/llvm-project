@@ -26,6 +26,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,6 +34,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -216,7 +218,11 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
     case Counter::CounterValueReference:
       if (Current.ICounter.getCounterID() >= CounterValues.size())
         return errorCodeToError(errc::argument_out_of_domain);
-      LastPoppedValue = CounterValues[Current.ICounter.getCounterID()];
+      // Counter values are unsigned. Saturate the ones that do not fit into
+      // int64_t instead of letting them turn negative.
+      LastPoppedValue = static_cast<int64_t>(
+          std::min<uint64_t>(CounterValues[Current.ICounter.getCounterID()],
+                             std::numeric_limits<int64_t>::max()));
       CounterStack.pop();
       break;
     case Counter::Expression: {
@@ -233,8 +239,15 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
       } else {
         int64_t LHS = Current.LHS;
         int64_t RHS = LastPoppedValue;
-        LastPoppedValue =
-            E.Kind == CounterExpression::Subtract ? LHS - RHS : LHS + RHS;
+        bool IsSubtract = E.Kind == CounterExpression::Subtract;
+        bool Overflow = IsSubtract ? SubOverflow(LHS, RHS, LastPoppedValue)
+                                   : AddOverflow(LHS, RHS, LastPoppedValue);
+        if (Overflow) {
+          // Saturate, keeping the sign of the exact result.
+          bool IsPositive = IsSubtract ? RHS < 0 : RHS > 0;
+          LastPoppedValue = IsPositive ? std::numeric_limits<int64_t>::max()
+                                       : std::numeric_limits<int64_t>::min();
+        }
         CounterStack.pop();
       }
       break;
@@ -783,7 +796,9 @@ struct CountedRegionEmitter {
     auto ValueOrErr = Ctx.evaluate(C);
     if (!ValueOrErr)
       return ValueOrErr.takeError();
-    CounterValues[C] = *ValueOrErr;
+    // Clamp negative values, which can result from inconsistent counter values,
+    // to zero instead of wrapping around to a huge unsigned count.
+    CounterValues[C] = std::max<int64_t>(*ValueOrErr, 0);
     return Error::success();
   }
 

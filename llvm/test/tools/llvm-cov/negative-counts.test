@@ -1,0 +1,25 @@
+// Check that a counter expression that evaluates to a negative value is
+// reported as zero instead of wrapping around to a huge unsigned value. In
+// lineExecutionCounts-negative.proftext, the counter for the "then" branch of
+// the if statement (#1) is larger than the function entry counter (#0), so
+// the count of the "else" branch (#0 - #1) is negative.
+
+// RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts-negative.proftext -o %t.profdata
+
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs \
+// RUN:   | FileCheck %s --check-prefix=SHOW --implicit-check-not=18.4E
+// SHOW: 9| 200| if (x) {
+// SHOW: 12| 0| x = 1;
+
+// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -format=lcov \
+// RUN:   | FileCheck %s --check-prefix=LCOV --implicit-check-not=1844674407
+// LCOV: DA:12,0
+// LCOV: DA:13,0
+
+// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -format=text \
+// RUN:   | FileCheck %s --check-prefix=JSON --implicit-check-not=9223372036854775807
+// JSON: [11,10,13,4,0,0,0,0]
+
+// RUN: llvm-cov report %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata \
+// RUN:   | FileCheck %s --check-prefix=REPORT
+// REPORT: TOTAL 11 3 72.73% 1 0 100.00% 20 3 85.00%
