@@ -2563,6 +2563,9 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 }
 
 bool RISCVTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
+  if (Subtarget.hasVendorXqcibi())
+    return isInt<16>(Imm);
+
   return isInt<12>(Imm);
 }
 
