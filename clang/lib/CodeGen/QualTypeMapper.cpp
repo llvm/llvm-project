@@ -633,9 +633,8 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return Builder.getPointerType(
-      PointerSize, llvm::Align(Alignment.value() / 8), TargetAddrSpace,
-      PointeeType.hasAddressSpace());
+  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
+                                TargetAddrSpace, PointeeType.hasAddressSpace());
 }
 
 /// Processes the fields of a record (struct/class/union) and populates
