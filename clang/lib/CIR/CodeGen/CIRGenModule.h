@@ -36,6 +36,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -115,6 +117,23 @@ private:
 
   /// Accumulated record layout entries, materialized in release().
   llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
+
+  /// Whether C++20 named modules get their own module initializer function,
+  /// which requires the Itanium mangling of the initializer name.
+  bool cxx20ModuleInits = false;
+
+  /// The complete set of modules that have been imported.
+  llvm::SetVector<clang::Module *> importedModules;
+
+  /// The location of the first import declaration of each imported module.
+  llvm::DenseMap<clang::Module *, clang::SourceLocation> moduleImportLocs;
+
+  /// The set of modules for which the module initializers have been emitted.
+  llvm::SmallPtrSet<clang::Module *, 16> emittedModuleInitializers;
+
+  /// The Itanium-mangled name of the initializer function of a C++20 named
+  /// module.
+  std::string getModuleInitializerName(clang::Module *mod);
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
@@ -679,7 +698,7 @@ public:
                                 cir::FuncOp func, bool isThunk);
 
   /// Set extra attributes (inline, etc.) for a function.
-  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+  void setCIRFunctionAttributesForDefinition(const clang::Decl *decl,
                                              cir::FuncOp f);
 
   /// Generate OpenCL kernel argument metadata for a kernel function.
@@ -803,10 +822,6 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
-
-  // Whether a global variable should be emitted by CUDA/HIP host/device
-  // related attributes.
-  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
   /// Print the postfix for externalized static variable or kernels for single
   /// source offloading languages CUDA and HIP. The unique postfix is created

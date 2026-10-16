@@ -26,7 +26,7 @@ registers:
   - { id: 0, class: gpr32, preferred-register: '' }
   - { id: 1, class: gpr32, preferred-register: '' }
 liveins:
-  - { reg: '$a0', virtual-reg: '%0' }
+  - { reg: '$r4', virtual-reg: '%0' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -49,11 +49,11 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0
+    liveins: $r4
 
-    %0:gpr32 = COPY $a0
-    %1:gpr32 = ADDiu $zero, 14
-    $a0 = COPY %1
-    TAILCALLREG %0, csr_o32, implicit-def dead $at, implicit $a0
+    %0:gpr32 = COPY $r4
+    %1:gpr32 = ADDiu $r0, 14
+    $r4 = COPY %1
+    TAILCALLREG %0, csr_o32, implicit-def dead $r1, implicit $r4
 
 ...
