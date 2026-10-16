@@ -335,7 +335,11 @@ MachineBasicBlock::reverse_iterator SIOptimizeExecMasking::findExecCopy(
   const unsigned InstLimit = 25;
 
   auto E = MBB.rend();
-  for (unsigned N = 0; N <= InstLimit && I != E; ++I, ++N) {
+  for (unsigned N = 0; N <= InstLimit && I != E; ++I) {
+    if (I->isDebugInstr())
+      continue;
+    ++N;
+
     Register CopyFromExec = isCopyFromExec(*I);
     if (CopyFromExec.isValid())
       return I;
@@ -462,7 +466,12 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
 
     unsigned SearchCount = 0;
     const unsigned SearchLimit = 5;
-    while (I != E && SearchCount++ < SearchLimit) {
+    while (I != E && SearchCount < SearchLimit) {
+      if (I->isDebugInstr()) {
+        ++I;
+        continue;
+      }
+      ++SearchCount;
       CopyToExec = isCopyToExec(*I);
       if (CopyToExec)
         break;
