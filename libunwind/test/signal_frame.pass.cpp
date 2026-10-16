@@ -49,7 +49,7 @@ __attribute__((noinline)) void caller() {
   asm volatile(""); // Prevent a tail call.
 }
 
-int main(int, char**) {
+int main(int, char **) {
   caller();
   return 0;
 }
