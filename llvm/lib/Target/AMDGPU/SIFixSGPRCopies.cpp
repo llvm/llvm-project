@@ -916,8 +916,9 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
   if (!DstReg.isVirtual()) {
     // If the destination register is a physical register there isn't
     // really much we can do to fix this.
-    // Some special instructions use M0 as an input. moveToVALU waterfalls the
-    // ones that use it in every lane and gives the rest the first lane.
+    // Some special instructions use M0 as an input. moveToVALU waterfalls a
+    // divergent index into M0 for a movrel access and gives every other reader
+    // the first lane.
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
     if (DstReg == AMDGPU::M0 && TRI->hasVectorRegisters(SrcRC)) {
       const TargetRegisterClass *OpRC =

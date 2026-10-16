@@ -486,7 +486,7 @@ const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc);
 
 LLVM_READONLY
 const VLdStIdxOpcodeInfo *
-getVLdStIdxOpcodeInfoByKey(uint16_t BitWidth, bool IsStore, bool IsGPRIdx);
+getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx);
 
 LLVM_READONLY
 int getMTBUFBaseOpcode(unsigned Opc);

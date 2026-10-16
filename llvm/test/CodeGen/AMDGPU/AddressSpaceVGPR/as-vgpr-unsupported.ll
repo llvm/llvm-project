@@ -43,6 +43,20 @@ define void @store_i32_align1(ptr addrspace(13) inreg %p, i32 %v) {
   ret void
 }
 
+; A width the opcode table cannot key must not wrap onto a supported one.
+; CHECK: error: {{.*}}unsupported access of VGPR 'as memory' address space (13); only dword-aligned whole-dword loads and stores are implemented
+define <2050 x i32> @load_v2050i32(ptr addrspace(13) inreg %p) {
+  %x = load <2050 x i32>, ptr addrspace(13) %p
+  ret <2050 x i32> %x
+}
+
+; CHECK: error: {{.*}}unsupported access of VGPR 'as memory' address space (13); only dword-aligned whole-dword loads and stores are implemented
+define void @store_v2050i32(ptr addrspace(13) inreg %p, ptr addrspace(1) %in) {
+  %v = load <2050 x i32>, ptr addrspace(1) %in
+  store <2050 x i32> %v, ptr addrspace(13) %p
+  ret void
+}
+
 ; Only dword alignment is required, whatever the access size.
 ; CHECK-NOT: in function load_i64_align4
 define i64 @load_i64_align4(ptr addrspace(13) inreg %p) {
