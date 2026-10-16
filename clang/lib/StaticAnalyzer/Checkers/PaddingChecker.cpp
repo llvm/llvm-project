@@ -178,6 +178,12 @@ public:
       QualType Ty = FD->getType();
       if (Ty->isIncompleteArrayType())
         return true;
+      // Dependent field types have no known layout, so we can't compute the
+      // padding of the enclosing record. This can happen for lambda captures
+      // in a dependent context, e.g. an init-capture of a forwarding reference
+      // inside a noexcept specifier.
+      if (Ty->isDependentType())
+        return true;
       return false;
     };
 
