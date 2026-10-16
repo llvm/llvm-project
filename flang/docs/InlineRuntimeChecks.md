@@ -104,9 +104,11 @@ Non-goals:
 - `%ok` (`i1`) is the condition that must hold.
 - `<kind>` is a check category (section 4). Options act on categories.
 - `<message>` is the error text, a `printf` format.
-- `values(%v0, ... : T0, ...)` are optional integer or `index` SSA values
-  (`T0`, ... are their types) printed into the message, one per `%lld`
-  directive. They are only read on the failure path. For example, the two
+- `values(%v0, ... : T0, ...)` are optional `i8`, `i16`, `i32`, `i64`, or
+  `index` SSA values (`T0`, ... are their types) printed as signed integers
+  into the message, one per `%lld` directive. Boolean diagnostics must be
+  explicitly extended by the producer to select their signed or unsigned
+  interpretation. Values are only read on the failure path. For example, the two
   extents in `"DOT_PRODUCT: SIZE(VECTOR_A) is %lld but SIZE(VECTOR_B) is %lld"`.
 - `guard(%x0, ... : U0, ...)` are the optional guarded values, of any type.
   The op has one result per guarded value, with the same type (`%g#i` has
@@ -255,12 +257,18 @@ llvm.cond_br %ok weights([2000, 1]), ^cont, ^fail
 
 - **Runtime entry.** `_FortranAReportFatalUserError(msg, source, line)`
   (`flang/include/flang/Runtime/stop.h`) is `[[noreturn]]` and device-callable
-  (`RT_API_ATTRS`). It takes no values. Proposed addition:
-  `ReportFatalUserErrorValues(msg, source, line, v0..v3)` with a fixed
-  number of `long long` arguments. That keeps the ABI simple on devices, and
-  messages use `%lld` only (CUDA's device `printf` only documents the `h`,
-  `l`, and `ll` length modifiers). The message is passed to `printf`, so a
-  literal `%` in a message must be escaped.
+  (`RT_API_ATTRS`). It takes no values. Assertions with up to four values use
+  `ReportFatalUserErrorValues(msg, source, line, v0..v3)` with fixed
+  `long long` arguments, padding unused arguments with zeros. Assertions with
+  more values use `ReportFatalUserErrorValueArray(msg, source, line, count,
+  values)`, where `count` is a `size_t` and `values` points to an array of
+  `long long`. Code generation packs that array on the failure path; the
+  assertion's diagnostic operands remain SSA values until then. Both entries
+  have fixed signatures to keep the ABI simple on devices. Messages use only
+  `%lld` and `%%` (for a literal percent sign). The array entry prints the
+  diagnostic in pieces through the existing runtime termination machinery,
+  without allocating a formatted message. Concurrent failures may interleave
+  their output.
 - **Declaration.** The runtime function declaration must carry `noreturn`,
   so LLVM can use the checked condition on the continuation path.
 - **Source location.** Take it from the assert's own location. Resolve
@@ -778,10 +786,11 @@ elimination do not. The code generation pattern must work on unoptimized IR.
 
 ## 9. Open questions
 
-1. Message formatting: a fixed number of `long long` values, or a variadic
-   runtime entry? Inline messages keep the runtime's text as closely as
-   possible, and only differ where the inline check is stricter (per-dimension
-   conformance, section 5.1).
+1. Diagnostic detail: report only the failing dimension, or include complete
+   shapes and subscript tuples? The fixed and count-and-array entries support
+   both. Inline messages keep the runtime's text as closely as possible, and
+   only differ where the inline check is stricter (per-dimension conformance,
+   section 5.1).
 2. When a default-on kind (`conformance`, `argument`) is disabled by an
    option, should its checks be emitted as assumptions (`llvm.intr.assume` at
    code generation) instead of not at all? An assumption gives more

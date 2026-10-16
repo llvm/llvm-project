@@ -2089,9 +2089,21 @@ public:
       return false;
     if (StepSize != OpWidth / 8)
       return false;
-    if (OpWidth >= 16)
+    if (OpWidth >= 16) {
       if (OpWidth != WcharSize * 8)
         return false;
+
+      // Don't call `wcslen` if the base pointer isn't known to be aligned.
+      const DataLayout &DL = LoopLoad->getDataLayout();
+      Align OperandAlign = DL.getABITypeAlign(OperandType);
+      if (LoopLoad->getAlign() < OperandAlign) {
+        // For null pointers the load base number of trailing zeros may be
+        // larger than what `Align` allows. So take log2 of operand alignment
+        // instead and compare trailing zeros instead of alignments.
+        if (SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
+          return false;
+      }
+    }
 
     // Scan every instruction in the loop to ensure there are no side effects.
     for (Instruction &I : *LoopBody)

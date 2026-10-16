@@ -7481,6 +7481,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_hipstdpar_interpose_alloc);
     Args.addOptInFlag(CmdArgs, options::OPT_fhip_kernel_arg_name,
                       options::OPT_fno_hip_kernel_arg_name);
+    if (TC.getTriple().isSPIRV() &&
+        TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
+      Args.addLastArg(CmdArgs, options::OPT_fenable_spirv_size_optimization);
   }
 
   if ((IsCuda || IsHIP || IsSYCL) && IsRDCMode)
@@ -9846,7 +9849,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_sanitize_trap_EQ,
       OPT_fslp_vectorize,
       OPT_fno_slp_vectorize,
-      OPT_hipstdpar};
+      OPT_hipstdpar,
+      OPT_fenable_spirv_size_optimization};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   // Suppress verbose output for HIP non-RDC fat binaries because it confuses
   // CMake implicit linker argument parsing.

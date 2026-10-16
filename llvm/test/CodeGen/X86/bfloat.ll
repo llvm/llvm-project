@@ -2717,31 +2717,13 @@ define half @bitcast_f32_hi16(float %f) {
 ;
 ; SSE2-LABEL: bitcast_f32_hi16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    shrl $16, %eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    psrld $16, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX512BF16-LABEL: bitcast_f32_hi16:
-; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vmovd %xmm0, %eax
-; AVX512BF16-NEXT:    shrl $16, %eax
-; AVX512BF16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVX512BF16-NEXT:    retq
-;
-; AVX512FP16-LABEL: bitcast_f32_hi16:
-; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vmovd %xmm0, %eax
-; AVX512FP16-NEXT:    shrl $16, %eax
-; AVX512FP16-NEXT:    vmovw %eax, %xmm0
-; AVX512FP16-NEXT:    retq
-;
-; AVXNC-LABEL: bitcast_f32_hi16:
-; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vmovd %xmm0, %eax
-; AVXNC-NEXT:    shrl $16, %eax
-; AVXNC-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; AVXNC-NEXT:    retq
+; AVX-LABEL: bitcast_f32_hi16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %i = bitcast float %f to i32
   %s = lshr i32 %i, 16
   %t = trunc i32 %s to i16
@@ -2764,9 +2746,7 @@ define <8 x i16> @insert_f32_hi16(<8 x i16> %vec, float %f) {
 ;
 ; AVX-LABEL: insert_f32_hi16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd %xmm1, %eax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
 ; AVX-NEXT:    retq
   %i = bitcast float %f to i32
   %s = lshr i32 %i, 16
@@ -2790,9 +2770,8 @@ define <8 x i16> @insert_f32_hi16_lane2(<8 x i16> %vec, float %f) {
 ;
 ; AVX-LABEL: insert_f32_hi16_lane2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd %xmm1, %eax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3,4,5,6,7]
 ; AVX-NEXT:    retq
   %i = bitcast float %f to i32
   %s = lshr i32 %i, 16

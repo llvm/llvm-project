@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_DEBUGGER_H
 #define LLDB_CORE_DEBUGGER_H
 
+#include <atomic>
 #include <cstdint>
 
 #include <memory>
@@ -479,7 +480,9 @@ public:
   /// output is an escape-code-capable terminal.
   bool StatuslineSupported();
 
-  /// Flush cached state (e.g. stale execution context in the statusline).
+  /// Discard the statusline's cached frame at its next redraw. This function
+  /// is thread-safe and takes no lock, so callers may hold the target API
+  /// mutex.
   void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
@@ -815,6 +818,8 @@ protected:
   /// Mutex protecting the m_statusline member.
   std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
+  /// Raised by FlushStatusLine to request a flush at the next redraw.
+  std::atomic<bool> m_flush_statusline = false;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;

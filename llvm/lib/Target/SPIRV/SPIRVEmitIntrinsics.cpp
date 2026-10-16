@@ -2758,11 +2758,7 @@ static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
 // emit an extra OpUnreachable instruction.
 static bool precededByAbortIntrinsic(const UnreachableInst &I,
                                      const SPIRVSubtarget &ST) {
-  // Find a previous non-debug instruction.
   const Instruction *Prev = I.getPrevNode();
-  while (Prev && Prev->isDebugOrPseudoInst())
-    Prev = Prev->getPrevNode();
-
   if (Prev && isAbortCall(*Prev, ST))
     return true;
 
@@ -3583,6 +3579,10 @@ bool SPIRVEmitIntrinsicsImpl::processFunctionPointers(Module &M) {
       continue;
     if (F.isDeclaration()) {
       for (User *U : F.users()) {
+        // SPIR-V has no personality, so it is not a function pointer use.
+        if (auto *UF = dyn_cast<Function>(U);
+            UF && UF->hasPersonalityFn() && UF->getPersonalityFn() == &F)
+          continue;
         CallInst *CI = dyn_cast<CallInst>(U);
         if (!CI || CI->getCalledFunction() != &F) {
           Worklist.push_back(&F);
