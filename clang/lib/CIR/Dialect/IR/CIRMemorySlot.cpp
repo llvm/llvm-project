@@ -28,7 +28,29 @@ static bool forwardToUsers(Operation *op,
 // Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
 
+/// Returns true if the scope still contains a cir.goto or cir.indirect_goto.
+/// Until GotoSolver turns them into branches, these jumps are terminators
+/// without successors, so the block holding the target cir.label does not list
+/// them as predecessors.
+static bool hasUnresolvedGotos(Operation *scope) {
+  return scope
+      ->walk([](Block *block) {
+        return (!block->empty() &&
+                isa<cir::GotoOp, cir::IndirectGotoOp>(block->back()))
+                   ? WalkResult::interrupt()
+                   : WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
 llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
+  // Promotion computes reaching definitions from the CFG, which misses the
+  // edges of unresolved gotos, so a load after a cir.label would be given the
+  // value from the fallthrough path only. Leave the slot in memory until the
+  // gotos are lowered.
+  if (hasUnresolvedGotos(
+          getOperation()->getParentWithTrait<OpTrait::IsIsolatedFromAbove>()))
+    return {};
   return {MemorySlot{getResult(), getAllocaType()}};
 }
 
