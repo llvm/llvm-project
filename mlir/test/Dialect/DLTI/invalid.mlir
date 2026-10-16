@@ -10,6 +10,11 @@
 
 // -----
 
+// expected-error@below {{attribute 'dlti' failed to satisfy constraint}}
+module attributes {dlti = 42 : i32} {}
+
+// -----
+
 // expected-error@below {{'dlti.dl_spec' is expected to be a #dlti.dl_spec attribute}}
 "test.unknown_op"() { dlti.dl_spec = 42 } : () -> ()
 
