@@ -46,7 +46,6 @@
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -396,14 +395,9 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   unsigned NumDwords = LdSt.getBitWidth() / 32;
 
   // A statically out-of-range offset is undefined behavior; mask it into the
-  // addressable range below rather than emit an invalid register. The AGPRs
-  // that gfx90a+ counts as addressable cannot be named as VGPRs.
-  unsigned DynamicVGPRBlockSize = BB.getParent()
-                                      ->getInfo<SIMachineFunctionInfo>()
-                                      ->getDynamicVGPRBlockSize();
+  // addressable range below rather than emit an invalid register.
   unsigned NumAddressableVGPRs =
-      std::min(ST->getAddressableNumArchVGPRs(),
-               ST->getAddressableNumVGPRs(DynamicVGPRBlockSize));
+      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*BB.getParent());
 
   const bool UseGPRIdxMode = LdSt.isGPRIdx();
 

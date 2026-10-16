@@ -49,6 +49,10 @@ public:
 
   unsigned getBitWidth() const { return getInfo().BitWidth; }
 
+  // The VGPRs an index can reach, which excludes the AGPRs that gfx90a+ counts
+  // as addressable.
+  static unsigned getNumIndexableVGPRs(const MachineFunction &MF);
+
   static bool classof(const MachineInstr *MI) {
     return AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode()) != nullptr;
   }
