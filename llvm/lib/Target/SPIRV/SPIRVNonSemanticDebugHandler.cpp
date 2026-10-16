@@ -46,6 +46,12 @@ static cl::opt<bool> SPIRVDebugScopeForwardRefs(
              "SPV_KHR_relaxed_extended_instruction is enabled"),
     cl::init(false));
 
+// When disabled, unwrap a DILexicalBlockFile to its enclosing scope.
+static cl::opt<bool> SPIRVDebugLexicalBlockDiscriminatorScope(
+    "spirv-debug-lexical-block-discriminator-scope",
+    cl::desc("Use a DebugLexicalBlockDiscriminator as a DebugScope"),
+    cl::init(false));
+
 namespace {
 
 /// Look up \p Key in a register map and return its value, or std::nullopt when
@@ -313,20 +319,6 @@ static void collectDebugLocationsAndLocalVariables(
   }
 }
 
-// Insert \p S and its enclosing DILexicalBlock/DINamespace chain into \p Out,
-// parent before child, so single-pass emission never needs a forward
-// reference for the Parent operand.
-static void collectLexicalBlockChain(const DIScope *S,
-                                     SetVector<const DIScope *> &Out) {
-  // Walk up child-first, then insert in reverse to get parents in first.
-  SmallVector<const DIScope *, 8> Chain;
-  while (S && !Out.contains(S) && isa<DILexicalBlock, DINamespace>(S)) {
-    Chain.push_back(S);
-    S = S->getScope();
-  }
-  Out.insert(Chain.rbegin(), Chain.rend());
-}
-
 void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   // The base class sets Asm = nullptr when the module has no compile units,
   // and initializes lexical scope tracking otherwise.
@@ -434,11 +426,9 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   collectDebugLocationsAndLocalVariables(*M, UniqueDebugLocations,
                                          LocalVariables);
 
-  // DILexicalBlock and DINamespace scopes are lowered to DebugLexicalBlock.
-  // Collect them in parent-before-child order so they can be later emitted in a
-  // single pass.
   for (const DIScope *S : Finder.scopes())
-    collectLexicalBlockChain(S, LexicalBlocks);
+    if (isa<DILexicalBlock, DINamespace, DILexicalBlockFile>(S))
+      LexicalBlocks.insert(S);
 }
 
 // The emitted SPIR-V id of \p MI, or an invalid register when \p MI defines
@@ -947,6 +937,9 @@ auto SPIRVNonSemanticDebugHandler::emitDebugScope(const DIScope *S)
   if (isa<DILexicalBlock, DINamespace>(S))
     return emitDebugLexicalBlock(S, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                                  MAI);
+  if (const auto *LBF = dyn_cast<DILexicalBlockFile>(S))
+    return emitDebugLexicalBlockDiscriminator(LBF, VoidTypeReg, I32TypeReg,
+                                              ExtInstSetReg, MAI);
   if (const auto *SP = dyn_cast<DISubprogram>(S)) {
     if (SP->isDefinition())
       return emitDebugFunction(SP, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
@@ -1072,14 +1065,16 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 }
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
-SPIRVNonSemanticDebugHandler::EmitResult<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
-                                           const DICompileUnit *FallbackCU) {
-  // DebugLexicalBlockDiscriminator cannot be used as a scope, so unwrap it.
-  while (const auto *DLBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
-    Scope = DLBF->getScope();
+auto SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
+                                                const DICompileUnit *FallbackCU)
+    -> EmitResult<MCRegister> {
+  if (!SPIRVDebugLexicalBlockDiscriminatorScope)
+    while (const auto *LBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
+      Scope = LBF->getScope();
 
-  if (isa_and_nonnull<DIType, DILexicalBlock, DINamespace, DISubprogram>(Scope))
+  // These scopes have their own debug instruction.
+  if (isa_and_nonnull<DIType, DILexicalBlock, DINamespace, DISubprogram,
+                      DILexicalBlockFile>(Scope))
     return getOrCreateDebugScope(Scope);
 
   // For a file, compile-unit, or absent scope, fall back to a compile unit.
@@ -1129,6 +1124,26 @@ auto SPIRVNonSemanticDebugHandler::emitDebugLexicalBlock(
 
   return EmitResult<PreparedScope>::emitted(
       PreparedScope{SPIRV::NonSemanticExtInst::DebugLexicalBlock, Ops});
+}
+
+auto SPIRVNonSemanticDebugHandler::emitDebugLexicalBlockDiscriminator(
+    const DILexicalBlockFile *LBF, MCRegister VoidTypeReg,
+    MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) -> EmitResult<PreparedScope> {
+  assert(LBF && "LBF must not be null");
+  EmitResult<MCRegister> Parent = resolveScope(LBF->getScope());
+  if (!Parent)
+    return EmitResult<PreparedScope>::failure(Parent);
+
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      LBF->getFile(), /*UseEmptyPathIfNullScope=*/true);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+  MCRegister DiscReg = emitOpConstantI32(
+      static_cast<uint32_t>(LBF->getDiscriminator()), I32TypeReg, MAI);
+  return EmitResult<PreparedScope>::emitted(
+      PreparedScope{SPIRV::NonSemanticExtInst::DebugLexicalBlockDiscriminator,
+                    {SrcReg, DiscReg, *Parent.Value}});
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugInlinedAt(
@@ -1742,8 +1757,6 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitAndCacheScopePathOpStringReg(LV->getFile(), MAI);
   }
 
-  // Cache the path OpString each DebugLexicalBlock uses (source file), plus
-  // the Name OpString for the DINamespace case.
   for (const DIScope *S : LexicalBlocks) {
     emitAndCacheScopePathOpStringReg(S->getFile(), MAI);
     if (const auto *NS = dyn_cast<DINamespace>(S))
@@ -2387,16 +2400,12 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
       DebugScopeRegs[Info.TheCU] = CUDbgReg;
   }
 
-  for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DINamespace>))
-    getOrCreateDebugScope(S);
   for (const DIType *Ty : DebugTypes)
     getOrCreateDebugScope(Ty);
   for (const DISubprogram *SP : concat<const DISubprogram *>(
            SubprogramDeclarations, SubprogramDefinitions))
     getOrCreateDebugScope(SP);
-  for (const DIScope *S :
-       make_filter_range(LexicalBlocks, IsaPred<DILexicalBlock>))
+  for (const DIScope *S : LexicalBlocks)
     getOrCreateDebugScope(S);
 
   // Emit DebugLocalVariable after DebugFunction and their lexical blocks so the
