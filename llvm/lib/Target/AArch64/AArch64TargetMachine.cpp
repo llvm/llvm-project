@@ -199,8 +199,9 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      CLOpts(AArch64Options::Global), TLOF(createTLOF(getTargetTriple())),
-      isLittle(LittleEndian) {
+      CLOpts(cl::LibraryOptionsContext::get<AArch64Options>(
+          Options.MCOptions.LibraryOptions)),
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
@@ -543,7 +544,7 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createSelectOptimizePass());
 
   addPass(createAArch64StackTaggingPass(
-      /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
+      CLOpts, /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
   // Try to use tbl in place of other shuffling operations if doing so would
   // reduce the total number of instructions. Shuffle masks for big endian may

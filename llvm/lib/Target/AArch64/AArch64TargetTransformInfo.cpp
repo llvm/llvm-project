@@ -3482,7 +3482,7 @@ instCombineDMB(InstCombiner &IC, IntrinsicInst &II,
     NI = NI->getNextNode();
     if (!NI) {
       if (auto *SuccBB = NIBB->getUniqueSuccessor())
-        NI = &*SuccBB->getFirstNonPHIOrDbgOrLifetime();
+        NI = &*SuccBB->getFirstNonPHIOrLifetime();
       else
         break;
     }
