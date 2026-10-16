@@ -282,13 +282,14 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
     return createError(ErrorCode::InvalidBinary, "failed to load binary %p",
                        Img);
 
-  OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(
-      device_load, DeviceID, /*FileName=*/nullptr, /*FileOffset=*/0,
-      /*VmaInFile=*/nullptr,
-      reinterpret_cast<uintptr_t>(Img->ImageEnd) -
-          reinterpret_cast<uintptr_t>(Img->ImageStart),
-      const_cast<void *>(Img->ImageStart),
-      /*DeviceAddr=*/nullptr, /*ModuleId=*/0));
+  OMPT_IF_BUILT_AND_INITIALIZED({
+    auto &Image = *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
+        Binary.handle);
+    performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
+                        /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+                        Image.getSize(), const_cast<void *>(Image.getStart()),
+                        /*DeviceAddr=*/nullptr, /*ModuleId=*/0);
+  });
 
   // This symbol is optional.
   void *DeviceEnvironmentPtr;
