@@ -827,7 +827,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       // No need to do anything for pthreads. Claim argument to avoid warning.
       Args.ClaimAllArgs(options::OPT_pthread);
-      Args.ClaimAllArgs(options::OPT_pthreads);
     }
   }
 
