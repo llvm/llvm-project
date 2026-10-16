@@ -323,7 +323,7 @@ def SIdenorm_mode : SDNode<"AMDGPUISD::DENORM_MODE",
 // - Both scales are the constant 0. E8M0 0 is 2^-127, so this is NOT unscaled.
 //   It is kept because there is no unscaled intrinsic, and frontends
 //   pass constant 0 scales expecting an unscaled instruction.
-// TODO: Remove this folder or add a supported unscaled intrinisic.
+// TODO: Remove the s=0 pattern or add a supported unscaled intrinsic.
 class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrags<
   (ops node:$srca, node:$srcb, node:$srcc,
        node:$cbsz, node:$blgp),
