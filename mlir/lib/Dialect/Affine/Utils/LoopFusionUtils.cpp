@@ -428,7 +428,7 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
   // Clone 'srcForOp' into 'dstForOp' at 'srcSlice->insertPoint'.
   OpBuilder b(srcSlice.insertPoint->getBlock(), srcSlice.insertPoint);
   IRMapping mapper;
-  b.clone(*srcForOp, mapper);
+  auto *clonedSrc = b.clone(*srcForOp, mapper);
 
   // Update 'sliceLoopNest' upper and lower bounds from computed 'srcSlice'.
   SmallVector<AffineForOp, 4> sliceLoops;
@@ -458,11 +458,20 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
   // Fix up and if possible, eliminate single iteration loops.
   for (AffineForOp forOp : sliceLoops) {
     if (isLoopParallelAndContainsReduction(forOp) &&
-        isInnermostSiblingInsertion && srcIsUnitSlice())
+        isInnermostSiblingInsertion && srcIsUnitSlice()) {
       // Patch reduction loop - only ones that are sibling-fused with the
       // destination loop - into the parent loop.
-      (void)promoteSingleIterReductionLoop(forOp, true);
-    else
+      auto *dstYield = dstForOp.getBody()->getTerminator();
+      unsigned oldParentResults = forOp->getParentOp()->getNumResults();
+      if (succeeded(promoteSingleIterReductionLoop(forOp, true)) &&
+          forOp.getOperation() == clonedSrc) {
+        AffineForOp newDst = cast<AffineForOp>(dstYield->getParentOp());
+        for (unsigned i = 0, e = srcForOp.getNumResults(); i < e; ++i) {
+          srcForOp.getResult(i).replaceAllUsesWith(
+              newDst.getResult(oldParentResults + i));
+        }
+      }
+    } else
       // Promote any single iteration slice loops.
       (void)promoteIfSingleIteration(forOp);
   }
