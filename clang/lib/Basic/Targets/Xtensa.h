@@ -97,7 +97,17 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return llvm::StringSwitch<bool>(Name).Case("generic", true).Default(false);
+    return llvm::StringSwitch<bool>(Name)
+        .Case("generic", true)
+        // Intel Audio DSP
+        .Case("intel_tgl_adsp", true)
+        .Case("intel_ace15_adsp", true)
+        .Case("intel_ace15_mtpm", true)
+        .Case("intel_ace30_adsp", true)
+        .Case("intel_ace30_ptl", true)
+        .Case("intel_ace40_adsp", true)
+        .Case("intel_ace40", true)
+        .Default(false);
   }
 
   bool setCPU(StringRef Name) override {
