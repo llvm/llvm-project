@@ -73,6 +73,9 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     seenIds[position] = true;
     return success();
   }
+  case AffineExprKind::Constant:
+    // A constant indexing expression does not reference a loop dimension.
+    return success();
   default:
     return failure();
   }
@@ -304,7 +307,14 @@ shard::detail::defaultGetShardingOption(Operation *op,
     if (!shardAttr)
       continue;
 
-    anyShardingInResultsOrOperands = !shardAttr.getSplitAxes().empty();
+    // Record the grid before processing mapped dimensions. Constant-indexed
+    // dimensions represent replication and do not call fillShardingOption.
+    FlatSymbolRefAttr grid = shardAttr.getGridAttr();
+    if (shardingOption.grid && grid && shardingOption.grid != grid)
+      return failure();
+    if (grid)
+      shardingOption.grid = grid;
+    anyShardingInResultsOrOperands |= !shardAttr.getSplitAxes().empty();
     AffineMap map = maps[shardingIt.index()];
     unsigned numDims = map.getNumDims();
 
@@ -312,17 +322,26 @@ shard::detail::defaultGetShardingOption(Operation *op,
     //
     // TODO: Change to process the operands with single loop index first and
     // then the operands with multiple loop indices.
-    for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
-      AffineExpr expr = std::get<0>(it);
-      ArrayRef<GridAxis> axes = std::get<1>(it).asArrayRef();
+    for (auto [dim, exprAndAxes] : llvm::enumerate(
+             llvm::zip(map.getResults(), shardAttr.getSplitAxes()))) {
+      AffineExpr expr = std::get<0>(exprAndAxes);
+      ArrayRef<GridAxis> axes = std::get<1>(exprAndAxes).asArrayRef();
       FailureOr<llvm::SmallSet<unsigned, 2>> loopIndices =
           checkOperandAffineExpr(expr, numDims);
       if (failed(loopIndices))
         return op->emitOpError()
                << "operand's affine expression is restricted to const_i * "
                   "dim_i + const_j + dim_j + ...";
-      if (loopIndices->empty())
+      // A constant expression selects the same element for every loop
+      // iteration. It can represent replication, but cannot carry split axes.
+      if (loopIndices->empty()) {
+        if (!axes.empty())
+          return op->emitOpError()
+                 << "cannot shard operand " << shardingIt.index()
+                 << " dimension " << dim + 1
+                 << ": its indexing expression is constant";
         continue;
+      }
       if (loopIndices->size() == 1) {
         unsigned loopIdx = *loopIndices->begin();
         visitedLoopIndices.insert(loopIdx);
