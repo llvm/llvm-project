@@ -1623,9 +1623,10 @@ static Value *foldAddOfCttz(BinaryOperator &I,
   // The addend must be the shift amount, truncated to the result type if
   // needed.
   if (!match(Addend, m_TruncOrSelf(m_Specific(ShiftAmt)))) {
-    auto *C = dyn_cast<Constant>(ShiftAmt);
-    if (!C || C->getType() == I.getType() ||
-        Addend != ConstantExpr::getTrunc(C, I.getType()))
+    const APInt *ShiftC, *AddC;
+    if (!match(ShiftAmt, m_APInt(ShiftC)) || !match(Addend, m_APInt(AddC)) ||
+        ShiftC->getBitWidth() <= AddC->getBitWidth() ||
+        ShiftC->trunc(AddC->getBitWidth()) != *AddC)
       return nullptr;
   }
 
