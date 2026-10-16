@@ -1707,6 +1707,32 @@ def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
+let Predicates = [In64BitMode, OptForMinSize] in {
+  def : Pat<(or (and_su GR64:$dst, -256), (i64 (zext GR8:$src))),
+            (INSERT_SUBREG (i64 (COPY $dst)), GR8:$src, sub_8bit)>;
+
+  def : Pat<(or (and_su GR64:$dst, -65536), (i64 (zext GR16:$src))),
+            (INSERT_SUBREG (i64 (COPY $dst)), GR16:$src, sub_16bit)>;
+
+  def : Pat<(or (and_su GR64:$dst, -256),
+                (i64 (zext (and GR32:$src, 255)))),
+            (INSERT_SUBREG (i64 (COPY $dst)),
+              (i8 (EXTRACT_SUBREG GR32:$src, sub_8bit)), sub_8bit)>;
+
+  def : Pat<(or (and_su GR64:$dst, -65536),
+                (i64 (zext (and GR32:$src, 65535)))),
+            (INSERT_SUBREG (i64 (COPY $dst)),
+              (i16 (EXTRACT_SUBREG GR32:$src, sub_16bit)), sub_16bit)>;
+
+  def : Pat<(or (and_su GR64:$dst, -256), (and GR64:$src, 255)),
+            (INSERT_SUBREG (i64 (COPY $dst)),
+              (i8 (EXTRACT_SUBREG GR64:$src, sub_8bit)), sub_8bit)>;
+
+  def : Pat<(or (and_su GR64:$dst, -65536), (and GR64:$src, 65535)),
+            (INSERT_SUBREG (i64 (COPY $dst)),
+              (i16 (EXTRACT_SUBREG GR64:$src, sub_16bit)), sub_16bit)>;
+}
+
 let Predicates = [Not64BitMode] in {
   def : Pat<(or (and GR32:$dst, -256),
                 (i32 (zextloadi8 addr:$src))),
