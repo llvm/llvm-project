@@ -32242,6 +32242,11 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
       assert((ShXAmt + ShYAmt) == EltSizeInBits && "Illegal funnel shift");
       MVT WideVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
+      // If the shift amount is zero, we can just return the appropriate
+      // operand. We can get here via splitting during legalization.
+      if (ShiftAmt == 0)
+        return IsFSHR ? Op1 : Op0;
+
       if (EltSizeInBits == 8 &&
           (Subtarget.hasXOP() ||
            (useVPTERNLOG(Subtarget, VT) &&
