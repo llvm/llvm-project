@@ -4817,7 +4817,7 @@ static Value *simplifySelectWithBitTest(Value *CondVal, Value *TrueVal,
 static Value *simplifySelectWithCountZeros(Value *Cond, Value *TrueVal,
                                            Value *FalseVal,
                                            const SimplifyQuery &Q) {
-  if (!TrueVal->getType()->isIntegerTy())
+  if (!TrueVal->getType()->isIntOrIntVectorTy())
     return nullptr;
 
   bool Invert = match(FalseVal, m_Zero());
@@ -4839,21 +4839,29 @@ static Value *simplifySelectWithCountZeros(Value *Cond, Value *TrueVal,
     return nullptr;
   if (auto Range = II->getRange();
       Range &&
-      !Range->contains(APInt(Count->getType()->getIntegerBitWidth(), 0)))
+      !Range->contains(APInt(Count->getType()->getScalarSizeInBits(), 0)))
     return nullptr;
 
   // The condition and the count must observe the same, non-poison input.
   if (!isGuaranteedNotToBeUndefOrPoison(X, Q.AC, Q.CtxI, Q.DT))
     return nullptr;
 
-  CondContext CC(Cond);
-  CC.Invert = Invert;
-  findValuesAffectedByCondition(Cond, /*IsAssume=*/false,
-                                [&](Value *V) { CC.AffectedValues.insert(V); });
-  if (CC.AffectedValues.empty())
-    return nullptr;
-
-  KnownBits Known = computeKnownBits(X, Q.getWithCondContext(CC));
+  KnownBits Known(X->getType()->getScalarSizeInBits());
+  if (Cond->getType()->isVectorTy()) {
+    // Only apply lane-local facts directly to X. Propagating the condition
+    // through its operands could transfer facts between lanes via a shuffle.
+    Known = computeKnownBits(X, Q);
+    adjustKnownBitsForSelectArm(Known, Cond, X, Invert, Q);
+  } else {
+    CondContext CC(Cond);
+    CC.Invert = Invert;
+    findValuesAffectedByCondition(Cond, /*IsAssume=*/false, [&](Value *V) {
+      CC.AffectedValues.insert(V);
+    });
+    if (CC.AffectedValues.empty())
+      return nullptr;
+    Known = computeKnownBits(X, Q.getWithCondContext(CC));
+  }
   // A set end bit makes the count zero, so zero-poison and truncation flags
   // cannot introduce poison on the arm where the count was previously unused.
   unsigned EndBit =

@@ -1897,11 +1897,8 @@ declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 
 define <2 x i32> @cttz_select_vector(<2 x i32> noundef %x) {
 ; CHECK-LABEL: @cttz_select_vector(
-; CHECK-NEXT:    [[BIT:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[ODD:%.*]] = icmp ne <2 x i32> [[BIT]], zeroinitializer
-; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[ODD]], <2 x i32> zeroinitializer, <2 x i32> [[COUNT]]
-; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret <2 x i32> [[COUNT]]
 ;
   %bit = and <2 x i32> %x, <i32 1, i32 1>
   %odd = icmp ne <2 x i32> %bit, zeroinitializer
@@ -1912,11 +1909,9 @@ define <2 x i32> @cttz_select_vector(<2 x i32> noundef %x) {
 
 define <2 x i32> @ctlz_select_vector_truncated(<2 x i64> noundef %x) {
 ; CHECK-LABEL: @ctlz_select_vector_truncated(
-; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt <2 x i64> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[X]], i1 true)
+; CHECK-NEXT:    [[COUNT:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[NARROW:%.*]] = trunc <2 x i64> [[COUNT]] to <2 x i32>
-; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[NEGATIVE]], <2 x i32> zeroinitializer, <2 x i32> [[NARROW]]
-; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+; CHECK-NEXT:    ret <2 x i32> [[NARROW]]
 ;
   %negative = icmp slt <2 x i64> %x, zeroinitializer
   %count = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %x, i1 true)
@@ -1959,10 +1954,8 @@ define <2 x i32> @cttz_select_vector_shuffled_input(<2 x i32> noundef %x) {
 
 define <vscale x 2 x i32> @cttz_select_scalable_vector(<vscale x 2 x i32> noundef %x) {
 ; CHECK-LABEL: @cttz_select_scalable_vector(
-; CHECK-NEXT:    [[ODD:%.*]] = trunc <vscale x 2 x i32> [[X:%.*]] to <vscale x 2 x i1>
-; CHECK-NEXT:    [[COUNT:%.*]] = call <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RESULT:%.*]] = select <vscale x 2 x i1> [[ODD]], <vscale x 2 x i32> zeroinitializer, <vscale x 2 x i32> [[COUNT]]
-; CHECK-NEXT:    ret <vscale x 2 x i32> [[RESULT]]
+; CHECK-NEXT:    [[COUNT:%.*]] = call <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[COUNT]]
 ;
   %odd = trunc <vscale x 2 x i32> %x to <vscale x 2 x i1>
   %count = call <vscale x 2 x i32> @llvm.cttz.nxv2i32(<vscale x 2 x i32> %x, i1 true)
