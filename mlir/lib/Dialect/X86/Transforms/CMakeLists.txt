@@ -16,7 +16,11 @@ add_mlir_dialect_library(MLIRX86Transforms
   MLIRLinalgDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMemRefDialect
+  MLIRSCFDialect
+  MLIRUBDialect
   MLIRVectorDialect
+  MLIRVectorTransforms
   MLIRVectorUtils
   MLIRX86Dialect
   MLIRX86Utils
