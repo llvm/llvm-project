@@ -2365,6 +2365,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value arg = ops[0];
     return cir::SqrtOp::create(builder, loc, arg).getResult();
   }
+  case X86::BI__builtin_ia32_pmulhw128:
+  case X86::BI__builtin_ia32_pmulhw256:
+  case X86::BI__builtin_ia32_pmulhw512:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "smulh",
+                                       ops[0].getType(), ops);
+  case X86::BI__builtin_ia32_pmulhuw128:
+  case X86::BI__builtin_ia32_pmulhuw256:
+  case X86::BI__builtin_ia32_pmulhuw512:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "umulh",
+                                       ops[0].getType(), ops);
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512: {
@@ -2603,6 +2613,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
     return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::eq,

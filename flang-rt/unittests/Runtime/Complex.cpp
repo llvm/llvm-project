@@ -9,18 +9,20 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
 #include <cstring>
-#include <limits>
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
 
 #include "flang/Common/Fortran-consts.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
 
 #include <complex>
 #include <cstdint>
+
+using Fortran::common::numeric_limits;
 
 #ifndef _MSC_VER
 #include <complex.h>
@@ -128,7 +130,7 @@ TEST(Complex, cpowi) {
   EXPECT_COMPLEX_FLOAT_EQ(cpowi(0.5f + 0.6if, -5), -1.121837f + 3.252915if);
 
   EXPECT_COMPLEX_FLOAT_EQ(
-      cpowi(0.f + 1if, std::numeric_limits<std::int32_t>::min()), 1.f + 0if);
+      cpowi(0.f + 1if, numeric_limits<std::int32_t>::min()), 1.f + 0if);
 }
 
 TEST(Complex, cpowk) {
@@ -146,7 +148,7 @@ TEST(Complex, cpowk) {
   EXPECT_COMPLEX_FLOAT_EQ(cpowk(0.5f + 0.6if, -5), -1.121837f + 3.252915if);
 
   EXPECT_COMPLEX_FLOAT_EQ(
-      cpowk(0.f + 1if, std::numeric_limits<std::int64_t>::min()), 1.f + 0if);
+      cpowk(0.f + 1if, numeric_limits<std::int64_t>::min()), 1.f + 0if);
 }
 
 TEST(Complex, zpowi) {
@@ -164,7 +166,7 @@ TEST(Complex, zpowi) {
   EXPECT_COMPLEX_DOUBLE_EQ(zpowi(0.5 + 0.6i, -5), -1.12183773 + 3.25291503i);
 
   EXPECT_COMPLEX_DOUBLE_EQ(
-      zpowi(0. + 1i, std::numeric_limits<std::int32_t>::min()), 1. + 0i);
+      zpowi(0. + 1i, numeric_limits<std::int32_t>::min()), 1. + 0i);
 }
 
 TEST(Complex, zpowk) {
@@ -182,7 +184,7 @@ TEST(Complex, zpowk) {
   EXPECT_COMPLEX_DOUBLE_EQ(zpowk(0.5 + 0.6i, -5), -1.12183773 + 3.25291503i);
 
   EXPECT_COMPLEX_DOUBLE_EQ(
-      zpowk(0. + 1i, std::numeric_limits<std::int64_t>::min()), 1. + 0i);
+      zpowk(0. + 1i, numeric_limits<std::int64_t>::min()), 1. + 0i);
 }
 
 // Exact bit-pattern check, unlike FloatEq above: folded constants and

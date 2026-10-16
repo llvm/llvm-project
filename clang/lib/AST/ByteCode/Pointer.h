@@ -730,7 +730,7 @@ public:
     case Storage::Block:
       return view().getType();
     case Storage::Fn:
-      return Fn.Func->getDecl()->getType();
+      return Fn.Func->getType();
     case Storage::Typeid:
       return QualType(Typeid.TypeInfoType, 0);
     case Storage::String:

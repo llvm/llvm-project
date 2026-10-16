@@ -92,8 +92,9 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
+  // The classifier sizes a vector with its width rounded up to a power of two.
   if (isa<cir::VectorType>(ty))
-    return dl.getTypeSizeInBits(ty).getFixedValue() >= 128;
+    return llvm::PowerOf2Ceil(dl.getTypeSizeInBits(ty).getFixedValue()) >= 128;
   if (auto fpTy = dyn_cast<cir::FPTypeInterface>(ty))
     return &fpTy.getFloatSemantics() == &llvm::APFloat::IEEEquad();
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -205,26 +206,16 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // x86_64 has no calling convention for one.
     if (vecTy.getIsScalable())
       return false;
-    // The classifier sizes a vector as element count times element width, so
-    // an element is only usable where that width is the one clang gives it.
-    // It is not for bool (a bit to clang, a byte here), for a _BitInt narrower
-    // than a byte (clang rounds to the storage container), or for x87 long
-    // double (80 bits here against clang's 128).
+    // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
+    // one bit per element, as clang packs it.  Vectors of a _BitInt whose
+    // width is not a whole number of bytes are not handled yet.
     mlir::Type elemTy = vecTy.getElementType();
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
         return false;
-    } else if (auto elemFp = dyn_cast<cir::FPTypeInterface>(elemTy)) {
-      if (&elemFp.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended())
-        return false;
-    } else {
+    } else if (!isa<cir::FPTypeInterface, cir::BoolType>(elemTy)) {
       return false;
     }
-    // Clang also rounds the vector's own width up to a power of two, and the
-    // classifier branches on the exact width, so a three-char vector would be
-    // classified at 24 bits where clang uses 32.
-    if (!llvm::isPowerOf2_64(dl.getTypeSizeInBits(ty).getFixedValue()))
-      return false;
     return isSupportedType(elemTy, dl);
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -308,7 +299,10 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
   return llvm::TypeSwitch<const llvm::abi::Type *, mlir::Type>(ty)
       .Case(
           [&](const llvm::abi::VoidType *) { return cir::VoidType::get(ctx); })
-      .Case([&](const llvm::abi::IntegerType *intTy) {
+      .Case([&](const llvm::abi::IntegerType *intTy) -> mlir::Type {
+        // mapCIRType maps a bool as a one-bit integer.
+        if (intTy->isBool())
+          return cir::BoolType::get(ctx);
         return cir::IntType::get(ctx, intTy->getSizeInBits().getFixedValue(),
                                  intTy->isSigned(), intTy->isBitInt());
       })
@@ -342,6 +336,19 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }
 
+/// Returns \p ty with a LongDoubleType vector element replaced by its
+/// underlying format, which is the element abiTypeToCIR builds for the same
+/// float.
+static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
+  if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
+    if (auto longDoubleTy =
+            dyn_cast<cir::LongDoubleType>(vecTy.getElementType()))
+      return cir::VectorType::get(longDoubleTy.getUnderlying(), vecTy.getSize(),
+                                  vecTy.getIsScalable());
+  }
+  return ty;
+}
+
 /// Map a CIR type to an llvm::abi::Type.  classifyX86_64Function pre-filters
 /// the signature, so only the scalar and struct/array types handled here can
 /// reach this function.
@@ -373,8 +380,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                  llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Case([&](cir::BoolType) {
-        return tb.getIntegerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
+        // A bool is a one-bit integer to the classifier, as QualTypeMapper
+        // maps it, so a bool vector is sized one bit per element.
+        return tb.getIntegerType(1, llvm::Align(dl.getTypeABIAlignment(type)),
                                  /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
@@ -605,13 +613,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
       return std::nullopt;
+    bool coerceIsNatural = coerced == unwrapLongDoubleVectorElement(origTy);
     // An offset would be lost here, since a coercion to the value's own type
     // is indistinguishable from no coercion at all.
-    if (offset && coerced == origTy)
+    if (offset && coerceIsNatural)
       return std::nullopt;
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
-    if (comparesAgainstCoerce && coerced == origTy)
+    if (comparesAgainstCoerce && coerceIsNatural)
       return ArgClassification::getDirect();
     ArgClassification classified =
         ArgClassification::getDirect(coerced, offset);
@@ -631,6 +640,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal());
+  // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
+  // x86_64 classifications only.
+  assert(!info.isCoerceAndExpand() &&
+         "CoerceAndExpand is not expected for x86_64");
   assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }

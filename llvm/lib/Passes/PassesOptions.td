@@ -8,7 +8,14 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def PassesOptions : OptionsStruct;
+def PassesOptions : OptionsStruct<perContext = false>;
+
+// PassBuilder.cpp
+defm : FlagOrEnumField<"print-pipeline-passes",
+  "std::optional<PrintPipelinePassesFormat>", "std::nullopt", "text,tree",
+  ["PrintPipelinePassesFormat::Text", "PrintPipelinePassesFormat::Tree"],
+  "PrintPipelinePassesFormat::Text",
+  "Print string describing the pipeline (best-effort only): =text for a '-passes' compatible string, =tree for a tree-like structure">;
 
 // PassBuilderPipelines.cpp
 defm : EnumField<"attributor-enable", "AttributorRunOption", "AttributorRunOption::NONE",
@@ -89,6 +96,8 @@ defm : BoolField<"opt-pipeline-trigger-crash", "false",
   "Trigger crash in optimization pipeline">;
 defm : ValueField<"preinline-threshold", "int", "75",
   "Control the amount of inlining in pre-instrumentation inliner (default = 75)">;
+defm : BoolField<"enable-profcheck-in-pipeline", "false",
+  "Adds profile verification to the pipeline, erroring if profile information is dropped.">;
 
 // RunCodeGen.cpp
 defm : OptionalBoolField<"force-new-pm-codegen",
@@ -125,6 +134,8 @@ defm : BoolField<"dropped-variable-stats", "false",
 // work as expected.
 defm : ValueField<"exec-on-ir-change", "StringRef", "",
   "exe called with module IR after each pass that changes it">;
+defm : BoolField<"instnamer-after-each-pass", "false",
+  "Name unnamed IR values before and after each new-PM pass with fresh generated names across pass callbacks">;
 let MetaVarName = "<filename>" in
 defm : ValueField<"ir-dump-directory", "StringRef", "",
   "If specified, IR printed using the -print-[before|after]{-all} options will be dumped into files in this directory rather than written to stderr">;
