@@ -134,7 +134,6 @@ public:
   bool run(MachineFunction &MF);
 
 private:
-  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
 
@@ -396,7 +395,7 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
 
   // A statically out-of-range offset is undefined behavior; mask it into the
   // addressable range below rather than emit an invalid register.
-  unsigned NumAddressableVGPRs =
+  unsigned NumIndexableVGPRs =
       AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(*BB.getParent());
 
   const bool UseGPRIdxMode = LdSt.isGPRIdx();
@@ -426,7 +425,7 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
                                  : RegState::NoFlags;
   for (unsigned i = 0; i < NumDwords; ++i) {
     Register Base = AMDGPU::VGPR_32RegClass.getRegister(
-        (Offset + i) & (NumAddressableVGPRs - 1));
+        (Offset + i) & (NumIndexableVGPRs - 1));
     Register Sub = Data;
     if (NumDwords != 1)
       Sub = TRI->getSubReg(Data, TRI->getSubRegFromChannel(i));
@@ -642,9 +641,9 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 }
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
-  ST = &MF.getSubtarget<GCNSubtarget>();
-  TII = ST->getInstrInfo();
-  TRI = ST->getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  TII = ST.getInstrInfo();
+  TRI = ST.getRegisterInfo();
 
   // Lowered on every subtarget, and first, so the MSB work below sees the
   // moves like any other instruction.
@@ -658,7 +657,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     }
   }
 
-  if (!ST->has1024AddressableVGPRs())
+  if (!ST.has1024AddressableVGPRs())
     return Changed;
 
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
@@ -707,7 +706,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       }
 
       if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-          ST->hasSetregVGPRMSBFixup()) {
+          ST.hasSetregVGPRMSBFixup()) {
         Changed |= handleSetregMode(MI);
         continue;
       }

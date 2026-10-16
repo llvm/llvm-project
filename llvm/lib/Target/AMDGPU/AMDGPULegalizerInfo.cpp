@@ -433,8 +433,6 @@ static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
     // register bank/uniformity and if the memory is invariant or not written in a
     // kernel.
     return IsLoad ? 512 : 128;
-  case AMDGPUAS::VGPR:
-    return 1024;
   default:
     // FIXME: Flat addresses may contextually need to be split to 32-bit parts
     // if they may alias scratch depending on the subtarget.  This needs to be
@@ -3553,8 +3551,8 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   }
 
   const MachineInstrBuilder PtrAsInt = B.buildPtrToInt(I32, PtrReg);
-  MachineInstrBuilder Two = B.buildConstant(I32, 2);
-  const MachineInstrBuilder Index = B.buildLShr(I32, PtrAsInt, Two);
+  const MachineInstrBuilder Index =
+      B.buildLShr(I32, PtrAsInt, B.buildConstant(I32, 2));
 
   // Pointers go through integers: a scalar pointer cannot be bitcast, and not
   // every pointer type has a selection pattern.

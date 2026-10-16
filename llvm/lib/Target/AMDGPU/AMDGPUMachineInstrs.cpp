@@ -35,22 +35,10 @@ int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
   return Info->Opcode;
 }
 
-unsigned VLoadIdxInst::getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
-  int Opcode = tryGetOpcodeForBitWidth(Bits, IsGPRIdx);
-  assert(Opcode != -1);
-  return Opcode;
-}
-
 int VStoreIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
       AMDGPU::getVLdStIdxOpcodeInfoByKey(Bits, /*IsStore=*/true, IsGPRIdx);
   if (!Info)
     return -1;
   return Info->Opcode;
-}
-
-unsigned VStoreIdxInst::getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
-  int Opcode = tryGetOpcodeForBitWidth(Bits, IsGPRIdx);
-  assert(Opcode != -1);
-  return Opcode;
 }

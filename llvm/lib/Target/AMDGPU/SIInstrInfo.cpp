@@ -7966,7 +7966,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       return CreatedBB;
     MachineOperand *Idx = &LdStIdx->getIdxOp();
     // A physical VGPR index is waterfalled too; isSGPRReg covers both.
-    if (Idx->isReg() && !RI.isSGPRReg(MRI, Idx->getReg()))
+    if (!RI.isSGPRReg(MRI, Idx->getReg()))
       CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
     return CreatedBB;
   }
