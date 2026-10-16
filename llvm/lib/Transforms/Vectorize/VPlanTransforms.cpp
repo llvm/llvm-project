@@ -2337,11 +2337,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // equality or hashing.
     auto C = vputils::getOpcodeOrIntrinsicID(Def);
 
-    // The issue with InsertValue is that the index of the insert is not a
-    // proper operand in LLVM IR, and hence also not in VPlan. Allocas must not
-    // be merged, as each creates a distinct allocation.
-    if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::Alloca)))
+    // Allocas must not be merged, as each creates a distinct allocation.
+    if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
 
     // Widened loads (including the EVL variant) are handled, as cse() only
