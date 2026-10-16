@@ -16,7 +16,6 @@ class TestProgressReporting(TestBase):
             self.broadcaster, lldb.SBDebugger.eBroadcastBitProgress
         )
 
-    @skipIf(remote=True, bugnumber="github.com/llvm/llvm-project/issues/232431")
     def test_wait_attach_progress_reporting(self):
         """Test that progress reports for wait attaching work as intended."""
         target = self.dbg.CreateTarget(None)
@@ -25,12 +24,9 @@ class TestProgressReporting(TestBase):
         # trying to attach, but it's not going to be the event picked
         # up by checking with fetch_next_event, so go through all emitted
         # progress events and check that the waiting to attach one was emitted at all.
-        target.AttachToProcessWithName(
-            self.listener,
-            "wait-attach-progress-report",
-            False,
-            lldb.SBError(),
-        )
+        error = lldb.SBError()
+        target.Attach(lldb.SBAttachInfo(), error)
+        self.assertTrue(error.Fail())
         event = lldb.SBEvent()
         events = []
         while self.listener.GetNextEventForBroadcaster(self.broadcaster, event):
