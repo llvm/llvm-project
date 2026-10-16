@@ -202,6 +202,15 @@ struct __char_traits_base {
     return __lhs < __rhs;
   }
 
+  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
+  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
+    __identity __proj;
+    const char_type* __match = std::__find(__s, __s + __n, __a, __proj);
+    if (__match == __s + __n)
+      return nullptr;
+    return __match;
+  }
+
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX20 char_type*
   move(char_type* __dest, const char_type* __src, size_t __n) _NOEXCEPT {
     return std::__constexpr_memmove(__dest, __src, __element_count(__n));
@@ -256,11 +265,6 @@ struct char_traits<wchar_t> : __char_traits_base<wchar_t, wint_t, static_cast<wi
   length(const char_type* __s) _NOEXCEPT {
     return std::__constexpr_wcslen(__s);
   }
-
-  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
-  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
-    return std::__constexpr_wmemchr(__s, __a, __n);
-  }
 };
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
@@ -290,15 +294,6 @@ struct char_traits<char16_t> : __char_traits_base<char16_t, uint_least16_t, stat
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t length(const char_type* __s) _NOEXCEPT;
-
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
-  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
-    __identity __proj;
-    const char_type* __match = std::__find(__s, __s + __n, __a, __proj);
-    if (__match == __s + __n)
-      return nullptr;
-    return __match;
-  }
 };
 
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 int
@@ -325,15 +320,6 @@ struct char_traits<char32_t> : __char_traits_base<char32_t, uint_least32_t, stat
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t length(const char_type* __s) _NOEXCEPT;
-
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
-  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
-    __identity __proj;
-    const char_type* __match = std::__find(__s, __s + __n, __a, __proj);
-    if (__match == __s + __n)
-      return nullptr;
-    return __match;
-  }
 };
 
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 int
