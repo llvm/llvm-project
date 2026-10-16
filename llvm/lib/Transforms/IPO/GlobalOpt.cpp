@@ -2561,7 +2561,7 @@ static bool OptimizeNonTrivialIFuncs(
     SmallVector<Function *> Versions;
     // Discover the versioned functions.
     if (any_of(*Resolver, [&](BasicBlock &BB) {
-          if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
+          if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
             if (!collectVersions(Ret->getReturnValue(), Versions, GetTTI))
               return true;
           return false;

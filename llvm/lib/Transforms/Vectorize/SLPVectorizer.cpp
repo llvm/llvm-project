@@ -11820,7 +11820,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   // schedulable.
   BasicBlock *BB = S.getMainOp()->getParent();
 
-  if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+  if (BB->isEHPad() || isa<UnreachableInst>(BB->getTerminator()) ||
       !DT->isReachableFromEntry(BB)) {
     // Don't go into unreachable blocks. They may contain instructions with
     // dependency cycles which confuse the final scheduling.
@@ -20542,7 +20542,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       continue;
     BasicBlock *UserParent = cast<Instruction>(EU.User)->getParent();
     if (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
-        isa_and_present<UnreachableInst>(UserParent->getTerminator()))
+        isa<UnreachableInst>(UserParent->getTerminator()))
       continue;
     BasicBlock *UseBlock = nullptr;
     if (auto *PHI = dyn_cast<PHINode>(EU.User)) {
@@ -20599,7 +20599,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
         (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
-         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
+         isa<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // No extract cost for vector "scalar" if REVEC is disabled.
@@ -25875,8 +25875,6 @@ bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
 
 bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
   assert(BB && "Expected a block to version for runtime checks.");
-  if (!BB->getTerminator())
-    return false;
   // Versioning duplicates the block body, increasing code size on the guarded
   // path; do not version when the function is optimized for size (-Os/-Oz).
   if (F->hasOptSize())
@@ -26135,7 +26133,6 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   Function *Fn = BB->getParent();
   LLVMContext &Ctx = BB->getContext();
   Instruction *Term = BB->getTerminator();
-  assert(Term && "Versioned block must have a terminator");
 
   // Build the diamond:
   //   BB (header: PHIs + guard) -> {VecBB, ScalarBB} -> Tail (terminator).
@@ -29653,8 +29650,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   // Scan the blocks in the function in post order.
   auto POT = post_order(&F.getEntryBlock());
   for (auto *BB : make_filter_range(POT, [](auto *BB) {
-         return !BB->isEHPad() &&
-                !isa_and_nonnull<UnreachableInst>(BB->getTerminator());
+         return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
        })) {
     // Skip scalar fallback blocks created by runtime alias check versioning:
     // they duplicate the original scalar code and must not be vectorized again.
@@ -29706,7 +29702,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     auto OnceUsedPOT = post_order(&F.getEntryBlock());
     for (auto *BB : make_filter_range(OnceUsedPOT, [&](auto *BB) {
            return !BB->isEHPad() &&
-                  !isa_and_nonnull<UnreachableInst>(BB->getTerminator()) &&
+                  !isa<UnreachableInst>(BB->getTerminator()) &&
                   !R.isScalarFallbackBlock(BB);
          })) {
       R.clearReductionData();

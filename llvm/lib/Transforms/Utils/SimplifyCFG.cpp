@@ -9317,7 +9317,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   bool Changed = false;
 
   assert(BB && BB->getParent() && "Block not embedded in function!");
-  assert(BB->getTerminator() && "Degenerate basic block encountered!");
+  assert(BB->hasTerminator() && "Degenerate basic block encountered!");
 
   // Remove basic blocks that have no predecessors (except the entry block)...
   // or that just have themself as a predecessor.  These are unreachable.
