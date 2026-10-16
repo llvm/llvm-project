@@ -2605,7 +2605,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 1, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = S_MOV_B32 1
@@ -2641,7 +2641,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 1, [[COPY]], implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = S_MOV_B32 1
@@ -2678,7 +2678,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 3
-    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], 3, implicit-def $scc
     ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = COPY $sgpr0
@@ -2716,7 +2716,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_MOV_B32_]], [[COPY]], implicit-def $scc
+    ; GCN-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 4, [[COPY]], implicit-def $scc
     ; GCN-NEXT: S_CMP_EQ_U32 killed [[S_ADD_U32_]], 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = COPY $sgpr0
