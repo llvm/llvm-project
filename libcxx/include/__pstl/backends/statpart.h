@@ -11,6 +11,7 @@
 
 #include <__pstl/backends/statpart/any_of.h>
 #include <__pstl/backends/statpart/basis.h>
+#include <__pstl/backends/statpart/fill.h>
 #include <__pstl/backends/statpart/find_end.h>
 #include <__pstl/backends/statpart/find_if.h>
 #include <__pstl/backends/statpart/for_each.h>

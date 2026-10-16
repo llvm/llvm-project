@@ -698,6 +698,7 @@ set(files
   __pstl/backends/statpart.h
   __pstl/backends/statpart/any_of.h
   __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/fill.h
   __pstl/backends/statpart/find_end.h
   __pstl/backends/statpart/find_if.h
   __pstl/backends/statpart/for_each.h
