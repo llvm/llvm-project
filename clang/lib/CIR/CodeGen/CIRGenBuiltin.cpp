@@ -27,6 +27,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/FunctionUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2481,8 +2482,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                         e->getArg(0)->getExprLoc(), fd, 0);
     emitNonNullArgCheck(RValue::get(dest.getPointer()), e->getArg(1)->getType(),
                         e->getArg(1)->getExprLoc(), fd, 0);
-    builder.createMemMove(getLoc(e->getSourceRange()), dest.getPointer(),
-                          src.getPointer(), sizeVal);
+    builder.createMemMove(getLoc(e->getSourceRange()), dest, src, sizeVal);
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_char_memchr:
@@ -2524,11 +2524,44 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin___memcpy_chk:
   case Builtin::BI__builtin_objc_memmove_collectable:
   case Builtin::BI__builtin___memmove_chk:
+    break; // Handled as library calls below.
   case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
-  case Builtin::BI__builtin_memmove:
+  case Builtin::BI__builtin_memmove: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    Address dest = emitPointerWithAlignment(e->getArg(0));
+    Address src = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value sizeVal = emitScalarExpr(e->getArg(2));
+    if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate) {
+      QualType eltTy = e->getArg(0)->getType()->getPointeeType();
+      CharUnits eltSize = getContext().getTypeSizeInChars(eltTy);
+      mlir::Value eltSizeVal =
+          builder.getConstInt(loc, sizeVal.getType(), eltSize.getQuantity());
+      sizeVal = builder.createMul(loc, sizeVal, eltSizeVal);
+    }
+    emitNonNullArgCheck(RValue::get(dest.getPointer()), e->getArg(0)->getType(),
+                        e->getArg(0)->getExprLoc(), fd, 0);
+    emitNonNullArgCheck(RValue::get(src.getPointer()), e->getArg(1)->getType(),
+                        e->getArg(1)->getExprLoc(), fd, 1);
+    assert(!cir::MissingFeatures::sanitizers());
+    Address destCast = dest.withElementType(builder, cgm.voidTy);
+    Address srcCast = src.withElementType(builder, cgm.voidTy);
+    builder.createMemMove(loc, destCast, srcCast, sizeVal);
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return RValue::get(dest.getPointer());
+  }
   case Builtin::BImemset:
-  case Builtin::BI__builtin_memset:
+  case Builtin::BI__builtin_memset: {
+    Address dest = emitPointerWithAlignment(e->getArg(0));
+    mlir::Value byteVal = builder.createIntCast(emitScalarExpr(e->getArg(1)),
+                                                builder.getUInt8Ty());
+    mlir::Value sizeVal = emitScalarExpr(e->getArg(2));
+    emitNonNullArgCheck(RValue::get(dest.getPointer()), e->getArg(0)->getType(),
+                        e->getArg(0)->getExprLoc(), fd, 0);
+    builder.createMemSet(getLoc(e->getSourceRange()), dest, byteVal, sizeVal);
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return RValue::get(dest.getPointer());
+  }
   case Builtin::BI__builtin_memset_inline:
   case Builtin::BI__builtin___memset_chk:
   case Builtin::BI__builtin_wmemchr:
@@ -3480,11 +3513,21 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
   // to build this up so provide a small stack buffer to handle the vast
   // majority of names.
   llvm::SmallString<64> name;
-
-  assert(!cir::MissingFeatures::asmLabelAttr());
-  name = astContext.BuiltinInfo.getName(builtinID).substr(10);
-
   GlobalDecl d(fd);
+
+  // If the builtin has been declared explicitly with an assembler label,
+  // use the mangled name. This differs from the plain label on platforms
+  // that prefix labels.
+  if (fd->hasAttr<AsmLabelAttr>())
+    name = getMangledName(d);
+  else if (llvm::StringRef targetName =
+               CodeGenUtils::getTargetBuiltinLibFunctionName(builtinID,
+                                                             getTarget());
+           !targetName.empty())
+    name = targetName;
+  else
+    name = astContext.BuiltinInfo.getName(builtinID).substr(10);
+
   mlir::Type type = convertType(fd->getType());
   return getOrCreateCIRFunction(name, type, d, /*forVTable=*/false);
 }

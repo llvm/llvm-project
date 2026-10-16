@@ -317,25 +317,15 @@ public:
       AddExpressionPath(path);
   }
 
-  void AddExpressionPath(const char *path) {
-    AddExpressionPath(std::string(path));
-  }
-
   void Clear() { m_expression_paths.clear(); }
 
   size_t GetCount() const { return m_expression_paths.size(); }
 
-  const char *GetExpressionPathAtIndex(size_t i) const {
-    return m_expression_paths[i].c_str();
-  }
+  llvm::StringRef GetExpressionPathAtIndex(size_t i) const;
 
-  bool SetExpressionPathAtIndex(size_t i, const char *path) {
-    return SetExpressionPathAtIndex(i, std::string(path));
-  }
+  void AddExpressionPath(llvm::StringRef path);
 
-  void AddExpressionPath(const std::string &path);
-
-  bool SetExpressionPathAtIndex(size_t i, const std::string &path);
+  bool SetExpressionPathAtIndex(size_t i, llvm::StringRef path);
 
   bool IsScripted() override { return false; }
 
