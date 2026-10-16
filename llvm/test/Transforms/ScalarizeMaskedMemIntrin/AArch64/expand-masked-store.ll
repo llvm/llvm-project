@@ -223,4 +223,73 @@ define void @scalarize_v1i1(ptr %p, <1 x i1> %mask, <1 x i1> %data) vscale_range
   ret void
 }
 
-declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)
+define void @scalarize_v2i16(ptr %p, <2 x i1> %mask, <2 x i16> %data) {
+; CHECK-LE-LABEL: @scalarize_v2i16(
+; CHECK-LE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-LE-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-LE:       cond.store1:
+; CHECK-LE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
+; CHECK-LE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-LE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE2]]
+; CHECK-LE:       else2:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v2i16(
+; CHECK-SVE-LE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-SVE-LE-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-SVE-LE:       cond.store1:
+; CHECK-SVE-LE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
+; CHECK-SVE-LE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-SVE-LE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-SVE-LE-NEXT:    br label [[ELSE2]]
+; CHECK-SVE-LE:       else2:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v2i16(
+; CHECK-BE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-BE-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-BE:       cond.store1:
+; CHECK-BE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
+; CHECK-BE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-BE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE2]]
+; CHECK-BE:       else2:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v2i16.p0(<2 x i16> %data, ptr %p, i32 2, <2 x i1> %mask)
+  ret void
+}
