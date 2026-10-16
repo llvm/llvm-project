@@ -70,10 +70,8 @@ define void @relaxed_store_hint_roW_mfloat(ptr %ptr, i32 %offset, <1 x i8> %val)
 define void @relaxed_store_hint_roW_bfloat(ptr %ptr, i32 %offset, bfloat %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roW_bfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    strh w8, [x0, w1, sxtw #1]
+; CHECK-NEXT:    str h0, [x0, w1, sxtw #1]
 ; CHECK-NEXT:    ret
   %addr = getelementptr bfloat, ptr %ptr, i32 %offset
   store atomic bfloat %val, ptr %addr monotonic, align 8, !mem.cache_hint !2
@@ -83,10 +81,8 @@ define void @relaxed_store_hint_roW_bfloat(ptr %ptr, i32 %offset, bfloat %val) n
 define void @relaxed_store_hint_roW_half(ptr %ptr, i32 %offset, half %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roW_half:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    strh w8, [x0, w1, sxtw #1]
+; CHECK-NEXT:    str h0, [x0, w1, sxtw #1]
 ; CHECK-NEXT:    ret
   %addr = getelementptr half, ptr %ptr, i32 %offset
   store atomic half %val, ptr %addr monotonic, align 8, !mem.cache_hint !2
@@ -183,10 +179,8 @@ define void @relaxed_store_hint_roX_mfloat(ptr %ptr, i64 %offset, <1 x i8> %val)
 define void @relaxed_store_hint_roX_bfloat(ptr %ptr, i64 %offset, bfloat %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roX_bfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh keep
-; CHECK-NEXT:    strh w8, [x0, x1, lsl #1]
+; CHECK-NEXT:    str h0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr = getelementptr bfloat, ptr %ptr, i64 %offset
   store atomic bfloat %val, ptr %addr monotonic, align 8, !mem.cache_hint !0
@@ -196,10 +190,8 @@ define void @relaxed_store_hint_roX_bfloat(ptr %ptr, i64 %offset, bfloat %val) n
 define void @relaxed_store_hint_roX_half(ptr %ptr, i64 %offset, half %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roX_half:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh keep
-; CHECK-NEXT:    strh w8, [x0, x1, lsl #1]
+; CHECK-NEXT:    str h0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr = getelementptr half, ptr %ptr, i64 %offset
   store atomic half %val, ptr %addr monotonic, align 8, !mem.cache_hint !0
@@ -296,10 +288,8 @@ define void @relaxed_store_hint_uimm_mfloat(ptr %ptr, <1 x i8> %val) nounwind {
 define void @relaxed_store_hint_uimm_bfloat(ptr %ptr, bfloat %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_uimm_bfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh keep
-; CHECK-NEXT:    strh w8, [x0, #4096]
+; CHECK-NEXT:    str h0, [x0, #4096]
 ; CHECK-NEXT:    ret
   %addr = getelementptr bfloat, ptr %ptr, i32 2048
   store atomic bfloat %val, ptr %addr monotonic, align 8, !mem.cache_hint !0
@@ -309,10 +299,8 @@ define void @relaxed_store_hint_uimm_bfloat(ptr %ptr, bfloat %val) nounwind {
 define void @relaxed_store_hint_uimm_half(ptr %ptr, half %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_uimm_half:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh keep
-; CHECK-NEXT:    strh w8, [x0, #4096]
+; CHECK-NEXT:    str h0, [x0, #4096]
 ; CHECK-NEXT:    ret
   %addr = getelementptr half, ptr %ptr, i32 2048
   store atomic half %val, ptr %addr monotonic, align 8, !mem.cache_hint !0
@@ -409,10 +397,8 @@ define void @relaxed_store_hint_imm_mfloat(ptr %ptr, <1 x i8> %val) nounwind {
 define void @relaxed_store_hint_imm_bfloat(ptr %ptr, bfloat %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_imm_bfloat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    sturh w8, [x0, #-256]
+; CHECK-NEXT:    stur h0, [x0, #-256]
 ; CHECK-NEXT:    ret
   %addr = getelementptr bfloat, ptr %ptr, i32 -128
   store atomic bfloat %val, ptr %addr monotonic, align 8, !mem.cache_hint !2
@@ -422,10 +408,8 @@ define void @relaxed_store_hint_imm_bfloat(ptr %ptr, bfloat %val) nounwind {
 define void @relaxed_store_hint_imm_half(ptr %ptr, half %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_imm_half:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    sturh w8, [x0, #-256]
+; CHECK-NEXT:    stur h0, [x0, #-256]
 ; CHECK-NEXT:    ret
   %addr = getelementptr half, ptr %ptr, i32 -128
   store atomic half %val, ptr %addr monotonic, align 8, !mem.cache_hint !2

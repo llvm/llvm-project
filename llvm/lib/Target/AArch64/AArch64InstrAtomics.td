@@ -403,6 +403,7 @@ defm ATOMIC_STORE_HINT_B : AtomicStoreHintPseudos<GPR32, ro_Wextend8,  ro_Xexten
 defm ATOMIC_STORE_HINT_H : AtomicStoreHintPseudos<GPR32, ro_Wextend16, ro_Xextend16, uimm12s2>;
 defm ATOMIC_STORE_HINT_W : AtomicStoreHintPseudos<GPR32, ro_Wextend32, ro_Xextend32, uimm12s4>;
 defm ATOMIC_STORE_HINT_X : AtomicStoreHintPseudos<GPR64, ro_Wextend64, ro_Xextend64, uimm12s8>;
+defm ATOMIC_STORE_HINT_FPR16 : AtomicStoreHintPseudos<FPR16, ro_Wextend16, ro_Xextend16, uimm12s2>;
 defm ATOMIC_STORE_HINT_S : AtomicStoreHintPseudos<FPR32, ro_Wextend32, ro_Xextend32, uimm12s4>;
 defm ATOMIC_STORE_HINT_D : AtomicStoreHintPseudos<FPR64, ro_Wextend64, ro_Xextend64, uimm12s8>;
 
@@ -432,6 +433,18 @@ multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
   def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
              (i64 (bitconvert (f64 FPR64Op:$data))), (ro_Windexed64 GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend)),
             (ATOMIC_STORE_HINT_DroW FPR64:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f16, 1, Pred>
+             (f16 FPR16Op:$data), (ro_Windexed16 GPR64sp:$addr, GPR32:$Rm, ro_Wextend16:$extend)),
+            (ATOMIC_STORE_HINT_FPR16roW FPR16:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend16:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_bf16, 1, Pred>
+             (bf16 FPR16Op:$data), (ro_Windexed16 GPR64sp:$addr, GPR32:$Rm, ro_Wextend16:$extend)),
+            (ATOMIC_STORE_HINT_FPR16roW FPR16:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend16:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f32, 1, Pred>
+             (f32 FPR32Op:$data), (ro_Windexed32 GPR64sp:$addr, GPR32:$Rm, ro_Wextend32:$extend)),
+            (ATOMIC_STORE_HINT_SroW FPR32:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend32:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f64, 1, Pred>
+             (f64 FPR64Op:$data), (ro_Windexed64 GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend)),
+            (ATOMIC_STORE_HINT_DroW FPR64:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend, (i32 1), (i32 Hint))>;
 
   def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
              GPR32:$data, (ro_Xindexed8 GPR64sp:$addr, GPR64:$Rm, ro_Xextend8:$extend)),
@@ -450,6 +463,18 @@ multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
             (ATOMIC_STORE_HINT_SroX FPR32:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend, (i32 1), (i32 Hint))>;
   def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
              (i64 (bitconvert (f64 FPR64Op:$data))), (ro_Xindexed64 GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend)),
+            (ATOMIC_STORE_HINT_DroX FPR64:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f16, 1, Pred>
+             (f16 FPR16Op:$data), (ro_Xindexed16 GPR64sp:$addr, GPR64:$Rm, ro_Xextend16:$extend)),
+            (ATOMIC_STORE_HINT_FPR16roX FPR16:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend16:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_bf16, 1, Pred>
+             (bf16 FPR16Op:$data), (ro_Xindexed16 GPR64sp:$addr, GPR64:$Rm, ro_Xextend16:$extend)),
+            (ATOMIC_STORE_HINT_FPR16roX FPR16:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend16:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f32, 1, Pred>
+             (f32 FPR32Op:$data), (ro_Xindexed32 GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend)),
+            (ATOMIC_STORE_HINT_SroX FPR32:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f64, 1, Pred>
+             (f64 FPR64Op:$data), (ro_Xindexed64 GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend)),
             (ATOMIC_STORE_HINT_DroX FPR64:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend, (i32 1), (i32 Hint))>;
 
   def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
@@ -470,6 +495,18 @@ multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
   def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
              (i64 (bitconvert (f64 FPR64Op:$data))), (am_indexed64 GPR64sp:$addr, uimm12s8:$offset)),
             (ATOMIC_STORE_HINT_Dui FPR64:$data, GPR64sp:$addr, uimm12s8:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f16, 1, Pred>
+             (f16 FPR16Op:$data), (am_indexed16 GPR64sp:$addr, uimm12s2:$offset)),
+            (ATOMIC_STORE_HINT_FPR16ui FPR16:$data, GPR64sp:$addr, uimm12s2:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_bf16, 1, Pred>
+             (bf16 FPR16Op:$data), (am_indexed16 GPR64sp:$addr, uimm12s2:$offset)),
+            (ATOMIC_STORE_HINT_FPR16ui FPR16:$data, GPR64sp:$addr, uimm12s2:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f32, 1, Pred>
+             (f32 FPR32Op:$data), (am_indexed32 GPR64sp:$addr, uimm12s4:$offset)),
+            (ATOMIC_STORE_HINT_Sui FPR32:$data, GPR64sp:$addr, uimm12s4:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f64, 1, Pred>
+             (f64 FPR64Op:$data), (am_indexed64 GPR64sp:$addr, uimm12s8:$offset)),
+            (ATOMIC_STORE_HINT_Dui FPR64:$data, GPR64sp:$addr, uimm12s8:$offset, (i32 1), (i32 Hint))>;
 
   def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
              GPR32:$data, (am_unscaled8 GPR64sp:$addr, simm9:$offset)),
@@ -489,6 +526,18 @@ multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
   def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
              (i64 (bitconvert (f64 FPR64Op:$data))), (am_unscaled64 GPR64sp:$addr, simm9:$offset)),
             (ATOMIC_STORE_HINT_Di FPR64:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f16, 1, Pred>
+             (f16 FPR16Op:$data), (am_unscaled16 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_FPR16i FPR16:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_bf16, 1, Pred>
+             (bf16 FPR16Op:$data), (am_unscaled16 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_FPR16i FPR16:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f32, 1, Pred>
+             (f32 FPR32Op:$data), (am_unscaled32 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Si FPR32:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_f64, 1, Pred>
+             (f64 FPR64Op:$data), (am_unscaled64 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Di FPR64:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
 }
 
 multiclass AtomicHintPatterns<int Relaxed, int Hint, code Pred> {
@@ -500,6 +549,16 @@ multiclass AtomicHintPatterns<int Relaxed, int Hint, code Pred> {
             (ATOMIC_STORE_HINT_W GPR32:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
   def : Pat<(atomic_hint_store<atomic_store_64, Relaxed, Pred> GPR64:$data, GPR64sp:$addr),
             (ATOMIC_STORE_HINT_X GPR64:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+  let Predicates = [HasRCPC3, HasNEON] in {
+      def : Pat<(atomic_hint_store<atomic_store_f16, Relaxed, Pred> (f16 FPR16Op:$data), GPR64sp:$addr),
+            (ATOMIC_STORE_HINT_FPR16 FPR16:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+      def : Pat<(atomic_hint_store<atomic_store_bf16, Relaxed, Pred> (bf16 FPR16Op:$data), GPR64sp:$addr),
+            (ATOMIC_STORE_HINT_FPR16 FPR16:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+      def : Pat<(atomic_hint_store<atomic_store_f32, Relaxed, Pred> (f32 FPR32Op:$data), GPR64sp:$addr),
+                (ATOMIC_STORE_HINT_S FPR32:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+      def : Pat<(atomic_hint_store<atomic_store_f64, Relaxed, Pred> (f64 FPR64Op:$data), GPR64sp:$addr),
+                (ATOMIC_STORE_HINT_D FPR64:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+  }
 }
 
 let AddedComplexity = 1, GISelShouldIgnore = 1 in {
