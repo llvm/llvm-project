@@ -136,6 +136,7 @@ class DependentDiagnostic;
 class Designation;
 class IdentifierInfo;
 struct ImplicitAllocationArguments;
+class ImplicitConversionPath;
 class ImplicitConversionSequence;
 typedef MutableArrayRef<ImplicitConversionSequence> ConversionSequenceList;
 class InitializationKind;
@@ -2923,12 +2924,13 @@ public:
   /// since all 1s are not contiguous.
   bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
-  /// Check the implicit conversion of E to T. IsKnownUnreachable indicates that
-  /// E is within an unselected operand of a constant conditional expression.
+  /// Check the implicit conversion of E to T. Path tracks enclosing conditional
+  /// operands, whose conditions are evaluated only when deciding whether to
+  /// emit an integer constant-conversion diagnostic.
   void CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
                                bool *ICContext = nullptr,
                                bool IsListInit = false,
-                               bool IsKnownUnreachable = false);
+                               const ImplicitConversionPath *Path = nullptr);
 
   /// Check for overflow behavior type related implicit conversion diagnostics.
   /// Returns true if OBT-related diagnostic was issued, false otherwise.
