@@ -2437,3 +2437,21 @@ func.func @promote_partial_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a
   }
   return %r#0, %r#1 : tensor<4xf32>, tensor<4xf32>
 }
+
+// -----
+
+// Disjoint insertions into one shared output must contribute to one result.
+// CHECK-LABEL: func @promote_multiple_inserts
+//  CHECK-SAME:   (%[[A:.*]]: tensor<2xf32>, %[[B:.*]]: tensor<2xf32>, %[[INIT:.*]]: tensor<4xf32>)
+//       CHECK:   %[[FIRST:.*]] = tensor.insert_slice %[[B]] into %[[INIT]][2] [2] [1]
+//       CHECK:   %[[SECOND:.*]] = tensor.insert_slice %[[A]] into %[[FIRST]][0] [2] [1]
+//       CHECK:   return %[[SECOND]] : tensor<4xf32>
+func.func @promote_multiple_inserts(%a: tensor<2xf32>, %b: tensor<2xf32>, %init: tensor<4xf32>) -> tensor<4xf32> {
+  %r = scf.forall () in () shared_outs(%out = %init) -> tensor<4xf32> {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %a into %out[0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+      tensor.parallel_insert_slice %b into %out[2] [2] [1] : tensor<2xf32> into tensor<4xf32>
+    }
+  }
+  return %r : tensor<4xf32>
+}
