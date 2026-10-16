@@ -2004,6 +2004,15 @@ DISubprogram *Function::getSubprogram() const {
   return cast_or_null<DISubprogram>(getMetadata(LLVMContext::MD_dbg));
 }
 
+void Function::setFLContext(MDFunctionLocalContext *FLContext) {
+  setMetadata(LLVMContext::MD_flmd, FLContext);
+}
+
+MDFunctionLocalContext *Function::getFLContext() const {
+  return cast_or_null<MDFunctionLocalContext>(
+      getMetadata(LLVMContext::MD_flmd));
+}
+
 bool Function::shouldEmitDebugInfoForProfiling() const {
   if (DISubprogram *SP = getSubprogram()) {
     if (DICompileUnit *CU = SP->getUnit()) {

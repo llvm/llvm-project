@@ -2172,6 +2172,12 @@ static void writeGenericDINode(raw_ostream &Out, const GenericDINode *N,
   Out << ")";
 }
 
+static void writeMDFunctionLocalContext(raw_ostream &Out,
+                                        const MDFunctionLocalContext *FLMD,
+                                        AsmWriterContext &WriterCtx) {
+  // Not implemented.
+}
+
 static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                             AsmWriterContext &WriterCtx) {
   Out << "!DILocation(";

@@ -350,6 +350,9 @@ private:
                        unsigned Abbrev);
   void writeDILayerLocList(const DILayerLocList *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeMDFunctionLocalContext(const MDFunctionLocalContext *N,
+                                   SmallVectorImpl<uint64_t> &Record,
+                                   unsigned &Abbrev);
   unsigned createGenericDINodeAbbrev();
   void writeGenericDINode(const GenericDINode *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned &Abbrev);
@@ -1900,6 +1903,12 @@ void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
                                     : bitc::METADATA_NODE,
                     Record, Abbrev);
   Record.clear();
+}
+
+void ModuleBitcodeWriter::writeMDFunctionLocalContext(
+    const MDFunctionLocalContext *N, SmallVectorImpl<uint64_t> &Record,
+    unsigned &Abbrev) {
+  llvm_unreachable("Not implemented");
 }
 
 unsigned ModuleBitcodeWriter::createDILocationAbbrev(bool WithIRLayers) {
