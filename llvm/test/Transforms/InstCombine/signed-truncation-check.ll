@@ -832,11 +832,11 @@ define i1 @negative_with_uniform_bad_mask_logical(i32 %arg) {
 
 define i1 @negative_with_wrong_mask(i32 %arg) {
 ; CHECK-LABEL: @negative_with_wrong_mask(
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[ARG:%.*]] to i1
+; CHECK-NEXT:    [[T2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T4]], [[T2]]
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %arg, 1 ; not even checking the right mask
@@ -849,11 +849,11 @@ define i1 @negative_with_wrong_mask(i32 %arg) {
 
 define i1 @negative_with_wrong_mask_logical(i32 %arg) {
 ; CHECK-LABEL: @negative_with_wrong_mask_logical(
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[ARG:%.*]] to i1
+; CHECK-NEXT:    [[T2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[ARG]], 128
 ; CHECK-NEXT:    [[T4:%.*]] = icmp ult i32 [[T3]], 256
-; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = and i1 [[T4]], [[T2]]
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t1 = and i32 %arg, 1 ; not even checking the right mask
