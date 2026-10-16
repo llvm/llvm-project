@@ -945,3 +945,31 @@ define <4 x float> @fdiv_exact_inverse_vector(<4 x i1> %c, <4 x float> %x) {
   ret <4 x float> %r
 }
 
+
+; FIXME: CodeGenPrepare splits the slow 64-bit divide across basic blocks
+; first, so the DAG no longer sees a select as the divisor.
+define i64 @udiv_scalar_const_i64(i1 %c, i64 %x) {
+; CHECK-X64-LABEL: udiv_scalar_const_i64:
+; CHECK-X64:       # %bb.0:
+; CHECK-X64-NEXT:    movq %rsi, %rax
+; CHECK-X64-NEXT:    testb $1, %dil
+; CHECK-X64-NEXT:    movl $137, %edx
+; CHECK-X64-NEXT:    movl $71, %ecx
+; CHECK-X64-NEXT:    cmovneq %rdx, %rcx
+; CHECK-X64-NEXT:    movq %rsi, %rdx
+; CHECK-X64-NEXT:    shrq $32, %rdx
+; CHECK-X64-NEXT:    je .LBB24_1
+; CHECK-X64-NEXT:  # %bb.2:
+; CHECK-X64-NEXT:    xorl %edx, %edx
+; CHECK-X64-NEXT:    divq %rcx
+; CHECK-X64-NEXT:    retq
+; CHECK-X64-NEXT:  .LBB24_1:
+; CHECK-X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-X64-NEXT:    xorl %edx, %edx
+; CHECK-X64-NEXT:    divl %ecx
+; CHECK-X64-NEXT:    # kill: def $eax killed $eax def $rax
+; CHECK-X64-NEXT:    retq
+  %d = select i1 %c, i64 137, i64 71
+  %r = udiv i64 %x, %d
+  ret i64 %r
+}
