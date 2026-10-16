@@ -222,6 +222,14 @@ functions:
       - type: const char *
       - type: const char *
       - type: '...'
+  - name: execlp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: '...'
   - name: execv
     standards:
       - posix
