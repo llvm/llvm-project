@@ -7,13 +7,77 @@
 //===----------------------------------------------------------------------===//
 
 #include "ContainerContainsCheck.h"
+#include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+// Returns true if the macro body uses the parameter expanded at `ParamUseLoc`
+// only parenthesized or as the entire body, so every expansion parses alike.
+static bool isParameterUsedOnlyParenthesized(SourceLocation ParamUseLoc,
+                                             Preprocessor &PP,
+                                             const SourceManager &SM) {
+  const StringRef MacroName =
+      Lexer::getImmediateMacroName(ParamUseLoc, SM, PP.getLangOpts());
+  if (MacroName.empty())
+    return false;
+  const MacroInfo *MI =
+      PP.getMacroDefinitionAtLoc(PP.getIdentifierInfo(MacroName),
+                                 SM.getExpansionLoc(ParamUseLoc))
+          .getMacroInfo();
+  if (!MI)
+    return false;
+
+  const ArrayRef<Token> Tokens = MI->tokens();
+  const SourceLocation ParamDefLoc = SM.getSpellingLoc(ParamUseLoc);
+  const auto *ParamTok = llvm::find_if(Tokens, [ParamDefLoc](const Token &Tok) {
+    return Tok.getLocation() == ParamDefLoc;
+  });
+  if (ParamTok == Tokens.end())
+    return false;
+  if (Tokens.size() == 1)
+    return true;
+
+  const IdentifierInfo *Param = ParamTok->getIdentifierInfo();
+  for (size_t I = 0, N = Tokens.size(); I < N; ++I) {
+    if (Tokens[I].getIdentifierInfo() != Param)
+      continue;
+    if (I == 0 || I + 1 == N || Tokens[I - 1].isNot(tok::l_paren) ||
+        Tokens[I + 1].isNot(tok::r_paren))
+      return false;
+    // Parentheses that may complete a call or a macro invocation, including
+    // one reached through a parameter or another expansion, do not group.
+    if (I >= 2 &&
+        Tokens[I - 2].isOneOf(tok::identifier, tok::r_paren, tok::r_square,
+                              tok::r_brace, tok::greater, tok::greatergreater))
+      return false;
+  }
+  return true;
+}
+
+// Returns true if every macro argument that `Loc` is spelled through satisfies
+// `isParameterUsedOnlyParenthesized`.
+static bool isSpelledThroughParenthesizedMacroArguments(
+    SourceLocation Loc, Preprocessor &PP, const SourceManager &SM) {
+  for (; Loc.isMacroID(); Loc = SM.getImmediateMacroCallerLoc(Loc)) {
+    SourceLocation ParamUseLoc;
+    if (SM.isMacroArgExpansion(Loc, &ParamUseLoc) &&
+        !isParameterUsedOnlyParenthesized(ParamUseLoc, PP, SM))
+      return false;
+  }
+  return true;
+}
+
+void ContainerContainsCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP,
+    Preprocessor * /*ModuleExpanderPP*/) {
+  this->PP = PP;
+}
 
 void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
   const auto Literal0 = integerLiteral(equals(0));
@@ -93,37 +157,72 @@ void ContainerContainsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Comparison = Negated ? NegativeComparison : PositiveComparison;
   const StringRef ContainsFunName =
       Result.Nodes.getNodeAs<CXXMethodDecl>("contains_fun")->getName();
-  const Expr *SearchExpr = Call->getArg(0)->IgnoreParenImpCasts();
 
   // Diagnose the issue.
   const auto Diag = diag(Call->getExprLoc(), "use '%0' to check for membership")
                     << ContainsFunName;
 
-  // Don't fix it if it's in a macro invocation. Leave fixing it to the user.
-  const SourceLocation FuncCallLoc = Comparison->getEndLoc();
-  if (!FuncCallLoc.isValid() || FuncCallLoc.isMacroID())
+  const SourceLocation ComparisonEndLoc = Comparison->getEndLoc();
+  if (ComparisonEndLoc.isInvalid())
     return;
 
+  const SourceManager &SM = *Result.SourceManager;
+  const LangOptions &LangOpts = Result.Context->getLangOpts();
+
+  const bool HasPrefix = Comparison->getBeginLoc() != Call->getBeginLoc();
+  CharSourceRange PrefixRange = CharSourceRange::getCharRange(
+      Comparison->getBeginLoc(), Call->getBeginLoc());
+  CharSourceRange FunctionNameRange =
+      CharSourceRange::getTokenRange(Call->getExprLoc());
+  CharSourceRange ArgumentsAndSuffixRange = CharSourceRange::getTokenRange(
+      Call->getArg(0)->getBeginLoc(), ComparisonEndLoc);
+  SourceLocation NegationLoc = Call->getBeginLoc();
+
+  if (ComparisonEndLoc.isMacroID()) {
+    if (!PP || isa<ImplicitCastExpr>(Comparison) ||
+        !Comparison->getType()->isBooleanType() ||
+        !utils::rangeIsEntirelyWithinMacroArgument(Comparison->getSourceRange(),
+                                                   &SM) ||
+        !isSpelledThroughParenthesizedMacroArguments(Comparison->getBeginLoc(),
+                                                     *PP, SM) ||
+        !isSpelledThroughParenthesizedMacroArguments(ComparisonEndLoc, *PP, SM))
+      return;
+
+    const CharSourceRange CallRange = Lexer::makeFileCharRange(
+        CharSourceRange::getTokenRange(Call->getSourceRange()), SM, LangOpts);
+    if (HasPrefix)
+      PrefixRange = Lexer::makeFileCharRange(PrefixRange, SM, LangOpts);
+    FunctionNameRange =
+        Lexer::makeFileCharRange(FunctionNameRange, SM, LangOpts);
+    ArgumentsAndSuffixRange =
+        Lexer::makeFileCharRange(ArgumentsAndSuffixRange, SM, LangOpts);
+    if (CallRange.isInvalid() || PrefixRange.isInvalid() ||
+        FunctionNameRange.isInvalid() || ArgumentsAndSuffixRange.isInvalid())
+      return;
+    NegationLoc = CallRange.getBegin();
+  }
+
+  bool Invalid = false;
   const StringRef SearchExprText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(SearchExpr->getSourceRange()),
-      *Result.SourceManager, Result.Context->getLangOpts());
+      CharSourceRange::getTokenRange(Call->getArg(0)->getSourceRange()), SM,
+      LangOpts, &Invalid);
+  if (Invalid)
+    return;
 
   // Remove everything before the function call.
-  Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-      Comparison->getBeginLoc(), Call->getBeginLoc()));
+  if (HasPrefix)
+    Diag << FixItHint::CreateRemoval(PrefixRange);
 
   // Rename the function to `contains`.
-  Diag << FixItHint::CreateReplacement(Call->getExprLoc(), ContainsFunName);
+  Diag << FixItHint::CreateReplacement(FunctionNameRange, ContainsFunName);
 
   // Replace arguments and everything after the function call.
-  Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(Call->getArg(0)->getBeginLoc(),
-                                     Comparison->getEndLoc()),
-      (SearchExprText + ")").str());
+  Diag << FixItHint::CreateReplacement(ArgumentsAndSuffixRange,
+                                       (SearchExprText + ")").str());
 
   // Add negation if necessary.
   if (Negated)
-    Diag << FixItHint::CreateInsertion(Call->getBeginLoc(), "!");
+    Diag << FixItHint::CreateInsertion(NegationLoc, "!");
 }
 
 } // namespace clang::tidy::readability
