@@ -44,6 +44,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -303,11 +304,44 @@ static llvm::Expected<std::vector<::pid_t>> DiscoverThreads(::pid_t pid) {
 }
 
 NativeProcessAIX::Manager::Manager(MainLoop &mainloop)
-    : NativeProcessProtocol::Manager(mainloop) {
+    : NativeProcessProtocol::Manager(mainloop), m_mainloop(mainloop) {
   Status status;
   m_sigchld_handle = mainloop.RegisterSignal(
       SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, status);
   assert(m_sigchld_handle && status.Success());
+}
+
+void NativeProcessAIX::Manager::ScheduleWaitpidPoll() {
+  // On AIX, a newly-spawned thread that hits a breakpoint may not generate
+  // a SIGCHLD before our mainloop goes idle (race between pthread_create and
+  // the trap delivery).  Schedule a series of waitpid polls at increasing
+  // intervals to catch the stop without busy-waiting indefinitely.
+  Log *log = GetLog(POSIXLog::Process);
+  LLDB_LOG(log, "ScheduleWaitpidPoll: arming post-continue poll");
+
+  // Poll at 5ms, 20ms, 50ms, 100ms, 200ms, 500ms intervals.
+  // Each fires SigchldHandler (which calls waitpid(WNOHANG)).
+  // If a stop is found the normal TryHandleWaitStatus path takes over.
+  static constexpr std::chrono::milliseconds kDelays[] = {
+      std::chrono::milliseconds(5),   std::chrono::milliseconds(20),
+      std::chrono::milliseconds(50),  std::chrono::milliseconds(100),
+      std::chrono::milliseconds(200), std::chrono::milliseconds(500),
+  };
+  for (auto delay : kDelays) {
+    m_mainloop.AddCallback(
+        [this](MainLoopBase &) {
+          Log *log = GetLog(POSIXLog::Process);
+          // Only poll if at least one process is still running.
+          bool any_running = llvm::any_of(m_processes, [](NativeProcessAIX *p) {
+            return StateIsRunningState(p->GetState());
+          });
+          if (!any_running)
+            return;
+          LLDB_LOG(log, "ScheduleWaitpidPoll: polling waitpid for new thread stop");
+          SigchldHandler();
+        },
+        delay);
+  }
 }
 
 // Public Static Methods
@@ -424,7 +458,7 @@ static std::optional<std::pair<lldb::pid_t, WaitStatus>> WaitPid() {
 
   if (wait_pid == -1) {
     Status error(errno, eErrorTypePOSIX);
-    LLDB_LOG(log, "waitpid(-1, &status, _) failed: {1}", error);
+    LLDB_LOG(log, "waitpid(-1, &status, _) failed: {0}", error);
     return std::nullopt;
   }
 
@@ -439,12 +473,14 @@ void NativeProcessAIX::Manager::SigchldHandler() {
   Log *log = GetLog(POSIXLog::Process);
   while (true) {
     auto wait_result = WaitPid();
-    if (!wait_result)
+    if (!wait_result) {
+      LLDB_LOG(log, "SigchldHandler: no more events (WaitPid returned nullopt)");
       return;
+    }
     lldb::pid_t pid = wait_result->first;
     WaitStatus status = wait_result->second;
 
-    LLDB_LOG(log, "Signal {0}",status.status);
+    LLDB_LOG(log, "Signal {0}", status.status);
     bool handled = llvm::any_of(m_processes, [&](NativeProcessAIX *process) {
       return process->TryHandleWaitStatus(pid, status);
     });
@@ -503,68 +539,226 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
   return DiscoverThreads(pid);
 }
 
+/// Take a fresh getthrds64 snapshot of all kernel threads for this stop.
+/// Returns the number of entries, or 0 on failure.
+static int TakeThreadSnapshot(lldb::pid_t pid,
+                               std::vector<struct thrdentry64> &out) {
+  out.clear();
+  tid64_t index = 0;
+  int count = ::getthrds64(static_cast<lldb::pid_t>(pid), nullptr,
+                            sizeof(struct thrdentry64), &index, INT_MAX);
+  if (count <= 0)
+    return 0;
+  out.resize(count);
+  index = 0;
+  int actual = ::getthrds64(static_cast<lldb::pid_t>(pid), out.data(),
+                             sizeof(struct thrdentry64), &index, count);
+  if (actual > 0)
+    out.resize(actual);
+  else
+    out.clear();
+  return static_cast<int>(out.size());
+}
+
 NativeThreadAIX* NativeProcessAIX::FindStoppedThread() {
     Log *log = GetLog(POSIXLog::Process);
 
-    tid64_t index = 0;
-    int thread_count = getthrds64(GetID(), NULL, sizeof(struct thrdentry64),
-            &index, INT_MAX);
+    std::vector<struct thrdentry64> entries;
+    TakeThreadSnapshot(GetID(), entries);
 
-    if (thread_count > 0) {
-        std::vector<struct thrdentry64> entries(thread_count);
-        index = 0;
-        int actual = getthrds64(GetID(), entries.data(),
-                sizeof(struct thrdentry64),
-                &index, thread_count);
-        
-        if (actual > 0) {
-            // Find thread with TTRCSIG flag set
-            for (int i = 0; i < actual; i++) {
-                if (entries[i].ti_flag & TTRCSIG) {
-                    lldb::tid_t stopped_tid = static_cast<lldb::tid_t>(entries[i].ti_tid);
-                    LLDB_LOG(log, "Found stopped thread via TTRCSIG: tid={0}, cursig={1}, state={2}",
-                            stopped_tid, entries[i].ti_cursig, entries[i].ti_state);
-
-                    // Find the corresponding NativeThreadAIX object
-                    for (const auto &thread_sp : m_threads) {
-                        if (thread_sp->GetID() == stopped_tid) {
-                            return static_cast<NativeThreadAIX *>(thread_sp.get());
-                        }
-                    }
-                    LLDB_LOG(log, "Warning: TTRCSIG thread {0} not in thread list", stopped_tid);
-                }
+    for (const auto &entry : entries) {
+        if (entry.ti_cursig) {
+            lldb::tid_t stopped_tid = static_cast<lldb::tid_t>(entry.ti_tid);
+            LLDB_LOG(log,
+                     "FindStoppedThread: tid={0} cursig={1} TTRCSIG={2} state={3}",
+                     stopped_tid, (int)entry.ti_cursig,
+                     bool(entry.ti_flag & TTRCSIG), (int)entry.ti_state);
+            for (const auto &thread_sp : m_threads) {
+                if (thread_sp->GetID() == stopped_tid)
+                    return static_cast<NativeThreadAIX *>(thread_sp.get());
             }
+            // Record the tid so TryHandleWaitStatus finds it after the add.
+            m_triggering_tid = stopped_tid;
+            LLDB_LOG(log, "FindStoppedThread: tid {0} not yet in thread list",
+                     stopped_tid);
+            return nullptr;
         }
     }
 
-    LLDB_LOG(log, "No stopped thread found among {0} threads", m_threads.size());
+    // No thread has a pending signal.  Fall back to the first tracked thread
+    if (!m_threads.empty()) {
+        LLDB_LOG(log,
+                 "FindStoppedThread: no cursig thread, falling back to first "
+                 "thread {0}",
+                 m_threads.front()->GetID());
+        return static_cast<NativeThreadAIX *>(m_threads.front().get());
+    }
+
+    LLDB_LOG(log, "FindStoppedThread: no threads available");
     return nullptr;
 }
 
+/// Reconcile m_threads against a fresh getthrds64 snapshot.
+///
+///   Phase A - kernel-thread pass (getthrds64 snapshot):
+///   Phase B - pthdb pass (only when the pthdb session is active):
+
+void NativeProcessAIX::ReconcileThreads(
+    const std::vector<struct thrdentry64> &snapshot, lldb::tid_t stop_tid) {
+  Log *log = GetLog(POSIXLog::Thread);
+
+  // Build set of live kernel tids from the getthrds64 snapshot.
+  llvm::SmallDenseSet<lldb::tid_t, 8> snapshot_tids;
+  for (const auto &entry : snapshot)
+    snapshot_tids.insert(static_cast<lldb::tid_t>(entry.ti_tid));
+
+  // add threads present in snapshot but not yet tracked.
+  for (const auto &entry : snapshot) {
+    lldb::tid_t tid = static_cast<lldb::tid_t>(entry.ti_tid);
+    if (!HasThreadNoLock(tid)) {
+      LLDB_LOG(log, "ReconcileThreads(A): adding new kernel tid {0}", tid);
+      NativeThreadAIX &thread = AddThread(tid, /*resume=*/false);
+      // Mark running: the thread hasn't stopped yet; StopRunningThreads will
+      // send it SIGSTOP and wait for it.
+      thread.SetRunning();
+      ThreadWasCreated(thread);
+    }
+  }
+
+  // Remove threads absent from snapshot (exited kernel threads).
+  // Guard: never remove stop_tid it briefly has TTRCSIG and may look absent.
+  llvm::SmallVector<NativeThreadAIX *, 4> to_remove;
+  for (const auto &thread_up : m_threads) {
+    lldb::tid_t tid = thread_up->GetID();
+    if (snapshot_tids.count(tid) == 0 && tid != stop_tid)
+      to_remove.push_back(static_cast<NativeThreadAIX *>(thread_up.get()));
+  }
+  for (NativeThreadAIX *t : to_remove) {
+    LLDB_LOG(log, "ReconcileThreads(A): removing exited kernel tid {0}",
+             t->GetID());
+    StopTrackingThread(*t);
+  }
+
+  if (!IsPthdbInitialized())
+    return;
+
+  pthdb_session_t sess = GetPthdbSession();
+
+  pthdb_pthread_t pdtid = PTHDB_INVALID_PTHREAD;
+  int rc = pthdb_pthread(sess, &pdtid, PTHDB_LIST_FIRST);
+
+  while (rc == PTHDB_SUCCESS && pdtid != PTHDB_INVALID_PTHREAD) {
+    // Check if this pthread has already been removed (GDB: exited_threads set).
+    if (m_pthdb_exited_pthreads.count(pdtid) != 0) {
+      rc = pthdb_pthread(sess, &pdtid, PTHDB_LIST_NEXT);
+      continue;
+    }
+
+    pthdb_tid_t ktid = 0;
+    pthdb_pthread_tid(sess, pdtid, &ktid);
+
+    pthdb_state_t state = PST_IDLE;
+    pthdb_pthread_state(sess, pdtid, &state);
+
+    if (ktid != 0) {
+      lldb::tid_t tid = static_cast<lldb::tid_t>(ktid);
+      if (!HasThreadNoLock(tid)) {
+        LLDB_LOG(log,
+                 "ReconcileThreads(B): pthdb handle {0} ktid {1} adding",
+                 pdtid, tid);
+        NativeThreadAIX &thread = AddThread(tid, /*resume=*/false);
+        thread.SetRunning();
+        ThreadWasCreated(thread);
+      }
+    }
+
+    // PST_TERM: thread has finished; remove it
+    if (state == PST_TERM) {
+      if (ktid != 0) {
+        lldb::tid_t tid = static_cast<lldb::tid_t>(ktid);
+        if (HasThreadNoLock(tid)) {
+          NativeThreadAIX *t = GetThreadByID(tid);
+          if (t) {
+            LLDB_LOG(log,
+                     "ReconcileThreads(B): pthdb handle {0} ktid {1} "
+                     "PST_TERM removing",
+                     pdtid, tid);
+            StopTrackingThread(*t);
+          }
+        }
+      }
+      m_pthdb_exited_pthreads.insert(pdtid);
+    }
+
+    rc = pthdb_pthread(sess, &pdtid, PTHDB_LIST_NEXT);
+  }
+}
 
 bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid,
                                              WaitStatus status) {
   Log *log = GetLog(POSIXLog::Process);
-  if (pid == GetID() &&
-      (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal)) {
-    // The process exited.  We're done monitoring.  Report to delegate.
+  LLDB_LOG(log, "TryHandleWaitStatus: pid={0} status={1}", pid, status);
+
+  if (pid != GetID())
+    return false;
+
+  if (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal) {
+    // The process exited.  Tear down the pthdb session then report.
+    if (IsPthdbInitialized()) {
+      pthdb_session_destroy(GetPthdbSession());
+      ClearPthdbSession();
+    }
+    m_pthdb_exited_pthreads.clear();
     SetExitStatus(status, true);
     return true;
   }
 
-  // Attempt to initialise the libpthdebug session on each stop.
-  // EnsurePthdbSession is idempotent: it is a no-op once the session is
-  // active or once the inferior is confirmed non-pthreaded.
-  process_aix::EnsurePthdbSession(*this, /*update=*/false);
+  // Snapshot the kernel thread table (getthrds64).
+  std::vector<struct thrdentry64> snapshot;
+  TakeThreadSnapshot(GetID(), snapshot);
+  LLDB_LOG(log, "TryHandleWaitStatus: getthrds64 sees {0} thread(s):",
+           snapshot.size());
+  for (const auto &e : snapshot)
+    LLDB_LOG(log,
+             "TryHandleWaitStatus:   ktid={0} cursig={1} state={2} TTRCSIG={3}",
+             static_cast<uint64_t>(e.ti_tid), (int)e.ti_cursig,
+             (int)e.ti_state, bool(e.ti_flag & TTRCSIG));
 
-  m_triggering_tid = FindStoppedThread() ? FindStoppedThread()->GetID()
-                                         : LLDB_INVALID_THREAD_ID;
-  LLDB_LOG(log, "m_triggering_tid {0}", m_triggering_tid);
-  if (NativeThreadAIX *thread = GetThreadByID(m_triggering_tid)) {
-    MonitorCallback(*thread, status);
-    return true;
+  // Identify the stopping thread from the snapshot.
+  lldb::tid_t stopping_tid = LLDB_INVALID_THREAD_ID;
+  for (const auto &entry : snapshot) {
+    if (entry.ti_cursig) {
+      stopping_tid = static_cast<lldb::tid_t>(entry.ti_tid);
+      break;
+    }
   }
-  return false;
+  // Commit to m_triggering_tid now so pthdb_session_stop_tid sees it.
+  m_triggering_tid = stopping_tid;
+  LLDB_LOG(log, "TryHandleWaitStatus: m_triggering_tid={0}", m_triggering_tid);
+
+  // Reconcile m_threads against the snapshot.
+  ReconcileThreads(snapshot, stopping_tid);
+
+  // Initialise/update the pthdb session.
+  process_aix::EnsurePthdbSession(*this, /*update=*/true);
+
+  // Find the NativeThreadAIX object for the stopping thread.
+  NativeThreadAIX *stopped_thread = nullptr;
+  if (m_triggering_tid != LLDB_INVALID_THREAD_ID)
+    stopped_thread = GetThreadByID(m_triggering_tid);
+  if (!stopped_thread)
+    stopped_thread = FindStoppedThread();
+
+  if (stopped_thread) {
+    m_triggering_tid = stopped_thread->GetID();
+    MonitorCallback(*stopped_thread, status);
+  } else {
+    LLDB_LOG(log,
+             "TryHandleWaitStatus: WARNING could not resolve stopping thread "
+             "for pid {0}; process has {1} thread(s)",
+             GetID(), m_threads.size());
+  }
+  return true;
 }
 
 // Handles all waitpid events from the inferior process.
@@ -618,33 +812,24 @@ void NativeProcessAIX::MonitorSIGTRAP(const WaitStatus status,
 
   switch (status.status) {
   case SIGTRAP: {
-        reg_ctx.ReadRegister(pc_info, pc_value);
-        struct thrdentry64 entry;
-        tid64_t cursor = 0;
-        int count = getthrds64(GetID(), &entry, sizeof(entry), &cursor, 1);
-        if (count <= 0) {
-            Status error;
-            LLDB_LOG(log, "Failed to fetch thread info");
-            if (count == 0)
-                error = Status::FromErrorStringWithFormat(
-                    "getthrds64 returned 0 threads for pid %" PRIu64, GetID());
-            else {
-                error = Status::FromErrno();
-                LLDB_LOG(log, "getthrds64 failed for pid {0}: {1}", 
-                         GetID(), error);
-            }
-            // Since error case does not set ti_watch, we will automatically
-            // fallback to regular breakpoint
-        }
-        // The kernel sets T_WP when a process-level hardware watchpoint fires.
-        // T_WP_SVC means it fired during a system call.
-        if ((entry.ti_watch & T_WP) || (entry.ti_watch & T_WP_SVC)) {
-            MonitorWatchpoint(thread, 0);
-            break;
-        }
-        MonitorBreakpoint(thread);
-        break;
+    reg_ctx.ReadRegister(pc_info, pc_value);
+    uint32_t ti_watch = 0;
+    {
+      struct thrdentry64 entry{};
+      tid64_t cursor = static_cast<tid64_t>(thread.GetID());
+      int count = ::getthrds64(GetID(), &entry, sizeof(entry), &cursor, 1);
+      if (count > 0)
+        ti_watch = entry.ti_watch;
     }
+    // The kernel sets T_WP when a hardware watchpoint fires.
+    // T_WP_SVC means it fired during a system call.
+    if ((ti_watch & T_WP) || (ti_watch & T_WP_SVC)) {
+      MonitorWatchpoint(thread, 0);
+      break;
+    }
+    MonitorBreakpoint(thread);
+    break;
+  }
   default:
     LLDB_LOG(log, "received unknown SIGTRAP stop event ({0}, pid {1} tid {2}",
              status.status, GetID(), thread.GetID());
@@ -754,17 +939,15 @@ void NativeProcessAIX::MonitorSignal(const WaitStatus status,
       // *is* the real stop reason, so we leave the signal intact if this is
       // the thread that was chosen as the triggering thread.
       if (m_pending_notification_tid != LLDB_INVALID_THREAD_ID) {
-        if (m_pending_notification_tid == thread.GetID())
-          thread.SetStoppedBySignal(SIGSTOP);
-        else
-          thread.SetStoppedWithNoReason();
-
-        SetCurrentThreadID(thread.GetID());
-        SignalIfAllThreadsStopped();
+        // Interrupt(): the kernel picks which thread takes the SIGSTOP, so
+        // report that thread as the stop reason.  The kernel has stopped the
+        // whole process, so mark all other threads stopped and notify.
+        thread.SetStoppedBySignal(SIGSTOP);
+        StopRunningThreads(thread.GetID());
       } else {
         // We can end up here if stop was initiated by LLGS but by this time a
         // thread stop has occurred - maybe initiated by another event.
-        Status error = ResumeThread(thread, thread.GetState(), 0);
+        Status error = ResumeThread(thread, eStateRunning, 0);
         if (error.Fail())
           LLDB_LOG(log, "failed to resume thread {0}: {1}", thread.GetID(),
                    error);
@@ -784,7 +967,7 @@ void NativeProcessAIX::MonitorSignal(const WaitStatus status,
   // Check if debugger should stop at this signal or just ignore it and resume
   // the inferior.
   if (m_signals_to_ignore.contains(signo) || signo == SIGCHLD) {
-     ResumeThread(thread, thread.GetState(), signo);
+     ResumeThread(thread, eStateRunning, signo);
      return;
   }
 
@@ -866,20 +1049,81 @@ Status NativeProcessAIX::IssuePTTContinue(
     struct ptthreads64 buf;
     memset(&buf, 0, sizeof(buf));
     size_t idx = 0;
-    for (lldb::tid_t tid : other_tids) {
-        if (tid == triggering_tid)
-            continue; // triggering thread is the id arg, not in the list
-        if (idx >= (sizeof(buf.th) / sizeof(buf.th[0])) - 1) {
-            LLDB_LOG(log, "IssuePTTContinue: too many threads, truncating list");
-            break;
+    constexpr size_t kMaxOther = (sizeof(buf.th) / sizeof(buf.th[0])) - 1;
+
+    if (IsPthdbInitialized()) {
+        // Enumerate ALL pthreads
+        llvm::SmallDenseSet<lldb::tid_t, 8> pthdb_tids;
+        pthdb_session_t sess = GetPthdbSession();
+        pthdb_pthread_t handle = PTHDB_INVALID_PTHREAD;
+        int rc = pthdb_pthread(sess, &handle, PTHDB_LIST_FIRST);
+        while (rc == PTHDB_SUCCESS && handle != PTHDB_INVALID_PTHREAD) {
+            pthdb_tid_t ktid = 0;
+            pthdb_pthread_tid(sess, handle, &ktid);
+            if (ktid != 0 &&
+                static_cast<lldb::tid_t>(ktid) != triggering_tid) {
+                lldb::tid_t tid = static_cast<lldb::tid_t>(ktid);
+                pthdb_tids.insert(tid);
+                if (idx < kMaxOther)
+                    buf.th[idx++] = static_cast<tid64_t>(ktid);
+                else
+                    LLDB_LOG(log, "IssuePTTContinue: tid list full, "
+                                  "truncating at {0}", kMaxOther);
+            }
+            rc = pthdb_pthread(sess, &handle, PTHDB_LIST_NEXT);
         }
-        buf.th[idx++] = static_cast<tid64_t>(tid);
+        // Supplement with any kernel threads in m_threads that pthdb does not
+        // yet know about.
+        for (const auto &thread_up : m_threads) {
+            lldb::tid_t tid = thread_up->GetID();
+            if (tid == triggering_tid)
+                continue;
+            if (pthdb_tids.count(tid))
+                continue; // already added via pthdb
+            if (idx < kMaxOther) {
+                LLDB_LOG(log,
+                         "IssuePTTContinue: tid {0} not in pthdb, adding from "
+                         "m_threads",
+                         tid);
+                buf.th[idx++] = static_cast<tid64_t>(tid);
+            } else {
+                LLDB_LOG(log, "IssuePTTContinue: tid list full, "
+                              "truncating at {0}", kMaxOther);
+            }
+        }
+    } else {
+        // pthdb not yet active (single thread or before pthread_create):
+        // use the caller's list directly.
+        for (lldb::tid_t tid : other_tids) {
+            if (tid == triggering_tid)
+                continue;
+            if (idx >= kMaxOther) {
+                LLDB_LOG(log, "IssuePTTContinue: too many threads, truncating");
+                break;
+            }
+            buf.th[idx++] = static_cast<tid64_t>(tid);
+        }
     }
     buf.th[idx] = 0; // null-terminate
 
     LLDB_LOG(log,
-            "IssuePTTContinue: triggering_tid={0} signo={1} other_count={2}",
-            triggering_tid, signo, idx);
+             "IssuePTTContinue: triggering_tid={0} signo={1} other_count={2}",
+             triggering_tid, signo, idx);
+
+    // Snapshot all kernel threads at resume time ro compare the kernel tid
+    // vs what pthdb
+    {
+      std::vector<struct thrdentry64> snap;
+      TakeThreadSnapshot(static_cast<lldb::pid_t>(process_pid), snap);
+      LLDB_LOG(log, "IssuePTTContinue: kernel has {0} thread(s) right now:",
+               snap.size());
+      for (const auto &e : snap)
+        LLDB_LOG(log,
+                 "IssuePTTContinue:   ktid={0} cursig={1} state={2} "
+                 "TTRCSIG={3}",
+                 static_cast<uint64_t>(e.ti_tid), (int)e.ti_cursig,
+                 (int)e.ti_state, bool(e.ti_flag & TTRCSIG));
+    }
 
     return PtraceWrapper(PTT_CONTINUE,
             triggering_tid,
@@ -964,10 +1208,17 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
     return Status();
   }
 
-  // m_triggering_tid MUST be the stopped thread
+  // m_triggering_tid MUST be the stopped thread (it is the id arg of
+  // PTT_CONTINUE).  If it is not in tids_to_run, re-derive it.
   if (llvm::find(tids_to_run, m_triggering_tid) == tids_to_run.end()) {
-    m_triggering_tid = FindStoppedThread()->GetID();
-    LLDB_LOG(log, "m_triggering_tid {0} ",m_triggering_tid);
+    if (NativeThreadAIX *st = FindStoppedThread()) {
+      m_triggering_tid = st->GetID();
+      LLDB_LOG(log, "Resume: updated m_triggering_tid to {0}", m_triggering_tid);
+    } else if (!tids_to_run.empty()) {
+      m_triggering_tid = tids_to_run.front();
+      LLDB_LOG(log, "Resume: no stopped thread, using first tid_to_run {0}",
+               m_triggering_tid);
+    }
   }
 
   // Issue the single PTT_CONTINUE that starts the whole process.
@@ -981,6 +1232,11 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
 
   m_triggering_tid = LLDB_INVALID_THREAD_ID;
   SetState(eStateRunning, true);
+
+  // Schedule a series of waitpid polls so we
+  // catch the stop even if SIGCHLD is late or never delivered.
+  m_manager.ScheduleWaitpidPoll();
+
   return Status();
 }
 
@@ -1071,7 +1327,20 @@ Status NativeProcessAIX::Interrupt() {
            running_thread ? "running" : "stopped",
            deferred_signal_thread->GetID());
 
-  StopRunningThreads(deferred_signal_thread->GetID());
+  if (!running_thread) {
+    // Everything is already stopped in the kernel; just report it.
+    StopRunningThreads(deferred_signal_thread->GetID());
+    return Status();
+  }
+
+  m_pending_notification_tid = deferred_signal_thread->GetID();
+  if (kill(GetID(), SIGSTOP) != 0) {
+    Status error = Status::FromErrno();
+    m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
+    return error;
+  }
+
+  m_manager.ScheduleWaitpidPoll();
 
   return Status();
 }
@@ -1974,16 +2243,25 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t id, void *addr,
       ptrace64(req, id, 1, (int)(size_t)data, nullptr);
       break;
 
-    case PTT_CONTINUE:
+    case PTT_CONTINUE: {
       // id   = triggering tid (the one with TTRCSIG)
       // addr = 1 means resume from current IAR
       // data = signal number (0 = discard the signal)
       // buffer = pointer to a null-terminated ptthreads64 listing all OTHER
-      //          threads that should also be started.  May be nullptr when
-      //          only the triggering thread needs to run (e.g. single-step
-      //          with all other threads suspended).
-      ptrace64(req, id, 1, (int)(size_t)data, (int *)addr);
+      //          threads that should also be started.
+      if (addr) {
+        const struct ptthreads64 *ptt =
+            reinterpret_cast<const struct ptthreads64 *>(addr);
+        LLDB_LOG(log, "PTT_CONTINUE: triggering_tid={0} signo={1}",
+                 id, (int)(size_t)data);
+        for (int _i = 0; _i < 8 && ptt->th[_i] != 0; ++_i)
+          LLDB_LOG(log, "PTT_CONTINUE:   other_tid[{0}]={1}", _i, ptt->th[_i]);
+      }
+      errno = 0;
+      int _rc = ptrace64(req, id, 1, (int)(size_t)data, (int *)addr);
+      LLDB_LOG(log, "PTT_CONTINUE: ptrace64 returned {0} errno={1}", _rc, errno);
       break;
+    }
 
     case PT_ATTACH: {
       // Block SIGCHLD signal during attach to the process, 

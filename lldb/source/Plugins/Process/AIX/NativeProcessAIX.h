@@ -10,6 +10,7 @@
 #define liblldb_NativeProcessAIX_H_
 
 #include <csignal>
+#include <procinfo.h>
 #include <string>
 #include <sys/pthdebug.h>
 #include <unordered_map>
@@ -47,7 +48,7 @@ class NativeProcessAIX : public NativeProcessProtocol,
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
-	Manager(MainLoop &mainloop);
+    Manager(MainLoop &mainloop);
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info,
@@ -69,7 +70,12 @@ public:
     // Collect an event for the given tid, waiting for it if necessary.
     void CollectThread(::pid_t tid);
 
+    // Schedule a waitpid poll after PTT_CONTINUE to catch new threads that
+    // trap before SIGCHLD fires.  Called by NativeProcessAIX::Resume().
+    void ScheduleWaitpidPoll();
+
   private:
+    MainLoop &m_mainloop;
     MainLoop::SignalHandleUP m_sigchld_handle;
 
     llvm::SmallPtrSet<NativeProcessAIX *, 2> m_processes;
@@ -77,7 +83,7 @@ public:
     // Threads (events) which haven't been claimed by any process.
     llvm::DenseSet<::pid_t> m_unowned_threads;
 
-	void SigchldHandler();
+    void SigchldHandler();
   };
 
   // NativeProcessProtocol Interface
@@ -244,6 +250,9 @@ private:
   /// True if the inferior is not pthreaded (PTHDB_NOT_PTHREADED received).
   bool m_pthdb_not_pthreaded = false;
 
+  /// Set of pthdb_pthread_t handles that have reached PST_TERM (exited).
+  std::unordered_set<pthdb_pthread_t> m_pthdb_exited_pthreads;
+
   lldb::tid_t m_triggering_tid = LLDB_INVALID_THREAD_ID;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
@@ -283,6 +292,10 @@ private:
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
   void StopTrackingThread(NativeThreadAIX &thread);
+
+  /// Reconcile m_threads against a getthrds64 snapshot.
+  void ReconcileThreads(const std::vector<struct thrdentry64> &snapshot,
+                        lldb::tid_t stop_tid);
 
   /// Create a new thread.
   ///

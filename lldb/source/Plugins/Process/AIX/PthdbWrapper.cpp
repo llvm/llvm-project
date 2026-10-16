@@ -38,6 +38,13 @@
 #include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
+#ifndef PTHDB_FLAG_RTL
+#define PTHDB_FLAG_RTL    0x2000000000000000ULL
+#endif
+#ifndef PTHDB_FLAG_UNSAFE
+#define PTHDB_FLAG_UNSAFE 0x4000000000000000ULL
+#endif
+
 using namespace lldb_private;
 using namespace lldb_private::process_aix;
 
@@ -251,7 +258,6 @@ static int cb_write_regs(pthdb_user_t user, pthdb_tid_t tid,
   if (flags & PTHDB_FLAG_GPRS) {
     if (is32) {
       GPR_PPC gpr{};
-      // TODO: Create a common function for this to avoid redundant code
       for (int i = 0; i < 32; ++i)
         (&gpr.r0)[i] = static_cast<uint32_t>(context->gpr[i]);
       gpr.pc  = static_cast<uint32_t>(context->iar);
@@ -266,6 +272,7 @@ static int cb_write_regs(pthdb_user_t user, pthdb_tid_t tid,
         return 1;
     } else {
       GPR_PPC64 gpr{};
+      // TODO: Create a common function for this to avoid redundant code
       for (int i = 0; i < 32; ++i)
         (&gpr.r0)[i] = context->gpr[i];
       gpr.pc  = context->iar;
@@ -316,8 +323,14 @@ static int cb_realloc(pthdb_user_t /*user*/, void *buf, size_t len,
                       void **bufp) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "cb_realloc: buf={0} len={1}", buf, len);
-  if (!buf || !len || !bufp)
+  if (!bufp)
     return 1;
+  if (!len) {
+    if (buf)
+      ::free(buf);
+    *bufp = nullptr;
+    return 0;
+  }
   *bufp = ::realloc(buf, len);
   int rc = (*bufp != nullptr) ? 0 : 1;
   LLDB_LOG(log, "cb_realloc: rc={0} newbuf={1}", rc, *bufp);
@@ -329,7 +342,7 @@ static int cb_dealloc(pthdb_user_t /*user*/, void *buf) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "cb_dealloc: buf={0}", buf);
   if (!buf)
-    return 1;
+    return 0;
   ::free(buf);
   return 0;
 }
@@ -354,7 +367,6 @@ pthdb_callbacks_t lldb_private::process_aix::g_pthdb_callbacks = {
     cb_print};
 
 /// Lazily initialise (and optionally update) the libpthdebug session.
-/// Mirrors pthreads_active() from pthreaded.c.
 bool lldb_private::process_aix::EnsurePthdbSession(NativeProcessAIX &process,
                                                     bool update) {
   Log *log = GetLog(POSIXLog::Process);
@@ -363,65 +375,48 @@ bool lldb_private::process_aix::EnsurePthdbSession(NativeProcessAIX &process,
     return false;
 
   if (!process.IsPthdbInitialized()) {
-    // Probe: check whether the inferior uses pthreads.
-    // pthdb_session_pthreaded() resolves __n_pthreads via cb_symbol_addrs,
-    // reads it, and returns PTHDB_SUCCESS only when __n_pthreads > 0.
-    char *pthreaded_sym = nullptr;
-    int probe_rc = pthdb_session_pthreaded(
-        static_cast<pthdb_user_t>(reinterpret_cast<uintptr_t>(&process)),
-        /*flags=*/0, &g_pthdb_callbacks, &pthreaded_sym);
-
-    if (probe_rc == PTHDB_NOT_PTHREADED) {
-      LLDB_LOG(log, "EnsurePthdbSession: inferior is not pthreaded");
-      process.SetPthdbNotPthreaded();
-      return false;
-    }
-
-    if (probe_rc != PTHDB_SUCCESS) {
-      LLDB_LOG(log,
-               "EnsurePthdbSession: pthdb_session_pthreaded failed (rc={0})",
-               probe_rc);
-      // Don't mark as not-pthreaded; symbols may not yet be resolved.
-      return false;
-    }
-
-    LLDB_LOG(log,
-             "EnsurePthdbSession: inferior is pthreaded, initialising session");
-
-    // Real session init.  cb_symbol_addrs resolves each name via
-    // GetDelegate().SymbolLookup() and caches it in the process.
+    // Flags:
+    //   PTHDB_FLAG_REGS    enable register access via read_regs/write_regs
+    //   PTHDB_FLAG_RTL     skip __n_pthreads==-1 sentinel (Pitfall 10)
+    //   PTHDB_FLAG_UNSAFE  traverse lists even with target locks held (§20.5)
     const pthdb_exec_mode_t pem =
         (process.GetArchitecture().GetAddressByteSize() == 4) ? PEM_32BIT
                                                               : PEM_64BIT;
+    const unsigned long long flags =
+        PTHDB_FLAG_REGS | PTHDB_FLAG_RTL | PTHDB_FLAG_UNSAFE;
+
     pthdb_session_t session = 0;
     int init_rc = pthdb_session_init(
         static_cast<pthdb_user_t>(reinterpret_cast<uintptr_t>(&process)),
-        pem, PTHDB_FLAG_REGS | PTHDB_FLAG_HOLD, &g_pthdb_callbacks,
-        &session);
+        pem, flags, &g_pthdb_callbacks, &session);
 
     if (init_rc == PTHDB_NOT_PTHREADED) {
-      LLDB_LOG(log, "EnsurePthdbSession: pthdb_session_init: not pthreaded");
-      process.SetPthdbNotPthreaded();
+      // Binary is not pthreaded yet (pthread library not initialised).
+      LLDB_LOG(log, "EnsurePthdbSession: not pthreaded yet (will retry)");
       return false;
     }
 
     if (init_rc != PTHDB_SUCCESS) {
       LLDB_LOG(log,
-               "EnsurePthdbSession: pthdb_session_init failed (rc={0})",
+               "EnsurePthdbSession: pthdb_session_init failed (rc={0}), "
+               "will retry on next stop",
                init_rc);
       return false;
     }
 
     process.SetPthdbSession(session);
-    LLDB_LOG(log, "EnsurePthdbSession: session initialised successfully");
+    LLDB_LOG(log, "EnsurePthdbSession: session initialised (pem={0} flags={1:x})",
+             static_cast<int>(pem), flags);
   }
 
   if (update) {
     int upd_rc = pthdb_session_update(process.GetPthdbSession());
-    if (upd_rc != PTHDB_SUCCESS)
+    if (upd_rc != PTHDB_SUCCESS) {
       LLDB_LOG(log,
                "EnsurePthdbSession: pthdb_session_update failed (rc={0})",
                upd_rc);
+      return true; // session still valid; carry on
+    }
   }
 
   return true;
