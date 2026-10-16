@@ -456,7 +456,7 @@ static const FieldRegion *findUninitializedField(ProgramStateRef State,
   MemRegionManager &MRMgr = SVB.getRegionManager();
 
   if (R->getValueType()->isUnionType())
-  return nullptr;
+    return nullptr;
 
   if (Ty->isArrayType()) {
     const auto *First = R;
@@ -496,7 +496,8 @@ static const FieldRegion *findUninitializedField(ProgramStateRef State,
     if (FD->getType()->isStructureType()) {
       if (const auto *Uninit = findUninitializedField(State, FR))
         return Uninit;
-    } else if (!FD->getType()->isAggregateType() && State->getSVal(FR).isUndef())
+    } else if (!FD->getType()->isAggregateType() &&
+               State->getSVal(FR).isUndef())
       return FR;
   }
   return nullptr;
