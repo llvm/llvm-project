@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_ppc64.h -------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_PPC64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_PPC64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFO_PPC64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFO_PPC64_H
 
 #include "RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterInfoPOSIX_ppc64 : public lldb_private::RegisterInfoInterface {
+class RegisterInfo_ppc64 : public lldb_private::RegisterInfoInterface {
 public:
-  RegisterInfoPOSIX_ppc64(const lldb_private::ArchSpec &target_arch);
+  RegisterInfo_ppc64(const lldb_private::ArchSpec &target_arch);
 
   size_t GetGPRSize() const override;
 
@@ -29,4 +29,4 @@ private:
   size_t m_gpr_size;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_PPC64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFO_PPC64_H
