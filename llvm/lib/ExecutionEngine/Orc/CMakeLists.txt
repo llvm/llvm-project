@@ -32,6 +32,8 @@ add_llvm_component_library(LLVMOrcJIT
   IndirectionUtils.cpp
   InProcessEPC.cpp
   InProcessMemoryAccess.cpp
+  InstanceSymbolGenerator.cpp
+  InstanceSymbolGeneratorSPS.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
   IRPartitionLayer.cpp

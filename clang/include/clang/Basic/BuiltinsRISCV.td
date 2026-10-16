@@ -279,6 +279,18 @@ def mulhru_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
 def mulhsu_i32 : RISCVBuiltin<"int32_t(int32_t, uint32_t)">;
 def mulhrsu_i32 : RISCVBuiltin<"int32_t(int32_t, uint32_t)">;
 
+// Scalar Multiply High Accumulate
+def mhacc_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, int32_t)">;
+def mhracc_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, int32_t)">;
+def mhaccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
+def mhraccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
+def mhaccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
+def mhraccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
+
+// Scalar "Q-format" Multiplication
+def mulq_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def mulqr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+
 // Packed Multiply High (32-bit)
 def pmulh_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
 def pmulhr_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>)">;
