@@ -831,9 +831,21 @@ func.func @fusion_non_constant_bounds_1(%N: index, %M: memref<?xf32>, %cst: f32)
   return
 }
 
-// No fusion here as the cost models computing slice costs run out of 64-bit precision.
+// Both producer nests fuse into the consumer here. The two reduction loops
+// keep accumulating into the same `%alloc` element, so the slice covers the
+// full source iteration space.
 
 // PRODUCER-CONSUMER-LABEL: func @high_trip_count
+// PRODUCER-CONSUMER:         affine.for %{{.*}} = 0 to 16 {
+// PRODUCER-CONSUMER-NEXT:      affine.for %{{.*}} = 0 to 512 {
+// PRODUCER-CONSUMER-NEXT:        affine.for %{{.*}} = 0 to 64 {
+// PRODUCER-CONSUMER-NEXT:          affine.for %{{.*}} = 0 to 16 {
+// PRODUCER-CONSUMER-NEXT:            affine.for %{{.*}} = 0 to 2048 {
+// PRODUCER-CONSUMER:                 affine.store
+// PRODUCER-CONSUMER:               affine.for %{{.*}} = 0 to 2048 {
+// PRODUCER-CONSUMER:                 affine.store
+// PRODUCER-CONSUMER:               affine.load
+// PRODUCER-CONSUMER-NEXT:          affine.store
 func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096xf32>) -> memref<1024x8192xf32> {
   %cst_0 = arith.constant 1.000000e+00 : f32
   %alloc = memref.alloc() : memref<1024x8192xf32>
@@ -847,7 +859,6 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
             %2 = affine.load %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
             %3 = arith.mulf %0, %1 : f32
             %4 = arith.addf %2, %3 : f32
-            // PRODUCER-CONSUMER: affine.store
             affine.store %4, %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
           }
         }
@@ -863,7 +874,6 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
             %2 = affine.load %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
             %3 = arith.mulf %0, %1 : f32
             %4 = arith.addf %2, %3 : f32
-            // PRODUCER-CONSUMER: affine.store
             affine.store %4, %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
           }
         }
@@ -871,7 +881,6 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
     }
 
   }
-  // PRODUCER-CONSUMER: affine.for {{.*}} = 0 to 16
   affine.for %arg2 = 0 to 16 {
     affine.for %arg3 = 0 to 512 {
       affine.for %arg4 = 0 to 64 {
@@ -883,4 +892,43 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
     }
   }
   return %alloc : memref<1024x8192xf32>
+}
+
+// -----
+
+// The producer covers j = [0, 4) while the consumer only covers j = [0, 3).
+// Whatever fusion happens, the producer's j = 3 iteration must survive:
+// dropping it loses the update to %ey[1, 3] and changes the result of the
+// program. Check that a loop covering the full j = [0, 4) range remains, and
+// that the producer body is still guarded by it.
+// See https://github.com/llvm/llvm-project/issues/212028.
+
+// PRODUCER-CONSUMER-LABEL: func @non_maximal_slice_keeps_producer
+// PRODUCER-CONSUMER:         affine.for %{{.*}} = 0 to 2 {
+// PRODUCER-CONSUMER:           affine.for %{{.*}} = 0 to 4 {
+// PRODUCER-CONSUMER:             affine.for %{{.*}} = 1 to 4 {
+func.func @non_maximal_slice_keeps_producer(%ey: memref<4x4xf64>, %hz: memref<4x4xf64>) {
+  affine.for %t = 0 to 2 {
+    affine.for %i = 1 to 4 {
+      affine.for %j = 0 to 4 {
+        %old = affine.load %ey[%i, %j] : memref<4x4xf64>
+        %a = affine.load %hz[%i, %j] : memref<4x4xf64>
+        %b = affine.load %hz[%i - 1, %j] : memref<4x4xf64>
+        %d = arith.subf %a, %b : f64
+        %new = arith.subf %old, %d : f64
+        affine.store %new, %ey[%i, %j] : memref<4x4xf64>
+      }
+    }
+    affine.for %i = 0 to 3 {
+      affine.for %j = 0 to 3 {
+        %old = affine.load %hz[%i, %j] : memref<4x4xf64>
+        %y1 = affine.load %ey[%i + 1, %j] : memref<4x4xf64>
+        %y0 = affine.load %ey[%i, %j] : memref<4x4xf64>
+        %d = arith.subf %y1, %y0 : f64
+        %new = arith.subf %old, %d : f64
+        affine.store %new, %hz[%i, %j] : memref<4x4xf64>
+      }
+    }
+  }
+  return
 }
