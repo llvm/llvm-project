@@ -2992,6 +2992,11 @@ def : Pat<(int_nvvm_ull2d_rp i64:$a), (CVT_f64_u64 reg_or_imm:$a, CvtRP)>;
 def : Pat<(int_nvvm_f2h_rn_ftz f32:$a), (CVT_f16_f32 reg_or_fpimm:$a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 reg_or_fpimm:$a, CvtRN)>;
 
+// PTX cvt.ftz requires an f32 operand. Flushing bf16 subnormals cannot change
+// the round-to-nearest f16 result.
+foreach intr = [int_nvvm_bf2h_rn, int_nvvm_bf2h_rn_ftz] in
+  def : Pat<(intr bf16:$a), (CVT_f16_bf16 $a, CvtRN)>, Requires<[SM90]>;
+
 foreach dst = ["e4m3x2", "e5m2x2"] in {
   foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
