@@ -1946,53 +1946,6 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   }
 }
 
-/// Given an object of the given canonical type, can we safely copy a
-/// value out of it based on its initializer?
-static bool isConstantEmittableObjectType(QualType type) {
-  assert(type.isCanonical());
-  assert(!type->isReferenceType());
-
-  // Must be const-qualified but non-volatile.
-  Qualifiers qs = type.getLocalQualifiers();
-  if (!qs.hasConst() || qs.hasVolatile()) return false;
-
-  // Otherwise, all object types satisfy this except C++ classes with
-  // mutable subobjects or non-trivial copy/destroy behavior.
-  if (const auto *RT = dyn_cast<RecordType>(type))
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      RD = RD->getDefinitionOrSelf();
-      if (RD->hasMutableFields() || !RD->isTrivial())
-        return false;
-    }
-
-  return true;
-}
-
-/// Can we constant-emit a load of a reference to a variable of the
-/// given type?  This is different from predicates like
-/// Decl::mightBeUsableInConstantExpressions because we do want it to apply
-/// in situations that don't necessarily satisfy the language's rules
-/// for this (e.g. C++'s ODR-use rules).  For example, we want to able
-/// to do this with const float variables even if those variables
-/// aren't marked 'constexpr'.
-enum ConstantEmissionKind {
-  CEK_None,
-  CEK_AsReferenceOnly,
-  CEK_AsValueOrReference,
-  CEK_AsValueOnly
-};
-static ConstantEmissionKind checkVarTypeForConstantEmission(QualType type) {
-  type = type.getCanonicalType();
-  if (const auto *ref = dyn_cast<ReferenceType>(type)) {
-    if (isConstantEmittableObjectType(ref->getPointeeType()))
-      return CEK_AsValueOrReference;
-    return CEK_AsReferenceOnly;
-  }
-  if (isConstantEmittableObjectType(type))
-    return CEK_AsValueOnly;
-  return CEK_None;
-}
-
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  This is just an optimization, but it avoids us needing
 /// to emit global copies of variables if they're named without triggering
@@ -2004,30 +1957,31 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   const ValueDecl *Value = RefExpr->getDecl();
 
   // The value needs to be an enum constant or a constant variable.
-  ConstantEmissionKind CEK;
+  CodeGenUtils::ConstantEmissionKind CEK;
   if (isa<ParmVarDecl>(Value)) {
-    CEK = CEK_None;
+    CEK = CodeGenUtils::CEK_None;
   } else if (const auto *var = dyn_cast<VarDecl>(Value)) {
-    CEK = checkVarTypeForConstantEmission(var->getType());
+    CEK = CodeGenUtils::checkVarTypeForConstantEmission(var->getType());
   } else if (isa<EnumConstantDecl>(Value)) {
-    CEK = CEK_AsValueOnly;
+    CEK = CodeGenUtils::CEK_AsValueOnly;
   } else {
-    CEK = CEK_None;
+    CEK = CodeGenUtils::CEK_None;
   }
-  if (CEK == CEK_None) return ConstantEmission();
+  if (CEK == CodeGenUtils::CEK_None)
+    return ConstantEmission();
 
   Expr::EvalResult result;
   bool resultIsReference;
   QualType resultType;
 
   // It's best to evaluate all the way as an r-value if that's permitted.
-  if (CEK != CEK_AsReferenceOnly &&
+  if (CEK != CodeGenUtils::CEK_AsReferenceOnly &&
       RefExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
     resultType = RefExpr->getType().getUnqualifiedType();
 
   // Otherwise, try to evaluate as an l-value.
-  } else if (CEK != CEK_AsValueOnly &&
+  } else if (CEK != CodeGenUtils::CEK_AsValueOnly &&
              RefExpr->EvaluateAsLValue(result, getContext())) {
     resultIsReference = true;
     resultType = Value->getType();
