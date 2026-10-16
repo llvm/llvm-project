@@ -63,7 +63,6 @@ Error SnippetGenerator::generateConfigurations(
     const auto &ScratchRegAliases =
         State.getRATC().getRegister(ScratchSpacePointerInReg).aliasedBits();
     // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
-    // FIXME: We could make a copy of the scratch register.
     for (const auto &Op : Variant.getInstr().Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
           ScratchRegAliases.test(Op.getImplicitReg().id()))
@@ -95,6 +94,7 @@ Error SnippetGenerator::generateConfigurations(
             return Error;
           BC.Key.Instructions.push_back(Inst);
         }
+
         if (CT.ScratchSpacePointerInReg)
           BC.LiveIns.push_back(CT.ScratchSpacePointerInReg);
         BC.Key.RegisterInitialValues =
@@ -213,6 +213,35 @@ template <typename C> static decltype(auto) randomElement(const C &Container) {
   assert(!Container.empty() &&
          "Can't pick a random element from an empty container)");
   return Container[randomIndex(Container.size() - 1)];
+}
+
+MCRegister
+SnippetGenerator::assignMemoryOperandRegister(const LLVMState &State,
+                                              InstructionTemplate &IT,
+                                              MCRegister Reg, unsigned Offset) {
+  const Operand &MemOp = IT.getMemOpReg();
+  const MCOperandInfo &OpInfo = MemOp.getExplicitOperandInfo();
+  // A memory operand does not necessarily carry a register class: some targets
+  // encode an address as a multi-operand tuple whose OPERAND_MEMORY entry has
+  // none.
+  if (OpInfo.RegClass >= 0) {
+    const MCRegisterClass &RequiredRC =
+        State.getRATC().regInfo().getRegClass(OpInfo.RegClass);
+    // A register class holding a single register leaves no choice: the
+    // encoding pins the base register, as RISC-V compressed accesses do by
+    // always addressing through X2. Substituting the scratch memory pointer
+    // there would clobber that register, and for the stack pointer that means
+    // destroying the frame the prologue and epilogue rely on. Targets needing
+    // such accesses to reach valid memory reserve it with
+    // getStackScratchSpaceBytes().
+    if (RequiredRC.getNumRegs() == 1) {
+      const MCRegister PinnedReg = RequiredRC.getRegister(0);
+      IT.getValueFor(MemOp) = MCOperand::createReg(PinnedReg);
+      return PinnedReg;
+    }
+  }
+  State.getExegesisTarget().fillMemoryOperands(IT, Reg, Offset);
+  return Reg;
 }
 
 static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
