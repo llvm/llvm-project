@@ -123,3 +123,27 @@ add_integration_test(
     libc.src.threads.linux.threads_utils
     libc.src.time.timespec_get
 )
+
+add_integration_test(
+  thrd_sleep_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_sleep_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.src.threads.thrd_sleep
+)
+
+add_integration_test(
+  thrd_yield_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_yield_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+    libc.src.threads.thrd_yield
+)

@@ -220,3 +220,17 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.cnd_broadcast
 )
+
+add_entrypoint_object(
+  thrd_sleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.thrd_sleep
+)
+
+add_entrypoint_object(
+  thrd_yield
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.thrd_yield
+)
