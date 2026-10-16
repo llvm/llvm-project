@@ -4336,8 +4336,14 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
 
               addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
               lldb_private::SymbolContextList sc_list;
+              // debugserver uses this C ABI data symbol to decode dispatch
+              // queues. C++ basename aliases are not that runtime definition.
+              // Other remote requests retain their usual name matching.
+              const bool match_linkage_names =
+                  symbol_name == "dispatch_queue_offsets";
               process->GetTarget().GetImages().FindSymbolsWithNameAndType(
-                  ConstString(symbol_name), eSymbolTypeAny, sc_list);
+                  ConstString(symbol_name), eSymbolTypeAny, sc_list,
+                  match_linkage_names);
               for (const SymbolContext &sc : sc_list) {
                 if (symbol_load_addr != LLDB_INVALID_ADDRESS)
                   break;
