@@ -53,6 +53,6 @@ body:             |
     liveins: $rdi
 
     $rax = MOV64rr $rdi
-    dead $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
+    $edi = XOR32rr undef $edi, undef $edi, implicit-def dead $eflags, implicit-def $rdi
     TAILJMPr64 killed renamable $rax, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit $rdi
 ...

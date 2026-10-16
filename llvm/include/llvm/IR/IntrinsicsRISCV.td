@@ -2108,6 +2108,12 @@ class RVPBinaryIntrinsic
   def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
   def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
 
+  // Packed Narrowing Clip.
+  def int_riscv_pnclipu  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipru : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclip   : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnclipr  : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2179,6 +2185,11 @@ class RVPBinaryIntrinsic
   def int_riscv_mulhru_u32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
   def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;
+
+  // Scalar "Q-format" Multiplication. On RV64 these map to the packed
+  // pmulq.w family on the low words.
+  def int_riscv_mulq_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_mulqr_i32 : RVPScalarBinaryIntrinsic;
 
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;

@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class TargetMachine;
+
 enum class RunOutliner {
   TargetDefault,
   AlwaysOutline,
@@ -91,7 +93,7 @@ struct CGPassBuilderOption {
   cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
 };
 
-LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();
+LLVM_ABI CGPassBuilderOption getCGPassBuilderOption(const TargetMachine &TM);
 
 } // namespace llvm
 

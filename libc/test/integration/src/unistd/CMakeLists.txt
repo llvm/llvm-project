@@ -38,6 +38,29 @@ add_integration_test(
     libc.include.sys_syscall
 )
 
+add_integration_test(
+  lockf_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    lockf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.sys_wait_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.stdlib.exit
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.lockf
+    libc.src.unistd.unlink
+)
+
 if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86}))
   add_integration_test(
     stack_smashing_test
@@ -176,6 +199,28 @@ add_integration_test(
     libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execve
+    libc.src.unistd.fork
+  ENV
+    EXECV_TEST=PASS
+)
+
+add_integration_test(
+  fexecve_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    fexecve_test.cpp
+  DEPENDS
+    libc_execv_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.fcntl_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fexecve
     libc.src.unistd.fork
   ENV
     EXECV_TEST=PASS
