@@ -786,3 +786,90 @@ entry:
       (i64 %x, i64 42, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f)
   ret void
 }
+
+; One value passed to an untied "r" input and to the "0" input tied to the
+; "rm" output, plus five other inputs. The def's register holds the value for
+; both reads, so the six registers fit and neither allocator folds the output.
+define i64 @test_tied_and_untied_same_value(i64 %v, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
+; GREEDY_RA-LABEL: test_tied_and_untied_same_value:
+; GREEDY_RA:       # %bb.0: # %entry
+; GREEDY_RA-NEXT:    pushq %rbp
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; GREEDY_RA-NEXT:    pushq %r15
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 24
+; GREEDY_RA-NEXT:    pushq %r14
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 32
+; GREEDY_RA-NEXT:    pushq %r13
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 40
+; GREEDY_RA-NEXT:    pushq %r12
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
+; GREEDY_RA-NEXT:    pushq %rbx
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 56
+; GREEDY_RA-NEXT:    .cfi_offset %rbx, -56
+; GREEDY_RA-NEXT:    .cfi_offset %r12, -48
+; GREEDY_RA-NEXT:    .cfi_offset %r13, -40
+; GREEDY_RA-NEXT:    .cfi_offset %r14, -32
+; GREEDY_RA-NEXT:    .cfi_offset %r15, -24
+; GREEDY_RA-NEXT:    .cfi_offset %rbp, -16
+; GREEDY_RA-NEXT:    #APP
+; GREEDY_RA-NEXT:    # %rdi %rdi %rsi %rdx %rcx %r8 %r9 %rdi
+; GREEDY_RA-NEXT:    #NO_APP
+; GREEDY_RA-NEXT:    movq %rdi, %rax
+; GREEDY_RA-NEXT:    popq %rbx
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 48
+; GREEDY_RA-NEXT:    popq %r12
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 40
+; GREEDY_RA-NEXT:    popq %r13
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 32
+; GREEDY_RA-NEXT:    popq %r14
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 24
+; GREEDY_RA-NEXT:    popq %r15
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; GREEDY_RA-NEXT:    popq %rbp
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 8
+; GREEDY_RA-NEXT:    retq
+;
+; FAST_RA-LABEL: test_tied_and_untied_same_value:
+; FAST_RA:       # %bb.0: # %entry
+; FAST_RA-NEXT:    pushq %rbp
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_RA-NEXT:    pushq %r15
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 24
+; FAST_RA-NEXT:    pushq %r14
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 32
+; FAST_RA-NEXT:    pushq %r13
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 40
+; FAST_RA-NEXT:    pushq %r12
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 48
+; FAST_RA-NEXT:    pushq %rbx
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 56
+; FAST_RA-NEXT:    .cfi_offset %rbx, -56
+; FAST_RA-NEXT:    .cfi_offset %r12, -48
+; FAST_RA-NEXT:    .cfi_offset %r13, -40
+; FAST_RA-NEXT:    .cfi_offset %r14, -32
+; FAST_RA-NEXT:    .cfi_offset %r15, -24
+; FAST_RA-NEXT:    .cfi_offset %rbp, -16
+; FAST_RA-NEXT:    #APP
+; FAST_RA-NEXT:    # %rdi %rdi %rsi %rdx %rcx %r8 %r9 %rdi
+; FAST_RA-NEXT:    #NO_APP
+; FAST_RA-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FAST_RA-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; FAST_RA-NEXT:    popq %rbx
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 48
+; FAST_RA-NEXT:    popq %r12
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 40
+; FAST_RA-NEXT:    popq %r13
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 32
+; FAST_RA-NEXT:    popq %r14
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 24
+; FAST_RA-NEXT:    popq %r15
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_RA-NEXT:    popq %rbp
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 8
+; FAST_RA-NEXT:    retq
+entry:
+  %r = call i64 asm sideeffect "# $0 $1 $2 $3 $4 $5 $6 $7",
+      "=rm,r,r,r,r,r,r,0,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
+      (i64 %v, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %v)
+  ret i64 %r
+}
