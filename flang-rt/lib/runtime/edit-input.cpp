@@ -559,43 +559,64 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
 
 static RT_API_ATTRS void RaiseFPExceptions(
     decimal::ConversionResultFlags flags) {
-#undef RAISE
 #if defined(RT_DEVICE_COMPILATION)
   Terminator terminator(__FILE__, __LINE__);
 #define RAISE(e) \
   terminator.Crash( \
       "not implemented yet: raising FP exception in device code: %s", #e);
-#else // !defined(RT_DEVICE_COMPILATION)
-#ifdef feraiseexcept // a macro in some environments; omit std::
-#define RAISE feraiseexcept
-#else
-#define RAISE std::feraiseexcept
-#endif
-#endif // !defined(RT_DEVICE_COMPILATION)
-
-// Some environment (e.g. emscripten, musl) don't define FE_OVERFLOW as allowed
-// by c99 (but not c++11) :-/
-#if defined(FE_OVERFLOW) || defined(RT_DEVICE_COMPILATION)
+  // Some environment (e.g. emscripten, musl) don't define FE_OVERFLOW as
+  // allowed by c99 (but not c++11) :-/
   if (flags & decimal::ConversionResultFlags::Overflow) {
     RAISE(FE_OVERFLOW);
   }
-#endif
-#if defined(FE_UNDERFLOW) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Underflow) {
     RAISE(FE_UNDERFLOW);
   }
-#endif
-#if defined(FE_INEXACT) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Inexact) {
     RAISE(FE_INEXACT);
   }
-#endif
-#if defined(FE_INVALID) || defined(RT_DEVICE_COMPILATION)
   if (flags & decimal::ConversionResultFlags::Invalid) {
     RAISE(FE_INVALID);
   }
-#endif
 #undef RAISE
+#else // !defined(RT_DEVICE_COMPILATION)
+  // Collect the requested exceptions, then raise only those not already set.
+  // feraiseexcept on an already-set flag is a no-op yet still costs a libm
+  // call, which dominates formatted real input of many inexact values.
+  int excepts{0};
+#if defined(FE_OVERFLOW)
+  if (flags & decimal::ConversionResultFlags::Overflow) {
+    excepts |= FE_OVERFLOW;
+  }
+#endif
+#if defined(FE_UNDERFLOW)
+  if (flags & decimal::ConversionResultFlags::Underflow) {
+    excepts |= FE_UNDERFLOW;
+  }
+#endif
+#if defined(FE_INEXACT)
+  if (flags & decimal::ConversionResultFlags::Inexact) {
+    excepts |= FE_INEXACT;
+  }
+#endif
+#if defined(FE_INVALID)
+  if (flags & decimal::ConversionResultFlags::Invalid) {
+    excepts |= FE_INVALID;
+  }
+#endif
+#ifdef fetestexcept // a macro in some environments; omit std::
+  excepts &= ~fetestexcept(excepts);
+#else
+  excepts &= ~std::fetestexcept(excepts);
+#endif
+  if (excepts) {
+#ifdef feraiseexcept // a macro in some environments; omit std::
+    feraiseexcept(excepts);
+#else
+    std::feraiseexcept(excepts);
+#endif
+  }
+#endif // !defined(RT_DEVICE_COMPILATION)
 }
 
 // If no special modes are in effect and the form of the input value
