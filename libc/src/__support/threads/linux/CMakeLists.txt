@@ -27,6 +27,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/unmap_and_exit
       libc.src.__support.macros.config
       libc.src.__support.macros.properties.architectures
   )
+  set(thread_unmap_and_exit_dep .unmap_and_exit)
 endif()
 
 add_header_library(
@@ -75,7 +76,7 @@ add_object_library(
     thread.cpp
   DEPENDS
     .futex_utils
-    .unmap_and_exit
+    ${thread_unmap_and_exit_dep}
     ${thread_tls_dep}
     libc.config.app_h
     libc.include.sys_syscall
