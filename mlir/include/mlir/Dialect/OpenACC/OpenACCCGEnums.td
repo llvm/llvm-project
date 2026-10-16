@@ -44,6 +44,7 @@ def OpenACC_MapFlagsTo : I32BitEnumAttrCaseBit<"to", 0>;
 def OpenACC_MapFlagsFrom : I32BitEnumAttrCaseBit<"from", 1>;
 def OpenACC_MapFlagsDelete : I32BitEnumAttrCaseBit<"delete_", 3, "delete">;
 def OpenACC_MapFlagsPtrAndObj : I32BitEnumAttrCaseBit<"ptr_and_obj", 4>;
+def OpenACC_MapFlagsReturnParam : I32BitEnumAttrCaseBit<"return_param", 6>;
 def OpenACC_MapFlagsPrivate : I32BitEnumAttrCaseBit<"private_", 7, "private">;
 def OpenACC_MapFlagsLiteral : I32BitEnumAttrCaseBit<"literal", 8>;
 def OpenACC_MapFlagsImplicit : I32BitEnumAttrCaseBit<"implicit", 9>;
@@ -68,7 +69,8 @@ def OpenACC_MapFlagsNoDeviceDescriptor
 def OpenACC_MapFlagsEnum : I32BitEnumAttr<
     "MapFlags", "OpenACC offload map-type flags",
     [OpenACC_MapFlagsNone, OpenACC_MapFlagsTo, OpenACC_MapFlagsFrom,
-     OpenACC_MapFlagsDelete, OpenACC_MapFlagsPtrAndObj, OpenACC_MapFlagsPrivate,
+     OpenACC_MapFlagsDelete, OpenACC_MapFlagsPtrAndObj,
+     OpenACC_MapFlagsReturnParam, OpenACC_MapFlagsPrivate,
      OpenACC_MapFlagsLiteral, OpenACC_MapFlagsImplicit, OpenACC_MapFlagsDevptr,
      OpenACC_MapFlagsManagedDevptr, OpenACC_MapFlagsNoCreate,
      OpenACC_MapFlagsGangPrivate, OpenACC_MapFlagsWorkerPrivate,

@@ -2575,9 +2575,9 @@ private:
   std::optional<BitPackInfo> computeBitPackLayout(const TreeEntry &TE) const;
 
   /// Returns the node packed for the shl operand \p LhsTE of a bitpack root.
-  /// If \p LhsTE is a (zext of) and(lshr/shl(load, C), mask) chain extracting
-  /// the same bits of every loaded lane, returns the load node and sets the
-  /// shift amounts of \p Info to the field offset in the loaded lanes.
+  /// If \p LhsTE is a (zext of) and(lshr/shl(x, C), mask) chain extracting
+  /// the same bits of every lane of x, returns the node of x and sets the
+  /// shift amounts of \p Info to the field offset in the lanes of x.
   /// Otherwise, returns \p LhsTE.
   const TreeEntry *getBitPackSource(const TreeEntry &LhsTE,
                                     BitPackInfo &Info) const;
@@ -14206,37 +14206,36 @@ const BoUpSLP::TreeEntry *BoUpSLP::getBitPackSource(const TreeEntry &LhsTE,
        ShiftTE->getOpcode() != Instruction::Shl) ||
       !IsChainNode(*ShiftTE))
     return &LhsTE;
-  const TreeEntry *LoadTE = getOperandEntry(ShiftTE, /*Idx=*/0);
-  if (LoadTE->State != TreeEntry::Vectorize ||
-      !LoadTE->ReorderIndices.empty() || !LoadTE->ReuseShuffleIndices.empty() ||
-      LoadTE->getOpcode() != Instruction::Load)
+  const TreeEntry *SrcTE = getOperandEntry(ShiftTE, /*Idx=*/0);
+  if (SrcTE->State != TreeEntry::Vectorize || !SrcTE->ReorderIndices.empty() ||
+      !SrcTE->ReuseShuffleIndices.empty())
     return &LhsTE;
-  const unsigned LoadBW = LoadTE->getMainOp()->getType()->getScalarSizeInBits();
+  const unsigned SrcBW = SrcTE->getMainOp()->getType()->getScalarSizeInBits();
   const unsigned FieldWidth = Info.FieldWidth;
   std::optional<uint64_t> UniformOff;
   for (auto [Idx, FieldOff] : enumerate(Info.LShrAmts)) {
     // The and-mask keeps the field bits, which are shifted from the same bits
-    // of every loaded lane.
+    // of every source lane.
     Value *Sh;
     const APInt *Mask, *Amt;
-    if (FieldOff + FieldWidth > LoadBW ||
+    if (FieldOff + FieldWidth > SrcBW ||
         !match(AndTE->Scalars[Idx], m_c_And(m_Value(Sh), m_APInt(Mask))) ||
         !Mask->extractBits(FieldWidth, FieldOff).isAllOnes())
       return &LhsTE;
     uint64_t Off = FieldOff;
-    if (match(Sh, m_LShr(m_Specific(LoadTE->Scalars[Idx]), m_APInt(Amt))))
+    if (match(Sh, m_LShr(m_Specific(SrcTE->Scalars[Idx]), m_APInt(Amt))))
       Off += Amt->getZExtValue();
-    else if (match(Sh, m_Shl(m_Specific(LoadTE->Scalars[Idx]), m_APInt(Amt))) &&
+    else if (match(Sh, m_Shl(m_Specific(SrcTE->Scalars[Idx]), m_APInt(Amt))) &&
              Amt->ule(FieldOff))
       Off -= Amt->getZExtValue();
     else
       return &LhsTE;
-    if (Off + FieldWidth > LoadBW || (UniformOff && *UniformOff != Off))
+    if (Off + FieldWidth > SrcBW || (UniformOff && *UniformOff != Off))
       return &LhsTE;
     UniformOff = Off;
   }
   fill(Info.LShrAmts, *UniformOff);
-  return LoadTE;
+  return SrcTE;
 }
 
 unsigned BoUpSLP::getZExtSrcWidth(const TreeEntry &TE) const {
@@ -15071,8 +15070,8 @@ void BoUpSLP::transformNodes() {
              "Expected constants only.");
       ShiftEntry->State = TreeEntry::CombinedVectorize;
       ShiftEntry->CombinedOp = TreeEntry::ReducedBitPack;
-      // The chain of a uniform field extract of a load node and its constant
-      // operands are part of the combined node.
+      // The chain of a uniform field extract and its constant operands are
+      // part of the combined node.
       std::optional<BitPackInfo> Info = computeBitPackLayout(E);
       TreeEntry *LhsTE = getOperandEntry(ShlEntry, /*Idx=*/0);
       const TreeEntry *SrcTE = getBitPackSource(*LhsTE, *Info);
@@ -17504,36 +17503,40 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     const TreeEntry *LhsTE = getOperandEntry(ShlTE, /*Idx=*/0);
     std::optional<BitPackInfo> Info = computeBitPackLayout(*E);
     const TreeEntry *SrcTE = Info ? getBitPackSource(*LhsTE, *Info) : LhsTE;
-    auto GetScalarCost = [&, &TTI = *TTI](unsigned Idx) {
-      Instruction *I;
-      if (!match(UniqueValues[Idx], m_Instruction(I)))
-        return InstructionCost(TTI::TCC_Free);
-      InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
-      if (match(I, m_And(m_Shl(m_Value(), m_Value()), m_Value())))
-        ScalarCost += TTI.getInstructionCost(
-            cast<Instruction>(I->getOperand(0)), CostKind);
-      // The scalars of the combined chain are removed too.
-      for (const TreeEntry *TE = LhsTE; TE != SrcTE;
-           TE = getOperandEntry(TE, /*Idx=*/0)) {
-        auto *ChainI = cast<Instruction>(TE->Scalars[UniqueIndexes[Idx]]);
-        if (ChainI->isCast()) {
+    // The scalars of the root, the shl and the combined chain are removed.
+    SmallVector<const TreeEntry *> CombinedTEs = {E};
+    if (ShlTE != E)
+      CombinedTEs.push_back(ShlTE);
+    for (const TreeEntry *TE = LhsTE; TE != SrcTE;
+         TE = getOperandEntry(TE, /*Idx=*/0))
+      CombinedTEs.push_back(TE);
+    auto GetLaneCost = [&, &TTI = *TTI](unsigned Lane) {
+      InstructionCost ScalarCost = 0;
+      for (const TreeEntry *TE : CombinedTEs) {
+        auto *I = dyn_cast<Instruction>(TE->Scalars[Lane]);
+        // A copyable lane is the operand of the node, costed with its node.
+        if (!I || TE->isCopyableElement(I))
+          continue;
+        if (I->isCast()) {
           ScalarCost += TTI.getCastInstrCost(
-              ChainI->getOpcode(), ChainI->getType(),
-              ChainI->getOperand(0)->getType(), TTI::getCastContextHint(ChainI),
-              CostKind, ChainI);
+              I->getOpcode(), I->getType(), I->getOperand(0)->getType(),
+              TTI::getCastContextHint(I), CostKind, I);
           continue;
         }
         assert(is_contained(
                    {Instruction::And, Instruction::LShr, Instruction::Shl},
-                   ChainI->getOpcode()) &&
-               "Expected and/shift in the chain.");
+                   I->getOpcode()) &&
+               "Expected and/shift in the bit pack.");
         ScalarCost += TTI.getArithmeticInstrCost(
-            ChainI->getOpcode(), ChainI->getType(), CostKind,
-            TTI::getOperandInfo(ChainI->getOperand(0)),
-            TTI::getOperandInfo(ChainI->getOperand(1)),
-            {ChainI->getOperand(0), ChainI->getOperand(1)}, ChainI, TLI);
+            I->getOpcode(), I->getType(), CostKind,
+            TTI::getOperandInfo(I->getOperand(0)),
+            TTI::getOperandInfo(I->getOperand(1)),
+            {I->getOperand(0), I->getOperand(1)}, I, TLI);
       }
       return ScalarCost;
+    };
+    auto GetScalarCost = [&](unsigned Idx) {
+      return GetLaneCost(UniqueIndexes[Idx]);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
       if (!Info)
@@ -17544,7 +17547,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       Type *SrcScalarTy = SrcTE->Scalars.front()->getType();
       if (auto It = MinBWs.find(SrcTE); It != MinBWs.end())
         SrcScalarTy = IntegerType::get(F->getContext(), It->second.first);
-      // The loaded lanes are packed into the node type.
+      // The source lanes are packed into the node type.
       Type *DstScalarTy = SrcTE == LhsTE ? SrcScalarTy : ScalarTy;
       InstructionCost PackCost =
           getBitPackCost(TTI,
@@ -17561,6 +17564,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                                     : Instruction::ZExt,
             OrigScalarTy, DstScalarTy, getCastContextHint(*LhsTE), CostKind);
       }
+      // The copyable lanes are not the scalars of the node, but their scalars
+      // in the shl and the combined chain are removed too.
+      for (auto [Lane, V] : enumerate(E->Scalars))
+        if (E->isCopyableElement(V))
+          PackCost -= GetLaneCost(Lane);
       return PackCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);

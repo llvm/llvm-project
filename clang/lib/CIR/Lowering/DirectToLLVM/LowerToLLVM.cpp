@@ -3470,19 +3470,19 @@ mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
   }
 
   llvm::SmallVector<mlir::Block *, 8> caseDestinations;
-  llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
 
   for (mlir::Block *x : op.getCaseDestinations())
     caseDestinations.push_back(x);
 
-  for (mlir::OperandRange x : op.getCaseOperands())
-    caseOperands.push_back(x);
+  // Use the converted operands so they match the type-converted successor
+  // block arguments.
+  llvm::SmallVector<mlir::ValueRange> caseOperands = adaptor.getCaseOperands();
 
   // Set switch op to branch to the newly created blocks.
   rewriter.setInsertionPoint(op);
   rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
       op, adaptor.getCondition(), op.getDefaultDestination(),
-      op.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
+      adaptor.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
   return mlir::success();
 }
 
@@ -6441,11 +6441,10 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
 
   (void)mlir::applyPassManagerCLOptions(pm);
 
-  if (mlir::failed(pm.run(mlirModule))) {
-    // FIXME: Handle any errors where they occurs and return a nullptr here.
-    report_fatal_error(
-        "The pass manager failed to lower CIR to LLVMIR dialect!");
-  }
+  // The failing pass has already reported its error through the MLIR
+  // diagnostic engine.
+  if (mlir::failed(pm.run(mlirModule)))
+    return nullptr;
 
   if (!mlirSaveTempsOutFile.empty()) {
     std::error_code ec;
@@ -6464,11 +6463,6 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
   StringRef moduleName = mlirModule.getName().value_or("CIRToLLVMModule");
   std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
       mlirModule, llvmCtx, moduleName, /*disableVerification=*/false, fs);
-
-  if (!llvmModule) {
-    // FIXME: Handle any errors where they occurs and return a nullptr here.
-    report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
-  }
 
   return llvmModule;
 }
