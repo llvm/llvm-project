@@ -2556,16 +2556,16 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
-    case Type::PackIndexing: {
-      const PackIndexingType *PIT = P->getAs<PackIndexingType>();
-      if (PIT->hasSelectedType()) {
-        return DeduceTemplateArgumentsByTypeMatch(
-            S, TemplateParams, PIT->getSelectedType(), A, Info, Deduced, TDF,
-            degradeCallPartialOrderingKind(POK),
-            /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
-      }
-      return TemplateDeductionResult::IncompletePack;
-    }
+    case Type::PackIndexing:
+      // C++26 [temp.deduct.type]p5.2:
+      //   The non-deduced contexts are:
+      //   [...]
+      //   - A pack-index-specifier or a pack-index-expression.
+      //
+      // A pack-index-specifier whose index and pack are fully substituted
+      // canonicalizes to its selected type, so this case is only reached for
+      // an unresolved one; nothing can be deduced from it.
+      return TemplateDeductionResult::Success;
     }
 
   llvm_unreachable("Invalid Type Class!");
