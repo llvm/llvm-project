@@ -276,6 +276,9 @@ def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
                                      "Enable instructions in ISA 3.0.",
                                      [FeatureISA2_07]>;
+def FeaturePPCAS : SubtargetFeature<"ppcas", "HasPPCAS", "true",
+                                    "Enable PowerPC AS instructions",
+                                    [Feature64Bit]>;
 def FeatureISA3_1 : SubtargetFeature<"isa-v31-instructions", "IsISA3_1",
                                      "true",
                                      "Enable instructions in ISA 3.1.",
@@ -382,6 +385,10 @@ def IsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def IsBigEndian : Predicate<"!Subtarget->isLittleEndian()">;
 def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
 def IsPPC64 : Predicate<"Subtarget->isPPC64()">;
+def HasPPCAS : Predicate<"Subtarget->hasPPCAS()">,
+               AssemblerPredicate<(all_of FeaturePPCAS)>;
+def NoPPCAS : Predicate<"!Subtarget->hasPPCAS()">,
+              AssemblerPredicate<(not FeaturePPCAS)>;
 def IsBookE  : Predicate<"Subtarget->isBookE()">;
 def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
 def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
@@ -423,6 +430,8 @@ def HasFutureVector : Predicate<"Subtarget->hasFutureVector()">;
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
 def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
+def IsISA3_0OrPPCAS : Predicate<"Subtarget->isISA3_0() || Subtarget->hasPPCAS()">,
+                      AssemblerPredicate<(any_of FeatureISA3_0, FeaturePPCAS)>;
 def IsNotISA3_0 : Predicate<"!Subtarget->isISA3_0()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
