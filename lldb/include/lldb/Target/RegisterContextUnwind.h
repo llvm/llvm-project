@@ -208,6 +208,11 @@ private:
   bool IsUnwindPlanValidForCurrentPC(
       std::shared_ptr<const UnwindPlan> unwind_plan_sp);
 
+  /// Return true if EH-frame has a signal-frame FDE for the current raw PC.
+  /// Signal frames must be recognized before normal PC adjustment and
+  /// fast-plan selection.
+  bool IsSignalFrameAtRawPC();
+
   lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
 
   lldb_private::Thread &m_thread;
