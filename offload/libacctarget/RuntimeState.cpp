@@ -21,6 +21,7 @@ PluginManager *PM = nullptr;
 } // namespace llvm::acc::target
 
 using namespace llvm::acc::target;
+using namespace llvm::acc::target::debug;
 
 static std::mutex &getInitMutex() {
   static std::mutex Mutex;

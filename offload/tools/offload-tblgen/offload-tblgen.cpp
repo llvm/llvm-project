@@ -34,6 +34,13 @@ enum ActionType {
   GenExports,
   GenErrcodes,
   GenInfo,
+  GenAccFModule,
+  GenAccCEnums,
+  GenAccExports,
+  GenAccPrintEnums,
+  GenAccFEntries,
+  GenAccFImplDecls,
+  GenAccFImpls,
 };
 
 namespace {
@@ -60,7 +67,24 @@ cl::opt<ActionType> Action(
                    "Generate export file for the Offload library"),
         clEnumValN(GenErrcodes, "gen-errcodes",
                    "Generate Offload Error Code enum"),
-        clEnumValN(GenInfo, "gen-info", "Generate Offload Info enum")));
+        clEnumValN(GenInfo, "gen-info", "Generate Offload Info enum"),
+        clEnumValN(GenAccFModule, "gen-acc-f-module",
+                   "Generate the OpenACC Fortran module fragment"),
+        clEnumValN(GenAccCEnums, "gen-acc-c-enums",
+                   "Generate the OpenACC C enums and constants"),
+        clEnumValN(GenAccExports, "gen-acc-exports",
+                   "Generate the OpenACC version script"),
+        clEnumValN(GenAccPrintEnums, "gen-acc-print-enums",
+                   "Generate OpenACC enum name lookups for printing"),
+        clEnumValN(GenAccFEntries, "gen-acc-f-entries",
+                   "Generate the traced C entry points that the OpenACC "
+                   "Fortran interfaces bind to"),
+        clEnumValN(GenAccFImplDecls, "gen-acc-f-impl-decls",
+                   "Generate declarations of the C++ routines that implement "
+                   "the OpenACC Fortran API"),
+        clEnumValN(
+            GenAccFImpls, "gen-acc-f-impls",
+            "Generate OpenACC impl stubs (a scaffold to copy and edit)")));
 }
 
 static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
@@ -97,6 +121,27 @@ static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenInfo:
     EmitOffloadInfo(Records, OS);
+    break;
+  case GenAccFModule:
+    EmitAccFModule(Records, OS);
+    break;
+  case GenAccCEnums:
+    EmitAccCEnums(Records, OS);
+    break;
+  case GenAccExports:
+    EmitAccExports(Records, OS);
+    break;
+  case GenAccPrintEnums:
+    EmitAccPrintEnums(Records, OS);
+    break;
+  case GenAccFEntries:
+    EmitAccFEntries(Records, OS);
+    break;
+  case GenAccFImplDecls:
+    EmitAccFImplDecls(Records, OS);
+    break;
+  case GenAccFImpls:
+    EmitAccFImpls(Records, OS);
     break;
   }
 
