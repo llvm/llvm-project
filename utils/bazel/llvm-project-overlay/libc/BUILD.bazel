@@ -3613,6 +3613,7 @@ libc_support_library(
     textual_hdrs = nearest_integer_platform_hdrs,
     deps = [
         ":__support_common",
+        ":__support_cpp_type_traits",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_architectures",
