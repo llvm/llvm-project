@@ -981,15 +981,19 @@ struct VectorContractToAMXDotProduct
             });
         auto one = rewriter.getIndexAttr(1);
         SmallVector<OpFoldResult> strides(indexVals.size(), one);
-        SmallVector<OpFoldResult> sizes = getAsIndexOpFoldResult(
-            contractOp.getRhs().getDefiningOp()->getContext(),
-            vecTy.getShape());
+        // A rank-reducing read drops leading unit dims. Append them back for
+        // the subview.
+        SmallVector<int64_t> subviewShape(indexVals.size() - vecTy.getRank(),
+                                          1);
+        llvm::append_range(subviewShape, vecTy.getShape());
+        SmallVector<OpFoldResult> sizes =
+            getAsIndexOpFoldResult(contractOp->getContext(), subviewShape);
         auto subview = memref::SubViewOp::create(rewriter, loc, srcBuffRhs,
                                                  indexVals, sizes, strides);
         auto bufferType = MemRefType::get({16, (16 * blockingFactor)}, ipType);
         auto packedBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-        // create a loop that does online packing.
+        // Create a loop that does online packing.
         Value step =
             arith::ConstantIndexOp::create(rewriter, loc, blockingFactor);
         Value uBound = arith::ConstantIndexOp::create(rewriter, loc,
@@ -1006,20 +1010,21 @@ struct VectorContractToAMXDotProduct
               Value i1_load =
                   arith::AddIOp::create(rewriter, loc, nextLoadIndx, iv);
 
-              indicesRhs[indicesRhs.size() - 2] = iv;
-              indicesRhs[indicesRhs.size() - 1] = c0;
-              ValueRange range1(indicesRhs);
+              // The source subview already accounts for the leading unit
+              // dimensions.
+              size_t numOffsets = indicesRhs.size();
+              SmallVector<Value> indices(numOffsets, c0);
+              indices[numOffsets - 2] = iv;
               auto vec1 = vector::LoadOp::create(
                   rewriter, loc,
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
-                  range1);
+                  indices);
 
-              indicesRhs[indicesRhs.size() - 2] = i1_load;
-              ValueRange range2(indicesRhs);
+              indices[numOffsets - 2] = i1_load;
               auto vec2 = vector::LoadOp::create(
                   rewriter, loc,
                   VectorType::get(16 * (blockingFactor / 2), ipType), subview,
-                  range2);
+                  indices);
 
               vector::ShuffleOp writeVal1;
               vector::ShuffleOp writeVal2;
