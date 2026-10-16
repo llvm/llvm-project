@@ -581,3 +581,123 @@ spirv.module Logical GLSL450 {
 // CHECK-LABEL: spirv.func @main
 // CHECK-SAME:  (%{{.+}}: !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>) "None"
 // CHECK:       spirv.Return
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
+  spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_wide_vector(%value: vector<4xf32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %c3 = spirv.Constant 3 : i32
+    %base = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c3] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xf32>, StorageBuffer>
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xf32>
+    spirv.Return
+  }
+}
+// CHECK-LABEL: spirv.module
+// CHECK: spirv.GlobalVariable @canonical bind(0, 0)
+// CHECK-NOT: spirv.GlobalVariable @wide
+// CHECK: spirv.func @store_wide_vector(%[[VALUE:.+]]: vector<4xf32>)
+// CHECK-DAG: %[[ZERO:.+]] = spirv.Constant 0 : i32
+// CHECK-DAG: %[[THREE:.+]] = spirv.Constant 3 : i32
+// CHECK-DAG: %[[BASE:.+]] = spirv.mlir.addressof @canonical
+// CHECK-DAG: %[[TWO:.+]] = spirv.Constant 2 : i32
+// CHECK: %[[INDEX:.+]] = spirv.IMul %[[THREE]], %[[TWO]] : i32
+// CHECK: %[[PTR0:.+]] = spirv.AccessChain %[[BASE]][%[[ZERO]], %[[INDEX]]]
+// CHECK: %[[LOW:.+]] = spirv.VectorShuffle [0 : i32, 1 : i32] %[[VALUE]], %[[VALUE]]
+// CHECK: spirv.Store "StorageBuffer" %[[PTR0]], %[[LOW]] : vector<2xf32>
+// CHECK: %[[HIGH:.+]] = spirv.VectorShuffle [2 : i32, 3 : i32] %[[VALUE]], %[[VALUE]]
+// CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
+// CHECK: %[[NEXT:.+]] = spirv.IAdd %[[INDEX]], %[[ONE]] : i32
+// CHECK: %[[PTR1:.+]] = spirv.AccessChain %[[BASE]][%[[ZERO]], %[[NEXT]]]
+// CHECK: spirv.Store "StorageBuffer" %[[PTR1]], %[[HIGH]] : vector<2xf32>
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
+  spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_wide_bitcast(%value: vector<4xi32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %c3 = spirv.Constant 3 : i32
+    %base = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c3] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xi32>, StorageBuffer>
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xi32>
+    spirv.Return
+  }
+}
+// CHECK-LABEL: spirv.module
+// CHECK: spirv.GlobalVariable @canonical bind(0, 0)
+// CHECK-NOT: spirv.GlobalVariable @wide
+// CHECK: spirv.func @store_wide_bitcast
+// CHECK: spirv.Bitcast
+// CHECK: spirv.VectorShuffle
+// CHECK: spirv.Store "StorageBuffer" {{.+}} : vector<2xf32>
+// CHECK: spirv.VectorShuffle
+// CHECK: spirv.Store "StorageBuffer" {{.+}} : vector<2xf32>
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
+  spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_wide_aligned(%value: vector<4xf32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %c3 = spirv.Constant 3 : i32
+    %base = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c3] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xf32>, StorageBuffer>
+    spirv.Store "StorageBuffer" %ptr, %value ["Volatile|Aligned", 16] : vector<4xf32>
+    spirv.Return
+  }
+}
+// CHECK-LABEL: spirv.module
+// CHECK: spirv.GlobalVariable @canonical bind(0, 0)
+// CHECK-NOT: spirv.GlobalVariable @wide
+// CHECK: spirv.func @store_wide_aligned
+// CHECK: spirv.VectorShuffle
+// CHECK: spirv.Store "StorageBuffer" {{.+}}["Volatile|Aligned", 16] : vector<2xf32>
+// CHECK: spirv.VectorShuffle
+// CHECK: spirv.Store "StorageBuffer" {{.+}}["Volatile|Aligned", 8] : vector<2xf32>
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.GlobalVariable @wide bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_equal_vector_bitcast(%value: vector<4xi32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %c3 = spirv.Constant 3 : i32
+    %base = spirv.mlir.addressof @wide : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c3] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xi32>, StorageBuffer>
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xi32>
+    spirv.Return
+  }
+}
+// CHECK-LABEL: spirv.module
+// CHECK: spirv.GlobalVariable @canonical bind(0, 0)
+// CHECK-NOT: spirv.GlobalVariable @wide
+// CHECK: spirv.func @store_equal_vector_bitcast
+// CHECK: spirv.Bitcast
+// CHECK: spirv.Store "StorageBuffer" {{.+}} : vector<4xf32>
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @canonical bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.GlobalVariable @alias bind(0, 0) {aliased} : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+  spirv.func @store_equal_vector(%value: vector<4xf32>) "None" {
+    %c0 = spirv.Constant 0 : i32
+    %base = spirv.mlir.addressof @alias : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>
+    %ptr = spirv.AccessChain %base[%c0, %c0] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<vector<4xf32>, StorageBuffer>
+    spirv.Store "StorageBuffer" %ptr, %value : vector<4xf32>
+    spirv.Return
+  }
+}
+// CHECK-LABEL: spirv.module
+// CHECK: spirv.GlobalVariable @canonical bind(0, 0)
+// CHECK-NOT: spirv.GlobalVariable @alias
+// CHECK: spirv.func @store_equal_vector(%[[VALUE:.+]]: vector<4xf32>)
+// CHECK: %[[PTR:.+]] = spirv.AccessChain
+// CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[VALUE]] : vector<4xf32>
