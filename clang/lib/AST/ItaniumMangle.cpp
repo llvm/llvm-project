@@ -5341,6 +5341,8 @@ recurse:
       else
         Out << "pi";
       const Expr *Init = New->getInitializer();
+      if (const auto *SILE = dyn_cast<CXXStdInitializerListExpr>(Init))
+        Init = SILE->getSubExpr()->IgnoreImplicit();
       if (const CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init)) {
         // Directly inline the initializers.
         for (CXXConstructExpr::const_arg_iterator I = CCE->arg_begin(),
