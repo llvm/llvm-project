@@ -11,8 +11,9 @@ define void @test0() nounwind {
 ; CHECK-LABEL: test0:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lea (dst,%pc), %a0
-; CHECK-NEXT:    move.l %a0, (ptr,%pc)
-; CHECK-NEXT:    move.l (src,%pc), (dst,%pc)
+; CHECK-NEXT:    lea (ptr,%pc), %a1
+; CHECK-NEXT:    move.l %a0, (%a1)
+; CHECK-NEXT:    move.l (src,%pc), (%a0)
 ; CHECK-NEXT:    rts
 entry:
     store ptr @dst, ptr @ptr
@@ -29,8 +30,9 @@ define void @test1() nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lea (dst2,%pc), %a0
-; CHECK-NEXT:    move.l %a0, (ptr2,%pc)
-; CHECK-NEXT:    move.l (src2,%pc), (dst2,%pc)
+; CHECK-NEXT:    lea (ptr2,%pc), %a1
+; CHECK-NEXT:    move.l %a0, (%a1)
+; CHECK-NEXT:    move.l (src2,%pc), (%a0)
 ; CHECK-NEXT:    rts
 entry:
     store ptr @dst2, ptr @ptr2
@@ -62,7 +64,8 @@ define void @test3() nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr afoo
-; CHECK-NEXT:    move.l %a0, (pfoo,%pc)
+; CHECK-NEXT:    lea (pfoo,%pc), %a1
+; CHECK-NEXT:    move.l %a0, (%a1)
 ; CHECK-NEXT:    jsr (%a0)
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
@@ -96,8 +99,9 @@ define void @test5() nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lea (dst6,%pc), %a0
-; CHECK-NEXT:    move.l %a0, (ptr6,%pc)
-; CHECK-NEXT:    move.l (src6,%pc), (dst6,%pc)
+; CHECK-NEXT:    lea (ptr6,%pc), %a1
+; CHECK-NEXT:    move.l %a0, (%a1)
+; CHECK-NEXT:    move.l (src6,%pc), (%a0)
 ; CHECK-NEXT:    rts
 entry:
     store ptr @dst6, ptr @ptr6
@@ -111,8 +115,7 @@ define void @test7(i32 %n.u) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %d0
 ; CHECK-NEXT:    add.l #-1, %d0
-; CHECK-NEXT:    move.l %d0, %d1
-; CHECK-NEXT:    sub.l #12, %d1
+; CHECK-NEXT:    cmpi.l #12, %d0
 ; CHECK-NEXT:    bhi .LBB6_12
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    lsl.l #2, %d0

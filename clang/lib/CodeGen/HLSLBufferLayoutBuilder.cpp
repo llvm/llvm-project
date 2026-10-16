@@ -61,6 +61,8 @@ HLSLBufferLayoutBuilder::layOutStruct(const RecordType *RT,
   CharUnits CurrentOffset = CharUnits::Zero();
   for (auto &[FD, Offset] : FieldsWithOffset) {
     llvm::Type *LayoutType = layOutType(FD->getType());
+    if (!LayoutType)
+      continue;
 
     const llvm::DataLayout &DL = CGM.getDataLayout();
     CharUnits Size =
@@ -142,6 +144,10 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutMatrix(QualType Ty) {
 }
 
 llvm::Type *HLSLBufferLayoutBuilder::layOutType(QualType Ty) {
+  // HLSL resource types are not included in the buffer layout.
+  if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+    return nullptr;
+
   if (const auto *AT = CGM.getContext().getAsConstantArrayType(Ty))
     return layOutArray(AT);
 

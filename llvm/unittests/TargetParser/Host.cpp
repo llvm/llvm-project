@@ -160,6 +160,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd8c"),
             "c1-ultra");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd96"),
+            "c2-ultra");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc00"),
             "falkor");
@@ -330,6 +333,10 @@ CPU part	: 0x0a1
                                               "CPU part        : 0xd01"),
             "tsv110");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
+                                              "CPU part        : 0xd06"),
+            "hip12");
+
   // Verify A64FX.
   const std::string A64FXProcCpuInfo = R"(
 processor       : 0
@@ -365,6 +372,14 @@ CPU revision    : 0
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
                                               "CPU part        : 0x010"),
             "olympus");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x11"),
+            "rigel");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x011"),
+            "rigel");
 
   // Snapdragon mixed implementer quirk
   const std::string Snapdragon865ProcCPUInfo = R"(

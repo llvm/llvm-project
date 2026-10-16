@@ -9,13 +9,16 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
 
-#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
-#include "llvm/Support/Path.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Regex.h"
 #include <list>
 #include <optional>
+#include <set>
+#include <string>
 #include <unordered_map>
 
 namespace clang {
@@ -64,7 +67,7 @@ public:
   /// default. These code sections include:
   ///   - raw string literals (containing #include).
   ///   - #if blocks.
-  ///   - Special #include's among declarations (e.g. functions).
+  ///   - Special #includes among declarations (e.g. functions).
   ///
   /// Returns a replacement that inserts the new header into a suitable #include
   /// block of the same category. This respects the order of the existing
@@ -77,6 +80,38 @@ public:
                                              bool IsAngled,
                                              IncludeDirective Directive) const;
 
+  /// Represents a single header directive to be inserted in a batch operation.
+  ///
+  /// Usage:
+  ///   - HeaderToInsert("<vector>") -> inserts #include <vector>
+  ///     (auto-detects angled)
+  ///   - HeaderToInsert("\"foo.h\"") -> inserts #include "foo.h"
+  ///     (auto-detects quoted)
+  ///   - HeaderToInsert("<foo>", IncludeDirective::Import) -> inserts #import
+  ///     <foo>
+  ///   - HeaderToInsert("foo.h", IncludeDirective::Include, /*IsAngled=*/false)
+  ///     -> explicit IsAngled
+  struct HeaderToInsert {
+    enum class QuoteStyle { AUTO, ANGLED, QUOTED };
+
+    // The header name, with any surrounding quotes or brackets removed.
+    std::string Header;
+    // Whether to insert #include or #import.
+    IncludeDirective Directive;
+    // Whether to use <> or "" for the header. This can be set explicitly with
+    // QuoteStyle::ANGLED or QuoteStyle::QUOTED, or auto-detected based on
+    // `RawOrSpelledHeader` with QuoteStyle::AUTO.
+    bool IsAngled;
+
+    HeaderToInsert(llvm::StringRef RawOrSpelledHeader,
+                   IncludeDirective Directive = IncludeDirective::Include,
+                   QuoteStyle QuoteStyle = QuoteStyle::AUTO);
+  };
+
+  /// Inserts a batch of headers into the code, sorting and grouping them
+  /// according to IncludeStyle and returning the replacements.
+  tooling::Replacements insert(llvm::ArrayRef<HeaderToInsert> Headers) const;
+
   /// Removes all existing #includes and #imports of \p Header quoted with <> if
   /// \p IsAngled is true or "" if \p IsAngled is false.
   /// This doesn't resolve the header file path; it only deletes #includes and
@@ -88,7 +123,7 @@ public:
 
 private:
   struct Include {
-    Include(StringRef Name, tooling::Range R, IncludeDirective D)
+    Include(llvm::StringRef Name, tooling::Range R, IncludeDirective D)
         : Name(Name), R(R), Directive(D) {}
 
     // An include header quoted with either <> or "".

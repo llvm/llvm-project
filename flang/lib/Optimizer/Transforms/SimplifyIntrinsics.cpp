@@ -26,7 +26,6 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -40,8 +39,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <llvm/Support/ErrorHandling.h>
@@ -421,8 +418,8 @@ static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
           loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/true));
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t minInt = llvm::APInt::getSignedMinValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, elementType, minInt);
+    return builder.createIntegerConstant(loc, elementType,
+                                         llvm::APInt::getSignedMinValue(bits));
   };
 
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
@@ -670,9 +667,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
       return builder.createRealConstant(loc, elementType, limit);
     }
     unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t initValue = (isMax ? llvm::APInt::getSignedMinValue(bits)
-                               : llvm::APInt::getSignedMaxValue(bits))
-                            .getSExtValue();
+    llvm::APInt initValue = isMax ? llvm::APInt::getSignedMinValue(bits)
+                                  : llvm::APInt::getSignedMaxValue(bits);
     return builder.createIntegerConstant(loc, elementType, initValue);
   };
 
@@ -1060,6 +1056,12 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
 
   auto argType = getArgElementType(args[0]);
   if (!argType)
+    return;
+  // Unsigned reductions (e.g. MaxvalUnsigned/SumUnsigned) lower to runtime
+  // calls whose signless result type intentionally differs from the unsigned
+  // element type, and the inline reduction generated below would use a signed
+  // identity/comparison. Leave the correct runtime call in place.
+  if (argType->isUnsignedInteger())
     return;
   assert(*argType == resultType &&
          "Argument/result types mismatch in reduction");

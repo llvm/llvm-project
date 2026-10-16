@@ -144,12 +144,12 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
 }
 
 // SPIR-V does not expose this, always return false.
-_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(const void *ptr) {
   return 0;
 }
 
 // SPIR-V does not expose this, always return false.
-_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(const void *ptr) {
   return 0;
 }
 

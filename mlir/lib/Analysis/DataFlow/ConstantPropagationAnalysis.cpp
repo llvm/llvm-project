@@ -70,23 +70,29 @@ LogicalResult SparseConstantPropagation::visitOperation(
   // folds in-place. The constant passed in may not correspond to the real
   // runtime value, so in-place updates are not allowed.
   SmallVector<Value, 8> originalOperands(op->getOperands());
-  DictionaryAttr originalAttrs = op->getAttrDictionary();
+  DictionaryAttr originalAttrs = op->getDiscardableAttrDictionary();
+  Attribute originalProperties = op->getPropertiesAsAttribute();
 
-  // Simulate the result of folding this operation to a constant. If folding
-  // fails or was an in-place fold, mark the results as overdefined.
+  // Simulate the result of folding this operation to a constant.
   SmallVector<OpFoldResult, 8> foldResults;
   foldResults.reserve(op->getNumResults());
-  if (failed(op->fold(constantOperands, foldResults))) {
-    setAllToEntryStates(results);
-    return success();
-  }
+  LogicalResult folded = op->fold(constantOperands, foldResults);
 
-  // If the folding was in-place, mark the results as overdefined and reset
-  // the operation. We don't allow in-place folds as the desire here is for
-  // simulated execution, and not general folding.
-  if (foldResults.empty()) {
+  // `fold` can mutate the operation in place and still return an out-of-place
+  // result, so the mutation must be reverted regardless of the outcome.
+  // Only write the operands back if the fold changed them, as `setOperands`
+  // relinks use-lists even for identical values.
+  if (!llvm::equal(op->getOperands(), originalOperands))
     op->setOperands(originalOperands);
-    op->setAttrs(originalAttrs);
+  op->setDiscardableAttrs(originalAttrs);
+  if (originalProperties)
+    (void)op->setPropertiesFromAttribute(originalProperties,
+                                         /*emitError=*/nullptr);
+
+  // If folding failed or was in-place, mark the results as overdefined. We
+  // don't allow in-place folds here: the goal is simulated execution, not
+  // general folding.
+  if (failed(folded) || foldResults.empty()) {
     setAllToEntryStates(results);
     return success();
   }

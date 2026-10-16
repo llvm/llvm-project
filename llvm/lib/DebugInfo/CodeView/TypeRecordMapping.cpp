@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -52,38 +53,31 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
   return "UnknownLeaf";
 }
 
-template <typename T>
-static bool compEnumNames(const EnumEntry<T> &lhs, const EnumEntry<T> &rhs) {
-  return lhs.Name < rhs.Name;
-}
-
 template <typename T, typename TFlag>
 static std::string getFlagNames(CodeViewRecordIO &IO, T Value,
-                                ArrayRef<EnumEntry<TFlag>> Flags) {
+                                EnumStrings<TFlag> Flags) {
   if (!IO.isStreaming())
     return std::string("");
-  typedef EnumEntry<TFlag> FlagEntry;
-  typedef SmallVector<FlagEntry, 10> FlagVector;
-  FlagVector SetFlags;
-  for (const auto &Flag : Flags) {
-    if (Flag.Value == 0)
-      continue;
-    if ((Value & Flag.Value) == Flag.Value) {
-      SetFlags.push_back(Flag);
-    }
-  }
+  typedef const typename EnumStrings<TFlag>::EnumString *FlagEntry;
+  SmallVector<FlagEntry, 10> SetFlags;
+  for (const auto &Flag : Flags)
+    if (Flag.value() != 0 && (Value & Flag.value()) == Flag.value())
+      SetFlags.push_back(&Flag);
 
-  llvm::sort(SetFlags, &compEnumNames<TFlag>);
+  llvm::sort(SetFlags, [](FlagEntry LHS, FlagEntry RHS) {
+    return LHS->name() < RHS->name();
+  });
 
   std::string FlagLabel;
   bool FirstOcc = true;
-  for (const auto &Flag : SetFlags) {
+  for (FlagEntry Flag : SetFlags) {
     if (FirstOcc)
       FirstOcc = false;
     else
       FlagLabel += (" | ");
 
-    FlagLabel += (Flag.Name.str() + " (0x" + utohexstr(Flag.Value) + ")");
+    FlagLabel +=
+        (std::string(Flag->name()) + " (0x" + utohexstr(Flag->value()) + ")");
   }
 
   if (!FlagLabel.empty()) {
@@ -96,18 +90,8 @@ static std::string getFlagNames(CodeViewRecordIO &IO, T Value,
 
 template <typename T, typename TEnum>
 static StringRef getEnumName(CodeViewRecordIO &IO, T Value,
-                             ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  if (!IO.isStreaming())
-    return "";
-  StringRef Name;
-  for (const auto &EnumItem : EnumValues) {
-    if (EnumItem.Value == Value) {
-      Name = EnumItem.Name;
-      break;
-    }
-  }
-
-  return Name;
+                             EnumStrings<TEnum> EnumValues) {
+  return IO.isStreaming() ? EnumValues.toString(Value) : "";
 }
 
 static std::string getMemberAttributes(CodeViewRecordIO &IO,
@@ -115,17 +99,17 @@ static std::string getMemberAttributes(CodeViewRecordIO &IO,
                                        MethodOptions Options) {
   if (!IO.isStreaming())
     return "";
-  std::string AccessSpecifier = std::string(
-      getEnumName(IO, uint8_t(Access), ArrayRef(getMemberAccessNames())));
+  std::string AccessSpecifier =
+      std::string(getEnumName(IO, uint8_t(Access), getMemberAccessNames()));
   std::string MemberAttrs(AccessSpecifier);
   if (Kind != MethodKind::Vanilla) {
-    std::string MethodKind = std::string(
-        getEnumName(IO, unsigned(Kind), ArrayRef(getMemberKindNames())));
+    std::string MethodKind =
+        std::string(getEnumName(IO, unsigned(Kind), getMemberKindNames()));
     MemberAttrs += ", " + MethodKind;
   }
   if (Options != MethodOptions::None) {
     std::string MethodOptions =
-        getFlagNames(IO, unsigned(Options), ArrayRef(getMethodOptionNames()));
+        getFlagNames(IO, unsigned(Options), getMethodOptionNames());
     MemberAttrs += ", " + MethodOptions;
   }
   return MemberAttrs;
@@ -304,9 +288,8 @@ Error TypeRecordMapping::visitMemberEnd(CVMemberRecord &Record) {
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ModifierRecord &Record) {
-  std::string ModifierNames =
-      getFlagNames(IO, static_cast<uint16_t>(Record.Modifiers),
-                   ArrayRef(getTypeModifierNames()));
+  std::string ModifierNames = getFlagNames(
+      IO, static_cast<uint16_t>(Record.Modifiers), getTypeModifierNames());
   error(IO.mapInteger(Record.ModifiedType, "ModifiedType"));
   error(IO.mapEnum(Record.Modifiers, "Modifiers" + ModifierNames));
   return Error::success();
@@ -314,11 +297,10 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ModifierRecord &Record) {
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           ProcedureRecord &Record) {
-  std::string CallingConvName = std::string(getEnumName(
-      IO, uint8_t(Record.CallConv), ArrayRef(getCallingConventions())));
-  std::string FuncOptionNames =
-      getFlagNames(IO, static_cast<uint16_t>(Record.Options),
-                   ArrayRef(getFunctionOptionEnum()));
+  std::string CallingConvName = std::string(
+      getEnumName(IO, uint8_t(Record.CallConv), getCallingConventions()));
+  std::string FuncOptionNames = getFlagNames(
+      IO, static_cast<uint16_t>(Record.Options), getFunctionOptionEnum());
   error(IO.mapInteger(Record.ReturnType, "ReturnType"));
   error(IO.mapEnum(Record.CallConv, "CallingConvention: " + CallingConvName));
   error(IO.mapEnum(Record.Options, "FunctionOptions" + FuncOptionNames));
@@ -330,11 +312,10 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           MemberFunctionRecord &Record) {
-  std::string CallingConvName = std::string(getEnumName(
-      IO, uint8_t(Record.CallConv), ArrayRef(getCallingConventions())));
-  std::string FuncOptionNames =
-      getFlagNames(IO, static_cast<uint16_t>(Record.Options),
-                   ArrayRef(getFunctionOptionEnum()));
+  std::string CallingConvName = std::string(
+      getEnumName(IO, uint8_t(Record.CallConv), getCallingConventions()));
+  std::string FuncOptionNames = getFlagNames(
+      IO, static_cast<uint16_t>(Record.Options), getFunctionOptionEnum());
   error(IO.mapInteger(Record.ReturnType, "ReturnType"));
   error(IO.mapInteger(Record.ClassType, "ClassType"));
   error(IO.mapInteger(Record.ThisType, "ThisType"));
@@ -374,12 +355,12 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, PointerRecord &Record) {
   SmallString<128> Attr("Attrs: ");
 
   if (IO.isStreaming()) {
-    std::string PtrType = std::string(getEnumName(
-        IO, unsigned(Record.getPointerKind()), ArrayRef(getPtrKindNames())));
+    std::string PtrType = std::string(
+        getEnumName(IO, unsigned(Record.getPointerKind()), getPtrKindNames()));
     Attr += "[ Type: " + PtrType;
 
-    std::string PtrMode = std::string(getEnumName(
-        IO, unsigned(Record.getMode()), ArrayRef(getPtrModeNames())));
+    std::string PtrMode = std::string(
+        getEnumName(IO, unsigned(Record.getMode()), getPtrModeNames()));
     Attr += ", Mode: " + PtrMode;
 
     auto PtrSizeOf = Record.getSize();
@@ -411,8 +392,8 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, PointerRecord &Record) {
 
     MemberPointerInfo &M = *Record.MemberInfo;
     error(IO.mapInteger(M.ContainingType, "ClassType"));
-    std::string PtrMemberGetRepresentation = std::string(getEnumName(
-        IO, uint16_t(M.Representation), ArrayRef(getPtrMemberRepNames())));
+    std::string PtrMemberGetRepresentation = std::string(
+        getEnumName(IO, uint16_t(M.Representation), getPtrMemberRepNames()));
     error(IO.mapEnum(M.Representation,
                      "Representation: " + PtrMemberGetRepresentation));
   }
@@ -430,44 +411,89 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArrayRecord &Record) {
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ClassRecord &Record) {
-  assert((CVR.kind() == TypeLeafKind::LF_STRUCTURE) ||
-         (CVR.kind() == TypeLeafKind::LF_CLASS) ||
-         (CVR.kind() == TypeLeafKind::LF_INTERFACE));
+  std::string PropertiesNames = getFlagNames(
+      IO, static_cast<uint16_t>(Record.Options), getClassOptionNames());
 
-  std::string PropertiesNames =
-      getFlagNames(IO, static_cast<uint16_t>(Record.Options),
-                   ArrayRef(getClassOptionNames()));
-  error(IO.mapInteger(Record.MemberCount, "MemberCount"));
-  error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
-  error(IO.mapInteger(Record.FieldList, "FieldList"));
-  error(IO.mapInteger(Record.DerivationList, "DerivedFrom"));
-  error(IO.mapInteger(Record.VTableShape, "VShape"));
-  error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
-  error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
-                             Record.hasUniqueName()));
+  // The original and *2 versions are handled in the same high level record as
+  // they're almost identical except for the widths of members. The *2 versions
+  // store the properties as 32 bits and the member count as an encoded integer.
+  TypeLeafKind Kind = CVR.kind();
+  if (Kind == TypeLeafKind::LF_STRUCTURE2 || Kind == TypeLeafKind::LF_CLASS2 ||
+      Kind == TypeLeafKind::LF_INTERFACE2) {
+    uint32_t Options = llvm::to_underlying(Record.Options);
+    error(IO.mapInteger(Options, "Properties" + PropertiesNames));
+    if (IO.isReading())
+      Record.Options = static_cast<ClassOptions>(Options);
+
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapInteger(Record.DerivationList, "DerivedFrom"));
+    error(IO.mapInteger(Record.VTableShape, "VShape"));
+    error(IO.mapEncodedInteger(Record.MemberCount, "MemberCount"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  } else {
+    assert(Kind == TypeLeafKind::LF_STRUCTURE ||
+           Kind == TypeLeafKind::LF_CLASS ||
+           Kind == TypeLeafKind::LF_INTERFACE);
+
+    // This is not an error to avoid failing to write all type records.
+    assert(
+        (IO.isReading() ||
+         Record.MemberCount <= std::numeric_limits<uint16_t>::max()) &&
+        "use the *2 versions of this record if there are 2^16 or more members");
+
+    error(IO.mapTruncInteger<uint16_t>(Record.MemberCount, "MemberCount"));
+    error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapInteger(Record.DerivationList, "DerivedFrom"));
+    error(IO.mapInteger(Record.VTableShape, "VShape"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  }
 
   return Error::success();
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, UnionRecord &Record) {
-  std::string PropertiesNames =
-      getFlagNames(IO, static_cast<uint16_t>(Record.Options),
-                   ArrayRef(getClassOptionNames()));
-  error(IO.mapInteger(Record.MemberCount, "MemberCount"));
-  error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
-  error(IO.mapInteger(Record.FieldList, "FieldList"));
-  error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
-  error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
-                             Record.hasUniqueName()));
+  std::string PropertiesNames = getFlagNames(
+      IO, static_cast<uint16_t>(Record.Options), getClassOptionNames());
+
+  if (CVR.kind() == LF_UNION2) {
+    uint32_t Options = llvm::to_underlying(Record.Options);
+    error(IO.mapInteger(Options, "Properties" + PropertiesNames));
+    if (IO.isReading())
+      Record.Options = static_cast<ClassOptions>(Options);
+
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapEncodedInteger(Record.MemberCount, "MemberCount"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  } else {
+    // This is not an error to avoid failing to write all type records.
+    assert(
+        (IO.isReading() ||
+         Record.MemberCount <= std::numeric_limits<uint16_t>::max()) &&
+        "use the *2 versions of this record if there are 2^16 or more members");
+
+    error(IO.mapTruncInteger<uint16_t>(Record.MemberCount, "MemberCount"));
+
+    error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
+    error(IO.mapInteger(Record.FieldList, "FieldList"));
+    error(IO.mapEncodedInteger(Record.Size, "SizeOf"));
+    error(mapNameAndUniqueName(IO, Record.Name, Record.UniqueName,
+                               Record.hasUniqueName()));
+  }
 
   return Error::success();
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, EnumRecord &Record) {
-  std::string PropertiesNames =
-      getFlagNames(IO, static_cast<uint16_t>(Record.Options),
-                   ArrayRef(getClassOptionNames()));
-  error(IO.mapInteger(Record.MemberCount, "NumEnumerators"));
+  std::string PropertiesNames = getFlagNames(
+      IO, static_cast<uint16_t>(Record.Options), getClassOptionNames());
+  error(IO.mapTruncInteger<uint16_t>(Record.MemberCount, "NumEnumerators"));
   error(IO.mapEnum(Record.Options, "Properties" + PropertiesNames));
   error(IO.mapInteger(Record.UnderlyingType, "UnderlyingType"));
   error(IO.mapInteger(Record.FieldList, "FieldListType"));
@@ -618,8 +644,8 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, LabelRecord &Record) {
-  std::string ModeName = std::string(
-      getEnumName(IO, uint16_t(Record.Mode), ArrayRef(getLabelTypeEnum())));
+  std::string ModeName =
+      std::string(getEnumName(IO, uint16_t(Record.Mode), getLabelTypeEnum()));
   error(IO.mapEnum(Record.Mode, "Mode: " + ModeName));
   return Error::success();
 }

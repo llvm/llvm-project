@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 class S<int s> {
   bits<2> val = !cond(!eq(s, 8):  {0, 0},

@@ -67,7 +67,6 @@ raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR) {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }

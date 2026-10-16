@@ -274,7 +274,7 @@ bool HostInfoBase::ComputePathRelativeToLibrary(FileSpec &file_spec,
   raw_path = (parent_path + dir).str();
   LLDB_LOG(log, "Derived the path as: {0}", raw_path);
   file_spec.SetDirectory(raw_path);
-  return (bool)file_spec.GetDirectory();
+  return !file_spec.GetDirectory().empty();
 }
 
 void HostInfoBase::SetSharedLibraryDirectoryHelper(
@@ -302,7 +302,7 @@ bool HostInfoBase::ComputeSharedLibraryDirectory(
   // Remove the filename so that this FileSpec only represents the directory.
   file_spec.SetDirectory(lldb_file_spec.GetDirectory());
 
-  return (bool)file_spec.GetDirectory();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoBase::ComputeSupportExeDirectory(FileSpec &file_spec) {

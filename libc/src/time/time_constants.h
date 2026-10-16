@@ -74,17 +74,6 @@ constexpr int ISO_FIRST_DAY_OF_YEAR = 3; // the 4th day of the year, 0-indexed.
 constexpr int ASCTIME_BUFFER_SIZE = 256;
 constexpr int ASCTIME_MAX_BYTES = 26;
 
-/* 2000-03-01 (mod 400 year, immediately after feb29 */
-constexpr int64_t SECONDS_UNTIL2000_MARCH_FIRST =
-    (946684800LL + SECONDS_PER_DAY * (31 + 29));
-constexpr int WEEK_DAY_OF2000_MARCH_FIRST = 3;
-
-constexpr int DAYS_PER400_YEARS =
-    (DAYS_PER_NON_LEAP_YEAR * 400) + (400 / 4) - 3;
-constexpr int DAYS_PER100_YEARS =
-    (DAYS_PER_NON_LEAP_YEAR * 100) + (100 / 4) - 1;
-constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4) + 1;
-
 constexpr time_t OUT_OF_RANGE_RETURN_VALUE = -1;
 
 constexpr cpp::array<cpp::string_view, DAYS_PER_WEEK> WEEK_DAY_NAMES = {
@@ -102,8 +91,12 @@ constexpr cpp::array<cpp::string_view, MONTHS_PER_YEAR> MONTH_FULL_NAMES = {
     "January", "February", "March",     "April",   "May",      "June",
     "July",    "August",   "September", "October", "November", "December"};
 
-constexpr int NON_LEAP_YEAR_DAYS_IN_MONTH[] = {31, 28, 31, 30, 31, 30,
-                                               31, 31, 30, 31, 30, 31};
+// Cumulative number of days before each month in a non-leap year.
+// 1-indexed: element [1] is January (0 days before it),
+// element [2] is February (31 days before it), etc.
+// Element [0] is unused padding for direct month-number indexing.
+constexpr int CUMULATIVE_DAYS_BEFORE_MONTH[] = {
+    0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 
 } // namespace time_constants
 } // namespace LIBC_NAMESPACE_DECL

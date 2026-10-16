@@ -10,15 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -70,14 +68,11 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
     if (std::optional<UndefinedVal> V =
             state->getSVal(Var.getOriginalRegion()).getAs<UndefinedVal>()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
-        // Generate a bug report.
-        SmallString<128> buf;
-        llvm::raw_svector_ostream os(buf);
-
-        os << "Variable '" << VD->getName()
-           << "' is uninitialized when captured by block";
-
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(
+            BT,
+            "Variable '" + Twine(VD->getName()) +
+                "' is uninitialized when captured by block",
+            N);
         if (const Expr *Ex = FindBlockDeclRefExpr(BE->getBody(), VD))
           R->addRange(Ex->getSourceRange());
         bugreporter::trackStoredValue(*V, VR, *R,

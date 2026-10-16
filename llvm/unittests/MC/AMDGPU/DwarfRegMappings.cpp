@@ -43,9 +43,9 @@ createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
 }
 
 TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {
-  for (auto Triple :
-       {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
-    auto TM = createTargetMachine(Triple, "gfx1010", "+wavefrontsize64");
+  for (auto Triple : {"amdgpu10.10-amd-", "amdgpu10.10-amd-amdhsa",
+                      "amdgpu10.10-amd-amdpal"}) {
+    auto TM = createTargetMachine(Triple, "", "+wavefrontsize64");
     if (TM) {
       const auto &MRI = TM->getMCRegisterInfo();
       // Wave64 Dwarf register mapping test numbers
@@ -63,9 +63,9 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave64DwarfRegMapping) {
 }
 
 TEST(AMDGPUDwarfRegMappingTests, TestWave32DwarfRegMapping) {
-  for (auto Triple :
-       {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
-    auto TM = createTargetMachine(Triple, "gfx1010", "+wavefrontsize32");
+  for (auto Triple : {"amdgpu10.10-amd-", "amdgpu10.10-amd-amdhsa",
+                      "amdgpu10.10-amd-amdpal"}) {
+    auto TM = createTargetMachine(Triple, "", "+wavefrontsize32");
     if (TM) {
       const auto &MRI = TM->getMCRegisterInfo();
       // Wave32 Dwarf register mapping test numbers

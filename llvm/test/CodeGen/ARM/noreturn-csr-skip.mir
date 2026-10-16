@@ -1,4 +1,4 @@
-# RUN: llc -mtriple thumbv7m-none-eabi -run-pass prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple thumbv7m-none-eabi -run-pass prolog-epilog %s -o - | FileCheck %s
 
 --- |
   define void @throw() noreturn { unreachable }

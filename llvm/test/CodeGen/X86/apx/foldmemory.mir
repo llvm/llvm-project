@@ -49,20 +49,20 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $xmm0 = FsFLD0SS
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = lr-split COPY [[COPY3]]
   ; CHECK-NEXT:   $rdi = COPY [[COPY5]]
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[COPY2]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64 = lr-split COPY [[COPY2]]
   ; CHECK-NEXT:   dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr64 = lr-split COPY [[COPY1]]
   ; CHECK-NEXT:   dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr32 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr32 = lr-split COPY [[COPY]]
   ; CHECK-NEXT:   dead $ecx = MOV32r0 implicit-def dead $eflags, implicit-def $rcx
   ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   CALL64r [[MOV32r0_1]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit killed $xmm0, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY5]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY6]]
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY [[COPY7]]
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY [[COPY8]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = lr-split COPY [[COPY5]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = lr-split COPY [[COPY6]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = lr-split COPY [[COPY7]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = lr-split COPY [[COPY8]]
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %stack.2)
   ; CHECK-NEXT:   MOV64mi32 [[MOV64rm]], 8, [[MOV32r0_]], 0, $noreg, 0 :: (store (s64))

@@ -132,6 +132,16 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+/// The kind of update operation performed on the buckets of a histogram, i.e.
+/// buckets[indices[i]] = UpdateOp(buckets[indices[i]], Val).
+enum class HistogramUpdateKind {
+  Add,
+  Sub,
+  UAddSat,
+  UMax,
+  UMin,
+};
+
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
@@ -164,6 +174,21 @@ isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID, unsigned ScalarOpdIdx,
 LLVM_ABI bool
 isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                        const TargetTransformInfo *TTI);
+
+/// Returns the argument index of the pointer parameter for the vector memory
+/// intrinsic \p ID, or `std::nullopt` if the intrinsic does not have a pointer
+/// operand.
+LLVM_ABI std::optional<unsigned>
+getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the data value of the vector store intrinsic
+/// \p ID, or `std::nullopt` if the intrinsic does not have a data operand.
+LLVM_ABI std::optional<unsigned>
+getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the mask for the vector intrinsic \p ID, or
+/// `std::nullopt` if the intrinsic does not have a mask operand.
+LLVM_ABI std::optional<unsigned> getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
@@ -665,8 +690,9 @@ class InterleavedAccessInfo {
 public:
   InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
                         DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
+                        const LoopAccessInfo *LAI, bool OptForSize)
+      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI), OptForSize(OptForSize) {
+  }
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -738,6 +764,7 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   const LoopAccessInfo *LAI;
+  bool OptForSize;
 
   /// True if the loop may contain non-reversed interleaved groups with
   /// out-of-bounds accesses. We ensure we don't speculatively access memory
@@ -805,10 +832,13 @@ private:
     delete Group;
   }
 
-  /// Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order. Any
+  /// SCEV predicates needed to compute the strides are added to \p
+  /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides);
+      const SymbolicStrideMap &Strides,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
   LLVM_ABI static bool isStrided(int Stride);

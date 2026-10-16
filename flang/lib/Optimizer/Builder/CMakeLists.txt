@@ -14,6 +14,7 @@ add_flang_library(FIRBuilder
   LowLevelIntrinsics.cpp
   MIFCommon.cpp
   MutableBox.cpp
+  OpenACCIntrinsicCall.cpp
   PPCIntrinsicCall.cpp
   Runtime/Allocatable.cpp
   Runtime/ArrayConstructor.cpp
@@ -30,7 +31,6 @@ add_flang_library(FIRBuilder
   Runtime/Main.cpp
   Runtime/Numeric.cpp
   Runtime/Pointer.cpp
-  Runtime/Ragged.cpp
   Runtime/Reduction.cpp
   Runtime/Stop.cpp
   Runtime/Support.cpp
@@ -53,7 +53,6 @@ add_flang_library(FIRBuilder
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranEvaluate
   FortranSupport
   HLFIRDialect
   MIFDialect

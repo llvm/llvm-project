@@ -93,15 +93,16 @@ getOrCreateMultiReturnType(ConversionPatternRewriter &rewriter, Location loc,
     auto savedIP = rewriter.saveInsertionPoint();
     rewriter.setInsertionPoint(insertBefore);
 
-    emitc::ClassOp classOp = emitc::ClassOp::create(rewriter, loc, structName,
-                                                    /*final_specifier=*/false,
-                                                    emitc::ClassType::struct_);
+    emitc::ClassOp classOp = emitc::ClassOp::create(
+        rewriter, loc, structName, /*sym_visibility=*/nullptr,
+        /*final_specifier=*/false, emitc::ClassType::struct_);
     rewriter.createBlock(&classOp.getBody());
     rewriter.setInsertionPointToStart(&classOp.getBody().front());
 
     for (auto [i, type] : llvm::enumerate(types)) {
       auto fieldName = rewriter.getStringAttr("field" + std::to_string(i));
-      emitc::FieldOp::create(rewriter, loc, fieldName, TypeAttr::get(type),
+      emitc::FieldOp::create(rewriter, loc, fieldName,
+                             /*sym_visibility=*/nullptr, TypeAttr::get(type),
                              nullptr);
     }
 
@@ -188,9 +189,12 @@ public:
     }
 
     if (callOp.getNumResults() <= 1) {
-      rewriter.replaceOpWithNewOp<emitc::CallOp>(
-          callOp, callOp.getResultTypes(), adaptor.getOperands(),
-          callOp->getAttrs());
+      auto newCall = rewriter.replaceOpWithNewOp<emitc::CallOp>(
+          callOp, callOp.getCalleeAttr(), convertedResultTypes,
+          adaptor.getOperands());
+      newCall.setArgAttrsAttr(callOp.getArgAttrsAttr());
+      newCall.setResAttrsAttr(callOp.getResAttrsAttr());
+      newCall->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
       return success();
     }
 
@@ -292,12 +296,14 @@ public:
                           signatureConverter.getConvertedTypes(),
                           resultType ? TypeRange(resultType) : TypeRange()));
 
-    // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
-      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-          namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-    }
+    newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+    newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+    newFuncOp.setVisibility(funcOp.getVisibility());
+
+    // Copy over the discardable attributes.
+    for (const auto &namedAttr :
+         funcOp->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     // Add `extern` to specifiers if `func.func` is declaration only.
     if (funcOp.isDeclaration()) {

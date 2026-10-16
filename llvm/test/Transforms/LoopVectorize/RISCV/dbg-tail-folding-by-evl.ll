@@ -7,9 +7,9 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !3 {
 ; CHECK-LABEL: define void @reverse_store(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[UMIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP1]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -19,7 +19,7 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !3 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP1]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP9]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i64 0, [[TMP5]]
@@ -27,12 +27,12 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !3 {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <vscale x 2 x i64> [[VEC_IND]], splat (i64 -1), !dbg [[DBG6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 2 x i64> [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP8]], !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP8]], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 0, [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[TMP9]], i64 [[TMP12]], !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG8]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP13]], ptr align 8 [[TMP14]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP10]], i64 [[TMP12]], !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG8]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP14]], ptr align 8 [[TMP13]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP4]]), !dbg [[DBG8]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -72,7 +72,7 @@ exit:
 !9 = !DILocation(line: 2, column: 27, scope: !3)
 !10 = !DILocation(line: 2, column: 5, scope: !3)
 !11 = distinct !{!11, !12}
-!12 = !{!"llvm.loop.vectorize.enable", i1 true}
+!12 = !{!"llvm.loop.vectorize.enable"}
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "{{.*}}dbg-tail-folding-by-evl.cpp", directory: {{.*}})

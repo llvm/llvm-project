@@ -48,7 +48,7 @@ protected:
 
 TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
   auto G = std::make_unique<LinkGraph>(
-      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"),
+      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
       SubtargetFeatures(), x86_64::getEdgeKindName);
 
   auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
@@ -75,7 +75,7 @@ TEST_F(ObjectLinkingLayerTest, ResourceTracker) {
   std::vector<ResourceTrackerSP> Trackers;
   for (unsigned I = 0; I < 64; I++) {
     auto G = std::make_unique<LinkGraph>(
-        "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"),
+        "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
         SubtargetFeatures(), x86_64::getEdgeKindName);
 
     auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
@@ -142,7 +142,7 @@ TEST_F(ObjectLinkingLayerTest, ClaimLateDefinedWeakSymbols) {
 
   ObjLinkingLayer.addPlugin(std::make_unique<TestPlugin>());
   auto G = std::make_unique<LinkGraph>(
-      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"),
+      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
       SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
@@ -195,7 +195,7 @@ TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
 
   ObjLinkingLayer.addPlugin(std::make_unique<TestPlugin>());
   auto G = std::make_unique<LinkGraph>(
-      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"),
+      "foo", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
       SubtargetFeatures(), getGenericEdgeKindName);
 
   auto &DataSec = G->createSection("__data", MemProt::Read | MemProt::Write);
@@ -249,7 +249,7 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
 
   {
     auto G1 = std::make_unique<LinkGraph>(
-        "G1", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"),
+        "G1", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
         SubtargetFeatures(), x86_64::getEdgeKindName);
 
     auto &DataSec = G1->createSection("__data", MemProt::Read | MemProt::Write);
@@ -267,7 +267,7 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
 
   {
     auto G2 = std::make_unique<LinkGraph>(
-        "G2", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"),
+        "G2", ES.getSymbolStringPool(), Triple("x86_64-apple-darwin"), 8,
         SubtargetFeatures(), x86_64::getEdgeKindName);
 
     auto &DataSec = G2->createSection("__data", MemProt::Read | MemProt::Write);

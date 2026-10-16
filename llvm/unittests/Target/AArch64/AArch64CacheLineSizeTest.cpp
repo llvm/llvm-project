@@ -56,6 +56,7 @@ TEST_F(AArch64CacheLineSizeTest, IsCorrect) {
   EXPECT_EQ(getCacheLineSizeForCPU("thunderx2t99"), 64u);
   EXPECT_EQ(getCacheLineSizeForCPU("thunderx3t110"), 64u);
   EXPECT_EQ(getCacheLineSizeForCPU("tsv110"), 64u);
+  EXPECT_EQ(getCacheLineSizeForCPU("hip12"), 64u);
 }
 
 } // namespace

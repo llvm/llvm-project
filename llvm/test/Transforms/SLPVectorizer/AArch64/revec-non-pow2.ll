@@ -31,9 +31,8 @@ define i32 @test(ptr %0) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = load <3 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = add <3 x i32> [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp sgt <3 x i32> [[TMP25]], zeroinitializer
-; CHECK-NEXT:    [[TMP27:%.*]] = bitcast <3 x i1> [[TMP26]] to i3
-; CHECK-NEXT:    [[TMP28:%.*]] = call i3 @llvm.ctpop.i3(i3 [[TMP27]])
-; CHECK-NEXT:    [[TMP29:%.*]] = zext i3 [[TMP28]] to i32
+; CHECK-NEXT:    [[TMP27:%.*]] = zext <3 x i1> [[TMP26]] to <3 x i32>
+; CHECK-NEXT:    [[TMP29:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP27]])
 ; CHECK-NEXT:    ret i32 [[TMP29]]
 ;
 .split:

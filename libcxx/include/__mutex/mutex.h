@@ -22,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("mutex") mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("mutex") _LIBCPP_WARN_UNUSED mutex {
   __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 
 public:
@@ -39,7 +39,7 @@ public:
 
   _LIBCPP_ACQUIRE_CAPABILITY() void lock();
   [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock() _NOEXCEPT;
-  _LIBCPP_RELEASE_CAPABILITY void unlock() _NOEXCEPT;
+  _LIBCPP_RELEASE_CAPABILITY() void unlock() _NOEXCEPT;
 
   typedef __libcpp_mutex_t* native_handle_type;
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__m_; }

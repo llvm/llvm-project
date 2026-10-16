@@ -163,7 +163,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
       assert(RV && "Template arg doesn't exist??");
       RV->setUsed(true);
       if (TrackReferenceLocs)
-        RV->addReferenceLoc(NameLoc);
+        Rec->appendValueReferenceLoc(ArgName, NameLoc);
       return VarInit::get(ArgName, RV->getType());
     }
     return Name->getValue() == "NAME"
@@ -181,7 +181,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
       // The variable is a record field?
       if (RecordVal *RV = CurRec->getValue(Name)) {
         if (TrackReferenceLocs)
-          RV->addReferenceLoc(NameLoc);
+          CurRec->appendValueReferenceLoc(Name, NameLoc);
         return VarInit::get(Name, RV->getType());
       }
 
@@ -218,7 +218,8 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   return nullptr;
 }
 
-bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
+bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV,
+                        const Record *FromRec) {
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
 
@@ -232,6 +233,8 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
                             ERV->getType()->getAsString() + "'");
   } else {
     CurRec->addValue(RV);
+    if (FromRec)
+      CurRec->appendValueReferenceLocs(*FromRec, RV.getNameInit());
   }
   return false;
 }
@@ -355,7 +358,7 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   // record.
   for (const RecordVal &Field : SC->getValues())
     if (!Field.isTemplateArg())
-      if (AddValue(CurRec, SubClass.RefRange.Start, Field))
+      if (AddValue(CurRec, SubClass.RefRange.Start, Field, SC))
         return true;
 
   if (resolveArgumentsOfClass(R, SC, SubClass.TemplateArgs,
@@ -2294,9 +2297,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
 
     const Init *A = StringInit::get(Records, Lex.getCurStrVal());
     if (CurRec && CurRec->getValue(A)) {
-      TokError((Twine("left !foldl variable '") + A->getAsString() +
-                "' already defined")
-                   .str());
+      TokError(Twine("left !foldl variable '") + A->getAsString() +
+               "' already defined");
       return nullptr;
     }
 
@@ -2312,9 +2314,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
 
     const Init *B = StringInit::get(Records, Lex.getCurStrVal());
     if (CurRec && CurRec->getValue(B)) {
-      TokError((Twine("right !foldl variable '") + B->getAsString() +
-                "' already defined")
-                   .str());
+      TokError(Twine("right !foldl variable '") + B->getAsString() +
+               "' already defined");
       return nullptr;
     }
 
@@ -2600,9 +2601,8 @@ const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
   Lex.Lex(); // eat the ID.
 
   if (CurRec && CurRec->getValue(LHS)) {
-    TokError((Twine("iteration variable '") + LHS->getAsString() +
-              "' is already defined")
-                 .str());
+    TokError(Twine("iteration variable '") + LHS->getAsString() +
+             "' is already defined");
     return nullptr;
   }
 
@@ -2753,9 +2753,7 @@ TGParser::resolveInitTypes(ArrayRef<const Init *> Inits, const Twine &ErrCtx) {
     if (isa<UnsetInit>(V))
       continue;
 
-    const RecTy *VTy = nullptr;
-    if (const auto *Vt = dyn_cast<TypedInit>(V))
-      VTy = Vt->getType();
+    const RecTy *VTy = cast<TypedInit>(V)->getType();
 
     if (!Type) {
       Type = VTy;
@@ -3338,13 +3336,12 @@ const Init *TGParser::ParseValue(Record *CurRec, const RecTy *ItemType,
       // Add a reference to this field if we know the record class.
       if (TrackReferenceLocs) {
         if (const auto *DI = dyn_cast<DefInit>(Result)) {
-          const RecordVal *V = DI->getDef()->getValue(FieldName);
-          const_cast<RecordVal *>(V)->addReferenceLoc(FieldNameLoc);
+          DI->getDef()->appendValueReferenceLoc(FieldName, FieldNameLoc);
         } else if (const auto *TI = dyn_cast<TypedInit>(Result)) {
           if (const auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
             for (const Record *R : RecTy->getClasses())
-              if (const auto *RV = R->getValue(FieldName))
-                const_cast<RecordVal *>(RV)->addReferenceLoc(FieldNameLoc);
+              if (R->getValue(FieldName))
+                R->appendValueReferenceLoc(FieldName, FieldNameLoc);
           }
         }
       }
@@ -4782,6 +4779,9 @@ bool TGParser::ParseFile() {
   // If we have unread input at the end of the file, report it.
   if (Lex.getCode() == tgtok::Eof)
     return false;
+
+  if (Lex.getCode() == tgtok::Error)
+    return true;
 
   return TokError("Unexpected token at top level");
 }

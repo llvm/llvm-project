@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefix=ASM %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=GFX1250-OBJDUMP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefix=GFX1250-ASM %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=GFX1250-OBJDUMP %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck --check-prefix=GFX1250-ASM %s
 
 ; OBJDUMP: Contents of section .rodata:
 ; OBJDUMP-NEXT: 0000 00000000 00000000 10010000 00000000  ................
@@ -76,7 +76,7 @@ define amdgpu_kernel void @amdhsa_kernarg_preload_0_implicit_2(i32) #0 { ret voi
 ; GFX1250-OBJDUMP: 0110 00000000 00000000 00000000 00000000  ................
 ; GFX1250-OBJDUMP: 0120 00000000 00000000 00000000 10000000  ................
 ; GFX1250-OBJDUMP: 0130 00000fc0 c0130000 1e041800 00000000  ................
-; GFX1250-ASM: .sgpr_count:     32
+; GFX1250-ASM: .sgpr_count:     66
 define amdgpu_kernel void @many__i32(
   i32 inreg  %a0, i32 inreg  %a1, i32 inreg  %a2, i32 inreg  %a3,
   i32 inreg  %a4, i32 inreg  %a5, i32 inreg  %a6, i32 inreg  %a7,

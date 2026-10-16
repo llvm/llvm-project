@@ -67,3 +67,32 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-DATA
 // MISSING-DATA:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-data.json'
 // MISSING-DATA-NEXT: failed to read SummaryData entries from field 'data': expected JSON array
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/missing-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TARGET-TRIPLE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/missing-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TARGET-TRIPLE
+// MISSING-TARGET-TRIPLE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-target-triple.json'
+// MISSING-TARGET-TRIPLE-NEXT: failed to read TargetTriple from field 'target_triple': expected JSON string
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/not-normalized-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NOT-NORMALIZED-TARGET-TRIPLE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/not-normalized-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NOT-NORMALIZED-TARGET-TRIPLE
+// NOT-NORMALIZED-TARGET-TRIPLE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}not-normalized-target-triple.json'
+// NOT-NORMALIZED-TARGET-TRIPLE-NEXT: reading TargetTriple from field 'target_triple'
+// NOT-NORMALIZED-TARGET-TRIPLE-NEXT: target triple 'arm64-macosx-apple' is not in normalized form (expected 'arm64-apple-macosx')
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TYPE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TYPE
+// MISSING-TYPE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}missing-type.json'
+// MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISMATCHED-TYPE
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISMATCHED-TYPE
+// MISMATCHED-TYPE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}mismatched-type.json'
+// MISMATCHED-TYPE-NEXT: expected 'TUSummary' for field 'type' but got 'LUSummary'

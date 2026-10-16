@@ -4,3 +4,6 @@ RUN: llvm-profdata merge --sample --extbinary %p/Inputs/cs-sample.proftext -o %t
 RUN: diff -b %t1.proftext %S/Inputs/cs-sample.proftext
 RUN: llvm-profdata show --sample -show-sec-info-only %t.prof | FileCheck %s
 CHECK: FunctionMetadata {{.*}} Flags: {attr}
+
+RUN: not llvm-profdata merge --sample --extbinary --use-md5 --md5-indexed-tables %p/Inputs/cs-sample.proftext -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR-CS-EYTZ
+ERR-CS-EYTZ: error: {{.*}}Profile encoding format unsupported for writing operations

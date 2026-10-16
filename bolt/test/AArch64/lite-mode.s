@@ -24,12 +24,12 @@
 # CHECK-COMPACT-NOT: <_start.org.0>
 
 ## Verify that the number of FDEs matches the number of functions in the output
-## binary. There are three original functions and two optimized.
+## binary. There are four original functions and three optimized.
 ## NOTE: at the moment we are emitting extra FDEs for patched functions, thus
 ## there is one more FDE for _start.
 # RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
 # RUN:   | FileCheck --check-prefix=CHECK-FDE %s
-# CHECK-FDE: 6
+# CHECK-FDE: 8
 
 ## In lite mode, optimized code will be separated from the original .text by
 ## over 128MB, making it impossible for call/bl instructions in cold functions
@@ -106,9 +106,9 @@ cold_function:
 # CHECK-NEXT:       add  x4
 
 ## Check that non-relaxable GOT load is left intact.
-  adrp    x5, :got:far_func
+  adrp    x5, :got:far_func2
   nop
-  ldr     x5, [x5, #:got_lo12:far_func]
+  ldr     x5, [x5, #:got_lo12:far_func2]
 # CHECK-INPUT-NEXT: adrp x5
 # CHECK-INPUT-NEXT: nop
 # CHECK-INPUT-NEXT: ldr x5
@@ -129,15 +129,6 @@ cold_function:
 # CHECK-INPUT-NEXT: b {{.*}} <_start>
 # CHECK-NEXT:       b {{.*}} <_start.org.0>
 
-## Quick test for conditional tail calls. A proper test is being added in:
-## https://github.com/llvm/llvm-project/pull/139565
-## For now check that llvm-bolt doesn't choke on CTCs.
-.ifndef COMPACT
-  b.eq _start
-  cbz x0, _start
-  tbz x0, 42, _start
-.endif
-
   .cfi_endproc
   .size cold_function, .-cold_function
 
@@ -155,3 +146,12 @@ far_func:
   ret  x30
   .cfi_endproc
   .size far_func, .-far_func
+
+  .globl far_func2
+  .type far_func2, %function
+far_func2:
+# FDATA: 0 [unknown] 0 1 far_func2 0 0 100
+  .cfi_startproc
+  ret  x30
+  .cfi_endproc
+  .size far_func2, .-far_func2

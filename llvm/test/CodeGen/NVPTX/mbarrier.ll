@@ -3,14 +3,14 @@
 ; RUN: %if ptxas-sm_80 && ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 ; RUN: %if ptxas-sm_80 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify -arch=sm_80 %}
 
-declare void @llvm.nvvm.mbarrier.init(ptr %a, i32 %b)
-declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %a, i32 %b)
+declare void @llvm.nvvm.mbarrier.init.p0(ptr %a, i32 %b, i32 %c)
+declare void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %a, i32 %b, i32 %c)
 
 ; CHECK-LABEL: barrierinit
 define void @barrierinit(ptr %a, i32 %b) {
 ; CHECK_PTX32: mbarrier.init.b64 [%r{{[0-9]+}}], %r{{[0-9]+}};
 ; CHECK_PTX64: mbarrier.init.b64 [%rd{{[0-9]+}}], %r{{[0-9]+}};
-  tail call void @llvm.nvvm.mbarrier.init(ptr %a, i32 %b)
+  tail call void @llvm.nvvm.mbarrier.init.p0(ptr %a, i32 %b, i32 0)
   ret void
 }
 
@@ -18,7 +18,7 @@ define void @barrierinit(ptr %a, i32 %b) {
 define void @barrierinitshared(ptr addrspace(3) %a, i32 %b) {
 ; CHECK_PTX32: mbarrier.init.shared.b64 [%r{{[0-9]+}}], %r{{[0-9]+}};
 ; CHECK_PTX64: mbarrier.init.shared.b64 [%rd{{[0-9]+}}], %r{{[0-9]+}};
-  tail call void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %a, i32 %b)
+  tail call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %a, i32 %b, i32 0)
   ret void
 }
 

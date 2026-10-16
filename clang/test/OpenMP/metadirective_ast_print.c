@@ -2,9 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT
 
-// RUN: %clang_cc1 -verify -fopenmp -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+// RUN: %clang_cc1 -verify -fopenmp -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
 // RUN: %clang_cc1 -verify -fopenmp -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
@@ -14,9 +14,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple amdgcn-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
 

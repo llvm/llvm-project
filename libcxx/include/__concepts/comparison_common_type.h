@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Up, class _CommonRef = common_reference_t<const _Tp&, const _Up&>>
 concept __comparison_common_type_with_impl =
@@ -33,8 +33,8 @@ concept __comparison_common_type_with_impl =
 template <class _Tp, class _Up>
 concept __comparison_common_type_with = __comparison_common_type_with_impl<remove_cvref_t<_Tp>, remove_cvref_t<_Up>>;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CONCEPTS_COMPARISON_COMMON_TYPE_H

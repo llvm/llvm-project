@@ -75,7 +75,7 @@
 ; ASM-NEXT: .asciz  "global_variable"       # External Name
 
 ; ASM: .section        .debug_gnu_pubtypes
-; ASM: .long 109                       # DIE offset
+; ASM: .long 42                        # DIE offset
 ; ASM: .byte   16                      # Attributes: TYPE, EXTERNAL
 ; ASM-NEXT: .asciz  "C"                     # External Name
 
@@ -83,29 +83,6 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_GNU_pubnames (true)
 ; CHECK-NOT: DW_AT_GNU_pubtypes [
-
-; CHECK:   DW_TAG_enumeration
-; CHECK:     [[UNNAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK:       DW_AT_name ("unnamed_enum_enumerator")
-; CHECK:     NULL
-
-; CHECK:   [[UNSIGNED_INT:0x[0-9a-f]+]]: DW_TAG_base_type
-; CHECK:     DW_AT_name ("unsigned int")
-
-; CHECK:   [[NAMED_ENUM:0x[0-9a-f]+]]: DW_TAG_enumeration
-; CHECK:     DW_AT_name ("named_enum")
-; CHECK:     [[NAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK:       DW_AT_name ("named_enum_enumerator")
-; CHECK:     NULL
-
-; CHECK:   [[NAMED_ENUM_CLASS:0x[0-9a-f]+]]: DW_TAG_enumeration
-; CHECK:     DW_AT_name ("named_enum_class")
-; CHECK:     [[NAMED_ENUM_CLASS_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
-; CHECK:       DW_AT_name ("named_enum_class_enumerator")
-; CHECK:     NULL
-
-; CHECK:   [[INT:0x[0-9a-f]+]]: DW_TAG_base_type
-; CHECK:     DW_AT_name ("int")
 
 ; CHECK:   [[C:0x[0-9a-f]+]]: DW_TAG_structure_type
 ; CHECK:     DW_AT_name ("C")
@@ -120,6 +97,9 @@
 ; CHECK:       DW_AT_linkage_name
 ; CHECK:       DW_AT_name ("static_member_function")
 ; CHECK:     NULL
+
+; CHECK:   [[INT:0x[0-9a-f]+]]: DW_TAG_base_type
+; CHECK:     DW_AT_name ("int")
 
 ; CHECK:   DW_TAG_pointer_type
 
@@ -150,7 +130,7 @@
 ; CHECK-NOT:   DW_AT_specification
 ; CHECK:       DW_AT_location
 ; CHECK-NOT:   DW_AT_specification
-; CHECK:     [[D:0x[0-9a-f]+]]: DW_TAG_structure_type
+; CHECK:     [[D_TYPE:0x[0-9a-f]+]]: DW_TAG_structure_type
 ; CHECK:       DW_AT_name ("D")
 ; CHECK:       DW_TAG_member
 ; CHECK:       NULL
@@ -194,6 +174,26 @@
 ; CHECK:       NULL
 ; CHECK:     NULL
 
+; CHECK:   DW_TAG_enumeration
+; CHECK:     [[UNNAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("unnamed_enum_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[UNSIGNED_INT:0x[0-9a-f]+]]: DW_TAG_base_type
+; CHECK:     DW_AT_name ("unsigned int")
+
+; CHECK:   [[NAMED_ENUM:0x[0-9a-f]+]]: DW_TAG_enumeration
+; CHECK:     DW_AT_name ("named_enum")
+; CHECK:     [[NAMED_ENUM_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("named_enum_enumerator")
+; CHECK:     NULL
+
+; CHECK:   [[NAMED_ENUM_CLASS:0x[0-9a-f]+]]: DW_TAG_enumeration
+; CHECK:     DW_AT_name ("named_enum_class")
+; CHECK:     [[NAMED_ENUM_CLASS_ENUMERATOR:0x[0-9a-f]+]]:  DW_TAG_enumerator
+; CHECK:       DW_AT_name ("named_enum_class_enumerator")
+; CHECK:     NULL
+
 ; CHECK:   DW_TAG_imported_declaration
 ; CHECK:   DW_TAG_pointer_type
 ; CHECK:   DW_TAG_pointer_type
@@ -203,9 +203,6 @@
 ; CHECK-LABEL: .debug_gnu_pubnames contents:
 ; CHECK-NEXT: length = {{.*}}, version = 0x0002, unit_offset = 0x00000000, unit_size = {{.*}}
 ; CHECK-NEXT: Offset     Linkage  Kind     Name
-; CHECK-NEXT:  [[UNNAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "unnamed_enum_enumerator"
-; CHECK-NEXT:  [[NAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "named_enum_enumerator"
-; CHECK-NEXT:  [[NAMED_ENUM_CLASS_ENUMERATOR]] STATIC VARIABLE  "named_enum_class_enumerator"
 ; CHECK-NEXT:  [[MEM_FUNC]] EXTERNAL FUNCTION "C::member_function"
 ; CHECK-NEXT:  [[STATIC_MEM_FUNC]] EXTERNAL FUNCTION "C::static_member_function"
 ; CHECK-NEXT:  [[GLOBAL_FUNC]] EXTERNAL FUNCTION "global_function"
@@ -230,14 +227,18 @@
 ; CHECK-NEXT:  [[OUTER_ANON]] EXTERNAL TYPE "outer::(anonymous namespace)"
 ; FIXME: GCC produces enumerators as EXTERNAL, not STATIC
 ; CHECK-NEXT:  [[OUTER_ANON_C]] STATIC VARIABLE "outer::(anonymous namespace)::c"
+; CHECK-NEXT:  [[UNNAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "unnamed_enum_enumerator"
+; CHECK-NEXT:  [[NAMED_ENUM_ENUMERATOR]] STATIC VARIABLE  "named_enum_enumerator"
+; CHECK-NEXT:  [[NAMED_ENUM_CLASS_ENUMERATOR]] STATIC VARIABLE  "named_enum_class_enumerator"
 
 ; CHECK-LABEL: debug_gnu_pubtypes contents:
 ; CHECK: Offset     Linkage  Kind     Name
+; CHECK-NEXT:  [[C]] EXTERNAL TYPE     "C"
+; CHECK-NEXT:  [[INT]] STATIC   TYPE     "int"
+; CHECK-NEXT:  [[D_TYPE]] EXTERNAL TYPE  "ns::D"
 ; CHECK-NEXT:  [[UNSIGNED_INT]] STATIC   TYPE     "unsigned int"
 ; CHECK-NEXT:  [[NAMED_ENUM]] EXTERNAL TYPE     "named_enum"
 ; CHECK-NEXT:  [[NAMED_ENUM_CLASS]] EXTERNAL TYPE     "named_enum_class"
-; CHECK-NEXT:  [[INT]] STATIC   TYPE     "int"
-; CHECK-NEXT:  [[C]] EXTERNAL TYPE     "C"
 
 %struct.C = type { i8 }
 %"struct.ns::D" = type { i32 }
@@ -332,7 +333,7 @@ attributes #1 = { nounwind readnone speculatable }
 !14 = !{!15}
 !15 = !DIEnumerator(name: "named_enum_class_enumerator", value: 0)
 !16 = !{!13}
-!17 = !{!0, !18, !29, !32, !37, !44, !47, !50}
+!17 = !{!0, !18, !29, !32, !44, !47, !50}
 !18 = !DIGlobalVariableExpression(var: !19, expr: !DIExpression())
 !19 = distinct !DIGlobalVariable(name: "global_variable", scope: !2, file: !3, line: 13, type: !20, isLocal: false, isDefinition: true)
 !20 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C", file: !3, line: 1, size: 8, flags: DIFlagTypePassByValue, elements: !21, identifier: "_ZTS1C")
@@ -354,7 +355,7 @@ attributes #1 = { nounwind readnone speculatable }
 !36 = !DIDerivedType(tag: DW_TAG_member, name: "A", scope: !34, file: !3, line: 22, baseType: !13, size: 32)
 !37 = !DIGlobalVariableExpression(var: !38, expr: !DIExpression())
 !38 = distinct !DIGlobalVariable(name: "z", scope: !39, file: !3, line: 33, type: !13, isLocal: true, isDefinition: true)
-!39 = distinct !DISubprogram(name: "f3", linkageName: "_Z2f3v", scope: !3, file: !3, line: 32, type: !40, scopeLine: 32, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !43)
+!39 = distinct !DISubprogram(name: "f3", linkageName: "_Z2f3v", scope: !3, file: !3, line: 32, type: !40, scopeLine: 32, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !91)
 !40 = !DISubroutineType(types: !41)
 !41 = !{!42}
 !42 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 64)
@@ -406,3 +407,4 @@ attributes #1 = { nounwind readnone speculatable }
 !88 = !DILocation(line: 59, column: 68, scope: !78)
 !89 = !DILocation(line: 60, column: 32, scope: !78)
 !90 = !DILocation(line: 59, column: 3, scope: !78)
+!91 = !{!37}

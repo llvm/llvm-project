@@ -199,6 +199,43 @@ TYPED_TEST(BitVectorTest, Equality) {
   EXPECT_TRUE(A == B);
 }
 
+TYPED_TEST(BitVectorTest, TestAllAndAny) {
+  TypeParam Vec;
+  Vec.resize(10);
+
+  // Empty range
+  EXPECT_TRUE(Vec.test_all(3, 3));
+  EXPECT_FALSE(Vec.test_any(3, 3));
+
+  Vec.set(2, 5);
+  EXPECT_TRUE(Vec.test_all(2, 5));
+  EXPECT_FALSE(Vec.test_all(2, 6));
+  EXPECT_FALSE(Vec.test_all(1, 5));
+  EXPECT_TRUE(Vec.test_any(2, 5));
+  EXPECT_TRUE(Vec.test_any(4, 5));
+  EXPECT_FALSE(Vec.test_any(0, 2));
+
+  Vec.set(7);
+  EXPECT_FALSE(Vec.test_all(0, Vec.size()));
+  EXPECT_TRUE(Vec.test_any(6, Vec.size()));
+  Vec.reset(7);
+
+  TypeParam LargeVec;
+  LargeVec.resize(80);
+  LargeVec.set(10, 30);
+  EXPECT_TRUE(LargeVec.test_any(10, 30));
+  EXPECT_FALSE(LargeVec.test_all(10, 35));
+  EXPECT_FALSE(LargeVec.test_any(0, 10));
+
+  LargeVec.set(30, 35);
+  EXPECT_TRUE(LargeVec.test_all(10, 35));
+
+  LargeVec.set(70);
+  EXPECT_TRUE(LargeVec.test_any(68, 72));
+  LargeVec.reset(70);
+  EXPECT_FALSE(LargeVec.test_any(68, 72));
+}
+
 TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   TypeParam A;
 

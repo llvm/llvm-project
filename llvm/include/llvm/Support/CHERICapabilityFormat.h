@@ -23,29 +23,43 @@ struct CHERICapabilityFormatBase {
   /// Returns the "alignment mask" for an allocation of size \p Length. This
   /// mask is 0 where the capability format alignment requires the
   /// address to be 0, and 1 otherwise.
-  LLVM_ABI static AddressType getAlignmentMask(AddressType Length);
+  static AddressType getAlignmentMask(AddressType Length) {
+    return Derived::getAlignmentMaskImpl(Length);
+  }
 
   /// Returns the required alignment for an allocation of size \p Length.
-  LLVM_ABI static Align getRequiredAlignment(AddressType Length);
+  static Align getRequiredAlignment(AddressType Length) {
+    return Align((~getAlignmentMask(Length) + 1) & AddressMask);
+  }
 
   /// Returns \p Length rounded up to the nearest representable allocation
   /// length.
-  LLVM_ABI static AddressType getRepresentableLength(AddressType Length);
+  static AddressType getRepresentableLength(AddressType Length) {
+    AddressType Mask = getAlignmentMask(Length);
+    return (Length + ~Mask) & Mask;
+  }
 };
 
 template <typename AddressType, unsigned MW, unsigned MAX_E>
 struct RVYCapabilityFormat
     : public CHERICapabilityFormatBase<
           RVYCapabilityFormat<AddressType, MW, MAX_E>, AddressType> {
-  LLVM_ABI static AddressType getAlignmentMask(uint64_t Length);
+  friend struct CHERICapabilityFormatBase<
+      RVYCapabilityFormat<AddressType, MW, MAX_E>, AddressType>;
+
+private:
+  LLVM_ABI static AddressType getAlignmentMaskImpl(uint64_t Length);
 };
 
 using RV32YCapabilityFormat = RVYCapabilityFormat<uint32_t, 10, 24>;
-using RV64YCapabilityFormat = RVYCapabilityFormat<uint64_t, 14, 24>;
+using RV64YCapabilityFormat = RVYCapabilityFormat<uint64_t, 14, 52>;
 
 struct CHERIoTCapabilityFormat
     : public CHERICapabilityFormatBase<CHERIoTCapabilityFormat, uint32_t> {
-  LLVM_ABI static uint32_t getAlignmentMask(uint32_t Length);
+  friend struct CHERICapabilityFormatBase<CHERIoTCapabilityFormat, uint32_t>;
+
+private:
+  LLVM_ABI static uint32_t getAlignmentMaskImpl(uint32_t Length);
 };
 
 } // namespace llvm

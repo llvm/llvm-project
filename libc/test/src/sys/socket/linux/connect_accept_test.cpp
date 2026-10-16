@@ -8,7 +8,9 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
 #include "hdr/types/size_t.h"
+#include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/fcntl/fcntl.h"
 #include "src/stdio/remove.h"
@@ -32,13 +34,12 @@ using LlvmLibcConnectAcceptTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcConnectAcceptTest, ConnectLocalSocket) {
-  const char *CONNECT_FILE = "connect_file.test";
-  const auto CONNECT_PATH = libc_make_test_file_path(CONNECT_FILE);
+  LIBC_NAMESPACE::testing::TestDirectoryScope dir_scope;
+  constexpr char CONNECT_PATH[] = "connect_file.test";
   struct sockaddr_un connect_addr;
   ASSERT_TRUE(make_sockaddr_un(CONNECT_PATH, connect_addr));
 
-  const char *ACCEPT_FILE = "accept_file.test";
-  const auto ACCEPT_PATH = libc_make_test_file_path(ACCEPT_FILE);
+  constexpr char ACCEPT_PATH[] = "accept_file.test";
   struct sockaddr_un accept_addr;
   ASSERT_TRUE(make_sockaddr_un(ACCEPT_PATH, accept_addr));
 
@@ -122,8 +123,8 @@ TEST_F(LlvmLibcConnectAcceptTest, ConnectLocalSocket) {
 }
 
 TEST_F(LlvmLibcConnectAcceptTest, Accept4Flags) {
-  const char *ACCEPT_FILE = "accept4_file.test";
-  auto ACCEPT_PATH = libc_make_test_file_path(ACCEPT_FILE);
+  LIBC_NAMESPACE::testing::TestDirectoryScope dir_scope;
+  constexpr char ACCEPT_PATH[] = "accept4_file.test";
   struct sockaddr_un accept_addr;
   ASSERT_TRUE(make_sockaddr_un(ACCEPT_PATH, accept_addr));
 

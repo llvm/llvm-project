@@ -10,6 +10,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class UnsignedTypesTestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Test that variables with unsigned types display correctly."""
         self.build()

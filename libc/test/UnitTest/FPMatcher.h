@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -186,8 +184,7 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
   static constexpr T aNaN = FPBits::quiet_nan(Sign::POS).get_val();
   static constexpr T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();
-  // TODO: make this static constexpr
-  const T sNaN = FPBits::signaling_nan().get_val();
+  static constexpr T sNaN = FPBits::signaling_nan().get_val();
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();

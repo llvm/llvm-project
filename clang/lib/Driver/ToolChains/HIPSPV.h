@@ -52,14 +52,21 @@ public:
                   const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
-    assert(HostTC);
-    return &HostTC->getTriple();
+    return HostTC ? &HostTC->getTriple() : nullptr;
   }
+
+  // Keep IsIntegratedBackendDefault() at the base class' "true": it also
+  // decides whether clang's compile and backend jobs are collapsed into a
+  // single -cc1 invocation, so making it depend on whether the SPIR-V backend
+  // was built would change the device compilation job layout of every HIPSPV
+  // compile. The fallback to the external llvm-spirv translator is decided in
+  // HIPSPV::Linker::constructLinkAndEmitSpirvCommand instead.
+  bool IsIntegratedBackendSupported() const override;
+  bool IsNonIntegratedBackendSupported() const override { return true; }
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        llvm::StringRef BoundArch,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
@@ -74,11 +81,11 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
   llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args, llvm::StringRef BoundArch,
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
                 const Action::OffloadKind DeviceOffloadKind) const override;
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
   VersionTuple
@@ -98,9 +105,6 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
-  LTOKind
-  getLTOMode(const llvm::opt::ArgList &Args,
-             Action::OffloadKind Kind = Action::OFK_None) const override;
 
   const ToolChain *HostTC = nullptr;
 

@@ -31,11 +31,11 @@ protected:
 
   AMDGPUMCExprTest() {
 
-    TM = createAMDGPUTargetMachine("amdgcn--amdpal", "gfx1010", "");
+    TM = createAMDGPUTargetMachine(Triple("amdgpu10.10--amdpal"), "", "");
 
     LLVMCtx = std::make_unique<LLVMContext>();
     M = std::make_unique<Module>("Module", *LLVMCtx);
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TM->getTargetTriple().computeDataLayout());
     auto *FType = FunctionType::get(Type::getVoidTy(*LLVMCtx), false);
     auto *F = Function::Create(FType, GlobalValue::ExternalLinkage, "Test", *M);
     MMI = std::make_unique<MachineModuleInfo>(TM.get());

@@ -9,7 +9,7 @@ define void @test() {
 ; X86:       body:
 ; X86-NEXT:    [[PHI1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0.000000e+00, [[BODY]] ]
 ; X86-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[BODY]] ]
-; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i32 0
+; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i64 0
 ; X86-NEXT:    [[TMP2:%.*]] = fmul fast <2 x double> <double 0.000000e+00, double undef>, [[TMP1]]
 ; X86-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP2]])
 ; X86-NEXT:    [[CMP42_I:%.*]] = fcmp fast ole double [[TMP3]], 0.000000e+00
@@ -34,7 +34,7 @@ define void @test() {
 ; AARCH64:       body:
 ; AARCH64-NEXT:    [[PHI1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0.000000e+00, [[BODY]] ]
 ; AARCH64-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[BODY]] ]
-; AARCH64-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i32 0
+; AARCH64-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i64 0
 ; AARCH64-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> <double 0.000000e+00, double undef>, [[TMP8]]
 ; AARCH64-NEXT:    [[ADD8_I_I:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP9]])
 ; AARCH64-NEXT:    [[CMP42_I:%.*]] = fcmp fast ole double [[ADD8_I_I]], 0.000000e+00

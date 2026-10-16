@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s -passes=loop-vectorize -S | FileCheck -check-prefix=GFX1251 %s
+; RUN: opt -mtriple=amdgpu12.51-amd-amdhsa < %s -passes=loop-vectorize -S | FileCheck -check-prefix=GFX1251 %s
 
 ; GFX1251-LABEL: @vectorize_v2f64_loop(
 ; GFX1251-COUNT-2: load <2 x double>

@@ -21,7 +21,7 @@ void test_member_in_array(void) {
 }
 
 // CIR-DAG: cir.global "private" constant cir_private @[[LINE_CONST:.*]] = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !rec_Point, #cir.const_record<{#cir.int<3> : !s32i, #cir.int<4> : !s32i}> : !rec_Point}> : !rec_Line
-// CIR-DAG: cir.global "private" constant cir_private @[[MATRIX_CONST:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<104> : !s8i, #cir.int<101> : !s8i, #cir.int<108> : !s8i, #cir.int<108> : !s8i, #cir.int<111> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 6>, #cir.const_array<[#cir.int<119> : !s8i, #cir.int<111> : !s8i, #cir.int<114> : !s8i, #cir.int<108> : !s8i, #cir.int<100> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 6>]>
+// CIR-DAG: cir.global "private" constant cir_private @[[MATRIX_CONST:.*]] = #cir.const_array<[#cir.const_array<[#cir.int<104> : !s8i, #cir.int<101> : !s8i, #cir.int<108> : !s8i, #cir.int<108> : !s8i, #cir.int<111> : !s8i], trailing_zeros> : !cir.array<!s8i x 6>, #cir.const_array<[#cir.int<119> : !s8i, #cir.int<111> : !s8i, #cir.int<114> : !s8i, #cir.int<108> : !s8i, #cir.int<100> : !s8i], trailing_zeros> : !cir.array<!s8i x 6>]>
 
 // LLVM-DAG: @[[LINE_CONST:.*]] = private constant %struct.Line { %struct.Point { i32 1, i32 2 }, %struct.Point { i32 3, i32 4 } }
 // LLVM-DAG: @[[MATRIX_CONST:.*]] = private constant [2 x [6 x i8]] {{.*}}
@@ -37,7 +37,7 @@ void test_member_in_array(void) {
 // LLVM-LABEL: define{{.*}} @test_member_in_array
 // LLVM:   %[[LINE:.*]] = alloca %struct.Line
 // LLVM:   %[[ARR:.*]] = alloca [1 x %struct.Point]
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[LINE]], ptr @[[LINE_CONST]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[LINE]], ptr align 4 @[[LINE_CONST]]
 // LLVM:   %[[MEMBER:.*]] = getelementptr{{.*}}%struct.Line{{.*}}%[[LINE]]{{.*}}i32 0, i32 0
 // LLVM:   call void @llvm.memcpy
 
@@ -111,7 +111,7 @@ void test_string_array_in_array(void) {
 
 // LLVM-LABEL: define{{.*}} @test_string_array_in_array
 // LLVM:   %[[MATRIX:.*]] = alloca [2 x [6 x i8]]
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[MATRIX]], ptr @[[MATRIX_CONST]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 1 %[[MATRIX]], ptr align 1 @[[MATRIX_CONST]]
 
 // OGCG-LABEL: define{{.*}} @test_string_array_in_array
 // OGCG:   alloca [2 x [6 x i8]]

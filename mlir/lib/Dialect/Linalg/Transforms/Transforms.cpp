@@ -221,7 +221,9 @@ private:
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              linalg::PackOp packOp,
                                              bool lowerPadLikeWithInsertSlice) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -355,7 +357,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult>
 linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
                     bool lowerUnpadLikeWithExtractSlice) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -483,6 +487,10 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
+  }
+  if (!linalgOp.hasPureTensorSemantics()) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "expects LinalgOp with pure tensor semantics");
   }
 
   Location loc = linalgOp->getLoc();
@@ -821,10 +829,12 @@ linalg::packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   // 2.a. Rewrite as a generic.
   auto genericOp = dyn_cast<GenericOp>(linalgOp.getOperation());
   if (!genericOp) {
-    FailureOr<GenericOp> generalizeResult =
+    FailureOr<LinalgOp> generalizeResult =
         generalizeNamedOp(rewriter, linalgOp);
-    assert(succeeded(generalizeResult) && "unexpected failure generalizing op");
-    genericOp = *generalizeResult;
+    assert(succeeded(generalizeResult) &&
+           isa<GenericOp>(generalizeResult->getOperation()) &&
+           "unexpected failure generalizing op");
+    genericOp = cast<GenericOp>(generalizeResult->getOperation());
   }
 
   // 2.b. Interchange to move the dimensions (k, m, n) as most-minor
@@ -1038,7 +1048,9 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
-  // TODO: Support Memref PackOp. Temporarily return just Op Source.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return input;
 
@@ -1158,7 +1170,9 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -1166,6 +1180,19 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
                    [](int64_t dim) { return dim != 1; })) {
     return rewriter.notifyMatchFailure(
         packOp, "not all outer dimensions of the result are 1s");
+  }
+
+  // When a padding value is set, getPackOpSourceOrPaddedSource only supports
+  // the case where every outer dim (including un-tiled ones) is 1. Bail out
+  // instead of hitting an assertion on a non-unit un-tiled outer dim.
+  // FIXME: Handle this case by decomposing the padded pack instead of bailing
+  // out; a non-unit un-tiled outer dim should be supported here.
+  if (packOp.getPaddingValue() &&
+      llvm::any_of(packOp.getAllOuterDims(),
+                   [](int64_t dim) { return dim != 1; })) {
+    return rewriter.notifyMatchFailure(
+        packOp, "cannot decompose padded pack with a non-unit un-tiled outer "
+                "dimension");
   }
 
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();

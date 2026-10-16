@@ -161,11 +161,15 @@ public:
   }
 
   /// Return true if the intrinsic may have side effects, i.e. does not have the
-  /// `IntrNoMem` property.
+  /// `IntrNoMem` property or has the `IntrHasSideEffects` property.
   bool hasSideEffects() const {
     return llvm::none_of(
-        record.getValueAsListOfDefs(fieldTraits),
-        [](const Record *r) { return r->getName() == "IntrNoMem"; });
+               record.getValueAsListOfDefs(fieldTraits),
+               [](const Record *r) { return r->getName() == "IntrNoMem"; }) ||
+           llvm::any_of(record.getValueAsListOfDefs(fieldTraits),
+                        [](const Record *r) {
+                          return r->getName() == "IntrHasSideEffects";
+                        });
   }
 
   /// Return true if the intrinsic is commutative, i.e. has the respective

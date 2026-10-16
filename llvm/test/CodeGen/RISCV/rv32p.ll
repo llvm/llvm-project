@@ -929,6 +929,42 @@ define i32 @asubu_i32(i32 %a, i32 %b) {
   ret i32 %res
 }
 
+define i32 @test_aadd_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_aaddu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aaddu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aaddu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asub a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asub.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asubu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asubu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asubu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i32 @mulhr_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: mulhr_i32:
 ; CHECK:       # %bb.0:
@@ -1122,7 +1158,7 @@ define i64 @wmaccu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccu a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    ret
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -1135,7 +1171,7 @@ define i64 @wmaccu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccu_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccu a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    ret
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -1148,7 +1184,7 @@ define i64 @wmacc(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmacc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -1161,7 +1197,7 @@ define i64 @wmacc_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmacc_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -1174,7 +1210,7 @@ define i64 @wmaccsu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccsu a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -1187,7 +1223,7 @@ define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccsu a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -1467,7 +1503,7 @@ define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %o
 ; CHECK-NEXT:    mv a5, a3
 ; CHECK-NEXT:    mv a6, a2
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    padd.dw a0, a2, zero
+; CHECK-NEXT:    mvd a0, a2
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    sw a5, 4(a4)
 ; CHECK-NEXT:    ret
@@ -1690,6 +1726,78 @@ define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
   ret i64 %sum
 }
 
+; acc + sext(a) -> wadda acc, a, 0
+define i64 @wadda_sext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wadda_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadda a0, a2, zero
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %sum = add i64 %acc, %ext_a
+  ret i64 %sum
+}
+
+; sext(a) + acc -> wadda acc, a, 0
+define i64 @wadda_sext_commuted(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wadda_sext_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadda a0, a2, zero
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %sum = add i64 %ext_a, %acc
+  ret i64 %sum
+}
+
+; acc + sext(a) + sext(b) -> wadda acc, a, b
+define i64 @wadda_sext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wadda_sext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadda a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sum1 = add i64 %acc, %ext_a
+  %sum2 = add i64 %sum1, %ext_b
+  ret i64 %sum2
+}
+
+; acc - sext(a) -> wsuba acc, 0, a
+define i64 @wsuba_sext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wsuba_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsuba a0, zero, a2
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %sub = sub i64 %acc, %ext_a
+  ret i64 %sub
+}
+
+; (acc + sext(a)) - sext(b) -> wsuba acc, a, b
+define i64 @wsuba_sext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsuba_sext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsuba a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sum = add i64 %acc, %ext_a
+  %sub = sub i64 %sum, %ext_b
+  ret i64 %sub
+}
+
+; (acc - sext(a)) + sext(b) -> wsuba acc, b, a
+define i64 @wsuba_sext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsuba_sext_chain_rev:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsuba a0, a3, a2
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sub = sub i64 %acc, %ext_a
+  %sum = add i64 %sub, %ext_b
+  ret i64 %sum
+}
+
 define i64 @waddu(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: waddu:
 ; CHECK:       # %bb.0:
@@ -1708,6 +1816,28 @@ define i64 @wsubu(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %ext_b = zext i32 %b to i64
+  %diff = sub i64 %ext_a, %ext_b
+  ret i64 %diff
+}
+
+define i64 @wadd(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
+  %sum = add i64 %ext_a, %ext_b
+  ret i64 %sum
+}
+
+define i64 @wsub(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsub a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = sext i32 %a to i64
+  %ext_b = sext i32 %b to i64
   %diff = sub i64 %ext_a, %ext_b
   ret i64 %diff
 }
@@ -2236,4 +2366,58 @@ define i32 @test_plui_h_remat(ptr %p) nounwind {
   tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
   ; Use the constant again - it should be rematerialized, not spilled/reloaded
   ret i32 u0x7fc07fc0
+}
+
+define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulh_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulh a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.smulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhr_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhr.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.umulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhru_u32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhru_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhru a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhru.u32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhsu_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhrsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
 }

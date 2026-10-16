@@ -18,10 +18,10 @@ define i32 @foo(ptr nocapture readonly %diff) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i32> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP5]], [[A_088]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[ARRAYIDX6]], align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[ADD24]] = add nsw i32 [[ADD10]], [[TMP6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8

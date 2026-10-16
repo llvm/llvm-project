@@ -412,3 +412,29 @@ define i32 @fold_add_sdiv_srem_by_two_no_mul(i32 noundef %arg) {
   %add = add i32 %div, %rem
   ret i32 %add
 }
+
+; The remainder may be `and X, 1` and appear on the LHS of the add. This
+; commuted form should fold identically to fold_add_udiv_urem_by_two_no_mul.
+define i32 @fold_add_udiv_urem_by_two_no_mul_commuted(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_by_two_no_mul_commuted(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[ARG]], [[LSHR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 1
+  %and = and i32 %arg, 1
+  %add = add i32 %and, %lshr
+  ret i32 %add
+}
+
+define <2 x i32> @fold_add_udiv_urem_by_two_no_mul_commuted_vec(<2 x i32> noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_by_two_no_mul_commuted_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[ARG:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[ADD:%.*]] = sub <2 x i32> [[ARG]], [[LSHR]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %lshr = lshr <2 x i32> %arg, splat (i32 1)
+  %and = and <2 x i32> %arg, splat (i32 1)
+  %add = add <2 x i32> %and, %lshr
+  ret <2 x i32> %add
+}

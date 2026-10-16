@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concepts.booleantestable]
 
@@ -31,8 +31,8 @@ concept __boolean_testable = __boolean_testable_impl<_Tp> && requires(_Tp&& __t)
   { !std::forward<_Tp>(__t) } -> __boolean_testable_impl;
 };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CONCEPTS_BOOLEAN_TESTABLE_H

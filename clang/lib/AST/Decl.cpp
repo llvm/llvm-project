@@ -60,6 +60,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -2255,8 +2256,8 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
-        !(getCanonicalDecl()->isInline() &&
-          getCanonicalDecl()->isConstexpr()) &&
+        !(getCanonicalDecl()->isInline() && getCanonicalDecl()->isConstexpr() &&
+          !getCanonicalDecl()->isOutOfLine()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
@@ -2267,7 +2268,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
@@ -2308,16 +2309,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isSingleLineLanguageLinkage(*this))
     return DeclarationOnly;
 
-  // C99 6.9.2p2:
-  //   A declaration of an object that has file scope without an initializer,
-  //   and without a storage class specifier or the scs 'static', constitutes
-  //   a tentative definition.
-  // No such thing in C++.
-  if (!C.getLangOpts().CPlusPlus && isFileVarDecl())
+  // C23 6.9.3p2:
+  //   A declaration of an identifier for an object that has file scope
+  //   without an initializer, and without the storage-class specifier extern
+  //   or thread_local, constitutes a tentative definition.
+  // In C23 and later, file-scope thread_local / _Thread_local / __thread
+  // declarations without initializers are full external definitions
+  // (C23 6.9.3p1). Pre-C23 standards allowed tentative TLS definitions, so we
+  // preserve that behavior in earlier language modes.
+  if (!C.getLangOpts().CPlusPlus && isFileVarDecl() &&
+      (getTLSKind() == TLS_None || !C.getLangOpts().C23))
     return TentativeDefinition;
 
-  // What's left is (in C, block-scope) declarations without initializers or
-  // external storage. These are definitions.
+  // What's left is (in C) block-scope declarations and, in C23, file-scope
+  // thread_local declarations without initializers or external storage. These
+  // are definitions.
   return Definition;
 }
 
@@ -2551,13 +2557,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
   return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
-APValue *VarDecl::evaluateValue() const {
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  return evaluateValueImpl(Notes, hasConstantInitialization());
+const APValue *VarDecl::evaluateValue() const {
+  return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
 }
 
-APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                    bool IsConstantInitialization) const {
+const APValue *
+VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
   const auto *Init = getInit();
@@ -2576,9 +2582,14 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
 
   Eval->IsEvaluating = true;
 
+  SmallVector<PartialDiagnosticAt> MSWarning;
   ASTContext &Ctx = getASTContext();
-  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
-                                            IsConstantInitialization);
+  Expr::EvalResult EStatus;
+  EStatus.Diag = Notes;
+  EStatus.ExtendedDiag = &MSWarning;
+  bool Result =
+      Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
+  Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
   // a constant initializer if we produced notes. In that case, we can't keep
@@ -2587,7 +2598,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   if (IsConstantInitialization &&
       (Ctx.getLangOpts().CPlusPlus ||
        (isConstexpr() && Ctx.getLangOpts().C23)) &&
-      !Notes.empty())
+      EStatus.DiagEmitted)
     Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
@@ -2595,8 +2606,14 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   // failed.
   if (!Result)
     Eval->Evaluated = APValue();
-  else if (Eval->Evaluated.needsCleanup())
-    Ctx.addDestruction(&Eval->Evaluated);
+  else {
+    if (!MSWarning.empty())
+      for (auto &Info : MSWarning)
+        getASTContext().getDiagnostics().Report(Info.first,
+                                                Info.second.getDiagID());
+    if (Eval->Evaluated.needsCleanup())
+      Ctx.addDestruction(&Eval->Evaluated);
+  }
 
   Eval->IsEvaluating = false;
   Eval->WasEvaluated = true;
@@ -2604,10 +2621,10 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   return Result ? &Eval->Evaluated : nullptr;
 }
 
-APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
-    if (Eval->WasEvaluated)
-      return &Eval->Evaluated;
+const APValue *VarDecl::getEvaluatedValue() const {
+  if (EvaluatedStmt *Eval = getEvaluatedStmt();
+      Eval && Eval->WasEvaluated && !Eval->Evaluated.isAbsent())
+    return &Eval->Evaluated;
 
   return nullptr;
 }
@@ -2656,7 +2673,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(Notes, true) && Notes.empty();
+      evaluateValueImpl(&Notes, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
@@ -2700,7 +2717,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
-      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      if (auto *VTD = dyn_cast<VarTemplateDecl *>(From)) {
         while (!VTD->isMemberSpecialization()) {
           auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
           if (!NewVTD)
@@ -2710,7 +2727,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
         return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
-              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
         while (!VTPSD->isMemberSpecialization()) {
           auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
           if (!NewVTPSD)
@@ -3113,7 +3130,7 @@ bool FunctionDecl::isVariadic() const {
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
 FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
     ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-    StringLiteral *DeletedMessage) {
+    FPOptionsOverride FPFeatures, StringLiteral *DeletedMessage) {
   static constexpr size_t Alignment =
       std::max({alignof(DefaultedOrDeletedFunctionInfo),
                 alignof(DeclAccessPair), alignof(StringLiteral *)});
@@ -3124,6 +3141,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
       new (Context.Allocate(Size, Alignment)) DefaultedOrDeletedFunctionInfo;
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = DeletedMessage != nullptr;
+  Info->FPFeatures = FPFeatures;
 
   llvm::uninitialized_copy(Lookups, Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
@@ -3149,7 +3167,7 @@ void FunctionDecl::setDeletedAsWritten(bool D, StringLiteral *Message) {
       DefaultedOrDeletedInfo->setDeletedMessage(Message);
     else
       setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo::Create(
-          getASTContext(), /*Lookups=*/{}, Message));
+          getASTContext(), /*Lookups=*/{}, FPOptionsOverride(), Message));
   }
 }
 
@@ -3267,6 +3285,61 @@ void FunctionDecl::setBody(Stmt *B) {
   Body = LazyDeclStmtPtr(B);
   if (B)
     EndRangeLoc = B->getEndLoc();
+}
+
+FunctionDecl::DefaultedFunctionKind
+FunctionDecl::getDefaultedFunctionKind() const {
+  if (auto *MD = dyn_cast<CXXMethodDecl>(this)) {
+    if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(this)) {
+      if (Ctor->isDefaultConstructor())
+        return CXXSpecialMemberKind::DefaultConstructor;
+
+      if (Ctor->isCopyConstructor())
+        return CXXSpecialMemberKind::CopyConstructor;
+
+      if (Ctor->isMoveConstructor())
+        return CXXSpecialMemberKind::MoveConstructor;
+    }
+
+    if (MD->isCopyAssignmentOperator())
+      return CXXSpecialMemberKind::CopyAssignment;
+
+    if (MD->isMoveAssignmentOperator())
+      return CXXSpecialMemberKind::MoveAssignment;
+
+    if (isa<CXXDestructorDecl>(this))
+      return CXXSpecialMemberKind::Destructor;
+  }
+
+  switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_EqualEqual:
+    return DefaultedComparisonKind::Equal;
+
+  case OO_ExclaimEqual:
+    return DefaultedComparisonKind::NotEqual;
+
+  case OO_Spaceship:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::ThreeWay;
+
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::Relational;
+  default:
+    break;
+  }
+
+  // Not defaultable.
+  return DefaultedFunctionKind();
 }
 
 void FunctionDecl::setIsPureVirtual(bool P) {
@@ -3802,6 +3875,11 @@ unsigned FunctionDecl::getNumParams() const {
   return FPT ? FPT->getNumParams() : 0;
 }
 
+unsigned FunctionDecl::getNumParamsIncludingThis() const {
+  const auto *MD = dyn_cast<CXXMethodDecl>(this);
+  return getNumParams() + (MD && MD->isImplicitObjectMemberFunction());
+}
+
 void FunctionDecl::setParams(ASTContext &C,
                              ArrayRef<ParmVarDecl *> NewParamInfo) {
   assert(!ParamInfo && "Already has param info!");
@@ -4000,12 +4078,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;
@@ -4326,7 +4401,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4346,7 +4421,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
@@ -4573,10 +4648,12 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemmove:
     return Builtin::BImemmove;
 
+  case Builtin::BI__builtin_strlcpy:
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4656,6 +4733,10 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
+      if (FnInfo->isStr("strlcpy"))
+        return Builtin::BIstrlcpy;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;
@@ -4851,7 +4932,13 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   if (!CAT)
     return nullptr;
 
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  // A late-parsed attribute whose argument was rejected keeps the node with the
+  // raw argument as its count (see Sema::ActOnLateParsedTypeAttrArgument). That
+  // argument may not be a simple declaration reference (e.g. it may be an error
+  // expression or a `sizeof`), in which case it refers to no field.
+  const auto *CountDRE = dyn_cast<DeclRefExpr>(CAT->getCountExpr());
+  if (!CountDRE)
+    return nullptr;
   const auto *CountDecl = CountDRE->getDecl();
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
     CountDecl = IFD->getAnonField();
@@ -5865,7 +5952,9 @@ TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
   SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  auto *D = new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  D->Ordinal = C.NumTopLevelStmtDecls++;
+  return D;
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,

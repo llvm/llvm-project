@@ -590,9 +590,9 @@ define i8 @test_atomic_load_min_i8(i8 signext %offset) nounwind {
 ; CHECK-NEXT: sxtb r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it le
-; CHECK:      movle r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{le|ge}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: strexb [[STATUS:r[0-9]+]], r[[OLDX]], {{.*}}[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -616,9 +616,9 @@ define i16 @test_atomic_load_min_i16(i16 signext %offset) nounwind {
 ; CHECK-NEXT: sxth r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it le
-; CHECK:      movle r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{le|ge}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: stlexh [[STATUS:r[0-9]+]], r[[OLDX]], {{.*}}[[ADDR]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -700,9 +700,9 @@ define i8 @test_atomic_load_max_i8(i8 signext %offset) nounwind {
 ; CHECK-NEXT: sxtb r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it gt
-; CHECK:      movgt r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{gt|lt}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: stlexb [[STATUS:r[0-9]+]], r[[OLDX]], {{.*}}[[ADDR]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1
@@ -726,9 +726,9 @@ define i16 @test_atomic_load_max_i16(i16 signext %offset) nounwind {
 ; CHECK-NEXT: sxth r[[OLDX:[0-9]+]], r[[OLD]]
   ; r0 below is a reasonable guess but could change: it certainly comes into the
   ;  function there.
-; CHECK-NEXT: cmp r[[OLDX]], r0
+; CHECK-NEXT: cmp {{r[0-9]+}}, r{{[0-9]+}}
 ; Thumb mode: it gt
-; CHECK:      movgt r[[OLDX]], r[[OLD]]
+; CHECK:      mov{{gt|lt}} r[[OLDX]], r[[OLD]]
 ; CHECK-NEXT: strexh [[STATUS:r[0-9]+]], r[[OLDX]], [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
 ; CHECK-NEXT: bne .LBB{{[0-9]+}}_1

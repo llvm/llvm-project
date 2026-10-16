@@ -10,11 +10,11 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_MISSINGFRAMEINFERRER_H
 
 #include "PerfReader.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include <unordered_map>
-#include <unordered_set>
 
 namespace llvm {
 namespace sampleprof {
@@ -66,39 +66,29 @@ private:
   // A map of call instructions to their target addresses. This is first
   // populated with static call edges but then trimmed down to dynamic call
   // edges based on LBR samples.
-  std::unordered_map<uint64_t, std::unordered_set<uint64_t>> CallEdges;
+  DenseMap<uint64_t, DenseSet<uint64_t>> CallEdges;
 
   // A map of tail call instructions to their target addresses. This is first
   // populated with static call edges but then trimmed down to dynamic call
   // edges based on LBR samples.
-  std::unordered_map<uint64_t, std::unordered_set<uint64_t>> TailCallEdges;
+  DenseMap<uint64_t, DenseSet<uint64_t>> TailCallEdges;
 
   // Dynamic call targets in terms of BinaryFunction for any calls.
-  std::unordered_map<uint64_t, std::unordered_set<BinaryFunction *>> CallEdgesF;
+  DenseMap<uint64_t, SmallPtrSet<BinaryFunction *, 0>> CallEdgesF;
 
   // Dynamic call targets in terms of BinaryFunction  for tail calls.
-  std::unordered_map<uint64_t, std::unordered_set<BinaryFunction *>>
-      TailCallEdgesF;
+  DenseMap<uint64_t, SmallPtrSet<BinaryFunction *, 0>> TailCallEdgesF;
 
   // Dynamic tail call targets of caller functions.
-  std::unordered_map<BinaryFunction *, std::vector<uint64_t>> FuncToTailCallMap;
+  DenseMap<BinaryFunction *, std::vector<uint64_t>> FuncToTailCallMap;
 
   // Functions that are reachable via tail calls.
   DenseSet<const BinaryFunction *> TailCallTargetFuncs;
 
-  struct PairHash {
-    std::size_t operator()(
-        const std::pair<BinaryFunction *, BinaryFunction *> &Pair) const {
-      return std::hash<BinaryFunction *>()(Pair.first) ^
-             std::hash<BinaryFunction *>()(Pair.second);
-    }
-  };
-
   // Cached results from a CallerCalleePair to a unique call path between them.
-  std::unordered_map<CallerCalleePair, std::vector<uint64_t>, PairHash>
-      UniquePaths;
+  DenseMap<CallerCalleePair, std::vector<uint64_t>> UniquePaths;
   // Cached results from CallerCalleePair to the number of available call paths.
-  std::unordered_map<CallerCalleePair, uint64_t, PairHash> NonUniquePaths;
+  DenseMap<CallerCalleePair, uint64_t> NonUniquePaths;
 
   DenseSet<BinaryFunction *> Visiting;
 

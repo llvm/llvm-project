@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_auxv_macros.h"
+#include "src/string/strstr.h"
 #include "src/sys/auxv/getauxval.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <src/string/strstr.h>
-#include <sys/auxv.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcGetauxvalTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

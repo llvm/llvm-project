@@ -81,14 +81,24 @@ void ompd_init() {
 
   char *libname = NULL;
 
+  const char *ompd_env_var = getenv("OMP_DEBUG");
+  int ompd_debug = ompd_env_var && !strcmp(ompd_env_var, "enabled");
+
 #if KMP_OS_UNIX
   // Find the location of libomp.so thru dladdr and replace the libomp with
   // libompd to get the full path of libompd
   Dl_info dl_info;
   int ret = dladdr((void *)ompd_init, &dl_info);
   if (!ret) {
-    fprintf(stderr, "%s\n", dlerror());
-  } else if (strrchr(dl_info.dli_fname, '/')) {
+    const char *err = dlerror();
+    if (ompd_debug || err)
+      fprintf(stderr,
+              "The OpenMP runtime could not determine the location of "
+              "libompd.so. If the debugger fails to load the library, make "
+              "sure to add the directory containing a compatible libompd.so "
+              "to your LD_LIBRARY_PATH%s%s\n",
+              err ? ": " : "", err ? err : "");
+  } else if (dl_info.dli_fname && strrchr(dl_info.dli_fname, '/')) {
     int lib_path_length = strrchr(dl_info.dli_fname, '/') - dl_info.dli_fname;
     libname =
         (char *)malloc(lib_path_length + 12 /*for '/libompd.so' and '\0'*/);
@@ -97,8 +107,7 @@ void ompd_init() {
   }
 #endif
 
-  const char *ompd_env_var = getenv("OMP_DEBUG");
-  if (ompd_env_var && !strcmp(ompd_env_var, "enabled")) {
+  if (ompd_debug) {
     fprintf(stderr, "OMP_OMPD active\n");
     ompt_enabled.enabled = 1;
     ompd_state |= OMPD_ENABLE_BP;

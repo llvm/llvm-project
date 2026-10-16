@@ -247,7 +247,7 @@ static void AddLineNumber(RewriteBuffer &RB, unsigned LineNo,
     RB.InsertTextBefore(B, OS.str());
   } else {
     RB.InsertTextBefore(B, OS.str());
-    RB.InsertTextBefore(E, "</td></tr>");
+    RB.InsertTextAfter(E, "</td></tr>");
   }
 }
 
@@ -293,7 +293,8 @@ void html::AddLineNumbers(Rewriter& R, FileID FID) {
   // Add one big table tag that surrounds all of the code.
   std::string s;
   llvm::raw_string_ostream os(s);
-  os << "<table class=\"code\" data-fileid=\"" << FID.getHashValue() << "\">\n";
+  os << "<table class=\"code\" data-fileid=\"" << FID.getOpaqueValue()
+     << "\">\n";
   RB.InsertTextBefore(0, os.str());
   RB.InsertTextAfter(FileEnd - FileBeg, "</table>");
 }

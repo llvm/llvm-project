@@ -3,7 +3,7 @@
 ; REQUIRES: amdgpu-registered-target
 
 ; DEFINE: %{opt} = opt -disable-output %S/Inputs/test.ll \
-; DEFINE:              -mtriple="amdgcn-amd-amdhsa" 2>&1
+; DEFINE:              -mtriple="amdgpu-amd-amdhsa" 2>&1
 ; DEFINE: %{fcheck-on} = FileCheck -match-full-lines %S/Inputs/test.ll
 ; DEFINE: %{fcheck-off} = FileCheck -allow-empty -check-prefixes=NONE \
 ; DEFINE:                 %S/Inputs/test.ll

@@ -25,6 +25,7 @@ int main(int, char**) {
 
   try { // Throw in vector() from allocator
     AllocVec vec;
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -33,6 +34,7 @@ int main(int, char**) {
   try { // Throw in vector(size_type, const allocator_type&) from allocator
     throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
     AllocVec get_alloc(0, alloc);
+    (void)get_alloc;
   } catch (int) {
   }
   check_new_delete_called();
@@ -41,6 +43,7 @@ int main(int, char**) {
   try { // Throw in vector(size_type, const value_type&, const allocator_type&) from allocator
     throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
     AllocVec get_alloc(0, true, alloc);
+    (void)get_alloc;
   } catch (int) {
   }
   check_new_delete_called();
@@ -48,6 +51,7 @@ int main(int, char**) {
   try { // Throw in vector(InputIterator, InputIterator) from input iterator
     std::vector<bool> vec(
         throwing_iterator<bool, std::input_iterator_tag>(), throwing_iterator<bool, std::input_iterator_tag>(2));
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -55,6 +59,7 @@ int main(int, char**) {
   try { // Throw in vector(InputIterator, InputIterator) from forward iterator
     std::vector<bool> vec(
         throwing_iterator<bool, std::forward_iterator_tag>(), throwing_iterator<bool, std::forward_iterator_tag>(2));
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -62,6 +67,7 @@ int main(int, char**) {
   try { // Throw in vector(InputIterator, InputIterator) from allocator
     bool a[] = {true, true};
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2));
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -70,6 +76,7 @@ int main(int, char**) {
     std::allocator<bool> alloc;
     std::vector<bool> vec(
         throwing_iterator<bool, std::input_iterator_tag>(), throwing_iterator<bool, std::input_iterator_tag>(2), alloc);
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -79,6 +86,7 @@ int main(int, char**) {
     std::vector<bool> vec(throwing_iterator<bool, std::forward_iterator_tag>(),
                           throwing_iterator<bool, std::forward_iterator_tag>(2),
                           alloc);
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -87,6 +95,7 @@ int main(int, char**) {
     bool a[] = {true, false};
     throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2), alloc);
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -95,6 +104,7 @@ int main(int, char**) {
     bool a[] = {true, false};
     throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
     AllocVec vec(forward_iterator<bool*>(a), forward_iterator<bool*>(a + 2), alloc);
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();
@@ -106,6 +116,7 @@ int main(int, char**) {
     vec.push_back(true);
     alloc.throw_on_copy_ = true;
     AllocVec vec2(vec, alloc);
+    (void)vec2;
   } catch (int) {
   }
   check_new_delete_called();
@@ -116,6 +127,7 @@ int main(int, char**) {
     vec.push_back(true);
     alloc.throw_on_copy_ = true;
     AllocVec vec2(std::move(vec), alloc);
+    (void)vec2;
   } catch (int) {
   }
   check_new_delete_called();
@@ -123,6 +135,7 @@ int main(int, char**) {
   try { // Throw in vector(initializer_list<value_type>, const allocator_type&) constructor from allocator
     throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
     AllocVec vec({true, true}, alloc);
+    (void)vec;
   } catch (int) {
   }
   check_new_delete_called();

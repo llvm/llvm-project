@@ -67,14 +67,14 @@ static unsigned getLength(const Expr *E,
   E = E->IgnoreImpCasts();
 
   if (const auto *LengthDRE = dyn_cast<DeclRefExpr>(E))
-    if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl()))
-      if (!isa<ParmVarDecl>(LengthVD))
-        if (const Expr *LengthInit = LengthVD->getInit();
-            LengthInit && !LengthInit->isValueDependent()) {
-          Expr::EvalResult Length;
-          if (LengthInit->EvaluateAsInt(Length, *Result.Context))
-            return Length.Val.getInt().getZExtValue();
-        }
+    if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl());
+        LengthVD && !isa<ParmVarDecl>(LengthVD))
+      if (const Expr *LengthInit = LengthVD->getInit();
+          LengthInit && !LengthInit->isValueDependent()) {
+        Expr::EvalResult Length;
+        if (LengthInit->EvaluateAsInt(Length, *Result.Context))
+          return Length.Val.getInt().getZExtValue();
+      }
 
   if (const auto *LengthIL = dyn_cast<IntegerLiteral>(E))
     return LengthIL->getValue().getZExtValue();
@@ -107,9 +107,9 @@ static const CallExpr *getStrlenExpr(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<CallExpr>(WrongLengthExprName))
     if (const Decl *D = StrlenExpr->getCalleeDecl())
       if (const FunctionDecl *FD = D->getAsFunction())
-        if (const IdentifierInfo *II = FD->getIdentifier())
-          if (II->isStr("strlen") || II->isStr("wcslen"))
-            return StrlenExpr;
+        if (const IdentifierInfo *II = FD->getIdentifier();
+            II && (II->isStr("strlen") || II->isStr("wcslen")))
+          return StrlenExpr;
 
   return nullptr;
 }
@@ -233,9 +233,9 @@ isGivenLengthEqualToSrcLength(const MatchFinder::MatchResult &Result) {
   if (GivenLength != 0 && SrcLength != 0 && GivenLength == SrcLength)
     return true;
 
-  if (const auto *LengthExpr = Result.Nodes.getNodeAs<Expr>(LengthExprName))
-    if (isa<BinaryOperator>(LengthExpr->IgnoreParenImpCasts()))
-      return false;
+  if (const auto *LengthExpr = Result.Nodes.getNodeAs<Expr>(LengthExprName);
+      LengthExpr && isa<BinaryOperator>(LengthExpr->IgnoreParenImpCasts()))
+    return false;
 
   // Check the strlen()'s argument's 'VarDecl' is equal to the source 'VarDecl'.
   if (const CallExpr *StrlenCE = getStrlenExpr(Result))
@@ -324,21 +324,18 @@ static void lengthExprHandle(const Expr *LengthExpr,
     const Expr *LhsExpr = BO->getLHS()->IgnoreImpCasts();
     const Expr *RhsExpr = BO->getRHS()->IgnoreImpCasts();
 
-    if (const auto *LhsIL = dyn_cast<IntegerLiteral>(LhsExpr)) {
-      if (LhsIL->getValue().getZExtValue() == 1) {
-        Diag << FixItHint::CreateRemoval(
-            {LhsIL->getBeginLoc(),
-             RhsExpr->getBeginLoc().getLocWithOffset(-1)});
-        return;
-      }
+    if (const auto *LhsIL = dyn_cast<IntegerLiteral>(LhsExpr);
+        LhsIL && LhsIL->getValue().getZExtValue() == 1) {
+      Diag << FixItHint::CreateRemoval(
+          {LhsIL->getBeginLoc(), RhsExpr->getBeginLoc().getLocWithOffset(-1)});
+      return;
     }
 
-    if (const auto *RhsIL = dyn_cast<IntegerLiteral>(RhsExpr)) {
-      if (RhsIL->getValue().getZExtValue() == 1) {
-        Diag << FixItHint::CreateRemoval(
-            {LhsExpr->getEndLoc().getLocWithOffset(1), RhsIL->getEndLoc()});
-        return;
-      }
+    if (const auto *RhsIL = dyn_cast<IntegerLiteral>(RhsExpr);
+        RhsIL && RhsIL->getValue().getZExtValue() == 1) {
+      Diag << FixItHint::CreateRemoval(
+          {LhsExpr->getEndLoc().getLocWithOffset(1), RhsIL->getEndLoc()});
+      return;
     }
   }
 
@@ -517,14 +514,14 @@ AST_MATCHER_P(Expr, hasDefinition, ast_matchers::internal::Matcher<Expr>,
   if (InnerMatcher.matches(*SimpleNode, Finder, Builder))
     return true;
 
-  auto DREHasInit = ignoringImpCasts(
+  const auto DREHasInit = ignoringImpCasts(
       declRefExpr(to(varDecl(hasInitializer(ignoringImpCasts(InnerMatcher))))));
 
   if (DREHasInit.matches(*SimpleNode, Finder, Builder))
     return true;
 
   const char *const VarDeclName = "variable-declaration";
-  auto DREHasDefinition = ignoringImpCasts(declRefExpr(
+  const auto DREHasDefinition = ignoringImpCasts(declRefExpr(
       to(varDecl().bind(VarDeclName)),
       hasAncestor(compoundStmt(hasDescendant(binaryOperator(
           hasLHS(declRefExpr(to(varDecl(equalsBoundNode(VarDeclName))))),
@@ -538,25 +535,26 @@ AST_MATCHER_P(Expr, hasDefinition, ast_matchers::internal::Matcher<Expr>,
 } // namespace
 
 void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
-  auto IncOp =
+  const auto IncOp =
       binaryOperator(hasOperatorName("+"),
                      hasEitherOperand(ignoringParenImpCasts(integerLiteral())));
 
-  auto DecOp =
+  const auto DecOp =
       binaryOperator(hasOperatorName("-"),
                      hasEitherOperand(ignoringParenImpCasts(integerLiteral())));
 
-  auto HasIncOp = anyOf(ignoringImpCasts(IncOp), hasDescendant(IncOp));
-  auto HasDecOp = anyOf(ignoringImpCasts(DecOp), hasDescendant(DecOp));
+  const auto HasIncOp = anyOf(ignoringImpCasts(IncOp), hasDescendant(IncOp));
+  const auto HasDecOp = anyOf(ignoringImpCasts(DecOp), hasDescendant(DecOp));
 
-  auto Container = ignoringImpCasts(cxxMemberCallExpr(hasDescendant(declRefExpr(
-      hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(recordDecl(
-          hasAnyName("::std::vector", "::std::list", "::std::deque"))))))))));
+  const auto Container = ignoringImpCasts(cxxMemberCallExpr(
+      hasDescendant(declRefExpr(hasType(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(recordDecl(hasAnyName(
+              "::std::vector", "::std::list", "::std::deque"))))))))));
 
-  auto StringTy = type(hasUnqualifiedDesugaredType(recordType(
+  const auto StringTy = type(hasUnqualifiedDesugaredType(recordType(
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string"))))));
 
-  auto AnyOfStringTy =
+  const auto AnyOfStringTy =
       anyOf(hasType(StringTy), hasType(qualType(pointsTo(StringTy))));
 
   auto CharTyArray = hasType(qualType(hasCanonicalType(
@@ -565,7 +563,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   auto CharTyPointer = hasType(
       qualType(hasCanonicalType(pointerType(pointee(isAnyCharacter())))));
 
-  auto AnyOfCharTy = anyOf(CharTyArray, CharTyPointer);
+  const auto AnyOfCharTy = anyOf(CharTyArray, CharTyPointer);
 
   //===--------------------------------------------------------------------===//
   // The following six cases match problematic length expressions.
@@ -603,7 +601,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   auto DREHasReturnWithoutInc = ignoringImpCasts(
       declRefExpr(to(varDecl(hasInitializer(CallExprReturnWithoutInc)))));
 
-  auto AnyOfWrongLengthInit =
+  const auto AnyOfWrongLengthInit =
       anyOf(WrongLength, AnyOfCallOrDREWithoutInc, CallExprReturnWithoutInc,
             DREHasReturnWithoutInc);
 
@@ -615,7 +613,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   // Note: Sometimes the size of char is explicitly written out.
   auto SizeExpr = anyOf(SizeOfCharExpr, integerLiteral(equals(1)));
 
-  auto MallocLengthExpr = allOf(
+  const auto MallocLengthExpr = allOf(
       callee(functionDecl(
           hasAnyName("::alloca", "::calloc", "malloc", "realloc"))),
       hasAnyArgument(allOf(unless(SizeExpr), expr().bind(DestMallocExprName))));
@@ -641,13 +639,13 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                   expr().bind(UnknownDestName))
           .bind(DestExprName);
 
-  auto AnyOfDestDecl = ignoringImpCasts(
+  const auto AnyOfDestDecl = ignoringImpCasts(
       anyOf(allOf(hasDefinition(anyOf(AnyOfDestInit, DestArrayTyDecl,
                                       hasDescendant(DestArrayTyDecl))),
                   expr().bind(DestExprName)),
             anyOf(DestUnknownDecl, hasDescendant(DestUnknownDecl))));
 
-  auto NullTerminatorExpr = binaryOperator(
+  const auto NullTerminatorExpr = binaryOperator(
       hasLHS(anyOf(hasDescendant(declRefExpr(to(varDecl(
                        equalsBoundNode(std::string(DestVarDeclName)))))),
                    hasDescendant(declRefExpr(
@@ -660,7 +658,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                   anyOf(hasAncestor(cxxMemberCallExpr().bind(SrcExprName)),
                         expr().bind(SrcExprName)));
 
-  auto AnyOfSrcDecl =
+  const auto AnyOfSrcDecl =
       ignoringImpCasts(anyOf(stringLiteral().bind(SrcExprName),
                              hasDescendant(stringLiteral().bind(SrcExprName)),
                              SrcDecl, hasDescendant(SrcDecl)));
@@ -683,7 +681,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
     bool WithIncrease;
   };
 
-  auto MatchDestination = [=](CallContext CC) {
+  const auto MatchDestination = [=](CallContext CC) {
     return hasArgument(*CC.DestinationPos,
                        allOf(AnyOfDestDecl,
                              unless(hasAncestor(compoundStmt(
@@ -691,11 +689,11 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                              unless(Container)));
   };
 
-  auto MatchSource = [=](CallContext CC) {
+  const auto MatchSource = [=](CallContext CC) {
     return hasArgument(*CC.SourcePos, AnyOfSrcDecl);
   };
 
-  auto MatchGivenLength = [=](CallContext CC) {
+  const auto MatchGivenLength = [=](CallContext CC) {
     return hasArgument(
         CC.LengthPos,
         allOf(
@@ -712,7 +710,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
             expr().bind(LengthExprName)));
   };
 
-  auto MatchCall = [=](CallContext CC) {
+  const auto MatchCall = [=](CallContext CC) {
     const std::string CharHandlerFuncName = "::" + CC.Name.str();
 
     // Try to match with 'wchar_t' based function calls.
@@ -725,7 +723,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                  MatchGivenLength(CC));
   };
 
-  auto Match = [=](CallContext CC) {
+  const auto Match = [=](CallContext CC) {
     if (CC.DestinationPos && CC.SourcePos)
       return allOf(MatchCall(CC), MatchDestination(CC), MatchSource(CC));
 
@@ -747,7 +745,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   auto MemcpyS = Match({"memcpy_s", 0, 2, 3, false});
 
   // void *memchr(const void *src, int c, size_t count)
-  auto Memchr = Match({"memchr", std::nullopt, 0, 2, false});
+  const auto Memchr = Match({"memchr", std::nullopt, 0, 2, false});
 
   // void *memmove(void *dest, const void *src, size_t count)
   auto Memmove = Match({"memmove", 0, 1, 2, false});
@@ -765,8 +763,8 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   // errno_t strerror_s(char *buffer, size_t bufferSize, int errnum);
   auto StrerrorS = Match({"strerror_s", 0, std::nullopt, 1, false});
 
-  auto AnyOfMatchers = anyOf(Memcpy, MemcpyS, Memmove, MemmoveS, StrncmpRHS,
-                             StrncmpLHS, Strxfrm, StrerrorS);
+  const auto AnyOfMatchers = anyOf(Memcpy, MemcpyS, Memmove, MemmoveS,
+                                   StrncmpRHS, StrncmpLHS, Strxfrm, StrerrorS);
 
   Finder->addMatcher(callExpr(AnyOfMatchers).bind(FunctionExprName), this);
 
@@ -911,12 +909,13 @@ void NotNullTerminatedResultCheck::memcpySFix(
 void NotNullTerminatedResultCheck::memchrFix(
     StringRef Name, const MatchFinder::MatchResult &Result) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
-  if (const auto *GivenCL = dyn_cast<CharacterLiteral>(FunctionExpr->getArg(1)))
-    if (GivenCL->getValue() != 0)
-      return;
+  if (const auto *GivenCL = dyn_cast<CharacterLiteral>(FunctionExpr->getArg(1));
+      GivenCL && GivenCL->getValue() != 0)
+    return;
 
-  auto Diag = diag(FunctionExpr->getArg(2)->IgnoreParenCasts()->getBeginLoc(),
-                   "the length is too short to include the null terminator");
+  const auto Diag =
+      diag(FunctionExpr->getArg(2)->IgnoreParenCasts()->getBeginLoc(),
+           "the length is too short to include the null terminator");
 
   if (const auto *CastExpr = Result.Nodes.getNodeAs<Expr>(CastExprName)) {
     const auto CastRemoveFix = FixItHint::CreateRemoval(
@@ -945,7 +944,7 @@ void NotNullTerminatedResultCheck::memmoveFix(
 
 void NotNullTerminatedResultCheck::strerrorSFix(
     const MatchFinder::MatchResult &Result) {
-  auto Diag =
+  const auto Diag =
       diag(Result.Nodes.getNodeAs<CallExpr>(FunctionExprName)->getBeginLoc(),
            "the result from calling 'strerror_s' is not null-terminated and "
            "missing the last character of the error message");
@@ -979,9 +978,10 @@ void NotNullTerminatedResultCheck::ncmpFix(
   if (!IsLengthTooLong && !isStringDataAndLength(Result))
     return;
 
-  auto Diag = diag(FunctionExpr->getArg(2)->IgnoreParenCasts()->getBeginLoc(),
-                   "comparison length is too long and might lead to a "
-                   "buffer overflow");
+  const auto Diag =
+      diag(FunctionExpr->getArg(2)->IgnoreParenCasts()->getBeginLoc(),
+           "comparison length is too long and might lead to a "
+           "buffer overflow");
 
   lengthArgHandle(LengthHandleKind::Decrease, Result, Diag);
 }
@@ -991,7 +991,7 @@ void NotNullTerminatedResultCheck::xfrmFix(
   if (!isDestCapacityOverflows(Result))
     return;
 
-  auto Diag =
+  const auto Diag =
       diag(Result.Nodes.getNodeAs<CallExpr>(FunctionExprName)->getBeginLoc(),
            "the result from calling '%0' is not null-terminated")
       << Name;

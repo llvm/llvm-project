@@ -2,11 +2,11 @@
 // Test standard include paths
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK000 %s
 // CHECK000: "-cc1" {{.*}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK001 %s
 // CHECK001: "-cc1" {{.*}} "-internal-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include{{/|\\\\}}c++"
 // CHECK001:   "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
@@ -15,19 +15,19 @@
 // Test -nostdinc, -nostdlibinc, -nostdinc++
 // -----------------------------------------------------------------------------
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -nostdinc %s 2>&1 | FileCheck -check-prefix=CHECK110 %s
 // CHECK110: "-cc1"
 // CHECK110-NOT: "-internal-externc-isystem"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -nostdlibinc %s 2>&1 | FileCheck -check-prefix=CHECK111 %s
 // CHECK111: "-cc1"
 // CHECK111-NOT: "-internal-externc-isystem"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK-RESOURCE-DIR %s
 // CHECK-RESOURCE-DIR: InstalledDir: [[INSTALLED_DIR:.+]]
@@ -36,7 +36,7 @@
 // CHECK-RESOURCE-DIR: "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // CHECK-RESOURCE-DIR: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -nostdinc++ %s 2>&1 | FileCheck -check-prefix=CHECK112 %s
 // CHECK112: InstalledDir: [[INSTALLED_DIR:.+]]
@@ -46,7 +46,7 @@
 // CHECK112-NOT: "-internal-isystem"
 // CHECK112-DAG: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
-// RUN: %clangxx -### --target=hexagon-unknown-elf -fno-integrated-as    \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
 // RUN:   -nostdlibinc %s 2>&1 | FileCheck -check-prefix=CHECK113 %s
 // CHECK113: InstalledDir: [[INSTALLED_DIR:.+]]
@@ -59,129 +59,129 @@
 // -----------------------------------------------------------------------------
 // Test -mcpu=<cpuname> -mv<number>
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv5 %s 2>&1 | FileCheck -check-prefix=CHECK221 %s
 // CHECK221: "-cc1" {{.*}} "-target-cpu" "hexagonv5"
 // CHECK221: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v5{{/|\\\\}}crt0
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv55 %s 2>&1 | FileCheck -check-prefix=CHECK222 %s
 // CHECK222: "-cc1" {{.*}} "-target-cpu" "hexagonv55"
 // CHECK222: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v55{{/|\\\\}}crt0
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK223 %s
 // CHECK223: "-cc1" {{.*}} "-target-cpu" "hexagonv60"
 // CHECK223: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v60{{/|\\\\}}crt0
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv62 %s 2>&1 | FileCheck -check-prefix=CHECK224 %s
 // CHECK224: "-cc1" {{.*}} "-target-cpu" "hexagonv62"
 // CHECK224: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v62{{/|\\\\}}crt0
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv65 %s 2>&1 | FileCheck -check-prefix=CHECK225 %s
 // CHECK225: "-cc1" {{.*}} "-target-cpu" "hexagonv65"
 // CHECK225: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v65{{/|\\\\}}crt0
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv66 %s 2>&1 | FileCheck -check-prefix=CHECK226 %s
 // CHECK226: "-cc1" {{.*}} "-target-cpu" "hexagonv66"
 // CHECK226: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v66{{/|\\\\}}crt0
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -O3 %s 2>&1 | FileCheck -check-prefix=CHECK227 %s
 // CHECK227-NOT: "-ffp-contract=fast"
 // CHECK227: {{hexagon-link|ld}}
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -O3 -ffp-contract=off %s 2>&1 | FileCheck -check-prefix=CHECK228 %s
 // CHECK228-NOT: "-ffp-contract=fast"
 // CHECK228: {{hexagon-link|ld}}
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv65 -march=hexagon\
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK229 %s
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mv65 -march=hexagon\
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK229 %s
 // CHECK229: "-cc1" {{.*}} "-target-cpu" "hexagonv65"
 // CHECK229: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v65{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv67 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK22A %s
 // CHECK22A: "-cc1" {{.*}} "-target-cpu" "hexagonv67"
 // CHECK22A: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v67{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv67t \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER %s 2>&1 | FileCheck -check-prefix=CHECK22B %s
 // CHECK22B: "-cc1" {{.*}} "-target-cpu" "hexagonv67t"
 // CHECK22B: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v67t{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv68 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK22C %s
 // CHECK22C: "-cc1" {{.*}} "-target-cpu" "hexagonv68"
 // CHECK22C: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v68{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv69 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK22D %s
 // CHECK22D: "-cc1" {{.*}} "-target-cpu" "hexagonv69"
 // CHECK22D: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v69{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv71 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK22E %s
 // CHECK22E: "-cc1" {{.*}} "-target-cpu" "hexagonv71"
 // CHECK22E: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v71{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv71t -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK22F %s
 // CHECK22F: "-cc1" {{.*}} "-target-cpu" "hexagonv71t"
 // CHECK22F: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v71t{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv73 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK230 %s
 // CHECK230: "-cc1" {{.*}} "-target-cpu" "hexagonv73"
 // CHECK230: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v73{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv75 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK240 %s
 // CHECK240: "-cc1" {{.*}} "-target-cpu" "hexagonv75"
 // CHECK240: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v75{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv79 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK250 %s
 // CHECK250: "-cc1" {{.*}} "-target-cpu" "hexagonv79"
 // CHECK250: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v79{{/|\\\\}}crt0
 
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv81 -fuse-ld=hexagon-link \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK260 %s
@@ -195,7 +195,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Defaults for C
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK330 %s
 // CHECK330: "-cc1"
@@ -214,7 +214,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Defaults for C++
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK331 %s
 // CHECK331: "-cc1"
@@ -233,7 +233,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Additional Libraries (-L)
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -Lone -L two -L three %s 2>&1 | FileCheck -check-prefix=CHECK332 %s
@@ -254,7 +254,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -static, -shared
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -static %s 2>&1 | FileCheck -check-prefix=CHECK333 %s
@@ -270,7 +270,7 @@
 // CHECK333: "--start-group" "-lstandalone" "-lc" "-lgcc" "--end-group"
 // CHECK333: "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v60{{/|\\\\}}fini.o"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -shared %s 2>&1 | FileCheck -check-prefix=CHECK334 %s
@@ -291,7 +291,7 @@
 // CHECK334: "--end-group"
 // CHECK334: "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v60{{/|\\\\}}G0{{/|\\\\}}pic{{/|\\\\}}finiS.o"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -shared \
@@ -315,7 +315,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -nostdlib, -nostartfiles, -nodefaultlibs, -nolibc
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -nostdlib %s 2>&1 | FileCheck -check-prefix=CHECK336 %s
@@ -336,7 +336,7 @@
 // CHECK336-NOT: "--end-group"
 // CHECK336-NOT: fini.o
 
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -nostartfiles %s 2>&1 | FileCheck -check-prefix=CHECK337 %s
@@ -351,7 +351,7 @@
 // CHECK337: "-lstdc++" "-lm" "--start-group" "-lstandalone" "-lc" "-lgcc" "--end-group"
 // CHECK337-NOT: fini.o
 
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -nodefaultlibs %s 2>&1 | FileCheck -check-prefix=CHECK338 %s
@@ -372,7 +372,7 @@
 // CHECK338-NOT: "--end-group"
 // CHECK338: "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v60{{/|\\\\}}fini.o"
 
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld -nolibc %s 2>&1 | FileCheck -check-prefix=CHECK-NOLIBC %s
 // CHECK-NOLIBC: "-cc1"
@@ -396,7 +396,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -moslib
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -moslib=first -moslib=second %s 2>&1 | FileCheck -check-prefix=CHECK339 %s
@@ -415,7 +415,7 @@
 // CHECK339-SAME: "-lc" "-lgcc" "--end-group"
 // CHECK339-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v60{{/|\\\\}}fini.o"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -moslib=first -moslib=second -moslib=standalone %s 2>&1 | FileCheck -check-prefix=CHECK33A %s
@@ -438,7 +438,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Other args to pass to linker
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 -fuse-ld=lld \
 // RUN:   -s -t -e start_here -uFoo -undefined Bar %s 2>&1 | FileCheck -check-prefix=CHECK33B %s
@@ -457,18 +457,18 @@
 // -----------------------------------------------------------------------------
 // pic, small data threshold
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK340 %s
 // CHECK340:      "-cc1"
 // CHECK340: {{hexagon-link|ld}}
 // CHECK340-NOT:  "-G{{[0-9]+}}"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fpic %s 2>&1 | FileCheck -check-prefix=CHECK341 %s
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fPIC %s 2>&1 | FileCheck -check-prefix=CHECK341 %s
@@ -479,15 +479,15 @@
 // CHECK341: {{hexagon-link|ld}}
 // CHECK341:      "-G0"
 
-// RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -G=8 %s 2>&1 | FileCheck -check-prefix=CHECK342 %s
-// RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -G 8 %s 2>&1 | FileCheck -check-prefix=CHECK342 %s
-// RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -fno-integrated-as -fno-pie -no-pie \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -msmall-data-threshold=8 %s 2>&1 | FileCheck -check-prefix=CHECK342 %s
@@ -502,7 +502,7 @@
 // -----------------------------------------------------------------------------
 // pie
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -pie %s 2>&1 | FileCheck -check-prefix=CHECK350 %s
@@ -510,7 +510,7 @@
 // CHECK350:      {{hexagon-link|ld}}
 // CHECK350:      "-pie"
 
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -pie -shared %s 2>&1 | FileCheck -check-prefix=CHECK351 %s
@@ -521,7 +521,7 @@
 // -----------------------------------------------------------------------------
 // Test that -pie is not set by default
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK357 %s
@@ -532,7 +532,7 @@
 // -----------------------------------------------------------------------------
 // Test Assembler related args
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf -fno-integrated-as    \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -gdwarf-2 \
@@ -544,65 +544,112 @@
 // CHECK360:      {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
-// ffixed-r16 through ffixed-r28
+// ffixed-r6 through ffixed-r28
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r6 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R6 %s
+// CHECK-R6: "-target-feature" "+reserved-r6"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r7 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R7 %s
+// CHECK-R7: "-target-feature" "+reserved-r7"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r8 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R8 %s
+// CHECK-R8: "-target-feature" "+reserved-r8"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r9 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R9 %s
+// CHECK-R9: "-target-feature" "+reserved-r9"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r10 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R10 %s
+// CHECK-R10: "-target-feature" "+reserved-r10"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r11 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R11 %s
+// CHECK-R11: "-target-feature" "+reserved-r11"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r12 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R12 %s
+// CHECK-R12: "-target-feature" "+reserved-r12"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r13 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R13 %s
+// CHECK-R13: "-target-feature" "+reserved-r13"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r14 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R14 %s
+// CHECK-R14: "-target-feature" "+reserved-r14"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r15 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-R15 %s
+// CHECK-R15: "-target-feature" "+reserved-r15"
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R16 %s
 // CHECK-R16: "-target-feature" "+reserved-r16"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r17 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r17 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R17 %s
 // CHECK-R17: "-target-feature" "+reserved-r17"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r18 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r18 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R18 %s
 // CHECK-R18: "-target-feature" "+reserved-r18"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r19 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r19 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK370 %s
 // CHECK370: "-target-feature" "+reserved-r19"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r20 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r20 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R20 %s
 // CHECK-R20: "-target-feature" "+reserved-r20"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r21 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r21 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R21 %s
 // CHECK-R21: "-target-feature" "+reserved-r21"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r22 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r22 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R22 %s
 // CHECK-R22: "-target-feature" "+reserved-r22"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r23 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r23 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R23 %s
 // CHECK-R23: "-target-feature" "+reserved-r23"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r24 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r24 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R24 %s
 // CHECK-R24: "-target-feature" "+reserved-r24"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r25 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r25 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R25 %s
 // CHECK-R25: "-target-feature" "+reserved-r25"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r26 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r26 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R26 %s
 // CHECK-R26: "-target-feature" "+reserved-r26"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r27 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r27 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R27 %s
 // CHECK-R27: "-target-feature" "+reserved-r27"
-// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r28 %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r28 %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK-R28 %s
 // CHECK-R28: "-target-feature" "+reserved-r28"
-// RUN: %clang -### --target=hexagon-unknown-elf %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK371 %s
-// CHECK371-NOT: "+reserved-r{{(1[6-9]|2[0-8])}}"
+// CHECK371-NOT: "+reserved-r{{([6-9]|1[0-9]|2[0-8])}}"
+
+// -----------------------------------------------------------------------------
+// Reserving a caller-saved register (r6-r15) warns; a callee-saved one
+// (r16-r28) does not. The warning can be silenced with -Wno-....
+// -----------------------------------------------------------------------------
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r6 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-WARN-R6 %s
+// CHECK-WARN-R6: warning: reserving the caller-saved register 'ffixed-r6'
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r15 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-WARN-R15 %s
+// CHECK-WARN-R15: warning: reserving the caller-saved register 'ffixed-r15'
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-NOWARN %s
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -ffixed-r6 \
+// RUN:        -Wno-hexagon-reserved-caller-saved %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-NOWARN %s
+// CHECK-NOWARN-NOT: warning: reserving the caller-saved register
 
 // -----------------------------------------------------------------------------
 // mcabac
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf -mcabac %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf -mcabac %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK372 %s
 // CHECK372: "-target-feature" "+cabac"
-// RUN: %clang -### --target=hexagon-unknown-elf %s 2>&1 \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf %s 2>&1 \
 // RUN:        | FileCheck --check-prefix=CHECK373 %s
 // CHECK373-NOT: "+cabac"
 
 // -----------------------------------------------------------------------------
 // Misc Defaults
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK380 %s
 // CHECK380:      "-cc1"
@@ -611,7 +658,7 @@
 // -----------------------------------------------------------------------------
 // Default, hexagon-link is used
 // -----------------------------------------------------------------------------
-// RUN: not %clang -### --target=hexagon-unknown-elf \
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER %s 2>&1 | FileCheck -check-prefix=CHECK381 %s
@@ -620,7 +667,7 @@
 // -----------------------------------------------------------------------------
 // Passing -fuse-ld=lld
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld %s 2>&1 | FileCheck -check-prefix=CHECK382 %s
@@ -641,7 +688,7 @@
 // -----------------------------------------------------------------------------
 // Passing -fno-use-init-array
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK384 %s
 // CHECK384:          "-fno-use-init-array"
@@ -649,7 +696,7 @@
 // ThinLTO passes LTO options to the linker
 // -----------------------------------------------------------------------------
 // RUN: touch %t.o
-// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \

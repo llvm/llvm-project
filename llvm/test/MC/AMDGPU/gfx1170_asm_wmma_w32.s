@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1170 -show-encoding %s | FileCheck --check-prefix=GFX1170 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1170 %s 2>&1 | FileCheck --check-prefix=GFX1170-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.70 -show-encoding %s | FileCheck --check-prefix=GFX1170 %s
+// RUN: not llvm-mc -triple=amdgpu11.70 %s 2>&1 | FileCheck --check-prefix=GFX1170-ERR --implicit-check-not=error: %s
 
 v_wmma_f32_16x16x16_f16 v[8:15], v[0:3], v[4:7], v[8:15]
 // GFX1170: v_wmma_f32_16x16x16_f16 v[8:15], v[0:3], v[4:7], v[8:15] ; encoding: [0x08,0x40,0x40,0xcc,0x00,0x09,0x22,0x1c]

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -45,6 +46,15 @@ cl::opt<bool> LArchAnnotateTableJump(
 LoongArchTargetStreamer &LoongArchAsmPrinter::getTargetStreamer() const {
   return static_cast<LoongArchTargetStreamer &>(
       *OutStreamer->getTargetStreamer());
+}
+
+void LoongArchAsmPrinter::emitStartOfAsmFile(Module &M) {
+  StringRef ABIName = M.getTargetABIFromMD();
+  if (!ABIName.empty()) {
+    getTargetStreamer().setTargetABI(LoongArchABI::computeTargetABI(
+        M.getTargetTriple(), TM.getMCSubtargetInfo().getFeatureBits(),
+        ABIName));
+  }
 }
 
 void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -250,7 +260,7 @@ void LoongArchAsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   // The count here should be adjusted accordingly if the implementation
   // changes.
   const int8_t NoopsInSledCount = 11;
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_begin");
   MCSymbol *EndOfSled = OutContext.createTempSymbol("xray_sled_end");
   OutStreamer->emitLabel(BeginOfSled);

@@ -225,7 +225,7 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
     CHECK_LT(beg.offset, end.offset);
     s8 value = beg.value;
     CHECK_EQ(value, end.value);
-    // We unpoison memory bytes up to enbytes up to end.offset if it is not
+    // We unpoison memory bytes up to end.offset if it is not
     // unpoisoned already.
     if (value != 0) {
       *beg.chunk = Max(value, end.offset);
@@ -549,7 +549,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
 }
 
 // Annotates a double ended contiguous memory area like std::deque's chunk.
-// It allows detecting buggy accesses to allocated but not used begining
+// It allows detecting buggy accesses to allocated but not used beginning
 // or end items of such a container.
 void __sanitizer_annotate_double_ended_contiguous_container(
     const void *storage_beg_p, const void *storage_end_p,
@@ -717,7 +717,7 @@ const void *__sanitizer_double_ended_contiguous_container_find_bad_address(
   uptr beg = reinterpret_cast<uptr>(container_beg_p);
   uptr end = reinterpret_cast<uptr>(container_end_p);
 
-  // The prefix of the firs granule of the container is unpoisoned.
+  // The prefix of the first granule of the container is unpoisoned.
   if (beg != end)
     beg = Max(storage_beg, RoundDownTo(beg, granularity));
 

@@ -141,9 +141,13 @@ FailureOr<memref::AllocOp> multiBuffer(memref::AllocOp allocOp,
                                        unsigned multiplier,
                                        bool skipOverrideAnalysis = false);
 
-/// Appends patterns for extracting address computations from the instructions
-/// with memory accesses such that these memory accesses use only a base
-/// pointer.
+/// Appends patterns for extracting address computations from memory access
+/// operations such that these accesses use only a base pointer.
+///
+/// The patterns match memref::IndexedAccessOpInterface and
+/// VectorTransferOpInterface generically. Callers that rely on external models
+/// should register the appropriate dialect extensions, such as the NVGPU, GPU
+/// and Vector indexed-access models registered by RegisterAllDialects.
 ///
 /// For instance,
 /// ```mlir

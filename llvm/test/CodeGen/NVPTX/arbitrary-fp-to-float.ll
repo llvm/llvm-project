@@ -26,7 +26,6 @@ define float @from_f8e5m2_normal() {
 ; CHECK-LABEL: from_f8e5m2_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -38,7 +37,6 @@ define float @from_f8e5m2_normal() {
 define float @from_f8e5m2_zero() {
 ; CHECK-LABEL: from_f8e5m2_zero(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
@@ -52,7 +50,6 @@ define float @from_f8e5m2_neg_zero() {
 ; CHECK-LABEL: from_f8e5m2_neg_zero(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -2147483648;
 ; CHECK-NEXT:    ret;
@@ -64,7 +61,6 @@ define float @from_f8e5m2_neg_zero() {
 define float @from_f8e5m2_denorm() {
 ; CHECK-LABEL: from_f8e5m2_denorm(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 931135488;
@@ -78,7 +74,6 @@ define float @from_f8e5m2_inf() {
 ; CHECK-LABEL: from_f8e5m2_inf(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 2139095040;
 ; CHECK-NEXT:    ret;
@@ -90,7 +85,6 @@ define float @from_f8e5m2_inf() {
 define float @from_f8e5m2_nan() {
 ; CHECK-LABEL: from_f8e5m2_nan(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 2143289344;
@@ -104,7 +98,6 @@ define float @from_f8e5m2_max() {
 ; CHECK-LABEL: from_f8e5m2_max(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1197473792;
 ; CHECK-NEXT:    ret;
@@ -117,7 +110,6 @@ define float @from_f8e5m2_neg() {
 ; CHECK-LABEL: from_f8e5m2_neg(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -1082130432;
 ; CHECK-NEXT:    ret;
@@ -129,7 +121,7 @@ define float @from_f8e5m2_neg() {
 define float @from_f8e5m2_dynamic(i8 %x) {
 ; CHECK-LABEL: from_f8e5m2_dynamic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<6>;
+; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b32 %r<31>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -142,32 +134,31 @@ define float @from_f8e5m2_dynamic(i8 %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 2, 5;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 2;
+; CHECK-NEXT:    and.b32 %r16, %r15, 31;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 21;
 ; CHECK-NEXT:    or.b32 %r20, %r18, %r19;
 ; CHECK-NEXT:    add.s32 %r21, %r20, 939524096;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r4, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
 ; CHECK-NEXT:    setp.eq.b32 %p3, %r24, 0;
 ; CHECK-NEXT:    selp.b32 %r25, %r3, %r23, %p3;
-; CHECK-NEXT:    setp.eq.b32 %p4, %r4, 0;
 ; CHECK-NEXT:    or.b32 %r26, %r3, 2139095040;
-; CHECK-NEXT:    selp.b32 %r27, %r26, %r25, %p4;
-; CHECK-NEXT:    setp.eq.b32 %p5, %r16, 31;
-; CHECK-NEXT:    selp.b32 %r28, %r27, %r25, %p5;
+; CHECK-NEXT:    selp.b32 %r27, %r25, %r26, %p1;
+; CHECK-NEXT:    setp.eq.b32 %p4, %r16, 31;
+; CHECK-NEXT:    selp.b32 %r28, %r27, %r25, %p4;
 ; CHECK-NEXT:    selp.b32 %r29, 2143289344, %r28, %p1;
-; CHECK-NEXT:    selp.b32 %r30, %r29, %r28, %p5;
+; CHECK-NEXT:    selp.b32 %r30, %r29, %r28, %p4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r30;
 ; CHECK-NEXT:    ret;
   %r = call float @llvm.convert.from.arbitrary.fp.f32.i8(i8 %x, metadata !"Float8E5M2")
@@ -183,7 +174,6 @@ define float @from_f8e4m3fn_normal() {
 ; CHECK-LABEL: from_f8e4m3fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -195,7 +185,6 @@ define float @from_f8e4m3fn_normal() {
 define float @from_f8e4m3fn_nan() {
 ; CHECK-LABEL: from_f8e4m3fn_nan(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 2143289344;
@@ -210,7 +199,6 @@ define float @from_f8e4m3fn_max() {
 ; CHECK-LABEL: from_f8e4m3fn_max(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1138753536;
 ; CHECK-NEXT:    ret;
@@ -224,7 +212,6 @@ define float @from_f8e4m3fn_not_nan() {
 ; CHECK-LABEL: from_f8e4m3fn_not_nan(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1137704960;
 ; CHECK-NEXT:    ret;
@@ -237,7 +224,6 @@ define float @from_f8e4m3fn_zero() {
 ; CHECK-LABEL: from_f8e4m3fn_zero(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -249,7 +235,6 @@ define float @from_f8e4m3fn_zero() {
 define float @from_f8e4m3fn_denorm() {
 ; CHECK-LABEL: from_f8e4m3fn_denorm(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 989855744;
@@ -275,20 +260,20 @@ define float @from_f8e4m3fn_dynamic(i8 %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 3, 4;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 3;
+; CHECK-NEXT:    and.b32 %r16, %r15, 15;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 20;
 ; CHECK-NEXT:    or.b32 %r20, %r18, %r19;
 ; CHECK-NEXT:    add.s32 %r21, %r20, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r4, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
@@ -313,7 +298,6 @@ define float @from_f6e3m2fn_normal() {
 ; CHECK-LABEL: from_f6e3m2fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -325,7 +309,6 @@ define float @from_f6e3m2fn_normal() {
 define float @from_f6e3m2fn_max() {
 ; CHECK-LABEL: from_f6e3m2fn_max(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1105199104;
@@ -339,7 +322,6 @@ define float @from_f6e3m2fn_denorm() {
 ; CHECK-LABEL: from_f6e3m2fn_denorm(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1031798784;
 ; CHECK-NEXT:    ret;
@@ -352,7 +334,6 @@ define float @from_f6e3m2fn_zero() {
 ; CHECK-LABEL: from_f6e3m2fn_zero(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -364,7 +345,6 @@ define float @from_f6e3m2fn_zero() {
 define float @from_f6e3m2fn_neg() {
 ; CHECK-LABEL: from_f6e3m2fn_neg(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -1082130432;
@@ -395,20 +375,20 @@ define float @from_f6e3m2fn_dynamic(i6 %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 2, 3;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 2;
+; CHECK-NEXT:    and.b32 %r16, %r15, 7;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 21;
 ; CHECK-NEXT:    or.b32 %r20, %r18, %r19;
 ; CHECK-NEXT:    add.s32 %r21, %r20, 1040187392;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r4, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
@@ -429,7 +409,6 @@ define float @from_f6e2m3fn_normal() {
 ; CHECK-LABEL: from_f6e2m3fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -441,7 +420,6 @@ define float @from_f6e2m3fn_normal() {
 define float @from_f6e2m3fn_max() {
 ; CHECK-LABEL: from_f6e2m3fn_max(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1089470464;
@@ -455,7 +433,6 @@ define float @from_f6e2m3fn_denorm() {
 ; CHECK-LABEL: from_f6e2m3fn_denorm(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1040187392;
 ; CHECK-NEXT:    ret;
@@ -467,7 +444,6 @@ define float @from_f6e2m3fn_denorm() {
 define float @from_f6e2m3fn_zero() {
 ; CHECK-LABEL: from_f6e2m3fn_zero(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
@@ -498,20 +474,20 @@ define float @from_f6e2m3fn_dynamic(i6 %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 3, 2;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 3;
+; CHECK-NEXT:    and.b32 %r16, %r15, 3;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 20;
 ; CHECK-NEXT:    or.b32 %r20, %r18, %r19;
 ; CHECK-NEXT:    add.s32 %r21, %r20, 1056964608;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r4, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
@@ -532,7 +508,6 @@ define float @from_f4e2m1fn_normal() {
 ; CHECK-LABEL: from_f4e2m1fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -545,7 +520,6 @@ define float @from_f4e2m1fn_denorm() {
 ; CHECK-LABEL: from_f4e2m1fn_denorm(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1056964608;
 ; CHECK-NEXT:    ret;
@@ -557,7 +531,6 @@ define float @from_f4e2m1fn_denorm() {
 define float @from_f4e2m1fn_max() {
 ; CHECK-LABEL: from_f4e2m1fn_max(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1086324736;
@@ -588,13 +561,13 @@ define float @from_f4e2m1fn_dynamic(i4 %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 1, 2;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 1;
+; CHECK-NEXT:    and.b32 %r16, %r15, 3;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 22;
@@ -602,7 +575,7 @@ define float @from_f4e2m1fn_dynamic(i4 %x) {
 ; CHECK-NEXT:    add.s32 %r21, %r20, 1056964608;
 ; CHECK-NEXT:    and.b16 %rs5, %rs3, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs5, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
@@ -619,7 +592,6 @@ define half @from_f8e5m2_to_f16() {
 ; CHECK-LABEL: from_f8e5m2_to_f16(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0], 0x3C00;
 ; CHECK-NEXT:    ret;
@@ -631,7 +603,6 @@ define half @from_f8e5m2_to_f16() {
 define double @from_f8e5m2_to_f64() {
 ; CHECK-LABEL: from_f8e5m2_to_f64(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b64 [func_retval0], 4607182418800017408;
@@ -645,7 +616,7 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-LABEL: fp4_to_f32_vec(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<13>;
-; CHECK-NEXT:    .reg .b32 %r<101>;
+; CHECK-NEXT:    .reg .b32 %r<104>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %r1, [fp4_to_f32_vec_param_0+2];
@@ -660,20 +631,20 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    shl.b32 %r10, %r9, 23;
 ; CHECK-NEXT:    or.b32 %r11, %r6, %r10;
 ; CHECK-NEXT:    sub.s32 %r12, 31, %r8;
-; CHECK-NEXT:    mov.b32 %r13, 1;
-; CHECK-NEXT:    shl.b32 %r14, %r13, %r12;
-; CHECK-NEXT:    xor.b32 %r15, %r7, %r14;
-; CHECK-NEXT:    add.s32 %r16, %r8, -8;
-; CHECK-NEXT:    shl.b32 %r17, %r15, %r16;
-; CHECK-NEXT:    or.b32 %r18, %r11, %r17;
-; CHECK-NEXT:    bfe.u32 %r19, %r4, 1, 2;
+; CHECK-NEXT:    shl.b32 %r13, 1, %r12;
+; CHECK-NEXT:    xor.b32 %r14, %r7, %r13;
+; CHECK-NEXT:    add.s32 %r15, %r8, -8;
+; CHECK-NEXT:    shl.b32 %r16, %r14, %r15;
+; CHECK-NEXT:    or.b32 %r17, %r11, %r16;
+; CHECK-NEXT:    shr.u32 %r18, %r4, 1;
+; CHECK-NEXT:    and.b32 %r19, %r18, 3;
 ; CHECK-NEXT:    shl.b32 %r20, %r19, 23;
 ; CHECK-NEXT:    or.b32 %r21, %r20, %r6;
 ; CHECK-NEXT:    shl.b32 %r22, %r7, 22;
 ; CHECK-NEXT:    or.b32 %r23, %r21, %r22;
 ; CHECK-NEXT:    add.s32 %r24, %r23, 1056964608;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r7, 0;
-; CHECK-NEXT:    selp.b32 %r25, %r18, %r24, %p1;
+; CHECK-NEXT:    selp.b32 %r25, %r17, %r24, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r19, 0;
 ; CHECK-NEXT:    selp.b32 %r26, %r25, %r24, %p2;
 ; CHECK-NEXT:    or.b32 %r27, %r19, %r7;
@@ -688,79 +659,82 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    shl.b32 %r35, %r34, 23;
 ; CHECK-NEXT:    or.b32 %r36, %r31, %r35;
 ; CHECK-NEXT:    sub.s32 %r37, 31, %r33;
-; CHECK-NEXT:    shl.b32 %r38, %r13, %r37;
+; CHECK-NEXT:    shl.b32 %r38, 1, %r37;
 ; CHECK-NEXT:    xor.b32 %r39, %r32, %r38;
 ; CHECK-NEXT:    add.s32 %r40, %r33, -8;
 ; CHECK-NEXT:    shl.b32 %r41, %r39, %r40;
 ; CHECK-NEXT:    or.b32 %r42, %r36, %r41;
-; CHECK-NEXT:    bfe.u32 %r43, %r29, 1, 2;
-; CHECK-NEXT:    shl.b32 %r44, %r43, 23;
-; CHECK-NEXT:    or.b32 %r45, %r44, %r31;
-; CHECK-NEXT:    shl.b32 %r46, %r32, 22;
-; CHECK-NEXT:    or.b32 %r47, %r45, %r46;
-; CHECK-NEXT:    add.s32 %r48, %r47, 1056964608;
+; CHECK-NEXT:    shr.u32 %r43, %r29, 1;
+; CHECK-NEXT:    and.b32 %r44, %r43, 3;
+; CHECK-NEXT:    shl.b32 %r45, %r44, 23;
+; CHECK-NEXT:    or.b32 %r46, %r45, %r31;
+; CHECK-NEXT:    shl.b32 %r47, %r32, 22;
+; CHECK-NEXT:    or.b32 %r48, %r46, %r47;
+; CHECK-NEXT:    add.s32 %r49, %r48, 1056964608;
 ; CHECK-NEXT:    setp.ne.b32 %p4, %r32, 0;
-; CHECK-NEXT:    selp.b32 %r49, %r42, %r48, %p4;
-; CHECK-NEXT:    setp.eq.b32 %p5, %r43, 0;
-; CHECK-NEXT:    selp.b32 %r50, %r49, %r48, %p5;
-; CHECK-NEXT:    or.b32 %r51, %r43, %r32;
-; CHECK-NEXT:    setp.eq.b32 %p6, %r51, 0;
-; CHECK-NEXT:    selp.b32 %r52, %r31, %r50, %p6;
-; CHECK-NEXT:    prmt.b32 %r53, %r2, 0, 0x7773U;
-; CHECK-NEXT:    shl.b32 %r54, %r53, 28;
-; CHECK-NEXT:    and.b32 %r55, %r54, -2147483648;
-; CHECK-NEXT:    and.b32 %r56, %r53, 1;
-; CHECK-NEXT:    clz.b32 %r57, %r56;
-; CHECK-NEXT:    sub.s32 %r58, 157, %r57;
-; CHECK-NEXT:    shl.b32 %r59, %r58, 23;
-; CHECK-NEXT:    or.b32 %r60, %r55, %r59;
-; CHECK-NEXT:    sub.s32 %r61, 31, %r57;
-; CHECK-NEXT:    shl.b32 %r62, %r13, %r61;
-; CHECK-NEXT:    xor.b32 %r63, %r56, %r62;
-; CHECK-NEXT:    add.s32 %r64, %r57, -8;
-; CHECK-NEXT:    shl.b32 %r65, %r63, %r64;
-; CHECK-NEXT:    or.b32 %r66, %r60, %r65;
-; CHECK-NEXT:    bfe.u32 %r67, %r53, 1, 2;
-; CHECK-NEXT:    shl.b32 %r68, %r67, 23;
-; CHECK-NEXT:    or.b32 %r69, %r68, %r55;
-; CHECK-NEXT:    shl.b32 %r70, %r56, 22;
-; CHECK-NEXT:    or.b32 %r71, %r69, %r70;
-; CHECK-NEXT:    add.s32 %r72, %r71, 1056964608;
-; CHECK-NEXT:    setp.ne.b32 %p7, %r56, 0;
-; CHECK-NEXT:    selp.b32 %r73, %r66, %r72, %p7;
-; CHECK-NEXT:    setp.eq.b32 %p8, %r67, 0;
-; CHECK-NEXT:    selp.b32 %r74, %r73, %r72, %p8;
-; CHECK-NEXT:    or.b32 %r75, %r67, %r56;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r75, 0;
-; CHECK-NEXT:    selp.b32 %r76, %r55, %r74, %p9;
-; CHECK-NEXT:    prmt.b32 %r77, %r2, 0, 0x7772U;
-; CHECK-NEXT:    shl.b32 %r78, %r77, 28;
-; CHECK-NEXT:    and.b32 %r79, %r78, -2147483648;
-; CHECK-NEXT:    and.b32 %r80, %r77, 1;
-; CHECK-NEXT:    clz.b32 %r81, %r80;
-; CHECK-NEXT:    sub.s32 %r82, 157, %r81;
-; CHECK-NEXT:    shl.b32 %r83, %r82, 23;
-; CHECK-NEXT:    or.b32 %r84, %r79, %r83;
-; CHECK-NEXT:    sub.s32 %r85, 31, %r81;
-; CHECK-NEXT:    shl.b32 %r86, %r13, %r85;
-; CHECK-NEXT:    xor.b32 %r87, %r80, %r86;
-; CHECK-NEXT:    add.s32 %r88, %r81, -8;
-; CHECK-NEXT:    shl.b32 %r89, %r87, %r88;
-; CHECK-NEXT:    or.b32 %r90, %r84, %r89;
-; CHECK-NEXT:    bfe.u32 %r91, %r77, 1, 2;
-; CHECK-NEXT:    shl.b32 %r92, %r91, 23;
-; CHECK-NEXT:    or.b32 %r93, %r92, %r79;
-; CHECK-NEXT:    shl.b32 %r94, %r80, 22;
-; CHECK-NEXT:    or.b32 %r95, %r93, %r94;
-; CHECK-NEXT:    add.s32 %r96, %r95, 1056964608;
-; CHECK-NEXT:    setp.ne.b32 %p10, %r80, 0;
-; CHECK-NEXT:    selp.b32 %r97, %r90, %r96, %p10;
-; CHECK-NEXT:    setp.eq.b32 %p11, %r91, 0;
-; CHECK-NEXT:    selp.b32 %r98, %r97, %r96, %p11;
-; CHECK-NEXT:    or.b32 %r99, %r91, %r80;
-; CHECK-NEXT:    setp.eq.b32 %p12, %r99, 0;
-; CHECK-NEXT:    selp.b32 %r100, %r79, %r98, %p12;
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r52, %r28, %r100, %r76};
+; CHECK-NEXT:    selp.b32 %r50, %r42, %r49, %p4;
+; CHECK-NEXT:    setp.eq.b32 %p5, %r44, 0;
+; CHECK-NEXT:    selp.b32 %r51, %r50, %r49, %p5;
+; CHECK-NEXT:    or.b32 %r52, %r44, %r32;
+; CHECK-NEXT:    setp.eq.b32 %p6, %r52, 0;
+; CHECK-NEXT:    selp.b32 %r53, %r31, %r51, %p6;
+; CHECK-NEXT:    prmt.b32 %r54, %r2, 0, 0x7773U;
+; CHECK-NEXT:    shl.b32 %r55, %r54, 28;
+; CHECK-NEXT:    and.b32 %r56, %r55, -2147483648;
+; CHECK-NEXT:    and.b32 %r57, %r54, 1;
+; CHECK-NEXT:    clz.b32 %r58, %r57;
+; CHECK-NEXT:    sub.s32 %r59, 157, %r58;
+; CHECK-NEXT:    shl.b32 %r60, %r59, 23;
+; CHECK-NEXT:    or.b32 %r61, %r56, %r60;
+; CHECK-NEXT:    sub.s32 %r62, 31, %r58;
+; CHECK-NEXT:    shl.b32 %r63, 1, %r62;
+; CHECK-NEXT:    xor.b32 %r64, %r57, %r63;
+; CHECK-NEXT:    add.s32 %r65, %r58, -8;
+; CHECK-NEXT:    shl.b32 %r66, %r64, %r65;
+; CHECK-NEXT:    or.b32 %r67, %r61, %r66;
+; CHECK-NEXT:    shr.u32 %r68, %r54, 1;
+; CHECK-NEXT:    and.b32 %r69, %r68, 3;
+; CHECK-NEXT:    shl.b32 %r70, %r69, 23;
+; CHECK-NEXT:    or.b32 %r71, %r70, %r56;
+; CHECK-NEXT:    shl.b32 %r72, %r57, 22;
+; CHECK-NEXT:    or.b32 %r73, %r71, %r72;
+; CHECK-NEXT:    add.s32 %r74, %r73, 1056964608;
+; CHECK-NEXT:    setp.ne.b32 %p7, %r57, 0;
+; CHECK-NEXT:    selp.b32 %r75, %r67, %r74, %p7;
+; CHECK-NEXT:    setp.eq.b32 %p8, %r69, 0;
+; CHECK-NEXT:    selp.b32 %r76, %r75, %r74, %p8;
+; CHECK-NEXT:    or.b32 %r77, %r69, %r57;
+; CHECK-NEXT:    setp.eq.b32 %p9, %r77, 0;
+; CHECK-NEXT:    selp.b32 %r78, %r56, %r76, %p9;
+; CHECK-NEXT:    prmt.b32 %r79, %r2, 0, 0x7772U;
+; CHECK-NEXT:    shl.b32 %r80, %r79, 28;
+; CHECK-NEXT:    and.b32 %r81, %r80, -2147483648;
+; CHECK-NEXT:    and.b32 %r82, %r79, 1;
+; CHECK-NEXT:    clz.b32 %r83, %r82;
+; CHECK-NEXT:    sub.s32 %r84, 157, %r83;
+; CHECK-NEXT:    shl.b32 %r85, %r84, 23;
+; CHECK-NEXT:    or.b32 %r86, %r81, %r85;
+; CHECK-NEXT:    sub.s32 %r87, 31, %r83;
+; CHECK-NEXT:    shl.b32 %r88, 1, %r87;
+; CHECK-NEXT:    xor.b32 %r89, %r82, %r88;
+; CHECK-NEXT:    add.s32 %r90, %r83, -8;
+; CHECK-NEXT:    shl.b32 %r91, %r89, %r90;
+; CHECK-NEXT:    or.b32 %r92, %r86, %r91;
+; CHECK-NEXT:    shr.u32 %r93, %r79, 1;
+; CHECK-NEXT:    and.b32 %r94, %r93, 3;
+; CHECK-NEXT:    shl.b32 %r95, %r94, 23;
+; CHECK-NEXT:    or.b32 %r96, %r95, %r81;
+; CHECK-NEXT:    shl.b32 %r97, %r82, 22;
+; CHECK-NEXT:    or.b32 %r98, %r96, %r97;
+; CHECK-NEXT:    add.s32 %r99, %r98, 1056964608;
+; CHECK-NEXT:    setp.ne.b32 %p10, %r82, 0;
+; CHECK-NEXT:    selp.b32 %r100, %r92, %r99, %p10;
+; CHECK-NEXT:    setp.eq.b32 %p11, %r94, 0;
+; CHECK-NEXT:    selp.b32 %r101, %r100, %r99, %p11;
+; CHECK-NEXT:    or.b32 %r102, %r94, %r82;
+; CHECK-NEXT:    setp.eq.b32 %p12, %r102, 0;
+; CHECK-NEXT:    selp.b32 %r103, %r81, %r101, %p12;
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r53, %r28, %r103, %r78};
 ; CHECK-NEXT:    ret;
   %r = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i4(<4 x i4> %x, metadata !"Float4E2M1FN")
   ret <4 x float> %r
@@ -772,7 +746,7 @@ define <2 x float> @from_f8e4m3fn_v2f32(<2 x i8> %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<54>;
+; CHECK-NEXT:    .reg .b32 %r<55>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [from_f8e4m3fn_v2f32_param_0];
@@ -785,20 +759,20 @@ define <2 x float> @from_f8e4m3fn_v2f32(<2 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 3, 4;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 3;
+; CHECK-NEXT:    and.b32 %r16, %r15, 15;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 20;
 ; CHECK-NEXT:    or.b32 %r20, %r18, %r19;
 ; CHECK-NEXT:    add.s32 %r21, %r20, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r4, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
@@ -817,29 +791,30 @@ define <2 x float> @from_f8e4m3fn_v2f32(<2 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r34, %r33, 23;
 ; CHECK-NEXT:    or.b32 %r35, %r30, %r34;
 ; CHECK-NEXT:    sub.s32 %r36, 31, %r32;
-; CHECK-NEXT:    shl.b32 %r37, %r10, %r36;
+; CHECK-NEXT:    shl.b32 %r37, 1, %r36;
 ; CHECK-NEXT:    xor.b32 %r38, %r31, %r37;
 ; CHECK-NEXT:    add.s32 %r39, %r32, -8;
 ; CHECK-NEXT:    shl.b32 %r40, %r38, %r39;
 ; CHECK-NEXT:    or.b32 %r41, %r35, %r40;
-; CHECK-NEXT:    bfe.u32 %r42, %r28, 3, 4;
-; CHECK-NEXT:    shl.b32 %r43, %r42, 23;
-; CHECK-NEXT:    or.b32 %r44, %r43, %r30;
-; CHECK-NEXT:    shl.b32 %r45, %r31, 20;
-; CHECK-NEXT:    or.b32 %r46, %r44, %r45;
-; CHECK-NEXT:    add.s32 %r47, %r46, 1006632960;
+; CHECK-NEXT:    shr.u32 %r42, %r28, 3;
+; CHECK-NEXT:    and.b32 %r43, %r42, 15;
+; CHECK-NEXT:    shl.b32 %r44, %r43, 23;
+; CHECK-NEXT:    or.b32 %r45, %r44, %r30;
+; CHECK-NEXT:    shl.b32 %r46, %r31, 20;
+; CHECK-NEXT:    or.b32 %r47, %r45, %r46;
+; CHECK-NEXT:    add.s32 %r48, %r47, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p6, %r31, 0;
-; CHECK-NEXT:    selp.b32 %r48, %r41, %r47, %p6;
-; CHECK-NEXT:    setp.eq.b32 %p7, %r42, 0;
-; CHECK-NEXT:    selp.b32 %r49, %r48, %r47, %p7;
-; CHECK-NEXT:    or.b32 %r50, %r42, %r31;
-; CHECK-NEXT:    setp.eq.b32 %p8, %r50, 0;
-; CHECK-NEXT:    selp.b32 %r51, %r30, %r49, %p8;
+; CHECK-NEXT:    selp.b32 %r49, %r41, %r48, %p6;
+; CHECK-NEXT:    setp.eq.b32 %p7, %r43, 0;
+; CHECK-NEXT:    selp.b32 %r50, %r49, %r48, %p7;
+; CHECK-NEXT:    or.b32 %r51, %r43, %r31;
+; CHECK-NEXT:    setp.eq.b32 %p8, %r51, 0;
+; CHECK-NEXT:    selp.b32 %r52, %r30, %r50, %p8;
 ; CHECK-NEXT:    setp.eq.b32 %p9, %r31, 7;
-; CHECK-NEXT:    selp.b32 %r52, 2143289344, %r51, %p9;
-; CHECK-NEXT:    setp.eq.b32 %p10, %r42, 15;
-; CHECK-NEXT:    selp.b32 %r53, %r52, %r51, %p10;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r53, %r27};
+; CHECK-NEXT:    selp.b32 %r53, 2143289344, %r52, %p9;
+; CHECK-NEXT:    setp.eq.b32 %p10, %r43, 15;
+; CHECK-NEXT:    selp.b32 %r54, %r53, %r52, %p10;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r54, %r27};
 ; CHECK-NEXT:    ret;
   %r = call <2 x float> @llvm.convert.from.arbitrary.fp.v2f32.v2i8(<2 x i8> %x, metadata !"Float8E4M3FN")
   ret <2 x float> %r
@@ -849,9 +824,9 @@ define <2 x float> @from_f8e4m3fn_v2f32(<2 x i8> %x) {
 define <2 x float> @from_f8e5m2_v2f32(<2 x i8> %x) {
 ; CHECK-LABEL: from_f8e5m2_v2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<11>;
+; CHECK-NEXT:    .reg .pred %p<9>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<60>;
+; CHECK-NEXT:    .reg .b32 %r<61>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [from_f8e5m2_v2f32_param_0];
@@ -864,32 +839,31 @@ define <2 x float> @from_f8e5m2_v2f32(<2 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r7, %r6, 23;
 ; CHECK-NEXT:    or.b32 %r8, %r3, %r7;
 ; CHECK-NEXT:    sub.s32 %r9, 31, %r5;
-; CHECK-NEXT:    mov.b32 %r10, 1;
-; CHECK-NEXT:    shl.b32 %r11, %r10, %r9;
-; CHECK-NEXT:    xor.b32 %r12, %r4, %r11;
-; CHECK-NEXT:    add.s32 %r13, %r5, -8;
-; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
-; CHECK-NEXT:    or.b32 %r15, %r8, %r14;
-; CHECK-NEXT:    bfe.u32 %r16, %r1, 2, 5;
+; CHECK-NEXT:    shl.b32 %r10, 1, %r9;
+; CHECK-NEXT:    xor.b32 %r11, %r4, %r10;
+; CHECK-NEXT:    add.s32 %r12, %r5, -8;
+; CHECK-NEXT:    shl.b32 %r13, %r11, %r12;
+; CHECK-NEXT:    or.b32 %r14, %r8, %r13;
+; CHECK-NEXT:    shr.u32 %r15, %r1, 2;
+; CHECK-NEXT:    and.b32 %r16, %r15, 31;
 ; CHECK-NEXT:    shl.b32 %r17, %r16, 23;
 ; CHECK-NEXT:    or.b32 %r18, %r17, %r3;
 ; CHECK-NEXT:    shl.b32 %r19, %r4, 21;
 ; CHECK-NEXT:    or.b32 %r20, %r18, %r19;
 ; CHECK-NEXT:    add.s32 %r21, %r20, 939524096;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r4, 0;
-; CHECK-NEXT:    selp.b32 %r22, %r15, %r21, %p1;
+; CHECK-NEXT:    selp.b32 %r22, %r14, %r21, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r16, 0;
 ; CHECK-NEXT:    selp.b32 %r23, %r22, %r21, %p2;
 ; CHECK-NEXT:    or.b32 %r24, %r16, %r4;
 ; CHECK-NEXT:    setp.eq.b32 %p3, %r24, 0;
 ; CHECK-NEXT:    selp.b32 %r25, %r3, %r23, %p3;
-; CHECK-NEXT:    setp.eq.b32 %p4, %r4, 0;
 ; CHECK-NEXT:    or.b32 %r26, %r3, 2139095040;
-; CHECK-NEXT:    selp.b32 %r27, %r26, %r25, %p4;
-; CHECK-NEXT:    setp.eq.b32 %p5, %r16, 31;
-; CHECK-NEXT:    selp.b32 %r28, %r27, %r25, %p5;
+; CHECK-NEXT:    selp.b32 %r27, %r25, %r26, %p1;
+; CHECK-NEXT:    setp.eq.b32 %p4, %r16, 31;
+; CHECK-NEXT:    selp.b32 %r28, %r27, %r25, %p4;
 ; CHECK-NEXT:    selp.b32 %r29, 2143289344, %r28, %p1;
-; CHECK-NEXT:    selp.b32 %r30, %r29, %r28, %p5;
+; CHECK-NEXT:    selp.b32 %r30, %r29, %r28, %p4;
 ; CHECK-NEXT:    cvt.u32.u16 %r31, %rs1;
 ; CHECK-NEXT:    shl.b32 %r32, %r31, 24;
 ; CHECK-NEXT:    and.b32 %r33, %r32, -2147483648;
@@ -899,32 +873,32 @@ define <2 x float> @from_f8e5m2_v2f32(<2 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r37, %r36, 23;
 ; CHECK-NEXT:    or.b32 %r38, %r33, %r37;
 ; CHECK-NEXT:    sub.s32 %r39, 31, %r35;
-; CHECK-NEXT:    shl.b32 %r40, %r10, %r39;
+; CHECK-NEXT:    shl.b32 %r40, 1, %r39;
 ; CHECK-NEXT:    xor.b32 %r41, %r34, %r40;
 ; CHECK-NEXT:    add.s32 %r42, %r35, -8;
 ; CHECK-NEXT:    shl.b32 %r43, %r41, %r42;
 ; CHECK-NEXT:    or.b32 %r44, %r38, %r43;
-; CHECK-NEXT:    bfe.u32 %r45, %r31, 2, 5;
-; CHECK-NEXT:    shl.b32 %r46, %r45, 23;
-; CHECK-NEXT:    or.b32 %r47, %r46, %r33;
-; CHECK-NEXT:    shl.b32 %r48, %r34, 21;
-; CHECK-NEXT:    or.b32 %r49, %r47, %r48;
-; CHECK-NEXT:    add.s32 %r50, %r49, 939524096;
-; CHECK-NEXT:    setp.ne.b32 %p6, %r34, 0;
-; CHECK-NEXT:    selp.b32 %r51, %r44, %r50, %p6;
-; CHECK-NEXT:    setp.eq.b32 %p7, %r45, 0;
-; CHECK-NEXT:    selp.b32 %r52, %r51, %r50, %p7;
-; CHECK-NEXT:    or.b32 %r53, %r45, %r34;
-; CHECK-NEXT:    setp.eq.b32 %p8, %r53, 0;
-; CHECK-NEXT:    selp.b32 %r54, %r33, %r52, %p8;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r34, 0;
-; CHECK-NEXT:    or.b32 %r55, %r33, 2139095040;
-; CHECK-NEXT:    selp.b32 %r56, %r55, %r54, %p9;
-; CHECK-NEXT:    setp.eq.b32 %p10, %r45, 31;
-; CHECK-NEXT:    selp.b32 %r57, %r56, %r54, %p10;
-; CHECK-NEXT:    selp.b32 %r58, 2143289344, %r57, %p6;
-; CHECK-NEXT:    selp.b32 %r59, %r58, %r57, %p10;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r59, %r30};
+; CHECK-NEXT:    shr.u32 %r45, %r31, 2;
+; CHECK-NEXT:    and.b32 %r46, %r45, 31;
+; CHECK-NEXT:    shl.b32 %r47, %r46, 23;
+; CHECK-NEXT:    or.b32 %r48, %r47, %r33;
+; CHECK-NEXT:    shl.b32 %r49, %r34, 21;
+; CHECK-NEXT:    or.b32 %r50, %r48, %r49;
+; CHECK-NEXT:    add.s32 %r51, %r50, 939524096;
+; CHECK-NEXT:    setp.ne.b32 %p5, %r34, 0;
+; CHECK-NEXT:    selp.b32 %r52, %r44, %r51, %p5;
+; CHECK-NEXT:    setp.eq.b32 %p6, %r46, 0;
+; CHECK-NEXT:    selp.b32 %r53, %r52, %r51, %p6;
+; CHECK-NEXT:    or.b32 %r54, %r46, %r34;
+; CHECK-NEXT:    setp.eq.b32 %p7, %r54, 0;
+; CHECK-NEXT:    selp.b32 %r55, %r33, %r53, %p7;
+; CHECK-NEXT:    or.b32 %r56, %r33, 2139095040;
+; CHECK-NEXT:    selp.b32 %r57, %r55, %r56, %p5;
+; CHECK-NEXT:    setp.eq.b32 %p8, %r46, 31;
+; CHECK-NEXT:    selp.b32 %r58, %r57, %r55, %p8;
+; CHECK-NEXT:    selp.b32 %r59, 2143289344, %r58, %p5;
+; CHECK-NEXT:    selp.b32 %r60, %r59, %r58, %p8;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r60, %r30};
 ; CHECK-NEXT:    ret;
   %r = call <2 x float> @llvm.convert.from.arbitrary.fp.v2f32.v2i8(<2 x i8> %x, metadata !"Float8E5M2")
   ret <2 x float> %r
@@ -935,7 +909,7 @@ define <3 x float> @from_f8e4m3fn_v3f32(<3 x i8> %x) {
 ; CHECK-LABEL: from_f8e4m3fn_v3f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<16>;
-; CHECK-NEXT:    .reg .b32 %r<81>;
+; CHECK-NEXT:    .reg .b32 %r<83>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [from_f8e4m3fn_v3f32_param_0];
@@ -948,20 +922,20 @@ define <3 x float> @from_f8e4m3fn_v3f32(<3 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 23;
 ; CHECK-NEXT:    or.b32 %r9, %r4, %r8;
 ; CHECK-NEXT:    sub.s32 %r10, 31, %r6;
-; CHECK-NEXT:    mov.b32 %r11, 1;
-; CHECK-NEXT:    shl.b32 %r12, %r11, %r10;
-; CHECK-NEXT:    xor.b32 %r13, %r5, %r12;
-; CHECK-NEXT:    add.s32 %r14, %r6, -8;
-; CHECK-NEXT:    shl.b32 %r15, %r13, %r14;
-; CHECK-NEXT:    or.b32 %r16, %r9, %r15;
-; CHECK-NEXT:    bfe.u32 %r17, %r2, 3, 4;
+; CHECK-NEXT:    shl.b32 %r11, 1, %r10;
+; CHECK-NEXT:    xor.b32 %r12, %r5, %r11;
+; CHECK-NEXT:    add.s32 %r13, %r6, -8;
+; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
+; CHECK-NEXT:    or.b32 %r15, %r9, %r14;
+; CHECK-NEXT:    shr.u32 %r16, %r2, 3;
+; CHECK-NEXT:    and.b32 %r17, %r16, 15;
 ; CHECK-NEXT:    shl.b32 %r18, %r17, 23;
 ; CHECK-NEXT:    or.b32 %r19, %r18, %r4;
 ; CHECK-NEXT:    shl.b32 %r20, %r5, 20;
 ; CHECK-NEXT:    or.b32 %r21, %r19, %r20;
 ; CHECK-NEXT:    add.s32 %r22, %r21, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r5, 0;
-; CHECK-NEXT:    selp.b32 %r23, %r16, %r22, %p1;
+; CHECK-NEXT:    selp.b32 %r23, %r15, %r22, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r17, 0;
 ; CHECK-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; CHECK-NEXT:    or.b32 %r25, %r17, %r5;
@@ -980,60 +954,62 @@ define <3 x float> @from_f8e4m3fn_v3f32(<3 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r35, %r34, 23;
 ; CHECK-NEXT:    or.b32 %r36, %r31, %r35;
 ; CHECK-NEXT:    sub.s32 %r37, 31, %r33;
-; CHECK-NEXT:    shl.b32 %r38, %r11, %r37;
+; CHECK-NEXT:    shl.b32 %r38, 1, %r37;
 ; CHECK-NEXT:    xor.b32 %r39, %r32, %r38;
 ; CHECK-NEXT:    add.s32 %r40, %r33, -8;
 ; CHECK-NEXT:    shl.b32 %r41, %r39, %r40;
 ; CHECK-NEXT:    or.b32 %r42, %r36, %r41;
-; CHECK-NEXT:    bfe.u32 %r43, %r29, 3, 4;
-; CHECK-NEXT:    shl.b32 %r44, %r43, 23;
-; CHECK-NEXT:    or.b32 %r45, %r44, %r31;
-; CHECK-NEXT:    shl.b32 %r46, %r32, 20;
-; CHECK-NEXT:    or.b32 %r47, %r45, %r46;
-; CHECK-NEXT:    add.s32 %r48, %r47, 1006632960;
+; CHECK-NEXT:    shr.u32 %r43, %r29, 3;
+; CHECK-NEXT:    and.b32 %r44, %r43, 15;
+; CHECK-NEXT:    shl.b32 %r45, %r44, 23;
+; CHECK-NEXT:    or.b32 %r46, %r45, %r31;
+; CHECK-NEXT:    shl.b32 %r47, %r32, 20;
+; CHECK-NEXT:    or.b32 %r48, %r46, %r47;
+; CHECK-NEXT:    add.s32 %r49, %r48, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p6, %r32, 0;
-; CHECK-NEXT:    selp.b32 %r49, %r42, %r48, %p6;
-; CHECK-NEXT:    setp.eq.b32 %p7, %r43, 0;
-; CHECK-NEXT:    selp.b32 %r50, %r49, %r48, %p7;
-; CHECK-NEXT:    or.b32 %r51, %r43, %r32;
-; CHECK-NEXT:    setp.eq.b32 %p8, %r51, 0;
-; CHECK-NEXT:    selp.b32 %r52, %r31, %r50, %p8;
+; CHECK-NEXT:    selp.b32 %r50, %r42, %r49, %p6;
+; CHECK-NEXT:    setp.eq.b32 %p7, %r44, 0;
+; CHECK-NEXT:    selp.b32 %r51, %r50, %r49, %p7;
+; CHECK-NEXT:    or.b32 %r52, %r44, %r32;
+; CHECK-NEXT:    setp.eq.b32 %p8, %r52, 0;
+; CHECK-NEXT:    selp.b32 %r53, %r31, %r51, %p8;
 ; CHECK-NEXT:    setp.eq.b32 %p9, %r32, 7;
-; CHECK-NEXT:    selp.b32 %r53, 2143289344, %r52, %p9;
-; CHECK-NEXT:    setp.eq.b32 %p10, %r43, 15;
-; CHECK-NEXT:    selp.b32 %r54, %r53, %r52, %p10;
-; CHECK-NEXT:    prmt.b32 %r55, %r1, 0, 0x7770U;
-; CHECK-NEXT:    shl.b32 %r56, %r55, 24;
-; CHECK-NEXT:    and.b32 %r57, %r56, -2147483648;
-; CHECK-NEXT:    and.b32 %r58, %r55, 7;
-; CHECK-NEXT:    clz.b32 %r59, %r58;
-; CHECK-NEXT:    sub.s32 %r60, 149, %r59;
-; CHECK-NEXT:    shl.b32 %r61, %r60, 23;
-; CHECK-NEXT:    or.b32 %r62, %r57, %r61;
-; CHECK-NEXT:    sub.s32 %r63, 31, %r59;
-; CHECK-NEXT:    shl.b32 %r64, %r11, %r63;
-; CHECK-NEXT:    xor.b32 %r65, %r58, %r64;
-; CHECK-NEXT:    add.s32 %r66, %r59, -8;
-; CHECK-NEXT:    shl.b32 %r67, %r65, %r66;
-; CHECK-NEXT:    or.b32 %r68, %r62, %r67;
-; CHECK-NEXT:    bfe.u32 %r69, %r55, 3, 4;
-; CHECK-NEXT:    shl.b32 %r70, %r69, 23;
-; CHECK-NEXT:    or.b32 %r71, %r70, %r57;
-; CHECK-NEXT:    shl.b32 %r72, %r58, 20;
-; CHECK-NEXT:    or.b32 %r73, %r71, %r72;
-; CHECK-NEXT:    add.s32 %r74, %r73, 1006632960;
-; CHECK-NEXT:    setp.ne.b32 %p11, %r58, 0;
-; CHECK-NEXT:    selp.b32 %r75, %r68, %r74, %p11;
-; CHECK-NEXT:    setp.eq.b32 %p12, %r69, 0;
-; CHECK-NEXT:    selp.b32 %r76, %r75, %r74, %p12;
-; CHECK-NEXT:    or.b32 %r77, %r69, %r58;
-; CHECK-NEXT:    setp.eq.b32 %p13, %r77, 0;
-; CHECK-NEXT:    selp.b32 %r78, %r57, %r76, %p13;
-; CHECK-NEXT:    setp.eq.b32 %p14, %r58, 7;
-; CHECK-NEXT:    selp.b32 %r79, 2143289344, %r78, %p14;
-; CHECK-NEXT:    setp.eq.b32 %p15, %r69, 15;
-; CHECK-NEXT:    selp.b32 %r80, %r79, %r78, %p15;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r80, %r54};
+; CHECK-NEXT:    selp.b32 %r54, 2143289344, %r53, %p9;
+; CHECK-NEXT:    setp.eq.b32 %p10, %r44, 15;
+; CHECK-NEXT:    selp.b32 %r55, %r54, %r53, %p10;
+; CHECK-NEXT:    prmt.b32 %r56, %r1, 0, 0x7770U;
+; CHECK-NEXT:    shl.b32 %r57, %r56, 24;
+; CHECK-NEXT:    and.b32 %r58, %r57, -2147483648;
+; CHECK-NEXT:    and.b32 %r59, %r56, 7;
+; CHECK-NEXT:    clz.b32 %r60, %r59;
+; CHECK-NEXT:    sub.s32 %r61, 149, %r60;
+; CHECK-NEXT:    shl.b32 %r62, %r61, 23;
+; CHECK-NEXT:    or.b32 %r63, %r58, %r62;
+; CHECK-NEXT:    sub.s32 %r64, 31, %r60;
+; CHECK-NEXT:    shl.b32 %r65, 1, %r64;
+; CHECK-NEXT:    xor.b32 %r66, %r59, %r65;
+; CHECK-NEXT:    add.s32 %r67, %r60, -8;
+; CHECK-NEXT:    shl.b32 %r68, %r66, %r67;
+; CHECK-NEXT:    or.b32 %r69, %r63, %r68;
+; CHECK-NEXT:    shr.u32 %r70, %r56, 3;
+; CHECK-NEXT:    and.b32 %r71, %r70, 15;
+; CHECK-NEXT:    shl.b32 %r72, %r71, 23;
+; CHECK-NEXT:    or.b32 %r73, %r72, %r58;
+; CHECK-NEXT:    shl.b32 %r74, %r59, 20;
+; CHECK-NEXT:    or.b32 %r75, %r73, %r74;
+; CHECK-NEXT:    add.s32 %r76, %r75, 1006632960;
+; CHECK-NEXT:    setp.ne.b32 %p11, %r59, 0;
+; CHECK-NEXT:    selp.b32 %r77, %r69, %r76, %p11;
+; CHECK-NEXT:    setp.eq.b32 %p12, %r71, 0;
+; CHECK-NEXT:    selp.b32 %r78, %r77, %r76, %p12;
+; CHECK-NEXT:    or.b32 %r79, %r71, %r59;
+; CHECK-NEXT:    setp.eq.b32 %p13, %r79, 0;
+; CHECK-NEXT:    selp.b32 %r80, %r58, %r78, %p13;
+; CHECK-NEXT:    setp.eq.b32 %p14, %r59, 7;
+; CHECK-NEXT:    selp.b32 %r81, 2143289344, %r80, %p14;
+; CHECK-NEXT:    setp.eq.b32 %p15, %r71, 15;
+; CHECK-NEXT:    selp.b32 %r82, %r81, %r80, %p15;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r82, %r55};
 ; CHECK-NEXT:    st.param.b32 [func_retval0+8], %r28;
 ; CHECK-NEXT:    ret;
   %r = call <3 x float> @llvm.convert.from.arbitrary.fp.v3f32.v3i8(<3 x i8> %x, metadata !"Float8E4M3FN")
@@ -1045,7 +1021,7 @@ define <4 x float> @from_f8e4m3fn_v4f32(<4 x i8> %x) {
 ; CHECK-LABEL: from_f8e4m3fn_v4f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<21>;
-; CHECK-NEXT:    .reg .b32 %r<107>;
+; CHECK-NEXT:    .reg .b32 %r<110>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [from_f8e4m3fn_v4f32_param_0];
@@ -1058,20 +1034,20 @@ define <4 x float> @from_f8e4m3fn_v4f32(<4 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 23;
 ; CHECK-NEXT:    or.b32 %r9, %r4, %r8;
 ; CHECK-NEXT:    sub.s32 %r10, 31, %r6;
-; CHECK-NEXT:    mov.b32 %r11, 1;
-; CHECK-NEXT:    shl.b32 %r12, %r11, %r10;
-; CHECK-NEXT:    xor.b32 %r13, %r5, %r12;
-; CHECK-NEXT:    add.s32 %r14, %r6, -8;
-; CHECK-NEXT:    shl.b32 %r15, %r13, %r14;
-; CHECK-NEXT:    or.b32 %r16, %r9, %r15;
-; CHECK-NEXT:    bfe.u32 %r17, %r2, 3, 4;
+; CHECK-NEXT:    shl.b32 %r11, 1, %r10;
+; CHECK-NEXT:    xor.b32 %r12, %r5, %r11;
+; CHECK-NEXT:    add.s32 %r13, %r6, -8;
+; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
+; CHECK-NEXT:    or.b32 %r15, %r9, %r14;
+; CHECK-NEXT:    shr.u32 %r16, %r2, 3;
+; CHECK-NEXT:    and.b32 %r17, %r16, 15;
 ; CHECK-NEXT:    shl.b32 %r18, %r17, 23;
 ; CHECK-NEXT:    or.b32 %r19, %r18, %r4;
 ; CHECK-NEXT:    shl.b32 %r20, %r5, 20;
 ; CHECK-NEXT:    or.b32 %r21, %r19, %r20;
 ; CHECK-NEXT:    add.s32 %r22, %r21, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r5, 0;
-; CHECK-NEXT:    selp.b32 %r23, %r16, %r22, %p1;
+; CHECK-NEXT:    selp.b32 %r23, %r15, %r22, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r17, 0;
 ; CHECK-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; CHECK-NEXT:    or.b32 %r25, %r17, %r5;
@@ -1090,91 +1066,94 @@ define <4 x float> @from_f8e4m3fn_v4f32(<4 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r35, %r34, 23;
 ; CHECK-NEXT:    or.b32 %r36, %r31, %r35;
 ; CHECK-NEXT:    sub.s32 %r37, 31, %r33;
-; CHECK-NEXT:    shl.b32 %r38, %r11, %r37;
+; CHECK-NEXT:    shl.b32 %r38, 1, %r37;
 ; CHECK-NEXT:    xor.b32 %r39, %r32, %r38;
 ; CHECK-NEXT:    add.s32 %r40, %r33, -8;
 ; CHECK-NEXT:    shl.b32 %r41, %r39, %r40;
 ; CHECK-NEXT:    or.b32 %r42, %r36, %r41;
-; CHECK-NEXT:    bfe.u32 %r43, %r29, 3, 4;
-; CHECK-NEXT:    shl.b32 %r44, %r43, 23;
-; CHECK-NEXT:    or.b32 %r45, %r44, %r31;
-; CHECK-NEXT:    shl.b32 %r46, %r32, 20;
-; CHECK-NEXT:    or.b32 %r47, %r45, %r46;
-; CHECK-NEXT:    add.s32 %r48, %r47, 1006632960;
+; CHECK-NEXT:    shr.u32 %r43, %r29, 3;
+; CHECK-NEXT:    and.b32 %r44, %r43, 15;
+; CHECK-NEXT:    shl.b32 %r45, %r44, 23;
+; CHECK-NEXT:    or.b32 %r46, %r45, %r31;
+; CHECK-NEXT:    shl.b32 %r47, %r32, 20;
+; CHECK-NEXT:    or.b32 %r48, %r46, %r47;
+; CHECK-NEXT:    add.s32 %r49, %r48, 1006632960;
 ; CHECK-NEXT:    setp.ne.b32 %p6, %r32, 0;
-; CHECK-NEXT:    selp.b32 %r49, %r42, %r48, %p6;
-; CHECK-NEXT:    setp.eq.b32 %p7, %r43, 0;
-; CHECK-NEXT:    selp.b32 %r50, %r49, %r48, %p7;
-; CHECK-NEXT:    or.b32 %r51, %r43, %r32;
-; CHECK-NEXT:    setp.eq.b32 %p8, %r51, 0;
-; CHECK-NEXT:    selp.b32 %r52, %r31, %r50, %p8;
+; CHECK-NEXT:    selp.b32 %r50, %r42, %r49, %p6;
+; CHECK-NEXT:    setp.eq.b32 %p7, %r44, 0;
+; CHECK-NEXT:    selp.b32 %r51, %r50, %r49, %p7;
+; CHECK-NEXT:    or.b32 %r52, %r44, %r32;
+; CHECK-NEXT:    setp.eq.b32 %p8, %r52, 0;
+; CHECK-NEXT:    selp.b32 %r53, %r31, %r51, %p8;
 ; CHECK-NEXT:    setp.eq.b32 %p9, %r32, 7;
-; CHECK-NEXT:    selp.b32 %r53, 2143289344, %r52, %p9;
-; CHECK-NEXT:    setp.eq.b32 %p10, %r43, 15;
-; CHECK-NEXT:    selp.b32 %r54, %r53, %r52, %p10;
-; CHECK-NEXT:    prmt.b32 %r55, %r1, 0, 0x7771U;
-; CHECK-NEXT:    shl.b32 %r56, %r55, 24;
-; CHECK-NEXT:    and.b32 %r57, %r56, -2147483648;
-; CHECK-NEXT:    and.b32 %r58, %r55, 7;
-; CHECK-NEXT:    clz.b32 %r59, %r58;
-; CHECK-NEXT:    sub.s32 %r60, 149, %r59;
-; CHECK-NEXT:    shl.b32 %r61, %r60, 23;
-; CHECK-NEXT:    or.b32 %r62, %r57, %r61;
-; CHECK-NEXT:    sub.s32 %r63, 31, %r59;
-; CHECK-NEXT:    shl.b32 %r64, %r11, %r63;
-; CHECK-NEXT:    xor.b32 %r65, %r58, %r64;
-; CHECK-NEXT:    add.s32 %r66, %r59, -8;
-; CHECK-NEXT:    shl.b32 %r67, %r65, %r66;
-; CHECK-NEXT:    or.b32 %r68, %r62, %r67;
-; CHECK-NEXT:    bfe.u32 %r69, %r55, 3, 4;
-; CHECK-NEXT:    shl.b32 %r70, %r69, 23;
-; CHECK-NEXT:    or.b32 %r71, %r70, %r57;
-; CHECK-NEXT:    shl.b32 %r72, %r58, 20;
-; CHECK-NEXT:    or.b32 %r73, %r71, %r72;
-; CHECK-NEXT:    add.s32 %r74, %r73, 1006632960;
-; CHECK-NEXT:    setp.ne.b32 %p11, %r58, 0;
-; CHECK-NEXT:    selp.b32 %r75, %r68, %r74, %p11;
-; CHECK-NEXT:    setp.eq.b32 %p12, %r69, 0;
-; CHECK-NEXT:    selp.b32 %r76, %r75, %r74, %p12;
-; CHECK-NEXT:    or.b32 %r77, %r69, %r58;
-; CHECK-NEXT:    setp.eq.b32 %p13, %r77, 0;
-; CHECK-NEXT:    selp.b32 %r78, %r57, %r76, %p13;
-; CHECK-NEXT:    setp.eq.b32 %p14, %r58, 7;
-; CHECK-NEXT:    selp.b32 %r79, 2143289344, %r78, %p14;
-; CHECK-NEXT:    setp.eq.b32 %p15, %r69, 15;
-; CHECK-NEXT:    selp.b32 %r80, %r79, %r78, %p15;
-; CHECK-NEXT:    prmt.b32 %r81, %r1, 0, 0x7770U;
-; CHECK-NEXT:    shl.b32 %r82, %r81, 24;
-; CHECK-NEXT:    and.b32 %r83, %r82, -2147483648;
-; CHECK-NEXT:    and.b32 %r84, %r81, 7;
-; CHECK-NEXT:    clz.b32 %r85, %r84;
-; CHECK-NEXT:    sub.s32 %r86, 149, %r85;
-; CHECK-NEXT:    shl.b32 %r87, %r86, 23;
-; CHECK-NEXT:    or.b32 %r88, %r83, %r87;
-; CHECK-NEXT:    sub.s32 %r89, 31, %r85;
-; CHECK-NEXT:    shl.b32 %r90, %r11, %r89;
-; CHECK-NEXT:    xor.b32 %r91, %r84, %r90;
-; CHECK-NEXT:    add.s32 %r92, %r85, -8;
-; CHECK-NEXT:    shl.b32 %r93, %r91, %r92;
-; CHECK-NEXT:    or.b32 %r94, %r88, %r93;
-; CHECK-NEXT:    bfe.u32 %r95, %r81, 3, 4;
-; CHECK-NEXT:    shl.b32 %r96, %r95, 23;
-; CHECK-NEXT:    or.b32 %r97, %r96, %r83;
-; CHECK-NEXT:    shl.b32 %r98, %r84, 20;
-; CHECK-NEXT:    or.b32 %r99, %r97, %r98;
-; CHECK-NEXT:    add.s32 %r100, %r99, 1006632960;
-; CHECK-NEXT:    setp.ne.b32 %p16, %r84, 0;
-; CHECK-NEXT:    selp.b32 %r101, %r94, %r100, %p16;
-; CHECK-NEXT:    setp.eq.b32 %p17, %r95, 0;
-; CHECK-NEXT:    selp.b32 %r102, %r101, %r100, %p17;
-; CHECK-NEXT:    or.b32 %r103, %r95, %r84;
-; CHECK-NEXT:    setp.eq.b32 %p18, %r103, 0;
-; CHECK-NEXT:    selp.b32 %r104, %r83, %r102, %p18;
-; CHECK-NEXT:    setp.eq.b32 %p19, %r84, 7;
-; CHECK-NEXT:    selp.b32 %r105, 2143289344, %r104, %p19;
-; CHECK-NEXT:    setp.eq.b32 %p20, %r95, 15;
-; CHECK-NEXT:    selp.b32 %r106, %r105, %r104, %p20;
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r106, %r80, %r54, %r28};
+; CHECK-NEXT:    selp.b32 %r54, 2143289344, %r53, %p9;
+; CHECK-NEXT:    setp.eq.b32 %p10, %r44, 15;
+; CHECK-NEXT:    selp.b32 %r55, %r54, %r53, %p10;
+; CHECK-NEXT:    prmt.b32 %r56, %r1, 0, 0x7771U;
+; CHECK-NEXT:    shl.b32 %r57, %r56, 24;
+; CHECK-NEXT:    and.b32 %r58, %r57, -2147483648;
+; CHECK-NEXT:    and.b32 %r59, %r56, 7;
+; CHECK-NEXT:    clz.b32 %r60, %r59;
+; CHECK-NEXT:    sub.s32 %r61, 149, %r60;
+; CHECK-NEXT:    shl.b32 %r62, %r61, 23;
+; CHECK-NEXT:    or.b32 %r63, %r58, %r62;
+; CHECK-NEXT:    sub.s32 %r64, 31, %r60;
+; CHECK-NEXT:    shl.b32 %r65, 1, %r64;
+; CHECK-NEXT:    xor.b32 %r66, %r59, %r65;
+; CHECK-NEXT:    add.s32 %r67, %r60, -8;
+; CHECK-NEXT:    shl.b32 %r68, %r66, %r67;
+; CHECK-NEXT:    or.b32 %r69, %r63, %r68;
+; CHECK-NEXT:    shr.u32 %r70, %r56, 3;
+; CHECK-NEXT:    and.b32 %r71, %r70, 15;
+; CHECK-NEXT:    shl.b32 %r72, %r71, 23;
+; CHECK-NEXT:    or.b32 %r73, %r72, %r58;
+; CHECK-NEXT:    shl.b32 %r74, %r59, 20;
+; CHECK-NEXT:    or.b32 %r75, %r73, %r74;
+; CHECK-NEXT:    add.s32 %r76, %r75, 1006632960;
+; CHECK-NEXT:    setp.ne.b32 %p11, %r59, 0;
+; CHECK-NEXT:    selp.b32 %r77, %r69, %r76, %p11;
+; CHECK-NEXT:    setp.eq.b32 %p12, %r71, 0;
+; CHECK-NEXT:    selp.b32 %r78, %r77, %r76, %p12;
+; CHECK-NEXT:    or.b32 %r79, %r71, %r59;
+; CHECK-NEXT:    setp.eq.b32 %p13, %r79, 0;
+; CHECK-NEXT:    selp.b32 %r80, %r58, %r78, %p13;
+; CHECK-NEXT:    setp.eq.b32 %p14, %r59, 7;
+; CHECK-NEXT:    selp.b32 %r81, 2143289344, %r80, %p14;
+; CHECK-NEXT:    setp.eq.b32 %p15, %r71, 15;
+; CHECK-NEXT:    selp.b32 %r82, %r81, %r80, %p15;
+; CHECK-NEXT:    prmt.b32 %r83, %r1, 0, 0x7770U;
+; CHECK-NEXT:    shl.b32 %r84, %r83, 24;
+; CHECK-NEXT:    and.b32 %r85, %r84, -2147483648;
+; CHECK-NEXT:    and.b32 %r86, %r83, 7;
+; CHECK-NEXT:    clz.b32 %r87, %r86;
+; CHECK-NEXT:    sub.s32 %r88, 149, %r87;
+; CHECK-NEXT:    shl.b32 %r89, %r88, 23;
+; CHECK-NEXT:    or.b32 %r90, %r85, %r89;
+; CHECK-NEXT:    sub.s32 %r91, 31, %r87;
+; CHECK-NEXT:    shl.b32 %r92, 1, %r91;
+; CHECK-NEXT:    xor.b32 %r93, %r86, %r92;
+; CHECK-NEXT:    add.s32 %r94, %r87, -8;
+; CHECK-NEXT:    shl.b32 %r95, %r93, %r94;
+; CHECK-NEXT:    or.b32 %r96, %r90, %r95;
+; CHECK-NEXT:    shr.u32 %r97, %r83, 3;
+; CHECK-NEXT:    and.b32 %r98, %r97, 15;
+; CHECK-NEXT:    shl.b32 %r99, %r98, 23;
+; CHECK-NEXT:    or.b32 %r100, %r99, %r85;
+; CHECK-NEXT:    shl.b32 %r101, %r86, 20;
+; CHECK-NEXT:    or.b32 %r102, %r100, %r101;
+; CHECK-NEXT:    add.s32 %r103, %r102, 1006632960;
+; CHECK-NEXT:    setp.ne.b32 %p16, %r86, 0;
+; CHECK-NEXT:    selp.b32 %r104, %r96, %r103, %p16;
+; CHECK-NEXT:    setp.eq.b32 %p17, %r98, 0;
+; CHECK-NEXT:    selp.b32 %r105, %r104, %r103, %p17;
+; CHECK-NEXT:    or.b32 %r106, %r98, %r86;
+; CHECK-NEXT:    setp.eq.b32 %p18, %r106, 0;
+; CHECK-NEXT:    selp.b32 %r107, %r85, %r105, %p18;
+; CHECK-NEXT:    setp.eq.b32 %p19, %r86, 7;
+; CHECK-NEXT:    selp.b32 %r108, 2143289344, %r107, %p19;
+; CHECK-NEXT:    setp.eq.b32 %p20, %r98, 15;
+; CHECK-NEXT:    selp.b32 %r109, %r108, %r107, %p20;
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r109, %r82, %r55, %r28};
 ; CHECK-NEXT:    ret;
   %r = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8> %x, metadata !"Float8E4M3FN")
   ret <4 x float> %r
@@ -1184,8 +1163,8 @@ define <4 x float> @from_f8e4m3fn_v4f32(<4 x i8> %x) {
 define <4 x float> @from_f8e5m2_v4f32(<4 x i8> %x) {
 ; CHECK-LABEL: from_f8e5m2_v4f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<21>;
-; CHECK-NEXT:    .reg .b32 %r<119>;
+; CHECK-NEXT:    .reg .pred %p<17>;
+; CHECK-NEXT:    .reg .b32 %r<122>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [from_f8e5m2_v4f32_param_0];
@@ -1198,32 +1177,31 @@ define <4 x float> @from_f8e5m2_v4f32(<4 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 23;
 ; CHECK-NEXT:    or.b32 %r9, %r4, %r8;
 ; CHECK-NEXT:    sub.s32 %r10, 31, %r6;
-; CHECK-NEXT:    mov.b32 %r11, 1;
-; CHECK-NEXT:    shl.b32 %r12, %r11, %r10;
-; CHECK-NEXT:    xor.b32 %r13, %r5, %r12;
-; CHECK-NEXT:    add.s32 %r14, %r6, -8;
-; CHECK-NEXT:    shl.b32 %r15, %r13, %r14;
-; CHECK-NEXT:    or.b32 %r16, %r9, %r15;
-; CHECK-NEXT:    bfe.u32 %r17, %r2, 2, 5;
+; CHECK-NEXT:    shl.b32 %r11, 1, %r10;
+; CHECK-NEXT:    xor.b32 %r12, %r5, %r11;
+; CHECK-NEXT:    add.s32 %r13, %r6, -8;
+; CHECK-NEXT:    shl.b32 %r14, %r12, %r13;
+; CHECK-NEXT:    or.b32 %r15, %r9, %r14;
+; CHECK-NEXT:    shr.u32 %r16, %r2, 2;
+; CHECK-NEXT:    and.b32 %r17, %r16, 31;
 ; CHECK-NEXT:    shl.b32 %r18, %r17, 23;
 ; CHECK-NEXT:    or.b32 %r19, %r18, %r4;
 ; CHECK-NEXT:    shl.b32 %r20, %r5, 21;
 ; CHECK-NEXT:    or.b32 %r21, %r19, %r20;
 ; CHECK-NEXT:    add.s32 %r22, %r21, 939524096;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r5, 0;
-; CHECK-NEXT:    selp.b32 %r23, %r16, %r22, %p1;
+; CHECK-NEXT:    selp.b32 %r23, %r15, %r22, %p1;
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r17, 0;
 ; CHECK-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; CHECK-NEXT:    or.b32 %r25, %r17, %r5;
 ; CHECK-NEXT:    setp.eq.b32 %p3, %r25, 0;
 ; CHECK-NEXT:    selp.b32 %r26, %r4, %r24, %p3;
-; CHECK-NEXT:    setp.eq.b32 %p4, %r5, 0;
 ; CHECK-NEXT:    or.b32 %r27, %r4, 2139095040;
-; CHECK-NEXT:    selp.b32 %r28, %r27, %r26, %p4;
-; CHECK-NEXT:    setp.eq.b32 %p5, %r17, 31;
-; CHECK-NEXT:    selp.b32 %r29, %r28, %r26, %p5;
+; CHECK-NEXT:    selp.b32 %r28, %r26, %r27, %p1;
+; CHECK-NEXT:    setp.eq.b32 %p4, %r17, 31;
+; CHECK-NEXT:    selp.b32 %r29, %r28, %r26, %p4;
 ; CHECK-NEXT:    selp.b32 %r30, 2143289344, %r29, %p1;
-; CHECK-NEXT:    selp.b32 %r31, %r30, %r29, %p5;
+; CHECK-NEXT:    selp.b32 %r31, %r30, %r29, %p4;
 ; CHECK-NEXT:    prmt.b32 %r32, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    shl.b32 %r33, %r32, 24;
 ; CHECK-NEXT:    and.b32 %r34, %r33, -2147483648;
@@ -1233,100 +1211,100 @@ define <4 x float> @from_f8e5m2_v4f32(<4 x i8> %x) {
 ; CHECK-NEXT:    shl.b32 %r38, %r37, 23;
 ; CHECK-NEXT:    or.b32 %r39, %r34, %r38;
 ; CHECK-NEXT:    sub.s32 %r40, 31, %r36;
-; CHECK-NEXT:    shl.b32 %r41, %r11, %r40;
+; CHECK-NEXT:    shl.b32 %r41, 1, %r40;
 ; CHECK-NEXT:    xor.b32 %r42, %r35, %r41;
 ; CHECK-NEXT:    add.s32 %r43, %r36, -8;
 ; CHECK-NEXT:    shl.b32 %r44, %r42, %r43;
 ; CHECK-NEXT:    or.b32 %r45, %r39, %r44;
-; CHECK-NEXT:    bfe.u32 %r46, %r32, 2, 5;
-; CHECK-NEXT:    shl.b32 %r47, %r46, 23;
-; CHECK-NEXT:    or.b32 %r48, %r47, %r34;
-; CHECK-NEXT:    shl.b32 %r49, %r35, 21;
-; CHECK-NEXT:    or.b32 %r50, %r48, %r49;
-; CHECK-NEXT:    add.s32 %r51, %r50, 939524096;
-; CHECK-NEXT:    setp.ne.b32 %p6, %r35, 0;
-; CHECK-NEXT:    selp.b32 %r52, %r45, %r51, %p6;
-; CHECK-NEXT:    setp.eq.b32 %p7, %r46, 0;
-; CHECK-NEXT:    selp.b32 %r53, %r52, %r51, %p7;
-; CHECK-NEXT:    or.b32 %r54, %r46, %r35;
-; CHECK-NEXT:    setp.eq.b32 %p8, %r54, 0;
-; CHECK-NEXT:    selp.b32 %r55, %r34, %r53, %p8;
-; CHECK-NEXT:    setp.eq.b32 %p9, %r35, 0;
-; CHECK-NEXT:    or.b32 %r56, %r34, 2139095040;
-; CHECK-NEXT:    selp.b32 %r57, %r56, %r55, %p9;
-; CHECK-NEXT:    setp.eq.b32 %p10, %r46, 31;
-; CHECK-NEXT:    selp.b32 %r58, %r57, %r55, %p10;
-; CHECK-NEXT:    selp.b32 %r59, 2143289344, %r58, %p6;
-; CHECK-NEXT:    selp.b32 %r60, %r59, %r58, %p10;
-; CHECK-NEXT:    prmt.b32 %r61, %r1, 0, 0x7771U;
-; CHECK-NEXT:    shl.b32 %r62, %r61, 24;
-; CHECK-NEXT:    and.b32 %r63, %r62, -2147483648;
-; CHECK-NEXT:    and.b32 %r64, %r61, 3;
-; CHECK-NEXT:    clz.b32 %r65, %r64;
-; CHECK-NEXT:    sub.s32 %r66, 142, %r65;
-; CHECK-NEXT:    shl.b32 %r67, %r66, 23;
-; CHECK-NEXT:    or.b32 %r68, %r63, %r67;
-; CHECK-NEXT:    sub.s32 %r69, 31, %r65;
-; CHECK-NEXT:    shl.b32 %r70, %r11, %r69;
-; CHECK-NEXT:    xor.b32 %r71, %r64, %r70;
-; CHECK-NEXT:    add.s32 %r72, %r65, -8;
-; CHECK-NEXT:    shl.b32 %r73, %r71, %r72;
-; CHECK-NEXT:    or.b32 %r74, %r68, %r73;
-; CHECK-NEXT:    bfe.u32 %r75, %r61, 2, 5;
-; CHECK-NEXT:    shl.b32 %r76, %r75, 23;
-; CHECK-NEXT:    or.b32 %r77, %r76, %r63;
-; CHECK-NEXT:    shl.b32 %r78, %r64, 21;
-; CHECK-NEXT:    or.b32 %r79, %r77, %r78;
-; CHECK-NEXT:    add.s32 %r80, %r79, 939524096;
-; CHECK-NEXT:    setp.ne.b32 %p11, %r64, 0;
-; CHECK-NEXT:    selp.b32 %r81, %r74, %r80, %p11;
-; CHECK-NEXT:    setp.eq.b32 %p12, %r75, 0;
-; CHECK-NEXT:    selp.b32 %r82, %r81, %r80, %p12;
-; CHECK-NEXT:    or.b32 %r83, %r75, %r64;
-; CHECK-NEXT:    setp.eq.b32 %p13, %r83, 0;
-; CHECK-NEXT:    selp.b32 %r84, %r63, %r82, %p13;
-; CHECK-NEXT:    setp.eq.b32 %p14, %r64, 0;
-; CHECK-NEXT:    or.b32 %r85, %r63, 2139095040;
-; CHECK-NEXT:    selp.b32 %r86, %r85, %r84, %p14;
-; CHECK-NEXT:    setp.eq.b32 %p15, %r75, 31;
-; CHECK-NEXT:    selp.b32 %r87, %r86, %r84, %p15;
-; CHECK-NEXT:    selp.b32 %r88, 2143289344, %r87, %p11;
-; CHECK-NEXT:    selp.b32 %r89, %r88, %r87, %p15;
-; CHECK-NEXT:    prmt.b32 %r90, %r1, 0, 0x7770U;
-; CHECK-NEXT:    shl.b32 %r91, %r90, 24;
-; CHECK-NEXT:    and.b32 %r92, %r91, -2147483648;
-; CHECK-NEXT:    and.b32 %r93, %r90, 3;
-; CHECK-NEXT:    clz.b32 %r94, %r93;
-; CHECK-NEXT:    sub.s32 %r95, 142, %r94;
-; CHECK-NEXT:    shl.b32 %r96, %r95, 23;
-; CHECK-NEXT:    or.b32 %r97, %r92, %r96;
-; CHECK-NEXT:    sub.s32 %r98, 31, %r94;
-; CHECK-NEXT:    shl.b32 %r99, %r11, %r98;
-; CHECK-NEXT:    xor.b32 %r100, %r93, %r99;
-; CHECK-NEXT:    add.s32 %r101, %r94, -8;
-; CHECK-NEXT:    shl.b32 %r102, %r100, %r101;
-; CHECK-NEXT:    or.b32 %r103, %r97, %r102;
-; CHECK-NEXT:    bfe.u32 %r104, %r90, 2, 5;
-; CHECK-NEXT:    shl.b32 %r105, %r104, 23;
-; CHECK-NEXT:    or.b32 %r106, %r105, %r92;
-; CHECK-NEXT:    shl.b32 %r107, %r93, 21;
-; CHECK-NEXT:    or.b32 %r108, %r106, %r107;
-; CHECK-NEXT:    add.s32 %r109, %r108, 939524096;
-; CHECK-NEXT:    setp.ne.b32 %p16, %r93, 0;
-; CHECK-NEXT:    selp.b32 %r110, %r103, %r109, %p16;
-; CHECK-NEXT:    setp.eq.b32 %p17, %r104, 0;
-; CHECK-NEXT:    selp.b32 %r111, %r110, %r109, %p17;
-; CHECK-NEXT:    or.b32 %r112, %r104, %r93;
-; CHECK-NEXT:    setp.eq.b32 %p18, %r112, 0;
-; CHECK-NEXT:    selp.b32 %r113, %r92, %r111, %p18;
-; CHECK-NEXT:    setp.eq.b32 %p19, %r93, 0;
-; CHECK-NEXT:    or.b32 %r114, %r92, 2139095040;
-; CHECK-NEXT:    selp.b32 %r115, %r114, %r113, %p19;
-; CHECK-NEXT:    setp.eq.b32 %p20, %r104, 31;
-; CHECK-NEXT:    selp.b32 %r116, %r115, %r113, %p20;
-; CHECK-NEXT:    selp.b32 %r117, 2143289344, %r116, %p16;
-; CHECK-NEXT:    selp.b32 %r118, %r117, %r116, %p20;
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r118, %r89, %r60, %r31};
+; CHECK-NEXT:    shr.u32 %r46, %r32, 2;
+; CHECK-NEXT:    and.b32 %r47, %r46, 31;
+; CHECK-NEXT:    shl.b32 %r48, %r47, 23;
+; CHECK-NEXT:    or.b32 %r49, %r48, %r34;
+; CHECK-NEXT:    shl.b32 %r50, %r35, 21;
+; CHECK-NEXT:    or.b32 %r51, %r49, %r50;
+; CHECK-NEXT:    add.s32 %r52, %r51, 939524096;
+; CHECK-NEXT:    setp.ne.b32 %p5, %r35, 0;
+; CHECK-NEXT:    selp.b32 %r53, %r45, %r52, %p5;
+; CHECK-NEXT:    setp.eq.b32 %p6, %r47, 0;
+; CHECK-NEXT:    selp.b32 %r54, %r53, %r52, %p6;
+; CHECK-NEXT:    or.b32 %r55, %r47, %r35;
+; CHECK-NEXT:    setp.eq.b32 %p7, %r55, 0;
+; CHECK-NEXT:    selp.b32 %r56, %r34, %r54, %p7;
+; CHECK-NEXT:    or.b32 %r57, %r34, 2139095040;
+; CHECK-NEXT:    selp.b32 %r58, %r56, %r57, %p5;
+; CHECK-NEXT:    setp.eq.b32 %p8, %r47, 31;
+; CHECK-NEXT:    selp.b32 %r59, %r58, %r56, %p8;
+; CHECK-NEXT:    selp.b32 %r60, 2143289344, %r59, %p5;
+; CHECK-NEXT:    selp.b32 %r61, %r60, %r59, %p8;
+; CHECK-NEXT:    prmt.b32 %r62, %r1, 0, 0x7771U;
+; CHECK-NEXT:    shl.b32 %r63, %r62, 24;
+; CHECK-NEXT:    and.b32 %r64, %r63, -2147483648;
+; CHECK-NEXT:    and.b32 %r65, %r62, 3;
+; CHECK-NEXT:    clz.b32 %r66, %r65;
+; CHECK-NEXT:    sub.s32 %r67, 142, %r66;
+; CHECK-NEXT:    shl.b32 %r68, %r67, 23;
+; CHECK-NEXT:    or.b32 %r69, %r64, %r68;
+; CHECK-NEXT:    sub.s32 %r70, 31, %r66;
+; CHECK-NEXT:    shl.b32 %r71, 1, %r70;
+; CHECK-NEXT:    xor.b32 %r72, %r65, %r71;
+; CHECK-NEXT:    add.s32 %r73, %r66, -8;
+; CHECK-NEXT:    shl.b32 %r74, %r72, %r73;
+; CHECK-NEXT:    or.b32 %r75, %r69, %r74;
+; CHECK-NEXT:    shr.u32 %r76, %r62, 2;
+; CHECK-NEXT:    and.b32 %r77, %r76, 31;
+; CHECK-NEXT:    shl.b32 %r78, %r77, 23;
+; CHECK-NEXT:    or.b32 %r79, %r78, %r64;
+; CHECK-NEXT:    shl.b32 %r80, %r65, 21;
+; CHECK-NEXT:    or.b32 %r81, %r79, %r80;
+; CHECK-NEXT:    add.s32 %r82, %r81, 939524096;
+; CHECK-NEXT:    setp.ne.b32 %p9, %r65, 0;
+; CHECK-NEXT:    selp.b32 %r83, %r75, %r82, %p9;
+; CHECK-NEXT:    setp.eq.b32 %p10, %r77, 0;
+; CHECK-NEXT:    selp.b32 %r84, %r83, %r82, %p10;
+; CHECK-NEXT:    or.b32 %r85, %r77, %r65;
+; CHECK-NEXT:    setp.eq.b32 %p11, %r85, 0;
+; CHECK-NEXT:    selp.b32 %r86, %r64, %r84, %p11;
+; CHECK-NEXT:    or.b32 %r87, %r64, 2139095040;
+; CHECK-NEXT:    selp.b32 %r88, %r86, %r87, %p9;
+; CHECK-NEXT:    setp.eq.b32 %p12, %r77, 31;
+; CHECK-NEXT:    selp.b32 %r89, %r88, %r86, %p12;
+; CHECK-NEXT:    selp.b32 %r90, 2143289344, %r89, %p9;
+; CHECK-NEXT:    selp.b32 %r91, %r90, %r89, %p12;
+; CHECK-NEXT:    prmt.b32 %r92, %r1, 0, 0x7770U;
+; CHECK-NEXT:    shl.b32 %r93, %r92, 24;
+; CHECK-NEXT:    and.b32 %r94, %r93, -2147483648;
+; CHECK-NEXT:    and.b32 %r95, %r92, 3;
+; CHECK-NEXT:    clz.b32 %r96, %r95;
+; CHECK-NEXT:    sub.s32 %r97, 142, %r96;
+; CHECK-NEXT:    shl.b32 %r98, %r97, 23;
+; CHECK-NEXT:    or.b32 %r99, %r94, %r98;
+; CHECK-NEXT:    sub.s32 %r100, 31, %r96;
+; CHECK-NEXT:    shl.b32 %r101, 1, %r100;
+; CHECK-NEXT:    xor.b32 %r102, %r95, %r101;
+; CHECK-NEXT:    add.s32 %r103, %r96, -8;
+; CHECK-NEXT:    shl.b32 %r104, %r102, %r103;
+; CHECK-NEXT:    or.b32 %r105, %r99, %r104;
+; CHECK-NEXT:    shr.u32 %r106, %r92, 2;
+; CHECK-NEXT:    and.b32 %r107, %r106, 31;
+; CHECK-NEXT:    shl.b32 %r108, %r107, 23;
+; CHECK-NEXT:    or.b32 %r109, %r108, %r94;
+; CHECK-NEXT:    shl.b32 %r110, %r95, 21;
+; CHECK-NEXT:    or.b32 %r111, %r109, %r110;
+; CHECK-NEXT:    add.s32 %r112, %r111, 939524096;
+; CHECK-NEXT:    setp.ne.b32 %p13, %r95, 0;
+; CHECK-NEXT:    selp.b32 %r113, %r105, %r112, %p13;
+; CHECK-NEXT:    setp.eq.b32 %p14, %r107, 0;
+; CHECK-NEXT:    selp.b32 %r114, %r113, %r112, %p14;
+; CHECK-NEXT:    or.b32 %r115, %r107, %r95;
+; CHECK-NEXT:    setp.eq.b32 %p15, %r115, 0;
+; CHECK-NEXT:    selp.b32 %r116, %r94, %r114, %p15;
+; CHECK-NEXT:    or.b32 %r117, %r94, 2139095040;
+; CHECK-NEXT:    selp.b32 %r118, %r116, %r117, %p13;
+; CHECK-NEXT:    setp.eq.b32 %p16, %r107, 31;
+; CHECK-NEXT:    selp.b32 %r119, %r118, %r116, %p16;
+; CHECK-NEXT:    selp.b32 %r120, 2143289344, %r119, %p13;
+; CHECK-NEXT:    selp.b32 %r121, %r120, %r119, %p16;
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r121, %r91, %r61, %r31};
 ; CHECK-NEXT:    ret;
   %r = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(<4 x i8> %x, metadata !"Float8E5M2")
   ret <4 x float> %r
@@ -1337,91 +1315,90 @@ define <2 x half> @from_f8e4m3fn_v2f16(<2 x i8> %x) {
 ; CHECK-LABEL: from_f8e4m3fn_v2f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
-; CHECK-NEXT:    .reg .b16 %rs<52>;
+; CHECK-NEXT:    .reg .b16 %rs<51>;
 ; CHECK-NEXT:    .reg .b32 %r<26>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [from_f8e4m3fn_v2f16_param_0];
 ; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    and.b32 %r2, %r1, 458759;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; CHECK-NEXT:    cvt.u32.u16 %r3, %rs4;
-; CHECK-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-NEXT:    clz.b32 %r5, %r4;
-; CHECK-NEXT:    cvt.u16.u32 %rs5, %r5;
-; CHECK-NEXT:    sub.s16 %rs6, 15, %rs5;
-; CHECK-NEXT:    cvt.u32.u16 %r6, %rs6;
-; CHECK-NEXT:    mov.b16 %rs7, 1;
-; CHECK-NEXT:    shl.b16 %rs8, %rs7, %r6;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs3;
+; CHECK-NEXT:    shl.b16 %rs3, %rs2, 8;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    shl.b16 %rs5, %rs1, 8;
+; CHECK-NEXT:    and.b16 %rs6, %rs5, -32768;
+; CHECK-NEXT:    mov.b32 %r2, {%rs6, %rs4};
+; CHECK-NEXT:    and.b32 %r3, %r1, 458759;
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs8;
+; CHECK-NEXT:    shl.b32 %r5, %r4, 16;
+; CHECK-NEXT:    clz.b32 %r6, %r5;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r6;
+; CHECK-NEXT:    sub.s16 %rs10, 21, %rs9;
+; CHECK-NEXT:    shl.b16 %rs11, %rs10, 10;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs7;
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 16;
 ; CHECK-NEXT:    clz.b32 %r9, %r8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r9;
-; CHECK-NEXT:    sub.s16 %rs10, 15, %rs9;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs10;
-; CHECK-NEXT:    shl.b16 %rs11, %rs7, %r10;
-; CHECK-NEXT:    mov.b32 %r11, {%rs11, %rs8};
-; CHECK-NEXT:    xor.b32 %r12, %r2, %r11;
-; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r12;
-; CHECK-NEXT:    add.s16 %rs14, %rs5, -5;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs14;
-; CHECK-NEXT:    shl.b16 %rs15, %rs13, %r13;
-; CHECK-NEXT:    add.s16 %rs16, %rs9, -5;
-; CHECK-NEXT:    cvt.u32.u16 %r14, %rs16;
-; CHECK-NEXT:    shl.b16 %rs17, %rs12, %r14;
-; CHECK-NEXT:    mov.b32 %r15, {%rs17, %rs15};
-; CHECK-NEXT:    shl.b16 %rs18, %rs2, 8;
-; CHECK-NEXT:    and.b16 %rs19, %rs18, -32768;
-; CHECK-NEXT:    shl.b16 %rs20, %rs1, 8;
-; CHECK-NEXT:    and.b16 %rs21, %rs20, -32768;
-; CHECK-NEXT:    mov.b32 %r16, {%rs21, %rs19};
-; CHECK-NEXT:    sub.s16 %rs22, 21, %rs5;
-; CHECK-NEXT:    shl.b16 %rs23, %rs22, 10;
-; CHECK-NEXT:    sub.s16 %rs24, 21, %rs9;
-; CHECK-NEXT:    shl.b16 %rs25, %rs24, 10;
-; CHECK-NEXT:    mov.b32 %r17, {%rs25, %rs23};
-; CHECK-NEXT:    or.b32 %r18, %r16, %r17;
-; CHECK-NEXT:    or.b32 %r19, %r18, %r15;
-; CHECK-NEXT:    mov.b32 {%rs26, %rs27}, %r19;
-; CHECK-NEXT:    shr.u16 %rs28, %rs2, 3;
-; CHECK-NEXT:    shr.u16 %rs29, %rs1, 3;
-; CHECK-NEXT:    mov.b32 %r20, {%rs29, %rs28};
+; CHECK-NEXT:    cvt.u16.u32 %rs12, %r9;
+; CHECK-NEXT:    sub.s16 %rs13, 21, %rs12;
+; CHECK-NEXT:    shl.b16 %rs14, %rs13, 10;
+; CHECK-NEXT:    mov.b32 %r10, {%rs14, %rs11};
+; CHECK-NEXT:    or.b32 %r11, %r2, %r10;
+; CHECK-NEXT:    sub.s16 %rs15, 15, %rs9;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs15;
+; CHECK-NEXT:    shl.b16 %rs16, 1, %r12;
+; CHECK-NEXT:    sub.s16 %rs17, 15, %rs12;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs17;
+; CHECK-NEXT:    shl.b16 %rs18, 1, %r13;
+; CHECK-NEXT:    mov.b32 %r14, {%rs18, %rs16};
+; CHECK-NEXT:    xor.b32 %r15, %r3, %r14;
+; CHECK-NEXT:    mov.b32 {%rs19, %rs20}, %r15;
+; CHECK-NEXT:    add.s16 %rs21, %rs9, -5;
+; CHECK-NEXT:    cvt.u32.u16 %r16, %rs21;
+; CHECK-NEXT:    shl.b16 %rs22, %rs20, %r16;
+; CHECK-NEXT:    add.s16 %rs23, %rs12, -5;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs23;
+; CHECK-NEXT:    shl.b16 %rs24, %rs19, %r17;
+; CHECK-NEXT:    mov.b32 %r18, {%rs24, %rs22};
+; CHECK-NEXT:    or.b32 %r19, %r11, %r18;
+; CHECK-NEXT:    mov.b32 {%rs25, %rs26}, %r19;
+; CHECK-NEXT:    shr.u16 %rs27, %rs2, 3;
+; CHECK-NEXT:    shr.u16 %rs28, %rs1, 3;
+; CHECK-NEXT:    mov.b32 %r20, {%rs28, %rs27};
 ; CHECK-NEXT:    and.b32 %r21, %r20, 983055;
-; CHECK-NEXT:    mov.b32 {%rs30, %rs31}, %r21;
-; CHECK-NEXT:    shl.b16 %rs32, %rs31, 10;
-; CHECK-NEXT:    add.s16 %rs33, %rs32, 8192;
-; CHECK-NEXT:    shl.b16 %rs34, %rs30, 10;
-; CHECK-NEXT:    add.s16 %rs35, %rs34, 8192;
-; CHECK-NEXT:    mov.b32 %r22, {%rs35, %rs33};
-; CHECK-NEXT:    or.b32 %r23, %r16, %r22;
-; CHECK-NEXT:    shl.b16 %rs36, %rs4, 7;
-; CHECK-NEXT:    shl.b16 %rs37, %rs3, 7;
-; CHECK-NEXT:    mov.b32 %r24, {%rs37, %rs36};
+; CHECK-NEXT:    mov.b32 {%rs29, %rs30}, %r21;
+; CHECK-NEXT:    shl.b16 %rs31, %rs30, 10;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 8192;
+; CHECK-NEXT:    shl.b16 %rs33, %rs29, 10;
+; CHECK-NEXT:    add.s16 %rs34, %rs33, 8192;
+; CHECK-NEXT:    mov.b32 %r22, {%rs34, %rs32};
+; CHECK-NEXT:    or.b32 %r23, %r2, %r22;
+; CHECK-NEXT:    shl.b16 %rs35, %rs8, 7;
+; CHECK-NEXT:    shl.b16 %rs36, %rs7, 7;
+; CHECK-NEXT:    mov.b32 %r24, {%rs36, %rs35};
 ; CHECK-NEXT:    or.b32 %r25, %r23, %r24;
-; CHECK-NEXT:    mov.b32 {%rs38, %rs39}, %r25;
-; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
-; CHECK-NEXT:    selp.b16 %rs40, %rs27, %rs39, %p1;
-; CHECK-NEXT:    setp.eq.b16 %p2, %rs31, 0;
-; CHECK-NEXT:    selp.b16 %rs41, %rs40, %rs39, %p2;
-; CHECK-NEXT:    or.b16 %rs42, %rs31, %rs4;
-; CHECK-NEXT:    setp.eq.b16 %p3, %rs42, 0;
-; CHECK-NEXT:    selp.b16 %rs43, %rs19, %rs41, %p3;
-; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 7;
-; CHECK-NEXT:    selp.b16 %rs44, 32256, %rs43, %p4;
-; CHECK-NEXT:    setp.eq.b16 %p5, %rs31, 15;
-; CHECK-NEXT:    selp.b16 %rs45, %rs44, %rs43, %p5;
-; CHECK-NEXT:    setp.ne.b16 %p6, %rs3, 0;
-; CHECK-NEXT:    selp.b16 %rs46, %rs26, %rs38, %p6;
-; CHECK-NEXT:    setp.eq.b16 %p7, %rs30, 0;
-; CHECK-NEXT:    selp.b16 %rs47, %rs46, %rs38, %p7;
-; CHECK-NEXT:    or.b16 %rs48, %rs30, %rs3;
-; CHECK-NEXT:    setp.eq.b16 %p8, %rs48, 0;
-; CHECK-NEXT:    selp.b16 %rs49, %rs21, %rs47, %p8;
-; CHECK-NEXT:    setp.eq.b16 %p9, %rs3, 7;
-; CHECK-NEXT:    selp.b16 %rs50, 32256, %rs49, %p9;
-; CHECK-NEXT:    setp.eq.b16 %p10, %rs30, 15;
-; CHECK-NEXT:    selp.b16 %rs51, %rs50, %rs49, %p10;
-; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs51, %rs45};
+; CHECK-NEXT:    mov.b32 {%rs37, %rs38}, %r25;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs8, 0;
+; CHECK-NEXT:    selp.b16 %rs39, %rs26, %rs38, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs30, 0;
+; CHECK-NEXT:    selp.b16 %rs40, %rs39, %rs38, %p2;
+; CHECK-NEXT:    or.b16 %rs41, %rs30, %rs8;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs41, 0;
+; CHECK-NEXT:    selp.b16 %rs42, %rs4, %rs40, %p3;
+; CHECK-NEXT:    setp.eq.b16 %p4, %rs8, 7;
+; CHECK-NEXT:    selp.b16 %rs43, 32256, %rs42, %p4;
+; CHECK-NEXT:    setp.eq.b16 %p5, %rs30, 15;
+; CHECK-NEXT:    selp.b16 %rs44, %rs43, %rs42, %p5;
+; CHECK-NEXT:    setp.ne.b16 %p6, %rs7, 0;
+; CHECK-NEXT:    selp.b16 %rs45, %rs25, %rs37, %p6;
+; CHECK-NEXT:    setp.eq.b16 %p7, %rs29, 0;
+; CHECK-NEXT:    selp.b16 %rs46, %rs45, %rs37, %p7;
+; CHECK-NEXT:    or.b16 %rs47, %rs29, %rs7;
+; CHECK-NEXT:    setp.eq.b16 %p8, %rs47, 0;
+; CHECK-NEXT:    selp.b16 %rs48, %rs6, %rs46, %p8;
+; CHECK-NEXT:    setp.eq.b16 %p9, %rs7, 7;
+; CHECK-NEXT:    selp.b16 %rs49, 32256, %rs48, %p9;
+; CHECK-NEXT:    setp.eq.b16 %p10, %rs29, 15;
+; CHECK-NEXT:    selp.b16 %rs50, %rs49, %rs48, %p10;
+; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs50, %rs44};
 ; CHECK-NEXT:    ret;
   %r = call <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8> %x, metadata !"Float8E4M3FN")
   ret <2 x half> %r
@@ -1430,8 +1407,8 @@ define <2 x half> @from_f8e4m3fn_v2f16(<2 x i8> %x) {
 define bfloat @from_f8e5m2_bf16(i8 %x) {
 ; CHECK-LABEL: from_f8e5m2_bf16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<6>;
-; CHECK-NEXT:    .reg .b16 %rs<32>;
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b16 %rs<31>;
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1448,35 +1425,33 @@ define bfloat @from_f8e5m2_bf16(i8 %x) {
 ; CHECK-NEXT:    or.b16 %rs8, %rs3, %rs7;
 ; CHECK-NEXT:    sub.s16 %rs9, 15, %rs5;
 ; CHECK-NEXT:    cvt.u32.u16 %r4, %rs9;
-; CHECK-NEXT:    mov.b16 %rs10, 1;
-; CHECK-NEXT:    shl.b16 %rs11, %rs10, %r4;
-; CHECK-NEXT:    xor.b16 %rs12, %rs4, %rs11;
-; CHECK-NEXT:    add.s16 %rs13, %rs5, -8;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs13;
-; CHECK-NEXT:    shl.b16 %rs14, %rs12, %r5;
-; CHECK-NEXT:    or.b16 %rs15, %rs8, %rs14;
-; CHECK-NEXT:    shr.u16 %rs16, %rs1, 2;
-; CHECK-NEXT:    and.b16 %rs17, %rs16, 31;
-; CHECK-NEXT:    shl.b16 %rs18, %rs17, 7;
-; CHECK-NEXT:    or.b16 %rs19, %rs18, %rs3;
-; CHECK-NEXT:    shl.b16 %rs20, %rs4, 5;
-; CHECK-NEXT:    or.b16 %rs21, %rs19, %rs20;
-; CHECK-NEXT:    add.s16 %rs22, %rs21, 14336;
+; CHECK-NEXT:    shl.b16 %rs10, 1, %r4;
+; CHECK-NEXT:    xor.b16 %rs11, %rs4, %rs10;
+; CHECK-NEXT:    add.s16 %rs12, %rs5, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs12;
+; CHECK-NEXT:    shl.b16 %rs13, %rs11, %r5;
+; CHECK-NEXT:    or.b16 %rs14, %rs8, %rs13;
+; CHECK-NEXT:    shr.u16 %rs15, %rs1, 2;
+; CHECK-NEXT:    and.b16 %rs16, %rs15, 31;
+; CHECK-NEXT:    shl.b16 %rs17, %rs16, 7;
+; CHECK-NEXT:    or.b16 %rs18, %rs17, %rs3;
+; CHECK-NEXT:    shl.b16 %rs19, %rs4, 5;
+; CHECK-NEXT:    or.b16 %rs20, %rs18, %rs19;
+; CHECK-NEXT:    add.s16 %rs21, %rs20, 14336;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
-; CHECK-NEXT:    selp.b16 %rs23, %rs15, %rs22, %p1;
-; CHECK-NEXT:    setp.eq.b16 %p2, %rs17, 0;
-; CHECK-NEXT:    selp.b16 %rs24, %rs23, %rs22, %p2;
-; CHECK-NEXT:    or.b16 %rs25, %rs17, %rs4;
-; CHECK-NEXT:    setp.eq.b16 %p3, %rs25, 0;
-; CHECK-NEXT:    selp.b16 %rs26, %rs3, %rs24, %p3;
-; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 0;
-; CHECK-NEXT:    or.b16 %rs27, %rs3, 32640;
-; CHECK-NEXT:    selp.b16 %rs28, %rs27, %rs26, %p4;
-; CHECK-NEXT:    setp.eq.b16 %p5, %rs17, 31;
-; CHECK-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p5;
-; CHECK-NEXT:    selp.b16 %rs30, 32704, %rs29, %p1;
-; CHECK-NEXT:    selp.b16 %rs31, %rs30, %rs29, %p5;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs31;
+; CHECK-NEXT:    selp.b16 %rs22, %rs14, %rs21, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs16, 0;
+; CHECK-NEXT:    selp.b16 %rs23, %rs22, %rs21, %p2;
+; CHECK-NEXT:    or.b16 %rs24, %rs16, %rs4;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs24, 0;
+; CHECK-NEXT:    selp.b16 %rs25, %rs3, %rs23, %p3;
+; CHECK-NEXT:    or.b16 %rs26, %rs3, 32640;
+; CHECK-NEXT:    selp.b16 %rs27, %rs25, %rs26, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p4, %rs16, 31;
+; CHECK-NEXT:    selp.b16 %rs28, %rs27, %rs25, %p4;
+; CHECK-NEXT:    selp.b16 %rs29, 32704, %rs28, %p1;
+; CHECK-NEXT:    selp.b16 %rs30, %rs29, %rs28, %p4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs30;
 ; CHECK-NEXT:    ret;
   %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E5M2")
   ret bfloat %r
@@ -1486,7 +1461,7 @@ define bfloat @from_f8e4m3fn_bf16(i8 %x) {
 ; CHECK-LABEL: from_f8e4m3fn_bf16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<6>;
-; CHECK-NEXT:    .reg .b16 %rs<29>;
+; CHECK-NEXT:    .reg .b16 %rs<28>;
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1503,32 +1478,31 @@ define bfloat @from_f8e4m3fn_bf16(i8 %x) {
 ; CHECK-NEXT:    or.b16 %rs8, %rs3, %rs7;
 ; CHECK-NEXT:    sub.s16 %rs9, 15, %rs5;
 ; CHECK-NEXT:    cvt.u32.u16 %r4, %rs9;
-; CHECK-NEXT:    mov.b16 %rs10, 1;
-; CHECK-NEXT:    shl.b16 %rs11, %rs10, %r4;
-; CHECK-NEXT:    xor.b16 %rs12, %rs4, %rs11;
-; CHECK-NEXT:    add.s16 %rs13, %rs5, -8;
-; CHECK-NEXT:    cvt.u32.u16 %r5, %rs13;
-; CHECK-NEXT:    shl.b16 %rs14, %rs12, %r5;
-; CHECK-NEXT:    or.b16 %rs15, %rs8, %rs14;
-; CHECK-NEXT:    shr.u16 %rs16, %rs1, 3;
-; CHECK-NEXT:    and.b16 %rs17, %rs16, 15;
-; CHECK-NEXT:    shl.b16 %rs18, %rs17, 7;
-; CHECK-NEXT:    or.b16 %rs19, %rs18, %rs3;
-; CHECK-NEXT:    shl.b16 %rs20, %rs4, 4;
-; CHECK-NEXT:    or.b16 %rs21, %rs19, %rs20;
-; CHECK-NEXT:    add.s16 %rs22, %rs21, 15360;
+; CHECK-NEXT:    shl.b16 %rs10, 1, %r4;
+; CHECK-NEXT:    xor.b16 %rs11, %rs4, %rs10;
+; CHECK-NEXT:    add.s16 %rs12, %rs5, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs12;
+; CHECK-NEXT:    shl.b16 %rs13, %rs11, %r5;
+; CHECK-NEXT:    or.b16 %rs14, %rs8, %rs13;
+; CHECK-NEXT:    shr.u16 %rs15, %rs1, 3;
+; CHECK-NEXT:    and.b16 %rs16, %rs15, 15;
+; CHECK-NEXT:    shl.b16 %rs17, %rs16, 7;
+; CHECK-NEXT:    or.b16 %rs18, %rs17, %rs3;
+; CHECK-NEXT:    shl.b16 %rs19, %rs4, 4;
+; CHECK-NEXT:    or.b16 %rs20, %rs18, %rs19;
+; CHECK-NEXT:    add.s16 %rs21, %rs20, 15360;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
-; CHECK-NEXT:    selp.b16 %rs23, %rs15, %rs22, %p1;
-; CHECK-NEXT:    setp.eq.b16 %p2, %rs17, 0;
-; CHECK-NEXT:    selp.b16 %rs24, %rs23, %rs22, %p2;
-; CHECK-NEXT:    or.b16 %rs25, %rs17, %rs4;
-; CHECK-NEXT:    setp.eq.b16 %p3, %rs25, 0;
-; CHECK-NEXT:    selp.b16 %rs26, %rs3, %rs24, %p3;
+; CHECK-NEXT:    selp.b16 %rs22, %rs14, %rs21, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs16, 0;
+; CHECK-NEXT:    selp.b16 %rs23, %rs22, %rs21, %p2;
+; CHECK-NEXT:    or.b16 %rs24, %rs16, %rs4;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs24, 0;
+; CHECK-NEXT:    selp.b16 %rs25, %rs3, %rs23, %p3;
 ; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 7;
-; CHECK-NEXT:    selp.b16 %rs27, 32704, %rs26, %p4;
-; CHECK-NEXT:    setp.eq.b16 %p5, %rs17, 15;
-; CHECK-NEXT:    selp.b16 %rs28, %rs27, %rs26, %p5;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs28;
+; CHECK-NEXT:    selp.b16 %rs26, 32704, %rs25, %p4;
+; CHECK-NEXT:    setp.eq.b16 %p5, %rs16, 15;
+; CHECK-NEXT:    selp.b16 %rs27, %rs26, %rs25, %p5;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs27;
 ; CHECK-NEXT:    ret;
   %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E4M3FN")
   ret bfloat %r
@@ -1537,98 +1511,95 @@ define bfloat @from_f8e4m3fn_bf16(i8 %x) {
 define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-LABEL: from_f8e5m2_v2bf16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<11>;
-; CHECK-NEXT:    .reg .b16 %rs<58>;
+; CHECK-NEXT:    .reg .pred %p<9>;
+; CHECK-NEXT:    .reg .b16 %rs<57>;
 ; CHECK-NEXT:    .reg .b32 %r<27>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [from_f8e5m2_v2bf16_param_0];
 ; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; CHECK-NEXT:    and.b32 %r2, %r1, 196611;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; CHECK-NEXT:    cvt.u32.u16 %r3, %rs4;
-; CHECK-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-NEXT:    clz.b32 %r5, %r4;
-; CHECK-NEXT:    cvt.u16.u32 %rs5, %r5;
-; CHECK-NEXT:    sub.s16 %rs6, 15, %rs5;
-; CHECK-NEXT:    cvt.u32.u16 %r6, %rs6;
-; CHECK-NEXT:    mov.b16 %rs7, 1;
-; CHECK-NEXT:    shl.b16 %rs8, %rs7, %r6;
-; CHECK-NEXT:    cvt.u32.u16 %r7, %rs3;
+; CHECK-NEXT:    shl.b16 %rs3, %rs2, 8;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    shl.b16 %rs5, %rs1, 8;
+; CHECK-NEXT:    and.b16 %rs6, %rs5, -32768;
+; CHECK-NEXT:    mov.b32 %r2, {%rs6, %rs4};
+; CHECK-NEXT:    and.b32 %r3, %r1, 196611;
+; CHECK-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs8;
+; CHECK-NEXT:    shl.b32 %r5, %r4, 16;
+; CHECK-NEXT:    clz.b32 %r6, %r5;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r6;
+; CHECK-NEXT:    sub.s16 %rs10, 126, %rs9;
+; CHECK-NEXT:    shl.b16 %rs11, %rs10, 7;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs7;
 ; CHECK-NEXT:    shl.b32 %r8, %r7, 16;
 ; CHECK-NEXT:    clz.b32 %r9, %r8;
-; CHECK-NEXT:    cvt.u16.u32 %rs9, %r9;
-; CHECK-NEXT:    sub.s16 %rs10, 15, %rs9;
-; CHECK-NEXT:    cvt.u32.u16 %r10, %rs10;
-; CHECK-NEXT:    shl.b16 %rs11, %rs7, %r10;
-; CHECK-NEXT:    mov.b32 %r11, {%rs11, %rs8};
-; CHECK-NEXT:    xor.b32 %r12, %r2, %r11;
-; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r12;
-; CHECK-NEXT:    add.s16 %rs14, %rs5, -8;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs14;
-; CHECK-NEXT:    shl.b16 %rs15, %rs13, %r13;
-; CHECK-NEXT:    add.s16 %rs16, %rs9, -8;
-; CHECK-NEXT:    cvt.u32.u16 %r14, %rs16;
-; CHECK-NEXT:    shl.b16 %rs17, %rs12, %r14;
-; CHECK-NEXT:    mov.b32 %r15, {%rs17, %rs15};
-; CHECK-NEXT:    shl.b16 %rs18, %rs2, 8;
-; CHECK-NEXT:    and.b16 %rs19, %rs18, -32768;
-; CHECK-NEXT:    shl.b16 %rs20, %rs1, 8;
-; CHECK-NEXT:    and.b16 %rs21, %rs20, -32768;
-; CHECK-NEXT:    mov.b32 %r16, {%rs21, %rs19};
-; CHECK-NEXT:    sub.s16 %rs22, 126, %rs5;
-; CHECK-NEXT:    shl.b16 %rs23, %rs22, 7;
-; CHECK-NEXT:    sub.s16 %rs24, 126, %rs9;
-; CHECK-NEXT:    shl.b16 %rs25, %rs24, 7;
-; CHECK-NEXT:    mov.b32 %r17, {%rs25, %rs23};
-; CHECK-NEXT:    or.b32 %r18, %r16, %r17;
-; CHECK-NEXT:    or.b32 %r19, %r18, %r15;
-; CHECK-NEXT:    mov.b32 {%rs26, %rs27}, %r19;
-; CHECK-NEXT:    shr.u16 %rs28, %rs2, 2;
-; CHECK-NEXT:    shr.u16 %rs29, %rs1, 2;
-; CHECK-NEXT:    mov.b32 %r20, {%rs29, %rs28};
+; CHECK-NEXT:    cvt.u16.u32 %rs12, %r9;
+; CHECK-NEXT:    sub.s16 %rs13, 126, %rs12;
+; CHECK-NEXT:    shl.b16 %rs14, %rs13, 7;
+; CHECK-NEXT:    mov.b32 %r10, {%rs14, %rs11};
+; CHECK-NEXT:    or.b32 %r11, %r2, %r10;
+; CHECK-NEXT:    sub.s16 %rs15, 15, %rs9;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs15;
+; CHECK-NEXT:    shl.b16 %rs16, 1, %r12;
+; CHECK-NEXT:    sub.s16 %rs17, 15, %rs12;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs17;
+; CHECK-NEXT:    shl.b16 %rs18, 1, %r13;
+; CHECK-NEXT:    mov.b32 %r14, {%rs18, %rs16};
+; CHECK-NEXT:    xor.b32 %r15, %r3, %r14;
+; CHECK-NEXT:    mov.b32 {%rs19, %rs20}, %r15;
+; CHECK-NEXT:    add.s16 %rs21, %rs9, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r16, %rs21;
+; CHECK-NEXT:    shl.b16 %rs22, %rs20, %r16;
+; CHECK-NEXT:    add.s16 %rs23, %rs12, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r17, %rs23;
+; CHECK-NEXT:    shl.b16 %rs24, %rs19, %r17;
+; CHECK-NEXT:    mov.b32 %r18, {%rs24, %rs22};
+; CHECK-NEXT:    or.b32 %r19, %r11, %r18;
+; CHECK-NEXT:    mov.b32 {%rs25, %rs26}, %r19;
+; CHECK-NEXT:    shr.u16 %rs27, %rs2, 2;
+; CHECK-NEXT:    shr.u16 %rs28, %rs1, 2;
+; CHECK-NEXT:    mov.b32 %r20, {%rs28, %rs27};
 ; CHECK-NEXT:    and.b32 %r21, %r20, 2031647;
-; CHECK-NEXT:    mov.b32 {%rs30, %rs31}, %r21;
-; CHECK-NEXT:    shl.b16 %rs32, %rs31, 7;
-; CHECK-NEXT:    add.s16 %rs33, %rs32, 14336;
-; CHECK-NEXT:    shl.b16 %rs34, %rs30, 7;
-; CHECK-NEXT:    add.s16 %rs35, %rs34, 14336;
-; CHECK-NEXT:    mov.b32 %r22, {%rs35, %rs33};
-; CHECK-NEXT:    or.b32 %r23, %r16, %r22;
-; CHECK-NEXT:    shl.b16 %rs36, %rs4, 5;
-; CHECK-NEXT:    shl.b16 %rs37, %rs3, 5;
-; CHECK-NEXT:    mov.b32 %r24, {%rs37, %rs36};
+; CHECK-NEXT:    mov.b32 {%rs29, %rs30}, %r21;
+; CHECK-NEXT:    shl.b16 %rs31, %rs30, 7;
+; CHECK-NEXT:    add.s16 %rs32, %rs31, 14336;
+; CHECK-NEXT:    shl.b16 %rs33, %rs29, 7;
+; CHECK-NEXT:    add.s16 %rs34, %rs33, 14336;
+; CHECK-NEXT:    mov.b32 %r22, {%rs34, %rs32};
+; CHECK-NEXT:    or.b32 %r23, %r2, %r22;
+; CHECK-NEXT:    shl.b16 %rs35, %rs8, 5;
+; CHECK-NEXT:    shl.b16 %rs36, %rs7, 5;
+; CHECK-NEXT:    mov.b32 %r24, {%rs36, %rs35};
 ; CHECK-NEXT:    or.b32 %r25, %r23, %r24;
-; CHECK-NEXT:    mov.b32 {%rs38, %rs39}, %r25;
-; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
-; CHECK-NEXT:    selp.b16 %rs40, %rs27, %rs39, %p1;
-; CHECK-NEXT:    setp.eq.b16 %p2, %rs31, 0;
-; CHECK-NEXT:    selp.b16 %rs41, %rs40, %rs39, %p2;
-; CHECK-NEXT:    or.b16 %rs42, %rs31, %rs4;
-; CHECK-NEXT:    setp.eq.b16 %p3, %rs42, 0;
-; CHECK-NEXT:    selp.b16 %rs43, %rs19, %rs41, %p3;
-; CHECK-NEXT:    or.b32 %r26, %r16, 2139127680;
-; CHECK-NEXT:    mov.b32 {%rs44, %rs45}, %r26;
-; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 0;
-; CHECK-NEXT:    selp.b16 %rs46, %rs45, %rs43, %p4;
-; CHECK-NEXT:    setp.eq.b16 %p5, %rs31, 31;
-; CHECK-NEXT:    selp.b16 %rs47, %rs46, %rs43, %p5;
-; CHECK-NEXT:    selp.b16 %rs48, 32704, %rs47, %p1;
-; CHECK-NEXT:    selp.b16 %rs49, %rs48, %rs47, %p5;
-; CHECK-NEXT:    setp.ne.b16 %p6, %rs3, 0;
-; CHECK-NEXT:    selp.b16 %rs50, %rs26, %rs38, %p6;
-; CHECK-NEXT:    setp.eq.b16 %p7, %rs30, 0;
-; CHECK-NEXT:    selp.b16 %rs51, %rs50, %rs38, %p7;
-; CHECK-NEXT:    or.b16 %rs52, %rs30, %rs3;
-; CHECK-NEXT:    setp.eq.b16 %p8, %rs52, 0;
-; CHECK-NEXT:    selp.b16 %rs53, %rs21, %rs51, %p8;
-; CHECK-NEXT:    setp.eq.b16 %p9, %rs3, 0;
-; CHECK-NEXT:    selp.b16 %rs54, %rs44, %rs53, %p9;
-; CHECK-NEXT:    setp.eq.b16 %p10, %rs30, 31;
-; CHECK-NEXT:    selp.b16 %rs55, %rs54, %rs53, %p10;
-; CHECK-NEXT:    selp.b16 %rs56, 32704, %rs55, %p6;
-; CHECK-NEXT:    selp.b16 %rs57, %rs56, %rs55, %p10;
-; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs57, %rs49};
+; CHECK-NEXT:    mov.b32 {%rs37, %rs38}, %r25;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs8, 0;
+; CHECK-NEXT:    selp.b16 %rs39, %rs26, %rs38, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs30, 0;
+; CHECK-NEXT:    selp.b16 %rs40, %rs39, %rs38, %p2;
+; CHECK-NEXT:    or.b16 %rs41, %rs30, %rs8;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs41, 0;
+; CHECK-NEXT:    selp.b16 %rs42, %rs4, %rs40, %p3;
+; CHECK-NEXT:    or.b32 %r26, %r2, 2139127680;
+; CHECK-NEXT:    mov.b32 {%rs43, %rs44}, %r26;
+; CHECK-NEXT:    selp.b16 %rs45, %rs42, %rs44, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p4, %rs30, 31;
+; CHECK-NEXT:    selp.b16 %rs46, %rs45, %rs42, %p4;
+; CHECK-NEXT:    selp.b16 %rs47, 32704, %rs46, %p1;
+; CHECK-NEXT:    selp.b16 %rs48, %rs47, %rs46, %p4;
+; CHECK-NEXT:    setp.ne.b16 %p5, %rs7, 0;
+; CHECK-NEXT:    selp.b16 %rs49, %rs25, %rs37, %p5;
+; CHECK-NEXT:    setp.eq.b16 %p6, %rs29, 0;
+; CHECK-NEXT:    selp.b16 %rs50, %rs49, %rs37, %p6;
+; CHECK-NEXT:    or.b16 %rs51, %rs29, %rs7;
+; CHECK-NEXT:    setp.eq.b16 %p7, %rs51, 0;
+; CHECK-NEXT:    selp.b16 %rs52, %rs6, %rs50, %p7;
+; CHECK-NEXT:    selp.b16 %rs53, %rs52, %rs43, %p5;
+; CHECK-NEXT:    setp.eq.b16 %p8, %rs29, 31;
+; CHECK-NEXT:    selp.b16 %rs54, %rs53, %rs52, %p8;
+; CHECK-NEXT:    selp.b16 %rs55, 32704, %rs54, %p5;
+; CHECK-NEXT:    selp.b16 %rs56, %rs55, %rs54, %p8;
+; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs56, %rs48};
 ; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.convert.from.arbitrary.fp.v2bf16.v2i8(<2 x i8> %x, metadata !"Float8E5M2")
   ret <2 x bfloat> %r

@@ -1,7 +1,0 @@
-breakpoint set --file VBases.cpp --line 15
-
-run
-
-expression c
-
-frame variable c

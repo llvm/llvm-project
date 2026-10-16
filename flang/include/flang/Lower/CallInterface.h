@@ -1,4 +1,4 @@
-//===-- Lower/CallInterface.h -- Procedure call interface ------*- C++ -*-===//
+//===-- Lower/CallInterface.h -- Procedure call interface -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,8 +30,6 @@
 #include "flang/Common/reference.h"
 #include "flang/Evaluate/characteristics.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/BuiltinOps.h"
-#include <memory>
 #include <optional>
 
 namespace Fortran::semantics {

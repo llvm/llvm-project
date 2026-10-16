@@ -95,5 +95,7 @@ static_library("IR") {
     "ValueSymbolTable.cpp",
     "VectorTypeUtils.cpp",
     "Verifier.cpp",
+    "VerifierAMDGPU.cpp",
+    "VerifierNVVM.cpp",
   ]
 }

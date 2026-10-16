@@ -46,101 +46,20 @@ static cl::opt<unsigned>
                                  "added. For testing purposes only."),
                         cl::ReallyHidden, cl::init(0));
 
+void AMDGPUTargetStreamer::initializeTargetID(const MCSubtargetInfo &STI,
+                                              bool ApplyFeatureString) {
+  assert(TargetID == std::nullopt && "TargetID can only be initialized once");
+  // Apply xnack/sramecc from subtarget features only in MC contexts
+  // (assembler), not in codegen where they come from module flags
+  TargetID = AMDGPU::createAMDGPUTargetID(
+      STI, ApplyFeatureString ? STI.getFeatureString() : "");
+}
+
 bool AMDGPUTargetStreamer::EmitHSAMetadataV3(StringRef HSAMetadataString) {
   msgpack::Document HSAMetadataDoc;
   if (!HSAMetadataDoc.fromYAML(HSAMetadataString))
     return false;
   return EmitHSAMetadata(HSAMetadataDoc, false);
-}
-
-StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
-  AMDGPU::GPUKind AK;
-
-  // clang-format off
-  switch (ElfMach) {
-  case ELF::EF_AMDGPU_MACH_R600_R600:      AK = GK_R600;    break;
-  case ELF::EF_AMDGPU_MACH_R600_R630:      AK = GK_R630;    break;
-  case ELF::EF_AMDGPU_MACH_R600_RS880:     AK = GK_RS880;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV670:     AK = GK_RV670;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV710:     AK = GK_RV710;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV730:     AK = GK_RV730;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV770:     AK = GK_RV770;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CEDAR:     AK = GK_CEDAR;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:   AK = GK_CYPRESS; break;
-  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:   AK = GK_JUNIPER; break;
-  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:   AK = GK_REDWOOD; break;
-  case ELF::EF_AMDGPU_MACH_R600_SUMO:      AK = GK_SUMO;    break;
-  case ELF::EF_AMDGPU_MACH_R600_BARTS:     AK = GK_BARTS;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CAICOS:    AK = GK_CAICOS;  break;
-  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:    AK = GK_CAYMAN;  break;
-  case ELF::EF_AMDGPU_MACH_R600_TURKS:     AK = GK_TURKS;   break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600:  AK = GK_GFX600;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:  AK = GK_GFX601;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX602:  AK = GK_GFX602;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:  AK = GK_GFX700;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701:  AK = GK_GFX701;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702:  AK = GK_GFX702;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703:  AK = GK_GFX703;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:  AK = GK_GFX704;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX705:  AK = GK_GFX705;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:  AK = GK_GFX801;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802:  AK = GK_GFX802;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:  AK = GK_GFX803;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX805:  AK = GK_GFX805;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:  AK = GK_GFX810;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900:  AK = GK_GFX900;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902:  AK = GK_GFX902;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904:  AK = GK_GFX904;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906:  AK = GK_GFX906;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX908:  AK = GK_GFX908;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:  AK = GK_GFX909;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A:  AK = GK_GFX90A;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:  AK = GK_GFX90C;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:  AK = GK_GFX942;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:  AK = GK_GFX950;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011: AK = GK_GFX1011; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012: AK = GK_GFX1012; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1013: AK = GK_GFX1013; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030: AK = GK_GFX1030; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031: AK = GK_GFX1031; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032: AK = GK_GFX1032; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1033: AK = GK_GFX1033; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1034: AK = GK_GFX1034; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1035: AK = GK_GFX1035; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1036: AK = GK_GFX1036; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1100: AK = GK_GFX1100; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101: AK = GK_GFX1101; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102: AK = GK_GFX1102; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103: AK = GK_GFX1103; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152: AK = GK_GFX1152; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170: AK = GK_GFX1170; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1171: AK = GK_GFX1171; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1172: AK = GK_GFX1172; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251: AK = GK_GFX1251; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310: AK = GK_GFX1310; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC:    AK = GK_GFX11_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC:    AK = GK_GFX12_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC:  AK = GK_GFX12_5_GENERIC; break;
-  case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
-  default:                                 AK = GK_NONE;    break;
-  }
-  // clang-format on
-
-  StringRef GPUName = getArchNameAMDGCN(AK);
-  if (GPUName != "")
-    return GPUName;
-  return getArchNameR600(AK);
 }
 
 unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
@@ -209,11 +128,13 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1152: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1152;
   case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
+  case GK_GFX1154: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1154;
   case GK_GFX1170: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170;
   case GK_GFX1171: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1171;
   case GK_GFX1172: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1172;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
+  case GK_GFX1250_STRICT: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT;
   case GK_GFX1250: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250;
   case GK_GFX1251: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251;
   case GK_GFX1310: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310;
@@ -222,8 +143,12 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
   case GK_GFX11_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC;
+  case GK_GFX11_7_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC;
   case GK_GFX12_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC;
   case GK_GFX12_5_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC;
+  case GK_GFX13_GENERIC:    return ELF::EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC;
+  case GK_GENERIC:
+  case GK_GENERIC_HSA:
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
   // clang-format on
@@ -548,9 +473,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     break;
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
-    if (getTargetID()->isXnackSupported())
-      OS << "\t\t.amdhsa_reserve_xnack_mask " << getTargetID()->isXnackOnOrAny()
-         << '\n';
+    if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK)) {
+      bool XnackOn = getTargetID()->isXnackOnOrAny();
+      OS << "\t\t.amdhsa_reserve_xnack_mask " << XnackOn << '\n';
+    }
     break;
   }
 
@@ -834,7 +760,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlags() {
     llvm_unreachable("Unsupported Arch");
   case Triple::r600:
     return getEFlagsR600();
-  case Triple::amdgcn:
+  case Triple::amdgpu:
     return getEFlagsAMDGCN();
   }
 }
@@ -913,32 +839,40 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
   EFlagsV4 |= getElfMach(STI.getCPU());
 
   // xnack.
-  switch (getTargetID()->getXnackSetting()) {
-  case AMDGPU::IsaInfo::TargetIDSetting::Unsupported:
-    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4;
+  // Hardwired-on XNACK is implied by the processor, not an ELF mode selection.
+  AMDGPU::TargetIDSetting XnackSetting =
+      STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes)
+          ? getTargetID()->getXnackSetting()
+          : AMDGPU::TargetIDSetting::Unsupported;
+  switch (XnackSetting) {
+  case AMDGPU::TargetIDSetting::Unsupported:
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Any:
+  case AMDGPU::TargetIDSetting::Any:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Off:
+  case AMDGPU::TargetIDSetting::Off:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::On:
+  case AMDGPU::TargetIDSetting::On:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4;
     break;
   }
   // sramecc.
-  switch (getTargetID()->getSramEccSetting()) {
-  case AMDGPU::IsaInfo::TargetIDSetting::Unsupported:
-    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4;
+  // Hardwired-on SRAMECC is implied by the processor, not an ELF mode.
+  AMDGPU::TargetIDSetting SramEccSetting =
+      STI.hasFeature(AMDGPU::FeatureSRAMECCOnOffModes)
+          ? getTargetID()->getSramEccSetting()
+          : AMDGPU::TargetIDSetting::Unsupported;
+  switch (SramEccSetting) {
+  case AMDGPU::TargetIDSetting::Unsupported:
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Any:
+  case AMDGPU::TargetIDSetting::Any:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::Off:
+  case AMDGPU::TargetIDSetting::Off:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4;
     break;
-  case AMDGPU::IsaInfo::TargetIDSetting::On:
+  case AMDGPU::TargetIDSetting::On:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4;
     break;
   }
@@ -967,11 +901,17 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
     case AMDGPU::GK_GFX11_GENERIC:
       Version = GenericVersion::GFX11;
       break;
+    case AMDGPU::GK_GFX11_7_GENERIC:
+      Version = GenericVersion::GFX11_7;
+      break;
     case AMDGPU::GK_GFX12_GENERIC:
       Version = GenericVersion::GFX12;
       break;
     case AMDGPU::GK_GFX12_5_GENERIC:
       Version = GenericVersion::GFX12_5;
+      break;
+    case AMDGPU::GK_GFX13_GENERIC:
+      Version = GenericVersion::GFX13;
       break;
     default:
       break;

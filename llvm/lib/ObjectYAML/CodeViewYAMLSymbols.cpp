@@ -62,6 +62,9 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(RegisterId)
 LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
+LLVM_YAML_DECLARE_ENUM_TRAITS(SourceLanguage)
+LLVM_YAML_DECLARE_ENUM_TRAITS(EncodedFramePtrReg)
+LLVM_YAML_DECLARE_ENUM_TRAITS(AssociationKind)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -80,7 +83,7 @@ void ScalarEnumerationTraits<SymbolKind>::enumeration(IO &io,
                                                       SymbolKind &Value) {
   auto SymbolNames = getSymbolTypeNames();
   for (const auto &E : SymbolNames)
-    io.enumCase(Value, E.Name, E.Value);
+    io.enumCase(Value, E.name(), E.value());
   io.enumFallback<yaml::Hex16>(Value);
 }
 
@@ -88,7 +91,7 @@ void ScalarBitSetTraits<CompileSym2Flags>::bitset(IO &io,
                                                   CompileSym2Flags &Flags) {
   auto FlagNames = getCompileSym2FlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<CompileSym2Flags>(E.Value));
+    io.bitSetCase(Flags, E.name(), static_cast<CompileSym2Flags>(E.value()));
   }
 }
 
@@ -96,35 +99,35 @@ void ScalarBitSetTraits<CompileSym3Flags>::bitset(IO &io,
                                                   CompileSym3Flags &Flags) {
   auto FlagNames = getCompileSym3FlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<CompileSym3Flags>(E.Value));
+    io.bitSetCase(Flags, E.name(), static_cast<CompileSym3Flags>(E.value()));
   }
 }
 
 void ScalarBitSetTraits<ExportFlags>::bitset(IO &io, ExportFlags &Flags) {
   auto FlagNames = getExportSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<ExportFlags>(E.Value));
+    io.bitSetCase(Flags, E.name(), static_cast<ExportFlags>(E.value()));
   }
 }
 
 void ScalarBitSetTraits<PublicSymFlags>::bitset(IO &io, PublicSymFlags &Flags) {
   auto FlagNames = getPublicSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<PublicSymFlags>(E.Value));
+    io.bitSetCase(Flags, E.name(), static_cast<PublicSymFlags>(E.value()));
   }
 }
 
 void ScalarBitSetTraits<LocalSymFlags>::bitset(IO &io, LocalSymFlags &Flags) {
   auto FlagNames = getLocalFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<LocalSymFlags>(E.Value));
+    io.bitSetCase(Flags, E.name(), static_cast<LocalSymFlags>(E.value()));
   }
 }
 
 void ScalarBitSetTraits<ProcSymFlags>::bitset(IO &io, ProcSymFlags &Flags) {
   auto FlagNames = getProcSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<ProcSymFlags>(E.Value));
+    io.bitSetCase(Flags, E.name(), static_cast<ProcSymFlags>(E.value()));
   }
 }
 
@@ -132,14 +135,15 @@ void ScalarBitSetTraits<FrameProcedureOptions>::bitset(
     IO &io, FrameProcedureOptions &Flags) {
   auto FlagNames = getFrameProcSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<FrameProcedureOptions>(E.Value));
+    io.bitSetCase(Flags, E.name(),
+                  static_cast<FrameProcedureOptions>(E.value()));
   }
 }
 
 void ScalarEnumerationTraits<CPUType>::enumeration(IO &io, CPUType &Cpu) {
   auto CpuNames = getCPUTypeNames();
   for (const auto &E : CpuNames) {
-    io.enumCase(Cpu, E.Name, static_cast<CPUType>(E.Value));
+    io.enumCase(Cpu, E.name(), static_cast<CPUType>(E.value()));
   }
 }
 
@@ -148,7 +152,6 @@ void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
   assert(Header && "The IO context is not initialized");
 
   std::optional<CPUType> CpuType;
-  ArrayRef<EnumEntry<uint16_t>> RegNames;
 
   switch (Header->Machine) {
   case COFF::IMAGE_FILE_MACHINE_I386:
@@ -168,11 +171,9 @@ void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
   }
 
   if (CpuType)
-    RegNames = getRegisterNames(*CpuType);
+    for (const auto &E : getRegisterNames(*CpuType))
+      io.enumCase(Reg, E.name(), static_cast<RegisterId>(E.value()));
 
-  for (const auto &E : RegNames) {
-    io.enumCase(Reg, E.Name, static_cast<RegisterId>(E.Value));
-  }
   io.enumFallback<Hex16>(Reg);
 }
 
@@ -180,7 +181,7 @@ void ScalarEnumerationTraits<TrampolineType>::enumeration(
     IO &io, TrampolineType &Tramp) {
   auto TrampNames = getTrampolineNames();
   for (const auto &E : TrampNames) {
-    io.enumCase(Tramp, E.Name, static_cast<TrampolineType>(E.Value));
+    io.enumCase(Tramp, E.name(), static_cast<TrampolineType>(E.value()));
   }
 }
 
@@ -188,7 +189,7 @@ void ScalarEnumerationTraits<ThunkOrdinal>::enumeration(IO &io,
                                                         ThunkOrdinal &Ord) {
   auto ThunkNames = getThunkOrdinalNames();
   for (const auto &E : ThunkNames) {
-    io.enumCase(Ord, E.Name, static_cast<ThunkOrdinal>(E.Value));
+    io.enumCase(Ord, E.name(), static_cast<ThunkOrdinal>(E.value()));
   }
 }
 
@@ -196,7 +197,7 @@ void ScalarEnumerationTraits<FrameCookieKind>::enumeration(
     IO &io, FrameCookieKind &FC) {
   auto ThunkNames = getFrameCookieKindNames();
   for (const auto &E : ThunkNames) {
-    io.enumCase(FC, E.Name, static_cast<FrameCookieKind>(E.Value));
+    io.enumCase(FC, E.name(), static_cast<FrameCookieKind>(E.value()));
   }
 }
 
@@ -204,8 +205,33 @@ void ScalarEnumerationTraits<JumpTableEntrySize>::enumeration(
     IO &io, JumpTableEntrySize &FC) {
   auto ThunkNames = getJumpTableEntrySizeNames();
   for (const auto &E : ThunkNames) {
-    io.enumCase(FC, E.Name, static_cast<JumpTableEntrySize>(E.Value));
+    io.enumCase(FC, E.name(), static_cast<JumpTableEntrySize>(E.value()));
   }
+}
+
+void ScalarEnumerationTraits<SourceLanguage>::enumeration(IO &IO,
+                                                          SourceLanguage &L) {
+  auto Names = getSourceLanguageNames();
+  for (const auto &E : Names) {
+    IO.enumCase(L, E.name(), static_cast<SourceLanguage>(E.value()));
+  }
+}
+
+void ScalarEnumerationTraits<EncodedFramePtrReg>::enumeration(
+    IO &IO, EncodedFramePtrReg &R) {
+  auto Names = getEncodedFramePtrRegNames();
+  for (const auto &E : Names) {
+    IO.enumCase(R, E.name(), static_cast<EncodedFramePtrReg>(E.value()));
+  }
+}
+
+void ScalarEnumerationTraits<AssociationKind>::enumeration(
+    IO &IO, AssociationKind &Kind) {
+  auto Names = getAssociationKindNames();
+  for (const auto &E : Names)
+    IO.enumCase(Kind, E.name(), static_cast<AssociationKind>(E.value()));
+
+  IO.enumFallback<Hex16>(Kind);
 }
 
 namespace llvm {
@@ -487,7 +513,14 @@ template <> void SymbolRecordImpl<Compile2Sym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<Compile3Sym>::map(IO &IO) {
-  IO.mapRequired("Flags", Symbol.Flags);
+  CompileSym3Flags Flags = Symbol.getFlags();
+  SourceLanguage Lang = Symbol.getLanguage();
+  IO.mapRequired("Flags", Flags);
+  IO.mapOptional("Language", Lang, SourceLanguage::C);
+  if (!IO.outputting()) {
+    Symbol.Flags = Flags;
+    Symbol.setLanguage(Lang);
+  }
   IO.mapRequired("Machine", Symbol.Machine);
   IO.mapRequired("FrontendMajor", Symbol.VersionFrontendMajor);
   IO.mapRequired("FrontendMinor", Symbol.VersionFrontendMinor);
@@ -509,7 +542,17 @@ template <> void SymbolRecordImpl<FrameProcSym>::map(IO &IO) {
   IO.mapRequired("OffsetOfExceptionHandler", Symbol.OffsetOfExceptionHandler);
   IO.mapRequired("SectionIdOfExceptionHandler",
                  Symbol.SectionIdOfExceptionHandler);
-  IO.mapRequired("Flags", Symbol.Flags);
+  FrameProcedureOptions Flags = Symbol.getFlags();
+  EncodedFramePtrReg LocalFP = Symbol.getEncodedLocalFramePtrReg();
+  EncodedFramePtrReg ParamFP = Symbol.getEncodedParamFramePtrReg();
+  IO.mapRequired("Flags", Flags);
+  IO.mapOptional("LocalFramePtrReg", LocalFP, EncodedFramePtrReg::None);
+  IO.mapOptional("ParamFramePtrReg", ParamFP, EncodedFramePtrReg::None);
+  if (!IO.outputting()) {
+    Symbol.setFlags(Flags);
+    Symbol.setEncodedLocalFramePtrReg(LocalFP);
+    Symbol.setEncodedParamFramePtrReg(ParamFP);
+  }
 }
 
 template <> void SymbolRecordImpl<CallSiteInfoSym>::map(IO &IO) {
@@ -616,6 +659,12 @@ template <> void SymbolRecordImpl<JumpTableSym>::map(IO &IO) {
 template <> void SymbolRecordImpl<HotPatchFuncSym>::map(IO &IO) {
   IO.mapRequired("Function", Symbol.Function);
   IO.mapRequired("Name", Symbol.Name);
+}
+
+template <> void SymbolRecordImpl<AssociationSym>::map(IO &IO) {
+  IO.mapRequired("AssociationKind", Symbol.AssocKind);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
 }
 
 } // end namespace detail

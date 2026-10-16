@@ -54,8 +54,7 @@ private:
   DenseMap<GlobalValue *, SmallPtrSet<GlobalValue *, 4>> GVDependencies;
 
   /// Constant -> Globals that use this global cache.
-  std::unordered_map<Constant *, SmallPtrSet<GlobalValue *, 8>>
-      ConstantDependenciesCache;
+  DenseMap<Constant *, SmallPtrSet<GlobalValue *, 8>> ConstantDependenciesCache;
 
   /// Comdat -> Globals in that Comdat section.
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;

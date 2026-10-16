@@ -17,22 +17,22 @@ define void @ldg_f16(ptr nocapture align 16 %rd0) {
 ; CHECK-NEXT:    [[S3:%.*]] = select <2 x i1> [[P3]], <2 x half> [[LOAD33]], <2 x half> zeroinitializer
 ; CHECK-NEXT:    [[P4:%.*]] = fcmp ogt <2 x half> [[LOAD44]], zeroinitializer
 ; CHECK-NEXT:    [[S4:%.*]] = select <2 x i1> [[P4]], <2 x half> [[LOAD44]], <2 x half> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x half> [[S1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> poison, half [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[S1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP3]], half [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x half> [[S2]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP5]], half [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[S2]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP7]], half [[TMP8]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x half> [[S3]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP9]], half [[TMP10]], i32 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x half> [[S3]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP11]], half [[TMP12]], i32 5
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x half> [[S4]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x half> [[TMP13]], half [[TMP14]], i32 6
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x half> [[S4]], i32 1
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x half> [[TMP15]], half [[TMP16]], i32 7
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x half> [[S1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> poison, half [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[S1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP3]], half [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x half> [[S2]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x half> [[TMP5]], half [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x half> [[S2]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x half> [[TMP7]], half [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x half> [[S3]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x half> [[TMP9]], half [[TMP10]], i64 4
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x half> [[S3]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x half> [[TMP11]], half [[TMP12]], i64 5
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x half> [[S4]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x half> [[TMP13]], half [[TMP14]], i64 6
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x half> [[S4]], i64 1
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x half> [[TMP15]], half [[TMP16]], i64 7
 ; CHECK-NEXT:    store <8 x half> [[TMP17]], ptr [[RD0]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -65,8 +65,8 @@ define void @no_nonpow2_vector(ptr nocapture align 16 %rd0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x half> @llvm.masked.load.v8f16.p0(ptr align 16 [[RD0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x half> poison)
 ; CHECK-NEXT:    [[LOAD13:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[LOAD24:%.*]] = shufflevector <8 x half> [[TMP1]], <8 x half> poison, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[EXTEND5:%.*]] = extractelement <8 x half> [[TMP1]], i32 6
-; CHECK-NEXT:    [[EXTEND26:%.*]] = extractelement <8 x half> [[TMP1]], i32 7
+; CHECK-NEXT:    [[EXTEND5:%.*]] = extractelement <8 x half> [[TMP1]], i64 6
+; CHECK-NEXT:    [[EXTEND26:%.*]] = extractelement <8 x half> [[TMP1]], i64 7
 ; CHECK-NEXT:    [[P1:%.*]] = fcmp ogt <3 x half> [[LOAD13]], zeroinitializer
 ; CHECK-NEXT:    [[S1:%.*]] = select <3 x i1> [[P1]], <3 x half> [[LOAD13]], <3 x half> zeroinitializer
 ; CHECK-NEXT:    store <3 x half> [[S1]], ptr [[RD0]], align 16

@@ -71,6 +71,7 @@ from ctypes import (
     byref,
     c_char_p,
     c_int,
+    c_long,
     c_longlong,
     c_uint,
     c_ulong,
@@ -82,6 +83,7 @@ from ctypes import (
 )
 
 import os
+import platform
 import sys
 from enum import Enum
 import warnings
@@ -422,7 +424,24 @@ class SourceRange(Structure):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
-class Diagnostic:
+class OpaqueClangObject:
+    """
+    A helper for Python objects that mirror opaque types of the C API.
+    It stores an opaque pointer returned by the C API, and implements a
+    `from_param` method, allowing Python objects to be implicitly converted
+    to the stored opaque pointer when it is passed as an argument to the
+    C API.
+    """
+
+    def __init__(self, obj):
+        assert isinstance(obj, c_object_p) and obj
+        self.obj = self._as_parameter_ = obj
+
+    def from_param(self):
+        return self._as_parameter_
+
+
+class Diagnostic(OpaqueClangObject):
     """
     A Diagnostic is a single instance of a Clang diagnostic. It includes the
     diagnostic severity, the message, the location the diagnostic occurred, as
@@ -442,9 +461,6 @@ class Diagnostic:
     DisplayCategoryId = 0x10
     DisplayCategoryName = 0x20
     _FormatOptionsMask = 0x3F
-
-    def __init__(self, ptr):
-        self.ptr = ptr
 
     def __del__(self):
         conf.lib.clang_disposeDiagnostic(self)
@@ -557,9 +573,6 @@ class Diagnostic:
 
     def __str__(self):
         return self.format()
-
-    def from_param(self):
-        return self.ptr
 
 
 class FixIt:
@@ -1261,8 +1274,8 @@ class CursorKind(BaseEnumeration):
     # Windows Structured Exception Handling's leave statement.
     SEH_LEAVE_STMT = 247
 
-    # OpenMP ordered directive.
-    OMP_ORDERED_DIRECTIVE = 248
+    # OpenMP ordered-standalone directive.
+    OMP_ORDERED_STANDALONE_DIRECTIVE = 248
 
     # OpenMP atomic directive.
     OMP_ATOMIC_DIRECTIVE = 249
@@ -1455,6 +1468,12 @@ class CursorKind(BaseEnumeration):
 
     # OpenMP split directive.
     OMP_SPLIT_DIRECTIVE = 312
+
+    # OpenMP ordered-blockassoc directive.
+    OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
+
+    # OpenMP flatten directive.
+    OMP_FLATTEN_DIRECTIVE = 314
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
@@ -2035,6 +2054,16 @@ class Cursor(Structure):
 
     @property
     @cursor_null_guard
+    def unary_operator(self) -> UnaryOperator:
+        """Retrieves the unary operator if this cursor has one."""
+
+        if not hasattr(self, "_unopcode"):
+            self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
+
+        return UnaryOperator.from_id(self._unopcode)
+
+    @property
+    @cursor_null_guard
     def access_specifier(self) -> AccessSpecifier:
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -2144,6 +2173,7 @@ class Cursor(Structure):
             if underlying_type.kind == TypeKind.ENUM:
                 underlying_type = underlying_type.get_declaration().enum_type
             if underlying_type.kind in (
+                TypeKind.BOOL,
                 TypeKind.CHAR_U,
                 TypeKind.UCHAR,
                 TypeKind.CHAR16,
@@ -2469,6 +2499,32 @@ class BinaryOperator(BaseEnumeration):
     XorAssign = 31
     OrAssign = 32
     Comma = 33
+
+
+class UnaryOperator(BaseEnumeration):
+    """Describes the kind of unary operators."""
+
+    def is_postfix(self):
+        return self in {
+            UnaryOperator.PostDec,
+            UnaryOperator.PostInc,
+        }
+
+    Invalid = 0
+    PostInc = 1
+    PostDec = 2
+    PreInc = 3
+    PreDec = 4
+    AddrOf = 5
+    Deref = 6
+    Plus = 7
+    Minus = 8
+    Not = 9
+    LNot = 10
+    Real = 11
+    Imag = 12
+    Extension = 13
+    Coawait = 14
 
 
 class StorageClass(BaseEnumeration):
@@ -3005,52 +3061,13 @@ class Type(Structure):
         return not self.__eq__(other)
 
 
-## CIndex Objects ##
-
-# CIndex objects (derived from ClangObject) are essentially lightweight
-# wrappers attached to some underlying object, which is exposed via CIndex as
-# a void*.
-
-
-class ClangObject:
-    """
-    A helper for Clang objects. This class helps act as an intermediary for
-    the ctypes library and the Clang CIndex library.
-    """
-
-    def __init__(self, obj):
-        assert isinstance(obj, c_object_p) and obj
-        self.obj = self._as_parameter_ = obj
-
-    def from_param(self):
-        return self._as_parameter_
-
+## Opaque Clang Objects ##
 
 ### Completion Chunk Kinds ###
 class CompletionChunkKind(BaseEnumeration):
     """
     Describes a single piece of text within a code-completion string.
     """
-
-    def __str__(self) -> str:
-        """
-        Converts enum value to string in the old camelCase format.
-        This is a temporary measure that will be changed in the future release
-        to return string in ALL_CAPS format, like for other enums.
-        """
-
-        warnings.warn(
-            "String representation of 'CompletionChunkKind' will be "
-            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-            "match other enums. 'CompletionChunkKind's can be "
-            "compared to one another without conversion to string.",
-            DeprecationWarning,
-        )
-        # Remove underscores
-        components = self.name.split("_")
-        # Upper-camel case each split component
-        components = [component.lower().capitalize() for component in components]
-        return "".join(components)
 
     OPTIONAL = 0
     TYPED_TEXT = 1
@@ -3101,32 +3118,6 @@ class _CXUnsavedFile(UnsavedFile):
 
 
 class CompletionChunk:
-    class SpellingCacheAlias:
-        """
-        A temporary utility that acts as an alias to CompletionChunk.SPELLING_CACHE.
-        This will be removed without deprecation warning in a future release.
-        Please do not use it directly!
-        """
-
-        deprecation_message = (
-            "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
-            "and adapted to use 'CompletionChunkKind's as keys instead of their "
-            "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
-            "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
-            "will be removed in a future release."
-        )
-
-        def __getattr__(self, _: Any) -> NoReturn:
-            raise AttributeError(self.deprecation_message)
-
-        def __getitem__(self, value: int) -> str:
-            warnings.warn(self.deprecation_message, DeprecationWarning)
-            return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
-
-        def __contains__(self, value: int) -> bool:
-            warnings.warn(self.deprecation_message, DeprecationWarning)
-            return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
-
     # Functions calls through the python interface are rather slow. Fortunately,
     # for most symbols, we do not need to perform a function call. Their spelling
     # never changes and is consequently provided by this spelling cache.
@@ -3184,108 +3175,8 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
-    __deprecation_message = (
-        "'CompletionChunk.{}' will be removed in a future release. "
-        "All uses of 'CompletionChunk.{}' should be replaced by checking "
-        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
-    )
 
-    def isKindOptional(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindOptional",
-            "isKindOptional",
-            "OPTIONAL",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.OPTIONAL
-
-    def isKindTypedText(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindTypedText",
-            "isKindTypedText",
-            "TYPED_TEXT",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.TYPED_TEXT
-
-    def isKindPlaceHolder(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindPlaceHolder",
-            "isKindPlaceHolder",
-            "PLACEHOLDER",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.PLACEHOLDER
-
-    def isKindInformative(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindInformative",
-            "isKindInformative",
-            "INFORMATIVE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.INFORMATIVE
-
-    def isKindResultType(self) -> bool:
-        deprecation_message = self.__deprecation_message.format(
-            "isKindResultType",
-            "isKindResultType",
-            "RESULT_TYPE",
-        )
-        warnings.warn(deprecation_message, DeprecationWarning)
-        return self.kind == CompletionChunkKind.RESULT_TYPE
-
-
-SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
-
-
-class CompletionString(ClangObject):
-    # AvailabilityKindCompat is an exact copy of AvailabilityKind, except for __str__.
-    # This is a temporary measure to keep the string representation the same
-    # until we change CompletionString.availability to return AvailabilityKind,
-    # like Cursor.availability does.
-    # Note that deriving from AvailabilityKind directly is not possible.
-    class AvailabilityKindCompat(BaseEnumeration):
-        """
-        Describes the availability of an entity.
-        It is deprecated in favor of AvailabilityKind.
-        """
-
-        # Ensure AvailabilityKindCompat is comparable with AvailabilityKind
-        def __eq__(self, other: object) -> bool:
-            if isinstance(
-                other, (AvailabilityKind, CompletionString.AvailabilityKindCompat)
-            ):
-                return self.value == other.value
-            else:
-                return NotImplemented
-
-        def __str__(self) -> str:
-            """
-            Converts enum value to string in the old camelCase format.
-            This is a temporary measure that will be changed in the future release
-            to return string in ALL_CAPS format, like for other enums.
-            """
-
-            warnings.warn(
-                "String representation of 'CompletionString.availability' will be "
-                "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
-                "match other enums. 'CompletionString.availability' can be "
-                "compared to 'AvailabilityKind' directly, "
-                "without conversion to string.",
-                DeprecationWarning,
-            )
-            # Remove underscores
-            components = self.name.split("_")
-            # Upper-camel case each split component
-            components = [component.lower().capitalize() for component in components]
-            return "".join(components)
-
-        AVAILABLE = 0
-        DEPRECATED = 1
-        NOT_AVAILABLE = 2
-        NOT_ACCESSIBLE = 3
-
+class CompletionString(OpaqueClangObject):
     def __len__(self) -> int:
         return self.num_chunks
 
@@ -3310,9 +3201,9 @@ class CompletionString(ClangObject):
         return conf.lib.clang_getCompletionPriority(self.obj)  # type: ignore [no-any-return]
 
     @property
-    def availability(self) -> AvailabilityKindCompat:
+    def availability(self) -> AvailabilityKind:
         res = conf.lib.clang_getCompletionAvailability(self.obj)
-        return CompletionString.AvailabilityKindCompat.from_id(res)
+        return AvailabilityKind.from_id(res)
 
     @property
     def briefComment(self) -> str:
@@ -3342,11 +3233,11 @@ class CodeCompletionResult(Structure):
         return CompletionString(self.completionString)
 
 
-class CCRStructure(Structure):
+class CodeCompletionResults(Structure):
     _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_uint)]
 
-    results: NoSliceSequence[CodeCompletionResult]
-    numResults: int
+    def __del__(self) -> None:
+        conf.lib.clang_disposeCodeCompleteResults(byref(self))
 
     def __len__(self) -> int:
         return self.numResults
@@ -3357,40 +3248,6 @@ class CCRStructure(Structure):
 
         return self.results[key]
 
-
-class CodeCompletionResults(ClangObject):
-    def __init__(self, ptr: _Pointer[CCRStructure]):
-        assert isinstance(ptr, POINTER(CCRStructure)) and ptr
-        self.ptr = self._as_parameter_ = ptr
-
-    def from_param(self) -> _Pointer[CCRStructure]:
-        return self._as_parameter_
-
-    def __del__(self) -> None:
-        conf.lib.clang_disposeCodeCompleteResults(self)
-
-    def __len__(self) -> int:
-        return self.ptr.contents.numResults
-
-    def __getitem__(self, key: int) -> CodeCompletionResult:
-        if len(self) <= key:
-            raise IndexError
-
-        return self.ptr.contents.results[key]
-
-    @property
-    def results(self) -> CCRStructure:
-        warnings.warn(
-            "'CodeCompletionResults.results' will become an implementation detail "
-            "with changed behavior in a future release and should not be used directly. "
-            "Existing uses of 'CodeCompletionResults.results' should be changed "
-            "to directly use 'CodeCompletionResults': it nows supports '__len__' "
-            "and '__getitem__', so it can be used the same as "
-            "'CodeCompletionResults.results'.",
-            DeprecationWarning,
-        )
-        return self.ptr.contents
-
     @property
     def diagnostics(self) -> NoSliceSequence[Diagnostic]:
         class DiagnosticsItr:
@@ -3398,15 +3255,17 @@ class CodeCompletionResults(ClangObject):
                 self.ccr = ccr
 
             def __len__(self) -> int:
-                return int(conf.lib.clang_codeCompleteGetNumDiagnostics(self.ccr))
+                return int(
+                    conf.lib.clang_codeCompleteGetNumDiagnostics(byref(self.ccr))
+                )
 
             def __getitem__(self, key: int) -> Diagnostic:
-                return conf.lib.clang_codeCompleteGetDiagnostic(self.ccr, key)  # type: ignore [no-any-return]
+                return conf.lib.clang_codeCompleteGetDiagnostic(byref(self.ccr), key)  # type: ignore [no-any-return]
 
         return DiagnosticsItr(self)
 
 
-class Index(ClangObject):
+class Index(OpaqueClangObject):
     """
     The Index type provides the primary interface to the Clang CIndex library,
     primarily by providing an interface for reading and parsing translation
@@ -3445,7 +3304,7 @@ class Index(ClangObject):
         return TranslationUnit.from_source(path, args, unsaved_files, options, self)
 
 
-class TranslationUnit(ClangObject):
+class TranslationUnit(OpaqueClangObject):
     """Represents a source code translation unit.
 
     This is one of the main types in the API. Any time you wish to interact
@@ -3613,7 +3472,7 @@ class TranslationUnit(ClangObject):
         """
         assert isinstance(index, Index)
         self.index = index
-        ClangObject.__init__(self, ptr)
+        OpaqueClangObject.__init__(self, ptr)
 
     def __del__(self) -> None:
         conf.lib.clang_disposeTranslationUnit(self)
@@ -3839,7 +3698,7 @@ class TranslationUnit(ClangObject):
             options,
         )
         if ptr:
-            return CodeCompletionResults(ptr)
+            return ptr.contents
         return None
 
     def get_tokens(
@@ -3866,7 +3725,7 @@ class TranslationUnit(ClangObject):
         return TokenGroup.get_tokens(self, extent)
 
 
-class File(ClangObject):
+class File(OpaqueClangObject):
     """
     The File class represents a particular source file that is part of a
     translation unit.
@@ -4027,7 +3886,7 @@ class CompileCommands:
         return CompileCommands(res)
 
 
-class CompilationDatabase(ClangObject):
+class CompilationDatabase(OpaqueClangObject):
     """
     The CompilationDatabase is a wrapper class around
     clang::tooling::CompilationDatabase
@@ -4129,7 +3988,7 @@ class Token(Structure):
         return cursor
 
 
-class Rewriter(ClangObject):
+class Rewriter(OpaqueClangObject):
     """
     The Rewriter is a wrapper class around clang::Rewriter
 
@@ -4144,9 +4003,6 @@ class Rewriter(ClangObject):
         tu -- The translation unit for the target AST.
         """
         return Rewriter(conf.lib.clang_CXRewriter_create(tu))
-
-    def __init__(self, ptr):
-        ClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_CXRewriter_dispose(self)
@@ -4222,7 +4078,7 @@ class PrintingPolicyProperty(BaseEnumeration):
     FullyQualifiedName = 25
 
 
-class PrintingPolicy(ClangObject):
+class PrintingPolicy(OpaqueClangObject):
     """
     The PrintingPolicy is a wrapper class around clang::PrintingPolicy
 
@@ -4238,9 +4094,6 @@ class PrintingPolicy(ClangObject):
         cursor -- Any cursor for a translation unit.
         """
         return PrintingPolicy(conf.lib.clang_getCursorPrintingPolicy(cursor))
-
-    def __init__(self, ptr):
-        ClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_PrintingPolicy_dispose(self)
@@ -4260,8 +4113,16 @@ class PrintingPolicy(ClangObject):
 translation_unit_includes_callback = CFUNCTYPE(
     None, c_object_p, POINTER(SourceLocation), c_uint, py_object
 )
-cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
-fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
+# On s390x the visitor callbacks must return a full register word (c_long)
+# rather than c_int. ctypes does not sign/zero-extend a narrow closure return
+# to the full 64-bit return register the s390x ELF ABI requires, leaving
+# garbage in the high bytes. libclang reads the full register and faults with
+# a SIGFPE.
+# TODO: Remove once the ctypes fix (https://github.com/python/cpython/issues/156933)
+# has propagated.
+_visitor_result = c_long if platform.machine() == "s390x" else c_int
+cursor_visit_callback = CFUNCTYPE(_visitor_result, Cursor, Cursor, py_object)
+fields_visit_callback = CFUNCTYPE(_visitor_result, Cursor, py_object)
 
 # Functions strictly alphabetical order.
 FUNCTION_LIST: list[LibFunc] = [
@@ -4291,10 +4152,14 @@ FUNCTION_LIST: list[LibFunc] = [
     (
         "clang_codeCompleteAt",
         [TranslationUnit, c_interop_string, c_int, c_int, c_void_p, c_int, c_int],
-        POINTER(CCRStructure),
+        POINTER(CodeCompletionResults),
     ),
-    ("clang_codeCompleteGetDiagnostic", [CodeCompletionResults, c_int], Diagnostic),
-    ("clang_codeCompleteGetNumDiagnostics", [CodeCompletionResults], c_int),
+    (
+        "clang_codeCompleteGetDiagnostic",
+        [POINTER(CodeCompletionResults), c_int],
+        Diagnostic,
+    ),
+    ("clang_codeCompleteGetNumDiagnostics", [POINTER(CodeCompletionResults)], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
     ("clang_CXRewriter_create", [TranslationUnit], c_object_p),
@@ -4322,7 +4187,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_EnumDecl_isScoped", [Cursor], c_uint),
     ("clang_defaultDiagnosticDisplayOptions", [], c_uint),
     ("clang_defaultSaveOptions", [TranslationUnit], c_uint),
-    ("clang_disposeCodeCompleteResults", [CodeCompletionResults]),
+    ("clang_disposeCodeCompleteResults", [POINTER(CodeCompletionResults)]),
     # ("clang_disposeCXTUResourceUsage",
     #  [CXTUResourceUsage]),
     ("clang_disposeDiagnostic", [Diagnostic]),
@@ -4488,6 +4353,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
     ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
+    ("clang_getCursorUnaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
@@ -4693,4 +4559,5 @@ __all__ = [
     "TranslationUnit",
     "TypeKind",
     "Type",
+    "UnaryOperator",
 ]
