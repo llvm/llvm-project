@@ -24,10 +24,10 @@ template <typename C, typename I> C tgpowi(C base, I exp) {
   }
 
   bool invertResult{exp < 0};
-  bool isMin{exp == std::numeric_limits<I>::min()};
+  bool isMin{exp == common::numeric_limits<I>::min()};
 
   if (isMin) {
-    exp = std::numeric_limits<I>::max();
+    exp = common::numeric_limits<I>::max();
   }
 
   if (exp < 0) {
