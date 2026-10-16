@@ -93,7 +93,8 @@ void execvp_eacces() {
   };
 
   errno = 0;
-  ASSERT_EQ(LIBC_NAMESPACE::execvp("./libc_execvp_test_no_exec.test", argv), -1);
+  ASSERT_EQ(LIBC_NAMESPACE::execvp("./libc_execvp_test_no_exec.test", argv),
+            -1);
   ASSERT_ERRNO_EQ(EACCES);
 
   errno = 0;

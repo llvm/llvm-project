@@ -31,9 +31,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
-LIBC_INLINE ErrorOr<int> execve_with_fallback(const char *path,
-                                              char *const argv[],
-                                              char *const envp[]) {
+LIBC_INLINE ErrorOr<int>
+execve_with_fallback(const char *path, char *const argv[], char *const envp[]) {
   auto ret = linux_syscalls::execve(path, argv, envp);
   if (!ret && ret.error() == ENOEXEC) {
     size_t argc = 0;
