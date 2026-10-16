@@ -181,9 +181,13 @@ public:
   bool Artificial = true;
   bool Constant = false;
 
-  // Map SubRegIndex -> Register.
+  // Map SubRegIndex -> Register, used while computing the sub-registers.
   using SubRegMap =
       std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<std::less<>>>;
+
+  // The final sub-registers, sorted by sub-register index.
+  using SubRegList =
+      ArrayRef<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>>;
 
   CodeGenRegister(const Record *R, unsigned Enum);
 
@@ -212,9 +216,9 @@ public:
   // silently corrupts sub-register liveness and spilling). See the definition.
   void checkSubRegIndexSizes(CodeGenRegBank &) const;
 
-  const SubRegMap &getSubRegs() const {
-    assert(SubRegsComplete && "Must precompute sub-registers");
-    return SubRegs;
+  SubRegList getSubRegs() const {
+    assert(SuperRegsComplete && "Must precompute super-registers");
+    return FinalSubRegs;
   }
 
   // Add sub-registers to OSet following a pre-order defined by the .td file.
@@ -313,11 +317,13 @@ private:
   // Super-registers where this is the first explicit sub-register.
   SuperRegList LeadingSuperRegs;
 
+  // Built by computeSubRegs(); copied to FinalSubRegs and freed by
+  // computeSuperRegs().
   SubRegMap SubRegs;
   SuperRegList SuperRegs;
   DenseMap<const CodeGenRegister *, CodeGenSubRegIndex *> SubReg2Idx;
-  // SubRegs as an array sorted by sub-register index, for getSubReg().
-  SmallVector<std::pair<unsigned, CodeGenRegister *>, 0> SubRegsByIdx;
+  SmallVector<std::pair<CodeGenSubRegIndex *, CodeGenRegister *>, 0>
+      FinalSubRegs;
   RegUnitList RegUnits;
   RegUnitLaneMaskList RegUnitLaneMasks;
 };
