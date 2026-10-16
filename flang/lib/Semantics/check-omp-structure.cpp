@@ -2690,12 +2690,13 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareMapperDirective &x) {
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
+void OmpStructureChecker::CheckDeclareReduction(
+    const parser::OmpDirectiveSpecification &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   std::string dirName{
       GetUpperName(llvm::omp::Directive::OMPD_declare_reduction, version)};
 
-  const parser::OmpArgumentList &args{x.v.Arguments()};
+  const parser::OmpArgumentList &args{x.Arguments()};
   if (args.v.size() != 1) {
     context_.Say(args.source,
         "%s directive should have a single argument"_err_en_US, dirName);
@@ -2718,6 +2719,10 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
         "The argument to the %s directive should be a reduction-specifier"_err_en_US,
         dirName);
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
+  CheckDeclareReduction(x.v);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {

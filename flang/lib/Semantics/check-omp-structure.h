@@ -487,6 +487,7 @@ private:
   void CheckIndividualAllocateDirective(
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+  void CheckDeclareReduction(const parser::OmpDirectiveSpecification &x);
 
   void CheckUsesAllocatorsSpec(
       const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
