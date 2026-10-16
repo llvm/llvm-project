@@ -319,6 +319,7 @@ namespace {
       if (Diags.hasErrorOccurred()) {
         if (Builder)
           Builder->clear();
+        DeferredInlineMemberFuncDefs.clear();
         M.reset();
       }
 

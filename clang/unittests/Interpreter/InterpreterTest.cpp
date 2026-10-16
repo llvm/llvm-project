@@ -121,6 +121,157 @@ TEST_F(InterpreterTest, Errors) {
   EXPECT_TRUE(!!RecoverErr);
 }
 
+// Collect the diagnostics of an interpreter into a string.
+struct CapturedDiagnostics {
+  std::string Output;
+  llvm::raw_string_ostream OS{Output};
+  DiagnosticOptions Opts;
+  TextDiagnosticPrinter Printer{OS, Opts};
+};
+
+// The error text of ParseAndExecute, or "" on success.
+static std::string ParseAndExecuteError(Interpreter &Interp,
+                                        llvm::StringRef Code) {
+  return llvm::toString(Interp.ParseAndExecute(Code));
+}
+
+// A failed input drops the IR of the definitions before the error. A later
+// input can define the same names again, and the JIT sees the new definitions.
+TEST_F(InterpreterTest, FailedInputDropsCodeGen) {
+  using ::testing::HasSubstr;
+  using ::testing::Not;
+  CapturedDiagnostics Diags;
+  auto Interp = createInterpreter({}, &Diags.Printer);
+
+  const char *Defs[] = {
+      // A function.
+      "int f() { return 1; }",
+      // A global variable.
+      "int gv = 1;",
+      // An inline function that the input uses.
+      "inline int inl() { return 1; } int useinl() { return inl(); }",
+      // A class with a vtable.
+      "struct V { virtual int k(); }; int V::k() { return 1; }",
+      // A static local.
+      "int sl() { static int s = 1; return s; }",
+      // A string literal.
+      "const char *str = \"s\";",
+  };
+  for (const char *Def : Defs) {
+    std::string Failed = std::string(Def) + " int e = no_such_name;";
+    auto Err = Interp->Parse(Failed).takeError();
+    EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err))) << Def;
+    EXPECT_THAT(Diags.Output, HasSubstr("undeclared identifier 'no_such_name'"))
+        << Def;
+    Diags.Output.clear();
+
+    EXPECT_EQ("", ParseAndExecuteError(*Interp, Def));
+    EXPECT_THAT(Diags.Output, Not(HasSubstr("error:"))) << Def;
+  }
+
+  Value V;
+  cantFail(Interp->ParseAndExecute(
+      "f() + gv + useinl() + V().k() + sl() + (str[0] == 's')", &V));
+  EXPECT_EQ(6, V.getInt());
+
+  // A definition after the error never reaches CodeGen.
+  auto Err = Interp->Parse("int e = no_such_name; int after() { return 1; }")
+                 .takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+  Diags.Output.clear();
+  EXPECT_EQ("", ParseAndExecuteError(*Interp, "int after() { return 2; }"));
+  EXPECT_THAT(Diags.Output, Not(HasSubstr("error:")));
+}
+
+// The initializers and statements of a failed input must not run later.
+TEST_F(InterpreterTest, FailedInputDoesNotRun) {
+  auto Interp = createInterpreter();
+  cantFail(Interp->ParseAndExecute("void setGlobal(int);"));
+  const int Before = getGlobal();
+
+  auto Err =
+      Interp->Parse("int side = (setGlobal(1), 0); int e = no_such_name;")
+          .takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+  Err = Interp->Parse("setGlobal(2); no_such_name;").takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  cantFail(Interp->ParseAndExecute("int ok = 1;"));
+  EXPECT_EQ(Before, getGlobal());
+}
+
+// A failed input can be the first user of a deferred definition from an
+// earlier input. A later input must still get that definition.
+TEST_F(InterpreterTest, FailedInputKeepsDeferredDecls) {
+  auto Interp = createInterpreter();
+  cantFail(Interp->ParseAndExecute("inline int seven() { return 7; }"));
+
+  auto Err =
+      Interp->Parse("int use = seven(); int e = no_such_name;").takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  Value V;
+  cantFail(Interp->ParseAndExecute("seven()", &V));
+  EXPECT_EQ(7, V.getInt());
+}
+
+// Undo after a failed input removes the last good input. The names of both
+// inputs are then free again.
+TEST_F(InterpreterTest, RedefineAfterUndoPastFailedInput) {
+  using ::testing::HasSubstr;
+  using ::testing::Not;
+  CapturedDiagnostics Diags;
+  auto Interp = createInterpreter({}, &Diags.Printer);
+
+  cantFail(Interp->ParseAndExecute("int u = 1;"));
+  auto Err = Interp->Parse("int u2 = 2; int e = no_such_name;").takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+  Diags.Output.clear();
+  cantFail(Interp->Undo());
+
+  EXPECT_EQ("", ParseAndExecuteError(*Interp, "int u = 3; int u2 = 4;"));
+  EXPECT_THAT(Diags.Output, Not(HasSubstr("error:")));
+  Value V;
+  cantFail(Interp->ParseAndExecute("u + u2", &V));
+  EXPECT_EQ(7, V.getInt());
+}
+
+// An inline definition of a failed input must not stay behind as a deferred
+// decl. A later input has no definition of the name.
+TEST_F(InterpreterTest, FailedInputDropsDeferredDefinitions) {
+  using ::testing::HasSubstr;
+  auto Interp = createInterpreter();
+  auto Err = Interp
+                 ->Parse("inline int f() { return 1; }"
+                         "int usef() { return f(); } int e = no_such_name;")
+                 .takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  // The JIT reports "Symbols not found: [ _Z1fv ]" on stderr.
+  EXPECT_THAT(ParseAndExecuteError(*Interp, "int f(); int r = f();"),
+              HasSubstr("Failed to materialize symbols"));
+}
+
+// CodeGen reports some errors only at the end of the unit. Such an input fails
+// like any other, and the next input works.
+TEST_F(InterpreterTest, ErrorFromCodeGenFailsTheInput) {
+  using ::testing::HasSubstr;
+  CapturedDiagnostics Diags;
+  auto Interp = createInterpreter({}, &Diags.Printer);
+
+  auto Err = Interp
+                 ->Parse("extern \"C\" int no_target(); extern \"C\" int ali()"
+                         " __attribute__((alias(\"no_target\")));")
+                 .takeError();
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+  EXPECT_THAT(Diags.Output,
+              HasSubstr("alias must point to a defined variable or function"));
+
+  Value V;
+  cantFail(Interp->ParseAndExecute("1 + 1", &V));
+  EXPECT_EQ(2, V.getInt());
+}
+
 // Here we test whether the user can mix declarations and statements. The
 // interpreter should be smart enough to recognize the declarations from the
 // statements and wrap the latter into a declaration, producing valid code.
