@@ -574,8 +574,8 @@ public:
 class UnborrowedCallArgsChecker final : public RawPtrRefCallArgsChecker {
 public:
   UnborrowedCallArgsChecker()
-      : RawPtrRefCallArgsChecker("Loan on a CanBorrow object not guarded by "
-                                 "const or a Borrow",
+      : RawPtrRefCallArgsChecker("Unborrowed call argument for a raw "
+                                 "pointer/reference parameter",
                                  makeBorrowSafetyModel()) {}
 };
 
