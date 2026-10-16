@@ -3,8 +3,7 @@
 
 define float @foo1(float %a) {
 ; CHECK-LABEL: @foo1(
-; CHECK-NEXT:    [[B:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[B]], float [[A]], float 0.000000e+00
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.maximumnum.f32(float [[A:%.*]], float 0.000000e+00)
 ; CHECK-NEXT:    [[D:%.*]] = fcmp olt float [[C]], 1.000000e+00
 ; CHECK-NEXT:    [[F:%.*]] = select i1 [[D]], float [[C]], float 1.000000e+00
 ; CHECK-NEXT:    ret float [[F]]
@@ -18,10 +17,10 @@ define float @foo1(float %a) {
 
 define float @foo2(float %a) !prof !0 {
 ; CHECK-LABEL: @foo2(
-; CHECK-NEXT:    [[B:%.*]] = fcmp ule float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.maximumnum.f32(float [[A1:%.*]], float 0.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[A]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], float [[A]], float 1.000000e+00, !prof [[PROF1:![0-9]+]]
-; CHECK-NEXT:    [[F:%.*]] = select i1 [[B]], float 0.000000e+00, float [[E]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[E:%.*]] = call float @llvm.maximumnum.f32(float [[A1]], float 0.000000e+00)
+; CHECK-NEXT:    [[F:%.*]] = select i1 [[TMP1]], float [[E]], float 1.000000e+00, !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %b = fcmp ogt float %a, 0.0
@@ -536,7 +535,7 @@ define <2 x i8> @strong_order_cmp_eq_ugt_vector_poison3(<2 x i32> %a, <2 x i32> 
 define i32 @selectSelect11(i1 %cond1, i1 %cond2, i32 %var, i32 %defaultVal) !prof !0 {
 ; CHECK-LABEL: @selectSelect11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i1 true, i1 [[COND1:%.*]], !prof [[PROF3:![0-9]+]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[TMP1]], i32 [[DEFAULTVAL:%.*]], i32 [[VAR:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[SEL2]]
 ;
   %sel1 = select i1 %cond1, i32 %defaultVal, i32 %var, !prof !1
@@ -698,7 +697,7 @@ declare void @use32(i32)
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 5}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 7, i32 11}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 5, i32 3}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ;.
