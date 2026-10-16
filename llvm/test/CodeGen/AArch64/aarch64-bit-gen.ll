@@ -322,16 +322,15 @@ if.else:
 define <8 x i8> @test_bit_sink_not_after_splat_not_multiuse(<8 x i8> %m, <8 x i8> %b, i8 %s, i1 %c, ptr %p) {
 ; CHECK-SD-LABEL: test_bit_sink_not_after_splat_not_multiuse:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d2, d0
-; CHECK-SD-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-SD-NEXT:    tbz w1, #0, .LBB13_2
 ; CHECK-SD-NEXT:  // %bb.1: // %if.then
-; CHECK-SD-NEXT:    dup v3.8b, w0
-; CHECK-SD-NEXT:    and v1.8b, v2.8b, v1.8b
-; CHECK-SD-NEXT:    bic v0.8b, v0.8b, v3.8b
-; CHECK-SD-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    dup v2.8b, w0
+; CHECK-SD-NEXT:    mvn v2.8b, v2.8b
+; CHECK-SD-NEXT:    bsl v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NEXT:    str d0, [x2]
-; CHECK-SD-NEXT:  .LBB13_2: // %common.ret
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB13_2:
+; CHECK-SD-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_bit_sink_not_after_splat_not_multiuse:

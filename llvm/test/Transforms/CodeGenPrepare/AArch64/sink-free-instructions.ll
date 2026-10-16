@@ -1133,8 +1133,9 @@ define <8 x i8> @no_sink_bsl_not_after_splat_not_multiuse(<8 x i8> %m, <8 x i8> 
 ; CHECK-NEXT:    [[NS:%.*]] = xor i8 [[S:%.*]], -1
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <8 x i8> poison, i8 [[NS]], i64 0
 ; CHECK-NEXT:    [[SPL:%.*]] = shufflevector <8 x i8> [[INS]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <8 x i8> [[M]], splat (i8 -1)
 ; CHECK-NEXT:    [[X:%.*]] = and <8 x i8> [[M]], [[B:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = and <8 x i8> [[SPL]], [[N]]
+; CHECK-NEXT:    [[Y:%.*]] = and <8 x i8> [[SPL]], [[TMP0]]
 ; CHECK-NEXT:    [[R:%.*]] = or <8 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    store <8 x i8> [[R]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
