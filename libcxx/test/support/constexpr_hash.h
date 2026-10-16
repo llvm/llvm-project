@@ -23,9 +23,9 @@
 #include <cmath>
 #include <array>
 
-namespace support {
-
 #if TEST_STD_VER >= 26
+
+namespace support {
 
 template <class Key>
 struct constexpr_hash {
