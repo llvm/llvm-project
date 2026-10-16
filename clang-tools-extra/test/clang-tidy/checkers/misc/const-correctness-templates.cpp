@@ -6,6 +6,9 @@
 // RUN:   misc-const-correctness.TransformPointersAsValues: false} \
 // RUN:   }" -- -fno-delayed-template-parsing
 
+#include <string>
+#include <utility>
+
 template <typename T>
 void type_dependent_variables() {
   T value = 42;
@@ -26,6 +29,27 @@ void instantiate_template_cases() {
   type_dependent_variables<int>();
   type_dependent_variables<float>();
 }
+
+namespace gh225395 {
+// The variable 'tmp' is passed to std::move in the template definition, so it
+// may be moved-from for some instantiations (e.g. std::string) but std::move
+// degenerates into a copy for others (e.g. int). No warning may be emitted
+// since the fix-it would apply to the template code and break the move for
+// types with real move semantics.
+template <typename T> void my_swap(T &t1, T &t2) {
+  auto tmp = std::move(t1);
+  t1 = std::move(t2);
+  t2 = std::move(tmp);
+}
+void instantiate() {
+  std::string a;
+  std::string b;
+  my_swap(a, b);
+  int x = 0;
+  int y = 0;
+  my_swap(x, y);
+}
+} // namespace gh225395
 
 namespace gh57297{
 // The expression to check may not be the dependent operand in a dependent
