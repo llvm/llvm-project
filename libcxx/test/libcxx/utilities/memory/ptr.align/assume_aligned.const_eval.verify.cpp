@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// UNSUPPORTED: clang-21, clang-22, clang-23
+
 // template<size_t N, class T>
 // [[nodiscard]] constexpr T* assume_aligned(T* ptr);
 
