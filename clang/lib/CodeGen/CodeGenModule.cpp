@@ -6442,6 +6442,10 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 
+bool CodeGenModule::isGlobalVarInvariant(const VarDecl *D) {
+  return isInvariantAddressSpace(GetGlobalVarAddressSpace(D));
+}
+
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
   return CodeGenUtils::getGlobalConstantAddressSpace(LangOpts, getTarget());
 }
