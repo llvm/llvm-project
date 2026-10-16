@@ -111,6 +111,32 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown
 
 // -----
 
+// expected-note@below {{enclosing op with data layout}}
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  i32 = dense<32> : vector<2xi64>
+>} {
+  // expected-error@below {{data layout does not combine with layouts of enclosing ops}}
+  module attributes { dlti.dl_spec = #dlti.dl_spec<
+    i32 = dense<64> : vector<2xi64>
+  >} {
+  }
+}
+
+// -----
+
+// expected-note@below {{enclosing op with data layout}}
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  index = 32
+>} {
+  // expected-error@below {{data layout does not combine with layouts of enclosing ops}}
+  module attributes { dlti.dl_spec = #dlti.dl_spec<
+    index = 64
+  >} {
+  }
+}
+
+// -----
+
 // expected-error@below {{'dlti.target_system_spec' is expected to be a #dlti.target_system_spec attribute}}
 "test.unknown_op"() { dlti.target_system_spec = 42 } : () -> ()
 
