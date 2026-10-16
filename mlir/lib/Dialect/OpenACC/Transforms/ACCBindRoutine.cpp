@@ -54,7 +54,8 @@ using namespace mlir::acc;
 namespace {
 
 static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
-                                      const SymbolTable &fallbackSymTab) {
+                                      const SymbolTable &fallbackSymTab,
+                                      SymbolTableCollection &symbolTables) {
   SymbolRefAttr routineRef;
   if (isSpecializedAccRoutine(funcOp)) {
     auto attr = funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
@@ -70,7 +71,7 @@ static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
   }
 
   RoutineOp routine =
-      SymbolTable::lookupNearestSymbolFrom<RoutineOp>(funcOp, routineRef);
+      symbolTables.lookupNearestSymbolFrom<RoutineOp>(funcOp, routineRef);
   if (routine)
     return routine;
   return fallbackSymTab.lookup<RoutineOp>(routineRef.getLeafReference());
@@ -146,7 +147,8 @@ public:
         if (routineInfo.getAccRoutines().size() > 1)
           return WalkResult::advance();
 
-      RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
+      RoutineOp routine =
+          getFirstAccRoutineOp(callee, outerSymTab, symbolTables);
       if (!routine ||
           !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return WalkResult::advance();
@@ -222,7 +224,8 @@ public:
         }
       }
 
-      RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
+      RoutineOp routine =
+          getFirstAccRoutineOp(callee, outerSymTab, symbolTables);
       if (!routine ||
           !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return;
