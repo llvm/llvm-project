@@ -85,6 +85,22 @@ bool RuntimeLibcallsInfo::isLibraryAvailable(RuntimeLibrary Library) const {
   return true;
 }
 
+void RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
+    const Triple &TT, ExceptionHandling ExceptionModel,
+    FloatABI::ABIType FloatABI, StringRef ABIName,
+    LongDoubleFormat LongDoubleFormat) {
+  CallingConv::ID DefaultCC = getDefaultLibcallCallingConv(
+      TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+  if (DefaultCC != CallingConv::C)
+    llvm::fill(LibcallImplCallingConvs, DefaultCC);
+
+  for (RTLIB::RuntimeLibrary Library : getDefaultRuntimeLibraries(TT)) {
+    if (isLibraryAvailable(Library))
+      setAvailableLibraryLibcalls(Library, TT, ExceptionModel, FloatABI,
+                                  ABIName, LongDoubleFormat);
+  }
+}
+
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,

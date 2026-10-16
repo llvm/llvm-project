@@ -1,9 +1,8 @@
 // RUN: llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s
 
-// Check that a LibraryRef<Lib, [impls]> member dispatches to the library like a
-// plain reference, with the excluded impls emitted as setUnavailable inside the
-// library function (guarded on the consumer's triple), so the dispatcher stays a
-// plain call.
+// Check that a LibraryExclusion emits the excluded impls as setUnavailable
+// inside the named library function, guarded on the exclusion's predicate, so
+// the system dispatch stays a plain call.
 
 include "llvm/IR/RuntimeLibcallsImpl.td"
 
@@ -23,13 +22,13 @@ def isX86 : RuntimeLibcallAvailability<(all_of IsX86)>;
 def CompilerRt : LibcallLibrary<"compiler-rt", (add memcpy, __divsi3, __modsi3)>;
 def Libm : LibcallLibrary<"libm", (add sqrt)>;
 
-// Dispatch compiler-rt but drop the two div/mod entries this target overrides;
-// dispatch libm plainly.
-def X86System : SystemRuntimeLibrary<isX86,
-    (add LibraryRef<CompilerRt, [__divsi3, __modsi3]>, Libm)>;
+def X86System : SystemRuntimeLibrary<isX86, ["compiler-rt", "libm"]>;
+
+// Drop the two div/mod entries this target overrides.
+def : LibraryExclusion<"compiler-rt", isX86, [__divsi3, __modsi3]>;
 
 // The compiler-rt library function sets its members available, then emits the
-// X86 consumer's opt-out under a triple guard at the end of the same function.
+// X86 opt-out under a triple guard at the end of the same function.
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_compiler_rt(
 // CHECK: for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
 // CHECK-NEXT: setAvailable(Impl);
@@ -41,11 +40,14 @@ def X86System : SystemRuntimeLibrary<isX86,
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libm(
 
-// The dispatcher is a plain call for both libraries; no setUnavailable here.
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
-// CHECK:   if (TT.isX86()) {
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
-// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libm))
-// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NOT:   setUnavailable
+// The system enables both libraries by name; no setUnavailable here.
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.isX86()) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::compiler_rt,
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libm,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }

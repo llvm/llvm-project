@@ -57,7 +57,7 @@ def Libc : LibcallLibrary<"libc",
        LibcallImpls<(add impl5), isNotX86_32>)
 >;
 
-def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, (add Libc)>;
+def TheSystemLibrary : SystemRuntimeLibrary<isTargetArch, ["libc"]>;
 
 // Predicate groups emit sorted by predicate def name
 

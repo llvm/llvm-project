@@ -38,16 +38,16 @@ def MSP430CompilerRt : LibcallLibrary<"compiler-rt",
        LibcallsWithCC<(add __udivmodhi4), MSP430_BUILTIN, RuntimeLibcallAvailability<(all_of IsBarLeaf)>>),
   isMSP430>;
 
-def AVRLibrary : SystemRuntimeLibrary<isAVR, (add Libc, AVRCompilerRt)>;
+def AVRLibrary : SystemRuntimeLibrary<isAVR, ["libc", "compiler-rt"]>;
 
 // Test with default calling convention
-def AVRHurdLibrary : SystemRuntimeLibrary<isAVRHurd, (add Libc, AVRCompilerRt)> {
+def AVRHurdLibrary : SystemRuntimeLibrary<isAVRHurd, ["libc", "compiler-rt"]> {
   let DefaultLibcallCallingConv
     = LibcallCallingConv<[{isFoo() ? CallingConv::Fast : CallingConv::GHC}]>;
 }
 
 def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
-  (add Libc, MSP430CompilerRt)>;
+  ["libc", "compiler-rt"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_compiler_rt(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK-NEXT:   if (TT.getArch() == Triple::avr) {
@@ -103,37 +103,34 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
-// CHECK-EMPTY:
+// CHECK-LABEL: CallingConv::ID llvm::RTLIB::RuntimeLibcallsInfo::getDefaultLibcallCallingConv(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-NEXT:   if (TT.getArch() == Triple::avr && TT.isOSHurd()) {
-// CHECK-NEXT:     const CallingConv::ID DefaultCC = isFoo() ? CallingConv::Fast : CallingConv::GHC;
-// CHECK-NEXT:     for (CallingConv::ID &Entry : LibcallImplCallingConvs) {
-// CHECK-NEXT:       Entry = DefaultCC;
-// CHECK-NEXT:     }
-// CHECK-EMPTY:
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
-// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
-// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
-// CHECK-EMPTY:
-// CHECK-NEXT:     return;
+// CHECK-NEXT:     return isFoo() ? CallingConv::Fast : CallingConv::GHC;
 // CHECK-NEXT:   }
-// CHECK-EMPTY:
+// CHECK-NEXT:   return CallingConv::C;
+// CHECK-NEXT: }
+
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::avr && TT.isOSHurd()) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::compiler_rt,
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
 // CHECK-NEXT:   if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
-// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
-// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-EMPTY:
-// CHECK-NEXT:     return;
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::compiler_rt,
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
 // CHECK-NEXT:   }
-// CHECK-EMPTY:
 // CHECK-NEXT:   if (TT.getArch() == Triple::msp430) {
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
-// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NEXT:     if (isLibraryAvailable(RTLIB::RuntimeLibrary::compiler_rt))
-// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-EMPTY:
-// CHECK-NEXT:     return;
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::compiler_rt,
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
 // CHECK-NEXT:   }
-// CHECK-NEXT:   LLVM_DEBUG(dbgs() << "no system runtime library applied to target \'" << TT.str() << "\'\n");
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }

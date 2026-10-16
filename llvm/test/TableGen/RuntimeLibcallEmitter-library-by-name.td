@@ -1,7 +1,8 @@
 // RUN: llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s | FileCheck %s
 
-// Each LibraryName gets an enumerator. Only libraries no SystemRuntimeLibrary
-// references get a setAvailableLibraryLibcalls case.
+// Each LibraryName gets an enumerator and a setAvailableLibraryLibcalls case.
+// Systems dispatch through it, and an isolated variant is selected by its own
+// predicate.
 
 include "llvm/IR/RuntimeLibcallsImpl.td"
 
@@ -26,8 +27,8 @@ def Libm : LibcallLibrary<"libm", (add sin)>;
 def X86Libm : LibcallLibrary<"libm", (add sin), isX86> {
   let Isolated = true;
 }
-def X86SystemLibrary : SystemRuntimeLibrary<isX86, (add X86Libm)>;
-def MSP430SystemLibrary : SystemRuntimeLibrary<isMSP430, (add Libm)> {
+def X86SystemLibrary : SystemRuntimeLibrary<isX86, ["libm"]>;
+def MSP430SystemLibrary : SystemRuntimeLibrary<isMSP430, ["libm"]> {
   let DefaultLibcallCallingConv = MSP430CC;
 }
 
@@ -66,19 +67,44 @@ def VecLibB : LibcallLibrary<"veclib-b", (add other_vsin2)>;
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
-// CHECK-LABEL: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
-// CHECK-NOT: veclib
-// CHECK: setAvailableLibFuncs_X86Libm(
-// CHECK-NOT: veclib
-// CHECK: }
+// CHECK-LABEL: CallingConv::ID llvm::RTLIB::RuntimeLibcallsInfo::getDefaultLibcallCallingConv(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::msp430) {
+// CHECK-NEXT:     return CallingConv::MSP430_BUILTIN;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return CallingConv::C;
+// CHECK-NEXT: }
+
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::msp430) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libm,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::x86_64) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libm,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }
 
 // CHECK-LABEL: bool llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibraryLibcalls(RTLIB::RuntimeLibrary Library, const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK-NEXT:   const CallingConv::ID DefaultCC = getDefaultLibcallCallingConv(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
 // CHECK-NEXT:   switch (Library) {
+// CHECK-NEXT:   case RTLIB::RuntimeLibrary::libm:
+// CHECK-NEXT:     if (TT.getArch() == Triple::x86_64) {
+// CHECK-NEXT:       setAvailableLibFuncs_X86Libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
+// CHECK-NEXT:       return true;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
+// CHECK-NEXT:     return true;
 // CHECK-NEXT:   case RTLIB::RuntimeLibrary::veclib_a:
-// CHECK-NEXT:     setAvailableLibFuncs_veclib_a(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
+// CHECK-NEXT:     setAvailableLibFuncs_veclib_a(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
 // CHECK-NEXT:     return true;
 // CHECK-NEXT:   case RTLIB::RuntimeLibrary::veclib_b:
-// CHECK-NEXT:     setAvailableLibFuncs_veclib_b(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
+// CHECK-NEXT:     setAvailableLibFuncs_veclib_b(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
 // CHECK-NEXT:     return true;
 // CHECK-NEXT:   default:
 // CHECK-NEXT:     return false;
