@@ -95,8 +95,8 @@ define void @test_distance_positive_via_assume(ptr %A, i64 %off) {
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (%off + %A) High: (404 + %off + %A))
-; CHECK-NEXT:            Member: {(%off + %A),+,4}<nw><%loop>
+; CHECK-NEXT:          (Low: (%off + %A)<nuw> High: (404 + %off + %A))
+; CHECK-NEXT:            Member: {(%off + %A)<nuw>,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (101 + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
