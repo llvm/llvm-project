@@ -14,7 +14,9 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -24,6 +26,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
+#include <cassert>
 #include <vector>
 
 using namespace llvm;
@@ -32,8 +35,26 @@ using namespace llvm;
 
 STATISTIC(NumPromoted, "Number of alloca's promoted");
 
+static void reportAllocaNotPromoted(const AllocaInst *AI,
+                                    OptimizationRemarkEmitter &ORE) {
+  // SROA handles the reporting for aggregates
+  if (AI->getAllocatedType()->isAggregateType())
+    return;
+
+  ORE.emit([&] {
+    AllocaPromotionResult Promotable = isAllocaPromotable(AI);
+    assert(!Promotable && "Reporting an alloca that could have been promoted");
+    return OptimizationRemarkMissed(DEBUG_TYPE, "AllocaNotPromotable", AI)
+           << "Alloca was not promoted. "
+           << ore::NV("Reason", Promotable.getFailureReason());
+  });
+}
+
+/// \p ORE is optional; when non-null, allocas that cannot be promoted are
+/// reported as missed optimizations.
 static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
-                                    AssumptionCache &AC) {
+                                    AssumptionCache &AC,
+                                    OptimizationRemarkEmitter *ORE) {
   std::vector<AllocaInst *> Allocas;
   BasicBlock &BB = F.getEntryBlock(); // Get the entry node for the function
   bool Changed = false;
@@ -55,13 +76,23 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
     NumPromoted += Allocas.size();
     Changed = true;
   }
+
+  // Report once promotion has reached a fixed point: the allocas still standing
+  // in the entry block are exactly the ones that could not be promoted, and
+  // reporting inside the loop would emit a remark per round instead of one.
+  if (ORE)
+    for (const Instruction &I : BB)
+      if (const auto *AI = dyn_cast<AllocaInst>(&I))
+        reportAllocaNotPromoted(AI, *ORE);
+
   return Changed;
 }
 
 PreservedAnalyses PromotePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  if (!promoteMemoryToRegister(F, DT, AC))
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  if (!promoteMemoryToRegister(F, DT, AC, &ORE))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -88,7 +119,7 @@ struct PromoteLegacyPass : public FunctionPass {
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    return promoteMemoryToRegister(F, DT, AC);
+    return promoteMemoryToRegister(F, DT, AC, /*ORE=*/nullptr);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
