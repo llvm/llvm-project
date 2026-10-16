@@ -69,6 +69,17 @@
 .cfi_endproc
 
 .cfi_startproc
+# CHECK: .cfi_register 64, 4929
+.cfi_register 64, mepc
+# CHECK: .cfi_return_column 4930
+.cfi_return_column mcause
+# CHECK: .cfi_same_value 4416
+.cfi_same_value sscratch
+# CHECK: .cfi_same_value 4099
+.cfi_same_value fcsr
+.cfi_endproc
+
+.cfi_startproc
 # CHECK: .cfi_offset zero, 0
 .cfi_offset zero, 0
 # CHECK: .cfi_offset ra, 8
