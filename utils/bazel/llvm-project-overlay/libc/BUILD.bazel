@@ -4728,6 +4728,7 @@ libc_support_library(
         ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_linux_syscall_wrappers_open",
         ":__support_osutil_linux_syscall_wrappers_read",
+        ":__support_osutil_linux_syscall_wrappers_rt_sigprocmask",
         ":__support_osutil_linux_syscall_wrappers_sched_getparam",
         ":__support_osutil_linux_syscall_wrappers_sched_getscheduler",
         ":__support_osutil_linux_syscall_wrappers_sched_setscheduler",
@@ -4748,6 +4749,8 @@ libc_support_library(
         ":hdr_signal_macros",
         ":hdr_stdint_proxy",
         ":hdr_sys_mman_macros",
+        ":string_memory_utils",
+        ":types_sigset_t",
     ],
 )
 
