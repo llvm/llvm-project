@@ -19,6 +19,8 @@ licenses(["notice"])
 # binaries in the runfiles tree.
 _TEST_INPUTS = {
     "HostCommonTests": glob(["Host/common/Inputs/*"]),
+    "ObjectFileELFTests": glob(["ObjectFile/ELF/Inputs/*"]),
+    "SymbolFileDWARFTests": glob(["SymbolFile/DWARF/Inputs/*"]),
     "SymbolTests": glob(["Symbol/Inputs/*"]),
     "TargetTests": glob(["Target/Inputs/*"]),
     "UtilityTests": glob(["Utility/Inputs/*"]),
@@ -210,6 +212,22 @@ cc_test(
 )
 
 cc_test(
+    name = "EditlineTests",
+    srcs = ["Editline/EditlineTest.cpp"],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "EmulatorTests",
     srcs = [
         "Instruction/ARM/TestARMEmulator.cpp",
@@ -230,22 +248,6 @@ cc_test(
         "//lldb/source/Plugins:PluginInstructionRISCV",
         "//lldb/source/Plugins:PluginProcessUtility",
         "//llvm:Support",
-        "//third-party/unittest:gmock",
-        "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "EditlineTests",
-    srcs = ["Editline/EditlineTest.cpp"],
-    deps = [
-        ":lldbUtilityHelpers",
-        "//lldb:Headers",
-        "//lldb:Host",
-        "//lldb:Utility",
-        "//llvm:Support",
-        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -381,6 +383,76 @@ cc_test(
 )
 
 cc_test(
+    name = "LanguageCLanguagesTests",
+    srcs = glob(["Language/CLanguages/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginObjCLanguage",
+        "//lldb/source/Plugins:PluginObjCPlusPlusLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LanguageCPlusPlusTests",
+    srcs = glob(["Language/CPlusPlus/*.cpp"]),
+    deps = [
+        ":lldbSymbolHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:DataFormatters",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LanguageFortranLanguageTests",
+    srcs = glob(["Language/Fortran/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginFortranLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "LanguageObjCTests",
+    srcs = glob(["Language/ObjC/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjCLanguage",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "LLDBBreakpointTests",
     srcs = glob(["Breakpoint/*.cpp"]),
     deps = [
@@ -499,6 +571,81 @@ cc_test(
 )
 
 cc_test(
+    name = "ObjectFileBreakpadTests",
+    srcs = glob(["ObjectFile/Breakpad/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileBreakpad",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ObjectFileELFTests",
+    srcs = glob(["ObjectFile/ELF/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["ObjectFileELFTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileELF",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ObjectFileMachOTests",
+    srcs = glob(["ObjectFile/MachO/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFileMachO",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginSymbolFileSymtab",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ObjectFilePECOFFTests",
+    srcs = glob(["ObjectFile/PECOFF/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFilePECOFF",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "PPC64InstEmulationTests",
     srcs = glob(["UnwindAssembly/PPC64/*.cpp"]),
     deps = [
@@ -601,6 +748,52 @@ cc_test(
         "//lldb:Headers",
         "//lldb:Target",
         "//lldb:Utility",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SymbolFileDWARFTests",
+    srcs = glob(["SymbolFile/DWARF/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["SymbolFileDWARFTests"]],
+    deps = [
+        ":lldbSymbolHelpers",
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Expression",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginObjectFilePECOFF",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginSymbolFilePDB",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:DebugInfoPDB",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SymbolFileNativePDBTests",
+    srcs = glob(["SymbolFile/NativePDB/*.cpp"]),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Symbol",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginSymbolFileNativePDB",
+        "//llvm:DebugInfoPDB",
         "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
