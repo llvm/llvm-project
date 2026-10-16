@@ -635,12 +635,45 @@ MCDwarfLineTable::tryGetFile(StringRef &Directory, StringRef &FileName,
                            FileNumber);
 }
 
-static bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
-                       StringRef &FileName,
+static SmallString<256> getDwarfFilePath(StringRef CompilationDir,
+                                         StringRef Directory,
+                                         StringRef FileName) {
+  // Debug paths need not originate on the host running this producer.
+  auto IsAbsolute = [](StringRef Path) {
+    return sys::path::is_absolute(Path, sys::path::Style::posix) ||
+           sys::path::is_absolute(Path, sys::path::Style::windows);
+  };
+  StringRef Base = IsAbsolute(FileName)    ? FileName
+                  : IsAbsolute(Directory) ? Directory
+                                          : CompilationDir;
+  auto Style = sys::path::Style::native;
+  if (sys::path::is_absolute(Base, sys::path::Style::posix))
+    Style = sys::path::Style::posix;
+  else if (sys::path::is_absolute(Base, sys::path::Style::windows))
+    Style = sys::path::Style::windows_slash;
+
+  SmallString<256> Path;
+  if (IsAbsolute(FileName)) {
+    Path = FileName;
+  } else {
+    if (!IsAbsolute(Directory))
+      Path = CompilationDir;
+    sys::path::append(Path, Style, Directory, FileName);
+  }
+  // Normalize Windows separators only; backslashes are valid POSIX filenames.
+  if (sys::path::is_style_windows(Style))
+    llvm::replace(Path, '\\', '/');
+  return Path;
+}
+
+static bool isRootFile(const MCDwarfFile &RootFile, StringRef CompilationDir,
+                       StringRef Directory, StringRef FileName,
                        std::optional<MD5::MD5Result> Checksum) {
-  if (RootFile.Name.empty() || StringRef(RootFile.Name) != FileName)
+  if (RootFile.Name.empty() || RootFile.Checksum != Checksum)
     return false;
-  return RootFile.Checksum == Checksum;
+  // Keep the root spelling required by DWARF, but compare the effective paths.
+  return getDwarfFilePath(CompilationDir, "", RootFile.Name) ==
+         getDwarfFilePath(CompilationDir, Directory, FileName);
 }
 
 Expected<unsigned>
@@ -661,9 +694,11 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
     trackMD5Usage(Checksum.has_value());
     HasAnySource |= Source.has_value();
   }
-  if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
-    return 0;
   if (FileNumber == 0) {
+    // Explicit assembler file numbers may be referenced by .loc directives.
+    if (DwarfVersion >= 5 &&
+        isRootFile(RootFile, CompilationDir, Directory, FileName, Checksum))
+      return 0;
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
     FileNumber = MCDwarfFiles.empty() ? 1 : MCDwarfFiles.size();
