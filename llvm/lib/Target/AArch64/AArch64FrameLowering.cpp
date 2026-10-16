@@ -866,7 +866,7 @@ bool AArch64FrameLowering::windowsRequiresStackProbe(
   const AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
   // TODO: When implementing stack protectors, take that into account
   // for the probe threshold.
-  return Subtarget.isTargetWindows() && MFI.hasStackProbing() &&
+  return Subtarget.isTargetWindowsOrUEFI() && MFI.hasStackProbing() &&
          StackSizeInBytes >= uint64_t(MFI.getStackProbeSize());
 }
 

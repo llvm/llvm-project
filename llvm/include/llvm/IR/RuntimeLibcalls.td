@@ -2064,9 +2064,10 @@ defvar SecurityCheckCookieIfWinMSVC =
     LibcallImpls<(add __security_check_cookie, __security_cookie),
                  isWindowsMSVCOrItaniumEnvironment>;
 
-// The Windows CRT security cookie and stack probes are part of libc.
+// The Windows CRT security cookie and stack probes are part of libc. UEFI
+// follows the Windows ARM64 ABI and uses the same stack probe helper.
 def isWindowsAArch64NotArm64EC : RuntimeLibcallAvailability<
-  (all_of IsOSWindows, IsAArch64, (not IsWindowsArm64EC))>;
+  (all_of IsOSWindowsOrUEFI, IsAArch64, (not IsWindowsArm64EC))>;
 def isWindowsARM : RuntimeLibcallAvailability<
   (all_of IsOSWindows, (any_of IsARM, IsThumb))>;
 def WindowsCRTLibc : LibcallLibrary<"libc", (add SecurityCheckCookieIfWinMSVC)>;
