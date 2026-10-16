@@ -2365,6 +2365,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value arg = ops[0];
     return cir::SqrtOp::create(builder, loc, arg).getResult();
   }
+  case X86::BI__builtin_ia32_pmulhw128:
+  case X86::BI__builtin_ia32_pmulhw256:
+  case X86::BI__builtin_ia32_pmulhw512:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "smulh",
+                                       ops[0].getType(), ops);
+  case X86::BI__builtin_ia32_pmulhuw128:
+  case X86::BI__builtin_ia32_pmulhuw256:
+  case X86::BI__builtin_ia32_pmulhuw512:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "umulh",
+                                       ops[0].getType(), ops);
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512: {

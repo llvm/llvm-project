@@ -2615,12 +2615,15 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   StringRef TrapFuncName =
       CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
   if (TrapFuncName.empty()) {
+    MachineInstrBuilder MIB;
     if (Opcode == TargetOpcode::G_UBSANTRAP) {
       uint64_t Code = cast<ConstantInt>(CI.getOperand(0))->getZExtValue();
-      MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
+      MIB = MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
     } else {
-      MIRBuilder.buildInstr(Opcode);
+      MIB = MIRBuilder.buildInstr(Opcode);
     }
+    if (CI.cannotMerge())
+      MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
     return true;
   }
 
@@ -2632,6 +2635,7 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
   Info.CB = &CI;
   Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+  Info.NoMerge = CI.cannotMerge();
   return CLI->lowerCall(MIRBuilder, Info);
 }
 
@@ -3074,24 +3078,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     MF->setHasFakeUses(true);
     return true;
   }
-  case Intrinsic::dbg_declare: {
-    const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
-    assert(DI.getVariable() && "Missing variable");
-    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
-    return true;
-  }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
-    assert(DI.getLabel() && "Missing label");
-
-    assert(DI.getLabel()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-
-    MIRBuilder.buildDbgLabel(DI.getLabel());
-    return true;
-  }
   case Intrinsic::vaend:
     // No target I know of cares about va_end. Certainly no in-tree target
     // does. Simplest intrinsic ever!
@@ -3105,20 +3091,6 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
         .addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Ptr),
                                                 MachineMemOperand::MOStore,
                                                 ListSize, Alignment));
-    return true;
-  }
-  case Intrinsic::dbg_assign:
-    // A dbg.assign is a dbg.value with more information about stack locations,
-    // typically produced during optimisation of variables with leaked
-    // addresses. We can treat it like a normal dbg_value intrinsic here; to
-    // benefit from the full analysis of stack/SSA locations, GlobalISel would
-    // need to register for and use the AssignmentTrackingAnalysis pass.
-    [[fallthrough]];
-  case Intrinsic::dbg_value: {
-    // This form of DBG_VALUE is target-independent.
-    const DbgValueInst &DI = cast<DbgValueInst>(CI);
-    translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
-                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::uadd_with_overflow:

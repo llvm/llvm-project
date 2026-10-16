@@ -882,10 +882,10 @@ void TargetLoweringBase::initActions() {
     // [US]CMP default to expand
     setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
 
-    // Halving adds
-    setOperationAction(
-        {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
-        Expand);
+    // Halving adds and subtracts
+    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
+                        ISD::AVGCEILU, ISD::AVGSUBFLOORS, ISD::AVGSUBFLOORU},
+                       VT, Expand);
 
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
