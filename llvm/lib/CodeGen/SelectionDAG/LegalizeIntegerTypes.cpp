@@ -5712,6 +5712,10 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::WRITE_REGISTER:
     Res = ExpandIntOp_WRITE_REGISTER(N, OpNo);
     break;
+  case ISD::PREFETCH:
+    // A prefetch is only a hint, so drop one whose address must be expanded.
+    Res = N->getOperand(0);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
