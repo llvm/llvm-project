@@ -27,9 +27,7 @@ private:
 
   ABICompatInfo CompatInfo;
 
-  /// HIP coerces a generic scalar-pointer kernel argument to the global
-  /// address space. Gated by the front end, which alone can see LangOpts.HIP.
-  bool CoerceGenericPtrArgToGlobal;
+  AMDGPUABIOptions Opts;
 
   ArgInfo classifyReturnType(const Type *RetTy) const;
   ArgInfo classifyKernelArgumentType(const Type *Ty) const;
@@ -41,15 +39,16 @@ private:
 
 public:
   AMDGPUTargetInfo(TypeBuilder &TypeBuilder, const ABICompatInfo &Compat,
-                   bool CoerceGenericPtrArgToGlobal)
-      : DefaultTargetInfo(TypeBuilder), CompatInfo(Compat),
-        CoerceGenericPtrArgToGlobal(CoerceGenericPtrArgToGlobal) {}
+                   const AMDGPUABIOptions &Opts)
+      : DefaultTargetInfo(TypeBuilder), CompatInfo(Compat), Opts(Opts) {}
 
   const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
 
   /// Indirect arguments live in the private (alloca) address space on AMDGPU.
-  unsigned getAllocaAddrSpace() const override {
-    return AMDGPUAS::PRIVATE_ADDRESS;
+  unsigned getAllocaAddrSpace() const override { return Opts.PrivateAddrSpace; }
+
+  unsigned getSRetAddrSpace(const RecordType *) const override {
+    return Opts.GenericAddrSpace;
   }
 
   void computeInfo(FunctionInfo &FI) const override;
@@ -135,9 +134,13 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
 
   // HIP passes a generic scalar pointer as a global pointer; a pointer is not
   // an aggregate, so this stays on the direct path.
-  if (CoerceGenericPtrArgToGlobal) {
-    if (const auto *PtrTy = dyn_cast<PointerType>(Ty);
-        PtrTy && PtrTy->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS) {
+  if (Opts.CoerceGenericPtrArgToGlobal) {
+    // An atomic pointer lowers to a plain pointer in classic CodeGen.
+    const Type *ValTy = Ty;
+    if (const auto *AT = dyn_cast<AtomicType>(ValTy))
+      ValTy = AT->getValueType();
+    if (const auto *PtrTy = dyn_cast<PointerType>(ValTy);
+        PtrTy && PtrTy->getAddrSpace() == Opts.GenericAddrSpace) {
       const Type *Coerced =
           TB.getPointerType(PtrTy->getSizeInBits().getFixedValue(),
                             PtrTy->getAlignment(), AMDGPUAS::GLOBAL_ADDRESS);
@@ -150,9 +153,8 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
   // to global address space when using byref. This would require implementing a
   // new kind of coercion of the in-memory type when for indirect arguments.
   if (isAggregateTypeForABI(Ty))
-    return ArgInfo::getIndirectAliased(
-        Ty->getAlignment(),
-        /*AddrSpace=*/AMDGPUAS::CONSTANT_ADDRESS);
+    return ArgInfo::getIndirectAliased(Ty->getAlignment(),
+                                       /*AddrSpace=*/Opts.ConstantAddrSpace);
 
   // CanBeFlattened=false keeps the struct intact.
   return ArgInfo::getDirect(Ty, /*Offset=*/0, /*Align=*/std::nullopt,
@@ -176,7 +178,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
     if (RecordArgABI RAA = getRecordArgABI(Ty); RAA != RAA_Default)
       return ArgInfo::getIndirect(Ty->getAlignment(),
                                   /*ByVal=*/RAA == RAA_DirectInMemory,
-                                  /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
+                                  /*AddrSpace=*/Opts.PrivateAddrSpace);
 
     // Ignore empty structs/unions.
     if (Ty->isEmptyRecord())
@@ -216,7 +218,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
 
     // Pass a struct argument by reference rather than by value.
     return ArgInfo::getIndirectAliased(Ty->getAlignment(),
-                                       /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
+                                       /*AddrSpace=*/Opts.PrivateAddrSpace);
   }
 
   // Otherwise just do the default thing.
@@ -252,9 +254,8 @@ void AMDGPUTargetInfo::computeInfo(FunctionInfo &FI) const {
 }
 
 std::unique_ptr<TargetInfo>
-createAMDGPUTargetInfo(TypeBuilder &TB, bool CoerceGenericPtrArgToGlobal) {
-  return std::make_unique<AMDGPUTargetInfo>(TB, ABICompatInfo(),
-                                            CoerceGenericPtrArgToGlobal);
+createAMDGPUTargetInfo(TypeBuilder &TB, const AMDGPUABIOptions &Opts) {
+  return std::make_unique<AMDGPUTargetInfo>(TB, ABICompatInfo(), Opts);
 }
 
 } // namespace abi

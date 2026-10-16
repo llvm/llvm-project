@@ -52,6 +52,7 @@ private:
   const llvm::abi::RecordType *convertStructType(const clang::RecordDecl *RD);
   const llvm::abi::RecordType *convertUnionType(const clang::RecordDecl *RD);
   const llvm::abi::Type *createPointerTypeForPointee(QualType PointeeType);
+  const llvm::abi::Type *createOpenCLOpaqueType(const clang::Type *T);
   const llvm::abi::RecordType *convertCXXRecordType(const CXXRecordDecl *RD);
 
   void computeFieldInfo(const clang::RecordDecl *RD,
