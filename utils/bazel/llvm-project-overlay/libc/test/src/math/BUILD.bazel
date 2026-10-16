@@ -67,6 +67,50 @@ math_mpfr_test(name = "atanpif16")
 math_mpfr_test(name = "cbrt")
 
 math_mpfr_test(
+    name = "bf16addl",
+    hdrs = ["AddTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16divl",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16fmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16subl",
+    hdrs = ["SubTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "cbrtbf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
@@ -112,6 +156,11 @@ math_mpfr_test(
 math_mpfr_test(name = "cos")
 
 math_mpfr_test(
+    name = "copysignl",
+    hdrs = ["CopySignTest.h"],
+)
+
+math_mpfr_test(
     name = "cosf",
     hdrs = ["sdcomp26094.h"],
     deps = [
@@ -145,7 +194,23 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add dfmal, dmull test.  Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "dfmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "dmull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "dsqrtl",
@@ -259,6 +324,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fdiml",
+    hdrs = ["FDimTest.h"],
+)
+
+math_mpfr_test(
     name = "fdiv",
     hdrs = ["DivTest.h"],
 )
@@ -283,7 +353,23 @@ math_mpfr_test(
     hdrs = ["DivTest.h"],
 )
 
-# TODO: Add ffma, ffmal test.  Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "ffma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "ffmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "floor",
@@ -311,7 +397,42 @@ math_mpfr_test(
     deps = ["//libc:__support_fputil_bfloat16"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
+# TODO: Add fmal tests. Missing stdlib/rand dependency.
+math_mpfr_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "fmull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
 
 math_mpfr_test(
     name = "f16mul",
@@ -394,6 +515,16 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fmaxl",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_mpfr_test(
+    name = "fminl",
+    hdrs = ["FMinTest.h"],
+)
+
+math_mpfr_test(
     name = "frexpf16",
     hdrs = ["FrexpTest.h"],
 )
@@ -473,6 +604,16 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ilogbl",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_mpfr_test(
+    name = "ldexpl",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_mpfr_test(
     name = "llrint",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -521,6 +662,11 @@ math_mpfr_test(
 math_mpfr_test(
     name = "llroundl",
     hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "logbl",
+    hdrs = ["LogbTest.h"],
 )
 
 math_mpfr_test(
@@ -610,6 +756,11 @@ math_mpfr_test(
 # TODO: add nan tests.
 
 math_mpfr_test(
+    name = "modfl",
+    hdrs = ["ModfTest.h"],
+)
+
+math_mpfr_test(
     name = "nearbyint",
     hdrs = ["NearbyIntTest.h"],
     deps = [
@@ -651,6 +802,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "pow")
+
+math_mpfr_test(
+    name = "nextafterl",
+    hdrs = ["NextAfterTest.h"],
+)
 
 math_mpfr_test(
     name = "powf",
@@ -773,6 +929,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "sin")
+
+math_mpfr_test(
+    name = "scalbnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
 
 math_mpfr_test(
     name = "sinf",
