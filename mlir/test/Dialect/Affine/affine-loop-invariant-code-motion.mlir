@@ -1010,3 +1010,81 @@ func.func @unknown_trip_count_store_not_hoisted(%x: i32, %n: index) -> i32 {
   %r = affine.load %alloc[0] : memref<1xi32>
   return %r : i32
 }
+
+// -----
+
+// A load accessing the same memref as a store can be hoisted if their
+// access ranges are disjoint.
+
+// CHECK-LABEL: func.func @hoist_disjoint_access
+func.func @hoist_disjoint_access(%A: memref<17xi32>, %v: i32) {
+  affine.store %v, %A[0] : memref<17xi32>
+  affine.for %i = 0 to 16 {
+    %x = affine.load %A[0] : memref<17xi32>
+    affine.store %x, %A[%i + 1] : memref<17xi32>
+  }
+  return
+}
+// CHECK:      affine.load %{{.*}}[0] : memref<17xi32>
+// CHECK:      affine.for %{{.*}} = 0 to 16 {
+// CHECK:      affine.store %{{.*}}, %{{.*}}[%{{.*}} + 1] : memref<17xi32>
+
+// -----
+
+// Verify that a load can be hoisted when multidimensional affine access
+// ranges are disjoint in at least one dimension.
+
+// CHECK-LABEL: func.func @hoist_disjoint_multidimensional_access
+func.func @hoist_disjoint_multidimensional_access(%A: memref<4x24xi32>) {
+  affine.for %i = 0 to 4 {
+    affine.for %j = 0 to 8 {
+      %x = affine.load %A[%i, 0] : memref<4x24xi32>
+      affine.store %x, %A[%i, %j + 16] : memref<4x24xi32>
+    }
+  }
+  return
+}
+// CHECK:      affine.for %{{.*}} = 0 to 4 {
+// CHECK:      affine.load %{{.*}}[%{{.*}}, 0] : memref<4x24xi32>
+// CHECK:      affine.for %{{.*}} = 0 to 8 {
+// CHECK:      affine.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}} + 16] : memref<4x24xi32>
+
+// -----
+
+// A load can be hoisted when its access range depends on multiple enclosing
+// induction variables and is disjoint from the store access range.
+
+// CHECK-LABEL: func.func @hoist_access_with_multiple_enclosing_ivs
+func.func @hoist_access_with_multiple_enclosing_ivs(%A: memref<32xi32>) {
+  affine.for %i = 0 to 4 {
+    affine.for %j = 0 to 4 {
+      affine.for %k = 0 to 8 {
+        %x = affine.load %A[%i + %j] : memref<32xi32>
+        affine.store %x, %A[%k + 16] : memref<32xi32>
+      }
+    }
+  }
+  return
+}
+// CHECK:      affine.for %[[I:.*]] = 0 to 4 {
+// CHECK:      affine.for %[[J:.*]] = 0 to 4 {
+// CHECK:      affine.load %{{.*}}[%[[I]] + %[[J]]] : memref<32xi32>
+// CHECK:      affine.for %[[K:.*]] = 0 to 8 {
+// CHECK:      affine.store %{{.*}}, %{{.*}}[%[[K]] + 16] : memref<32xi32>
+
+// -----
+
+// A store accessing the same memref as a store can be hoisted if their
+// access ranges are disjoint.
+
+// CHECK-LABEL: func.func @hoist_disjoint_store
+func.func @hoist_disjoint_store(%A: memref<17xi32>, %v: i32) {
+  affine.for %i = 0 to 16 {
+    affine.store %v, %A[0] : memref<17xi32>
+    affine.store %v, %A[%i + 1] : memref<17xi32>
+  }
+  return
+}
+// CHECK:      affine.store %{{.*}}, %{{.*}}[0] : memref<17xi32>
+// CHECK:      affine.for %[[K:.*]] = 0 to 16 {
+// CHECK:      affine.store %{{.*}}, %{{.*}}[%[[K]] + 1] : memref<17xi32>
