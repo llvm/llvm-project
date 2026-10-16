@@ -270,8 +270,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // 5) Symbols that will be referenced after linker wrapping is performed.
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
-                            (r.Prevailing && sym->isExported) ||
-                            usedStartStop.contains(objSym.getSectionName());
+                            (r.Prevailing && sym->isExported);
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
     r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&
@@ -297,7 +296,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // their values are still not final.
     r.LinkerRedefined = sym->scriptDefined;
   }
-  checkError(ctx.e, ltoObj->add(std::move(f.obj), resols));
+  auto resolver = [this](StringRef sectionName) {
+    lto::SectionResolution r;
+    r.Keep = usedStartStop.contains(sectionName);
+    return r;
+  };
+  checkError(ctx.e, ltoObj->add(std::move(f.obj), resols, std::move(resolver)));
 }
 
 // If LazyObjFile has not been added to link, emit empty index files.
