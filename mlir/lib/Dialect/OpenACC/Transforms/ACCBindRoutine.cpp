@@ -113,7 +113,8 @@ public:
     }
 
     SymbolTable outerSymTab(mod);
-    SymbolTable insertSymTab(symbolTableOp);
+    SymbolTableCollection symbolTables;
+    SymbolTable &insertSymTab = symbolTables.getSymbolTable(symbolTableOp);
     Block *insertBlock = &symbolTableOp->getRegion(0).front();
 
     symbolTableOp->walk<WalkOrder::PreOrder>([&](Operation *op) {
