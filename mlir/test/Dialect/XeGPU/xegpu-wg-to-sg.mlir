@@ -963,6 +963,40 @@ gpu.module @test_distribution {
     gpu.return
   }
 
+  // AND has all ones as neutral element, not 1.
+  // CHECK-LABEL: gpu.func @vector_reduce_and_neutral
+  gpu.func @vector_reduce_and_neutral(%src: memref<256x64xi32>, %src8: memref<256x64xi8>) {
+    // CHECK: %[[LOAD:.*]] = xegpu.load_nd {{.*}} -> vector<16x64xi32>
+    // CHECK: %[[N0:.*]] = arith.constant dense<-1> : vector<16xi32>
+    // CHECK: vector.multi_reduction <and>, %[[LOAD]], %[[N0]] [1] : vector<16x64xi32> to vector<16xi32>
+    // CHECK: %[[LOAD8:.*]] = xegpu.load_nd {{.*}} -> vector<16x64xi8>
+    // CHECK: %[[N1:.*]] = arith.constant dense<-1> : vector<16xi8>
+    // CHECK: vector.multi_reduction <and>, %[[LOAD8]], %[[N1]] [1] : vector<16x64xi8> to vector<16xi8>
+    %cst = arith.constant dense<-1> : vector<256xi32>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x64xi32>
+      -> !xegpu.tensor_desc<256x64xi32>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>}>
+      : !xegpu.tensor_desc<256x64xi32>
+      -> vector<256x64xi32>
+    %r0 = vector.multi_reduction <and>, %load, %cst [1]
+      : vector<256x64xi32> to vector<256xi32>
+    %a0 = xegpu.convert_layout %r0
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xi32>
+    %cst8 = arith.constant dense<-1> : vector<256xi8>
+    %tdesc8 = xegpu.create_nd_tdesc %src8 : memref<256x64xi8>
+      -> !xegpu.tensor_desc<256x64xi8>
+    %load8 = xegpu.load_nd %tdesc8[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>}>
+      : !xegpu.tensor_desc<256x64xi8>
+      -> vector<256x64xi8>
+    %r1 = vector.multi_reduction <and>, %load8, %cst8 [1]
+      : vector<256x64xi8> to vector<256xi8>
+    %a1 = xegpu.convert_layout %r1
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [16, 1], sg_data = [16, 64]>, dims = [1]>}>
+      : vector<256xi8>
+    gpu.return
+  }
+
   // CHECK-LABEL: load_nd_tdesc_with_anchor_layout
   gpu.func @load_nd_tdesc_with_anchor_layout(%src: memref<256x128xf32>) {
     //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
