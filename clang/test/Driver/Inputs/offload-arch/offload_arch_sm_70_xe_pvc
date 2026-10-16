@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "sm_70"
+echo "xe_12.60.7"
+exit 0
