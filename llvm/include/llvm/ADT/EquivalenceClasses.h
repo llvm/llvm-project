@@ -47,8 +47,8 @@ namespace llvm {
 ///
 ///  for (EquivalenceClasses<int>::iterator I = EC.begin(), E = EC.end();
 ///       I != E; ++I) {           // Iterate over all of the equivalence sets.
-///    if (!I->isLeader()) continue;   // Ignore non-leader sets.
-///    for (EquivalenceClasses<int>::member_iterator MI = EC.member_begin(I);
+///    if (!(*I)->isLeader()) continue; // Ignore non-leader sets.
+///    for (EquivalenceClasses<int>::member_iterator MI = EC.member_begin(**I);
 ///         MI != EC.member_end(); ++MI)   // Loop over members in this set.
 ///      cerr << *MI << " ";  // Print member.
 ///    cerr << "\n";   // Finish set.
