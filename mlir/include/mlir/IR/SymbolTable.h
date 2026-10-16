@@ -437,6 +437,9 @@ private:
 
   /// Non-private symbols whose uses are all visible within this map's scope.
   DenseSet<Operation *> symbolsWithAllUsesVisible;
+
+  // Symbol tables for which the uses of some nested op could not be computed
+  DenseSet<Operation *> symbolTablesWithUnknownUsers;
 };
 
 //===----------------------------------------------------------------------===//
