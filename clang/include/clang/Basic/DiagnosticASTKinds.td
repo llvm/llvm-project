@@ -454,6 +454,8 @@ def err_invalid_is_within_lifetime : Note<
 let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_escape : Error<
     "invalid %% escape in inline assembly string">;
+  def err_asm_nested_variant : Error<
+    "nested variants found in inline assembly string">;
   def err_asm_unknown_symbolic_operand_name : Error<
     "unknown symbolic operand name in inline assembly string">;
 
