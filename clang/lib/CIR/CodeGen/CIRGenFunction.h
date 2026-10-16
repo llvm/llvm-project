@@ -818,11 +818,12 @@ public:
     }
 
     bool isReference() const { return valueAndIsReference.getInt(); }
-    LValue getReferenceLValue(CIRGenFunction &cgf, Expr *refExpr) const {
+    LValue getReferenceLValue(CIRGenFunction &cgf, const Expr *refExpr) const {
       assert(isReference());
-      cgf.cgm.errorNYI(refExpr->getSourceRange(),
-                       "ConstantEmission::getReferenceLValue");
-      return {};
+      mlir::Value addr = cgf.getBuilder().getConstant(
+          cgf.getLoc(refExpr->getSourceRange()),
+          mlir::cast<mlir::TypedAttr>(valueAndIsReference.getPointer()));
+      return cgf.makeNaturalAlignAddrLValue(addr, refExpr->getType());
     }
 
     mlir::TypedAttr getValue() const {
