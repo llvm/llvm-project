@@ -151,7 +151,8 @@ void LoongArchInstrInfo::storeRegToStackSlot(
       .addReg(SrcReg, getKillRegState(IsKill))
       .addFrameIndex(FI)
       .addImm(0)
-      .addMemOperand(MMO);
+      .addMemOperand(MMO)
+      .setMIFlag(Flags);
 }
 
 void LoongArchInstrInfo::loadRegFromStackSlot(
@@ -189,7 +190,8 @@ void LoongArchInstrInfo::loadRegFromStackSlot(
   BuildMI(MBB, I, DL, get(Opcode), DstReg)
       .addFrameIndex(FI)
       .addImm(0)
-      .addMemOperand(MMO);
+      .addMemOperand(MMO)
+      .setMIFlag(Flags);
 }
 
 Register LoongArchInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
