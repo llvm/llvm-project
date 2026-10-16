@@ -735,18 +735,6 @@ void RegionInfoBase<Tr>::buildRegionsTree(DomTreeNodeT *N, RegionT *region) {
   }
 }
 
-#ifdef EXPENSIVE_CHECKS
-template <class Tr>
-bool RegionInfoBase<Tr>::VerifyRegionInfo = true;
-#else
-template <class Tr>
-bool RegionInfoBase<Tr>::VerifyRegionInfo = false;
-#endif
-
-template <class Tr>
-typename Tr::RegionT::PrintStyle RegionInfoBase<Tr>::printStyle =
-    RegionBase<Tr>::PrintNone;
-
 template <class Tr>
 void RegionInfoBase<Tr>::print(raw_ostream &OS) const {
   OS << "Region tree:\n";
