@@ -2,6 +2,7 @@
 ; RUN: not llc --mtriple=armv7-none-eabihf --mattr=-fpregs < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EABIHF --implicit-check-not=error:
 ; RUN: not llc --mtriple=thumbv6-none-eabihf --mcpu=arm1176jzf-s < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EABIHF --implicit-check-not=error:
 ; RUN: not llc --mtriple=armv7-none-eabihf --mattr=+soft-float < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EABIHF --implicit-check-not=error:
+; RUN: not llc --mtriple=armv7-none-eabi --mattr=+soft-float < %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 ; EABIHF: error: <unknown>:0:0: in function default_pcs void (): calling convention is hard-float, but floating-point registers are unavailable
 define void @default_pcs() {
@@ -21,6 +22,17 @@ define void @variadic(...) {
   ret void
 }
 
+; fastcc and cxx_fast_tlscc only use the hard-float calling convention when
+; FP registers are usable, so they are never diagnosed here, including when
+; FP registers exist but +soft-float is used.
+define fastcc void @fast_pcs() {
+  ret void
+}
+
+define cxx_fast_tlscc void @fast_tls_pcs() {
+  ret void
+}
+
 ; CHECK: error: {{.*}} in function soft_to_hard {{.*}}: 'soft_to_hard' calls 'hard_callee', which expects a hard-float calling convention, but floating-point registers are unavailable
 ; CHECK: error: {{.*}} 'soft_to_hard' calls 'hard_callee2', which expects a hard-float calling convention, but floating-point registers are unavailable
 define arm_aapcscc void @soft_to_hard() {
@@ -35,6 +47,14 @@ define arm_aapcscc void @soft_to_default_hard() {
   ret void
 }
 
+define arm_aapcscc void @soft_to_fast() {
+  call fastcc void @fast_callee()
+  call cxx_fast_tlscc void @fast_tls_callee()
+  ret void
+}
+
 declare arm_aapcs_vfpcc void @hard_callee()
 declare arm_aapcs_vfpcc void @hard_callee2()
 declare void @default_callee()
+declare fastcc void @fast_callee()
+declare cxx_fast_tlscc void @fast_tls_callee()
