@@ -20,22 +20,22 @@ class Encodekey<bits<8> opcode, string m>
 
 multiclass Aesencdec<string suffix> {
  def AESENC128KL#suffix : I<0xDC, MRMSrcMem, (outs VR128:$dst),
-                            (ins VR128:$src1, opaquemem:$src2),
+                            (ins VR128:$src1, opaquemem_norex2:$src2),
                             "aesenc128kl\t{$src2, $src1|$src1, $src2}",
                             [(set VR128:$dst, EFLAGS, (X86aesenc128kl VR128:$src1, addr:$src2))]>,
                           NoCD8, XS;
  def AESDEC128KL#suffix : I<0xDD, MRMSrcMem, (outs VR128:$dst),
-                            (ins VR128:$src1, opaquemem:$src2),
+                            (ins VR128:$src1, opaquemem_norex2:$src2),
                             "aesdec128kl\t{$src2, $src1|$src1, $src2}",
                             [(set VR128:$dst, EFLAGS, (X86aesdec128kl VR128:$src1, addr:$src2))]>,
                           NoCD8, XS;
  def AESENC256KL#suffix : I<0xDE, MRMSrcMem, (outs VR128:$dst),
-                            (ins VR128:$src1, opaquemem:$src2),
+                            (ins VR128:$src1, opaquemem_norex2:$src2),
                             "aesenc256kl\t{$src2, $src1|$src1, $src2}",
                             [(set VR128:$dst, EFLAGS, (X86aesenc256kl VR128:$src1, addr:$src2))]>,
                           NoCD8, XS;
  def AESDEC256KL#suffix : I<0xDF, MRMSrcMem, (outs VR128:$dst),
-                            (ins VR128:$src1, opaquemem:$src2),
+                            (ins VR128:$src1, opaquemem_norex2:$src2),
                             "aesdec256kl\t{$src2, $src1|$src1, $src2}",
                             [(set VR128:$dst, EFLAGS, (X86aesdec256kl VR128:$src1, addr:$src2))]>,
                           NoCD8, XS;
@@ -61,10 +61,10 @@ let SchedRW = [WriteSystem] in {
 } // SchedRW
 
 multiclass Aesencdecwide<string suffix> {
-  def AESENCWIDE128KL#suffix : I<0xD8, MRM0m, (outs), (ins opaquemem:$src), "aesencwide128kl\t$src", []>, NoCD8, XS;
-  def AESDECWIDE128KL#suffix : I<0xD8, MRM1m, (outs), (ins opaquemem:$src), "aesdecwide128kl\t$src", []>, NoCD8, XS;
-  def AESENCWIDE256KL#suffix : I<0xD8, MRM2m, (outs), (ins opaquemem:$src), "aesencwide256kl\t$src", []>, NoCD8, XS;
-  def AESDECWIDE256KL#suffix : I<0xD8, MRM3m, (outs), (ins opaquemem:$src), "aesdecwide256kl\t$src", []>, NoCD8, XS;
+  def AESENCWIDE128KL#suffix : I<0xD8, MRM0m, (outs), (ins opaquemem_norex2:$src), "aesencwide128kl\t$src", []>, NoCD8, XS;
+  def AESDECWIDE128KL#suffix : I<0xD8, MRM1m, (outs), (ins opaquemem_norex2:$src), "aesdecwide128kl\t$src", []>, NoCD8, XS;
+  def AESENCWIDE256KL#suffix : I<0xD8, MRM2m, (outs), (ins opaquemem_norex2:$src), "aesencwide256kl\t$src", []>, NoCD8, XS;
+  def AESDECWIDE256KL#suffix : I<0xD8, MRM3m, (outs), (ins opaquemem_norex2:$src), "aesdecwide256kl\t$src", []>, NoCD8, XS;
 }
 
 let SchedRW = [WriteSystem], Uses = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
