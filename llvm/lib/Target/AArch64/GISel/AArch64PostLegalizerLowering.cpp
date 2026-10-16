@@ -928,10 +928,12 @@ void applyBuildVectorToHalfDup(MachineInstr &MI,
   B.setInstrAndDebugLoc(MI);
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   LLT HalfTy = Ty.divide(2);
-  auto D1 = Srcs.first ? B.buildInstr(AArch64::G_DUP, {HalfTy}, {Srcs.first})
-                       : B.buildUndef(HalfTy);
-  auto D2 = Srcs.second ? B.buildInstr(AArch64::G_DUP, {HalfTy}, {Srcs.second})
-                        : B.buildUndef(HalfTy);
+  auto D1 = Srcs.first
+                ? B.buildInstr(AArch64::G_SPLAT_VECTOR, {HalfTy}, {Srcs.first})
+                : B.buildUndef(HalfTy);
+  auto D2 = Srcs.second
+                ? B.buildInstr(AArch64::G_SPLAT_VECTOR, {HalfTy}, {Srcs.second})
+                : B.buildUndef(HalfTy);
   B.buildConcatVectors(MI.getOperand(0), {D1.getReg(0), D2.getReg(0)});
   MI.eraseFromParent();
 }
