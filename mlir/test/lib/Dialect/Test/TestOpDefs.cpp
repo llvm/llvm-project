@@ -237,6 +237,22 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 //===----------------------------------------------------------------------===//
+// TestOpFoldUnmaterializable
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestOpFoldUnmaterializable::fold(FoldAdaptor adaptor,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  // The unmaterializable slot comes last, so that the rollback sees both a
+  // materialized constant and an existing value.
+  Builder b(getContext());
+  results.push_back(b.getI32IntegerAttr(42));
+  results.push_back(getOperand());
+  results.push_back(b.getStringAttr("unmaterializable"));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpInPlaceFold
 //===----------------------------------------------------------------------===//
 
