@@ -1687,6 +1687,22 @@ bool InductionDescriptor::isInductionPHI(
   if (PhiTy->isIntegerTy()) {
     BinaryOperator *BOp =
         dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Latch));
+    // Do not treat a loop-variant update as a regular induction. Scalar
+    // Evolution can derive an affine recurrence from a condition that is
+    // guaranteed true on backedges, but the update can differ on the exiting
+    // iteration. The vectorizer's induction recipe assumes the same step for
+    // every vector lane and can therefore compute an incorrect live-out.
+    if (BOp && (BOp->getOpcode() == Instruction::Add ||
+                BOp->getOpcode() == Instruction::Sub)) {
+      Value *StepValue = nullptr;
+      if (BOp->getOperand(0) == Phi)
+        StepValue = BOp->getOperand(1);
+      else if (BOp->getOpcode() == Instruction::Add &&
+               BOp->getOperand(1) == Phi)
+        StepValue = BOp->getOperand(0);
+      if (!StepValue || !TheLoop->isLoopInvariant(StepValue))
+        return false;
+    }
     D = InductionDescriptor(StartValue, IK_IntInduction, Step, BOp,
                             CastsToIgnore, Preds);
     return true;
