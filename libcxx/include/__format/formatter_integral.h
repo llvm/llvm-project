@@ -16,12 +16,13 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_error.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__locale_dir/num.h>
 #include <__memory/pointer_traits.h>
 #include <__system_error/errc.h>
 #include <__type_traits/make_unsigned.h>
@@ -33,7 +34,7 @@
 #include <string_view>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
+#  include <__locale_dir/locale.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

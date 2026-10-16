@@ -865,6 +865,27 @@ ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C,
                                     Selector(), QualType(), nullptr, nullptr);
 }
 
+void ObjCMethodDecl::getNameForDiagnostic(raw_ostream &OS,
+                                          const PrintingPolicy &Policy,
+                                          bool Qualified) const {
+  if (!Qualified) {
+    printName(OS, Policy);
+    return;
+  }
+
+  OS << (isInstanceMethod() ? '-' : '+');
+  OS << '[';
+  if (const auto *ID = getClassInterface()) {
+    OS << ID->getName();
+  } else if (const auto *PD = dyn_cast<ObjCProtocolDecl>(getDeclContext())) {
+    OS << PD->getName();
+  } else {
+    assert(false && "Context should be set for ObjCMethodDecl");
+    OS << "<Unknown>";
+  }
+  OS << ' ' << getSelector() << ']';
+}
+
 bool ObjCMethodDecl::isDirectMethod() const {
   return hasAttr<ObjCDirectAttr>() &&
          !getASTContext().getLangOpts().ObjCDisableDirectMethodsForTesting;
@@ -2363,6 +2384,36 @@ ObjCPropertyDecl *ObjCPropertyDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) ObjCPropertyDecl(nullptr, SourceLocation(), nullptr,
                                       SourceLocation(), SourceLocation(),
                                       QualType(), nullptr, None);
+}
+
+void ObjCPropertyDecl::getNameForDiagnostic(raw_ostream &OS,
+                                            const PrintingPolicy &Policy,
+                                            bool Qualified) const {
+  if (!Qualified) {
+    printName(OS, Policy);
+    return;
+  }
+
+  OS << (isInstanceProperty() ? '-' : '+');
+  OS << '[';
+  const ObjCContainerDecl *Parent = nullptr;
+  if (const auto *MD = getGetterMethodDecl()) {
+    Parent = MD->getClassInterface();
+    if (!Parent)
+      Parent = dyn_cast<ObjCProtocolDecl>(MD->getDeclContext());
+  }
+  if (!Parent) {
+    Parent = dyn_cast<ObjCContainerDecl>(getDeclContext());
+  }
+
+  if (Parent) {
+    OS << Parent->getName();
+  } else {
+    assert(false && "Parent should not be null");
+    OS << "<Unknown>";
+  }
+
+  OS << ' ' << getName() << ']';
 }
 
 QualType ObjCPropertyDecl::getUsageType(QualType objectType) const {

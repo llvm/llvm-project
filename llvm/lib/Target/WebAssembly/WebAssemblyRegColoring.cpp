@@ -46,8 +46,6 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

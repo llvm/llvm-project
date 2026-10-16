@@ -8,8 +8,8 @@
 spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNonUniformBallot, GroupNonUniformArithmetic, GroupNonUniformClustered, GroupNonUniformShuffle, GroupNonUniformShuffleRelative, GroupNonUniformVote, GroupNonUniformQuad], []> {
   // CHECK-LABEL: @group_non_uniform_ballot
   spirv.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> "None" {
-    // CHECK: %{{.*}} = spirv.GroupNonUniformBallot <Workgroup> %{{.*}}: vector<4xi32>
-  %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+    // CHECK: %{{.*}} = spirv.GroupNonUniformBallot <Subgroup> %{{.*}}: vector<4xi32>
+  %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
     spirv.ReturnValue %0: vector<4xi32>
   }
 
@@ -30,86 +30,86 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, Linkage, GroupNo
 
   // CHECK-LABEL: @group_non_uniform_elect
   spirv.func @group_non_uniform_elect() -> i1 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformElect <Workgroup> : i1
-    %0 = spirv.GroupNonUniformElect <Workgroup> : i1
+    // CHECK: %{{.+}} = spirv.GroupNonUniformElect <Subgroup> : i1
+    %0 = spirv.GroupNonUniformElect <Subgroup> : i1
     spirv.ReturnValue %0: i1
   }
 
   // CHECK-LABEL: @group_non_uniform_fadd_reduce
   spirv.func @group_non_uniform_fadd_reduce(%val: f32) -> f32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %{{.+}} : f32 -> f32
-    %0 = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %val : f32 -> f32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformFAdd <Subgroup> <Reduce> %{{.+}} : f32 -> f32
+    %0 = spirv.GroupNonUniformFAdd <Subgroup> <Reduce> %val : f32 -> f32
     spirv.ReturnValue %0: f32
   }
 
   // CHECK-LABEL: @group_non_uniform_fmax_reduce
   spirv.func @group_non_uniform_fmax_reduce(%val: f32) -> f32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %{{.+}} : f32 -> f32
-    %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %val : f32 -> f32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformFMax <Subgroup> <Reduce> %{{.+}} : f32 -> f32
+    %0 = spirv.GroupNonUniformFMax <Subgroup> <Reduce> %val : f32 -> f32
     spirv.ReturnValue %0: f32
   }
 
   // CHECK-LABEL: @group_non_uniform_fmin_reduce
   spirv.func @group_non_uniform_fmin_reduce(%val: f32) -> f32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformFMin <Workgroup> <Reduce> %{{.+}} : f32 -> f32
-    %0 = spirv.GroupNonUniformFMin <Workgroup> <Reduce> %val : f32 -> f32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformFMin <Subgroup> <Reduce> %{{.+}} : f32 -> f32
+    %0 = spirv.GroupNonUniformFMin <Subgroup> <Reduce> %val : f32 -> f32
     spirv.ReturnValue %0: f32
   }
 
   // CHECK-LABEL: @group_non_uniform_fmul_reduce
   spirv.func @group_non_uniform_fmul_reduce(%val: f32) -> f32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %{{.+}} : f32 -> f32
-    %0 = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %val : f32 -> f32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformFMul <Subgroup> <Reduce> %{{.+}} : f32 -> f32
+    %0 = spirv.GroupNonUniformFMul <Subgroup> <Reduce> %val : f32 -> f32
     spirv.ReturnValue %0: f32
   }
 
   // CHECK-LABEL: @group_non_uniform_iadd_reduce
   spirv.func @group_non_uniform_iadd_reduce(%val: i32) -> i32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformIAdd <Workgroup> <Reduce> %{{.+}} : i32 -> i32
-    %0 = spirv.GroupNonUniformIAdd <Workgroup> <Reduce> %val : i32 -> i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %{{.+}} : i32 -> i32
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 
   // CHECK-LABEL: @group_non_uniform_iadd_clustered_reduce
   spirv.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vector<2xi32> "None" {
     %four = spirv.Constant 4 : i32
-    // CHECK: %{{.+}} = spirv.GroupNonUniformIAdd <Workgroup> <ClusteredReduce> %{{.+}} cluster_size(%{{.+}}) : vector<2xi32>, i32 -> vector<2xi32>
-    %0 = spirv.GroupNonUniformIAdd <Workgroup> <ClusteredReduce> %val cluster_size(%four) : vector<2xi32>, i32 -> vector<2xi32>
+    // CHECK: %{{.+}} = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %{{.+}} cluster_size(%{{.+}}) : vector<2xi32>, i32 -> vector<2xi32>
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %val cluster_size(%four) : vector<2xi32>, i32 -> vector<2xi32>
     spirv.ReturnValue %0: vector<2xi32>
   }
 
   // CHECK-LABEL: @group_non_uniform_imul_reduce
   spirv.func @group_non_uniform_imul_reduce(%val: i32) -> i32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformIMul <Workgroup> <Reduce> %{{.+}} : i32 -> i32
-    %0 = spirv.GroupNonUniformIMul <Workgroup> <Reduce> %val : i32 -> i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformIMul <Subgroup> <Reduce> %{{.+}} : i32 -> i32
+    %0 = spirv.GroupNonUniformIMul <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 
   // CHECK-LABEL: @group_non_uniform_smax_reduce
   spirv.func @group_non_uniform_smax_reduce(%val: i32) -> i32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformSMax <Workgroup> <Reduce> %{{.+}} : i32 -> i32
-    %0 = spirv.GroupNonUniformSMax <Workgroup> <Reduce> %val : i32 -> i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformSMax <Subgroup> <Reduce> %{{.+}} : i32 -> i32
+    %0 = spirv.GroupNonUniformSMax <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 
   // CHECK-LABEL: @group_non_uniform_smin_reduce
   spirv.func @group_non_uniform_smin_reduce(%val: i32) -> i32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformSMin <Workgroup> <Reduce> %{{.+}} : i32 -> i32
-    %0 = spirv.GroupNonUniformSMin <Workgroup> <Reduce> %val : i32 -> i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformSMin <Subgroup> <Reduce> %{{.+}} : i32 -> i32
+    %0 = spirv.GroupNonUniformSMin <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 
   // CHECK-LABEL: @group_non_uniform_umax_reduce
   spirv.func @group_non_uniform_umax_reduce(%val: i32) -> i32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformUMax <Workgroup> <Reduce> %{{.+}} : i32 -> i32
-    %0 = spirv.GroupNonUniformUMax <Workgroup> <Reduce> %val : i32 -> i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformUMax <Subgroup> <Reduce> %{{.+}} : i32 -> i32
+    %0 = spirv.GroupNonUniformUMax <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 
   // CHECK-LABEL: @group_non_uniform_umin_reduce
   spirv.func @group_non_uniform_umin_reduce(%val: i32) -> i32 "None" {
-    // CHECK: %{{.+}} = spirv.GroupNonUniformUMin <Workgroup> <Reduce> %{{.+}} : i32 -> i32
-    %0 = spirv.GroupNonUniformUMin <Workgroup> <Reduce> %val : i32 -> i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformUMin <Subgroup> <Reduce> %{{.+}} : i32 -> i32
+    %0 = spirv.GroupNonUniformUMin <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 

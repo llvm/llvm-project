@@ -36,10 +36,12 @@ GoldPlugin
 Remarks
 SourceLevelDebugging
 HowToUpdateDebugInfo
+HowToUpdateUnicodeTables
 Instrumentor
 InstrRefDebugInfo
 RemoveDIsDebugInfo
 KeyInstructionsDebugInfo
+DynamicDebugging
 InstrProfileFormat
 InstCombineContributorGuide
 WritingAnLLVMBackend
@@ -217,6 +219,11 @@ yaml2obj
   This document specifies how to correctly update debug info in various kinds
   of code transformations.
 
+- {doc}`How to Update Unicode Tables <HowToUpdateUnicodeTables>`
+
+  How to regenerate LLVM and Clang Unicode character tables from the Unicode
+  Character Database.
+
 - {doc}`InstrRefDebugInfo`
 
   This document explains how LLVM uses value tracking, or instruction
@@ -232,6 +239,11 @@ yaml2obj
 
   This document explains how the debug info feature Key Instructions is
   implemented in LLVM.
+
+- {doc}`DynamicDebugging`
+
+  This document explains how the dynamic debugging feature is implemented in
+  LLVM.
 
 - {doc}`InstrProfileFormat`
 

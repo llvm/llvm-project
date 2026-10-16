@@ -4,7 +4,7 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i, !s64i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
 
 #indirect_return = {
   return = { kind = "indirect", indirect_align = 8 },
@@ -90,7 +90,7 @@ module attributes {
   // CHECK:        cir.return %{{.*}} : !s32i
 
   // A call whose result has more than one use cannot reuse a destination, so a
-  // fresh sret slot is allocated and the result is loaded back out of it.
+  // fresh sret slot is allocated and each store of the result copies out of it.
   cir.func @caller_multi() -> !s32i
       attributes { test_classify = #caller_cls } {
     %a = cir.alloca "a" align(8) : !cir.ptr<!rec_Big>
@@ -109,9 +109,8 @@ module attributes {
   // CHECK:        cir.call @returns_big(%[[SLOT]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     -> ()
-  // CHECK:        %[[LD:.*]] = cir.load %[[SLOT]] : !cir.ptr<!rec_Big>, !rec_Big
-  // CHECK:        cir.store %[[LD]], %[[A]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[LD]], %[[B]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[SLOT]] align(8) to %[[A]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[SLOT]] align(8) to %[[B]] align(8) : !cir.ptr<!rec_Big>
 
   // sret composes with an Extend argument: the sret slot is prepended and the
   // s8 argument is still extended to s32 with llvm.signext on both the callee

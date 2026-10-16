@@ -56,6 +56,11 @@ struct SIModeRegisterDefaults {
            FP64FP16Denormals == Other.FP64FP16Denormals;
   }
 
+  /// Get the denormal handling described by this mode.
+  DenormalFPEnv getDenormalFPEnv() const {
+    return DenormalFPEnv(FP64FP16Denormals, FP32Denormals);
+  }
+
   /// Get the encoding value for the FP_DENORM bits of the mode register for the
   /// FP32 denormal mode.
   uint32_t fpDenormModeSPValue() const {

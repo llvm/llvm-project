@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/Support/Compiler.h"
@@ -201,6 +202,11 @@ public:
                           bool EndStatementAtEOF = true);
 
   const MCAsmInfo &getMAI() const { return MAI; }
+
+  static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
+    return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
+           (AllowAt && C == '@') || (AllowHash && C == '#');
+  }
 
 private:
   bool isAtStartOfComment(const char *Ptr);

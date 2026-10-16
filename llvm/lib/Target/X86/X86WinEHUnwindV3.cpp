@@ -13,13 +13,15 @@
 ///   2. Check V3 capacity limits (<=31 prolog/epilog ops, <=7 epilogs).
 ///   3. Insert sub-fragment split points if limits are exceeded.
 ///
-/// The unwind version is set module-wide, not per-function.
+/// The unwind version is normally module-wide. When only an individual function
+/// needs V3 (see requireWinX64UnwindV3()), this pass stamps each of its frames
+/// -- the entry block and every funclet -- with a per-function
+/// .seh_unwindversion 3, leaving the rest of the module on its default version.
 ///
 /// See https://learn.microsoft.com/en-us/cpp/build/x64-unwind-information-v3
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,7 +33,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -47,7 +48,6 @@ STATISTIC(SubFragmentSplits,
 static constexpr unsigned MaxV3PrologOps = 31;
 static constexpr unsigned MaxV3Epilogs = 7;
 static constexpr unsigned MaxV3EpilogOps = 31;
-static constexpr unsigned EpilogDistanceThreshold = 32767;
 
 /// Approximate byte distance between an epilog and its fragment tail beyond
 /// which the funclet is split into a new chained sub-fragment. The V3
@@ -56,12 +56,7 @@ static constexpr unsigned EpilogDistanceThreshold = 32767;
 /// exact byte offsets aren't known until MC layout, so (like the V2 pass) an
 /// approximate byte count is used as a proxy — instructions are charged
 /// ApproxBytesPerInstr each and alignment padding is added.
-static cl::opt<unsigned> ApproxBytesPerInstr(
-    "x86-wineh-unwindv3-instr-avg-size", cl::Hidden,
-    cl::desc(
-        "Average size of an instruction. This value is used in determining "
-        "split points for chained unwinder info"),
-    cl::init(7));
+static constexpr unsigned EpilogDistanceThreshold = 32767;
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
 /// instructions and clear the WinCFI flag so the AsmPrinter doesn't try to
@@ -158,6 +153,8 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
   bool InEpilog = false;
   bool SeenProlog = false;
   unsigned CurrentEpilogOpCount = 0;
+  const unsigned ApproxBytesPerInstr =
+      MF.getSubtarget<X86Subtarget>().getCLOpts().wineh_unwindv3_instr_avg_size;
 
   for (; Iter != MF.end(); ++Iter) {
     MachineBasicBlock &MBB = *Iter;
@@ -225,30 +222,21 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
 }
 
 bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
-  WinX64EHUnwindMode Mode =
-      MF.getFunction().getParent()->getWinX64EHUnwindMode();
-
   Function &F = MF.getFunction();
   LLVMContext &Ctx = F.getContext();
 
-  // EGPR (R16-R31) requires V3 unwind info because V1/V2 cannot encode
-  // registers beyond R15. Only enforce this for functions that actually
-  // emit SEH unwind info — `nounwind` functions and targets that don't
-  // require unwind tables (e.g. cross-compilation host defaults) can use
-  // EGPR with any unwind mode since no SEH metadata is generated.
-  if (Mode != WinX64EHUnwindMode::V3) {
-    if (!F.needsUnwindTableEntry())
-      return false;
-    const auto &STI = MF.getSubtarget<X86Subtarget>();
-    if (STI.hasEGPR()) {
-      Ctx.diagnose(DiagnosticInfoUnsupported(
-          F, "EGPR (R16-R31) requires V3 unwind info on Windows x64"));
-      // Stripping the SEH pseudos modifies the function, so report a change.
-      suppressWinCFI(MF);
-      return true;
-    }
+  if (!requireWinX64UnwindV3(MF))
     return false;
-  }
+
+  // Emit a per-function .seh_unwindversion 3 only when V3 is enabled for this
+  // function alone: in module-wide V3 the AsmPrinter emits it once, so stamping
+  // here would duplicate it. The gate also requires WinCFI -- without a
+  // .seh_proc there is nothing to version, and a lone SEH pseudo would trip an
+  // AsmPrinter assertion. The marker is per .seh_proc, hence stamped on each
+  // funclet in the loop below.
+  bool PerFunctionV3 =
+      MF.hasWinCFI() && MF.getFunction().getParent()->getWinX64EHUnwindMode() !=
+                            WinX64EHUnwindMode::V3;
 
   bool Changed = false;
   unsigned ApproxBytePos = 0;
@@ -259,6 +247,21 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   // Process each funclet (and the main function body) independently.
   // Each funclet gets its own UNWIND_INFO, so V3 limits apply per funclet.
   while (Iter != MF.end()) {
+    // Iter points at the first block of a frame -- the entry frame on the
+    // first iteration, an EH funclet on later ones. Each frame is its own
+    // .seh_proc, so stamp the version on each here before analyzeFunclet
+    // advances past it.
+    if (PerFunctionV3) {
+      const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+      MachineBasicBlock &FuncletEntry = *Iter;
+      BuildMI(FuncletEntry, FuncletEntry.begin(),
+              FuncletEntry.findDebugLoc(FuncletEntry.begin()),
+              TII->get(X86::SEH_UnwindVersion))
+          .addImm(3)
+          .setMIFlag(MachineInstr::FrameSetup);
+      Changed = true;
+    }
+
     FuncletInfo Info = analyzeFunclet(MF, Iter, ApproxBytePos);
 
     if (Info.PrologOpCount > MaxV3PrologOps) {
@@ -301,7 +304,8 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     auto SplitAfter = [&](const EpilogSplitPoint &Epilog) {
       MachineBasicBlock *MBB = Epilog.BeginEpilog->getParent();
       BuildMI(*MBB, MBB->begin(), Epilog.BeginEpilog->getDebugLoc(),
-              TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+              TII->get(X86::SEH_SplitChainedAtEndOfBlock))
+          .setMIFlag(MachineInstr::FrameDestroy);
       SubFragmentSplits++;
       Changed = true;
     };

@@ -13,19 +13,19 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v:_(p0) = COPY $x0
-    ; CHECK-NEXT: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %load(s64), [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: %load:_(i64) = G_SEXTLOAD %v(p0) :: (load (i32))
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %load(i64), [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
-    %trunc:_(s32) = G_TRUNC %load(s64)
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cmp:_(s1) = G_ICMP intpred(ne), %trunc(s32), %zero
-    %5:_(s32) = G_ANYEXT %cmp
-    $w0 = COPY %5(s32)
+    %load:_(i64) = G_SEXTLOAD %v:_(p0) :: (load (i32))
+    %trunc:_(i32) = G_TRUNC %load(i64)
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cmp:_(i1) = G_ICMP intpred(ne), %trunc(i32), %zero
+    %5:_(i32) = G_ANYEXT %cmp
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -39,19 +39,19 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v:_(p0) = COPY $x0
-    ; CHECK-NEXT: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %load(s64), [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: %load:_(i64) = G_SEXTLOAD %v(p0) :: (load (i32))
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %load(i64), [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
-    %trunc:_(s32) = G_TRUNC %load(s64)
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cmp:_(s1) = G_ICMP intpred(eq), %trunc(s32), %zero
-    %5:_(s32) = G_ANYEXT %cmp
-    $w0 = COPY %5(s32)
+    %load:_(i64) = G_SEXTLOAD %v:_(p0) :: (load (i32))
+    %trunc:_(i32) = G_TRUNC %load(i64)
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cmp:_(i1) = G_ICMP intpred(eq), %trunc(i32), %zero
+    %5:_(i32) = G_ANYEXT %cmp
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -65,20 +65,20 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v:_(p0) = COPY $x0
-    ; CHECK-NEXT: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
-    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC %load(s64)
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(slt), %trunc(s32), %zero
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: %load:_(i64) = G_SEXTLOAD %v(p0) :: (load (i32))
+    ; CHECK-NEXT: %trunc:_(i32) = G_TRUNC %load(i64)
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(slt), %trunc(i32), %zero
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
-    %trunc:_(s32) = G_TRUNC %load(s64)
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cmp:_(s1) = G_ICMP intpred(slt), %trunc(s32), %zero
-    %5:_(s32) = G_ANYEXT %cmp
-    $w0 = COPY %5(s32)
+    %load:_(i64) = G_SEXTLOAD %v:_(p0) :: (load (i32))
+    %trunc:_(i32) = G_TRUNC %load(i64)
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cmp:_(i1) = G_ICMP intpred(slt), %trunc(i32), %zero
+    %5:_(i32) = G_ANYEXT %cmp
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -92,20 +92,20 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %v:_(p0) = COPY $x0
-    ; CHECK-NEXT: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
-    ; CHECK-NEXT: %trunc:_(s16) = G_TRUNC %load(s64)
-    ; CHECK-NEXT: %zero:_(s16) = G_CONSTANT i16 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %trunc(s16), %zero
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: %load:_(i64) = G_SEXTLOAD %v(p0) :: (load (i32))
+    ; CHECK-NEXT: %trunc:_(i16) = G_TRUNC %load(i64)
+    ; CHECK-NEXT: %zero:_(i16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %trunc(i16), %zero
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
-    %trunc:_(s16) = G_TRUNC %load(s64)
-    %zero:_(s16) = G_CONSTANT i16 0
-    %cmp:_(s1) = G_ICMP intpred(ne), %trunc(s16), %zero
-    %5:_(s32) = G_ANYEXT %cmp
-    $w0 = COPY %5(s32)
+    %load:_(i64) = G_SEXTLOAD %v:_(p0) :: (load (i32))
+    %trunc:_(i16) = G_TRUNC %load(i64)
+    %zero:_(i16) = G_CONSTANT i16 0
+    %cmp:_(i1) = G_ICMP intpred(ne), %trunc(i16), %zero
+    %5:_(i32) = G_ANYEXT %cmp
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 ...
 

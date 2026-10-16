@@ -1260,8 +1260,7 @@ define i1 @iszero_d(double %x) {
 ; X64-LABEL: iszero_d:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    shlq %rax
-; X64-NEXT:    testq %rax, %rax
+; X64-NEXT:    addq %rax, %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 entry:
@@ -1397,8 +1396,7 @@ define i1 @iszero_d_strictfp(double %x) strictfp {
 ; X64-LABEL: iszero_d_strictfp:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    shlq %rax
-; X64-NEXT:    testq %rax, %rax
+; X64-NEXT:    addq %rax, %rax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 entry:

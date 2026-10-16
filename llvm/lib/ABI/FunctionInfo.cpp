@@ -7,24 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/FunctionInfo.h"
-#include <optional>
 
 using namespace llvm;
 using namespace llvm::abi;
 
 std::unique_ptr<FunctionInfo>
 FunctionInfo::create(CallingConv::ID CC, const Type *ReturnType,
-                     ArrayRef<const Type *> ArgTypes,
-                     std::optional<unsigned> NumRequired) {
+                     ArrayRef<const Type *> ArgTypes, RequiredArgs Required) {
 
-  assert(!NumRequired || *NumRequired <= ArgTypes.size());
+  assert((!Required.allowsOptionalArgs() ||
+          Required.getNumRequiredArgs() <= ArgTypes.size()) &&
+         "declared parameters cannot outnumber the arguments");
 
   void *Buffer = operator new(totalSizeToAlloc<ArgEntry>(ArgTypes.size()));
 
   // FunctionInfo overloads operator delete, so we can use std::unique_ptr
   // without worrying about sized deallocation of trailing objects.
   std::unique_ptr<FunctionInfo> FI(
-      new (Buffer) FunctionInfo(CC, ReturnType, ArgTypes.size(), NumRequired));
+      new (Buffer) FunctionInfo(CC, ReturnType, ArgTypes.size(), Required));
 
   ArgEntry *Args = FI->getTrailingObjects();
   for (unsigned I = 0; I < ArgTypes.size(); ++I)

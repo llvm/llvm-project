@@ -421,10 +421,13 @@ bool generateDsymCompanion(
 
   bool HasSymtab = false;
 
-  // Check LC_SYMTAB and get LC_UUID and LC_BUILD_VERSION.
+  // Check LC_SYMTAB and get LC_UUID, LC_BUILD_VERSION, LC_TARGET_TRIPLE.
   MachO::uuid_command UUIDCmd;
   SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
+  MachO::target_triple_command TargetTripleCmd;
+  const char *TargetTriple = nullptr;
   memset(&UUIDCmd, 0, sizeof(UUIDCmd));
+  memset(&TargetTripleCmd, 0, sizeof(TargetTripleCmd));
   for (auto &LCI : InputBinary.load_commands()) {
     switch (LCI.C.cmd) {
     case MachO::LC_UUID:
@@ -445,6 +448,14 @@ bool generateDsymCompanion(
       BuildVersionCmd.push_back(Cmd);
       break;
     }
+    case MachO::LC_TARGET_TRIPLE:
+      if (TargetTripleCmd.cmd)
+        return error("Binary contains more than one Target Triple");
+      TargetTripleCmd = InputBinary.getTargetTripleLoadCommand(LCI);
+      TargetTriple = LCI.Ptr + TargetTripleCmd.triple;
+      ++NumLoadCommands;
+      LoadCommandSize += TargetTripleCmd.cmdsize;
+      break;
     case MachO::LC_SYMTAB:
       HasSymtab = true;
       break;
@@ -550,6 +561,13 @@ bool generateDsymCompanion(
     Writer.W.write<uint32_t>(Cmd.minos);
     Writer.W.write<uint32_t>(Cmd.sdk);
     Writer.W.write<uint32_t>(Cmd.ntools);
+  }
+  if (TargetTripleCmd.cmd != 0) {
+    Writer.W.write<uint32_t>(TargetTripleCmd.cmd);
+    Writer.W.write<uint32_t>(TargetTripleCmd.cmdsize);
+    Writer.W.write<uint32_t>(TargetTripleCmd.triple);
+    OutFile.write(TargetTriple,
+                  TargetTripleCmd.cmdsize - TargetTripleCmd.triple);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");

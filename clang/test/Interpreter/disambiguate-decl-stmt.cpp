@@ -69,6 +69,12 @@ PrivateUsingFriend::T PrivateUsingFriendMember::f() { return 0; }
 class PrivateUsingFriendVar { static PrivateUsingFriend::T i; };
 PrivateUsingFriend::T PrivateUsingFriendVar::i = 42;
 
+// Out-of-line members of a private nested class
+class PrivateNested { struct Nested { Nested(); ~Nested(); int f(); }; };
+PrivateNested::Nested::Nested() {}
+PrivateNested::Nested::~Nested() {}
+int PrivateNested::Nested::f() { return 0; }
+
 // The following should still diagnose (inspired by PR13642)
 class PR13642 { class Inner { public: static int i; }; };
 // expected-note@-1 {{implicitly declared private here}}

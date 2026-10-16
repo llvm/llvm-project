@@ -259,6 +259,12 @@ public:
   /// Called on well-formed '#pragma omp requires'.
   DeclGroupPtrTy ActOnOpenMPRequiresDirective(SourceLocation Loc,
                                               ArrayRef<OMPClause *> ClauseList);
+
+  /// Registers a 'requires' directive deserialized from an AST file.
+  void addRequiresDecl(OMPRequiresDecl *D);
+
+  /// The 'requires' directives seen so far in this translation unit.
+  ArrayRef<const OMPRequiresDecl *> getRequiresDecls() const;
   /// Check restrictions on Requires directive
   OMPRequiresDecl *CheckOMPRequiresDecl(SourceLocation Loc,
                                         ArrayRef<OMPClause *> Clauses);
@@ -470,6 +476,12 @@ public:
                                              Stmt *AStmt,
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc);
+
+  /// Called on well-formed '#pragma omp flatten' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
+                                         Stmt *AStmt, SourceLocation StartLoc,
+                                         SourceLocation EndLoc);
 
   /// Called on well-formed '#pragma omp fuse' after parsing of its
   /// clauses and the associated statement.
@@ -898,9 +910,11 @@ public:
                                     SourceLocation EndLoc);
   /// Called on well-formed 'num_threads' clause.
   OMPClause *ActOnOpenMPNumThreadsClause(
-      OpenMPNumThreadsClauseModifier Modifier, Expr *NumThreads,
-      SourceLocation StartLoc, SourceLocation LParenLoc,
-      SourceLocation ModifierLoc, SourceLocation EndLoc);
+      ArrayRef<Expr *> VarList, OpenMPNumThreadsClauseModifier SimpleModifier,
+      SourceLocation SimpleModifierLoc,
+      OpenMPNumThreadsClauseModifier ComplexModifier, Expr *ComplexModifierExpr,
+      SourceLocation ComplexModifierLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc);
   /// Called on well-formed 'align' clause.
   OMPClause *ActOnOpenMPAlignClause(Expr *Alignment, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
@@ -936,6 +950,10 @@ public:
   OMPClause *ActOnOpenMPPartialClause(Expr *FactorExpr, SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'depth' clause.
+  OMPClause *ActOnOpenMPDepthClause(Expr *DepthExpr, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc);
   /// Called on well-formed 'collapse' clause.
   OMPClause *ActOnOpenMPCollapseClause(Expr *NumForLoops,
                                        SourceLocation StartLoc,
@@ -1012,12 +1030,12 @@ public:
                                     SourceLocation LParenLoc,
                                     SourceLocation MLoc, SourceLocation KindLoc,
                                     SourceLocation EndLoc);
-  /// Called on well-formed 'update' clause.
-  OMPClause *ActOnOpenMPUpdateClause(OpenMPDependClauseKind Kind,
-                                     SourceLocation KindLoc,
-                                     SourceLocation StartLoc,
-                                     SourceLocation LParenLoc,
-                                     SourceLocation EndLoc);
+  /// Called on well-formed 'update_depend_objects' clause.
+  OMPClause *ActOnOpenMPUpdateDependObjectsClause(OpenMPDependClauseKind Kind,
+                                                  SourceLocation KindLoc,
+                                                  SourceLocation StartLoc,
+                                                  SourceLocation LParenLoc,
+                                                  SourceLocation EndLoc);
   /// Called on well-formed 'holds' clause.
   OMPClause *ActOnOpenMPHoldsClause(Expr *E, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,

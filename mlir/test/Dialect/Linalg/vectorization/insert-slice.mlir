@@ -88,6 +88,118 @@ func.func private @insert_slice_dynamic_src_dim(%source: tensor<?x3x?x1xi32>, %s
 
 // -----
 
+func.func private @insert_slice_dynamic_src_dim_non_leading_unit_dim_dropped(
+    %source: tensor<?x4xi32>, %size: index) -> tensor<8x1x4xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<8x1x4xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<8x1x4xi32>) -> tensor<8x1x4xi32>
+  %res = tensor.insert_slice %source into %init[0, 0, 0] [%size, 1, 4] [1, 1, 1] : tensor<?x4xi32> into tensor<8x1x4xi32>
+  return %res : tensor<8x1x4xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_non_leading_unit_dim_dropped(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<8x1x4xi32> {
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<8x1x4xi32>) -> tensor<8x1x4xi32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}} : vector<8x4xi32>, tensor<8x1x4xi32>
+// CHECK:           return %[[RES]] : tensor<8x1x4xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+func.func private @insert_slice_dynamic_src_dim_leading_unit_dim_dropped(
+    %source: tensor<?x4xi32>, %size: index) -> tensor<1x8x4xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<1x8x4xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<1x8x4xi32>) -> tensor<1x8x4xi32>
+  %res = tensor.insert_slice %source into %init[0, 0, 0] [1, %size, 4] [1, 1, 1] : tensor<?x4xi32> into tensor<1x8x4xi32>
+  return %res : tensor<1x8x4xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_leading_unit_dim_dropped(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<1x8x4xi32> {
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<1x8x4xi32>) -> tensor<1x8x4xi32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}} : vector<8x4xi32>, tensor<1x8x4xi32>
+// CHECK:           return %[[RES]] : tensor<1x8x4xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+func.func private @insert_slice_dynamic_src_dim_trailing_unit_dim_dropped(
+    %source: tensor<?x4xi32>, %size: index) -> tensor<8x4x1xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<8x4x1xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<8x4x1xi32>) -> tensor<8x4x1xi32>
+  %res = tensor.insert_slice %source into %init[0, 0, 0] [%size, 4, 1] [1, 1, 1] : tensor<?x4xi32> into tensor<8x4x1xi32>
+  return %res : tensor<8x4x1xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_trailing_unit_dim_dropped(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<8x4x1xi32> {
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<8x4x1xi32>) -> tensor<8x4x1xi32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] : vector<8x4xi32>, tensor<8x4x1xi32>
+// CHECK:           return %[[RES]] : tensor<8x4x1xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+func.func private @insert_slice_dynamic_src_dim_leading_and_trailing_unit_dims_dropped(
+    %source: tensor<?x4xi32>, %size: index) -> tensor<1x8x4x1xi32> {
+  %pad = arith.constant 0 : i32
+  %empty = tensor.empty() : tensor<1x8x4x1xi32>
+  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<1x8x4x1xi32>) -> tensor<1x8x4x1xi32>
+  %res = tensor.insert_slice %source into %init[0, 0, 0, 0] [1, %size, 4, 1] [1, 1, 1, 1] : tensor<?x4xi32> into tensor<1x8x4x1xi32>
+  return %res : tensor<1x8x4x1xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_dynamic_src_dim_leading_and_trailing_unit_dims_dropped(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<1x8x4x1xi32> {
+// CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<1x8x4x1xi32>) -> tensor<1x8x4x1xi32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] : vector<8x4xi32>, tensor<1x8x4x1xi32>
+// CHECK:           return %[[RES]] : tensor<1x8x4x1xi32>
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
 // One of the _destination_ dimensions is dynamic (but _source_ dimensions are static).
 
 func.func private @insert_slice_dynamic_dest_dim(%source: tensor<?x3x?x1xi32>, %size: index) -> tensor<?x3xi32> {
@@ -174,6 +286,31 @@ func.func private @insert_slice_dynamic_source_and_dest_dim(%source: tensor<?x3x
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [8, 1] : !transform.any_op
+    transform.yield
+  }
+ }
+
+// -----
+
+// The destination is static and the insert index is a non-zero constant. The
+// vector fits in the destination, but not from offset 6: only 2 elements are
+// left, so the write needs a mask.
+
+func.func private @insert_slice_constant_non_zero_offset(
+    %source: tensor<?xi32>, %dest: tensor<8xi32>, %size: index) -> tensor<8xi32> {
+  %res = tensor.insert_slice %source into %dest[6] [%size] [1] : tensor<?xi32> into tensor<8xi32>
+  return %res : tensor<8xi32>
+}
+// CHECK-LABEL:   func.func private @insert_slice_constant_non_zero_offset(
+// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read
+// CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_2]] : vector<4xi1>
+// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]]
+
+ module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
     transform.yield
   }
  }

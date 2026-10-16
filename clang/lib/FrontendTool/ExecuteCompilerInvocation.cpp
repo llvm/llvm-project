@@ -27,6 +27,7 @@
 #include "clang/ScalableStaticAnalysis/Frontend/SourceTransformationFrontendAction.h"
 #include "clang/ScalableStaticAnalysis/Frontend/TUSummaryExtractorFrontendAction.h"
 #include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -55,10 +56,11 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 
   unsigned UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
   frontend::ActionKind Act = CI.getFrontendOpts().ProgramAction;
-  bool EmitsCIR = Act == EmitCIR;
+  bool EmitsCIR = Act == EmitCIR || Act == EmitCIRBC;
 
   if (!UseCIR && EmitsCIR)
-    llvm::report_fatal_error("-emit-cir and only valid when using -fclangir");
+    llvm::report_fatal_error(
+        "-emit-cir and -emit-cir-bc only valid when using -fclangir");
 
   switch (CI.getFrontendOpts().ProgramAction) {
   case ASTDeclList:            return std::make_unique<ASTDeclListAction>();
@@ -84,6 +86,13 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case EmitCIR:
 #if CLANG_ENABLE_CIR
     return std::make_unique<cir::EmitCIRAction>();
+#else
+    CI.getDiagnostics().Report(diag::err_fe_cir_not_built);
+    return nullptr;
+#endif
+  case EmitCIRBC:
+#if CLANG_ENABLE_CIR
+    return std::make_unique<cir::EmitCIRBCAction>();
 #else
     CI.getDiagnostics().Report(diag::err_fe_cir_not_built);
     return nullptr;
@@ -252,21 +261,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   Clang->LoadRequestedPlugins();
 
-  // Honor -mllvm.
-  //
-  // FIXME: Remove this, one day.
-  // This should happen AFTER plugins have been loaded!
-  if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
-    unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
-    Args[0] = "clang (LLVM option parsing)";
-    for (unsigned i = 0; i != NumArgs; ++i)
-      Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
-    Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr,
-                                      /*VFS=*/&Clang->getVirtualFileSystem());
-  }
+  Clang->parseLLVMArgs();
 
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!

@@ -152,3 +152,11 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
   }
   return PreservedAnalyses::all();
 }
+
+void DropUnnecessaryAssumesPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<DropUnnecessaryAssumesPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (DropDereferenceable)
+    OS << "<drop-deref>";
+}

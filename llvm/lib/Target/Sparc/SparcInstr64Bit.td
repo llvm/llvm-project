@@ -509,6 +509,11 @@ let Predicates = [HasV9, Is64Bit] in {
 
   def : Pat<(SPloadbig    ForceADDRrr:$src, i64), (LDXArr ForceADDRrr:$src, 0x80)>;
   def : Pat<(SPloadlittle ForceADDRrr:$src, i64), (LDXArr ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x88)>;
+  def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x88)>;
   def : Pat<(SPstorebig    i64:$val, ForceADDRrr:$dst, i64), (STXArr ForceADDRrr:$dst, $val, 0x80)>;
   def : Pat<(SPstorelittle i64:$val, ForceADDRrr:$dst, i64), (STXArr ForceADDRrr:$dst, $val, 0x88)>;
 }

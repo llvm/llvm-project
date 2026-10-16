@@ -24,7 +24,7 @@ namespace clang {
 /// Constants for TokenKinds.def
 enum TokenKey : unsigned {
 #define EMIT_TOKENKEY
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
 };
 
 namespace tok {

@@ -33,8 +33,8 @@ extern "C" int __cdecl atexit(void(__cdecl *f)(void));
 extern "C" void __cdecl _initterm(void *a, void *b);
 
 namespace {
-__declspec(allocate(".CRT$XTW")) void *before_global_dtors = 0;
-__declspec(allocate(".CRT$XTY")) void *after_global_dtors = 0;
+IN_SECTION(".CRT$XTW") void* before_global_dtors = 0;
+IN_SECTION(".CRT$XTY") void* after_global_dtors = 0;
 
 void UnregisterGlobals() {
   _initterm(&before_global_dtors, &after_global_dtors);
@@ -47,8 +47,8 @@ int ScheduleUnregisterGlobals() { return atexit(UnregisterGlobals); }
 // atexit() is initialized (.CRT$XIC).  As this is executed before C++
 // initializers (think ctors for globals), UnregisterGlobals gets executed after
 // dtors for C++ globals.
-extern "C" __declspec(allocate(".CRT$XID")) int (
-    *__asan_schedule_unregister_globals)() = ScheduleUnregisterGlobals;
+extern "C" IN_SECTION(".CRT$XID") int (*__asan_schedule_unregister_globals)() =
+    ScheduleUnregisterGlobals;
 WIN_FORCE_LINK(__asan_schedule_unregister_globals)
 
 #endif  // SANITIZER_DYNAMIC_RUNTIME_THUNK

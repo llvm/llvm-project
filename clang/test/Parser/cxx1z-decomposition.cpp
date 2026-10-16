@@ -106,9 +106,10 @@ namespace BadSpecifiers {
     // defining-type-specifiers other than cv-qualifiers and 'auto'
     S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
-    auto ([c2]) = s; // cxx17-error {{structured binding declaration cannot be declared with parenthese}} \
-                     // post2b-error {{use of undeclared identifier 'c2'}} \
-                     // post2b-error {{expected body of lambda expression}} \
+
+    // FIXME: This diagnostic could be improved.
+    auto ([c2]) = s; // expected-error {{use of undeclared identifier 'c2'}} \
+                     // expected-error {{expected body of lambda expression}}
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
@@ -212,7 +213,6 @@ void invalid_attributes() {
   // pre2c-warning@+1 {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
   auto [a alignas(42) // expected-error {{'alignas' attribute only applies to variables, data members and tag types}}
       [[assume(true), // expected-error {{'assume' attribute cannot be applied to a declaration}}
-        carries_dependency, // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
         fallthrough,  // expected-error {{'fallthrough' attribute cannot be applied to a declaration}}
         likely, // expected-error {{'likely' attribute cannot be applied to a declaration}}
         unlikely, // expected-error {{'unlikely' attribute cannot be applied to a declaration}}

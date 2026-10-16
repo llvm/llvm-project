@@ -195,6 +195,12 @@ void DumpEvaluateExpr::Show(const evaluate::DescriptorInquiry &x) {
   Outdent();
 }
 
+void DumpEvaluateExpr::Show(const evaluate::RankOneBoundElement &x) {
+  Indent(("rank-1 bound element [" + llvm::Twine(x.dimension()) + "]").str());
+  Show(x.base());
+  Outdent();
+}
+
 void DumpEvaluateExpr::Print(llvm::Twine twine) {
   outs_ << GetIndentString() << twine << '\n';
 }

@@ -25,5 +25,5 @@ end program
 
 ! CHECK-LABEL: func.func @_QQmain()
 ! CHECK: cuf.kernel
-! CHECK-COUNT-2: %{{.*}} = fir.alloca !fir.char<1> {bindc_name = ".tmp"}
+! CHECK-COUNT-2: %{{.*}} = fir.alloca !fir.char<1> <{bindc_name = ".tmp"}>
 

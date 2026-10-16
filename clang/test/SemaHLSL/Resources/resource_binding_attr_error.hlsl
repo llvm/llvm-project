@@ -2,7 +2,7 @@
 
 template<typename T>
 struct MyTemplatedSRV {
-  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("SRV")]] x;
 };
 
 // valid, The register keyword in this statement isn't binding a resource, rather it is
@@ -35,10 +35,10 @@ cbuffer D : register(b 2, space3) {}
 cbuffer E : register(u-1) {};
 
 // expected-error@+1 {{expected <numeric_constant>}}
-cbuffer F : register(u) {}; 
+cbuffer F : register(u) {};
 
 // expected-error@+1 {{binding type 'u' only applies to UAV resources}}
-cbuffer G : register(u13) {}; 
+cbuffer G : register(u13) {};
 
 // expected-error@+1 {{binding type 'c' only applies to numeric variables in the global scope}}
 cbuffer H : register(c0) {};
