@@ -2214,7 +2214,9 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     return true;
 
   if (I.getOpcode() == Instruction::FCmp)
-    return false;
+    return TTI.getInstructionCost(&I,
+                                  TargetTransformInfo::TCK_SizeAndLatency) ==
+           TargetTransformInfo::TCC_Free;
 
   // Otherwise look for a comparison between constant offset pointers with
   // a common base.
@@ -2256,7 +2258,11 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     if (isImplicitNullCheckCmp(I))
       return true;
   }
-  return handleSROA(I.getOperand(0), isa<ConstantPointerNull>(I.getOperand(1)));
+  if (handleSROA(I.getOperand(0), isa<ConstantPointerNull>(I.getOperand(1))))
+    return true;
+
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 bool CallAnalyzer::visitSub(BinaryOperator &I) {
@@ -2318,7 +2324,8 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
       !match(&I, m_FNeg(m_Value())))
     onCallPenalty();
 
-  return false;
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
