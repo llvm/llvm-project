@@ -3116,8 +3116,9 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
     TcPhi->insertBefore(Body->begin());
 
     Builder.SetInsertPoint(LbCond);
-    Instruction *TcDec = cast<Instruction>(Builder.CreateSub(
-        TcPhi, ConstantInt::get(Ty, 1), "tcdec", true, false));
+    Instruction *TcDec = cast<Instruction>(
+        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1), "tcdec",
+                          /*HasNUW=*/true, /*HasNSW=*/false));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
