@@ -31,9 +31,10 @@ static cl::opt<unsigned> SSThreshold(
     cl::desc("Small data and bss section threshold size (default=8)"),
     cl::init(8));
 
-void M68kELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                         const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void M68kELFTargetObjectFile::initialize(MCContext &Ctx,
+                                         const TargetMachine &TM,
+                                         const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
   InitializeELF(TM.Options.UseInitArray);
 
   // FIXME do we need `.sdata` and `.sbss` explicitly?

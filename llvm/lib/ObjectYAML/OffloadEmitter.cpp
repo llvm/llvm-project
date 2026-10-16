@@ -9,6 +9,8 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/OffloadYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -41,7 +43,18 @@ bool yaml2offload(Binary &Doc, raw_ostream &Out, ErrorHandler EH) {
   }
 
   // Copy the data to a new buffer so we can modify the bytes directly.
-  auto Buffer = object::OffloadBinary::write(Images);
+  SmallString<0> Buffer;
+  if (Doc.Compression) {
+    Expected<SmallString<0>> CompressedOrErr = object::OffloadBinary::write(
+        Images, compression::Params(*Doc.Compression));
+    if (!CompressedOrErr) {
+      EH(toString(CompressedOrErr.takeError()));
+      return false;
+    }
+    Buffer = std::move(*CompressedOrErr);
+  } else {
+    Buffer = object::OffloadBinary::write(Images);
+  }
   auto *TheHeader =
       reinterpret_cast<object::OffloadBinary::Header *>(&Buffer[0]);
   if (Doc.Version)

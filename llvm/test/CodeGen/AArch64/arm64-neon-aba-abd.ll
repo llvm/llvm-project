@@ -301,11 +301,10 @@ define <2 x i32> @test_sabd_v2i32_const() {
 ;
 ; CHECK-GI-LABEL: test_sabd_v2i32_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI30_0
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI30_1]
-; CHECK-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI30_0]
-; CHECK-GI-NEXT:    sabd v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    movi d0, #0x00ffffffff0000
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    sabd v0.2s, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
   %1 = tail call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(
     <2 x i32> <i32 -2147483648, i32 2147450880>,
@@ -576,16 +575,9 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; CHECK-GI-LABEL: knownbits_sabd_and_shl_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
-; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v0.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = shl <4 x i32> %1, <i32 17, i32 17, i32 17, i32 17>

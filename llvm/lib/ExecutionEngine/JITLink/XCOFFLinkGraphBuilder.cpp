@@ -35,10 +35,10 @@ XCOFFLinkGraphBuilder::XCOFFLinkGraphBuilder(
     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
-    : Obj(Obj),
-      G(std::make_unique<LinkGraph>(
-          std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
-          std::move(Features), std::move(GetEdgeKindName))) {}
+    : Obj(Obj), G(std::make_unique<LinkGraph>(
+                    std::string(Obj.getFileName()), std::move(SSP),
+                    std::move(TT), Obj.getBytesInAddress(), std::move(Features),
+                    std::move(GetEdgeKindName))) {}
 
 #ifndef NDEBUG
 static llvm::StringRef getStorageClassString(XCOFF::StorageClass SC) {

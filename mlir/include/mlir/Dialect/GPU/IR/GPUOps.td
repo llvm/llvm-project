@@ -29,6 +29,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -811,7 +812,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 def GPU_LaunchOp : GPU_Op<"launch", [
       AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
       DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
+      GPU_AsyncOpInterface, HasParallelRegion, RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
@@ -1151,6 +1152,10 @@ def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 10, "xor">;
 def GPU_AllReduceOpMinimumF : I32EnumAttrCase<"MINIMUMF", 11, "minimumf">;
 // Follows the `arith.maximumf` semantics.
 def GPU_AllReduceOpMaximumF : I32EnumAttrCase<"MAXIMUMF", 12, "maximumf">;
+// Follows the `arith.minimumnumf` semantics.
+def GPU_AllReduceOpMinimumNumF : I32EnumAttrCase<"MINIMUMNUMF", 13, "minimumnumf">;
+// Follows the `arith.maximumnumf` semantics.
+def GPU_AllReduceOpMaximumNumF : I32EnumAttrCase<"MAXIMUMNUMF", 14, "maximumnumf">;
 
 def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
     "built-in reduction operations supported by gpu.allreduce.",
@@ -1167,7 +1172,9 @@ def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
       GPU_AllReduceOpOr,
       GPU_AllReduceOpXor,
       GPU_AllReduceOpMinimumF,
-      GPU_AllReduceOpMaximumF
+      GPU_AllReduceOpMaximumF,
+      GPU_AllReduceOpMinimumNumF,
+      GPU_AllReduceOpMaximumNumF
     ]>{
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
@@ -1202,7 +1209,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
     *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
-       `maximumf`
+       `maximumf`, `minimumnumf`, `maximumnumf`
 
     If `uniform` flag is set either none or all work items of a workgroup
     need to execute this op in convergence.
@@ -1259,7 +1266,7 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType,
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
     *  Floating point types: `add`, `mul`, `minnumf`, `maxnumf`, `minimumf`,
-       `maximumf`
+       `maximumf`, `minimumnumf`, `maximumnumf`
   }];
 
   let arguments = (ins

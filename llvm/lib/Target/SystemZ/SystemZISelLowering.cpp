@@ -838,6 +838,30 @@ bool SystemZTargetLowering::useSoftFloat() const {
   return Subtarget.hasSoftFloat();
 }
 
+TargetLoweringBase::LegalizeTypeAction
+SystemZTargetLowering::getPreferredVectorAction(MVT VT) const {
+  // Widen subvectors to the full width rather than promoting integer
+  // elements.  This is better because:
+  //
+  // (a) it means that we can handle the ABI for passing and returning
+  //     sub-128 vectors without having to handle them as legal types.
+  //
+  // (b) we don't have instructions to extend on load and truncate on store,
+  //     so promoting the integers is less efficient.
+  //
+  // (c) there are no multiplication instructions for the widest integer
+  //     type (v2i64).
+
+  // Expand (narrow) f16 vectors during type legalization to avoid
+  // operations for all elements as with expansion after widening.
+  if (VT.getScalarType() == MVT::f16)
+    return VT.getVectorElementCount().isScalar() ? TypeScalarizeVector
+                                                 : TypeSplitVector;
+  if (VT.getScalarSizeInBits() % 8 == 0)
+    return TypeWidenVector;
+  return TargetLoweringBase::getPreferredVectorAction(VT);
+}
+
 unsigned SystemZTargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
@@ -5108,6 +5132,7 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
       SDValue Tmp = DAG.getSplatBuildVector(MVT::v16i8, DL,
                                             DAG.getConstant(0, DL, MVT::i32));
       Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Tmp);
+      Tmp = DAG.getNode(ISD::BITCAST, DL, MVT::v4i32, Tmp);
       Op = DAG.getNode(SystemZISD::VSUM, DL, VT, Op, Tmp);
       break;
     }
