@@ -1443,18 +1443,19 @@ bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
   return isBuildVectorConstantSplat(MI, MRI, -1, AllowUndef);
 }
 
-std::optional<RegOrConstant>
-llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+std::optional<Register> llvm::getVectorSplat(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI) {
   unsigned Opc = MI.getOpcode();
+  if (Opc == TargetOpcode::G_SPLAT_VECTOR)
+    return MI.getOperand(1).getReg();
+
   if (!isBuildVectorOp(Opc))
     return std::nullopt;
-  if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
-    return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
   if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
-  return RegOrConstant(Reg);
+  return Reg;
 }
 
 static bool isConstantScalar(const MachineInstr &MI,
@@ -1648,6 +1649,7 @@ void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
   LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
   DeadInstChain.remove(&MI);
+  salvageDebugInfo(MRI, MI);
   MI.eraseFromParent();
   if (LocObserver)
     LocObserver->checkpoint(false);
@@ -1689,6 +1691,10 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+
+    // MI is about to go away, so whatever could not be salvaged would be left
+    // referring to a register without a definition.
+    MRI.markUsesInDebugValueAsUndef(Def.getReg());
   }
 }
 

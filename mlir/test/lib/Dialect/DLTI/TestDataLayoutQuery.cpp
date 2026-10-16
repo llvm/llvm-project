@@ -38,6 +38,7 @@ struct TestDataLayoutQuery
       const DataLayout &layout = layouts.getAbove(op);
       llvm::TypeSize size = layout.getTypeSize(op.getType());
       llvm::TypeSize bitsize = layout.getTypeSizeInBits(op.getType());
+      llvm::TypeSize allocSize = layout.getTypeAllocSize(op.getType());
       uint64_t alignment = layout.getTypeABIAlignment(op.getType());
       uint64_t preferred = layout.getTypePreferredAlignment(op.getType());
       uint64_t index = layout.getTypeIndexBitwidth(op.getType()).value_or(0);
@@ -66,6 +67,7 @@ struct TestDataLayoutQuery
       op->setAttrs(
           {builder.getNamedAttr("size", convertTypeSizeToAttr(size)),
            builder.getNamedAttr("bitsize", convertTypeSizeToAttr(bitsize)),
+           builder.getNamedAttr("alloc_size", convertTypeSizeToAttr(allocSize)),
            builder.getNamedAttr("alignment", builder.getIndexAttr(alignment)),
            builder.getNamedAttr("preferred", builder.getIndexAttr(preferred)),
            builder.getNamedAttr("index", builder.getIndexAttr(index)),

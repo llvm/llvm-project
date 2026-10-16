@@ -20,16 +20,11 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define i16 @test_bitcast_2xi8_i16(<2 x i8> %a) {
 ; O0-LABEL: test_bitcast_2xi8_i16(
 ; O0:       {
-; O0-NEXT:    .reg .b16 %rs<5>;
-; O0-NEXT:    .reg .b32 %r<3>;
+; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_bitcast_2xi8_i16_param_0];
-; O0-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; O0-NEXT:    shl.b16 %rs3, %rs2, 8;
-; O0-NEXT:    or.b16 %rs4, %rs1, %rs3;
-; O0-NEXT:    cvt.u32.u16 %r2, %rs4;
-; O0-NEXT:    st.param.b32 [func_retval0], %r2;
+; O0-NEXT:    ld.param.b16 %r1, [test_bitcast_2xi8_i16_param_0];
+; O0-NEXT:    st.param.b32 [func_retval0], %r1;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_bitcast_2xi8_i16(
@@ -70,11 +65,9 @@ define <2 x i8> @test_call_2xi8(<2 x i8> %a) {
 ; O0-LABEL: test_call_2xi8(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<5>;
-; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_call_2xi8_param_0];
-; O0-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; O0-NEXT:    { // callseq 0, 0
 ; O0-NEXT:    .param .align 2 .b8 param0[2];
 ; O0-NEXT:    .param .align 2 .b8 retval0[2];
@@ -108,14 +101,13 @@ define <2 x float> @test_uitofp_2xi8(<2 x i8> %a) {
 ; O0-LABEL: test_uitofp_2xi8(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<3>;
-; O0-NEXT:    .reg .b32 %r<4>;
+; O0-NEXT:    .reg .b32 %r<3>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_uitofp_2xi8_param_0];
-; O0-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; O0-NEXT:    cvt.rn.f32.u16 %r2, %rs2;
-; O0-NEXT:    cvt.rn.f32.u16 %r3, %rs1;
-; O0-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
+; O0-NEXT:    cvt.rn.f32.u16 %r1, %rs2;
+; O0-NEXT:    cvt.rn.f32.u16 %r2, %rs1;
+; O0-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_uitofp_2xi8(
@@ -137,13 +129,11 @@ define void @test_store_i8x2_unaligned(ptr %ptr, <2 x i8> %a) {
 ; O0-LABEL: test_store_i8x2_unaligned(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<3>;
-; O0-NEXT:    .reg .b32 %r<2>;
 ; O0-NEXT:    .reg .b64 %rd<2>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b64 %rd1, [test_store_i8x2_unaligned_param_0];
 ; O0-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [test_store_i8x2_unaligned_param_1];
-; O0-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; O0-NEXT:    st.b8 [%rd1+1], %rs2;
 ; O0-NEXT:    st.b8 [%rd1], %rs1;
 ; O0-NEXT:    ret;
