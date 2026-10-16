@@ -200,6 +200,8 @@ void EmitHLSLInlineIntrinsics(const llvm::RecordKeeper &Records,
 
 void EmitClangAttrDocs(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
+void EmitClangAttrDocSyntaxes(const llvm::RecordKeeper &Records,
+                              llvm::raw_ostream &OS);
 void EmitClangDiagDocs(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
 void EmitClangOptDocs(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
