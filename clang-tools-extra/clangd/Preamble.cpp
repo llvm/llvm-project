@@ -107,11 +107,26 @@ public:
     return std::move(Pragmas);
   }
 
+  std::vector<std::pair<std::string, std::string>> takeDeprecatedMacros() {
+    return std::move(DeprecatedMacros);
+  }
+
   std::optional<CapturedASTCtx> takeLife() { return std::move(CapturedCtx); }
 
   bool isMainFileIncludeGuarded() const { return IsMainFileIncludeGuarded; }
 
   void AfterExecute(CompilerInstance &CI) override {
+    for (const auto &Entry : CI.getPreprocessor().getIdentifierTable()) {
+      const IdentifierInfo *II = Entry.getValue();
+      if (II && II->isDeprecatedMacro()) {
+        std::string Msg;
+        const auto &Annotations = CI.getPreprocessor().getMacroAnnotations(II);
+        if (Annotations.DeprecationInfo)
+          Msg = Annotations.DeprecationInfo->Message;
+        DeprecatedMacros.emplace_back(Entry.getKey().str(), std::move(Msg));
+      }
+    }
+
     // As part of the Preamble compilation, ASTConsumer
     // PrecompilePreambleConsumer/PCHGenerator is setup. This would be called
     // when Preamble consists of modules. Therefore while capturing AST context,
@@ -202,6 +217,7 @@ private:
   include_cleaner::PragmaIncludes Pragmas;
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
+  std::vector<std::pair<std::string, std::string>> DeprecatedMacros;
   bool IsMainFileIncludeGuarded = false;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
@@ -700,6 +716,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
+    Result->DeprecatedMacros = CapturedInfo.takeDeprecatedMacros();
     Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     // Move the options instead of copying them. The invocation doesn't need

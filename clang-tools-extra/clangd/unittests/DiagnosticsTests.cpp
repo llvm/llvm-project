@@ -2126,6 +2126,18 @@ TEST(Diagnostics, Tags) {
                         withTag(DiagnosticTag::Deprecated))));
 
   Test = Annotations(R"cpp(
+    #define OLD 1
+    #pragma clang deprecated(OLD, "use NEW")
+    int y = $deprecated[[OLD]];
+  )cpp");
+  TU.Code = Test.code().str();
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(AllOf(
+                  Diag(Test.range("deprecated"),
+                       "macro 'OLD' has been marked as deprecated: use NEW"),
+                  withTag(DiagnosticTag::Deprecated))));
+
+  Test = Annotations(R"cpp(
     $typedef[[typedef int INT]];
   )cpp");
   TU.Code = Test.code();
