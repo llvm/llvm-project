@@ -27,6 +27,7 @@
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
@@ -160,6 +161,11 @@ bool AMDGPUAtomicOptimizerImpl::run() {
 
   visit(F);
   if (ToReplace.empty())
+    return false;
+
+  // The new cross-lane operations are convergent and carry no convergence
+  // control token, so they must not be added to a function that uses tokens.
+  if (any_of(instructions(F), IsaPred<ConvergenceControlInst>))
     return false;
 
   for (auto &[I, Op, ValIdx, ValDivergent, IsLDS] : ToReplace)
