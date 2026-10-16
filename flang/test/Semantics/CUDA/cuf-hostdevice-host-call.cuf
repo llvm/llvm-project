@@ -49,7 +49,7 @@ contains
       end function
     end interface
     double precision, intent(inout) :: x
-    !ERROR: 'hostfunc' may not be called in device code
+    !ERROR: The HOST procedure 'hostfunc' may not be called in DEVICE code
     x = hostfunc()
   end subroutine
 

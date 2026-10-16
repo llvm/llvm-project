@@ -30,7 +30,7 @@ contains
     integer, value :: i
   end subroutine
   attributes(host,device) subroutine pass_expression()
-    !ERROR: 'host_value' may not be called in device code
+    !ERROR: The HOST procedure 'host_value' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
     call consume_value(host_value())
   end subroutine
   attributes(host,device) subroutine both(p, q, f, g, d, e, result)
@@ -70,7 +70,7 @@ contains
   end function
   attributes(host,device) subroutine caller(result)
     logical :: result
-    !ERROR: 'c_associated_c_ptr' may not be called in device code
+    !ERROR: The HOST procedure 'c_associated_c_ptr' may not be called in HOST,DEVICE code without an ON_DEVICE() guard
     result = c_associated_c_ptr()
   end subroutine
 end module
