@@ -58,6 +58,15 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                           TTI::TargetCostKind CostKind) const;
 
+  /// This function calculates the costs for one or more RVV opcodes based
+  /// on the type and the cost kind.
+  /// \param Opcodes A list of opcodes of the RVV instruction to evaluate.
+  /// \param Tp The Type associated with the RVV instructions. Will be legalized
+  /// and the result multiplied by the legalization cost;
+  /// \param CostKind The type of cost to compute.
+  InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, Type *Tp,
+                                          TTI::TargetCostKind CostKind) const;
+
   // Return the cost of generating a PC relative address
   InstructionCost
   getStaticDataAddrGenerationCost(const TTI::TargetCostKind CostKind) const;
