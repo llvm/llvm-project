@@ -63,6 +63,37 @@ entry:
   ret float %fmod
 }
 
+define float @frem2_nsz_user(float %x, float %y) {
+; CHECK-SD-LABEL: frem2_nsz_user:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s2, #0.50000000
+; CHECK-SD-NEXT:    fmov s3, #-2.00000000
+; CHECK-SD-NEXT:    fmul s2, s0, s2
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmadd s0, s2, s3, s0
+; CHECK-SD-NEXT:    fadd s0, s0, s1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: frem2_nsz_user:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    fmov s8, s1
+; CHECK-GI-NEXT:    fmov s1, #2.00000000
+; CHECK-GI-NEXT:    bl fmodf
+; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
+; CHECK-GI-NEXT:    fadd s0, s0, s8
+; CHECK-GI-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+entry:
+  %fmod = frem nsz float %x, 2.0
+  %add = fadd nsz float %fmod, %y
+  ret float %add
+}
+
 define float @frem2_abs(float %x) {
 ; CHECK-SD-LABEL: frem2_abs:
 ; CHECK-SD:       // %bb.0: // %entry
