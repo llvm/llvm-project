@@ -35,6 +35,7 @@ set(LIBCXX_SOURCES
   include/ryu/ryu.h
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
+  log_hardening_failure.cpp
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
@@ -307,7 +308,6 @@ endif()
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
-  experimental/log_hardening_failure.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
