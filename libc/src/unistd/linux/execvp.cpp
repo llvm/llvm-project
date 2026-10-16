@@ -28,6 +28,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// TODO: POSIX requires that if execve fails with ENOEXEC, execvp executes the
+// file using the system shell (as if by `sh -- file args...`). The kernel only
+// handles ELF, "#!" scripts, and binfmt_misc formats, so shebang-less scripts
+// currently fail with ENOEXEC instead of being run by /bin/sh.
 LLVM_LIBC_FUNCTION(int, execvp, (const char *file, char *const argv[])) {
   LIBC_CRASH_ON_NULLPTR(file);
   LIBC_CRASH_ON_NULLPTR(argv);
