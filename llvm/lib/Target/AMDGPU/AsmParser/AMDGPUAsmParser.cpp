@@ -2280,6 +2280,13 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       // checked earlier in isLiteralImm()
 
       Val = FPLiteral.bitcastToAPInt().getZExtValue();
+      if (OpTy == AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT &&
+          AsmParser->isGFX11Plus() && Lit == LitModifier::None) {
+        // Match the duplicated value printed for a packed FP16 inline source.
+        uint32_t Packed = Val | (Val << 16);
+        if (AMDGPU::isPKFMACF16InlineConstant(Packed, /*IsGFX11Plus=*/true))
+          Val = Packed;
+      }
       break;
     }
     default:

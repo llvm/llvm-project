@@ -2198,7 +2198,7 @@ v_pk_fmac_f16 v5, -1, v2
 // GFX13: v_pk_fmac_f16 v5, -1, v2                ; encoding: [0xc1,0x04,0x0a,0x78]
 
 v_pk_fmac_f16 v5, 0.5, v2
-// GFX13: v_pk_fmac_f16 v5, 0x3800, v2            ; encoding: [0xff,0x04,0x0a,0x78,0x00,0x38,0x00,0x00]
+// GFX13: v_pk_fmac_f16 v5, 0.5, v2               ; encoding: [0xf0,0x04,0x0a,0x78]
 
 v_pk_fmac_f16 v5, src_scc, v2
 // GFX13: v_pk_fmac_f16 v5, src_scc, v2           ; encoding: [0xfd,0x04,0x0a,0x78]
