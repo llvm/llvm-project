@@ -8,10 +8,16 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyDiagnosticConsumer.h"
+#include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../ClangTidyModule.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
+
+// NOLINTNEXTLINE(readability-identifier-naming)
+extern "C" const char clang_analyzerAPIVersionString[] =
+    CLANG_ANALYZER_API_VERSION_STRING;
 
 namespace clang::tidy {
 namespace {
@@ -32,6 +38,8 @@ class ClangTidyPluginAction : public PluginASTAction {
                  std::vector<std::unique_ptr<ASTConsumer>> Consumer)
         : MultiplexConsumer(std::move(Consumer)), Context(std::move(Context)),
           DiagEngine(std::move(DiagEngine)) {}
+
+    ~WrapConsumer() override { DiagEngine->getClient()->EndSourceFile(); }
   };
 
 public:
@@ -44,6 +52,8 @@ public:
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
         DiagnosticIDs::create(), *DiagOpts, DiagConsumer);
     Context->setDiagnosticsEngine(std::move(DiagOpts), DiagEngine.get());
+    DiagConsumer->BeginSourceFile(Compiler.getLangOpts(),
+                                  &Compiler.getPreprocessor());
 
     // Create the AST consumer.
     ClangTidyASTConsumerFactory Factory(*Context);
@@ -54,7 +64,7 @@ public:
         std::move(Context), std::move(DiagEngine), std::move(Vec));
   }
 
-  bool ParseArgs(const CompilerInstance &,
+  bool ParseArgs(const CompilerInstance &Compiler,
                  const std::vector<std::string> &Args) override {
     const ClangTidyGlobalOptions GlobalOptions;
     const ClangTidyOptions DefaultOptions;
@@ -67,7 +77,8 @@ public:
         OverrideOptions.Checks = std::string(Arg.substr(strlen("-checks=")));
 
     auto Options = std::make_unique<FileOptionsProvider>(
-        GlobalOptions, DefaultOptions, OverrideOptions);
+        GlobalOptions, DefaultOptions, OverrideOptions,
+        Compiler.getVirtualFileSystemPtr());
     Context = std::make_unique<ClangTidyContext>(std::move(Options));
     return true;
   }
@@ -78,11 +89,6 @@ private:
 
 } // namespace
 } // namespace clang::tidy
-
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the clang-tidy plugin.
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int ClangTidyPluginAnchorSource = 0;
 
 static clang::FrontendPluginRegistry::Add<clang::tidy::ClangTidyPluginAction>
     X("clang-tidy", "clang-tidy");
