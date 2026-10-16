@@ -3446,7 +3446,7 @@ void ownership_returns_free_stack() {
   int local = 42;
   int *p = &local; // expected-warning {{local variable 'local' does not live long enough}}
   myfree(&local);  // expected-note {{local variable 'local' is freed here}}
-  (void)*p;        // expected-note {{later used here}}
+  use(*p);         // expected-note {{later used here}}
 }
 
 void ownership_returns_escape_global() {
@@ -3544,8 +3544,8 @@ void ownership_returns_member_realloc() {
   int *p = a.alloc();
   p = a.realloc2(p); // expected-warning {{object allocated by 'realloc2' does not live long enough}}
   *p = 1;
-  a.dealloc(p); // expected-note {{object allocated by 'realloc2' is freed here}}
-  *p = 1;       // expected-note {{later used here}}
+  a.dealloc(p);      // expected-note {{object allocated by 'realloc2' is freed here}}
+  *p = 1;            // expected-note {{later used here}}
 }
 
 struct UserDefinedNewDeleteOps {
@@ -3574,8 +3574,8 @@ void user_defined_new_delete_explicit_call_use_after_free() {
 
 void user_defined_new_delete_explicit_allocator_use_after_free() {
   auto *p = static_cast<UserDefinedNewDeleteOps *>(
-      UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps))); // expected-warning {{expression does not live long enough}}
-  UserDefinedNewDeleteOps::operator delete(p);                                 // expected-note {{expression is freed here}}
+      UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps))); // expected-warning {{object allocated by 'operator new' does not live long enough}}
+  UserDefinedNewDeleteOps::operator delete(p);                                 // expected-note {{object allocated by 'operator new' is freed here}}
   p->x = 1;                                                                    // expected-note {{later used here}}
 }
 
