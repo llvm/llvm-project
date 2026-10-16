@@ -287,11 +287,10 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
   return std::make_pair(Sym, BV.getValue(0, Sym->getType()));
 }
 
-static std::optional<NonLoc>
-doRearrangeUnchecked(ProgramStateRef State, BinaryOperator::Opcode Op,
-                     SymbolRef LSym, llvm::APSInt LInt, SymbolRef RSym,
-                     llvm::APSInt RInt);
-
+// Simplify "(LSym + LInt) Op (RSym + RInt)" when all values are of the
+// same signed integral type and no overflows occurs. Returns the simplified
+// value or std::nullopt when the the preconditions are not satisfied or the
+// symbol complexity limit is reached.
 static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
                                           BinaryOperator::Opcode Op, NonLoc Lhs,
                                           NonLoc Rhs, QualType ResultTy) {
@@ -343,35 +342,13 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
 
-  // We know that no overflows can occur anymore.
-  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt);
-}
-// Simplify "(LSym + LInt) Op (RSym + RInt)" assuming all values are of the
-// same signed integral type and no overflows occur (which should be checked
-// by the caller). May return UnknownVal if the symbol complexity threshold is
-// reached.
-static std::optional<NonLoc>
-doRearrangeUnchecked(ProgramStateRef State, BinaryOperator::Opcode Op,
-                     SymbolRef LSym, llvm::APSInt LInt, SymbolRef RSym,
-                     llvm::APSInt RInt) {
-  SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  BasicValueFactory &BV = SVB.getBasicValueFactory();
+  QualType SymTy = SingleTy; // TODO eliminate this
 
-  QualType SymTy = LSym->getType();
-  assert(SymTy == RSym->getType() &&
-         "Symbols are not of the same type!");
+  // FIXME: Why can we assert these?
   assert(APSIntType(LInt) == BV.getAPSIntType(SymTy) &&
          "Integers are not of the same type as symbols!");
   assert(APSIntType(RInt) == BV.getAPSIntType(SymTy) &&
          "Integers are not of the same type as symbols!");
-
-  QualType ResultTy;
-  if (BinaryOperator::isComparisonOp(Op))
-    ResultTy = SVB.getConditionType();
-  else if (BinaryOperator::isAdditiveOp(Op))
-    ResultTy = SymTy;
-  else
-    llvm_unreachable("Operation not suitable for unchecked rearrangement!");
 
   if (LSym == RSym)
     return SVB
