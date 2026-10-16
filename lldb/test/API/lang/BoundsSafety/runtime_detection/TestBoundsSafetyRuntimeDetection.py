@@ -69,8 +69,9 @@ class TestBoundsSafetyRuntimeDetection(TestBase):
             if late
             else None
         )
+        environment = self.registerSharedLibrariesWithTarget(target, ["Unrelated"])
         process = target.LaunchSimple(
-            arguments, None, self.get_process_working_directory()
+            arguments, environment, self.get_process_working_directory()
         )
         self.assertState(process.GetState(), lldb.eStateStopped)
         if runtime_location is not None:
