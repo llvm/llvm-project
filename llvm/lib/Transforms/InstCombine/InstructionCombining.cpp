@@ -4282,7 +4282,7 @@ Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
+    } while (BBI != FirstInstr && isa<PseudoProbeInst>(BBI));
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -5376,8 +5376,7 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // replacement below is still necessary.
   BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore =
-        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
   } else {
     auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
     if (!MoveBeforeOpt)
@@ -6167,10 +6166,10 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
         }
       }
 
-      // Skip processing debug and pseudo intrinsics in InstCombine. Processing
+      // Skip processing pseudo intrinsics in InstCombine. Processing
       // these call instructions consumes non-trivial amount of time and
       // provides no value for the optimization.
-      if (!Inst.isDebugOrPseudoInst()) {
+      if (!isa<PseudoProbeInst>(Inst)) {
         InstrsForInstructionWorklist.push_back(&Inst);
         SeenAliasScopes.analyse(&Inst);
       }
@@ -6269,7 +6268,8 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
-  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
+  const auto &CLOpts =
+      F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
   bool MadeIRChange = false;
   if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);

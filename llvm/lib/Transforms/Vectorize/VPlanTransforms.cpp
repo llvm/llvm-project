@@ -49,20 +49,24 @@ using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
 void VPlanTransforms::verifyIfRequested(VPlan &Plan) {
-  if (VectorizeOptions::Global.vplan_verify_each && !verifyVPlanIsValid(Plan))
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
+  if (Opts.vplan_verify_each && !verifyVPlanIsValid(Plan))
     report_fatal_error("Broken VPlan found, compilation aborted!");
 }
 
 #ifndef NDEBUG
-bool VPlanTransforms::isPrintingRequested() {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+bool VPlanTransforms::isPrintingRequested(const VPlan &Plan) {
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
   return Opts.vplan_print_before_all || Opts.vplan_print_after_all ||
          !Opts.vplan_print_before.empty() || !Opts.vplan_print_after.empty();
 }
 
 void VPlanTransforms::printIfRequested(VPlan &Plan, Function *Fn,
                                        StringRef NumberedPassName, bool After) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts =
+      Plan.getContext().getLibraryOptions().get<VectorizeOptions>();
   bool All = After ? Opts.vplan_print_after_all : Opts.vplan_print_before_all;
   ArrayRef<StringRef> Passes =
       After ? Opts.vplan_print_after : Opts.vplan_print_before;
@@ -712,7 +716,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   for (VPWidenIntOrFpInductionRecipe &IV :
        make_isa_range<VPWidenIntOrFpInductionRecipe>(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    if (IV.getTruncInst())
+    if (IV.isTruncated())
       continue;
 
     // A sequence of IR Casts has potentially been recorded for IV, which
@@ -887,8 +891,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
-        WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder, WrapFlags);
+        WideIV->getScalarType(), WideIV->getStartValue(),
+        WideIV->getStepValue(), WideIV->getDebugLoc(), Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -916,7 +920,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    return (IntOrFpIV && IntOrFpIV->getTruncInst()) ? nullptr : WideIV;
+    return (IntOrFpIV && IntOrFpIV->isTruncated()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -1019,7 +1023,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
   // Truncated wide inductions resume from the last lane of their vector value
   // in the last vector iteration which is handled elsewhere.
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
+  if (WideIntOrFp && WideIntOrFp->isTruncated())
     return nullptr;
 
   VPValue *Start = WideIV->getStartValue();
@@ -1182,9 +1186,7 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   }
 }
 
-/// Remove redundant ExpandSCEVRecipes in \p Plan's entry block by replacing
-/// them with already existing recipes expanding the same SCEV expression.
-static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
+void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   DenseMap<const SCEV *, VPValue *> SCEV2VPV;
 
   for (VPExpandSCEVRecipe &ExpR :
@@ -1678,10 +1680,11 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   // This is useful for fmax/fmin without fast-math flags, where we need to
   // check if any operand is NaN.
   if (CanCreateNewRecipe &&
-      match(Def,
-            m_BinaryOr(
-                m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X), m_Deferred(X)),
-                m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y), m_Deferred(Y)))))
+      match(Def, m_BinaryOr(m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(X),
+                                          m_Deferred(X)),
+                            m_SpecificCmp(CmpInst::FCMP_UNO, m_VPValue(Y),
+                                          m_Deferred(Y)))) &&
+      X->getScalarType() == Y->getScalarType())
     return Builder.createFCmp(CmpInst::FCMP_UNO, X, Y);
 
   if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
@@ -2116,7 +2119,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
-    assert(!WideIV->getTruncInst() &&
+    assert(!WideIV->isTruncated() &&
            "canonical IV is not expected to have a truncation");
     auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
         WideIV->getPHINode(), Plan.getZero(NewIVTy),
@@ -2334,11 +2337,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // equality or hashing.
     auto C = vputils::getOpcodeOrIntrinsicID(Def);
 
-    // The issue with InsertValue is that the index of the insert is not a
-    // proper operand in LLVM IR, and hence also not in VPlan. Allocas must not
-    // be merged, as each creates a distinct allocation.
-    if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::Alloca)))
+    // Allocas must not be merged, as each creates a distinct allocation.
+    if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
 
     // Widened loads (including the EVL variant) are handled, as cse() only
@@ -2770,7 +2770,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
-  RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(combineRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
@@ -3140,11 +3139,10 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   VPValue *Uncountable = nullptr;
   VPValue *Countable = nullptr;
   VPValue *Cond = Term->getOperand(0);
-  if (!match(Cond, m_OneUse(m_CombineOr(
-                       m_c_LogicalOr(m_Uncountable(Uncountable),
-                                     m_Countable(Countable, PSE, L)),
-                       m_c_BinaryOr(m_Uncountable(Uncountable),
-                                    m_Countable(Countable, PSE, L))))))
+  if (!match(Cond, m_CombineOr(m_c_LogicalOr(m_Uncountable(Uncountable),
+                                             m_Countable(Countable, PSE, L)),
+                               m_c_BinaryOr(m_Uncountable(Uncountable),
+                                            m_Countable(Countable, PSE, L)))))
     return true;
 
   // If the conditions are combined with a logical or (select), then we'll
@@ -3189,9 +3187,6 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
     Countable = NewLatchBuilder.createFreeze(Countable);
   }
   Term->setOperand(0, Countable);
-
-  // Remove the combining or.
-  cast<VPInstruction>(Cond)->eraseFromParent();
 
   return true;
 }
@@ -3269,12 +3264,6 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
     // Any value defined outside the loop does not need to be copied.
     if (V->isDefinedOutsideLoopRegions())
       continue;
-
-    // FIXME: Remove the single user restriction; it's here because we're
-    //        starting with the simplest set of loops we can, and multiple
-    //        users means needing to add PHI nodes in the transform.
-    if (V->getNumUsers() > 1)
-      return nullptr;
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
@@ -3364,9 +3353,7 @@ static bool handleUncountableExitsWithSideEffects(
     OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
 
-  // Disconnect early exiting blocks from successors, remove branches. We
-  // currently don't support multiple uses for recipes involved in creating
-  // the uncountable exit condition.
+  // Disconnect early exiting blocks from successors, remove branches.
   for (auto &Exit : Exits) {
     if (Exit.EarlyExitingVPBB == LatchVPBB)
       continue;
@@ -4435,7 +4422,7 @@ isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
   }
 
   auto IG = InterleaveR->getInterleaveGroup();
-  if (IG->getFactor() != IG->getNumMembers())
+  if (IG->getFactor() != IG->getNumMembers() || IG->isReverse())
     return std::nullopt;
 
   auto GetVectorBitWidthForVF = [&TTI](ElementCount VF) {
@@ -6262,11 +6249,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
 
-      // Underlying Trunc is necessary to create VPWidenIntOrFpInductionRecipe.
-      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
-      if (!Trunc)
-        continue;
-
       // A truncate that is not widened is left to the scalarization decisions
       // made earlier.
       if (vputils::onlyFirstLaneUsed(&VPI))
@@ -6300,8 +6282,9 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
           WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
-          WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
-          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
+          WideIV->getVFValue(), WideIV->getInductionDescriptor(),
+          VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
+          VPI.getDebugLoc());
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

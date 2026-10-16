@@ -34591,11 +34591,24 @@ SDValue X86TargetLowering::LowerGC_TRANSITION(SDValue Op,
 static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
+  bool IsStrict = Op.getOpcode() == X86ISD::STRICT_CVTPS2PH;
+  unsigned OpNo = IsStrict ? 1 : 0;
   SDValue Lo, Hi;
-  std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), OpNo);
   EVT LoVT, HiVT;
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-  SDValue RC = Op.getOperand(1);
+  SDValue RC = Op.getOperand(OpNo + 1);
+  if (IsStrict) {
+    SDValue Chain = Op.getOperand(0);
+    Lo = DAG.getNode(X86ISD::STRICT_CVTPS2PH, dl, {LoVT, MVT::Other},
+                     {Chain, Lo, RC});
+    Hi = DAG.getNode(X86ISD::STRICT_CVTPS2PH, dl, {HiVT, MVT::Other},
+                     {Chain, Hi, RC});
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Lo.getValue(1),
+                        Hi.getValue(1));
+    SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
+    return DAG.getMergeValues({Res, Chain}, dl);
+  }
   Lo = DAG.getNode(X86ISD::CVTPS2PH, dl, LoVT, Lo, RC);
   Hi = DAG.getNode(X86ISD::CVTPS2PH, dl, HiVT, Hi, RC);
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
@@ -34979,7 +34992,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GC_TRANSITION_START:
   case ISD::GC_TRANSITION_END:  return LowerGC_TRANSITION(Op, DAG);
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
-  case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
+  case X86ISD::CVTPS2PH:
+  case X86ISD::STRICT_CVTPS2PH: return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
   case ISD::FLDEXP:             return LowerFLDEXP(Op, Subtarget, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
@@ -35082,8 +35096,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case X86ISD::CVTPS2PH:
-    Results.push_back(LowerCVTPS2PH(SDValue(N, 0), DAG));
+  case X86ISD::STRICT_CVTPS2PH: {
+    SDValue Res = LowerCVTPS2PH(SDValue(N, 0), DAG);
+    Results.push_back(Res);
+    if (Opc == X86ISD::STRICT_CVTPS2PH)
+      Results.push_back(Res.getValue(1));
     return;
+  }
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
@@ -47281,6 +47300,21 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
                          DAG.getBitcast(MVT::v8f16, Src.getOperand(0)),
                          DAG.getVectorIdxConstant(0, DL));
     }
+    using namespace SDPatternMatch;
+    SDValue FpOp;
+    if (Subtarget.hasSSE2() && N0.hasOneUse() &&
+        sd_match(Src, m_OneUse(m_Srl(m_OneUse(m_BitCast(m_Value(
+                                         FpOp, m_SpecificVT(MVT::f32)))),
+                                     m_SpecificInt(16)))) &&
+        !ISD::isNormalLoad(FpOp.getNode())) {
+      SDLoc DL(N);
+      SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, FpOp);
+      Vec = DAG.getBitcast(MVT::v4i32, Vec);
+      Vec = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, MVT::v4i32, Vec, 16,
+                                       DAG);
+      return DAG.getExtractVectorElt(DL, VT, DAG.getBitcast(MVT::v8f16, Vec),
+                                     0);
+    }
   }
 
   // Since MMX types are special and don't usually play with other vector types,
@@ -52386,6 +52420,22 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
     if (TLI.SimplifyDemandedBits(SDValue(N, 0),
                                  APInt::getAllOnes(NumBitsPerElt), DCI))
       return SDValue(N, 0);
+  }
+
+  if (Opcode == X86ISD::PINSRW && Subtarget.hasSSE41()) {
+    using namespace SDPatternMatch;
+    SDValue FpOp;
+    if (sd_match(Scl, m_OneUse(m_Srl(m_OneUse(m_BitCast(m_Value(
+                                         FpOp, m_SpecificVT(MVT::f32)))),
+                                     m_SpecificInt(16)))) &&
+        !ISD::isNormalLoad(FpOp.getNode())) {
+      SDLoc DL(N);
+      SDValue SrcVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, FpOp);
+      int Mask[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+      Mask[N->getConstantOperandVal(2)] = 9;
+      return DAG.getVectorShuffle(VT, DL, Vec, DAG.getBitcast(VT, SrcVec),
+                                  Mask);
+    }
   }
 
   // Attempt to combine insertion patterns to a shuffle.
@@ -65394,7 +65444,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
 
     // flags -> EFLAGS
-    if (StringRef("{flags}").equals_insensitive(Constraint))
+    // Only allow for clobber.
+    if (StringRef("{flags}").equals_insensitive(Constraint) && VT == MVT::Other)
       return std::make_pair(X86::EFLAGS, &X86::CCRRegClass);
 
     // dirflag -> DF

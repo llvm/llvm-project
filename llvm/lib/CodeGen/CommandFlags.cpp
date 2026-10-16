@@ -752,9 +752,9 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
-Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(const Triple &TargetTriple,
-                                      CodeGenOptLevel OptLevel) {
+Expected<std::unique_ptr<TargetMachine>> codegen::createTargetMachineForTriple(
+    const cl::LibraryOptionsContext &LibraryOptions, const Triple &TargetTriple,
+    CodeGenOptLevel OptLevel) {
   // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
@@ -762,9 +762,10 @@ codegen::createTargetMachineForTriple(const Triple &TargetTriple,
       TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+  Options.MCOptions.LibraryOptions = &LibraryOptions;
   auto *Target = TheTarget->createTargetMachine(
-      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(),
-      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
+      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(), Options,
       codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
       OptLevel);
   if (!Target)

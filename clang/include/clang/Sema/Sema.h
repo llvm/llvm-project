@@ -3502,10 +3502,9 @@ public:
   bool ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS, const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
 
-  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
-                                              const DeclSpec &DS,
-                                              SourceLocation ColonColonLoc,
-                                              QualType Type);
+  ParsedType ActOnCXXNestedNameSpecifierIndexedPack(
+      CXXScopeSpec &SS, const DeclSpec &DS, TypeSourceInfo *PatternLoc,
+      SourceLocation ColonColonLoc, QualType Type);
 
   /// IsInvalidUnlessNestedName - This method is used for error recovery
   /// purposes to determine whether the specified identifier is only valid as
@@ -15610,10 +15609,9 @@ public:
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
 
   QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc,
-                                 SourceLocation EllipsisLoc);
+                                 SourceLocation Loc);
   QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 SourceLocation Loc,
                                  bool FullySubstituted = false,
                                  ArrayRef<QualType> Expansions = {});
 
