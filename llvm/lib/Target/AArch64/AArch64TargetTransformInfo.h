@@ -320,12 +320,6 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
-      unsigned Bits = DataType->getPrimitiveSizeInBits();
-      if (Bits != 64 && Bits != 128)
-        return false; // Fall back to scalarization of masked operations.
-    }
-
     // Type legalization cannot scalarize the data of a masked load/store.
     // Reject types that would be legalized to a scalar (e.g. <1 x half>).
     if (isa<FixedVectorType>(DataType) &&
