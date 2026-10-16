@@ -265,7 +265,7 @@ static bool isWithinConstantOverflowBounds(SymbolRef Sym,
 }
 
 // Same for the concrete integers: see if I is within [min/4, max/4].
-static bool isWithinConstantOverflowBounds(llvm::APSInt I) {
+static bool isWithinConstantOverflowBounds(llvm::APSInt I, ProgramStateRef) {
   APSIntType AT(I);
   assert(!AT.isUnsigned() &&
          "This only works with signed integers!");
@@ -362,17 +362,6 @@ static SVal doRearrangeUnchecked(ProgramStateRef State,
   return UnknownVal();
 }
 
-// Rearrange if symbol type matches the result type and if the operator is a
-// comparison operator, both symbol and constant must be within constant
-// overflow bounds.
-static bool shouldRearrange(ProgramStateRef State, BinaryOperator::Opcode Op,
-                            SymbolRef Sym, llvm::APSInt Int, QualType Ty) {
-  return Sym->getType() == Ty &&
-    (!BinaryOperator::isComparisonOp(Op) ||
-     (isWithinConstantOverflowBounds(Sym, State) &&
-      isWithinConstantOverflowBounds(Int)));
-}
-
 static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
                                           BinaryOperator::Opcode Op, NonLoc Lhs,
                                           NonLoc Rhs, QualType ResultTy) {
@@ -414,8 +403,14 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   llvm::APSInt LInt, RInt;
   std::tie(LSym, LInt) = decomposeSymbol(LSym, BV);
   std::tie(RSym, RInt) = decomposeSymbol(RSym, BV);
-  if (!shouldRearrange(State, Op, LSym, LInt, SingleTy) ||
-      !shouldRearrange(State, Op, RSym, RInt, SingleTy))
+
+  if (LSym->getType() != SingleTy || RSym->getType() != SingleTy)
+    return std::nullopt;
+
+  auto InBounds = [State](auto... X) {
+    return (... && isWithinConstantOverflowBounds(X, State));
+  };
+  if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
 
   // We know that no overflows can occur anymore.
