@@ -19,6 +19,7 @@ licenses(["notice"])
 # binaries in the runfiles tree.
 _TEST_INPUTS = {
     "HostCommonTests": glob(["Host/common/Inputs/*"]),
+    "LLDBMinidumpTests": glob(["Process/minidump/Inputs/*"]),
     "ObjectFileELFTests": glob(["ObjectFile/ELF/Inputs/*"]),
     "SymbolFileDWARFTests": glob(["SymbolFile/DWARF/Inputs/*"]),
     "SymbolTests": glob(["Symbol/Inputs/*"]),
@@ -136,6 +137,23 @@ cc_test(
         "//lldb/source/Plugins:PluginABIRISCV",
         "//llvm:RISCVInfo",
         "//llvm:RISCVUtilsAndDesc",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "AdbClientTests",
+    srcs = glob(["Platform/Android/*.cpp"]),
+    deps = [
+        ":lldbHostHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformAndroid",
         "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -552,6 +570,28 @@ cc_test(
 )
 
 cc_test(
+    name = "LLDBMinidumpTests",
+    srcs = glob(["Process/minidump/*.cpp"]),
+    data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["LLDBMinidumpTests"]],
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginProcessMinidump",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:ObjectYAML",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "LLDBValueObjectTests",
     srcs = glob(["ValueObject/*.cpp"]),
     deps = [
@@ -686,6 +726,22 @@ cc_test(
 )
 
 cc_test(
+    name = "PlatformGdbRemoteTests",
+    srcs = glob(["Platform/gdb-server/*.cpp"]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformGDB",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "PPC64InstEmulationTests",
     srcs = glob(["UnwindAssembly/PPC64/*.cpp"]),
     deps = [
@@ -710,6 +766,94 @@ cc_test(
 )
 
 cc_test(
+    name = "ProcessElfCoreTests",
+    srcs = glob(["Process/elf-core/*.cpp"]),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":lldbUtilityHelpers",
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformLinux",
+        "//lldb/source/Plugins:PluginProcessElfCore",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProcessGdbRemoteTests",
+    srcs = glob([
+        "Process/gdb-remote/*.cpp",
+        "Process/gdb-remote/*.h",
+    ]),
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginPlatformMacOSX",
+        "//lldb/source/Plugins:PluginProcessGDBRemote",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProcessLinuxTests",
+    srcs = glob(["Process/Linux/*.cpp"]),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginProcessLinux",
+        "//lldb/source/Plugins:PluginProcessLinuxPrivateHeaders",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProcessPOSIXTests",
+    srcs = glob(["Process/POSIX/*.cpp"]),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":lldbHostHelpers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginProcessPOSIX",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "ProcessTests",
     srcs = glob(["Process/*.cpp"]),
     deps = [
@@ -725,6 +869,27 @@ cc_test(
         "//lldb/source/Plugins:PluginPlatformMacOSX",
         "//llvm:Option",
         "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ProcessUtilityTests",
+    srcs = [
+        "Process/Utility/CoreFileMemoryRangesTest.cpp",
+        "Process/Utility/LinuxProcMapsTest.cpp",
+        "Process/Utility/MemoryTagManagerAArch64MTETest.cpp",
+    ],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -755,6 +920,24 @@ cc_test(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+# CMake also adds the FreeBSD and NetBSD register context tests on those
+# systems, which bazel does not build for.
+cc_test(
+    name = "RegisterSupportTests",
+    srcs = ["Process/Utility/RegisterContextTest.cpp"],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Interpreter",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
