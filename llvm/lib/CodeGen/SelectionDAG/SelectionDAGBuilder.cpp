@@ -10570,10 +10570,11 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
         !OpInfo.isIndirect) {
       // Only an input has a value to store to memory. A direct output, which
       // Clang never emits with a memory constraint but other IR can, would
-      // need a stack slot to be reloaded after the asm.
-      if (!OpInfo.isMultipleAlternative && OpInfo.Type != InlineAsm::isInput) {
-        Info.ErrorMsg << "cannot handle direct memory outputs yet for "
-                      << "constraint '" << OpInfo.ConstraintCode << "'";
+      // need a stack slot to be reloaded after the asm. That includes an
+      // output whose chosen alternative is memory, e.g. "=m|r".
+      if (OpInfo.Type != InlineAsm::isInput) {
+        Info.ErrorMsg << "cannot handle direct memory outputs for constraint '"
+                      << OpInfo.ConstraintCode << "'";
         return true;
       }
 
