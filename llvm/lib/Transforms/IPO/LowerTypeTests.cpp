@@ -2416,6 +2416,10 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
+// Sound wherever the caller has already dropped the type tests: the check
+// folds to true, the trap branch becomes dead, and later passes fold it
+// away. Required because the backend cannot select these intrinsics
+// ("must be lowered by the LowerTypeTests pass before code generation").
 bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
                                             bool IsRelative) {
   bool Changed = false;
