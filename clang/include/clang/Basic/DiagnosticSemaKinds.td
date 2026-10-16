@@ -11098,7 +11098,7 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def warn_lifetime_safety_inapplicable_lifetimebound_return
-    : Warning<"'lifetimebound' attribute has no effect on this function because return type %0 cannot carry a lifetime. The attribute only applies when the return type is a reference type, pointer type, or non-owner record type">,
+    : Warning<"'lifetimebound' attribute may not apply to return type %0">,
       InGroup<LifetimeSafetyInapplicableLifetimeboundReturn>,
       DefaultIgnore;
 

@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-annotation-placement -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-annotation-placement -Wno-dangling -verify=expected,return %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-inapplicable-lifetimebound-return -Wno-dangling -verify=return %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-annotation-placement -Wno-lifetime-safety-inapplicable-lifetimebound-return -Wno-dangling -verify=expected %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -12,9 +14,9 @@ struct [[gsl::Pointer()]] View {
 struct Plain {
   Plain() {}
   Plain(const Plain &other [[clang::lifetimebound]]) {}
-  Plain operator+(const Plain &other [[clang::lifetimebound]]) const { return {}; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'Plain' cannot carry a lifetime}}
+  Plain operator+(const Plain &other [[clang::lifetimebound]]) const { return {}; } // return-warning {{'lifetimebound' attribute may not apply to return type 'Plain'}}
   Plain &operator=(const Plain &other [[clang::lifetimebound]]) { return *this; }
-  operator int() const [[clang::lifetimebound]] { return 0; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'int' cannot carry a lifetime}}
+  operator int() const [[clang::lifetimebound]] { return 0; } // return-warning {{'lifetimebound' attribute may not apply to return type 'int'}}
   Plain(const Owner &o [[clang::lifetimebound]]) {}
 };
 
@@ -98,20 +100,19 @@ int *context_sensitive_origin_type(
   return v[0];
 }
 
-int getInt(const Owner &o [[clang::lifetimebound]]) { return 0; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'int' cannot carry a lifetime}}
-Owner getOwner(const Owner &o [[clang::lifetimebound]]) { return o; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'Owner' cannot carry a lifetime}}
-Plain getPlain(const Owner &o [[clang::lifetimebound]]) { return {}; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'Plain' cannot carry a lifetime}}
+int getInt(const Owner &o [[clang::lifetimebound]]) { return 0; } // return-warning {{'lifetimebound' attribute may not apply to return type 'int'}}
+Owner getOwner(const Owner &o [[clang::lifetimebound]]) { return o; } // return-warning {{'lifetimebound' attribute may not apply to return type 'Owner'}}
+Plain getPlain(const Owner &o [[clang::lifetimebound]]) { return {}; } // return-warning {{'lifetimebound' attribute may not apply to return type 'Plain'}}
 
 View getView(const Owner &o [[clang::lifetimebound]]) { return View(); }
 Owner *getOwnerPtr(Owner &o [[clang::lifetimebound]]) { return &o; }
 
-auto getAuto(const Owner &o [[clang::lifetimebound]]) { return 0; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'int' cannot carry a lifetime}}
+auto getAuto(const Owner &o [[clang::lifetimebound]]) { return 0; } // return-warning {{'lifetimebound' attribute may not apply to return type 'int'}}
 
-int getIntMultiParam(const Owner &o [[clang::lifetimebound]], int i [[clang::lifetimebound]]) { return 0; } // expected-warning 2 {{'lifetimebound' attribute has no effect on this function because return type 'int' cannot carry a lifetime}} \
+int getIntMultiParam(const Owner &o [[clang::lifetimebound]], int i [[clang::lifetimebound]]) { return 0; } // return-warning 2 {{'lifetimebound' attribute may not apply to return type 'int'}} \
                                                                                                             // expected-warning {{'lifetimebound' attribute has no effect on parameter of type 'int'}}
 
 void test_lambda() {
-  auto lambda = [](const Owner &o [[clang::lifetimebound]]) -> int { return 0; }; // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'int' cannot carry a lifetime}}
+  auto lambda = [](const Owner &o [[clang::lifetimebound]]) -> int { return 0; }; // return-warning {{'lifetimebound' attribute may not apply to return type 'int'}}
   (void)lambda;
 }
-
