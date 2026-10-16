@@ -1,4 +1,5 @@
-REQUIRES: curl || system-windows, http-server
+REQUIRES: curl && !system-windows, http-server
+
 
 RUN: rm -rf %t
 RUN: mkdir -p %t/debuginfod-cache
