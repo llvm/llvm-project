@@ -39,3 +39,13 @@ define i32 @select_i32_lt(i32 inreg %x, i32 inreg %y) #0 {
   %2 = select i1 %1, i32 %x, i32 %y
   ret i32 %2
 }
+
+; Check that the DAG combiner does not loop when folding a sign extension of
+; an inverted i1 value.
+; CHECK-LABEL: sext_xor_i1:
+; CHECK: sub
+define i8 @sext_xor_i1(i1 %a) {
+  %n = xor i1 %a, true
+  %r = sext i1 %n to i8
+  ret i8 %r
+}
