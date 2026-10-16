@@ -3204,6 +3204,8 @@ public:
     case ISD::UREM:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
+    case ISD::AVGSUBFLOORS:
+    case ISD::AVGSUBFLOORU:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
@@ -5896,6 +5898,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand GET_ACTIVE_LANE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandGetActiveLaneMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand LOOP_DEPENDENCE_MASK nodes
   /// \param N Node to expand
