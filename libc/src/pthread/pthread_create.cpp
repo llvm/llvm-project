@@ -39,6 +39,18 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
   size_t guardsize = attr->__guardsize;
   int detachstate = attr->__detachstate;
 
+  cpp::optional<SchedParameters> sched_params;
+  switch (attr->__inheritsched) {
+  case PTHREAD_INHERIT_SCHED:
+    break;
+  case PTHREAD_EXPLICIT_SCHED:
+    sched_params = cpp::optional<SchedParameters>(
+        SchedParameters{attr->__schedpolicy, attr->__schedparam});
+    break;
+  default:
+    return EINVAL;
+  }
+
   if (stacksize && stacksize < PTHREAD_STACK_MIN)
     return EINVAL;
 
@@ -53,8 +65,9 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
   // universal, not sure a pthread requirement).
 
   auto *thread = reinterpret_cast<LIBC_NAMESPACE::Thread *>(th);
-  int result = thread->run(func, arg, stack, stacksize, guardsize,
-                           detachstate == PTHREAD_CREATE_DETACHED);
+  int result =
+      thread->run(func, arg, stack, stacksize, guardsize,
+                  detachstate == PTHREAD_CREATE_DETACHED, sched_params);
   if (result != 0 && result != EPERM && result != EINVAL)
     return EAGAIN;
   return result;
