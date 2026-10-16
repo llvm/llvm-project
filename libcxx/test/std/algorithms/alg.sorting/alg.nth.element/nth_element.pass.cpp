@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -65,6 +66,39 @@ TEST_CONSTEXPR_CXX20 bool test()
     return true;
 }
 
+#if TEST_STD_VER >= 11
+TEST_CONSTEXPR_CXX20 void test_pattern(const std::vector<int>& input) {
+  std::vector<int> sorted = input;
+  std::sort(sorted.begin(), sorted.end());
+  int n           = static_cast<int>(input.size());
+  int positions[] = {0, n / 4, n / 2, n - 2, n - 1};
+  for (int nth : positions) {
+    std::vector<int> v = input;
+    std::nth_element(v.begin(), v.begin() + nth, v.end());
+    assert(v[nth] == sorted[nth]);
+    for (int i = 0; i != nth; ++i)
+      assert(v[i] <= v[nth]);
+    for (int i = nth + 1; i != n; ++i)
+      assert(v[i] >= v[nth]);
+  }
+}
+
+// Inputs that make a median-of-3 pivot do badly.
+TEST_CONSTEXPR_CXX20 bool test_patterns(int n) {
+  std::vector<int> v(n);
+  for (int i = 0; i != n; ++i)
+    v[i] = i < n / 2 ? i : n - i; // pipe organ
+  test_pattern(v);
+  for (int i = 0; i != n; ++i)
+    v[i] = i % 64; // sawtooth
+  test_pattern(v);
+  for (int i = 0; i != n; ++i)
+    v[i] = (i * 7919) % 16; // few distinct values
+  test_pattern(v);
+  return true;
+}
+#endif
+
 int main(int, char**)
 {
     test<int, random_access_iterator<int*> >();
@@ -73,6 +107,7 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     test<MoveOnly, random_access_iterator<MoveOnly*>>();
     test<MoveOnly, MoveOnly*>();
+    test_patterns(4096);
 #endif
 
 #if TEST_STD_VER >= 20
@@ -80,6 +115,7 @@ int main(int, char**)
     static_assert(test<int, int*>());
     static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
     static_assert(test<MoveOnly, MoveOnly*>());
+    static_assert(test_patterns(256));
 #endif
 
     return 0;
