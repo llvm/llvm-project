@@ -998,10 +998,14 @@ LogicalResult DynamicCastInfoAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
     cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
     mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
-  if (!isRttiPtr(srcRtti.getType()))
+  if (!srcRtti != !destRtti)
+    return emitError() << "srcRtti and destRtti must both be present or both "
+                          "be absent";
+
+  if (srcRtti && !isRttiPtr(srcRtti.getType()))
     return emitError() << "srcRtti must be an RTTI pointer";
 
-  if (!isRttiPtr(destRtti.getType()))
+  if (destRtti && !isRttiPtr(destRtti.getType()))
     return emitError() << "destRtti must be an RTTI pointer";
 
   return success();

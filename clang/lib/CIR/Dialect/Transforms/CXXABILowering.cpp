@@ -123,8 +123,10 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
                isCXXABIAttributeLegal(tc, tia.getData());
       })
       .Case<cir::DynamicCastInfoAttr>([&tc](cir::DynamicCastInfoAttr dcia) {
-        return isCXXABIAttributeLegal(tc, dcia.getSrcRtti()) &&
-               isCXXABIAttributeLegal(tc, dcia.getDestRtti()) &&
+        return (!dcia.getSrcRtti() ||
+                isCXXABIAttributeLegal(tc, dcia.getSrcRtti())) &&
+               (!dcia.getDestRtti() ||
+                isCXXABIAttributeLegal(tc, dcia.getDestRtti())) &&
                isCXXABIAttributeLegal(tc, dcia.getRuntimeFunc()) &&
                isCXXABIAttributeLegal(tc, dcia.getBadCastFunc());
       })
@@ -231,11 +233,13 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
       })
       .Case<cir::DynamicCastInfoAttr>([&tc,
                                        ctx](cir::DynamicCastInfoAttr dcia) {
+        auto rewriteRtti = [&](cir::GlobalViewAttr rtti) {
+          return rtti ? mlir::cast<cir::GlobalViewAttr>(
+                            rewriteAttribute(tc, ctx, rtti))
+                      : rtti;
+        };
         return cir::DynamicCastInfoAttr::get(
-            mlir::cast<cir::GlobalViewAttr>(
-                rewriteAttribute(tc, ctx, dcia.getSrcRtti())),
-            mlir::cast<cir::GlobalViewAttr>(
-                rewriteAttribute(tc, ctx, dcia.getDestRtti())),
+            rewriteRtti(dcia.getSrcRtti()), rewriteRtti(dcia.getDestRtti()),
             dcia.getRuntimeFunc(), dcia.getBadCastFunc(), dcia.getOffsetHint());
       })
       .Case<cir::ConstRecordAttr>([&tc, ctx](cir::ConstRecordAttr cra) {
