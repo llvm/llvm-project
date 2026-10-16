@@ -537,7 +537,7 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
                 return preservesUniformity(R->getOpcode());
               })
               .Case([](const VPPhi *) {
-                // Conservatively reject PHIs rather than follow cyclic inputs.
+                // Bail out on VPPhi, as we can end up in infinite cycles.
                 return false;
               })
               .Case([](const VPInstruction *VPI) {
@@ -551,14 +551,8 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
               });
       if (!PreservesUniformity)
         return false;
-      if (isa<VPWidenCastRecipe>(R)) {
-        // A cast is uniform according to its operand.
-        Worklist.push_back(R->getOperand(0));
-        continue;
-      }
     }
-    // Process operands in their original order, without recursive calls.
-    for (const VPValue *Op : reverse(R->operands()))
+    for (const VPValue *Op : R->operands())
       Worklist.push_back(Op);
   }
   return true;

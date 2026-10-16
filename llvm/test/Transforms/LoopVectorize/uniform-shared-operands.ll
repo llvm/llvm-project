@@ -124,5 +124,3 @@ loop:
 exit:
   ret i64 %acc.next
 }
-
-declare i64 @llvm.fshl.i64(i64, i64, i64)
