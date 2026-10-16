@@ -36844,6 +36844,11 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
 
 bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
   auto Changed = false;
+  const Loop *L = LI->getLoopFor(BB);
+  auto IsAffineInLoop = [L](const SCEV *S) {
+    const auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+    return AddRec && AddRec->getLoop() == L && AddRec->isAffine();
+  };
   // If the getelementptr list has fewer than two elements, there's nothing
   // to do.
   for (auto &Entry : make_filter_range(
@@ -36889,19 +36894,24 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       // Remove from the set of candidates all pairs of getelementptrs with
       // constant differences. Such getelementptrs are likely not good
       // candidates for vectorization in a bottom-up phase since one can be
-      // computed from the other. We also ensure all candidate getelementptr
-      // indices are unique.
+      // computed from the other. The same holds for affine recurrences of the
+      // enclosing loop that differ by a loop-invariant amount: loop strength
+      // reduction turns them into pointer increments. We also ensure all
+      // candidate getelementptr indices are unique.
       for (int I = 0, E = GEPList.size(); I < E && Candidates.size() > 1; ++I) {
         auto *GEPI = GEPList[I];
         if (!Candidates.count(GEPI))
           continue;
         const SCEV *SCEVI = SE->getSCEV(GEPList[I]);
+        bool IsAffineI = IsAffineInLoop(SCEVI);
         for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
           auto *GEPJ = GEPList[J];
           if (!Candidates.count(GEPJ))
             continue;
           const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
-          if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
+          const SCEV *Diff = SE->getMinusSCEV(SCEVI, SCEVJ);
+          if (isa<SCEVConstant>(Diff) || (IsAffineI && IsAffineInLoop(SCEVJ) &&
+                                          SE->isLoopInvariant(Diff, L))) {
             Candidates.remove(GEPI);
             Candidates.remove(GEPJ);
           } else if (GEPI->idx_begin()->get() == GEPJ->idx_begin()->get()) {
