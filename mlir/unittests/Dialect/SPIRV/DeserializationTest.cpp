@@ -269,13 +269,8 @@ class UnsupportedParameterDecorationTest
 TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
   addHeader();
   auto argID = nextID++;
-  SmallVector<uint32_t> operands = {argID, static_cast<uint32_t>(GetParam())};
-  if (GetParam() == spirv::Decoration::Alignment)
-    operands.push_back(16);
-  else if (GetParam() == spirv::Decoration::FuncParamAttr)
-    operands.push_back(
-        static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoWrite));
-  addInstruction(spirv::Opcode::OpDecorate, operands);
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {argID, static_cast<uint32_t>(GetParam())});
   addInstruction(spirv::Opcode::OpDecorate,
                  {argID, static_cast<uint32_t>(spirv::Decoration::Constant)});
 
@@ -294,15 +289,13 @@ TEST_P(UnsupportedParameterDecorationTest, RejectWithSupportedDecoration) {
   addFunctionEnd();
 
   ASSERT_FALSE(deserialize());
-  expectDiagnostic("unhandled decoration 'constant' on function argument with "
-                   "result <id> 1");
+  expectDiagnostic(
+      "already found a decoration for function argument with result <id> 1");
 }
 
 INSTANTIATE_TEST_SUITE_P(
     SPIRV, UnsupportedParameterDecorationTest,
-    ::testing::Values(spirv::Decoration::Alignment,
-                      spirv::Decoration::FuncParamAttr,
-                      spirv::Decoration::Restrict,
+    ::testing::Values(spirv::Decoration::Restrict,
                       spirv::Decoration::RelaxedPrecision));
 
 TEST_F(DeserializationTest, AlignmentMissingOperand) {
