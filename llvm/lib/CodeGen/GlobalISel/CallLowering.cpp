@@ -193,7 +193,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   }
 
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
-    if (F->hasFnAttribute(Attribute::NonLazyBind)) {
+    // Only a nonlazybind callee that may be preempted needs the GOT load; a
+    // DSO-local one gets a direct call, as in SelectionDAG.
+    if (F->hasFnAttribute(Attribute::NonLazyBind) &&
+        !MF.getTarget().shouldAssumeDSOLocal(F)) {
       LLT Ty = getLLTForType(*F->getType(), DL);
       Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
