@@ -57,7 +57,7 @@ constexpr bool __container_appendable = requires(_Container& __c, _Ref&& __ref) 
   requires(
       requires { __c.emplace_back(std::forward<_Ref>(__ref)); } ||
       requires { __c.push_back(std::forward<_Ref>(__ref)); } ||
-      requires { __c.emplace(__c.end(), std::forward<_Ref>(__ref)); } ||
+      requires { __c.emplace_hint(__c.end(), std::forward<_Ref>(__ref)); } ||
       requires { __c.insert(__c.end(), std::forward<_Ref>(__ref)); });
 };
 
@@ -117,8 +117,8 @@ template <class _Container, input_range _Range, class... _Args>
           __result.emplace_back(std::forward<_Ref>(__ref));
         } else if constexpr (requires { __result.push_back(std::declval<_Ref>()); }) {
           __result.push_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.emplace(__result.end(), std::declval<_Ref>()); }) {
-          __result.emplace(__result.end(), std::forward<_Ref>(__ref));
+        } else if constexpr (requires { __result.emplace_hint(__result.end(), std::declval<_Ref>()); }) {
+          __result.emplace_hint(__result.end(), std::forward<_Ref>(__ref));
         } else {
           static_assert(requires { __result.insert(__result.end(), std::declval<_Ref>()); });
           __result.insert(__result.end(), std::forward<_Ref>(__ref));
