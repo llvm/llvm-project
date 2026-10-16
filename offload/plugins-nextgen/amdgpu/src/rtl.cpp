@@ -283,9 +283,9 @@ private:
 
 /// Class holding an HSA memory pool.
 struct AMDGPUMemoryPoolTy {
-  /// Create a memory pool from an HSA memory pool.
-  AMDGPUMemoryPoolTy(hsa_amd_memory_pool_t MemoryPool)
-      : MemoryPool(MemoryPool), GlobalFlags(0) {}
+  /// Create a memory pool from an HSA memory pool owned by \p Agent.
+  AMDGPUMemoryPoolTy(hsa_amd_memory_pool_t MemoryPool, hsa_agent_t Agent)
+      : MemoryPool(MemoryPool), Agent(Agent), GlobalFlags(0) {}
 
   /// Initialize the memory pool retrieving its properties.
   Error init() {
@@ -304,6 +304,9 @@ struct AMDGPUMemoryPoolTy {
 
   /// Getter of the HSA memory pool.
   hsa_amd_memory_pool_t get() const { return MemoryPool; }
+
+  /// Getter of the agent owning the memory pool.
+  hsa_agent_t getAgent() const { return Agent; }
 
   /// Indicate the segment which belongs to.
   bool isGlobal() const { return (Segment == HSA_AMD_SEGMENT_GLOBAL); }
@@ -434,6 +437,9 @@ struct AMDGPUMemoryPoolTy {
 private:
   /// The HSA memory pool.
   hsa_amd_memory_pool_t MemoryPool;
+
+  /// The agent owning the memory pool.
+  hsa_agent_t Agent;
 
   /// The segment where the memory pool belongs to.
   hsa_amd_segment_t Segment;
@@ -2171,7 +2177,7 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
   /// Create a host device from an array of host agents.
   AMDHostDeviceTy(AMDGPUPluginTy &Plugin,
                   const llvm::SmallVector<hsa_agent_t> &HostAgents)
-      : AMDGenericDeviceTy(), Agents(HostAgents), ArgsMemoryManager(Plugin),
+      : AMDGenericDeviceTy(), Plugin(Plugin), Agents(HostAgents),
         PinnedMemoryManager(Plugin) {
     assert(!HostAgents.empty() && "No host agent found");
   }
@@ -2182,8 +2188,14 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     if (auto Err = initMemoryPools())
       return Err;
 
-    if (auto Err = ArgsMemoryManager.init(getArgsMemoryPool()))
-      return Err;
+    // Create a kernel args memory manager per host agent, so that each device
+    // can use the one nearest to it.
+    for (hsa_agent_t Agent : Agents) {
+      ArgsMemoryManagers.push_back(
+          std::make_unique<AMDGPUMemoryManagerTy>(Plugin));
+      if (auto Err = ArgsMemoryManagers.back()->init(getArgsMemoryPool(Agent)))
+        return Err;
+    }
 
     if (auto Err = PinnedMemoryManager.init(getFineGrainedMemoryPool()))
       return Err;
@@ -2196,8 +2208,10 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     if (auto Err = deinitMemoryPools())
       return Err;
 
-    if (auto Err = ArgsMemoryManager.deinit())
-      return Err;
+    for (auto &ArgsMemoryManager : ArgsMemoryManagers)
+      if (auto Err = ArgsMemoryManager->deinit())
+        return Err;
+    ArgsMemoryManagers.clear();
 
     if (auto Err = PinnedMemoryManager.deinit())
       return Err;
@@ -2212,7 +2226,7 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
       Error Err = hsa_utils::iterateAgentMemoryPools(
           Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
             AMDGPUMemoryPoolTy *MemoryPool =
-                new AMDGPUMemoryPoolTy(HSAMemoryPool);
+                new AMDGPUMemoryPoolTy(HSAMemoryPool, Agent);
             AllMemoryPools.push_back(MemoryPool);
             return HSA_STATUS_SUCCESS;
           });
@@ -2238,25 +2252,39 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
     return *CoarseGrainedMemoryPools[0];
   }
 
-  /// Get a memory pool for kernel args allocations.
-  AMDGPUMemoryPoolTy &getArgsMemoryPool() {
+  /// Get a memory pool for kernel args allocations owned by \p Agent. Fall back
+  /// to the first kernel args pool if \p Agent has none.
+  AMDGPUMemoryPoolTy &getArgsMemoryPool(hsa_agent_t Agent) {
     assert(!ArgsMemoryPools.empty() && "No kernelargs mempool");
-    // Retrieve any memory pool.
+    for (AMDGPUMemoryPoolTy *Pool : ArgsMemoryPools)
+      if (Pool->getAgent().handle == Agent.handle)
+        return *Pool;
     return *ArgsMemoryPools[0];
   }
 
-  /// Getters for kernel args and host pinned memory managers.
-  AMDGPUMemoryManagerTy &getArgsMemoryManager() { return ArgsMemoryManager; }
+  /// Get the kernel args memory manager of \p Agent. Fall back to the first
+  /// agent's if \p Agent is unknown.
+  AMDGPUMemoryManagerTy &getArgsMemoryManager(hsa_agent_t Agent) {
+    for (size_t I = 0; I < Agents.size(); ++I)
+      if (Agents[I].handle == Agent.handle)
+        return *ArgsMemoryManagers[I];
+    return *ArgsMemoryManagers[0];
+  }
+
+  /// Getter for host pinned memory manager.
   AMDGPUMemoryManagerTy &getPinnedMemoryManager() {
     return PinnedMemoryManager;
   }
 
 private:
+  /// Reference to the plugin.
+  AMDGPUPluginTy &Plugin;
+
   /// Array of agents on the host side.
   const llvm::SmallVector<hsa_agent_t> Agents;
 
-  // Memory manager for kernel arguments.
-  AMDGPUMemoryManagerTy ArgsMemoryManager;
+  // Memory managers for kernel arguments, one per host agent.
+  llvm::SmallVector<std::unique_ptr<AMDGPUMemoryManagerTy>> ArgsMemoryManagers;
 
   // Memory manager for pinned memory.
   AMDGPUMemoryManagerTy PinnedMemoryManager;
@@ -2405,6 +2433,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // detect if device is an APU.
     if (auto Err = checkIfAPU())
       return Err;
+
+    // Allocate kernel args from the host agent nearest to this device. If the
+    // attribute is missing, assume an older libhsa and use the first agent.
+    hsa_agent_t NearestCPU;
+    if (getDeviceAttrRaw(HSA_AMD_AGENT_INFO_NEAREST_CPU, NearestCPU) !=
+        HSA_STATUS_SUCCESS)
+      NearestCPU = HostDevice.getAgent();
+    ArgsMemoryManager = &HostDevice.getArgsMemoryManager(NearestCPU);
 
     // Retrieve the size of the group memory.
     for (const auto *Pool : AllMemoryPools) {
@@ -3555,6 +3591,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the device agent.
   hsa_agent_t getAgent() const override { return Agent; }
 
+  /// Get the memory manager for kernel args.
+  AMDGPUMemoryManagerTy &getArgsMemoryManager() {
+    assert(ArgsMemoryManager && "Kernel args memory manager not initialized");
+    return *ArgsMemoryManager;
+  }
+
   /// Get the signal manager.
   AMDGPUSignalManagerTy &getSignalManager() { return AMDGPUSignalManager; }
 
@@ -3565,7 +3607,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
           AMDGPUMemoryPoolTy *MemoryPool =
               Plugin.allocate<AMDGPUMemoryPoolTy>();
-          new (MemoryPool) AMDGPUMemoryPoolTy(HSAMemoryPool);
+          new (MemoryPool) AMDGPUMemoryPoolTy(HSAMemoryPool, Agent);
           AllMemoryPools.push_back(MemoryPool);
           return HSA_STATUS_SUCCESS;
         });
@@ -3727,6 +3769,9 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
+
+  /// Kernel args memory manager of the host agent nearest to the device.
+  AMDGPUMemoryManagerTy *ArgsMemoryManager = nullptr;
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
@@ -4382,10 +4427,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "cooperative kernel launch not supported for AMDGPU");
 
-  AMDGPUPluginTy &AMDGPUPlugin =
-      static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
-  AMDHostDeviceTy &HostDevice = AMDGPUPlugin.getHostDevice();
-  AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
+  AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
+  AMDGPUMemoryManagerTy &ArgsMemoryManager =
+      AMDGPUDevice.getArgsMemoryManager();
 
   void *AllArgs = nullptr;
   if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
@@ -4416,8 +4460,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     auto [Offset, Size] = ArgMDs[NumArgs - 1];
     ExplicitEnd = Offset + Size;
   }
-
-  AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
 
   AMDGPUStreamTy *Stream = nullptr;
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
