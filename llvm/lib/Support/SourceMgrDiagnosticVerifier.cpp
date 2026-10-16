@@ -88,6 +88,10 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &OS,
   // If the buffer is invalid, return an empty list.
   if (!Buf)
     return {};
+  // Idempotent: a buffer that's already been scanned is returned as-is,
+  // rather than being rescanned and appending duplicate entries.
+  if (auto MaybeDiags = getExpectedDiags(Buf->getBufferIdentifier()))
+    return *MaybeDiags;
   auto &ExpectedDiags = ExpectedDiagsPerFile[Buf->getBufferIdentifier()];
 
   // The number of the last line that did not correlate to a designator.
@@ -141,12 +145,30 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &OS,
       // Get the integer value without the @ and +/- prefix.
       if (OffsetMatch[0] == '+' || OffsetMatch[0] == '-') {
         int Offset;
-        OffsetMatch.drop_front().getAsInteger(0, Offset);
+        // The regex only ever captures decimal digits here, so parse as
+        // decimal explicitly: a leading zero (e.g. '@+08') would otherwise
+        // be mis-parsed as octal by getAsInteger's radix auto-detection
+        // (and '08' isn't valid octal, so that already-broken corner case
+        // would silently discard the offset instead of reporting an error).
+        if (OffsetMatch.drop_front().getAsInteger(10, Offset)) {
+          OK = false;
+          Record.emitError(OS, Mgr, "invalid line offset '" + OffsetMatch + "'");
+          continue;
+        }
 
-        if (OffsetMatch.front() == '+')
+        if (OffsetMatch.front() == '+') {
           Record.LineNo += Offset;
-        else
+        } else if (static_cast<unsigned>(Offset) >= Record.LineNo) {
+          // Line numbers are 1-based, so an offset that would take LineNo to
+          // 0 or below is out of range.
+          OK = false;
+          Record.emitError(OS, Mgr,
+                           "line offset '" + OffsetMatch +
+                               "' is before the start of the file");
+          continue;
+        } else {
           Record.LineNo -= Offset;
+        }
       } else if (OffsetMatch.consume_front("unknown")) {
         // This is matching unknown locations.
         Record.FileLoc = SMLoc();
@@ -188,12 +210,8 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
   if (HasLoc) {
     // If the buffer couldn't be resolved, `Diags` stays empty: a diagnostic
     // with a location in an unknown file can never match anything.
-    if (Buf) {
-      if (auto MaybeDiags = getExpectedDiags(Buf->getBufferIdentifier()))
-        Diags = *MaybeDiags;
-      else
-        Diags = computeExpectedDiags(OS, Mgr, Buf);
-    }
+    if (Buf)
+      Diags = computeExpectedDiags(OS, Mgr, Buf);
   } else {
     Diags = ExpectedUnknownLocDiags;
   }
@@ -236,6 +254,15 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
 }
 
 bool SourceMgrDiagnosticVerifier::verify(raw_ostream &OS, SourceMgr &Mgr) {
+  // Scan any buffers that process() never had a reason to look at (e.g. an
+  // included file where the diagnostic its 'expected-*' comment names never
+  // actually fired): otherwise that expectation would never be recorded, and
+  // so never reported as missing below, letting verification silently
+  // pass when it shouldn't. computeExpectedDiags is idempotent, so
+  // re-scanning an already-known buffer here is harmless.
+  for (unsigned I = 0, E = Mgr.getNumBuffers(); I != E; ++I)
+    (void)computeExpectedDiags(OS, Mgr, Mgr.getMemoryBuffer(I + 1));
+
   // Verify that all expected errors were seen.
   auto CheckExpectedDiags = [&](ExpectedDiag &Diag) {
     if (!Diag.Matched) {
