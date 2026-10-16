@@ -1264,8 +1264,9 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
     if (LSOpts.CheckFieldOriginEscape && !isa<CXXConstructorDecl>(MD)) {
-      if (const auto *ClassDef = MD->getParent()->getDefinition())
-        issueFieldPlaceholderLoans(ClassDef, PlaceholderLoanFacts);
+      const CXXRecordDecl *RecDef = MD->getParent()->getDefinition();
+      assert(RecDef && "class methods have a defined parent");
+      issueFieldPlaceholderLoans(RecDef, PlaceholderLoanFacts);
     }
   }
   for (const ParmVarDecl *PVD : FD->parameters()) {
