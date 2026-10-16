@@ -2228,6 +2228,10 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+TypedAttr ModuleImport::convertScalarConstant(llvm::Constant *constant) {
+  return getScalarConstantAsAttr(builder, constant);
+}
+
 LogicalResult ModuleImport::convertIntrinsicArguments(
     ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
     bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,

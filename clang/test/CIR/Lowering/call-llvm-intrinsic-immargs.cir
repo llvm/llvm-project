@@ -1,0 +1,92 @@
+// RUN: cir-opt %s -cir-to-llvm | FileCheck %s
+// RUN: cir-opt %s -cir-to-llvm | cir-opt -canonicalize='region-simplify=aggressive' -cse -sccp | cir-translate -mlir-to-llvmir | FileCheck %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+!ptr = !cir.ptr<!cir.void>
+!v4f32 = !cir.vector<4 x !cir.float>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // CHECK-LABEL: llvm.func @all_immediate
+  // CHECK: llvm.call_intrinsic "llvm.amdgcn.s.sleep"() {immarg_positions = array<i32: 0>, immarg_values = [1 : i32]} : () -> ()
+  // LLVM-LABEL: define void @all_immediate(
+  // LLVM: call void @llvm.amdgcn.s.sleep(i32 1)
+  cir.func @all_immediate() {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.call_llvm_intrinsic "amdgcn.s.sleep" %one : (!s32i) -> ()
+    cir.return
+  }
+
+  // A constant that is not an immarg parameter must remain an SSA operand.
+  // CHECK-LABEL: llvm.func @ordinary_constant
+  // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(42 : i32)
+  // CHECK: llvm.call_intrinsic "llvm.bswap.i32"(%[[VALUE]]) : (i32) -> i32
+  // LLVM-LABEL: define i32 @ordinary_constant(
+  // LLVM: call i32 @llvm.bswap.i32(i32 42)
+  cir.func @ordinary_constant() -> !s32i {
+    %value = cir.const #cir.int<42> : !s32i
+    %r = cir.call_llvm_intrinsic "bswap.i32" %value : (!s32i) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK-LABEL: llvm.func @probability
+  // CHECK: llvm.call_intrinsic "llvm.expect.with.probability.i32"(%{{.*}}, %{{.*}}) {immarg_positions = array<i32: 2>, immarg_values = [5.000000e-01]} : (i32, i32) -> i32
+  // LLVM-LABEL: define i32 @probability(
+  // LLVM: call i32 @llvm.expect.with.probability.i32(i32 %{{.*}}, i32 %{{.*}}, double 5.000000e-01)
+  cir.func @probability(%x: !s32i, %expected: !s32i) -> !s32i {
+    %p = cir.const #cir.fp<5.000000e-01> : !cir.double
+    %r = cir.call_llvm_intrinsic "expect.with.probability.i32" %x, %expected, %p : (!s32i, !s32i, !cir.double) -> !s32i
+    cir.return %r : !s32i
+  }
+
+  // Test multiple immediates, overloaded names, and generated flags.
+  // CHECK-LABEL: llvm.func @object_size
+  // CHECK: llvm.call_intrinsic "llvm.objectsize"(%{{.*}}) {immarg_positions = array<i32: 1, 2, 3>, immarg_values = [false, true, true]} : (!llvm.ptr) -> i64
+  // LLVM-LABEL: define i64 @object_size(
+  // LLVM: call i64 @llvm.objectsize.i64.p0(ptr %{{.*}}, i1 false, i1 true, i1 true)
+  cir.func @object_size(%p: !ptr) -> !u64i {
+    %r = cir.objsize max nullunknown dynamic %p : !ptr -> !u64i
+    cir.return %r : !u64i
+  }
+
+  // CHECK-LABEL: llvm.func @return_address
+  // CHECK: llvm.call_intrinsic "llvm.returnaddress"() {immarg_positions = array<i32: 0>, immarg_values = [1 : i32]} : () -> !llvm.ptr
+  // LLVM-LABEL: define ptr @return_address(
+  // LLVM: call ptr @llvm.returnaddress.p0(i32 1)
+  cir.func @return_address() -> !ptr {
+    %level = cir.const #cir.int<1> : !u32i
+    %r = cir.return_address(%level)
+    cir.return %r : !ptr
+  }
+
+  // CHECK-LABEL: llvm.func @frame_address
+  // CHECK: llvm.call_intrinsic "llvm.frameaddress"() {immarg_positions = array<i32: 0>, immarg_values = [0 : i32]} : () -> !llvm.ptr
+  // LLVM-LABEL: define ptr @frame_address(
+  // LLVM: call ptr @llvm.frameaddress.p0(i32 0)
+  cir.func @frame_address() -> !ptr {
+    %level = cir.const #cir.int<0> : !u32i
+    %r = cir.frame_address(%level) : !ptr
+    cir.return %r : !ptr
+  }
+
+  // Constants from different branches must not become a block argument.
+  // CHECK-LABEL: llvm.func @different_modes
+  // CHECK: llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<reassoc>, immarg_positions = array<i32: 2>, immarg_values = [1 : i32]}
+  // CHECK: llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<reassoc>, immarg_positions = array<i32: 2>, immarg_values = [2 : i32]}
+  // LLVM-LABEL: define <4 x float> @different_modes(
+  // LLVM: call reassoc <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 1)
+  // LLVM: call reassoc <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 2)
+  cir.func @different_modes(%cond: !cir.bool, %x: !v4f32) -> !v4f32 {
+    %one = cir.const #cir.int<1> : !s32i
+    %two = cir.const #cir.int<2> : !s32i
+    cir.if %cond {
+      %a = cir.call_llvm_intrinsic "x86.sse41.round.ss" %x, %x, %one : (!v4f32, !v4f32, !s32i) -> !v4f32 fastmath<reassoc>
+      cir.return %a : !v4f32
+    } else {
+      %b = cir.call_llvm_intrinsic "x86.sse41.round.ss" %x, %x, %two : (!v4f32, !v4f32, !s32i) -> !v4f32 fastmath<reassoc>
+      cir.return %b : !v4f32
+    }
+    cir.unreachable
+  }
+}

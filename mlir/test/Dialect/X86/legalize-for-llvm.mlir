@@ -8,14 +8,14 @@ func.func @avx512_mask_rndscale(
 {
   %rnd_k = arith.constant 15 : i32
   %rnd = arith.constant 42 : i32
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.rndscale.ps.512"
+  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.rndscale.ps.512"{{.*}}immarg_positions = array<i32: 1, 4>, immarg_values = [15 : i32, 42 : i32]
   %0 = x86.avx512.mask.rndscale %src, %rnd_k, %a, %imm_i16, %rnd : vector<16xf32>
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.rndscale.pd.512"
+  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.rndscale.pd.512"{{.*}}immarg_positions = array<i32: 1, 4>, immarg_values = [15 : i32, 42 : i32]
   %1 = x86.avx512.mask.rndscale %b, %rnd_k, %b, %imm_i8, %rnd : vector<8xf64>
 
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.scalef.ps.512"
+  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.scalef.ps.512"{{.*}}immarg_positions = array<i32: 4>, immarg_values = [42 : i32]
   %2 = x86.avx512.mask.scalef %a, %a, %a, %scale_k_i16, %rnd : vector<16xf32>
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.scalef.pd.512"
+  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.mask.scalef.pd.512"{{.*}}immarg_positions = array<i32: 4>, immarg_values = [42 : i32]
   %3 = x86.avx512.mask.scalef %b, %b, %b, %scale_k_i8, %rnd : vector<8xf64>
 
   // Keep results alive.
@@ -223,7 +223,7 @@ func.func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
 func.func @avx_dot(%a: vector<8xf32>, %b: vector<8xf32>) -> (vector<8xf32>)
 {
   // CHECK: llvm.mlir.constant(-1 : i8)
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx.dp.ps.256"
+  // CHECK: llvm.call_intrinsic "llvm.x86.avx.dp.ps.256"{{.*}}immarg_positions = array<i32: 2>, immarg_values = [-1 : i8]
   %0 = x86.avx.intr.dot %a, %b : vector<8xf32>
   return %0 : vector<8xf32>
 }

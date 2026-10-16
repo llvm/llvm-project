@@ -104,7 +104,13 @@ void ConvertVectorToLLVMPass::runOnOperation() {
       if (armSVE)
         arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
     }
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    GreedyRewriteConfig config;
+    // X86 immediate arguments are still SSA operands until the conversion
+    // below represents them as attributes. Do not merge blocks with different
+    // immediates into a block that takes the immediate as a block argument.
+    if (x86)
+      config.setRegionSimplificationLevel(GreedySimplifyRegionLevel::Normal);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
   // Convert to the LLVM IR dialect.
