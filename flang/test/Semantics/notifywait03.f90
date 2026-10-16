@@ -75,28 +75,28 @@ program test_notify_wait
   !ERROR: Until-spec in a event-wait-spec-list may not be repeated
   notify wait(notify_var, until_count=count, stat=sync_status, errmsg=error_message, until_count=count_array(1))
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, stat=sync_status, stat=superfluous_stat)
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, stat=sync_status, until_count=count, stat=superfluous_stat)
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, stat=sync_status, errmsg=error_message, stat=superfluous_stat)
 
-  !ERROR: A stat-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The stat-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, stat=sync_status, until_count=count, errmsg=error_message, stat=superfluous_stat)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, errmsg=error_message, errmsg=superfluous_errmsg)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, errmsg=error_message, until_count=count, errmsg=superfluous_errmsg)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, errmsg=error_message, stat=superfluous_stat, errmsg=superfluous_errmsg)
 
-  !ERROR: A errmsg-variable in a event-wait-spec-list may not be repeated
+  !ERROR: The errmsg-variable in a event-wait-spec-list may not be repeated
   notify wait(notify_var, errmsg=error_message, until_count=count, stat=superfluous_stat, errmsg=superfluous_errmsg)
 
   !_____________ invalid sync-stat-lists: coindexed stat-variable - C1173 __________________
