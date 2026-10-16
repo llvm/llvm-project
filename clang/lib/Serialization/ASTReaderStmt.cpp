@@ -2957,6 +2957,7 @@ void ASTStmtReader::VisitOMPGenericLoopDirective(OMPGenericLoopDirective *D) {
 void ASTStmtReader::VisitOMPTeamsGenericLoopDirective(
     OMPTeamsGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setCanBeParallelFor(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsGenericLoopDirective(
