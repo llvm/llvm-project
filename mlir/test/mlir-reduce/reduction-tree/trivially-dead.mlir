@@ -1,5 +1,6 @@
 // UNSUPPORTED: system-windows
 // RUN: mlir-reduce %s -reduction-tree='traversal-mode=0 test=%S/../script/trivially-dead.sh' | FileCheck %s
+// RUN: mlir-reduce %s -reduction-tree='traversal-mode=2 test=%S/../script/trivially-dead.sh' | FileCheck %s
 // We are testing the ability of keeping trivially-dead yet interesting code
 
 func.func @trivially_dead() {
