@@ -400,6 +400,9 @@ private:
 
   BlockFrequency getBrokenHintFreq(const HintsInfo &, MCRegister);
   void collectHintInfo(Register, HintsInfo &);
+  bool recolorPhysicalHintInterferences(const LiveRange &, MCRegister,
+                                        BlockFrequency);
+  void tryRecoloringForPhysicalHint(const LiveInterval &, MCRegister);
 
   /// Greedy RA statistic to remark.
   struct RAGreedyStats {
