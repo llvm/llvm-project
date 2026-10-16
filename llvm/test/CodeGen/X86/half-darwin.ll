@@ -44,11 +44,26 @@ define void @truncdfhf(double %in, ptr %ptr) nounwind {
 ;
 ; CHECK-F16C-LABEL: truncdfhf:
 ; CHECK-F16C:       ## %bb.0:
-; CHECK-F16C-NEXT:    pushq %rbx
-; CHECK-F16C-NEXT:    movq %rdi, %rbx
-; CHECK-F16C-NEXT:    callq ___truncdfhf2
-; CHECK-F16C-NEXT:    movw %ax, (%rbx)
-; CHECK-F16C-NEXT:    popq %rbx
+; CHECK-F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
+; CHECK-F16C-NEXT:    vmovd %xmm1, %eax
+; CHECK-F16C-NEXT:    leal 1(%rax), %ecx
+; CHECK-F16C-NEXT:    leal -1(%rax), %edx
+; CHECK-F16C-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
+; CHECK-F16C-NEXT:    ## xmm2 = mem[0,0]
+; CHECK-F16C-NEXT:    vandps %xmm2, %xmm0, %xmm3
+; CHECK-F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; CHECK-F16C-NEXT:    vandps %xmm2, %xmm1, %xmm2
+; CHECK-F16C-NEXT:    vucomisd %xmm2, %xmm3
+; CHECK-F16C-NEXT:    cmoval %ecx, %edx
+; CHECK-F16C-NEXT:    vucomisd %xmm1, %xmm0
+; CHECK-F16C-NEXT:    sete %cl
+; CHECK-F16C-NEXT:    testb $1, %al
+; CHECK-F16C-NEXT:    setne %sil
+; CHECK-F16C-NEXT:    orb %cl, %sil
+; CHECK-F16C-NEXT:    cmovnel %eax, %edx
+; CHECK-F16C-NEXT:    vmovd %edx, %xmm0
+; CHECK-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; CHECK-F16C-NEXT:    retq
 ;
 ; CHECK-FP16-LABEL: truncdfhf:

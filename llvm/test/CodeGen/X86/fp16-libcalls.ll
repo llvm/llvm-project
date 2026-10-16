@@ -427,7 +427,25 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; F16C-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
 ; F16C-NEXT:    callq fma@PLT
-; F16C-NEXT:    callq __truncdfhf2@PLT
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
+; F16C-NEXT:    vmovd %xmm1, %eax
+; F16C-NEXT:    leal 1(%rax), %ecx
+; F16C-NEXT:    leal -1(%rax), %edx
+; F16C-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
+; F16C-NEXT:    # xmm2 = mem[0,0]
+; F16C-NEXT:    vandps %xmm2, %xmm0, %xmm3
+; F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; F16C-NEXT:    vandps %xmm2, %xmm1, %xmm2
+; F16C-NEXT:    vucomisd %xmm2, %xmm3
+; F16C-NEXT:    cmoval %ecx, %edx
+; F16C-NEXT:    vucomisd %xmm1, %xmm0
+; F16C-NEXT:    sete %cl
+; F16C-NEXT:    testb $1, %al
+; F16C-NEXT:    setne %sil
+; F16C-NEXT:    orb %cl, %sil
+; F16C-NEXT:    cmovnel %eax, %edx
+; F16C-NEXT:    vmovd %edx, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq

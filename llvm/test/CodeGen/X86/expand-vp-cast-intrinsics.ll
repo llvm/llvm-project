@@ -519,25 +519,60 @@ define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroex
 ;
 ; AVX512-LABEL: vfptrunc_v2f16_v2f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    subq $40, %rsp
-; AVX512-NEXT:    .cfi_def_cfa_offset 48
-; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    callq __truncdfhf2@PLT
-; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm0 = mem[1,0]
-; AVX512-NEXT:    callq __truncdfhf2@PLT
-; AVX512-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
+; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vmovd %xmm1, %eax
+; AVX512-NEXT:    leal 1(%rax), %ecx
+; AVX512-NEXT:    leal -1(%rax), %edx
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm2 = [NaN,NaN]
+; AVX512-NEXT:    # xmm2 = mem[0,0]
+; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm3
+; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vandps %xmm2, %xmm1, %xmm4
+; AVX512-NEXT:    vucomisd %xmm4, %xmm3
+; AVX512-NEXT:    cmoval %ecx, %edx
+; AVX512-NEXT:    vucomisd %xmm1, %xmm0
+; AVX512-NEXT:    sete %cl
+; AVX512-NEXT:    testb $1, %al
+; AVX512-NEXT:    setne %sil
+; AVX512-NEXT:    orb %cl, %sil
+; AVX512-NEXT:    cmovnel %eax, %edx
+; AVX512-NEXT:    vmovd %edx, %xmm1
+; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm3
+; AVX512-NEXT:    vmovd %xmm3, %eax
+; AVX512-NEXT:    leal 1(%rax), %ecx
+; AVX512-NEXT:    leal -1(%rax), %edx
+; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm4
+; AVX512-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
+; AVX512-NEXT:    vandps %xmm2, %xmm3, %xmm5
+; AVX512-NEXT:    vucomisd %xmm5, %xmm4
+; AVX512-NEXT:    cmoval %ecx, %edx
+; AVX512-NEXT:    vucomisd %xmm3, %xmm0
+; AVX512-NEXT:    sete %cl
+; AVX512-NEXT:    testb $1, %al
+; AVX512-NEXT:    setne %sil
+; AVX512-NEXT:    orb %cl, %sil
+; AVX512-NEXT:    cmovnel %eax, %edx
+; AVX512-NEXT:    vmovd %edx, %xmm0
+; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX512-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    callq __truncdfhf2@PLT
-; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vpblendd $13, (%rsp), %xmm0, %xmm1 # 16-byte Folded Reload
-; AVX512-NEXT:    # xmm1 = mem[0],xmm0[1],mem[2,3]
-; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX512-NEXT:    addq $40, %rsp
-; AVX512-NEXT:    .cfi_def_cfa_offset 8
+; AVX512-NEXT:    vcvtsd2ss %xmm0, %xmm15, %xmm1
+; AVX512-NEXT:    vmovd %xmm1, %eax
+; AVX512-NEXT:    leal 1(%rax), %ecx
+; AVX512-NEXT:    leal -1(%rax), %edx
+; AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vucomisd %xmm1, %xmm2
+; AVX512-NEXT:    cmoval %ecx, %edx
+; AVX512-NEXT:    movb $1, %cl
+; AVX512-NEXT:    testb %cl, %cl
+; AVX512-NEXT:    cmovnel %eax, %edx
+; AVX512-NEXT:    vmovd %edx, %xmm1
+; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; AVX512-NEXT:    vpbroadcastw %xmm1, %xmm1
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    retq
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> %m, i32 %vl)
   ret <2 x half> %v
