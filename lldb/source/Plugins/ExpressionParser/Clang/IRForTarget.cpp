@@ -394,9 +394,14 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     result_global->replaceAllUsesWith(new_result_global);
   }
 
-  if (!m_decl_map->AddPersistentVariable(
-          result_decl, m_result_name, m_result_type, true, m_result_is_pointer))
+  if (llvm::Error err = m_decl_map->AddPersistentVariable(
+          result_decl, m_result_name, m_result_type, true,
+          m_result_is_pointer)) {
+    m_error_stream.Format("Internal error: Couldn't create the result "
+                          "variable: {0}",
+                          llvm::toString(std::move(err)));
     return false;
+  }
 
   result_global->eraseFromParent();
 
@@ -874,8 +879,8 @@ bool IRForTarget::RewriteObjCSelectors(BasicBlock &basic_block) {
   return true;
 }
 
-// This function does not report errors; its callers are responsible.
-bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
+llvm::Error
+IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   AllocaInst *alloc = dyn_cast<AllocaInst>(persistent_alloc);
@@ -883,13 +888,15 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   MDNode *alloc_md = alloc->getMetadata("clang.decl.ptr");
 
   if (!alloc_md || !alloc_md->getNumOperands())
-    return false;
+    return llvm::createStringError("Internal error: Couldn't rewrite the "
+                                   "creation of a persistent variable");
 
   ConstantInt *constant_int =
       mdconst::dyn_extract<ConstantInt>(alloc_md->getOperand(0));
 
   if (!constant_int)
-    return false;
+    return llvm::createStringError("Internal error: Couldn't rewrite the "
+                                   "creation of a persistent variable");
 
   // We attempt to register this as a new persistent variable with the DeclMap.
 
@@ -902,9 +909,9 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
 
   StringRef decl_name(decl->getName());
   lldb_private::ConstString persistent_variable_name(decl_name);
-  if (!m_decl_map->AddPersistentVariable(decl, persistent_variable_name,
-                                         result_decl_type, false, false))
-    return false;
+  if (llvm::Error err = m_decl_map->AddPersistentVariable(
+          decl, persistent_variable_name, result_decl_type, false, false))
+    return err;
 
   GlobalVariable *persistent_global = new GlobalVariable(
       (*m_module), alloc->getType(), false,  /* not constant */
@@ -939,7 +946,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   alloc->replaceAllUsesWith(persistent_load);
   alloc->eraseFromParent();
 
-  return true;
+  return llvm::Error::success();
 }
 
 bool IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block) {
@@ -972,12 +979,10 @@ bool IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block) {
   }
 
   for (Instruction *inst : pvar_allocs) {
-    if (!RewritePersistentAlloc(inst)) {
-      m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite "
-                            "the creation of a persistent variable\n");
-
-      LLDB_LOG(log, "Couldn't rewrite the creation of a persistent variable");
-
+    if (llvm::Error err = RewritePersistentAlloc(inst)) {
+      std::string msg = llvm::toString(std::move(err));
+      LLDB_LOG(log, "Couldn't rewrite a persistent variable: {0}", msg);
+      m_error_stream << msg;
       return false;
     }
   }
