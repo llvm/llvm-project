@@ -33,7 +33,7 @@ def look_for_indirect(file):
     for line in stdout.splitlines():
         if not line.startswith(" "):
             function = line
-        result = re.search("(call|jmp).*\*", line)
+        result = re.search(r"(call|jmp).*\*", line)
         if result is not None:
             # TODO: Perhaps use cxxfilt to demangle functions?
             print(function)
