@@ -1,0 +1,31 @@
+# NOTE: Do not autogenerate. The MIR updater cannot check debugValueSubstitutions in YAML metadata.
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=si-reuse-invariant-scalar-loads -verify-machineinstrs %s -o - | FileCheck %s
+
+# Equivalent deleted definitions must still resolve instruction references.
+# CHECK-LABEL: name: debug_substitution
+# CHECK: debugValueSubstitutions:
+# CHECK-NEXT: - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 0 }
+# CHECK: early-clobber $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM_ec
+# CHECK-SAME: debug-instr-number 1
+# CHECK: DBG_INSTR_REF dbg-instr-ref(2, 0)
+
+---
+name: debug_substitution
+tracksRegLiveness: true
+debugInstrRef: true
+machineFunctionInfo:
+  isEntryFunction: true
+  sgprForEXECCopy: '$sgpr4_sgpr5'
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+    ;
+    renamable $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0, debug-instr-number 1 :: (invariant load (s64), align 8, addrspace 4)
+    renamable $vgpr1 = V_MUL_LO_U32_e64 $vgpr0, $sgpr9, implicit $exec
+    $sgpr8_sgpr9 = S_MOV_B64 0
+    renamable $sgpr12_sgpr13 = S_LOAD_DWORDX2_IMM_ec $sgpr0_sgpr1, 64, 0, debug-instr-number 2 :: (invariant load (s64), align 8, addrspace 4)
+    renamable $vgpr2 = V_MUL_LO_U32_e64 $sgpr12, $vgpr0, implicit $exec
+    $sgpr12_sgpr13 = S_MOV_B64 0
+    DBG_INSTR_REF dbg-instr-ref(2, 0)
+    S_ENDPGM 0
+...

@@ -486,6 +486,13 @@ public:
                         MachineFunctionAnalysisManager &AM);
 };
 
+class SIReuseInvariantScalarLoadsPass
+    : public OptionalPassInfoMixin<SIReuseInvariantScalarLoadsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class SIInsertWaitcntsPass
     : public RequiredPassInfoMixin<SIInsertWaitcntsPass> {
 public:
@@ -598,6 +605,9 @@ extern char &AMDGPULowerVGPREncodingLegacyID;
 
 void initializeSIInsertHardClausesLegacyPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
+
+void initializeSIReuseInvariantScalarLoadsLegacyPass(PassRegistry &);
+extern char &SIReuseInvariantScalarLoadsLegacyID;
 
 void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
