@@ -9,7 +9,7 @@ define ptr @forward_byte_store_to_ptr_load() {
 ; CHECK-LABEL: define ptr @forward_byte_store_to_ptr_load() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store b64 bitcast (ptr @g to b64), ptr [[A]], align 8
-; CHECK-NEXT:    ret ptr inttoptr (i64 bitcast (b64 bitcast (ptr @g to b64) to i64) to ptr)
+; CHECK-NEXT:    ret ptr @g
 ;
   %a = alloca ptr, align 8
   store b64 bitcast (ptr @g to b64), ptr %a, align 8

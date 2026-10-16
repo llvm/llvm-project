@@ -9,9 +9,9 @@
 ; CHECK: @g = external global i32
 ; CHECK: @c = global i64 bitcast (b64 bitcast (ptr @g to b64) to i64)
 ;.
-define i64 @neg_ptr_to_byte_to_int_const() {
-; CHECK-LABEL: define i64 @neg_ptr_to_byte_to_int_const() {
-; CHECK-NEXT:    ret i64 bitcast (b64 bitcast (ptr @g to b64) to i64)
+define i64 @ptr_to_byte_to_int_const() {
+; CHECK-LABEL: define i64 @ptr_to_byte_to_int_const() {
+; CHECK-NEXT:    ret i64 ptrtoint (ptr @g to i64)
 ;
   %x = bitcast b64 bitcast (ptr @g to b64) to i64
   ret i64 %x
