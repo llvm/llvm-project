@@ -228,12 +228,13 @@ void CodeGenPassBuilder::flushFPMsToMPM(PassManagerWrapper &PMW,
 Error CodeGenPassBuilder::buildPipeline(
     ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
     raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
+  auto StartStopInfo = TargetPassConfig::getStartStopInfo(TM, *PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);
 
-  bool PrintAsm = TargetPassConfig::willCompleteCodeGenPipeline();
+  CompletesPipeline = StartStopInfo->StopPass.empty();
+  bool PrintAsm = CompletesPipeline;
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
   PassManagerWrapper PMW(MPM);

@@ -56,7 +56,8 @@ template class A<int>;
 
 // CIR-DEV-DAG: cir.global "private" internal comdat dso_local  target_address_space(1) @_ZN1AIiE8d_memberE = #cir.int<0>
 // CIR-DEV-DAG: cir.global "private" constant internal comdat dso_local  target_address_space(4) @_ZN1AIiE8c_memberE = #cir.int<0>
-// CIR-DEV-DAG: cir.global "private" internal comdat dso_local  target_address_space(1) @_ZN1AIiE8m_memberE = #cir.int<0>
+// CIR-DEV-DAG: cir.global "private" internal comdat("_ZN1AIiE8m_memberE") dso_local  target_address_space(1) @_ZN1AIiE8m_memberE.managed = #cir.int<0>
+// CIR-DEV-DAG: cir.global "private" internal  dso_local  target_address_space(1) @_ZN1AIiE8m_memberE = #cir.ptr<null> : !cir.ptr<!s32i, target_address_space(1)> {cu.externally_initialized = #cir.cu.externally_initialized}
 // CIR-DEV-DAG: cir.global "private" constant internal comdat dso_local  target_address_space(4) @_ZN1AIiE12const_memberE = #cir.int<0>
 // CIR-DEV-NEG-NOT: @_ZN1AIiE8h_memberE
 
@@ -69,7 +70,8 @@ template class A<int>;
 // CIR-HOST-DAG:  cir.global weak_odr comdat @_ZN1AIiE8h_memberE = #cir.int<0>
 // CIR-HOST-DAG:  cir.global "private" internal comdat dso_local @_ZN1AIiE8d_memberE = #cir.undef
 // CIR-HOST-DAG:  cir.global "private" internal comdat dso_local @_ZN1AIiE8c_memberE = #cir.undef
-// CIR-HOST-DAG:  cir.global "private" internal comdat dso_local @_ZN1AIiE8m_memberE = #cir.int<0>
+// CIR-HOST-DAG:  cir.global "private" internal comdat("_ZN1AIiE8m_memberE") dso_local @_ZN1AIiE8m_memberE.managed = #cir.int<0>
+// CIR-HOST-DAG:  cir.global "private" internal dso_local @_ZN1AIiE8m_memberE = #cir.ptr<null> : !cir.ptr<!s32i> {cu.externally_initialized = #cir.cu.externally_initialized}
 // CIR-HOST-DAG:  cir.global constant weak_odr comdat @_ZN1AIiE12const_memberE = #cir.int<0>
 
 // HOST-DAG: @_ZN1AIiE8h_memberE = weak_odr global i32 0, comdat, align 4

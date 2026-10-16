@@ -462,7 +462,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtP() && !Subtarget.is64Bit()) {
     // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
     // paadd.w, paaddu.w and extracting.
-    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, MVT::i32, Legal);
+    setOperationAction(
+        {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGSUBFLOORS, ISD::AVGSUBFLOORU},
+        MVT::i32, Legal);
   }
 
   if (Subtarget.hasStdExtZbkc()) {
@@ -549,7 +551,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SADDSAT, VTs, Legal);
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
-    setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
+    setOperationAction(
+        {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGSUBFLOORS, ISD::AVGSUBFLOORU},
+        VTs, Legal);
     setOperationAction(ISD::BITREVERSE, VTs, Legal);
     setOperationAction(ISD::VECTOR_SHUFFLE, VTs, Custom);
     setOperationAction(ISD::VECTOR_REVERSE, VTs, Legal);
@@ -609,7 +613,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           Legal);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, P64VecVTs, Legal);
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
-      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, P64VecVTs, Legal);
+      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGSUBFLOORS,
+                          ISD::AVGSUBFLOORU},
+                         P64VecVTs, Legal);
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          P64VecVTs, Legal);
       setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU},
@@ -1087,10 +1093,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
-      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
-                          ISD::AVGCEILU, ISD::SADDSAT, ISD::UADDSAT,
-                          ISD::SSUBSAT, ISD::USUBSAT},
-                         VT, Legal);
+      if (!Subtarget.avoidVXRM())
+        setOperationAction(
+            {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
+            Legal);
+      setOperationAction(
+          {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
 
       // Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR_VL"
       // nodes which truncate by one power of two at a time.
@@ -1652,10 +1660,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
 
-        setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,
-                            ISD::AVGCEILU, ISD::SADDSAT, ISD::UADDSAT,
-                            ISD::SSUBSAT, ISD::USUBSAT},
-                           VT, Custom);
+        if (!Subtarget.avoidVXRM())
+          setOperationAction(
+              {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU},
+              VT, Custom);
+        setOperationAction(
+            {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT,
+            Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
 
@@ -6605,10 +6616,10 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 //   <a1, b0, a3, b2, ...> -> ppairoe.*
 //   <a1, b1, a3, b3, ...> -> ppairo.*
 static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
-                                          SelectionDAG &DAG) {
+                                          SelectionDAG &DAG, bool IsRV64) {
   MVT VT = SVN->getSimpleValueType(0);
   if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v2i16 &&
-      VT != MVT::v4i16)
+      VT != MVT::v4i16 && !(IsRV64 && VT == MVT::v2i32))
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
@@ -6729,7 +6740,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (SDValue V =
             lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
       return V;
-    if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG))
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG, Subtarget.is64Bit()))
       return V;
     return SDValue();
   }
@@ -12407,9 +12418,9 @@ static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
   case Intrinsic::riscv_aaddu_u32:
     return ISD::AVGFLOORU;
   case Intrinsic::riscv_asub_i32:
-    return RISCVISD::ASUB;
+    return ISD::AVGSUBFLOORS;
   case Intrinsic::riscv_asubu_u32:
-    return RISCVISD::ASUBU;
+    return ISD::AVGSUBFLOORU;
   }
 }
 
@@ -12968,12 +12979,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       OddOpc = ISD::SSUBSAT;
       break;
     case Intrinsic::riscv_paas:
-      EvenOpc = RISCVISD::ASUB;
+      EvenOpc = ISD::AVGSUBFLOORS;
       OddOpc = ISD::AVGFLOORS;
       break;
     case Intrinsic::riscv_pasa:
       EvenOpc = ISD::AVGFLOORS;
-      OddOpc = RISCVISD::ASUB;
+      OddOpc = ISD::AVGSUBFLOORS;
       break;
     default:
       llvm_unreachable("Unexpected exchanged add/sub intrinsic");
@@ -13055,10 +13066,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       Opc = ISD::AVGFLOORU;
       break;
     case Intrinsic::riscv_pasub:
-      Opc = RISCVISD::ASUB;
+      Opc = ISD::AVGSUBFLOORS;
       break;
     case Intrinsic::riscv_pasubu:
-      Opc = RISCVISD::ASUBU;
+      Opc = ISD::AVGSUBFLOORU;
       break;
     case Intrinsic::riscv_pabd:
       Opc = ISD::ABDS;
@@ -17580,8 +17591,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NewRes));
     break;
   }
-  case RISCVISD::ASUB:
-  case RISCVISD::ASUBU:
   case RISCVISD::MULHSU:
   case RISCVISD::MULHR:
   case RISCVISD::MULHRU:
@@ -17590,18 +17599,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     unsigned Opcode = N->getOpcode();
-    // PMULH* variants don't support i8
-    [[maybe_unused]] bool IsMulH =
-        Opcode == RISCVISD::MULHSU || Opcode == RISCVISD::MULHR ||
-        Opcode == RISCVISD::MULHRU || Opcode == RISCVISD::MULHRSU;
-    assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
+    assert(VT == MVT::v2i16);
     MVT NewVT = MVT::v4i16;
-    if (VT == MVT::v4i8)
-      NewVT = MVT::v8i8;
     SDValue Undef = DAG.getUNDEF(VT);
-    Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op0, Undef});
-    Op1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op1, Undef});
-    Results.push_back(DAG.getNode(Opcode, DL, NewVT, {Op0, Op1}));
+    Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Op0, Undef);
+    Op1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Op1, Undef);
+    Results.push_back(DAG.getNode(Opcode, DL, NewVT, Op0, Op1));
     return;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -17970,10 +17973,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Opc = ISD::AVGFLOORU;
         break;
       case Intrinsic::riscv_pasub:
-        Opc = RISCVISD::ASUB;
+        Opc = ISD::AVGSUBFLOORS;
         break;
       case Intrinsic::riscv_pasubu:
-        Opc = RISCVISD::ASUBU;
+        Opc = ISD::AVGSUBFLOORU;
         break;
       case Intrinsic::riscv_pabd:
         Opc = ISD::ABDS;
@@ -19543,9 +19546,35 @@ static SDValue combineSubShiftToOrcB(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::ORC_B, SDLoc(N), VT, LeftShiftOperand);
 }
 
+// fold (sub 0, (select_cc lhs, rhs, cc, (sub X, Y), (sub Y, X))) ->
+//      (select_cc lhs, rhs, cc, (sub Y, X), (sub X, Y))
+static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
+  if (!isNullConstant(N->getOperand(0)))
+    return SDValue();
+
+  SDValue Sel = N->getOperand(1);
+  if (Sel.getOpcode() != RISCVISD::SELECT_CC || !Sel.hasOneUse())
+    return SDValue();
+
+  SDValue TrueV = Sel.getOperand(3);
+  SDValue FalseV = Sel.getOperand(4);
+  using namespace SDPatternMatch;
+  SDValue X, Y;
+  if (!sd_match(TrueV, m_Sub(m_Value(X), m_Value(Y))) ||
+      !sd_match(FalseV, m_Sub(m_Specific(Y), m_Specific(X))))
+    return SDValue();
+
+  return DAG.getNode(RISCVISD::SELECT_CC, SDLoc(N), N->getValueType(0),
+                     Sel.getOperand(0), Sel.getOperand(1), Sel.getOperand(2),
+                     FalseV, TrueV);
+}
+
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   if (SDValue V = combineSubOfBoolean(N, DAG))
+    return V;
+
+  if (SDValue V = combineNegOfSelectCCSubs(N, DAG))
     return V;
 
   EVT VT = N->getValueType(0);
@@ -19713,9 +19742,9 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     if (ShAmtVal != 1)
       return SDValue();
     if (LHSIsSExt && RHSIsSExt)
-      Opc = RISCVISD::ASUB;
+      Opc = ISD::AVGSUBFLOORS;
     else if (LHSIsZExt && RHSIsZExt)
-      Opc = RISCVISD::ASUBU;
+      Opc = ISD::AVGSUBFLOORU;
     else
       return SDValue();
     break;

@@ -90,6 +90,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -135,6 +136,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
+  case VPActiveLaneMaskPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPCurrentIterationPHISC:
@@ -150,6 +152,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -3109,8 +3112,8 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   printFlags(O);
   printOperands(O, SlotTracker);
 
-  if (auto *TI = getTruncInst())
-    O << " (truncated to " << *TI->getType() << ")";
+  if (isTruncated())
+    O << " (truncated to " << *getScalarType() << ")";
 }
 #endif
 

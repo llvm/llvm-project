@@ -26,11 +26,25 @@ STATISTIC(numMachineSimpleRegions, "The # of simple machine regions");
 
 namespace llvm {
 
-template class RegionBase<RegionTraits<MachineFunction>>;
-template class RegionNodeBase<RegionTraits<MachineFunction>>;
-template class RegionInfoBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE RegionBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionNodeBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionInfoBase<RegionTraits<MachineFunction>>;
 
 } // end namespace llvm
+
+//===----------------------------------------------------------------------===//
+// RegionTraits<MachineFunction> implementation
+//
+
+void RegionTraits<MachineFunction>::updateStatistics(MachineRegion *R) {
+  ++numMachineRegions;
+
+  // TODO: Slow. Should only be enabled if -stats is used.
+  if (R->isSimple())
+    ++numMachineSimpleRegions;
+}
 
 //===----------------------------------------------------------------------===//
 // MachineRegion implementation
@@ -49,14 +63,6 @@ MachineRegionInfo::MachineRegionInfo() = default;
 
 MachineRegionInfo::~MachineRegionInfo() = default;
 
-void MachineRegionInfo::updateStatistics(MachineRegion *R) {
-  ++numMachineRegions;
-
-  // TODO: Slow. Should only be enabled if -stats is used.
-  if (R->isSimple())
-    ++numMachineSimpleRegions;
-}
-
 void MachineRegionInfo::recalculate(MachineFunction &F,
                                     MachineDominatorTree *DT_,
                                     MachinePostDominatorTree *PDT_,
@@ -68,7 +74,7 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
   MachineBasicBlock *Entry = GraphTraits<MachineFunction*>::getEntryNode(&F);
 
   TopLevelRegion = new MachineRegion(Entry, nullptr, this, DT, nullptr);
-  updateStatistics(TopLevelRegion);
+  RegionTraits<MachineFunction>::updateStatistics(TopLevelRegion);
   calculate(F);
 }
 

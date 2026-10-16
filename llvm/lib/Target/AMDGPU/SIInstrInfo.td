@@ -2900,6 +2900,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsPacked = Src0VT.isVector;
   field bit HasOpSel = IsPacked;
+  // The instruction has no op_sel_hi field, so encode those bits as 0. Note
+  // that some VOP3P instructions may reuse the op_sel_hi bits for other
+  // purposes (for example, IsDOT), and thus should not be forced to 0.
+  field bit HasNoOpSelHi = 0;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
 
