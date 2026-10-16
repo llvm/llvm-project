@@ -1412,8 +1412,8 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     bool ReloadUndefLanes = false;
     if (RI.Writes && !RI.Reads) {
       LaneBitmask DefLanes;
-      for (const std::pair<MachineInstr *, unsigned> &OpPair : Ops) {
-        const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+      for (const auto &[OpMI, OpIdx] : Ops) {
+        const MachineOperand &MO = OpMI->getOperand(OpIdx);
         if (MO.isDef() && !MO.isDead())
           DefLanes |= MO.getSubReg()
                           ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
