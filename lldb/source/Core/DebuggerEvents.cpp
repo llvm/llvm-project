@@ -80,14 +80,26 @@ llvm::StringRef DiagnosticEventData::GetPrefix() const {
     return "warning";
   case Severity::eSeverityError:
     return "error";
+  case Severity::eSeverityHint:
+    return "hint";
   }
   llvm_unreachable("Fully covered switch above!");
 }
 
 void DiagnosticEventData::Dump(Stream *s) const {
-  llvm::HighlightColor color = m_severity == lldb::eSeverityWarning
-                                   ? llvm::HighlightColor::Warning
-                                   : llvm::HighlightColor::Error;
+  llvm::HighlightColor color;
+  switch (m_severity) {
+  case lldb::eSeverityError:
+  case lldb::eSeverityInfo:
+    color = llvm::HighlightColor::Error;
+    break;
+  case lldb::eSeverityWarning:
+    color = llvm::HighlightColor::Warning;
+    break;
+  case lldb::eSeverityHint:
+    color = llvm::HighlightColor::Remark;
+    break;
+  }
   llvm::WithColor(s->AsRawOstream(), color, llvm::ColorMode::Enable)
       << GetPrefix();
   *s << ": " << GetMessage() << '\n';

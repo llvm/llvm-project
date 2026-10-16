@@ -113,6 +113,7 @@ void Host::SystemLog(Severity severity, llvm::StringRef message) {
     });
     switch (severity) {
     case lldb::eSeverityInfo:
+    case lldb::eSeverityHint:
     case lldb::eSeverityWarning:
       os_log(g_os_log, "%{public}s", message.str().c_str());
       break;

@@ -55,6 +55,7 @@ public:
         lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgress,
     eBroadcastBitExternalProgressCategory =
         lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgressCategory,
+    eBroadcastBitHint = lldb::DebuggerBroadcastBit::eBroadcastBitHint,
   };
 
   /// Default constructor creates an invalid SBDebugger instance.
