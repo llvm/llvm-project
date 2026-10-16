@@ -70,6 +70,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="-no-pie" \
       -D LLVM_ENABLE_WERROR=ON \
       -D LLVM_BINUTILS_INCDIR=/usr \
+      -D LLVM_REVERSE_ITERATION="${LLVM_REVERSE_ITERATION:-OFF}" \
       "${runtime_cmake_args[@]}"
 
 start-group "ninja"
