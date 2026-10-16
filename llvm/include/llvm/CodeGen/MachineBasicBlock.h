@@ -1501,6 +1501,31 @@ inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin,
   return It;
 }
 
+/// Increment \p It until it points to a non-meta instruction or to \p End
+/// and return the resulting iterator. This function should only be used with
+/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
+/// const_instr_iterator} and the respective reverse iterators.
+/// Unlike skipDebugInstructionsForward, this skips the full set recognized by
+/// MachineInstr::isMetaInstruction().
+template <typename IterT>
+inline IterT skipMetaInstructionsForward(IterT It, IterT End) {
+  while (It != End && It->isMetaInstruction())
+    ++It;
+  return It;
+}
+
+/// Decrement \p It until it points to a non-meta instruction or to \p Begin
+/// and return the resulting iterator. This function should only be used with
+/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
+/// const_instr_iterator} and the respective reverse iterators.
+/// \p Begin is not skipped even if it points to a meta instruction.
+template <typename IterT>
+inline IterT skipMetaInstructionsBackward(IterT It, IterT Begin) {
+  while (It != Begin && It->isMetaInstruction())
+    --It;
+  return It;
+}
+
 /// Increment \p It, then continue incrementing it while it points to a debug
 /// instruction. A replacement for std::next.
 template <typename IterT>
