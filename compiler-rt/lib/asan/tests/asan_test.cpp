@@ -387,7 +387,7 @@ TEST(AddressSanitizer, ManyThreadsTest) {
       NumThreads = i;
       break;
     }
-    ASSERT_EQ(Result, 0);
+    ASSERT_EQ(0, Result);
 #  endif
   }
   for (size_t i = 0; i < NumThreads; i++) {
