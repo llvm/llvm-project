@@ -235,6 +235,10 @@ SmallVector<int64_t> getNativeVectorShapeImpl(vector::TransposeOp op);
 // For general ops.
 std::optional<SmallVector<int64_t>> getNativeVectorShape(Operation *op);
 
+// True if `op` has a vector type of rank > 1, which needs unrolling before
+// SPIR-V conversion patterns (rank-1 only) can apply.
+bool hasMultiRankVectorType(Operation *op);
+
 // Unroll vectors in function signatures to native size.
 LogicalResult unrollVectorsInSignatures(Operation *op);
 
