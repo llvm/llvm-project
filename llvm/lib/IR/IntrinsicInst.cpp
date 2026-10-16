@@ -610,8 +610,6 @@ const Value *GCProjectionInst::getStatepoint() const {
     cast<Instruction>(Token)->getParent()->getUniquePredecessor();
 
   assert(InvokeBB && "safepoints should have unique landingpads");
-  assert(InvokeBB->getTerminator() &&
-         "safepoint block should be well formed");
 
   return cast<GCStatepointInst>(InvokeBB->getTerminator());
 }
