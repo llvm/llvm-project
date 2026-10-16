@@ -1,0 +1,23 @@
+## Test that an indexed profile with a corrupted summary (inflated field/entry
+## counts) is rejected with a clean error instead of crashing the reader.
+
+# printf does not produce the right bytes on Windows, and z/OS mangles output.
+# UNSUPPORTED: system-windows, system-zos
+
+# Indexed profile magic: \xff "lprofi" \x81
+# RUN: printf '\377lprofi\201' > %t.profdata
+# Version 4: profile summary is stored after the header.
+# RUN: printf '\4\0\0\0\0\0\0\0' >> %t.profdata
+# Unused field.
+# RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profdata
+# HashType = MD5.
+# RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profdata
+# HashOffset (never reached: the summary below is rejected first).
+# RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profdata
+# Summary header with a corrupted NumSummaryFields (UINT64_MAX) and zero
+# NumCutoffEntries.
+# RUN: printf '\377\377\377\377\377\377\377\377' >> %t.profdata
+# RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profdata
+
+# RUN: not llvm-profdata show %t.profdata 2>&1 | FileCheck %s
+# CHECK: malformed instrumentation profile data: corrupt profile summary
