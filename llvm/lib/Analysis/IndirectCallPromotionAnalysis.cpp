@@ -76,7 +76,7 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
 
   uint32_t I = 0;
   uint64_t RemainingCount = TotalCount;
-  for (; I < MaxNumPromotions && I < ValueDataArray.size(); I++) {
+  for (; I < ValueDataArray.size(); I++) {
     uint64_t Count = ValueDataArray[I].Count;
     assert(Count <= RemainingCount);
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
@@ -105,6 +105,8 @@ ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
     NumCandidates = 0;
     return MutableArrayRef<InstrProfValueData>();
   }
+  assert(ValueDataArray.size() <= MaxNumValueData &&
+         "Number of profile values exceeds limit");
   NumCandidates = getProfitablePromotionCandidates(I, TotalCount);
   return ValueDataArray;
 }
