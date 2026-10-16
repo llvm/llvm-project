@@ -8,8 +8,8 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown -spirv-ext=+SPV_KHR_untyped_pointers %s -filetype=obj -o - | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -filetype=obj -o - | spirv-val %}
 
-; A constant element count in an entry-block alloca is a fixed-size allocation,
-; even when the variable-length-array extension is enabled.
+; Function-storage allocas with constant element counts use array variables,
+; even when the VLA extension is enabled.
 
 ; CHECK-DAG: OpName %[[#SCALARS:]] "scalars"
 ; CHECK-DAG: OpName %[[#STRUCTS:]] "structs"

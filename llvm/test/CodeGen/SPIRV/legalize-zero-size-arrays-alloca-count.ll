@@ -15,7 +15,6 @@ define void @test_alloca_with_count(i32 %n) {
   ret void
 }
 
-; A zero element count is legalized before static array allocations are folded.
 ; SPIRV-LABEL: Begin function test_alloca_zero_count
 ; SPIRV: OpVariable %[[#PTR]] Function
 define i64 @test_alloca_zero_count() {
