@@ -481,7 +481,6 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   FirstEntryBlock->splice(FirstEntryBlock->end(), SecondEntryBlock);
   CondBrInst *PBI = cast<CondBrInst>(FirstEntryBlock->getTerminator());
   assert(PBI->getCondition() == CInst2);
-  BasicBlock *SaveInsertBB = Builder.GetInsertBlock();
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();
   Builder.SetInsertPoint(PBI);
   if (InvertCond2) {
@@ -489,7 +488,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   }
   Value *NC = Builder.CreateBinOp(CombineOp, CInst1, PBI->getCondition());
   PBI->replaceUsesOfWith(PBI->getCondition(), NC);
-  Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
+  Builder.SetInsertPoint(SaveInsertPt);
 
   // Remove IfTrue1
   if (IfTrue1 != FirstEntryBlock) {
@@ -512,7 +511,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
 
 bool FlattenCFGOpt::run(BasicBlock *BB) {
   assert(BB && BB->getParent() && "Block not embedded in function!");
-  assert(BB->getTerminator() && "Degenerate basic block encountered!");
+  assert(BB->hasTerminator() && "Degenerate basic block encountered!");
 
   IRBuilder<> Builder(BB);
 

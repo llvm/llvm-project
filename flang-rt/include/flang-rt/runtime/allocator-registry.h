@@ -56,14 +56,14 @@ static RT_API_ATTRS void *MallocWrapper(std::size_t size,
 #endif
   return std::malloc(size);
 }
-#ifdef RT_DEVICE_COMPILATION
-static RT_API_ATTRS void FreeWrapper(void *p) { return std::free(p); }
-#endif
-
 struct AllocatorRegistry {
 #ifdef RT_DEVICE_COMPILATION
-  RT_API_ATTRS constexpr AllocatorRegistry()
-      : allocators{{&MallocWrapper, &FreeWrapper}} {}
+  // The default allocator is not stored in the table on the device; it is
+  // called directly by Allocate/Deallocate. Taking the address of
+  // MallocWrapper anywhere in device code keeps it, and with it device
+  // malloc, linked into every module which makes the driver reserve the device
+  // malloc heap at the first kernel launch.
+  RT_API_ATTRS constexpr AllocatorRegistry() {}
 #else
   constexpr AllocatorRegistry() {
     allocators[kDefaultAllocator] = {&MallocWrapper, &std::free};
@@ -72,6 +72,11 @@ struct AllocatorRegistry {
   RT_API_ATTRS void Register(int, Allocator_t);
   RT_API_ATTRS AllocFct GetAllocator(int pos);
   RT_API_ATTRS FreeFct GetDeallocator(int pos);
+  // Allocate/free through allocator `pos`. The default allocator is called
+  // directly, without going through a function pointer.
+  RT_API_ATTRS void *Allocate(int pos, std::size_t size, std::size_t alignment,
+      std::int64_t *asyncObject);
+  RT_API_ATTRS void Deallocate(int pos, void *p);
 
   Allocator_t allocators[MAX_ALLOCATOR];
 };

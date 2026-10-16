@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_CONTEXT_IMPL
-#define _LIBSYCL_CONTEXT_IMPL
+#ifndef _LIBSYCL_SRC_DETAIL_CONTEXT_IMPL_HPP
+#define _LIBSYCL_SRC_DETAIL_CONTEXT_IMPL_HPP
 
 #include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/context.hpp>
@@ -24,9 +24,13 @@
 #include <OffloadAPI.h>
 
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -36,12 +40,13 @@ namespace detail {
 
 class PlatformImpl;
 class DeviceImpl;
+class DeviceKernelInfo;
 
 /// Context represents the runtime data structures and state required by a SYCL
 /// backend API to interact with a group of devices associated with a platform.
 class ContextImpl : public std::enable_shared_from_this<ContextImpl> {
-  struct Private {
-    explicit Private() = default;
+  struct PrivateTag {
+    explicit PrivateTag() = default;
   };
 
 public:
@@ -52,7 +57,7 @@ public:
   /// \param PropList is a list of context properties.
   ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
               const async_handler &AsyncHandler, const property_list &PropList,
-              Private);
+              PrivateTag);
 
   /// Releases the underlying offload context handle.
   ~ContextImpl();
@@ -60,13 +65,14 @@ public:
   /// Gets asynchronous exception handler.
   ///
   /// \return an instance of SYCL async_handler.
-  const async_handler &get_async_handler() const { return MAsyncHandler; }
+  const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
-  /// Constructs a ContextImpl with a provided arguments. Variadic helper.
-  /// Restrics ways of ContextImpl creation.
+  /// Constructs a ContextImpl with the provided arguments. Variadic helper.
+  /// Restricts ContextImpl creation to std::shared_ptr allocations.
   template <typename... Ts>
-  static std::shared_ptr<ContextImpl> create(Ts &&...args) {
-    return std::make_shared<ContextImpl>(std::forward<Ts>(args)..., Private{});
+  static std::shared_ptr<ContextImpl> create(Ts &&...Args) {
+    return std::make_shared<ContextImpl>(std::forward<Ts>(Args)...,
+                                         PrivateTag{});
   }
 
   /// Returns the raw underlying offload context handle.
@@ -80,9 +86,8 @@ public:
   /// \return the platform this context is associated with.
   PlatformImpl &getPlatformImpl() const;
 
-  /// Calls "callback" with every device associated
-  /// with this context.
-  void iterateDevices(const std::function<void(DeviceImpl *)> &callback) const;
+  /// Calls Callback with every device associated with this context.
+  void iterateDevices(const std::function<void(DeviceImpl *)> &Callback) const;
 
   /// \return backend of the platform this context is associated with.
   backend getBackend() const;
@@ -114,6 +119,18 @@ public:
   /// This method is thread-safe.
   void releaseAllPrograms();
 
+  /// Records that \p Info has (or is about to have) a cache entry keyed by
+  /// this context, so that the entry can be removed when this context is
+  /// destroyed. Safe to call more than once for the same \p Info.
+  /// This method is thread-safe.
+  void trackKernelInfoCache(DeviceKernelInfo *Info);
+
+  /// Removes \p Info from the set of tracked caches, e.g. because \p Info is
+  /// about to be destroyed (its owning device image is being unregistered).
+  /// No-op if \p Info was not tracked.
+  /// This method is thread-safe.
+  void forgetKernelInfoCache(DeviceKernelInfo *Info);
+
 private:
   const async_handler MAsyncHandler;
   const std::vector<DeviceImpl *> MDevices;
@@ -124,10 +141,13 @@ private:
   using ProgramsByDeviceT =
       std::unordered_map<ol_device_handle_t, ProgramWrapper>;
   std::unordered_map<const DeviceImageManager *, ProgramsByDeviceT> MPrograms;
+
+  std::mutex MTrackedKernelInfosMutex;
+  std::unordered_set<DeviceKernelInfo *> MTrackedKernelInfos;
 };
 
 } // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_CONTEXT_IMPL
+#endif // _LIBSYCL_SRC_DETAIL_CONTEXT_IMPL_HPP

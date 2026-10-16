@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Convert a nanoseconds duration to the given TimeSpec type, which must have
 // the same properties as std::timespec.
 template <class _TimeSpec>
-_LIBCPP_HIDE_FROM_ABI inline _TimeSpec __convert_to_timespec(const chrono::nanoseconds& __ns) {
+inline _TimeSpec __convert_to_timespec(const chrono::nanoseconds& __ns) {
   using namespace chrono;
   seconds __s = duration_cast<seconds>(__ns);
   _TimeSpec __ts;

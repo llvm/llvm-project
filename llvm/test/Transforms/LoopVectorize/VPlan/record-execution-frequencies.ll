@@ -28,9 +28,9 @@ define void @if_then(ptr noalias %a, ptr noalias %idx) {
 ; VPLAN0-NEXT:  Successor(s): if.then, latch
 ; VPLAN0-EMPTY:
 ; VPLAN0-NEXT:  if.then:
-; VPLAN0-NEXT:    EMIT ir<%add> = add ir<%i>, ir<10> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN0-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN0-NEXT:    EMIT store ir<%add>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN0-NEXT:    EMIT ir<%add> = add ir<%i>, ir<10> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN0-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4611686018427387903 (25%))
+; VPLAN0-NEXT:    EMIT store ir<%add>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; VPLAN0-NEXT:  Successor(s): latch
 ; VPLAN0-EMPTY:
 ; VPLAN0-NEXT:  latch:
@@ -65,9 +65,9 @@ define void @if_then(ptr noalias %a, ptr noalias %idx) {
 ; MASKED-NEXT:    Successor(s): if.then
 ; MASKED-EMPTY:
 ; MASKED-NEXT:    if.then:
-; MASKED-NEXT:      EMIT ir<%add> = add ir<%i>, ir<10>, ir<%c> (!vplan.execution.frequency 2305843009213693952 (25%))
+; MASKED-NEXT:      EMIT ir<%add> = add ir<%i>, ir<10>, ir<%c> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; MASKED-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; MASKED-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%c> (!vplan.execution.frequency 2305843009213693952 (25%))
+; MASKED-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%c> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; MASKED-NEXT:    Successor(s): latch
 ; MASKED-EMPTY:
 ; MASKED-NEXT:    latch:
@@ -128,13 +128,13 @@ define void @if_else(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN0-NEXT:  Successor(s): then, else
 ; VPLAN0-EMPTY:
 ; VPLAN0-NEXT:  else:
-; VPLAN0-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 6917529027641081856 (75%))
-; VPLAN0-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 6917529027641081856 (75%))
+; VPLAN0-NEXT:    EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 13835058055282163711 (75%))
+; VPLAN0-NEXT:    EMIT store ir<%i>, ir<%gep.b> (!vplan.execution.frequency 13835058055282163711 (75%))
 ; VPLAN0-NEXT:  Successor(s): latch
 ; VPLAN0-EMPTY:
 ; VPLAN0-NEXT:  then:
-; VPLAN0-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 2305843009213693952 (25%))
-; VPLAN0-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 2305843009213693952 (25%))
+; VPLAN0-NEXT:    EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv> (!vplan.execution.frequency 4611686018427387904 (25%))
+; VPLAN0-NEXT:    EMIT store ir<%i>, ir<%gep.a> (!vplan.execution.frequency 4611686018427387904 (25%))
 ; VPLAN0-NEXT:  Successor(s): latch
 ; VPLAN0-EMPTY:
 ; VPLAN0-NEXT:  latch:
@@ -171,12 +171,12 @@ define void @if_else(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; MASKED-NEXT:    else:
 ; MASKED-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c>
 ; MASKED-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; MASKED-NEXT:      EMIT store ir<%i>, ir<%gep.b>, vp<[[VP4]]> (!vplan.execution.frequency 6917529027641081856 (75%))
+; MASKED-NEXT:      EMIT store ir<%i>, ir<%gep.b>, vp<[[VP4]]> (!vplan.execution.frequency 13835058055282163711 (75%))
 ; MASKED-NEXT:    Successor(s): then
 ; MASKED-EMPTY:
 ; MASKED-NEXT:    then:
 ; MASKED-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; MASKED-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c> (!vplan.execution.frequency 2305843009213693952 (25%))
+; MASKED-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (25%))
 ; MASKED-NEXT:    Successor(s): latch
 ; MASKED-EMPTY:
 ; MASKED-NEXT:    latch:

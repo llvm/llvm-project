@@ -20,18 +20,28 @@
 
 #include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Debug.h"
 #include <llvm/Support/CommandLine.h>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "machine-block-match-infer"
 
 static cl::opt<float>
     PropellerInferThreshold("propeller-infer-threshold",
                             cl::desc("Threshold for infer stale profile"),
                             cl::init(0.6));
+
+static cl::opt<bool>
+    PropellerMatchBBID("propeller-match-bbid",
+                       cl::desc("Match basic blocks using BBIDs instead of "
+                                "hashes for Propeller inference"),
+                       cl::init(false), cl::Optional);
 
 /// The object is used to identify and match basic blocks given their hashes.
 class StaleMatcher {
@@ -154,6 +164,74 @@ BasicBlockMatchingAndInference::initWeightInfoByMatching(MachineFunction &MF) {
   return MatchWeight;
 }
 
+BasicBlockMatchingAndInference::WeightInfo
+BasicBlockMatchingAndInference::initWeightInfoByBBID(MachineFunction &MF,
+                                                     const CFGProfile &CFG) {
+  // Path cloning does not run before matching and inference, so blocks are
+  // identified by their base IDs. The counts of clones in the profile are
+  // attributed to the original block.
+  DenseMap<unsigned, MachineBasicBlock *> BaseIDToMBB;
+  for (auto &MBB : MF) {
+    unsigned BaseID = MBB.getBBID() ? MBB.getBBID()->BaseID
+                                    : static_cast<unsigned>(MBB.getNumber());
+    BaseIDToMBB[BaseID] = &MBB;
+  }
+  auto FindMBB = [&](const UniqueBBID &BBID) {
+    return BaseIDToMBB.lookup(BBID.BaseID);
+  };
+
+  // A basic block is matched only if it exists in CFG.NodeCounts and all of its
+  // edges in the CFG profile are also edges in the MIR. The profile may omit
+  // edges without samples, so MIR edges missing from the profile are allowed.
+  // Both ends of a profile edge that is not in the MIR are kept as unknown.
+  DenseSet<const MachineBasicBlock *> MismatchedMBBs;
+  for (const auto &[PredID, Succs] : CFG.EdgeCounts) {
+    MachineBasicBlock *PredMBB = FindMBB(PredID);
+    for (const auto &[SuccID, EdgeCount] : Succs) {
+      MachineBasicBlock *SuccMBB = FindMBB(SuccID);
+      if (PredMBB && SuccMBB && PredMBB->isSuccessor(SuccMBB))
+        continue;
+      if (PredMBB)
+        MismatchedMBBs.insert(PredMBB);
+      if (SuccMBB)
+        MismatchedMBBs.insert(SuccMBB);
+    }
+  }
+  DenseSet<const MachineBasicBlock *> ProfiledMBBs;
+  for (const auto &[BBID, BlockCount] : CFG.NodeCounts)
+    if (MachineBasicBlock *MBB = FindMBB(BBID))
+      ProfiledMBBs.insert(MBB);
+  DenseSet<const MachineBasicBlock *> MatchedMBBs;
+  for (auto &MBB : MF) {
+    if (!ProfiledMBBs.contains(&MBB))
+      continue;
+    if (MismatchedMBBs.contains(&MBB))
+      LLVM_DEBUG(dbgs() << MF.getName() << ": bb." << MBB.getNumber()
+                        << " has profile edges that are not in the CFG\n");
+    else
+      MatchedMBBs.insert(&MBB);
+  }
+
+  BasicBlockMatchingAndInference::WeightInfo MatchWeight;
+  for (const auto &[BBID, BlockCount] : CFG.NodeCounts) {
+    MachineBasicBlock *MBB = FindMBB(BBID);
+    if (MBB && MatchedMBBs.count(MBB))
+      MatchWeight.BlockWeights[MBB] += BlockCount;
+  }
+  for (const auto &[PredID, Succs] : CFG.EdgeCounts) {
+    MachineBasicBlock *PredMBB = FindMBB(PredID);
+    if (!PredMBB || !MatchedMBBs.count(PredMBB))
+      continue;
+    for (const auto &[SuccID, EdgeCount] : Succs) {
+      MachineBasicBlock *SuccMBB = FindMBB(SuccID);
+      if (!SuccMBB || !MatchedMBBs.count(SuccMBB))
+        continue;
+      MatchWeight.EdgeWeights[std::make_pair(PredMBB, SuccMBB)] += EdgeCount;
+    }
+  }
+  return MatchWeight;
+}
+
 void BasicBlockMatchingAndInference::generateWeightInfoByInference(
     MachineFunction &MF,
     BasicBlockMatchingAndInference::WeightInfo &MatchWeight) {
@@ -175,13 +253,23 @@ void BasicBlockMatchingAndInference::generateWeightInfoByInference(
 bool BasicBlockMatchingAndInference::runOnMachineFunction(MachineFunction &MF) {
   if (MF.empty())
     return false;
-  auto MatchWeight = initWeightInfoByMatching(MF);
-  // If the ratio of the number of MBBs in matching to the total number of MBBs
-  // in the function is less than the threshold value, the processing should be
-  // abandoned.
-  if (static_cast<float>(MatchWeight.BlockWeights.size()) / MF.size() <
-      PropellerInferThreshold) {
+  auto *BSPR = &getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>();
+  const CFGProfile *CFG = BSPR->getFunctionCFGProfile(MF.getName());
+  if (CFG == nullptr || (CFG->NodeCounts.empty() && CFG->EdgeCounts.empty()))
     return false;
+
+  BasicBlockMatchingAndInference::WeightInfo MatchWeight;
+  if (PropellerMatchBBID) {
+    MatchWeight = initWeightInfoByBBID(MF, *CFG);
+  } else {
+    MatchWeight = initWeightInfoByMatching(MF);
+    // If the ratio of the number of MBBs in matching to the total number of
+    // MBBs in the function is less than the threshold value, the processing
+    // should be abandoned.
+    if (static_cast<float>(MatchWeight.BlockWeights.size()) / MF.size() <
+        PropellerInferThreshold) {
+      return false;
+    }
   }
   generateWeightInfoByInference(MF, MatchWeight);
   return false;

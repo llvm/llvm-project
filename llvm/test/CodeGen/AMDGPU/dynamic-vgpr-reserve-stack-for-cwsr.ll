@@ -159,18 +159,18 @@ define amdgpu_cs void @realign_stack(<16 x i32> %x) #0 {
 ; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x200
 ; CHECK-NEXT:    s_movk_i32 s32, 0x100
-; CHECK-NEXT:    scratch_store_b128 off, v[12:15], s33 offset:128 ; 16-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v12, 0
+; CHECK-NEXT:    scratch_store_b128 off, v[0:3], s33 offset:128 ; 16-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_cmovk_i32 s32, 0x300
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    scratch_store_b32 off, v12, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:32
-; CHECK-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:128 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_clause 0x2
-; CHECK-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:48
+; CHECK-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:32
+; CHECK-NEXT:    scratch_store_b128 off, v[12:15], s33 offset:48
 ; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:16
+; CHECK-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:128 th:TH_LOAD_LU ; 16-byte Folded Reload
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b128 off, v[0:3], s33
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]

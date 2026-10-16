@@ -14,13 +14,8 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-FixGlobalBaseReg("mips-fix-global-base-reg", cl::Hidden, cl::init(true),
-                 cl::desc("Always use $gp as the global base register."));
 
 MachineFunctionInfo *
 MipsFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -143,13 +138,13 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   // The two instructions are emitted during lowering to MC layer in order to
   // avoid any reordering.
   //
-  // Register $2 (Mips::V0) is added to the list of live-in registers to ensure
+  // Register $2 (Mips::R2) is added to the list of live-in registers to ensure
   // the value instruction 1 (addiu) defines is valid when instruction 2 (addu)
   // reads it.
-  MF.getRegInfo().addLiveIn(Mips::V0);
-  MBB.addLiveIn(Mips::V0);
+  MF.getRegInfo().addLiveIn(Mips::R2);
+  MBB.addLiveIn(Mips::R2);
   BuildMI(MBB, I, DL, TII.get(Mips::ADDu), GlobalBaseReg)
-      .addReg(Mips::V0)
+      .addReg(Mips::R2)
       .addReg(T9);
 }
 
