@@ -2524,11 +2524,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_objc_memmove_collectable:
   case Builtin::BI__builtin___memmove_chk:
     break; // Handled as library calls below.
-  case Builtin::BI__builtin_memset_inline:
-  case Builtin::BI__builtin___memset_chk:
-  case Builtin::BI__builtin_wmemchr:
-  case Builtin::BI__builtin_wmemcmp:
-    break; // Handled as library calls below.
   case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove: {
@@ -2566,6 +2561,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::generateDebugInfo());
     return RValue::get(dest.getPointer());
   }
+  case Builtin::BI__builtin_memset_inline:
+  case Builtin::BI__builtin___memset_chk:
+  case Builtin::BI__builtin_wmemchr:
+  case Builtin::BI__builtin_wmemcmp:
+    break; // Handled as library calls below.
   case Builtin::BI__builtin_dwarf_cfa:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_return_address: {
