@@ -460,11 +460,19 @@ def powf_finite : TargetLibCall<"__powf_finite", Flt, [Flt, Flt]>;
 /// long double __powl_finite(long double x, long double y);
 def powl_finite : TargetLibCall<"__powl_finite", LDbl, [LDbl, LDbl]>;
 
-/// double __sincospi_stret(double x);
+/// { double, double } __sincos_stret(double x);
+def sincos_stret
+    : TargetLibCall<"__sincos_stret", ? /* Checked manually. */>;
+
+/// { float, float } __sincosf_stret(float x);
+def sincosf_stret
+    : TargetLibCall<"__sincosf_stret", ? /* Checked manually. */>;
+
+/// { double, double } __sincospi_stret(double x);
 def sincospi_stret
     : TargetLibCall<"__sincospi_stret", ? /* Checked manually. */>;
 
-/// float __sincospif_stret(float x);
+/// { float, float } __sincospif_stret(float x);
 def sincospif_stret
     : TargetLibCall<"__sincospif_stret", ? /* Checked manually. */>;
 
