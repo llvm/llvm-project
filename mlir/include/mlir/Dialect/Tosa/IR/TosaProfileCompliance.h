@@ -20,8 +20,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
-using namespace mlir;
-using namespace mlir::tosa;
+namespace mlir {
+namespace tosa {
 
 //===----------------------------------------------------------------------===//
 // Type Compilance Definition
@@ -226,5 +226,8 @@ private:
   FailureOr<SmallVector<OpComplianceInfo<T>>>
   getOperatorMatchedEntries(Operation *op);
 };
+
+}  // namespace tosa
+}  // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
