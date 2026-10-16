@@ -721,6 +721,14 @@ def scan_dynamic_schemas(
         for m in regex.finditer(content):
             if not RE_CACHE.search(m.group(2)):
                 words = set(RE_IDENTIFIER_TOKENS.findall(m.group(2)))
+                if m.group(1).upper() in {
+                    "LLVM_LIBC_OPTIONAL_ARGS",
+                    "LLVM_LIBC_SINGLE_VALUE_ARGS",
+                    "LLVM_LIBC_MULTI_VALUE_ARGS",
+                }:
+                    words |= {f"OVERLAY_{w}" for w in words} | {
+                        f"FULL_BUILD_{w}" for w in words
+                    }
                 target_set.update(words)
                 if target_set is context.learned_multi_value:
                     context.list_keywords.update(words)
