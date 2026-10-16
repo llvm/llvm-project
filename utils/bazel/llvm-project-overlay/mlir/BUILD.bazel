@@ -2695,7 +2695,6 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":ValueBoundsOpInterface",
-        ":VectorDialect",
         ":VectorUtils",
         ":X86Dialect",
         ":X86Utils",
