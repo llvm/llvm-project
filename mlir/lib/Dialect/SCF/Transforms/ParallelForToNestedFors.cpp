@@ -48,6 +48,9 @@ mlir::scf::parallelForToNestedFors(RewriterBase &rewriter,
       scf::buildLoopNest(rewriter, loc, lowerBounds, upperBounds, steps);
   for (scf::ForOp forOp : loopNest.loops)
     forOp.setUnsignedCmp(parallelOp.getUnsignedCmp());
+  if (!loopNest.loops.empty())
+    loopNest.loops.back()->setDiscardableAttrs(
+        parallelOp->getDiscardableAttrDictionary());
 
   SmallVector<Value> newInductionVars = llvm::map_to_vector(
       loopNest.loops, [](scf::ForOp forOp) { return forOp.getInductionVar(); });
