@@ -1338,7 +1338,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto It = BB->begin();
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
-  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
                              sandboxir::SchedDirection::BottomUp);

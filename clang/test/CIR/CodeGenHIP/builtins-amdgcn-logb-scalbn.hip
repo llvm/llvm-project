@@ -17,6 +17,8 @@
 // CIR: cir.call_llvm_intrinsic "frexp" {{.*}} : (!cir.float) -> {{.*}}
 // LLVM: define{{.*}} float @_Z11test_logbfff(
 // LLVM: call { float, i32 } @llvm.frexp.f32.i32(float {{.*}})
+// LLVM: add nsw i32 %{{.*}}, -1
+// LLVM: fcmp{{.*}} one float %{{.*}}, +inf
 __device__ float test_logbff(float a) {
   return __builtin_logbf(a);
 }
@@ -25,6 +27,8 @@ __device__ float test_logbff(float a) {
 // CIR: cir.call_llvm_intrinsic "frexp" {{.*}} : (!cir.double) -> {{.*}}
 // LLVM: define{{.*}} double @_Z11test_logbddd(
 // LLVM: call { double, i32 } @llvm.frexp.f64.i32(double {{.*}})
+// LLVM: add nsw i32 %{{.*}}, -1
+// LLVM: fcmp{{.*}} one double %{{.*}}, +inf
 __device__ double test_logbdd(double a) {
   return __builtin_logb(a);
 }

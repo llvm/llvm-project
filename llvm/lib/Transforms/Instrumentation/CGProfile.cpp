@@ -74,19 +74,16 @@ static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
       std::optional<uint64_t> BBCount = BFI.getBlockProfileCount(&BB);
       if (!BBCount)
         continue;
-      for (auto &I : BB) {
-        CallBase *CB = dyn_cast<CallBase>(&I);
-        if (!CB)
-          continue;
-        if (CB->isIndirectCall()) {
+      for (CallBase &CB : make_isa_range<CallBase>(BB)) {
+        if (CB.isIndirectCall()) {
           uint64_t TotalC;
           auto ValueData =
-              getValueProfDataFromInst(*CB, IPVK_IndirectCallTarget, 8, TotalC);
+              getValueProfDataFromInst(CB, IPVK_IndirectCallTarget, 8, TotalC);
           for (const auto &VD : ValueData)
             UpdateCounts(TTI, &F, Symtab.getFunction(VD.Value), VD.Count);
           continue;
         }
-        UpdateCounts(TTI, &F, CB->getCalledFunction(), *BBCount);
+        UpdateCounts(TTI, &F, CB.getCalledFunction(), *BBCount);
       }
     }
   }

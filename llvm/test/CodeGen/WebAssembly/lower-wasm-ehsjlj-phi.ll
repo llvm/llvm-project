@@ -1,4 +1,4 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -124,3 +124,6 @@ declare i32 @llvm.wasm.memory.size.i32(i32) #1
 attributes #0 = { nocallback nofree nosync nounwind willreturn }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(read) }
 attributes #2 = { returns_twice }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"wasm"}

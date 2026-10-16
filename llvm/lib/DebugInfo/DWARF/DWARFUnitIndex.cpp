@@ -308,14 +308,15 @@ const DWARFUnitIndex::Entry *DWARFUnitIndex::getFromHash(uint64_t S) const {
   auto H = S & Mask;
   auto HP = ((S >> 32) & Mask) | 1;
   // The spec says "while 0 is a valid hash value, the row index in a used slot
-  // will always be non-zero". Loop until we find a match or an empty slot.
-  while (Rows[H].getSignature() != S && Rows[H].Index != nullptr)
+  // will always be non-zero". Stop at a match, an empty slot, or after
+  // NumBuckets probes, which cover every slot of a well-formed table.
+  for (uint32_t Probes = 0; Probes != Header.NumBuckets; ++Probes) {
+    // An empty slot's zero signature can equal S, so check emptiness first.
+    if (Rows[H].Index == nullptr)
+      return nullptr;
+    if (Rows[H].getSignature() == S)
+      return &Rows[H];
     H = (H + HP) & Mask;
-
-  // If the slot is empty, we don't care whether the signature matches (it could
-  // be zero and still match the zeros in the empty slot).
-  if (Rows[H].Index == nullptr)
-    return nullptr;
-
-  return &Rows[H];
+  }
+  return nullptr;
 }

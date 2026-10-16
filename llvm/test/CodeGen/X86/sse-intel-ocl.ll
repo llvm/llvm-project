@@ -13,7 +13,7 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
-; WIN32-NEXT:    subl $80, %esp
+; WIN32-NEXT:    subl $64, %esp
 ; WIN32-NEXT:    movups 72(%ebp), %xmm4
 ; WIN32-NEXT:    movups 8(%ebp), %xmm3
 ; WIN32-NEXT:    addps %xmm4, %xmm3
@@ -91,7 +91,7 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
-; WIN32-NEXT:    subl $80, %esp
+; WIN32-NEXT:    subl $64, %esp
 ; WIN32-NEXT:    movups 72(%ebp), %xmm6
 ; WIN32-NEXT:    movups 8(%ebp), %xmm3
 ; WIN32-NEXT:    movups 56(%ebp), %xmm7

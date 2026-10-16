@@ -6,7 +6,7 @@ import time
 
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.session_helpers import DAPTestSession
-from lldbsuite.test.tools.lldb_dap.types import CancelArgs, EvaluateArgs, LaunchArgs
+from lldbsuite.test.tools.lldb_dap.types import *
 
 
 class TestDAP_cancel(DAPTestCaseBase):
@@ -91,3 +91,35 @@ class TestDAP_cancel(DAPTestCaseBase):
         self.assertEqual(cancel_resp.command, "cancel")
         self.assertEqual(cancel_resp.success, True)
         session.continue_to_exit()
+
+    def test_request_after_disconnect(self):
+        """
+        Tests a request queued after 'disconnect' is cancelled, before the
+        'disconnect' response.
+        """
+        program = self.getBuildArtifact("a.out")
+        busy_loop = self.getSourcePath("busy_loop.py")
+        session = self.build_and_create_session(disconnect_automatically=False)
+        process_event = session.launch(
+            LaunchArgs(
+                program,
+                initCommands=[f"command script import {busy_loop}"],
+                stopOnEntry=True,
+            )
+        )
+        session.verify_stopped_on_entry(after=process_event)
+
+        # Block the request handling thread, so both requests are queued.
+        blocking_handle = self.async_blocking_request(session, count=1)
+        disconnect_handle = session.send_request(DisconnectArgs(terminateDebuggee=True))
+        threads_handle = session.send_request(ThreadsArgs())
+
+        blocking_resp = blocking_handle.result()
+        self.assertEqual(blocking_resp.success, True)
+
+        threads_resp = threads_handle.error()
+        self.assertEqual(threads_resp.request_seq, threads_handle.seq)
+        self.assertEqual(threads_resp.message, "cancelled")
+
+        disconnect_resp = disconnect_handle.result()
+        self.assertLess(threads_resp.seq, disconnect_resp.seq)

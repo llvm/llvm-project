@@ -1,9 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 
 #include <sycl/sycl.hpp>
 
+#include <cassert>
 #include <cstddef>
 
 using namespace sycl;
@@ -22,7 +31,10 @@ int main() {
 
   event E1 = Q.prefetch(SharedData, NumBytes);
 
-  event E2 = Q.prefetch(SharedData, NumBytes / 2, E1);
+  event E2 = Q.submit([&](sycl::handler &CGH) {
+    CGH.depends_on(E1);
+    CGH.prefetch(SharedData, NumBytes / 2);
+  });
 
   event E3 = Q.prefetch(nullptr, 0, E2);
   E3.wait();
