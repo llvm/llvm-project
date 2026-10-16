@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_FUNC_IR_FUNCOPS_TD
 
 include "mlir/IR/EnumAttr.td"
-include "mlir/Dialect/DLTI/DLTIOpInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -257,7 +256,7 @@ def ConstantOp : Func_Op<"constant",
 def FuncOp : Func_Op<"func", [
   AffineScope, AutomaticAllocationScope,
   SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
-  OpAsmOpInterface, DLTIQueryOpInterface
+  OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -272,10 +271,7 @@ def FuncOp : Func_Op<"func", [
     the region.
 
     Only dialect attribute names may be specified in the attribute dictionaries
-    for function arguments, results, or the function itself. The function may
-    also have an inherent `dlti` attribute implementing `DLTIQueryInterface`.
-    Its values are available to scoped DLTI queries on the function and nested
-    operations, unless a closer scope answers the same key.
+    for function arguments, results, or the function itself.
 
     Example:
 
@@ -306,9 +302,7 @@ def FuncOp : Func_Op<"func", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
-                       UnitAttr:$no_inline,
-                       OptionalAttr<DLTIQueryAttr>:$dlti);
-  let useCustomPropertiesEncoding = 1;
+                       UnitAttr:$no_inline);
   let regions = (region AnyRegion:$body);
 
   let builders = [OpBuilder<(ins
