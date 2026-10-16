@@ -70,15 +70,43 @@ define float @powf_intrinsic_half_fast(float %x) {
 
 ; If we can disregard INFs, no need for a select.
 
-define double @pow_libcall_half_no_FMF_base_ninf(i32 %x) {
-; CHECK-LABEL: @pow_libcall_half_no_FMF_base_ninf(
+; A uitofp base is never negative, so the sqrt result is never -0.0 and the
+; fabs is not needed.
+define double @pow_libcall_half_no_FMF_base_ninf_uitofp(i32 %x) {
+; CHECK-LABEL: @pow_libcall_half_no_FMF_base_ninf_uitofp(
 ; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[X:%.*]] to double
+; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[CONV]])
+; CHECK-NEXT:    ret double [[SQRT]]
+;
+  %conv = uitofp i32 %x to double
+  %pow = call double @pow(double %conv, double 5.0e-01)
+  ret double %pow
+}
+
+; A sitofp base may be negative, so the sqrt result may be a nan with an
+; unknown sign and the fabs must be kept.
+define double @pow_libcall_half_no_FMF_base_ninf_sitofp(i32 %x) {
+; CHECK-LABEL: @pow_libcall_half_no_FMF_base_ninf_sitofp(
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[X:%.*]] to double
 ; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double [[CONV]])
 ; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
 ; CHECK-NEXT:    ret double [[ABS]]
 ;
-  %conv = uitofp i32 %x to double
+  %conv = sitofp i32 %x to double
   %pow = call double @pow(double %conv, double 5.0e-01)
+  ret double %pow
+}
+
+; nnan is copied to the sqrt call, which rules out the nan that was hiding the
+; sign of the result, so the fabs is not needed.
+define double @pow_libcall_half_nnan_base_ninf_sitofp(i32 %x) {
+; CHECK-LABEL: @pow_libcall_half_nnan_base_ninf_sitofp(
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[X:%.*]] to double
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan double @sqrt(double [[CONV]])
+; CHECK-NEXT:    ret double [[SQRT]]
+;
+  %conv = sitofp i32 %x to double
+  %pow = call nnan double @pow(double %conv, double 5.0e-01)
   ret double %pow
 }
 
