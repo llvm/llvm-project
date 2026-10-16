@@ -1186,6 +1186,8 @@ public:
 
   virtual bool preferSLPInstCountCheck() const { return true; }
 
+  virtual bool preferSLPOnceUsedSeeds() const { return true; }
+
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization(ElementCount Iters) const {

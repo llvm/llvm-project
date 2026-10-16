@@ -29702,7 +29702,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   // Instructions with the single user require just one extract per lane, so
   // they are used as the seeds for the very last attempt, after all the other
   // roots in the function are exhausted.
-  if (Opts->slp_vectorize_once_used) {
+  if (valueOr(Opts->slp_vectorize_once_used, TTI->preferSLPOnceUsedSeeds())) {
     auto OnceUsedPOT = post_order(&F.getEntryBlock());
     for (auto *BB : make_filter_range(OnceUsedPOT, [&](auto *BB) {
            return !BB->isEHPad() &&

@@ -2028,6 +2028,11 @@ public:
   /// of this heuristic.
   LLVM_ABI bool preferSLPInstCountCheck() const;
 
+  /// \returns True if the SLP vectorizer should use instructions with a single
+  /// user as standalone seeds, after all other roots in the function are
+  /// exhausted. Overridden by -slp-vectorize-once-used when it is given.
+  LLVM_ABI bool preferSLPOnceUsedSeeds() const;
+
   /// \returns True if the target prefers reductions of \p Kind to be performed
   /// in the loop.
   LLVM_ABI bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
