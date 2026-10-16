@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements classes required for offloading to HIP and CUDA devices.
+// This file defines the classes required for offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +15,8 @@
 
 #include "IncrementalParser.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
-
-#include <memory>
 
 namespace clang {
 struct PartialTranslationUnit;
@@ -40,7 +39,6 @@ public:
   ~IncrementalDeviceParser() override;
 
 protected:
-  CompilerInstance &DeviceCI;
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
   CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
@@ -55,20 +53,9 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
       llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
 
-  llvm::Expected<TranslationUnitDecl *> Parse(llvm::StringRef Input) override;
-
   llvm::Error GenerateOffloadBinary() override;
 
-  ~IncrementalHIPDeviceParser();
-
-protected:
-  // Generate the HSACO code object for the last PTU.
-  llvm::Expected<llvm::StringRef> GenerateHSACO();
-
-  // Bundle the HSACO into a HIP offload bundle in memory.
-  llvm::Error GenerateOffloadBundle();
-
-  llvm::SmallVector<char, 1024> HSACOContent;
+  ~IncrementalHIPDeviceParser() override;
 };
 
 class IncrementalCUDADeviceParser : public IncrementalDeviceParser {
@@ -82,9 +69,9 @@ public:
 
   llvm::Error GenerateOffloadBinary() override;
 
-  ~IncrementalCUDADeviceParser();
+  ~IncrementalCUDADeviceParser() override;
 
-protected:
+private:
   // Generate PTX for the last PTU.
   llvm::Expected<llvm::StringRef> GeneratePTX();
 

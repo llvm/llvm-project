@@ -98,6 +98,10 @@ struct TestSCFParallelLoopCollapsing
             << flattenedCombinedLoops.size() << " iter args.";
         return;
       }
+      if (op.getUnsignedCmp()) {
+        op.emitOpError("with unsigned bounds is not supported");
+        return;
+      }
       collapseParallelLoops(rewriter, op, combinedLoops);
     });
   }

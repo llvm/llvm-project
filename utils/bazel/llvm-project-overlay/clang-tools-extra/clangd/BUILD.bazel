@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(
@@ -13,18 +14,20 @@ licenses(["notice"])
 
 # TODO: this is a shim to provide Features.inc as needed by Feature.h.
 # Replace this with something that parses Features.inc.in.
-genrule(
+write_file(
     name = "gen_features_inc",
-    outs = ["Features.inc"],
-    cmd = "\n".join([
-        "echo '// IWYU pragma: private, include \"Feature.h\"' >> $@",
-        "echo '#define CLANGD_BUILD_XPC 0' >> $@",
-        "echo '#define CLANGD_ENABLE_REMOTE 1' >> $@",
-        "echo '#define ENABLE_GRPC_REFLECTION 0' >> $@",
-        "echo '#define CLANGD_MALLOC_TRIM 0' >> $@",
-        "echo '#define CLANGD_TIDY_CHECKS 1' >> $@",
-        "echo '#define CLANGD_DECISION_FOREST 1' >> $@",
-    ]),
+    out = "Features.inc",
+    content = [
+        "// IWYU pragma: private, include \"Feature.h\"",
+        "#define CLANGD_BUILD_XPC 0",
+        "#define CLANGD_ENABLE_REMOTE 1",
+        "#define ENABLE_GRPC_REFLECTION 0",
+        "#define CLANGD_MALLOC_TRIM 0",
+        "#define CLANGD_TIDY_CHECKS 1",
+        "#define CLANGD_DECISION_FOREST 1",
+        "",
+    ],
+    newline = "unix",
 )
 
 # TODO: Pick up other files for more complete functionality, to match

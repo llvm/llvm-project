@@ -41,6 +41,8 @@
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @LocGlob = private unnamed_addr addrspace(5) global i32 43
 @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@packet = external global i64
+@__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 
 ; Function Attrs: convergent norecurse nounwind
@@ -375,6 +377,50 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) {
   ret void
 }
 
+define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_system_fence_l40(ptr %dyn) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_system_fence_l40(
+; CHECK: region.guarded:
+; CHECK-NEXT: store i64 8, ptr @packet, align 8
+; CHECK: region.exit:
+; CHECK-NEXT: fence acquire
+; CHECK-NEXT: [[V:%.*]] = load i64, ptr @packet, align 8
+; CHECK-NEXT: [[P:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-NEXT: call void @usei8ptr(ptr [[P]])
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_system_fence_l40(
+; CHECK-DISABLED: store i64 8, ptr @packet, align 8
+; CHECK-DISABLED-NEXT: fence acquire
+; CHECK-DISABLED-NEXT: [[V:%.*]] = load i64, ptr @packet, align 8
+; CHECK-DISABLED-NEXT: [[P:%.*]] = inttoptr i64 [[V]] to ptr
+; CHECK-DISABLED-NEXT: call void @usei8ptr(ptr [[P]])
+; CHECK-DISABLED-NOT: region.guarded
+;
+  %init = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_fbfa7a_system_fence_l40_kernel_environment, ptr %dyn)
+  %exec = icmp eq i32 %init, -1
+  br i1 %exec, label %user, label %exit
+
+user:
+  call void @__kmpc_parallel_60(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__fence, ptr @__omp_outlined__fence_wrapper, ptr null, i64 0, i32 0)
+  store i64 8, ptr @packet, align 8
+  fence acquire
+  %v = load i64, ptr @packet, align 8
+  %p = inttoptr i64 %v to ptr
+  call void @usei8ptr(ptr %p)
+  call void @__kmpc_target_deinit()
+  br label %exit
+
+exit:
+  ret void
+}
+
+define internal void @__omp_outlined__fence(ptr noalias, ptr noalias) {
+  ret void
+}
+
+define internal void @__omp_outlined__fence_wrapper(i16 zeroext, i32) {
+  ret void
+}
+
 declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
@@ -429,7 +475,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 !7 = !{!"clang version 14.0.0"}
 !8 = !{!9}
 !9 = distinct !{!9, !10, !"__omp_outlined__: %__context"}
-!10 = distinct !{!10, !"__omp_outlined__"}
+!10 = distinct !{!10, i1 false, !"__omp_outlined__"}
 !11 = distinct !{!11, !12}
 !12 = !{!"llvm.loop.mustprogress"}
 ;.
@@ -466,7 +512,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
@@ -479,7 +525,7 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK-DISABLED: [[META7]] = !{[[META8:![0-9]+]]}
 ; CHECK-DISABLED: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], i1 false, !"__omp_outlined__"}
 ; CHECK-DISABLED: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
 ; CHECK-DISABLED: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.

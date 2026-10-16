@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRVectorTransformOps
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRArithDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRVectorDialect

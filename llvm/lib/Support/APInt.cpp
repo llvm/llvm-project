@@ -3154,6 +3154,16 @@ APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
   return (C1 | C2) - (C1 ^ C2).lshr(1);
 }
 
+APInt APIntOps::avgSubFloorS(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 - C2) / 2), using C1 - C2 == (C1 ^ C2) - 2 * (~C1 & C2).
+  return (C1 ^ C2).ashr(1) - (~C1 & C2);
+}
+
+APInt APIntOps::avgSubFloorU(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 - C2) / 2), using C1 - C2 == (C1 ^ C2) - 2 * (~C1 & C2).
+  return (C1 ^ C2).lshr(1) - (~C1 & C2);
+}
+
 APInt APIntOps::mulhs(const APInt &C1, const APInt &C2) {
   assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
   unsigned FullWidth = C1.getBitWidth() * 2;

@@ -1630,9 +1630,33 @@ define void @versioned_loop_block(ptr %dst, i64 %stride, ptr %src, i64 %n) {
 ; CHECK-NEXT:  [[LOOP_RTVEC:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_RTCONT:.*]]
 ; CHECK:       [[LOOP_RTCONT]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_RTVEC]] ], [ [[IV_NEXT_SCALAR:%.*]], %[[LOOP_RTCONT]] ]
-; CHECK-NEXT:    [[D:%.*]] = phi ptr [ [[DST]], %[[LOOP_RTVEC]] ], [ [[D_NEXT_SCALAR:%.*]], %[[LOOP_RTCONT]] ]
-; CHECK-NEXT:    [[S:%.*]] = phi ptr [ [[SRC]], %[[LOOP_RTVEC]] ], [ [[S_NEXT_SCALAR:%.*]], %[[LOOP_RTCONT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_RTVEC]] ], [ [[IV_NEXT_RTMERGE:%.*]], %[[EXIT:.*]] ]
+; CHECK-NEXT:    [[D:%.*]] = phi ptr [ [[DST]], %[[LOOP_RTVEC]] ], [ [[D_NEXT_RTMERGE:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[S:%.*]] = phi ptr [ [[SRC]], %[[LOOP_RTVEC]] ], [ [[S_NEXT_RTMERGE:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[S8:%.*]] = ptrtoaddr ptr [[S]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[S8]], 16
+; CHECK-NEXT:    [[D9:%.*]] = ptrtoaddr ptr [[D]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[D9]], 8
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[D9]], [[TMP0]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[S8]], [[TMP1]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[LOOP_RTSCALAR:.*]], label %[[LOOP_RTVEC1:.*]], !prof [[PROF0]]
+; CHECK:       [[EXIT1:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[LOOP_RTVEC1]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[S]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = ashr <8 x i16> [[TMP2]], splat (i16 8)
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr <8 x i16> [[TMP4]], splat (i16 6)
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[TMP5]] to <8 x i8>
+; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr [[D]], align 1
+; CHECK-NEXT:    [[D_NEXT:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[S_NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[LOOP_RTSCALAR]]:
 ; CHECK-NEXT:    [[L0_SCALAR:%.*]] = load i16, ptr [[S]], align 2
 ; CHECK-NEXT:    [[A0_SCALAR:%.*]] = ashr i16 [[L0_SCALAR]], 8
 ; CHECK-NEXT:    [[B0_SCALAR:%.*]] = sub i16 [[L0_SCALAR]], [[A0_SCALAR]]
@@ -1695,13 +1719,17 @@ define void @versioned_loop_block(ptr %dst, i64 %stride, ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[C7_SCALAR:%.*]] = lshr i16 [[B7_SCALAR]], 6
 ; CHECK-NEXT:    [[T7_SCALAR:%.*]] = trunc i16 [[C7_SCALAR]] to i8
 ; CHECK-NEXT:    store i8 [[T7_SCALAR]], ptr [[D7_SCALAR]], align 1
-; CHECK-NEXT:    [[D_NEXT_SCALAR]] = getelementptr inbounds i8, ptr [[D]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[S_NEXT_SCALAR]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
-; CHECK-NEXT:    [[IV_NEXT_SCALAR]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[D_NEXT_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[S_NEXT_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
+; CHECK-NEXT:    [[IV_NEXT_SCALAR:%.*]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[COND_SCALAR:%.*]] = icmp eq i64 [[IV_NEXT_SCALAR]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_SCALAR]], label %[[EXIT:.*]], label %[[LOOP_RTCONT]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[D_NEXT_RTMERGE]] = phi ptr [ [[D_NEXT]], %[[LOOP_RTVEC1]] ], [ [[D_NEXT_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    [[S_NEXT_RTMERGE]] = phi ptr [ [[S_NEXT]], %[[LOOP_RTVEC1]] ], [ [[S_NEXT_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    [[IV_NEXT_RTMERGE]] = phi i64 [ [[IV_NEXT]], %[[LOOP_RTVEC1]] ], [ [[IV_NEXT_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    [[COND_RTMERGE:%.*]] = phi i1 [ [[COND]], %[[LOOP_RTVEC1]] ], [ [[COND_SCALAR]], %[[LOOP_RTSCALAR]] ]
+; CHECK-NEXT:    br i1 [[COND_RTMERGE]], label %[[EXIT1]], label %[[LOOP_RTCONT]]
 ;
 ; NOCHK-LABEL: define void @versioned_loop_block(
 ; NOCHK-SAME: ptr [[DST:%.*]], i64 [[STRIDE:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {

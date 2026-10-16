@@ -183,6 +183,8 @@ defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of 
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
 defm implicit_none_ext : OptInFC1FFlag<"implicit-none-ext", "No implicit externals allowed">;
+defm implicit_module_prefix : OptInFC1FFlag<"implicit-module-prefix",
+  "Treat a submodule procedure as if it had a missing MODULE prefix when it matches an ancestor interface">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
@@ -201,6 +203,9 @@ defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-
 defm openacc_combined_loop_firstprivate : OptOutFC1FFlag<"openacc-combined-loop-firstprivate",
   "Attach firstprivate on combined loop in addition to compute construct (extension)",
   "Keep firstprivate only on the compute construct for combined loop">;
+defm openacc_acc_kernels_do_concurrent_independent : OptOutFC1FFlag<"openacc-acc-kernels-do-concurrent-independent",
+  "Treat DO CONCURRENT associated with an OpenACC KERNELS LOOP as independent (extension)",
+  "Treat DO CONCURRENT associated with an OpenACC KERNELS LOOP as auto">;
 defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
   "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
   "Diagnose a USE association conflict with an intrinsic module generic">;

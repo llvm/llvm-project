@@ -92,10 +92,6 @@ char SIFormMemoryClausesLegacy::ID = 0;
 
 char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
 
-FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
-  return new SIFormMemoryClausesLegacy();
-}
-
 static bool isVMEMClauseInst(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI);
 }
@@ -193,8 +189,7 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // defs will be marked early-clobber they will all stay alive at least to the
   // end of the clause. Therefor we should not decrease pressure even if load
   // pointer becomes dead and could otherwise be reused for destination.
-  RPT.advanceToNext(/*MI=*/nullptr, /*UseInternalIterator=*/true,
-                    /*RetireDeadUses=*/false);
+  RPT.advanceToNext(/*RetireDeadUses=*/false);
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(
       *ST,
@@ -386,8 +381,8 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         // bundle.
         Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst),
                        DebugLoc(), TII->get(AMDGPU::KILL));
-        for (auto &Op : KillOps)
-          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        for (auto [State, SubReg] : KillOps)
+          Kill.addUse(Reg, State, SubReg);
         Ind->insertMachineInstrInMaps(*Kill);
       }
 
