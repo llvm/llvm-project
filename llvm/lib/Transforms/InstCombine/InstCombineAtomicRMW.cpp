@@ -134,6 +134,13 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
                                                  : AtomicRMWInst::Add);
       return replaceOperand(RMWI, 1, X);
     }
+
+    // atomicrmw sub(ptr, C) -> atomicrmw add(ptr, -C)
+    const APInt *C;
+    if (Op == AtomicRMWInst::Sub && match(Val, m_APInt(C)) && !C->isZero()) {
+      RMWI.setOperation(AtomicRMWInst::Add);
+      return replaceOperand(RMWI, 1, ConstantInt::get(RMWI.getType(), -*C));
+    }
   }
 
   if (!isIdempotentRMW(RMWI))
