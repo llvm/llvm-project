@@ -1684,15 +1684,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (HasInt256) {
       setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
-      // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
-      // MULH[SU]. The custom lowering unrolls to scalar i64 [SU]MUL_LOHI,
-      // which is only legalizable when i64 is a legal type.
-      if (Subtarget.is64Bit()) {
-        setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
-        setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
-      } else {
-        setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
-      }
+      setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
+
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -30705,8 +30698,16 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     return splitVectorIntBinary(Op, DAG, dl);
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i64) {
-    SDValue Lo, Hi;
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    // Scalarize if i64 MUL support is better than vXi64.
+    if ((VT == MVT::v2i64 || VT == MVT::v4i64) &&
+        TLI.isOperationLegal(ISD::MUL, MVT::i64) &&
+        !TLI.isOperationLegal(ISD::MUL, VT)) {
+      if (IsSigned || !(A.hasOneUse() || B.hasOneUse()))
+        return DAG.UnrollVectorOp(Op.getNode());
+    }
+
+    SDValue Lo, Hi;
     TLI.forceExpandMultiply(DAG, dl, IsSigned, Lo, Hi, A, B);
     return Hi;
   }
@@ -34937,8 +34938,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MUL:                return LowerMUL(Op, Subtarget, DAG);
   case ISD::MULHS:
   case ISD::MULHU:              return LowerMULH(Op, Subtarget, DAG);
-  case ISD::SMUL_LOHI:
-  case ISD::UMUL_LOHI:          return DAG.UnrollVectorOp(Op.getNode());
   case ISD::ROTL:
   case ISD::ROTR:               return LowerRotate(Op, Subtarget, DAG);
   case ISD::SRA:
