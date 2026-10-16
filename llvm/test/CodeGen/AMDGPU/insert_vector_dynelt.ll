@@ -10269,6 +10269,274 @@ define <7 x float> @insert_dyn_inreg_float_7(<7 x float> inreg %arg, i32 inreg %
   ret <7 x float> %x
 }
 
+define <8 x half> @insert_dyn_half_8(<8 x half> inreg %arg, i32 %idx, half %val) {
+; GCN-LABEL: insert_dyn_half_8:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_lshrrev_b32_e32 v4, 2, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 3, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
+; GCN-NEXT:    v_lshlrev_b64 v[2:3], v0, s[4:5]
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
+; GCN-NEXT:    v_mov_b32_e32 v6, 16
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v2, vcc
+; GCN-NEXT:    v_lshlrev_b32_sdwa v6, v6, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
+; GCN-NEXT:    v_or_b32_sdwa v6, v1, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GCN-NEXT:    v_bfi_b32 v1, v0, v6, s17
+; GCN-NEXT:    v_bfi_b32 v0, v5, v6, s16
+; GCN-NEXT:    v_bfi_b32 v3, v3, v6, s19
+; GCN-NEXT:    v_bfi_b32 v2, v2, v6, s18
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-O0-LABEL: insert_dyn_half_8:
+; GCN-O0:       ; %bb.0:
+; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-O0-NEXT:    s_mov_b32 s6, s18
+; GCN-O0-NEXT:    s_mov_b32 s4, s16
+; GCN-O0-NEXT:    s_mov_b32 s8, s4
+; GCN-O0-NEXT:    s_mov_b32 s5, 2
+; GCN-O0-NEXT:    v_lshrrev_b32_e64 v2, s5, v0
+; GCN-O0-NEXT:    s_mov_b32 s5, 1
+; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[10:11], v2, s5
+; GCN-O0-NEXT:    s_mov_b32 s5, 3
+; GCN-O0-NEXT:    v_and_b32_e64 v0, v0, s5
+; GCN-O0-NEXT:    s_mov_b32 s5, 4
+; GCN-O0-NEXT:    v_lshlrev_b32_e64 v0, s5, v0
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], 0xffff
+; GCN-O0-NEXT:    v_lshlrev_b64 v[3:4], v0, s[8:9]
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, v4
+; GCN-O0-NEXT:    s_mov_b64 s[12:13], 0
+; GCN-O0-NEXT:    s_mov_b32 s8, s13
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s8
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v0, v0, v5, s[10:11]
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, v3
+; GCN-O0-NEXT:    s_mov_b32 s5, s12
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, s5
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v9, v3, v6, s[10:11]
+; GCN-O0-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v10, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, v10
+; GCN-O0-NEXT:    s_mov_b32 s7, 0xffff
+; GCN-O0-NEXT:    v_and_b32_e64 v1, s7, v1
+; GCN-O0-NEXT:    s_mov_b32 s7, 16
+; GCN-O0-NEXT:    v_lshlrev_b32_e64 v3, s7, v1
+; GCN-O0-NEXT:    v_or_b32_e64 v1, v1, v3
+; GCN-O0-NEXT:    v_mov_b32_e32 v7, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v8, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v8
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GCN-O0-NEXT:    s_mov_b32 s7, s19
+; GCN-O0-NEXT:    s_mov_b32 s9, s7
+; GCN-O0-NEXT:    v_bfi_b32 v0, v0, v3, s9
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v9
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v7
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_sgpr7
+; GCN-O0-NEXT:    v_bfi_b32 v7, v1, v4, s6
+; GCN-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v8, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, v8
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v7
+; GCN-O0-NEXT:    s_mov_b32 s6, 0
+; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[6:7], v2, s6
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s8
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v2, v2, v5, s[6:7]
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, s5
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v5, v5, v6, s[6:7]
+; GCN-O0-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v6
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    s_mov_b32 s5, s17
+; GCN-O0-NEXT:    s_mov_b32 s6, s5
+; GCN-O0-NEXT:    v_bfi_b32 v2, v2, v3, s6
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v5
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GCN-O0-NEXT:    v_bfi_b32 v3, v3, v4, s4
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v4
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $vgpr3_vgpr4 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4_vgpr5_vgpr6 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, v3
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v4
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v5
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
+; GCN-O0-NEXT:    s_setpc_b64 s[30:31]
+  %x = insertelement <8 x half> %arg, half %val, i32 %idx
+  ret <8 x half> %x
+}
+
+define <16 x bfloat> @insert_dyn_bfloat_16(<16 x bfloat> inreg %arg, i32 %idx, bfloat %val) {
+; GCN-LABEL: insert_dyn_bfloat_16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_lshrrev_b32_e32 v8, 2, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 3, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
+; GCN-NEXT:    v_lshlrev_b64 v[6:7], v0, s[4:5]
+; GCN-NEXT:    v_mov_b32_e32 v3, 16
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v8
+; GCN-NEXT:    v_lshlrev_b32_sdwa v3, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v7, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
+; GCN-NEXT:    v_or_b32_sdwa v9, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v8
+; GCN-NEXT:    v_bfi_b32 v1, v0, v9, s17
+; GCN-NEXT:    v_bfi_b32 v0, v2, v9, s16
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v7, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v8
+; GCN-NEXT:    v_bfi_b32 v3, v2, v9, s19
+; GCN-NEXT:    v_bfi_b32 v2, v4, v9, s18
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v7, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v10, 0, v6, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v8
+; GCN-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; GCN-NEXT:    v_bfi_b32 v5, v4, v9, s21
+; GCN-NEXT:    v_bfi_b32 v4, v10, v9, s20
+; GCN-NEXT:    v_bfi_b32 v7, v7, v9, s23
+; GCN-NEXT:    v_bfi_b32 v6, v6, v9, s22
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-O0-LABEL: insert_dyn_bfloat_16:
+; GCN-O0:       ; %bb.0:
+; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-O0-NEXT:    s_mov_b32 s12, s22
+; GCN-O0-NEXT:    s_mov_b32 s10, s20
+; GCN-O0-NEXT:    s_mov_b32 s6, s18
+; GCN-O0-NEXT:    s_mov_b32 s4, s16
+; GCN-O0-NEXT:    s_mov_b32 s40, s4
+; GCN-O0-NEXT:    s_mov_b32 s7, 2
+; GCN-O0-NEXT:    v_lshrrev_b32_e64 v6, s7, v0
+; GCN-O0-NEXT:    s_mov_b32 s5, 3
+; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[14:15], v6, s5
+; GCN-O0-NEXT:    v_and_b32_e64 v0, v0, s5
+; GCN-O0-NEXT:    s_mov_b32 s5, 4
+; GCN-O0-NEXT:    v_lshlrev_b32_e64 v0, s5, v0
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], 0xffff
+; GCN-O0-NEXT:    v_lshlrev_b64 v[2:3], v0, s[8:9]
+; GCN-O0-NEXT:    v_mov_b32_e32 v9, v3
+; GCN-O0-NEXT:    s_mov_b64 s[24:25], 0
+; GCN-O0-NEXT:    s_mov_b32 s8, s25
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s8
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v0, v0, v9, s[14:15]
+; GCN-O0-NEXT:    v_mov_b32_e32 v10, v2
+; GCN-O0-NEXT:    s_mov_b32 s5, s24
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s5
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v4, v2, v10, s[14:15]
+; GCN-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_vgpr5 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, v5
+; GCN-O0-NEXT:    s_mov_b32 s9, 0xffff
+; GCN-O0-NEXT:    v_and_b32_e64 v1, s9, v1
+; GCN-O0-NEXT:    s_mov_b32 s9, 16
+; GCN-O0-NEXT:    v_lshlrev_b32_e64 v2, s9, v1
+; GCN-O0-NEXT:    v_or_b32_e64 v1, v1, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v7, v3
+; GCN-O0-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
+; GCN-O0-NEXT:    s_mov_b32 s13, s23
+; GCN-O0-NEXT:    s_mov_b32 s9, s13
+; GCN-O0-NEXT:    v_bfi_b32 v0, v0, v7, s9
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v4
+; GCN-O0-NEXT:    v_mov_b32_e32 v8, v2
+; GCN-O0-NEXT:    s_mov_b32 s9, s12
+; GCN-O0-NEXT:    v_bfi_b32 v1, v1, v8, s9
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[12:13], v6, s7
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s8
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v2, v2, v9, s[12:13]
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, s5
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v3, v3, v10, s[12:13]
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v4
+; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
+; GCN-O0-NEXT:    s_mov_b32 s11, s21
+; GCN-O0-NEXT:    s_mov_b32 s7, s11
+; GCN-O0-NEXT:    v_bfi_b32 v2, v2, v7, s7
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $vgpr3_vgpr4 killed $exec
+; GCN-O0-NEXT:    s_mov_b32 s7, s10
+; GCN-O0-NEXT:    v_bfi_b32 v3, v3, v8, s7
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v4
+; GCN-O0-NEXT:    ; kill: def $vgpr3 killed $vgpr3 killed $vgpr3_vgpr4 killed $exec
+; GCN-O0-NEXT:    s_mov_b32 s7, 1
+; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[10:11], v6, s7
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, s8
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v9, s[10:11]
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, s5
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v11, v5, v10, s[10:11]
+; GCN-O0-NEXT:    ; kill: def $vgpr11 killed $vgpr11 def $vgpr11_vgpr12 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v12, v4
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v12
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GCN-O0-NEXT:    s_mov_b32 s7, s19
+; GCN-O0-NEXT:    s_mov_b32 s9, s7
+; GCN-O0-NEXT:    v_bfi_b32 v4, v4, v7, s9
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, v11
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_sgpr7
+; GCN-O0-NEXT:    v_bfi_b32 v11, v5, v8, s6
+; GCN-O0-NEXT:    ; kill: def $vgpr11 killed $vgpr11 def $vgpr11_vgpr12 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v12, v4
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v12
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, v11
+; GCN-O0-NEXT:    s_mov_b32 s6, 0
+; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[6:7], v6, s6
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, s8
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v6, v6, v9, s[6:7]
+; GCN-O0-NEXT:    v_mov_b32_e32 v9, s5
+; GCN-O0-NEXT:    v_cndmask_b32_e64 v9, v9, v10, s[6:7]
+; GCN-O0-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v10, v6
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, v10
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GCN-O0-NEXT:    s_mov_b32 s5, s17
+; GCN-O0-NEXT:    s_mov_b32 s6, s5
+; GCN-O0-NEXT:    v_bfi_b32 v6, v6, v7, s6
+; GCN-O0-NEXT:    v_mov_b32_e32 v7, v9
+; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GCN-O0-NEXT:    v_bfi_b32 v7, v7, v8, s4
+; GCN-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v8, v6
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, v8
+; GCN-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 killed $vgpr7_vgpr8 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14 killed $exec
+; GCN-O0-NEXT:    v_mov_b32_e32 v8, v6
+; GCN-O0-NEXT:    v_mov_b32_e32 v9, v5
+; GCN-O0-NEXT:    v_mov_b32_e32 v10, v4
+; GCN-O0-NEXT:    v_mov_b32_e32 v11, v3
+; GCN-O0-NEXT:    v_mov_b32_e32 v12, v2
+; GCN-O0-NEXT:    v_mov_b32_e32 v13, v1
+; GCN-O0-NEXT:    v_mov_b32_e32 v14, v0
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, v7
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v8
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, v9
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, v10
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, v11
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, v12
+; GCN-O0-NEXT:    v_mov_b32_e32 v6, v13
+; GCN-O0-NEXT:    v_mov_b32_e32 v7, v14
+; GCN-O0-NEXT:    s_setpc_b64 s[30:31]
+  %x = insertelement <16 x bfloat> %arg, bfloat %val, i32 %idx
+  ret <16 x bfloat> %x
+}
+
 define amdgpu_kernel void @half8_inselt_chain(ptr addrspace(1) %out, <8 x half> %vec, i32 %sel0, i32 %sel1) {
 ; GCN-LABEL: half8_inselt_chain:
 ; GCN:       ; %bb.0: ; %entry

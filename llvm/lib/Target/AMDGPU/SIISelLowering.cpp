@@ -9802,6 +9802,7 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                   DAG.getConstant(Log2_32(EltsPerPiece), SL, MVT::i32));
   SDValue Zero = DAG.getConstant(0, SL, IntVT);
   SmallVector<SDValue, 8> Pieces;
+  Pieces.reserve(NumPieces);
   for (unsigned I = 0; I != NumPieces; ++I) {
     SDValue CurPieceNo = DAG.getConstant(I, SL, MVT::i32);
     SDValue Piece =
