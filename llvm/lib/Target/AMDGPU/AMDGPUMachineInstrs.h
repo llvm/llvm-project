@@ -61,7 +61,6 @@ public:
 class VLoadIdxInst : public VLoadStoreIdxInst {
 public:
   static int tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
-  static unsigned getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
 
   static bool classof(const MachineInstr *MI) {
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
@@ -73,7 +72,6 @@ public:
 class VStoreIdxInst : public VLoadStoreIdxInst {
 public:
   static int tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
-  static unsigned getOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx = false);
 
   static bool classof(const MachineInstr *MI) {
     const AMDGPU::VLdStIdxOpcodeInfo *Info =
