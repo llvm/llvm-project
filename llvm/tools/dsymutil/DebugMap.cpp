@@ -15,6 +15,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -147,7 +148,8 @@ DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 DebugMap::parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
                             StringRef PrependPath, bool Verbose) {
-  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(InputFile, /*IsText=*/true);
+  auto ErrOrFile =
+      MemoryBuffer::getFileOrSTDIN(InputFile, sys::fs::OF_TextWithCRLF);
   if (auto Err = ErrOrFile.getError())
     return Err;
 

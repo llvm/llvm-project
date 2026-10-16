@@ -1026,7 +1026,7 @@ Error OffloadBundler::ListBundleIDsInFile(
 
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> Contents =
-      MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(InputFileName, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = Contents.getError())
     return createFileError(InputFileName, EC);
 
@@ -1182,7 +1182,7 @@ Error OffloadBundler::BundleFiles() {
   InputBuffers.reserve(BundlerConfig.InputFileNames.size());
   for (auto &I : BundlerConfig.InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(I, /*IsText=*/true);
+        MemoryBuffer::getFileOrSTDIN(I, sys::fs::OF_TextWithCRLF);
     if (std::error_code EC = CodeOrErr.getError())
       return createFileError(I, EC);
     InputBuffers.emplace_back(std::move(*CodeOrErr));
@@ -1252,7 +1252,7 @@ Error OffloadBundler::UnbundleFiles() {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
       MemoryBuffer::getFileOrSTDIN(BundlerConfig.InputFileNames.front(),
-                                   /*IsText=*/true);
+                                   sys::fs::OF_Text);
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(BundlerConfig.InputFileNames.front(), EC);
 
@@ -1480,7 +1480,8 @@ CheckHeterogeneousArchive(StringRef ArchiveName,
                           const OffloadBundlerConfig &BundlerConfig) {
   std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(ArchiveName, true, false);
+      MemoryBuffer::getFileOrSTDIN(ArchiveName, sys::fs::OF_TextWithCRLF,
+                                   false);
   if (std::error_code EC = BufOrErr.getError())
     return createFileError(ArchiveName, EC);
 
@@ -1585,7 +1586,7 @@ Error OffloadBundler::UnbundleArchive() {
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(IFName, true, false);
+      MemoryBuffer::getFileOrSTDIN(IFName, sys::fs::OF_TextWithCRLF, false);
   if (std::error_code EC = BufOrErr.getError())
     return createFileError(BundlerConfig.InputFileNames.front(), EC);
 
