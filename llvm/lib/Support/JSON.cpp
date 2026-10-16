@@ -726,6 +726,12 @@ std::string fixUTF8(llvm::StringRef S) {
   return Res;
 }
 
+Value safeUTF8(StringRef S) {
+  if (LLVM_LIKELY(isUTF8(S)))
+    return S;
+  return fixUTF8(S);
+}
+
 static void quote(llvm::raw_ostream &OS, llvm::StringRef S) {
   OS << '\"';
   for (unsigned char C : S) {
@@ -930,4 +936,3 @@ void llvm::format_provider<llvm::json::Value>::format(
     llvm_unreachable("json::Value format options should be an integer");
   json::OStream(OS, IndentAmount).value(E);
 }
-
