@@ -8269,6 +8269,57 @@ bool AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode *N) {
   return true;
 }
 
+/// (X >> C) & Mask -> ((X & (Mask << C)) >> (C + Scale)) << Scale
+/// (X << C) & Mask -> ((X & (Mask >> C)) >> (Scale - C)) << Scale, C < Scale
+/// where Mask is a run of ones starting at Scale, used only by ADDs. The masked
+/// right shift is a UBFX (or LSR) and the left shift usually folds into users.
+static SDValue foldMaskedShiftToScale(SelectionDAG &DAG, SDNode &N) {
+  // Restrict to Scale values that may be used in addressing modes.
+  uint64_t Mask;
+  unsigned Scale, MaskLen;
+  if (N.getValueType(0) != MVT::i64 ||
+      !isOpcWithIntImmediate(&N, ISD::AND, Mask) ||
+      !isShiftedMask_64(Mask, Scale, MaskLen) || Scale == 0 || Scale > 4 ||
+      !all_of(N.users(), [](SDNode *U) { return U->getOpcode() == ISD::ADD; }))
+    return SDValue();
+
+  // Extends from i32 can only differ above bit 31, which the mask clears.
+  SDValue Shift = N.getOperand(0);
+  bool IsExtended = ISD::isExtOpcode(Shift.getOpcode());
+  if (IsExtended && Shift.hasOneUse() && isUInt<32>(Mask))
+    Shift = Shift.getOperand(0);
+  if (!Shift.hasOneUse())
+    return SDValue();
+
+  uint64_t C, FieldMask;
+  EVT VT = Shift.getValueType();
+  unsigned BW = VT.getSizeInBits();
+  if (isOpcWithIntImmediate(Shift.getNode(), ISD::SRL, C) && C + Scale < BW)
+    FieldMask = (Mask << C) & maskTrailingOnes<uint64_t>(BW);
+  else if (isOpcWithIntImmediate(Shift.getNode(), ISD::SHL, C) && C < Scale)
+    FieldMask = Mask >> C;
+  else
+    return SDValue();
+  assert((!IsExtended || VT == MVT::i32) && "illegal extend");
+
+  SDLoc DL(&N);
+  SDValue X = Shift.getOperand(0);
+  unsigned ShiftOpc = ISD::SRL;
+  unsigned R = llvm::countr_zero(FieldMask);
+  if (Scale + MaskLen != 64)
+    X = DAG.getNode(ISD::AND, DL, VT, X, DAG.getConstant(FieldMask, DL, VT));
+  else if (Shift.getOpcode() == ISD::SHL && X.getOpcode() == ISD::SIGN_EXTEND) {
+    // The bits shifted in are shifted out again by Scale, so an SRA works.
+    // An SRA of a sign extend is an SBFX.
+    ShiftOpc = ISD::SRA;
+  }
+  X = DAG.getNode(ShiftOpc, DL, VT, X, DAG.getShiftAmountConstant(R, VT, DL));
+  if (IsExtended)
+    X = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, X);
+  return DAG.getNode(ISD::SHL, DL, MVT::i64, X,
+                     DAG.getShiftAmountConstant(Scale, MVT::i64, DL));
+}
+
 void AArch64DAGToDAGISel::PreprocessISelDAG() {
   bool MadeChange = false;
   for (SDNode &N : llvm::make_early_inc_range(CurDAG->allnodes())) {
@@ -8277,6 +8328,10 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
 
     SDValue Result;
     switch (N.getOpcode()) {
+    case ISD::AND: {
+      Result = foldMaskedShiftToScale(*CurDAG, N);
+      break;
+    }
     case ISD::SCALAR_TO_VECTOR: {
       EVT ScalarTy = N.getValueType(0).getVectorElementType();
       if ((ScalarTy == MVT::i32 || ScalarTy == MVT::i64) &&
