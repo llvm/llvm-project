@@ -287,10 +287,10 @@ static std::pair<SymbolRef, APSIntPtr> decomposeSymbol(SymbolRef Sym,
   return std::make_pair(Sym, BV.getValue(0, Sym->getType()));
 }
 
-static SVal doRearrangeUnchecked(ProgramStateRef State,
-                                 BinaryOperator::Opcode Op, SymbolRef LSym,
-                                 llvm::APSInt LInt, SymbolRef RSym,
-                                 llvm::APSInt RInt);
+static std::optional<NonLoc>
+doRearrangeUnchecked(ProgramStateRef State, BinaryOperator::Opcode Op,
+                     SymbolRef LSym, llvm::APSInt LInt, SymbolRef RSym,
+                     llvm::APSInt RInt);
 
 static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
                                           BinaryOperator::Opcode Op, NonLoc Lhs,
@@ -344,17 +344,16 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     return std::nullopt;
 
   // We know that no overflows can occur anymore.
-  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt)
-      .getAs<NonLoc>();
+  return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt);
 }
 // Simplify "(LSym + LInt) Op (RSym + RInt)" assuming all values are of the
 // same signed integral type and no overflows occur (which should be checked
 // by the caller). May return UnknownVal if the symbol complexity threshold is
 // reached.
-static SVal doRearrangeUnchecked(ProgramStateRef State,
-                                 BinaryOperator::Opcode Op, SymbolRef LSym,
-                                 llvm::APSInt LInt, SymbolRef RSym,
-                                 llvm::APSInt RInt) {
+static std::optional<NonLoc>
+doRearrangeUnchecked(ProgramStateRef State, BinaryOperator::Opcode Op,
+                     SymbolRef LSym, llvm::APSInt LInt, SymbolRef RSym,
+                     llvm::APSInt RInt) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
 
@@ -378,7 +377,7 @@ static SVal doRearrangeUnchecked(ProgramStateRef State,
     return SVB
         .evalBinOpNN(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
-        .castAs<NonLoc>();
+        .getAs<NonLoc>();
 
   auto MakeSymExprVal = [&SVB, SymTy](SymbolRef Lhs, BinaryOperatorKind Op,
                                       SymbolRef Rhs) {
@@ -412,16 +411,16 @@ static SVal doRearrangeUnchecked(ProgramStateRef State,
       ResultOp = BO_Sub;
     } else if (ResultInt == 0) {
       // Shortcut: Simplify "$x + 0" to "$x".
-      return ResultSV;
+      return ResultSV.getAs<NonLoc>();
     }
   }
   if (auto ResultNL = ResultSV.getAs<NonLoc>()) {
     nonloc::ConcreteInt ResultCI(BV.getValue(ResultInt));
-    return SVB.makeSymExprValNN(ResultOp, *ResultNL, ResultCI, ResultTy);
+    return SVB.makeSymExprValNN(ResultOp, *ResultNL, ResultCI, ResultTy)
+        .getAs<NonLoc>();
   }
-  return UnknownVal();
+  return std::nullopt;
 }
-
 
 SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
                                   BinaryOperator::Opcode op,
