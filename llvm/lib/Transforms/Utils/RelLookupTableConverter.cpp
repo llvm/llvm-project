@@ -24,6 +24,7 @@ using namespace llvm;
 struct LookupTableInfo {
   Value *Index;
   SmallVector<Constant *> Ptrs;
+  SmallVector<LoadInst *, 4> Loads;
 };
 
 static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
@@ -47,18 +48,25 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     return false;
 
   auto *GEP = dyn_cast<GetElementPtrInst>(GV.use_begin()->getUser());
-  if (!GEP || !GEP->hasOneUse())
+  if (!GEP || GEP->use_empty())
     return false;
-
-  auto *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
-  if (!Load || Load->isVolatile())
+  auto *FirstLoad = dyn_cast<LoadInst>(*GEP->user_begin());
+  if (!FirstLoad || FirstLoad->isVolatile())
     return false;
 
   // If values are not 64-bit pointers, do not generate a relative lookup table.
   const DataLayout &DL = M.getDataLayout();
-  Type *ElemType = Load->getType();
+  Type *ElemType = FirstLoad->getType();
   if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
     return false;
+
+  for (User *U : GEP->users()) {
+    auto *Load = dyn_cast<LoadInst>(U);
+    if (!Load || Load->isVolatile() || Load->getType() != ElemType)
+      return false;
+
+    Info.Loads.push_back(Load);
+  }
 
   // Make sure this is a gep of the form GV + scale*var.
   unsigned IndexWidth = DL.getIndexTypeSizeInBits(GEP->getType());
@@ -174,7 +182,6 @@ static void convertToRelLookupTable(LookupTableInfo &Info,
                                     GlobalVariable &LookupTable) {
   GetElementPtrInst *GEP =
       cast<GetElementPtrInst>(LookupTable.use_begin()->getUser());
-  LoadInst *Load = cast<LoadInst>(GEP->use_begin()->getUser());
 
   Module &M = *LookupTable.getParent();
   BasicBlock *BB = GEP->getParent();
@@ -190,22 +197,25 @@ static void convertToRelLookupTable(LookupTableInfo &Info,
   Value *Offset = Builder.CreateShl(Info.Index, ConstantInt::get(IntTy, 2),
                                     "reltable.shift");
 
-  // Insert the call to load.relative intrinsic before LOAD.
-  // GEP might not be immediately followed by a LOAD, like it can be hoisted
-  // outside the loop or another instruction might be inserted them in between.
-  Builder.SetInsertPoint(Load);
   Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
       &M, Intrinsic::load_relative, {Info.Index->getType()});
 
-  // Create a call to load.relative intrinsic that computes the target address
-  // by adding base address (lookup table address) and relative offset.
-  Value *Result = Builder.CreateCall(LoadRelIntrinsic, {RelLookupTable, Offset},
-                                     "reltable.intrinsic");
+  // Insert the call to load.relative intrinsic before each LOAD.
+  // GEP might not be immediately followed by a LOAD, like it can be hoisted
+  // outside the loop or another instruction might be inserted them in between.
+  for (LoadInst *Load : Info.Loads) {
+    Builder.SetInsertPoint(Load);
+    // Create a call to load.relative intrinsic that computes the target address
+    // by adding base address (lookup table address) and relative offset.
+    Value *Result = Builder.CreateCall(
+        LoadRelIntrinsic, {RelLookupTable, Offset}, "reltable.intrinsic");
 
-  // Replace load instruction with the new generated instruction sequence.
-  Load->replaceAllUsesWith(Result);
-  // Remove Load and GEP instructions.
-  Load->eraseFromParent();
+    // Replace load instruction with the new generated instruction sequence.
+    Load->replaceAllUsesWith(Result);
+    Load->eraseFromParent();
+  }
+
+  // Remove GEP instruction.
   GEP->eraseFromParent();
 }
 
