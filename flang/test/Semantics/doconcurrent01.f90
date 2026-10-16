@@ -64,6 +64,8 @@ subroutine do_concurrent_test2(i,j,n,flag)
 !ERROR: 'ieee_get_flag' may not be called in DO CONCURRENT
     call ieee_get_flag(flag, flagValue)
     call ieee_set_flag(flag, flagValue)
+! TODO: IEEE_SET_MODES is SIMPLE per F2023 17.11.41 p2
+! The impurity diagnostic is a known nonconformance, not an expectation
 !ERROR: 'ieee_set_modes' may not be called in DO CONCURRENT
 !ERROR: Impure procedure 'ieee_exceptions$__fortran_ieee_exceptions$ieee_set_modes_0' may not be referenced in DO CONCURRENT
     call ieee_set_modes(modes)
@@ -81,6 +83,8 @@ subroutine do_concurrent_ieee_arithmetic(n)
   do concurrent (i = 1:n)
 !ERROR: 'ieee_set_rounding_mode' may not be called in DO CONCURRENT
     call ieee_set_rounding_mode(rounding)
+!ERROR: 'ieee_set_rounding_mode' may not be called in DO CONCURRENT
+    call ieee_set_rounding_mode(rounding, radix=2)
 !ERROR: 'ieee_set_underflow_mode' may not be called in DO CONCURRENT
     call ieee_set_underflow_mode(gradual)
   end do
@@ -323,5 +327,18 @@ subroutine do_concurrent_non_intrinsic_ieee()
   integer :: i
   do concurrent (i = 1:10)
     call ieee_set_rounding_mode()
+  end do
+end subroutine
+
+! F2023 C1146 permits IEEE_GET_ROUNDING_MODE and IEEE_GET_UNDERFLOW_MODE in DO CONCURRENT
+subroutine do_concurrent_ieee_get(n)
+  use, intrinsic :: ieee_arithmetic
+  implicit none
+  integer :: i, n
+  type(ieee_round_type) :: rounding(n)
+  logical :: gradual(n)
+  do concurrent (i = 1:n)
+    call ieee_get_rounding_mode(rounding(i))
+    call ieee_get_underflow_mode(gradual(i))
   end do
 end subroutine
