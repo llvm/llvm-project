@@ -133,9 +133,9 @@ LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<uint32_t>
 LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
-  if (m_del_obj)
-    return 2;
-  return 1;
+  if (m_ptr_obj && m_ptr_obj->GetValueAsUnsigned(0) != 0)
+    return m_del_obj ? 2 : 1;
+  return 0;
 }
 
 llvm::Expected<size_t>
