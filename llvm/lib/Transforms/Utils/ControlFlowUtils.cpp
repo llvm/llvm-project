@@ -11,12 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "control-flow-hub"
@@ -246,7 +253,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     bool AllUndef = true;
     for (auto [BB, Succ0, Succ1] : Incoming) {
       Value *V = PoisonValue::get(Phi->getType());
-      if  (Phi->getBasicBlockIndex(BB) != -1) {
+      if (Phi->getBasicBlockIndex(BB) != -1) {
         V = Phi->removeIncomingValue(BB, false);
         // When both successors are the same (Succ0 == Succ1), there are two
         // edges from BB to Out, so we need to remove the second PHI entry too.
@@ -277,9 +284,290 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
   }
 }
 
+bool llvm::functionHasScalableBranchProfile(const Function &F) {
+  if (F.getEntryCount().value_or(0) > 0)
+    return true;
+  for (const BasicBlock &BB : F) {
+    if (const Instruction *Term = BB.getTerminator())
+      if (hasBranchWeightMD(*Term))
+        return true;
+  }
+  return false;
+}
+
+bool llvm::functionHasBranchWeightsWiderThan32Bits(const Function &F) {
+  for (const BasicBlock &BB : F) {
+    const Instruction *Term = BB.getTerminator();
+    if (!Term)
+      continue;
+    const MDNode *MD = getBranchWeightMDNode(*Term);
+    if (!MD)
+      continue;
+    for (unsigned I = getBranchWeightOffset(MD), E = MD->getNumOperands();
+         I != E; ++I) {
+      const auto *Weight = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+      if (Weight && Weight->getValue().getActiveBits() > 32)
+        return true;
+    }
+  }
+  return false;
+}
+
+void llvm::recordBlocksBeforeTransform(
+    const Function &F, SmallPtrSetImpl<const BasicBlock *> &BlocksSeenBefore) {
+  for (const BasicBlock &BB : F)
+    BlocksSeenBefore.insert(&BB);
+}
+
+// Returns false if adding Amount to Total would overflow.
+static bool addWeight(uint64_t &Total, uint64_t Amount) {
+  if (Total > UINT64_MAX - Amount)
+    return false;
+  Total += Amount;
+  return true;
+}
+
+// Return the execution count for a block that existed when BFI was computed.
+// Prefer profile counts when available; otherwise fall back to the raw block
+// frequency.
+static std::optional<uint64_t>
+getBlockCount(BlockFrequencyInfo &BFI,
+              const SmallPtrSetImpl<const BasicBlock *> &KnownBlocks,
+              const BasicBlock *Block) {
+  if (!KnownBlocks.contains(Block))
+    return std::nullopt;
+  if (std::optional<uint64_t> Count = BFI.getBlockProfileCount(Block))
+    return Count;
+  return BFI.getBlockFreq(Block).getFrequency();
+}
+
+// This edge's share of the block count: EdgeWeight / TotalWeight * block count.
+// Empty when the total wrapped, or when a taken edge scales down to 0.
+static std::optional<uint64_t>
+scaleToBlockCount(BlockFrequencyInfo &BFI,
+                  const SmallPtrSetImpl<const BasicBlock *> &KnownBlocks,
+                  const BasicBlock *FromBlock, uint64_t EdgeWeight,
+                  uint64_t TotalWeight) {
+  if (!TotalWeight || EdgeWeight > TotalWeight)
+    return std::nullopt;
+  std::optional<uint64_t> Count = getBlockCount(BFI, KnownBlocks, FromBlock);
+  if (!Count)
+    return std::nullopt;
+  if (!*Count || !EdgeWeight)
+    return 0;
+  uint64_t Scaled =
+      BranchProbability::getBranchProbability(EdgeWeight, TotalWeight)
+          .scale(*Count);
+  if (!Scaled)
+    return std::nullopt;
+  return Scaled;
+}
+
+// Profile information for an edge redirected through the guard hub.
+struct RedirectedEdge {
+  BasicBlock *Target = nullptr;
+  // Estimated count reaching Target.
+  std::optional<uint64_t> Count;
+  // Source terminator had branch_weights.
+  bool HadBranchWeights = false;
+};
+
+// False when a weight is not an integer or needs more than 64 bits.
+static bool readBranchWeights64(const MDNode &MD,
+                                SmallVectorImpl<uint64_t> &Weights) {
+  Weights.clear();
+  unsigned Offset = getBranchWeightOffset(&MD);
+  if (Offset >= MD.getNumOperands())
+    return false;
+  for (unsigned I = Offset, E = MD.getNumOperands(); I != E; ++I) {
+    const auto *Weight = mdconst::dyn_extract<ConstantInt>(MD.getOperand(I));
+    if (!Weight || Weight->getValue().getActiveBits() > 64)
+      return false;
+    Weights.push_back(Weight->getValue().getZExtValue());
+  }
+  return true;
+}
+
+// Recover the count for a newly-created split block from its predecessor's
+// count and branch weights.
+static RedirectedEdge
+countFromPredecessor(BlockFrequencyInfo &BFI,
+                     const SmallPtrSetImpl<const BasicBlock *> &KnownBlocks,
+                     const BasicBlock *SplitBlock) {
+  RedirectedEdge Result;
+  const BasicBlock *Pred = SplitBlock->getUniquePredecessor();
+  if (!Pred)
+    return Result;
+  const Instruction *Term = Pred->getTerminator();
+  if (!Term)
+    return Result;
+  unsigned NumSuccessors = Term->getNumSuccessors();
+  const MDNode *MD = getBranchWeightMDNode(*Term);
+  // Need per-successor weights to reconstruct the flow into SplitBlock.
+  if (!MD || NumSuccessors < 2) {
+    Result.HadBranchWeights = hasBranchWeightMD(*Term);
+    return Result;
+  }
+  SmallVector<uint64_t, 8> Weights;
+  if (!readBranchWeights64(*MD, Weights) || Weights.size() != NumSuccessors) {
+    Result.HadBranchWeights = true;
+    return Result;
+  }
+  Result.HadBranchWeights = true;
+  uint64_t WeightToSplitBlock = 0;
+  uint64_t TotalWeight = 0;
+  bool SawSplitBlockEdge = false;
+  for (unsigned I = 0; I != NumSuccessors; ++I) {
+    if (!addWeight(TotalWeight, Weights[I]))
+      return Result;
+    if (Term->getSuccessor(I) != SplitBlock)
+      continue;
+    if (!addWeight(WeightToSplitBlock, Weights[I]))
+      return Result;
+    SawSplitBlockEdge = true;
+  }
+  if (!SawSplitBlockEdge)
+    return Result;
+  Result.Count = scaleToBlockCount(BFI, KnownBlocks, Pred, WeightToSplitBlock,
+                                   TotalWeight);
+  return Result;
+}
+
+// Edges redirected through the hub, plus whether the function already has
+// profile data those edges can be annotated from.
+struct CollectedRedirectedFlows {
+  SmallVector<RedirectedEdge, 8> Flows;
+  // Positive function_entry_count.
+  bool HasPositiveEntryCount = false;
+  // A redirected edge had branch_weights.
+  bool SawBranchWeights = false;
+};
+
+// Counts for both edges of a conditional branch. The 32-bit weight helper
+// drops the top bits, so the 64-bit metadata is read here.
+static void addConditionalBranchFlows(
+    const CondBrInst &Br, BasicBlock *FromBlock, BasicBlock *FirstTarget,
+    BasicBlock *SecondTarget, BlockFrequencyInfo *BFI,
+    const SmallPtrSetImpl<const BasicBlock *> &BlocksSeenBefore,
+    function_ref<void(BasicBlock *, bool, std::optional<uint64_t>)> AddFlow) {
+  const MDNode *MD = getBranchWeightMDNode(Br);
+  // Both arms to one block carry that block's whole count.
+  if (FirstTarget == SecondTarget) {
+    std::optional<uint64_t> Count;
+    if (BFI)
+      Count = getBlockCount(*BFI, BlocksSeenBefore, FromBlock);
+    AddFlow(FirstTarget, MD != nullptr, Count);
+    return;
+  }
+  if (!MD) {
+    AddFlow(FirstTarget, /*HadBranchWeights=*/false, std::nullopt);
+    AddFlow(SecondTarget, /*HadBranchWeights=*/false, std::nullopt);
+    return;
+  }
+  // Counts are unused without BFI.
+  if (!BFI) {
+    AddFlow(FirstTarget, /*HadBranchWeights=*/true, std::nullopt);
+    AddFlow(SecondTarget, /*HadBranchWeights=*/true, std::nullopt);
+    return;
+  }
+  SmallVector<uint64_t, 2> Weights;
+  // A weight past 64 bits leaves both targets unknown.
+  if (!readBranchWeights64(*MD, Weights) || Weights.size() != 2) {
+    AddFlow(FirstTarget, /*HadBranchWeights=*/true, std::nullopt);
+    AddFlow(SecondTarget, /*HadBranchWeights=*/true, std::nullopt);
+    return;
+  }
+  uint64_t TrueWeight = Weights[0], FalseWeight = Weights[1];
+  uint64_t TotalWeight = 0;
+  bool CanScale =
+      addWeight(TotalWeight, TrueWeight) && addWeight(TotalWeight, FalseWeight);
+  std::optional<uint64_t> TrueCount, FalseCount;
+  if (CanScale) {
+    TrueCount = scaleToBlockCount(*BFI, BlocksSeenBefore, FromBlock, TrueWeight,
+                                  TotalWeight);
+    FalseCount = scaleToBlockCount(*BFI, BlocksSeenBefore, FromBlock,
+                                   FalseWeight, TotalWeight);
+  }
+  AddFlow(FirstTarget, /*HadBranchWeights=*/true, TrueCount);
+  AddFlow(SecondTarget, /*HadBranchWeights=*/true, FalseCount);
+}
+
+// Record each redirected edge.
+// BFI only covers blocks that existed when it was computed. Newly-created
+// hub/split blocks are therefore excluded from count recovery.
+static CollectedRedirectedFlows
+collectRedirectedFlows(ArrayRef<EdgeDescriptor> Branches,
+                       const SmallPtrSetImpl<BasicBlock *> &SplitTargets,
+                       BlockFrequencyInfo *BFI,
+                       const SmallPtrSetImpl<const BasicBlock *> *KnownBlocks) {
+  CollectedRedirectedFlows Result;
+  SmallPtrSet<const BasicBlock *, 1> Empty;
+  const SmallPtrSetImpl<const BasicBlock *> &BlocksSeenBefore =
+      KnownBlocks ? *KnownBlocks : Empty;
+  if (!Branches.empty()) {
+    const Function *Fn = Branches.front().BB->getParent();
+    Result.HasPositiveEntryCount = Fn->getEntryCount().value_or(0) > 0;
+  }
+  auto addFlow = [&](BasicBlock *Target, bool HadBranchWeights,
+                     std::optional<uint64_t> Count = std::nullopt) {
+    if (!Target)
+      return;
+    RedirectedEdge Edge;
+    Edge.Target = Target;
+    Edge.HadBranchWeights = HadBranchWeights;
+    Edge.Count = Count;
+    Result.Flows.push_back(Edge);
+  };
+  for (auto [FromBlock, FirstTarget, SecondTarget] : Branches) {
+    // For blocks introduced while splitting edges/guards, recover the flow
+    // from the original predecessor rather than from the synthetic block.
+    if (SplitTargets.contains(FromBlock)) {
+      BasicBlock *OriginalTarget = FirstTarget ? FirstTarget : SecondTarget;
+      if (!BFI) {
+        bool HadBranchWeights = false;
+        if (const BasicBlock *Pred = FromBlock->getUniquePredecessor())
+          if (const Instruction *Term = Pred->getTerminator())
+            HadBranchWeights = hasBranchWeightMD(*Term);
+        addFlow(OriginalTarget, HadBranchWeights);
+      } else {
+        RedirectedEdge Edge =
+            countFromPredecessor(*BFI, BlocksSeenBefore, FromBlock);
+        addFlow(OriginalTarget, Edge.HadBranchWeights, Edge.Count);
+      }
+      continue;
+    }
+    if (const auto *Br = dyn_cast<CondBrInst>(FromBlock->getTerminator())) {
+      addConditionalBranchFlows(*Br, FromBlock, FirstTarget, SecondTarget, BFI,
+                                BlocksSeenBefore, addFlow);
+      continue;
+    }
+    if (!FirstTarget && !SecondTarget)
+      continue;
+    // Two different successors that are not a conditional branch. Neither
+    // edge has a weight of its own.
+    if (FirstTarget && SecondTarget && FirstTarget != SecondTarget) {
+      addFlow(FirstTarget, /*HadBranchWeights=*/false);
+      addFlow(SecondTarget, /*HadBranchWeights=*/false);
+      continue;
+    }
+    BasicBlock *OnlyTarget = FirstTarget ? FirstTarget : SecondTarget;
+    std::optional<uint64_t> Count;
+    if (BFI)
+      Count = getBlockCount(*BFI, BlocksSeenBefore, FromBlock);
+    addFlow(OnlyTarget, /*HadBranchWeights=*/false, Count);
+  }
+  Result.SawBranchWeights =
+      any_of(Result.Flows,
+             [](const RedirectedEdge &Edge) { return Edge.HadBranchWeights; });
+  return Result;
+}
+
 std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
-    const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
+    const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans,
+    ProfileInfo Profile) {
+  BlockFrequencyInfo *BFI = Profile.BFI;
+  const SmallPtrSetImpl<const BasicBlock *> *KnownBlocks = Profile.KnownBlocks;
 #ifndef NDEBUG
   SmallPtrSet<BasicBlock *, 8> Incoming;
 #endif
@@ -296,6 +584,19 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     if (Succ1)
       Outgoing.insert(Succ1);
   }
+
+  // Weights for the edges about to be redirected through the guards.
+  CollectedRedirectedFlows Edges =
+      collectRedirectedFlows(Branches, SplitTargets, BFI, KnownBlocks);
+  // Already profiled: a guard with no recovered count is marked unknown.
+  const bool MayAnnotate =
+      Edges.SawBranchWeights || Edges.HasPositiveEntryCount;
+  auto markUnknown = [&](Instruction &I) {
+    if (Edges.HasPositiveEntryCount)
+      setExplicitlyUnknownBranchWeightsIfProfiled(I, DEBUG_TYPE);
+    else if (Edges.SawBranchWeights)
+      setExplicitlyUnknownBranchWeights(I, DEBUG_TYPE);
+  };
 
   assert(Outgoing.size() && "No outgoing edges");
 
@@ -316,6 +617,133 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
   SmallVector<WeakVH, 8> DeletionCandidates;
   convertToGuardPredicates(Branches, Outgoing.getArrayRef(), GuardBlocks,
                            DeletionCandidates, Prefix, MaxControlFlowBooleans);
+
+  if (MayAnnotate) {
+    // [src] -> [guard0] -> [Out0]
+    //              |
+    //              +-> [guard1] -> [Out1]
+    //                       |
+    //                       +-> [Out2]
+    // guard0 compares Out0 with the rest of the chain. A target that could
+    // not be scaled makes that guard unknown. guard1 still gets a weight
+    // when Out1 and Out2 could be scaled. The examples below have one guard
+    // each, so both outgoing counts are written on that branch.
+    //
+    // FixIrreducible. Entry count 100. right branches back to left.
+    // Both exits are the same block.
+    //
+    //                     +----------------------------+
+    //                     v                            |
+    // [entry] --25--> [left] --80--+                   |
+    //    |              |          v                   |
+    //    |              v          |                   |
+    //    |           [exit]        |                   |
+    //    +-------------75-----> [right]----------------+
+    //                              |
+    //                              v
+    //                           [exit]
+    //
+    // entry->left  = 100 * 10/40 = 25
+    // entry->right = 100 * 30/40 = 75
+    // left->right scales to 80
+    //
+    // After. One [left]. entry's two edges and left->right are redirected
+    // through [guard]. right->left still targets [left].
+    // In: 100 + 80 = 180. Out: 155 + 25 = 180.
+    // 155 = 75 + 80 to right. 25 is entry->left. 80 is left->guard.
+    //
+    //                                   +-----------------+
+    //                                   v                 |
+    // [entry] --100--> [guard] --25--> [left]             |
+    //                     | ^           |  |              |
+    //                     | |           |  |              |
+    //                     | +----80-----+  |              |
+    //                    155             [exit]           |
+    //                     |                               |
+    //                     v                               |
+    //                  [right]----------------------------+
+    //                     |
+    //                     v
+    //                  [exit]
+    //
+    // UnifyLoopExits. Entry count 100. [latch] branches back to [header].
+    //
+    //                      +------------------------+
+    //                      v                        |
+    // [entry] --100--> [header] --120--> [latch]----+
+    //                     |                 |
+    //                    40                60
+    //                     v                 v
+    //                 [exit.a]          [exit.b]
+    //
+    // header = 100 + 60 = 160
+    // header->latch = 160 * 3/4 = 120
+    // header->exit.a = 160 * 1/4 = 40
+    // latch->header = latch->exit.b = 120 * 1/2 = 60
+    //
+    // After. Both exits go through [guard]. The back edge stays.
+    // In: 40 + 60 = 100. Out: 40 + 60 = 100.
+    //
+    //                      +------------------------+
+    //                      v                        |
+    // [entry] --100--> [header] --120--> [latch]----+
+    //                     |                 |
+    //                    40                60
+    //                     +--------+--------+
+    //                              v
+    //                          [guard] --40--> [exit.a]
+    //                             |
+    //                            60
+    //                             v
+    //                         [exit.b]
+    DenseMap<BasicBlock *, uint64_t> TargetWeight;
+    DenseSet<BasicBlock *> Unresolved;
+    // If a redirected edge has no target, the corresponding flow cannot be
+    // recovered, so every synthesized guard is marked unknown.
+    bool MissingTarget = any_of(Branches, [&](const EdgeDescriptor &Branch) {
+      auto [FromBlock, FirstTarget, SecondTarget] = Branch;
+      return !FirstTarget && !SecondTarget &&
+             !SplitTargets.contains(FromBlock) &&
+             !isa<CondBrInst>(FromBlock->getTerminator());
+    });
+    if (!BFI || MissingTarget) {
+      for (BasicBlock *Out : Outgoing)
+        Unresolved.insert(Out);
+    } else {
+      for (const RedirectedEdge &Edge : Edges.Flows) {
+        // Overflow while accumulating counts makes the target unusable.
+        if (!Edge.Count || !addWeight(TargetWeight[Edge.Target], *Edge.Count))
+          Unresolved.insert(Edge.Target);
+      }
+    }
+    for (unsigned I = 0, E = GuardBlocks.size(); I != E; ++I) {
+      auto *Br = cast<CondBrInst>(GuardBlocks[I]->getTerminator());
+      if (Unresolved.contains(Outgoing[I])) {
+        markUnknown(*Br);
+        continue;
+      }
+      uint64_t ThisTargetCount = TargetWeight.lookup(Outgoing[I]);
+      uint64_t RestCount = 0;
+      bool CanAnnotate = true;
+      for (unsigned J = I + 1; J != Outgoing.size(); ++J) {
+        if (Unresolved.contains(Outgoing[J]) ||
+            !addWeight(RestCount, TargetWeight.lookup(Outgoing[J]))) {
+          CanAnnotate = false;
+          break;
+        }
+      }
+      if (!CanAnnotate) {
+        markUnknown(*Br);
+        continue;
+      }
+      // {0, 0} would look like the block never runs.
+      if (ThisTargetCount || RestCount)
+        setFittedBranchWeights(*Br, {ThisTargetCount, RestCount},
+                               /*IsExpected=*/false);
+      else
+        markUnknown(*Br);
+    }
+  }
   BasicBlock *FirstGuardBlock = GuardBlocks.front();
 
   // Update the PHINodes in each outgoing block to match the new control flow.
