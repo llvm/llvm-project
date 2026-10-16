@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def PassesOptions : OptionsStruct;
+def PassesOptions : OptionsStruct<perContext = false>;
 
 // PassBuilder.cpp
 defm : FlagOrEnumField<"print-pipeline-passes",

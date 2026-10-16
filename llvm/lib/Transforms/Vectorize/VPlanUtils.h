@@ -19,6 +19,7 @@ class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class SCEVNAryExpr;
 class PredicatedScalarEvolution;
 } // namespace llvm
 
@@ -278,6 +279,9 @@ class VPSCEVExpander {
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
+
+  /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
+  VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
 
 public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)

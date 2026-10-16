@@ -262,7 +262,8 @@ def pmerge_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned 
 def pmerge_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
 
 // Scalar Bitmanip
-def rev16_64 : RISCVBuiltin<"uint64_t(uint64_t)", "64bit">;
+let Features = "experimental-p,64bit" in
+def rev16_64 : RISCVBuiltin<"uint64_t(uint64_t)">;
 
 // Scalar Averaging Addition and Subtraction
 def aadd_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;

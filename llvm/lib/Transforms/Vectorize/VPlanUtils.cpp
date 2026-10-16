@@ -639,13 +639,13 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
 
   // Truncate BaseIV and Step to ResultTy.
   if (ResultTy->isIntegerTy()) {
-    Type *BaseIVTy = BaseIV->getScalarType();
+    [[maybe_unused]] Type *BaseIVTy = BaseIV->getScalarType();
     assert(BaseIVTy->isIntegerTy() && "Integral BaseIV type expected");
     assert(BaseIVTy->getPrimitiveSizeInBits() >=
                ResultTy->getPrimitiveSizeInBits() &&
            "BaseIV's type must be at least as large as ResultTy");
     BaseIV = Builder.createScalarZExtOrTrunc(BaseIV, ResultTy, DL);
-    Type *StepTy = Step->getScalarType();
+    [[maybe_unused]] Type *StepTy = Step->getScalarType();
     assert(StepTy->isIntegerTy() && "Integral Step type expected");
     assert(StepTy->getPrimitiveSizeInBits() >=
                ResultTy->getPrimitiveSizeInBits() &&
@@ -915,6 +915,15 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   return nullptr;
 }
 
+VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
+  VPValue *Base = expand(SE.getPointerBase(S));
+  VPValue *Offset = expand(SE.removePointerBase(S));
+  GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
+                                ? GEPNoWrapFlags::noUnsignedWrap()
+                                : GEPNoWrapFlags::none();
+  return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+}
+
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
@@ -933,14 +942,8 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
 
     // Expand pointer SCEVAddExpr as a ptradd of the pointer base and the
     // integer offset, matching SCEVExpander.
-    if (S->getType()->isPointerTy()) {
-      VPValue *Base = expand(SE.getPointerBase(S));
-      VPValue *Offset = expand(SE.removePointerBase(S));
-      GEPNoWrapFlags GEPFlags = WrapFlags.HasNUW
-                                    ? GEPNoWrapFlags::noUnsignedWrap()
-                                    : GEPNoWrapFlags::none();
-      return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
-    }
+    if (S->getType()->isPointerTy())
+      return expandAsPtrAdd(AddE);
 
     // Non-constant-negative add operands are expanded negated and subtracted
     // from the running result below, instead of being negated and added.

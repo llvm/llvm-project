@@ -3784,6 +3784,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::avgCeilS(Known, Known2);
     break;
   }
+  case ISD::AVGSUBFLOORU:
+  case ISD::AVGSUBFLOORS: {
+    bool IsSigned = Op.getOpcode() == ISD::AVGSUBFLOORS;
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    // Subtract in i[N+1] so the difference can't overflow, then halve.
+    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = KnownBits::sub(Known, Known2);
+    // The shifted in top bit is unknown, but it is truncated away.
+    Known >>= 1;
+    Known = Known.trunc(BitWidth);
+    break;
+  }
   case ISD::SELECT:
   case ISD::VSELECT:
     Known = computeKnownBits(Op.getOperand(2), DemandedElts, Depth+1);
@@ -5371,6 +5385,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
+  case ISD::AVGSUBFLOORS:
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1; // Early out.
@@ -6007,6 +6022,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   case ISD::ABDU:
   case ISD::ABDS:
   case ISD::SMIN:
@@ -7614,6 +7631,10 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::avgCeilS(C1, C2);
   case ISD::AVGCEILU:
     return APIntOps::avgCeilU(C1, C2);
+  case ISD::AVGSUBFLOORS:
+    return APIntOps::avgSubFloorS(C1, C2);
+  case ISD::AVGSUBFLOORU:
+    return APIntOps::avgSubFloorU(C1, C2);
   case ISD::ABDS:
     return APIntOps::abds(C1, C2);
   case ISD::ABDU:
@@ -8685,6 +8706,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");

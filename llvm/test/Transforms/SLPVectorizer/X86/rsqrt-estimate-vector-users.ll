@@ -3,11 +3,9 @@
 
 define float @direct(ptr %p, float %x, float %y, i64 %n) {
 ; CHECK-LABEL: define float @direct(
-; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]], float [[Y:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]], float [[X:%.*]], float [[Y:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[NUM:%.*]] = load float, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[NUM]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -15,13 +13,10 @@ define float @direct(ptr %p, float %x, float %y, i64 %n) {
 ; CHECK-NEXT:    [[X2:%.*]] = fmul float [[X]], [[X]]
 ; CHECK-NEXT:    [[Y2:%.*]] = fmul float [[Y]], [[Y]]
 ; CHECK-NEXT:    [[SX:%.*]] = call fast float @llvm.sqrt.f32(float [[X2]])
-; CHECK-NEXT:    [[SY:%.*]] = call fast float @llvm.sqrt.f32(float [[Y2]])
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[SX]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP2]], float [[SY]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <2 x float> [[TMP1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float [[NUM]], [[SX]]
 ; CHECK-NEXT:    [[ACC1:%.*]] = fadd float [[ACC]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i64 1
+; CHECK-NEXT:    [[SY:%.*]] = call fast float @llvm.sqrt.f32(float [[Y2]])
+; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float [[NUM]], [[SY]]
 ; CHECK-NEXT:    [[ACC2]] = fadd float [[ACC1]], [[TMP8]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
@@ -54,7 +49,7 @@ exit:
 
 define void @gathered(ptr %p, ptr %q, float %x, float %y) {
 ; CHECK-LABEL: define void @gathered(
-; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SX:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    [[SY:%.*]] = call fast float @llvm.sqrt.f32(float [[Y]])
 ; CHECK-NEXT:    [[D2:%.*]] = fdiv fast float 1.000000e+00, [[SY]]
