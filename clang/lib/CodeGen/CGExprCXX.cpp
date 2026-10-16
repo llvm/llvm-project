@@ -254,7 +254,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   }
 
   bool TrivialForCodegen =
-      MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion());
+      MD->isTrivial() || MD->isMemcpyEquivalentSpecialMember(getContext());
   bool TrivialAssignment =
       TrivialForCodegen &&
       (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) &&
