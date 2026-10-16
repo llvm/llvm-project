@@ -4181,17 +4181,15 @@ define float @test_pow_afn_f32__y_poison(float %x) {
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.log2.f32(float [[TMP1]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.exp2.f32(float [[TMP2]])
-; NOPRELINK-NEXT:    [[TMP4:%.*]] = call afn float @llvm.copysign.f32(float [[TMP3]], float [[X]])
-; NOPRELINK-NEXT:    [[TMP5:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
-; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp afn oeq float [[TMP5]], +inf
-; NOPRELINK-NEXT:    [[TMP7:%.*]] = fcmp afn oeq float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = select afn i1 [[TMP7]], float 0.000000e+00, float +inf
-; NOPRELINK-NEXT:    [[TMP10:%.*]] = call afn float @llvm.copysign.f32(float [[TMP9]], float [[X]])
-; NOPRELINK-NEXT:    [[TMP11:%.*]] = select afn i1 [[TMP8]], float [[TMP10]], float [[TMP4]]
-; NOPRELINK-NEXT:    [[TMP12:%.*]] = fcmp afn uno float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP13:%.*]] = select afn i1 [[TMP12]], float +qnan, float [[TMP11]]
-; NOPRELINK-NEXT:    ret float [[TMP13]]
+; NOPRELINK-NEXT:    [[TMP4:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
+; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp afn oeq float [[TMP4]], +inf
+; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp afn oeq float [[X]], 0.000000e+00
+; NOPRELINK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], float +inf, float [[TMP3]]
+; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float 0.000000e+00, float [[TMP7]]
+; NOPRELINK-NEXT:    [[TMP8:%.*]] = call afn float @llvm.copysign.f32(float [[DOTV]], float [[X]])
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = fcmp afn uno float [[X]], 0.000000e+00
+; NOPRELINK-NEXT:    [[TMP10:%.*]] = select afn i1 [[TMP9]], float +qnan, float [[TMP8]]
+; NOPRELINK-NEXT:    ret float [[TMP10]]
 ;
   %pow = tail call afn float @_Z3powff(float %x, float poison)
   ret float %pow
