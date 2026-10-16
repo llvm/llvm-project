@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -verify-each -pass-pipeline="builtin.module(convert-math-to-funcs{convert-ctlz})" | FileCheck %s
+// RUN: mlir-opt %s  -pass-pipeline="builtin.module(convert-math-to-funcs{convert-ctlz})" | FileCheck %s
 
 // CHECK-LABEL: gpu.module @first {
 // CHECK-LABEL: gpu.func @kernel(
