@@ -8,8 +8,8 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define <8 x i8> @bsl(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
 ; COST-LABEL: 'bsl'
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
-; COST-NEXT:  Cost Model: Found costs of 1 for: %x = and <8 x i8> %m, %a
-; COST-NEXT:  Cost Model: Found costs of 1 for: %y = and <8 x i8> %n, %b
+; COST-NEXT:  Cost Model: Found costs of 0 for: %x = and <8 x i8> %m, %a
+; COST-NEXT:  Cost Model: Found costs of 0 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %x, %y
 ; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
 ;
@@ -28,11 +28,11 @@ define <8 x i8> @bsl(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
 define void @bsl_shared_mask(<16 x i8> %m, <16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, ptr %p, ptr %q) {
 ; COST-LABEL: 'bsl_shared_mask'
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <16 x i8> %m, splat (i8 -1)
-; COST-NEXT:  Cost Model: Found costs of 1 for: %x0 = and <16 x i8> %m, %a
-; COST-NEXT:  Cost Model: Found costs of 1 for: %y0 = and <16 x i8> %n, %b
+; COST-NEXT:  Cost Model: Found costs of 0 for: %x0 = and <16 x i8> %m, %a
+; COST-NEXT:  Cost Model: Found costs of 0 for: %y0 = and <16 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r0 = or <16 x i8> %x0, %y0
-; COST-NEXT:  Cost Model: Found costs of 1 for: %x1 = and <16 x i8> %m, %c
-; COST-NEXT:  Cost Model: Found costs of 1 for: %y1 = and <16 x i8> %n, %d
+; COST-NEXT:  Cost Model: Found costs of 0 for: %x1 = and <16 x i8> %m, %c
+; COST-NEXT:  Cost Model: Found costs of 0 for: %y1 = and <16 x i8> %n, %d
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r1 = or <16 x i8> %x1, %y1
 ; COST-NEXT:  Cost Model: Found costs of 1 for: store <16 x i8> %r0, ptr %p, align 16
 ; COST-NEXT:  Cost Model: Found costs of 1 for: store <16 x i8> %r1, ptr %q, align 16
@@ -60,8 +60,8 @@ define void @bsl_shared_mask(<16 x i8> %m, <16 x i8> %a, <16 x i8> %b, <16 x i8>
 define <8 x i8> @bsl_not_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr %p) {
 ; COST-LABEL: 'bsl_not_multiuse'
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
-; COST-NEXT:  Cost Model: Found costs of 1 for: %x = and <8 x i8> %m, %a
-; COST-NEXT:  Cost Model: Found costs of 1 for: %y = and <8 x i8> %n, %b
+; COST-NEXT:  Cost Model: Found costs of 0 for: %x = and <8 x i8> %m, %a
+; COST-NEXT:  Cost Model: Found costs of 0 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %x, %y
 ; COST-NEXT:  Cost Model: Found costs of 1 for: store <8 x i8> %n, ptr %p, align 8
 ; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
