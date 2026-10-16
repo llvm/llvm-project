@@ -3481,6 +3481,7 @@ TEST_F(OpenMPIRBuilderTest, CopyinBlocks) {
   EXPECT_NE(NotMasterBB, nullptr);
   EXPECT_NE(CopyinEnd, nullptr);
 
+  EXPECT_TRUE(NotMasterBB->hasTerminator());
   UncondBrInst *NotMasterBr =
       dyn_cast<UncondBrInst>(NotMasterBB->getTerminator());
   EXPECT_NE(NotMasterBr, nullptr);
