@@ -1210,7 +1210,7 @@ class NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<ArgIndex ColIdx, string Buffer> {
 }
 
 class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = "",
-                           bit IsAShift = 0> {
+                            bit IsAShift = 0> {
   LLVMType a_operand_type = !if(!eq(Space, "tensor"),
                                   llvm_tmem_ptr_ty, llvm_i64_ty);
   list<LLVMType> common_args = !listconcat(
@@ -1224,8 +1224,7 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = "",
   // state. D may be read, and .ashift also writes A.
   list<IntrinsicProperty> common_intr_props = !listconcat(
       [IntrWrite<[ArgMem, InaccessibleMem]>],
-      !if(!and(!eq(Space, "tensor"), !not(IsAShift)),
-          [ReadOnly<ArgIndex<1>>], []),
+      !if(!and(!eq(Space, "tensor"), !not(IsAShift)), [ReadOnly<ArgIndex<1>>], []),
       !if(IsSparse, [ReadOnly<ArgIndex<5>>], []));
 
   string Prefix = "llvm.nvvm.tcgen05.mma";
@@ -4084,8 +4083,8 @@ foreach sparse = [0, 1] in {
         if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
             !listconcat(mma.common_intr_props,
-                        [ReadOnly<ArgIndex<!sub(nargs, 2)>>,
-                         ReadOnly<ArgIndex<!sub(nargs, 1)>>,
+                        [ReadOnly<ArgIndex<!sub(nargs, 2)>>, // scale_a
+                         ReadOnly<ArgIndex<!sub(nargs, 1)>>, // scale_b
                          Range<cta_group, 1, 3>,
                          Range<collector_usage_a, 0, 4>,
                          Range<collector_usage_b, 0, 4>,
@@ -4155,7 +4154,7 @@ foreach space = ["tensor", "shared"] in {
 
   defvar intrinsic_properties = !listconcat(
       mma.common_intr_props,
-      [ReadOnly<ArgIndex<!sub(nargs, 1)>>,
+      [ReadOnly<ArgIndex<!sub(nargs, 1)>>, // decompress_b
        Range<cta_group, 1, 3>,
        Range<collector_usage_a, 0, 4>,
        Range<collector_usage_b, 0, 4>,
@@ -4189,7 +4188,7 @@ foreach space = ["tensor", "shared"] in {
 
     defvar intrinsic_properties = !listconcat(
         mma.common_intr_props,
-        [ReadOnly<ArgIndex<!sub(nargs, 2)>>,
+        [ReadOnly<ArgIndex<!sub(nargs, 2)>>, // decompress_b
          Range<collector_usage_a, 0, 4>,
          Range<collector_usage_b, 0, 4>,
          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
@@ -4222,9 +4221,9 @@ foreach space = ["tensor", "shared"] in {
 
   defvar intrinsic_properties = !listconcat(
       mma.common_intr_props,
-      [ReadOnly<ArgIndex<!sub(nargs, 3)>>,
-       ReadOnly<ArgIndex<!sub(nargs, 2)>>,
-       ReadOnly<ArgIndex<!sub(nargs, 1)>>,
+      [ReadOnly<ArgIndex<!sub(nargs, 3)>>, // scale_a
+       ReadOnly<ArgIndex<!sub(nargs, 2)>>, // scale_b
+       ReadOnly<ArgIndex<!sub(nargs, 1)>>, // decompress_b
        Range<cta_group, 1, 3>,
        Range<collector_usage_a, 0, 4>,
        Range<collector_usage_b, 0, 4>,
