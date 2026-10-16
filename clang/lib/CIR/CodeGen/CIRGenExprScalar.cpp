@@ -2949,25 +2949,27 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
 }
 
 mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
-  // TODO(cir): The classic codegen calls tryEmitAsConstant() here. Folding
-  // constants sound like work for MLIR optimizers, but we'll keep an assertion
-  // for now.
-  assert(!cir::MissingFeatures::tryEmitAsConstant());
-  Expr::EvalResult result;
-  if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
-    llvm::APSInt value = result.Val.getInt();
+  if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e)) {
     cgf.emitIgnoredExpr(e->getBase());
-    mlir::Location loc = cgf.getLoc(e->getExprLoc());
-    // The constant is folded from an APSInt with the source-type's bit width
-    // (1 for bool), but the AST's expression type is what later consumers of
-    // this value see. For a bool member we have to emit a !cir.bool constant
-    // -- otherwise downstream ops (cir.call into a bool parameter, cir.if /
-    // cir.ternary on the value, ...) would all reject the !cir.int<u, 1> the
-    // raw APSInt would produce.
-    if (e->getType()->isBooleanType())
-      return builder.getBool(value.getBoolValue(), loc);
-    return builder.getConstInt(loc, value);
+    return cgf.emitScalarConstant(constant, e);
+  } else {
+    Expr::EvalResult result;
+    if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
+      llvm::APSInt value = result.Val.getInt();
+      cgf.emitIgnoredExpr(e->getBase());
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      // The constant is folded from an APSInt with the source-type's bit width
+      // (1 for bool), but the AST's expression type is what later consumers of
+      // this value see. For a bool member we have to emit a !cir.bool constant
+      // -- otherwise downstream ops (cir.call into a bool parameter, cir.if /
+      // cir.ternary on the value, ...) would all reject the !cir.int<u, 1> the
+      // raw APSInt would produce.
+      if (e->getType()->isBooleanType())
+        return builder.getBool(value.getBoolValue(), loc);
+      return builder.getConstInt(loc, value);
+    }
   }
+
   return emitLoadOfLValue(e);
 }
 

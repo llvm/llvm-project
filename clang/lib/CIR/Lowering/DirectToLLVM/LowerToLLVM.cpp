@@ -2715,10 +2715,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     attr = rewriter.getIntegerAttr(typeConverter->convertType(op.getType()),
                                    value);
   } else if (mlir::isa<cir::IntType>(op.getType())) {
-    // Lower GlobalViewAttr to llvm.mlir.addressof + llvm.mlir.ptrtoint
-    if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(op.getValue())) {
-      auto newOp = lowerCirAttrAsValue(op, gv, rewriter, symbolTables,
-                                       getTypeConverter());
+    // Lower GlobalViewAttr to llvm.mlir.addressof + llvm.mlir.ptrtoint and
+    // BlockAddrDiffAttr to the difference of two llvm.blockaddress.
+    if (mlir::isa<cir::GlobalViewAttr, cir::BlockAddrDiffAttr>(op.getValue())) {
+      auto newOp =
+          lowerCirAttrAsValue(op, op.getValue(), rewriter, symbolTables,
+                              getTypeConverter(), &blockInfoAddr);
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     }
@@ -2739,10 +2741,14 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
         return mlir::success();
       }
     }
-    // Lower GlobalViewAttr and GlobalOffsetAttr to llvm.mlir.addressof
-    if (mlir::isa<cir::GlobalViewAttr, cir::GlobalOffsetAttr>(op.getValue())) {
-      auto newOp = lowerCirAttrAsValue(op, op.getValue(), rewriter,
-                                       symbolTables, getTypeConverter());
+    // Lower GlobalViewAttr and GlobalOffsetAttr to llvm.mlir.addressof,
+    // non-null ConstPtrAttr to llvm.inttoptr and BlockAddrInfoAttr to
+    // llvm.blockaddress.
+    if (mlir::isa<cir::GlobalViewAttr, cir::GlobalOffsetAttr, cir::ConstPtrAttr,
+                  cir::BlockAddrInfoAttr>(op.getValue())) {
+      auto newOp =
+          lowerCirAttrAsValue(op, op.getValue(), rewriter, symbolTables,
+                              getTypeConverter(), &blockInfoAddr);
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     }
@@ -4712,9 +4718,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   /// repeated O(M) module-wide symbol scans for every call site.
   mlir::SymbolTableCollection symbolTables;
   mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMGlobalOpLowering,
-               CIRToLLVMLabelOpLowering>(converter, patterns.getContext(), dl,
-                                         symbolTables, blockInfoAddr);
+  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMConstantOpLowering,
+               CIRToLLVMGlobalOpLowering, CIRToLLVMLabelOpLowering>(
+      converter, patterns.getContext(), dl, symbolTables, blockInfoAddr);
 
   patterns.add<
 #define GET_LLVM_LOWERING_PATTERNS_LIST
