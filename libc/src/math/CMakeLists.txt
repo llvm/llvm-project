@@ -143,6 +143,7 @@ add_math_entrypoint_object(dsubl)
 add_math_entrypoint_object(dsubf128)
 
 add_math_entrypoint_object(erf)
+add_math_entrypoint_object(erfc)
 add_math_entrypoint_object(erff)
 add_math_entrypoint_object(erff16)
 
