@@ -380,14 +380,16 @@ LIBC_INLINE float set_overflow(Sign sign = Sign::POS) {
 LIBC_INLINE float set_underflow(Sign sign = Sign::POS) {
   fputil::set_errno_if_required(ERANGE);
   fputil::raise_underflow_except_if_required<float>();
-  using FPBits = fputil::FPBits<float>;
+
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  using FPBits = fputil::FPBits<float>;
   int rounding = fputil::quick_get_round();
   if (rounding == FE_UPWARD && sign.is_pos())
     return FPBits::min_subnormal(Sign::POS).get_val();
   if (rounding == FE_DOWNWARD && sign.is_neg())
     return FPBits::min_subnormal(Sign::NEG).get_val();
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
   return sign.is_neg() ? -0.0f : 0.0f;
 }
 
