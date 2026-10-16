@@ -77,6 +77,7 @@ add_llvm_component_library(LLVMAnalysis
   CycleAnalysis.cpp
   DDG.cpp
   DDGPrinter.cpp
+  FunctionDDGPrinter.cpp
   ConstraintSystem.cpp
   Delinearization.cpp
   DemandedBits.cpp
