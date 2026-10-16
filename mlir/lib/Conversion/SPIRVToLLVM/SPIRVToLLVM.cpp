@@ -612,6 +612,35 @@ public:
   }
 };
 
+class SwitchConversionPattern : public SPIRVToLLVMConversion<spirv::SwitchOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SwitchOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SwitchOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value selector = adaptor.getSelector();
+    auto selectorType = dyn_cast<IntegerType>(selector.getType());
+    if (!selectorType)
+      return rewriter.notifyMatchFailure(op, "selector is not an integer");
+
+    SmallVector<APInt> caseValues;
+    if (auto literals = op.getLiterals()) {
+      unsigned width = selectorType.getWidth();
+      bool isSigned = op.getSelector().getType().isSignedInteger();
+      for (const APInt &val : literals->getValues<APInt>())
+        caseValues.push_back(isSigned ? val.sextOrTrunc(width)
+                                      : val.zextOrTrunc(width));
+    }
+
+    SmallVector<ValueRange> caseOperands = adaptor.getTargetOperands();
+    rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
+        op, selector, op.getDefaultTarget(), adaptor.getDefaultOperands(),
+        caseValues, op.getTargets(), caseOperands);
+    return success();
+  }
+};
+
 /// Converts `spirv.getCompositeExtract` to `llvm.extractvalue` if the container
 /// type is an aggregate type (struct or array). Otherwise, converts to
 /// `llvm.extractelement` that operates on vectors.
@@ -2312,7 +2341,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
       FunctionCallPattern, LoopPattern, SelectionPattern,
-      ErasePattern<spirv::MergeOp>,
+      SwitchConversionPattern, ErasePattern<spirv::MergeOp>,
 
       // Entry points and execution mode are handled separately.
       ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
