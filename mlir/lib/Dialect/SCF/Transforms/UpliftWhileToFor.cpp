@@ -165,6 +165,14 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   if (!step || !dom.properlyDominates(step, loop))
     return rewriter.notifyMatchFailure(loop, "Invalid 'addi' form");
 
+  // `scf.for` requires a strictly positive step, and the exit-value
+  // reconstruction below relies on that same precondition.
+  APInt stepValue;
+  if (!matchPattern(step, m_ConstantInt(&stepValue)) ||
+      !stepValue.isStrictlyPositive())
+    return rewriter.notifyMatchFailure(loop,
+                                       "Step must be a positive constant");
+
   Value lb = loop.getInits()[argNumber];
 
   assert(lb.getType().isIntOrIndex());
