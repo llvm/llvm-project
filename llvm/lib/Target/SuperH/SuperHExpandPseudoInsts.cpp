@@ -96,6 +96,7 @@ private:
   bool expandMI(Block &MBB, BlockIt MBBI);
   template <unsigned OP> bool expand(Block &MBB, BlockIt MBBI);
   void emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameReg, StackAddr Addr);
+  void emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, int64_t Offset);
 
   bool storeToFrame(Block &MBB, BlockIt MBBI, int Scale);
   bool storeToAddress(Block &MBB, BlockIt MBBI);
@@ -129,6 +130,7 @@ static bool eraseMI(MachineInstr &MI) {
 static int64_t truncdiv(int64_t V, int64_t D) {
   return ((V << 8LL) / D) >> 8LL;
 }
+
 
 
 
@@ -218,6 +220,23 @@ void SuperHExpandPseudo::emitStackAdj(Block &MBB, BlockIt MBBI, Register FrameRe
 
 
 //===----------------------------------------------------------------------===//
+//                            Heap Offset Calculation
+//===----------------------------------------------------------------------===//
+void SuperHExpandPseudo::emitBaseAdj(Block &MBB, BlockIt MBBI, Register &Base, 
+                                      int64_t Offset) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  if (Offset != 0) {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
+      .addReg(Base);
+    TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
+    Base = SH::R1;
+  }
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
 //                                Stores
 //===----------------------------------------------------------------------===//
 
@@ -292,6 +311,7 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
   bool SrcIsKill = MI.getOperand(0).isKill();
   Register SrcReg = MI.getOperand(0).getReg();
   Register DstReg;
+  auto Offset = MI.getOperand(2).getImm();
 
   if (MI.getOperand(1).isGlobal()) {
     if (auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
@@ -303,59 +323,30 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
     DstReg = MI.getOperand(1).getReg();
   }  
 
-  auto Offset = MI.getOperand(2).getImm();
+  // TODO: Use store-with-offset.
+  
   unsigned Opc;
-
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*SP opcode.");
-  case SH::MOVBSP: {
-    if (Offset == 0)
-      Opc = SH::MOVBS;
-    else
-      Opc = SH::MOVBS4;
+  case SH::MOVBSP:
+    Opc = SH::MOVBS;
     break;
-  }
-  case SH::MOVWSP: {
-    if (Offset == 0)
-      Opc = SH::MOVWS;
-    else
-      Opc = SH::MOVWS4;
+  case SH::MOVWSP:
+    Opc = SH::MOVWS;
     break;
-  }
-  case SH::MOVLSP: {
-    if (Offset == 0)
-      Opc = SH::MOVLS;
-    else
-      Opc = SH::MOVLS4;
+  case SH::MOVLSP:
+    Opc = SH::MOVLS;
     break;
-  }
-  case SH::MOVF32SP: {
-    if (Offset != 0) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-        .addReg(DstReg);
-      TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
-      DstReg = SH::R1;
-    }
-
-    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(DstReg);
-    return eraseMI(MI);
-  }
+  case SH::MOVF32SP:
+    Opc = SH::FMOV_STORE;
+    break;
   }
 
-  // TODO: Allow bigger accesses.
-  if (Offset == 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(Opc))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(DstReg);
-  } else {
-    BuildMI(MBB, MBBI, DL, TII->get(Opc))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(DstReg)
-      .addImm(Offset);
-  }
+  emitBaseAdj(MBB, MBBI, DstReg, Offset);
+  BuildMI(MBB, MBBI, DL, TII->get(Opc))
+    .addReg(SrcReg, getKillRegState(SrcIsKill))
+    .addReg(DstReg);
 
   return eraseMI(MI);
 }
@@ -493,6 +484,7 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
 
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg;
+  auto Offset = MI.getOperand(2).getImm();
 
   if (MI.getOperand(1).isGlobal()) {
     if (auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
@@ -504,56 +496,28 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
     SrcReg = MI.getOperand(1).getReg();
   }
 
-  auto Offset = MI.getOperand(2).getImm();
+  // TODO: Use load-with-offset.
   unsigned Opc;
-
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Expected valid MOV*LP opcode.");
-  case SH::MOVBLP: {
-    if (Offset == 0)
-      Opc = SH::MOVBL;
-    else
-      Opc = SH::MOVBL4;
+  case SH::MOVBLP:
+    Opc = SH::MOVBL;
     break;
-  }
-  case SH::MOVWLP: {
-    if (Offset == 0)
-      Opc = SH::MOVWL;
-    else
-      Opc = SH::MOVWL4;
+  case SH::MOVWLP:
+    Opc = SH::MOVWL;
     break;
-  }
-  case SH::MOVLLP: {
-    if (Offset == 0)
-      Opc = SH::MOVLL;
-    else
-      Opc = SH::MOVLL4;
+  case SH::MOVLLP:
+    Opc = SH::MOVLL;
     break;
-  }
-  case SH::MOVF32LP: {
-    if (Offset != 0) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-        .addReg(DstReg);
-      TII->emitAddressAdjust(SH::R1, MBB, MBBI, Offset, CFPMaxAdd);
-      DstReg = SH::R1;
-    }
-
-    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_LOAD), DstReg)
-      .addReg(SrcReg);
-    return eraseMI(MI);
-  }
+  case SH::MOVF32LP:
+    Opc = SH::FMOV_LOAD;
+    break;
   }
 
-  // TODO: Allow bigger accesses.
-  if (Offset == 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(Opc), DstReg)
-      .addReg(SrcReg);
-  } else {
-    BuildMI(MBB, MBBI, DL, TII->get(Opc), DstReg)
-      .addReg(SrcReg)
-      .addImm(Offset);
-  }
+  emitBaseAdj(MBB, MBBI, DstReg, Offset);
+  BuildMI(MBB, MBBI, DL, TII->get(Opc), DstReg)
+    .addReg(SrcReg);
 
   return eraseMI(MI);
 }
