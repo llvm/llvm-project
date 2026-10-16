@@ -6,6 +6,26 @@
 
 #include <arm_neon.h>
 
+// LLVM-LABEL: @test_vfma_f32(
+// CIR-LABEL: @vfma_f32(
+float32x2_t test_vfma_f32(float32x2_t a, float32x2_t b, float32x2_t c) {
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]], <2 x float> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM: [[A_I:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM: [[B_I:%.*]] = bitcast <2 x float> [[B]] to <2 x i32>
+// LLVM: [[C_I:%.*]] = bitcast <2 x float> [[C]] to <2 x i32>
+// LLVM: [[A_BYTES:%.*]] = bitcast <2 x i32> [[A_I]] to <8 x i8>
+// LLVM: [[B_BYTES:%.*]] = bitcast <2 x i32> [[B_I]] to <8 x i8>
+// LLVM: [[C_BYTES:%.*]] = bitcast <2 x i32> [[C_I]] to <8 x i8>
+// LLVM: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <2 x float>
+// LLVM: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <2 x float>
+// LLVM: [[C_CAST:%.*]] = bitcast <8 x i8> [[C_BYTES]] to <2 x float>
+// LLVM: [[FMA:%.*]] = call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> [[B_CAST]], <2 x float> [[C_CAST]], <2 x float> [[A_CAST]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM: ret <2 x float> [[FMA]]
+  return vfma_f32(a, b, c);
+}
+
 // LLVM-LABEL: @test_vfma_f64(
 // CIR-LABEL: @vfma_f64(
 float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
@@ -27,6 +47,46 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // LLVM: [[FMA:%.*]] = call <1 x double> @llvm.experimental.constrained.fma.v1f64(<1 x double> [[B_CAST]], <1 x double> [[C_CAST]], <1 x double> [[A_CAST]], metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM: ret <1 x double> [[FMA]]
   return vfma_f64(a, b, c);
+}
+
+// LLVM-LABEL: @test_vfmaq_f32(
+// CIR-LABEL: @vfmaq_f32(
+float32x4_t test_vfmaq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]], <4 x float> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM: [[A_I:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM: [[B_I:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
+// LLVM: [[C_I:%.*]] = bitcast <4 x float> [[C]] to <4 x i32>
+// LLVM: [[A_BYTES:%.*]] = bitcast <4 x i32> [[A_I]] to <16 x i8>
+// LLVM: [[B_BYTES:%.*]] = bitcast <4 x i32> [[B_I]] to <16 x i8>
+// LLVM: [[C_BYTES:%.*]] = bitcast <4 x i32> [[C_I]] to <16 x i8>
+// LLVM: [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <4 x float>
+// LLVM: [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <4 x float>
+// LLVM: [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <4 x float>
+// LLVM: [[FMA:%.*]] = call <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float> [[B_CAST]], <4 x float> [[C_CAST]], <4 x float> [[A_CAST]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM: ret <4 x float> [[FMA]]
+  return vfmaq_f32(a, b, c);
+}
+
+// LLVM-LABEL: @test_vfmaq_f64(
+// CIR-LABEL: @vfmaq_f64(
+float64x2_t test_vfmaq_f64(float64x2_t a, float64x2_t b, float64x2_t c) {
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM: [[A_I:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM: [[B_I:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
+// LLVM: [[C_I:%.*]] = bitcast <2 x double> [[C]] to <2 x i64>
+// LLVM: [[A_BYTES:%.*]] = bitcast <2 x i64> [[A_I]] to <16 x i8>
+// LLVM: [[B_BYTES:%.*]] = bitcast <2 x i64> [[B_I]] to <16 x i8>
+// LLVM: [[C_BYTES:%.*]] = bitcast <2 x i64> [[C_I]] to <16 x i8>
+// LLVM: [[A_CAST:%.*]] = bitcast <16 x i8> [[A_BYTES]] to <2 x double>
+// LLVM: [[B_CAST:%.*]] = bitcast <16 x i8> [[B_BYTES]] to <2 x double>
+// LLVM: [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <2 x double>
+// LLVM: [[FMA:%.*]] = call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> [[B_CAST]], <2 x double> [[C_CAST]], <2 x double> [[A_CAST]], metadata !"round.tonearest", metadata !"fpexcept.strict")
+// LLVM: ret <2 x double> [[FMA]]
+  return vfmaq_f64(a, b, c);
 }
 
 // ALL-LABEL: @test_vfma_laneq_f64(
