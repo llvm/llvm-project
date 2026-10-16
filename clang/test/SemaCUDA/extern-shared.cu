@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-is-device -verify %s
 
 // RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fgpu-rdc -verify=rdc %s
-// RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-is-device -fgpu-rdc -verify=rdc %s
+// RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-is-device -fgpu-rdc -verify=rdc,rdc-dev %s
 
 // Most of these declarations are fine in separate compilation mode.
 
@@ -11,14 +11,16 @@
 __device__ void foo() {
   extern __shared__ int x; // expected-error {{__shared__ variable 'x' cannot be 'extern'}}
   extern __shared__ int arr[];  // ok
-  extern __shared__ int arr0[0]; // expected-error {{__shared__ variable 'arr0' cannot be 'extern'}}
+  extern __shared__ int arr0[0]; // expected-error {{__shared__ variable 'arr0' cannot be 'extern'}} \
+                                 // rdc-dev-warning {{zero-length __shared__ array 'arr0' has no storage}}
   extern __shared__ int arr1[1]; // expected-error {{__shared__ variable 'arr1' cannot be 'extern'}}
   extern __shared__ int* ptr ; // expected-error {{__shared__ variable 'ptr' cannot be 'extern'}}
 }
 
 __host__ __device__ void bar() {
   extern __shared__ int arr[];  // ok
-  extern __shared__ int arr0[0]; // expected-error {{__shared__ variable 'arr0' cannot be 'extern'}}
+  extern __shared__ int arr0[0]; // expected-error {{__shared__ variable 'arr0' cannot be 'extern'}} \
+                                 // rdc-dev-warning {{zero-length __shared__ array 'arr0' has no storage}}
   extern __shared__ int arr1[1]; // expected-error {{__shared__ variable 'arr1' cannot be 'extern'}}
   extern __shared__ int* ptr ; // expected-error {{__shared__ variable 'ptr' cannot be 'extern'}}
 }
