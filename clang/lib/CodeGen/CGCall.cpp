@@ -5444,16 +5444,26 @@ CodeGenFunction::getBundlesForFunclet(llvm::Value *Callee) {
   return BundleList;
 }
 
+static bool isConvergentIntrinsic(const llvm::Function *F) {
+  assert(F->isIntrinsic() && "expected an intrinsic declaration");
+  return F->isConvergent();
+}
+
 /// Emits a simple call (never an invoke) to the given runtime function.
 llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
                                                  ArrayRef<llvm::Value *> args,
-                                                 const llvm::Twine &name) {
-  llvm::CallInst *call = Builder.CreateCall(
-      callee, args, getBundlesForFunclet(callee.getCallee()), name);
-  call->setCallingConv(getRuntimeCC());
+                                                 const llvm::Twine &name,
+                                                 bool IsConvergent) {
+  SmallVector<llvm::OperandBundleDef> BundleList =
+      getBundlesForFunclet(callee.getCallee());
+  if (IsConvergent)
+    addConvergenceControlBundle(BundleList);
 
-  if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(call));
+  llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList, name);
+  call->setCallingConv(getRuntimeCC());
+  assert((IsConvergent == call->isConvergent() ||
+          (!IsConvergent && !CGM.shouldEmitConvergenceTokens())) &&
+         "runtime call convergence doesn't match its declaration");
   return call;
 }
 
@@ -5474,11 +5484,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
   llvm::Function *F =
       llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5491,11 +5500,10 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
     ArgTys.push_back(Arg->getType());
   llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
       &CGM.getModule(), ID, RetTy, ArgTys);
-  llvm::CallInst *Call =
-      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
-  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
-    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
-  return Call;
+  SmallVector<llvm::OperandBundleDef> BundleList = getBundlesForFunclet(F);
+  if (isConvergentIntrinsic(F))
+    addConvergenceControlBundle(BundleList);
+  return Builder.CreateCall(F, Args, BundleList, Name);
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.
@@ -6311,11 +6319,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
-  // Remove call-site convergent attribute if requested.
-  if (InNoConvergentAttributedStmt)
-    Attrs =
-        Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
-
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.
 
@@ -6387,6 +6390,26 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+
+  if (Attrs.hasFnAttr(llvm::Attribute::Convergent)) {
+    addConvergenceControlBundle(BundleList);
+
+    // Remove call-site convergent attribute if requested, unless the call must
+    // stay convergent to match its convergence token and the callee doesn't
+    // already make it convergent.
+    //
+    // FIXME: This means [[clang::noconvergent]] can't make an indirect call
+    // non-convergent when using convergence tokens. A call without a token can
+    // later be made direct to a convergent function, which mixes controlled
+    // and uncontrolled convergence and fails the verifier.
+    auto *CalleeFn = dyn_cast<llvm::Function>(CalleePtr);
+    if (InNoConvergentAttributedStmt &&
+        (!CGM.shouldEmitConvergenceTokens() ||
+         (CalleeFn && CalleeFn->isConvergent()))) {
+      Attrs = Attrs.removeFnAttribute(getLLVMContext(),
+                                      llvm::Attribute::Convergent);
+    }
+  }
 
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
@@ -6496,9 +6519,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   if (!CI->getType()->isVoidTy())
     CI->setName("call");
-
-  if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
-    CI = addConvergenceControlToken(CI);
 
   // Update largest vector width from the return type.
   LargestVectorWidth =
