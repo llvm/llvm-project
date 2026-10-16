@@ -8,7 +8,7 @@ func.func @pow3(%arg0: complex<f32>) -> complex<f32> {
 // CHECK-LABEL: func.func @pow3(
 // CHECK-NOT: complex.powi
 // CHECK: %[[M0:.+]] = complex.mul %{{.*}}, %{{.*}} : complex<f32>
-// CHECK: %[[M1:.+]] = complex.mul %[[M0]], %{{.*}} : complex<f32>
+// CHECK: %[[M1:.+]] = complex.mul %{{.*}}, %[[M0]] : complex<f32>
 // CHECK: return %[[M1]] : complex<f32>
 
 func.func @pow9(%arg0: complex<f32>) -> complex<f32> {

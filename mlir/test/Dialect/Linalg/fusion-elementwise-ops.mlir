@@ -984,9 +984,9 @@ module {
 //  CHECK-SAME:         %[[B0:[a-zA-Z0-9_]+]]: f32
 //  CHECK-SAME:         %[[B1:[a-zA-Z0-9_]+]]: f32
 //   CHECK-DAG:     %[[T0:.+]] = arith.addf %[[B0]], %[[B1]]
-//   CHECK-DAG:     %[[T1:.+]] = arith.addf %[[T0]], %[[B1]]
-//   CHECK-DAG:     %[[T2:.+]] = arith.addf %[[T1]], %[[B1]]
-//   CHECK-DAG:     %[[T3:.+]] = arith.addf %[[T2]], %[[B1]]
+//   CHECK-DAG:     %[[T1:.+]] = arith.addf %[[B1]], %[[T0]]
+//   CHECK-DAG:     %[[T2:.+]] = arith.addf %[[B1]], %[[T1]]
+//   CHECK-DAG:     %[[T3:.+]] = arith.addf %[[B1]], %[[T2]]
 //       CHECK:     linalg.yield %[[T3]] : f32
 //       CHECK:   return %[[GENERIC]]
 

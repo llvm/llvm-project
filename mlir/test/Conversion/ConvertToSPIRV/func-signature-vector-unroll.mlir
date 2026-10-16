@@ -197,7 +197,7 @@ func.func @unsupported_scalable(%arg0 : vector<[8]xi32>) -> (vector<[8]xi32>) {
 // CHECK-SAME: (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32) -> i32
 func.func @legal_params_multiple_blocks_simple(%arg0: i32, %arg1: i32) -> i32 {
   // CHECK: %[[ADD0:.*]] = arith.addi %[[ARG0]], %[[ARG1]] : i32
-  // CHECK: %[[ADD1:.*]] = arith.addi %[[ADD0]], %[[ARG1]] : i32
+  // CHECK: %[[ADD1:.*]] = arith.addi %[[ARG1]], %[[ADD0]] : i32
   // CHECK: return %[[ADD1]] : i32
   cf.br ^bb1(%arg0 : i32)
 ^bb1(%acc0: i32):
@@ -218,7 +218,7 @@ func.func @legal_params_multiple_blocks_simple(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-SAME: (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32, %[[ARG2:.+]]: vector<4xi32>) -> vector<4xi32>
 func.func @legal_params_with_vec_insert_multiple_blocks(%arg0: i32, %arg1: i32, %arg2: vector<4xi32>) -> vector<4xi32> {
   // CHECK: %[[ADD0:.*]] = arith.addi %[[ARG0]], %[[ARG1]] : i32
-  // CHECK: %[[ADD1:.*]] = arith.addi %[[ADD0]], %[[ARG1]] : i32
+  // CHECK: %[[ADD1:.*]] = arith.addi %[[ARG1]], %[[ADD0]] : i32
   // CHECK: %[[VEC1D:.*]] = vector.broadcast %[[ADD1]] : i32 to vector<1xi32>
   // CHECK: %[[VEC0:.*]] = vector.insert_strided_slice %[[VEC1D]], %[[ARG2]] offsets = [1], strides = [1] : vector<1xi32> into vector<4xi32>
   // CHECK: %[[VEC1:.*]] = vector.insert_strided_slice %[[VEC1D]], %[[VEC0]] offsets = [2], strides = [1] : vector<1xi32> into vector<4xi32>

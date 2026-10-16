@@ -144,10 +144,11 @@ public:
   }
 };
 
-/// This pattern matches test.op_commutative2 with the first operand being
+/// This pattern matches test.op_commutative2 with the second operand being
 /// another test.op_commutative2 with a constant on the right side and fold it
-/// away by propagating it as its result. This is intend to check that patterns
-/// are applied after the commutative property moves constant to the right.
+/// away by propagating it as its result. This is intended to check that
+/// patterns are applied after the commutative property moves constants to the
+/// right and nested commutative operands after the values that they use.
 struct FolderCommutativeOp2WithConstant
     : public OpRewritePattern<TestCommutative2Op> {
 public:
@@ -155,7 +156,7 @@ public:
 
   LogicalResult matchAndRewrite(TestCommutative2Op op,
                                 PatternRewriter &rewriter) const override {
-    auto operand = op->getOperand(0).getDefiningOp<TestCommutative2Op>();
+    auto operand = op->getOperand(1).getDefiningOp<TestCommutative2Op>();
     if (!operand)
       return failure();
     Attribute constInput;
