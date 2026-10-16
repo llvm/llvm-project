@@ -1380,7 +1380,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
         "      SmallVectorImpl<std::pair<SDValue, SDNode *>> &Result)",
         true /*AddOverride*/);
     OS << "{\n";
-    OS << "  unsigned NextRes = Result.size();\n";
+    OS << "  size_t NextRes = Result.size();\n";
     OS << "  switch (PatternNo) {\n";
     OS << "  default: llvm_unreachable(\"Invalid pattern # in table?\");\n";
     for (unsigned i = 0, e = ComplexPatterns.size(); i != e; ++i) {
