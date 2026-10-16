@@ -143,22 +143,19 @@ define void @cmpxchg(ptr %ptr) {
   ; CHECK-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr, mmra !1 :: (load (s32) from %ir.AlignedAddr)
   ; CHECK-NEXT:   [[V_AND_B32_e64_2:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[FLAT_LOAD_DWORD]], [[V_NOT_B32_e32_]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.partword.cmpxchg.loop:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF]], %bb.0, %12, %bb.3
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %13, %bb.3
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[V_AND_B32_e64_2]], %bb.0, %11, %bb.3
-  ; CHECK-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[PHI2]], [[V_LSHLREV_B32_e64_2]], implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_OR_B32_e64_]], %subreg.sub0, [[PHI2]], %subreg.sub1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %13, %bb.3
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[V_AND_B32_e64_2]], %bb.0, %11, %bb.3
+  ; CHECK-NEXT:   [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[PHI1]], [[V_LSHLREV_B32_e64_2]], implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_OR_B32_e64_]], %subreg.sub0, [[PHI1]], %subreg.sub1
   ; CHECK-NEXT:   [[FLAT_ATOMIC_CMPSWAP_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_CMPSWAP_RTN [[COPY4]], [[REG_SEQUENCE2]], 0, 1, implicit $exec, implicit $flat_scr, mmra !1 :: (load store acquire acquire (s32) on %ir.AlignedAddr)
-  ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 [[FLAT_ATOMIC_CMPSWAP_RTN]], [[PHI2]], implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 [[FLAT_ATOMIC_CMPSWAP_RTN]], [[PHI1]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF1]]
-  ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[PHI]], $exec, implicit-def dead $scc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF [[V_CMP_NE_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -166,26 +163,24 @@ define void @cmpxchg(ptr %ptr) {
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_AND_B32_e64_3:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[FLAT_ATOMIC_CMPSWAP_RTN]], [[V_NOT_B32_e32_]], implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[PHI2]], [[V_AND_B32_e64_3]], implicit $exec
-  ; CHECK-NEXT:   [[S_ANDN2_B64_:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[S_OR_B64_]], $exec, implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_ANDN2_B64_]], [[S_AND_B64_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[PHI1]], [[V_AND_B32_e64_3]], implicit $exec
+  ; CHECK-NEXT:   [[S_ORN2_B64_:%[0-9]+]]:sreg_64 = S_ORN2_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def dead $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.Flow:
   ; CHECK-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[S_OR_B64_]], %bb.1, [[S_OR_B64_1]], %bb.2
-  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[COPY5]], %bb.1, [[V_AND_B32_e64_3]], %bb.2
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_1]], %bb.1, [[S_ORN2_B64_]], %bb.2
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI [[COPY5]], %bb.1, [[V_AND_B32_e64_3]], %bb.2
   ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY [[PHI3]]
-  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY6]], [[PHI1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY [[PHI2]]
+  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY6]], [[PHI]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.partword.cmpxchg.end:
-  ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.3
-  ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:vgpr_32 = PHI [[FLAT_ATOMIC_CMPSWAP_RTN]], %bb.3
-  ; CHECK-NEXT:   SI_END_CF [[PHI5]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.3
+  ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:vgpr_32 = PHI [[FLAT_ATOMIC_CMPSWAP_RTN]], %bb.3
+  ; CHECK-NEXT:   SI_END_CF [[PHI4]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   SI_RETURN
   %pair = cmpxchg ptr %ptr, i8 0, i8 1 acquire acquire, !mmra !2
   ret void

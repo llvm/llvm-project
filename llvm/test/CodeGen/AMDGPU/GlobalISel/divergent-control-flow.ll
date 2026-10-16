@@ -209,36 +209,33 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-LABEL: break_loop:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
-; CHECK-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_subrev_u32_e32 v0, s0, v0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
-; CHECK-NEXT:    s_branch .LBB5_2
-; CHECK-NEXT:  .LBB5_1: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[2:3]
-; CHECK-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
+; CHECK-NEXT:    s_branch .LBB5_3
+; CHECK-NEXT:  .LBB5_1: ; %bb4
+; CHECK-NEXT:    ; in Loop: Header=BB5_3 Depth=1
+; CHECK-NEXT:    global_load_dword v1, v[0:1], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_andn2_b64 s[2:3], exec, exec
+; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
+; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
+; CHECK-NEXT:  .LBB5_2: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB5_3 Depth=1
+; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
+; CHECK-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz .LBB5_4
-; CHECK-NEXT:  .LBB5_2: ; %bb1
+; CHECK-NEXT:    s_cbranch_execz .LBB5_5
+; CHECK-NEXT:  .LBB5_3: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_add_i32 s4, s4, 1
 ; CHECK-NEXT:    s_cmp_ge_i32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
-; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB5_1
-; CHECK-NEXT:  ; %bb.3: ; %bb4
-; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    global_load_dword v1, v[0:1], off glc
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; CHECK-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; CHECK-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
-; CHECK-NEXT:    s_branch .LBB5_1
-; CHECK-NEXT:  .LBB5_4: ; %bb9
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_1
+; CHECK-NEXT:  ; %bb.4: ; in Loop: Header=BB5_3 Depth=1
+; CHECK-NEXT:    s_mov_b64 s[2:3], exec
+; CHECK-NEXT:    s_branch .LBB5_2
+; CHECK-NEXT:  .LBB5_5: ; %bb9
 ; CHECK-NEXT:    s_endpgm
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
