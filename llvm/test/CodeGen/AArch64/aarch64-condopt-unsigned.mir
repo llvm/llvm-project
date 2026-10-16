@@ -385,8 +385,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   Bcc 10, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   TBZW [[COPY]], 31, %bb.2
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
