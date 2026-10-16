@@ -3186,10 +3186,6 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   }
   Term->setOperand(0, Countable);
 
-  // Remove the combining or if the branch was the only user.
-  if (Cond->getNumUsers() == 0)
-    cast<VPInstruction>(Cond)->eraseFromParent();
-
   return true;
 }
 
