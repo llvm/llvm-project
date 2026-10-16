@@ -224,7 +224,8 @@ private:
 
   lldb::addr_t FindInSymbols(const std::vector<ConstString> &names,
                              const lldb_private::SymbolContext &sc,
-                             bool &symbol_was_missing_weak);
+                             bool &symbol_was_missing_weak,
+                             bool lookup_by_linkage);
 
   lldb::addr_t FindInRuntimes(const std::vector<ConstString> &names,
                               const lldb_private::SymbolContext &sc);

@@ -716,7 +716,8 @@ ResolveFunctionCallLabel(FunctionCallLabel &label,
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
                                const lldb_private::SymbolContext &sc,
-                               bool &symbol_was_missing_weak) {
+                               bool &symbol_was_missing_weak,
+                               bool lookup_by_linkage) {
   symbol_was_missing_weak = false;
 
   Target *target = sc.target_sp.get();
@@ -745,6 +746,24 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
   function_options.include_inlines = false;
+  function_options.match_linkage_names = lookup_by_linkage;
+
+  auto resolve = [&](SymbolContextList &sc_list) {
+    if (lookup_by_linkage) {
+      // General linkage queries retain named trampolines. The ordinary name
+      // indexes exclude them, so retain that exclusion for JIT resolution.
+      for (size_t i = sc_list.GetSize(); i > 0; --i) {
+        const SymbolContext &context = sc_list[i - 1];
+        if (!context.symbol || !context.symbol->IsTrampoline())
+          continue;
+        if (context.function)
+          sc_list.SetSymbolAtIndex(i - 1, nullptr);
+        else
+          sc_list.RemoveContextAtIndex(i - 1);
+      }
+    }
+    return resolver.Resolve(sc_list);
+  };
 
   for (const ConstString &name : names) {
     // The lookup order here is as follows:
@@ -759,7 +778,7 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       sc.module_sp->FindFunctions(name, CompilerDeclContext(),
                                   lldb::eFunctionNameTypeFull, function_options,
                                   sc_list);
-      if (auto load_addr = resolver.Resolve(sc_list))
+      if (auto load_addr = resolve(sc_list))
         return *load_addr;
     }
 
@@ -767,7 +786,7 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       SymbolContextList sc_list;
       m_preferred_modules.FindFunctions(name, lldb::eFunctionNameTypeFull,
                                         function_options, sc_list);
-      if (auto load_addr = resolver.Resolve(sc_list))
+      if (auto load_addr = resolve(sc_list))
         return *load_addr;
     }
 
@@ -775,31 +794,31 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       SymbolContextList sc_list;
       non_local_images.FindFunctions(name, lldb::eFunctionNameTypeFull,
                                      function_options, sc_list);
-      if (auto load_addr = resolver.Resolve(sc_list))
+      if (auto load_addr = resolve(sc_list))
         return *load_addr;
     }
 
     if (sc.module_sp) {
       SymbolContextList sc_list;
       sc.module_sp->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
-                                               sc_list);
-      if (auto load_addr = resolver.Resolve(sc_list))
+                                               sc_list, lookup_by_linkage);
+      if (auto load_addr = resolve(sc_list))
         return *load_addr;
     }
 
     {
       SymbolContextList sc_list;
-      m_preferred_modules.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
-                                                     sc_list);
-      if (auto load_addr = resolver.Resolve(sc_list))
+      m_preferred_modules.FindSymbolsWithNameAndType(
+          name, lldb::eSymbolTypeAny, sc_list, lookup_by_linkage);
+      if (auto load_addr = resolve(sc_list))
         return *load_addr;
     }
 
     {
       SymbolContextList sc_list;
       non_local_images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
-                                                  sc_list);
-      if (auto load_addr = resolver.Resolve(sc_list))
+                                                  sc_list, lookup_by_linkage);
+      if (auto load_addr = resolve(sc_list))
         return *load_addr;
     }
 
@@ -856,6 +875,9 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 
 lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
                                          bool &missing_weak) {
+  // Original JIT/interpreter requests use linkage spellings. Source names
+  // recovered from function-call labels retain their compatibility lookup.
+  bool lookup_by_linkage = true;
   if (name.GetStringRef().starts_with(FunctionCallLabelPrefix)) {
     auto label_or_err = FunctionCallLabel::fromString(name);
     if (!label_or_err) {
@@ -878,6 +900,7 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
       // a different lldb_private::Module than it's declaration. Meaning
       // we couldn't pin-point it using the information encoded in the label.
       name.SetString(label_or_err->lookup_name);
+      lookup_by_linkage = false;
     }
   }
 
@@ -889,7 +912,8 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
 
   CollectCandidateCNames(candidate_C_names, name);
 
-  lldb::addr_t ret = FindInSymbols(candidate_C_names, m_sym_ctx, missing_weak);
+  lldb::addr_t ret = FindInSymbols(candidate_C_names, m_sym_ctx, missing_weak,
+                                   lookup_by_linkage);
   if (ret != LLDB_INVALID_ADDRESS)
     return ret;
 
@@ -906,7 +930,8 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
 
   CollectCandidateCPlusPlusNames(candidate_CPlusPlus_names, candidate_C_names,
                                  m_sym_ctx);
-  ret = FindInSymbols(candidate_CPlusPlus_names, m_sym_ctx, missing_weak);
+  ret = FindInSymbols(candidate_CPlusPlus_names, m_sym_ctx, missing_weak,
+                      /*lookup_by_linkage=*/false);
   return ret;
 }
 
