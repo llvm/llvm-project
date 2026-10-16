@@ -414,7 +414,7 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     lldb::ValueObjectSP value_sp;
     if (variable_list) {
       lldb::VariableSP var_sp =
-          variable_list->FindVariable(ConstString(name_ref));
+          variable_list->FindVariable(ConstString(name_ref), stack_frame);
       if (var_sp)
         value_sp =
             frame_sp->GetValueObjectForFrameVariable(var_sp, use_dynamic);

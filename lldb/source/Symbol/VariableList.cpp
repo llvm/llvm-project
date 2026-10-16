@@ -88,6 +88,27 @@ VariableSP VariableList::FindVariable(ConstString name,
   return {};
 }
 
+VariableSP VariableList::FindVariable(ConstString name, StackFrame &frame,
+                                      bool include_static_members) const {
+  VariableSP first_match_sp;
+  for (const auto &var_sp : m_variables) {
+    if (!var_sp->NameMatches(name))
+      continue;
+
+    if (var_sp->IsStaticMember()) {
+      if (!include_static_members)
+        continue;
+      return var_sp;
+    }
+
+    if (var_sp->LocationIsValidForFrame(&frame))
+      return var_sp;
+    if (!first_match_sp)
+      first_match_sp = var_sp;
+  }
+  return first_match_sp;
+}
+
 size_t VariableList::AppendVariablesIfUnique(VariableList &var_list) {
   const size_t initial_size = var_list.GetSize();
   iterator pos, end = m_variables.end();
