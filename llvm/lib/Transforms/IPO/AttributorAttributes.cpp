@@ -6743,6 +6743,22 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 } // namespace
 
+/// Clear the tail markers in the function of \p QueryingAA, as tail calls
+/// cannot access new allocas of the function. Musttail calls are skipped as
+/// their tail marker cannot be removed.
+/// TODO: Be smarter about new allocas escaping into tail calls.
+static bool clearTailCalls(Attributor &A, const AbstractAttribute &QueryingAA) {
+  bool UsedAssumedInformation = false;
+  return A.checkForAllInstructions(
+      [](Instruction &I) {
+        auto &CI = cast<CallInst>(I);
+        if (CI.isTailCall() && !CI.isMustTailCall())
+          CI.setTailCall(false);
+        return true;
+      },
+      QueryingAA, {Instruction::Call}, UsedAssumedInformation);
+}
+
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
 namespace {
 struct AAHeapToStackFunction final : public AAHeapToStack {
@@ -6993,6 +7009,11 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
       HasChanged = ChangeStatus::CHANGED;
     }
+
+    // Tail calls cannot access allocas of the caller, but any call may access
+    // the new allocas, which may escape until they are freed.
+    if (HasChanged == ChangeStatus::CHANGED)
+      clearTailCalls(A, *this);
 
     return HasChanged;
   }
@@ -7729,19 +7750,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
       return ChangeStatus::UNCHANGED;
     assert(*PrivatizableType && "Expected privatizable type!");
 
-    // Collect all tail calls in the function as we cannot allow new allocas to
-    // escape into tail recursion.
-    // TODO: Be smarter about new allocas escaping into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
-    bool UsedAssumedInformation = false;
-    if (!A.checkForAllInstructions(
-            [&](Instruction &I) {
-              CallInst &CI = cast<CallInst>(I);
-              if (CI.isTailCall())
-                TailCalls.push_back(&CI);
-              return true;
-            },
-            *this, {Instruction::Call}, UsedAssumedInformation))
+    if (!clearTailCalls(A, *this))
       return ChangeStatus::UNCHANGED;
 
     Argument *Arg = getAssociatedArgument();
@@ -7769,9 +7778,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             AI = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
-
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
         };
 
     // Callback to repair a call site of the associated function. The elements
