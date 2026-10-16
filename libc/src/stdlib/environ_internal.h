@@ -15,10 +15,13 @@
 #define LLVM_LIBC_SRC_STDLIB_ENVIRON_INTERNAL_H
 
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/mutex.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/mutex.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -44,11 +47,16 @@ struct EnvStringOwnership {
 
 // Centralized manager for environment variable operations.
 // This class encapsulates all state and operations related to environment
-// management, including memory management and tracking of string ownership.
+// management, including thread safety and tracking of string ownership.
 //
 // The manager provides iterator support, allowing callers to iterate over
 // the current environment entries using standard begin()/end() semantics.
 class EnvironmentManager {
+  // Recursive mutex protecting all environment operations.
+  // Must be recursive to avoid self-deadlock when setenv() invokes memory
+  // allocation and the allocator (e.g. Scudo) calls getenv() to parse options.
+  mutable Mutex env_lock;
+
   // Our allocated environ array (nullptr if using startup environ)
   char **storage = nullptr;
 
@@ -63,16 +71,13 @@ class EnvironmentManager {
   size_t count = 0;
 
   // True if we have initialized from the startup environment
-  bool initialized = false;
+  cpp::Atomic<bool> initialized{false};
 
   // True if we allocated storage (and are responsible for freeing it)
   bool is_ours = false;
 
-  EnvironmentManager() = default;
-  ~EnvironmentManager() = default;
-
-  // Lazily initialize from the startup environment.
-  // Called internally by get_instance(); idempotent.
+  // Lazily initialize from the startup environment using double-checked
+  // locking.
   void init_once();
 
   // Get a pointer to the current environ array.
@@ -103,7 +108,17 @@ class EnvironmentManager {
                                             EnvStringOwnership *old_ownership,
                                             size_t copy_count);
 
+  // Unset implementation assuming env_lock is already held.
+  int unset_unlocked(cpp::string_view name);
+
 public:
+  LIBC_INLINE constexpr EnvironmentManager()
+      : env_lock(/*is_priority_inherit=*/false, /*is_recursive=*/true,
+                 /*is_robust=*/false, /*is_pshared=*/false),
+        storage(nullptr), ownership(nullptr), capacity(0), count(0),
+        initialized(false), is_ours(false) {}
+  ~EnvironmentManager() = default;
+
   // Get the singleton instance of the environment manager.
   static EnvironmentManager &get_instance();
 
@@ -117,7 +132,7 @@ public:
   using iterator = char **;
   iterator begin();
   iterator end();
-  size_t size() const;
+  size_t size();
 
   // Look up a variable by name. Returns a pointer to the value string
   // (after the '='), or nullptr if not found.

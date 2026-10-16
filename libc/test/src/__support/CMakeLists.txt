@@ -363,6 +363,16 @@ add_libc_test(
     libc.src.__support.macros.properties.os
 )
 
+add_libc_test(
+  sanitizer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    sanitizer_test.cpp
+  DEPENDS
+    libc.src.__support.macros.sanitizer
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(pwd)
