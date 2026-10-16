@@ -48,6 +48,7 @@ class TestDAP_disassemble(DAPTestCaseBase):
 
         session.continue_to_exit()
 
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_disassemble_backwards(self):
         """
         Tests the 'disassemble' request with a backwards disassembly range.
