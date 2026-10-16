@@ -28,9 +28,8 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/WithColor.h"
-#include <cctype>
 #include <clocale>
-#include <cwctype>
+#include <cuchar>
 #include <string>
 
 using namespace llvm;
@@ -144,20 +143,20 @@ bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
 
   const char *Next = Cur;
   std::mbstate_t NextMBState = MBState;
-  wchar_t WCh;
+  char32_t UCh;
   for (;;) {
     // Read one byte at a time. This is usually not the best way to use
-    // mbrtowc(), usually it would make more sense to pass the size of the
+    // mbrtoc32(), usually it would make more sense to pass the size of the
     // buffer, but the strings utility is unusual in that it is expected to
     // encounter many bytes that do not form valid characters and it is more
     // useful to optimise for this case.
-    const std::size_t BytesRead = std::mbrtowc(&WCh, Next, 1, &NextMBState);
+    const std::size_t BytesRead = std::mbrtoc32(&UCh, Next, 1, &NextMBState);
     switch (BytesRead) {
     case 1:
       ++Next;
       Cur = Next;
       MBState = NextMBState;
-      Ch = WCh;
+      Ch = UCh;
       return true;
 
     case (std::size_t)-2:
@@ -221,11 +220,13 @@ template <> bool Strings<Encoding::Ascii>::isStringChar(UTF32 Ch) {
 }
 
 template <> bool Strings<Encoding::Locale>::isStringChar(UTF32 Ch) {
-  return Ch == L'\t' || std::iswprint(Ch);
+  return llvm::sys::unicode::isCharacter(Ch) &&
+         (Ch == U'\t' || !llvm::sys::unicode::isControl(Ch));
 }
 
 template <> bool Strings<Encoding::Utf8>::isStringChar(UTF32 Ch) {
-  return Ch == u'\t' || sys::unicode::isPrintable(Ch);
+  return llvm::sys::unicode::isCharacter(Ch) &&
+         (Ch == U'\t' || !llvm::sys::unicode::isControl(Ch));
 }
 
 template <enum Encoding Encoding>
@@ -239,7 +240,7 @@ void Strings<Encoding::Locale>::endString(raw_ostream &OS,
   char Buf[MB_LEN_MAX];
   // Note: This is only required for stateful encodings such as the
   // ISO-2022 ones.
-  const std::size_t BytesWritten = std::wcrtomb(Buf, L'\0', &MBState);
+  const std::size_t BytesWritten = std::c32rtomb(Buf, U'\0', &MBState);
   Buf[BytesWritten - 1] = '\n';
   OS << StringRef(Buf, BytesWritten);
 }

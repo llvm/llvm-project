@@ -12,8 +12,9 @@
 {program}`llvm-strings` is a tool intended as a drop-in replacement for GNU's
 {program}`strings`, which looks for printable strings in files and writes them
 to the standard output stream. A printable string is any sequence of four (by
-default) or more printable characters. The end of the file, or any unprintable
-byte sequence, terminates the current sequence.
+default) or more printable characters. A printable character is tab, or any
+character that is not a control character. The end of the file, or any
+unprintable byte sequence, terminates the current sequence.
 
 {program}`llvm-strings` looks for strings in each `input` file specified.
 Unlike GNU {program}`strings` it looks in the entire input file, regardless of
