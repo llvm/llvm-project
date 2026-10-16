@@ -39,9 +39,8 @@
 // have been compiled with -fno-exceptions (e.g. with
 // -DCOMPILER_RT_ASAN_ENABLE_EXCEPTIONS=OFF). Forward-declare just enough
 // of std for the loop; the real std::get_new_handler is supplied by the
-// C++ runtime the sanitizer links against (vcruntime / msvcprt /
-// MinGW libstdc++ / libstdc++ / libc++) — it doesn't need to come from
-// <new>.
+// C++ runtime when one is linked (vcruntime / msvcprt / MinGW libstdc++ /
+// libstdc++ / libc++) — it doesn't need to come from <new>.
 namespace std {
 struct nothrow_t {};
 enum class align_val_t : __sanitizer::usize {};
@@ -49,6 +48,15 @@ using new_handler = void (*)();
 new_handler get_new_handler() noexcept;
 }  // namespace std
 #endif  // !SANITIZER_WINDOWS && defined(__cpp_exceptions)
+
+#if !SANITIZER_WINDOWS
+// Declare weak so that linking sanitizer C++ runtimes without a C++ standard
+// library (e.g. Go/cgo with -nostdlib++) resolves to nullptr instead of
+// failing with an undefined symbol.
+namespace std {
+SANITIZER_WEAK_ATTRIBUTE new_handler get_new_handler() noexcept;
+}  // namespace std
+#endif  // !SANITIZER_WINDOWS
 
 namespace __sanitizer {
 
@@ -65,7 +73,12 @@ void* RunNewHandlerChain(Alloc alloc) {
     void* res = alloc();
     if (LIKELY(res != nullptr))
       return res;
+#if !SANITIZER_WINDOWS
+    std::new_handler handler =
+        &std::get_new_handler ? std::get_new_handler() : nullptr;
+#else
     std::new_handler handler = std::get_new_handler();
+#endif
     if (!handler)
       return nullptr;
     handler();
