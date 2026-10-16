@@ -241,7 +241,7 @@ GCNRewritePartialRegUsesImpl::getRegClassWithShiftedSubregs(
     const uint32_t *Mask = NewSubReg ? getSuperRegClassMask(SubRegRC, NewSubReg)
                                      : SubRegRC->getSubClassMask();
     if (!Mask)
-      llvm_unreachable("no register class mask?");
+      return nullptr;
 
     ClassMask.clearBitsNotInMask(Mask);
     // Don't try to early exit because checking if ClassMask has set bits isn't
