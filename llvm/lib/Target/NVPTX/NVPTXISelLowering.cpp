@@ -886,9 +886,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // PTX does not directly support SELP of i1, so promote to i32 first
   setOperationAction(ISD::SELECT, MVT::i1, Custom);
 
-  // PTX cannot multiply two i64s in a single instruction.
-  setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+  // PTX only exposes separate mul.lo and mul.hi forms. Lower i16 and i32 to
+  // use mul.wide. i64 has no mul.wide, so it expands to MUL and MULHS/MULHU.
+  setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, {MVT::i16, MVT::i32},
+                     Custom);
+  setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD,
@@ -2444,6 +2446,20 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   return Op;
 }
 
+static SDValue lowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) {
+  const SDLoc DL(Op);
+  const EVT VT = Op.getValueType();
+  const unsigned Opc = Op.getOpcode() == ISD::SMUL_LOHI
+                           ? NVPTXISD::MUL_WIDE_SIGNED
+                           : NVPTXISD::MUL_WIDE_UNSIGNED;
+
+  SDValue Wide =
+      DAG.getNode(Opc, DL, VT.widenIntegerElementType(*DAG.getContext()),
+                  Op.getOperand(0), Op.getOperand(1));
+  auto [Lo, Hi] = DAG.SplitScalar(Wide, DL, VT, VT);
+  return DAG.getMergeValues({Lo, Hi}, DL);
+}
+
 static SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG,
                                   const NVPTXSubtarget &STI) {
   EVT SrcVT = Op.getOperand(0).getValueType();
@@ -3678,6 +3694,9 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
     return lowerSELECT(Op, DAG);
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return lowerMUL_LOHI(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:

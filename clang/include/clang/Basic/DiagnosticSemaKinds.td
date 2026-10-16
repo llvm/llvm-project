@@ -7279,6 +7279,9 @@ def err_builtin_counted_by_ref_counter_field_is_bitfield : Error<
 def note_counted_by_counter_field : Note<
   "bit-field %0 declared here">;
 
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.

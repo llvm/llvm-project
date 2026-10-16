@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_loongarch64.h -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_LOONGARCH64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_LOONGARCH64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFO_RISCV32_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFO_RISCV32_H
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/lldb-private.h"
+
 #include <map>
 
-class RegisterInfoPOSIX_loongarch64
+class RegisterInfo_riscv32
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
   static const lldb_private::RegisterInfo *
@@ -23,40 +25,25 @@ public:
   GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch);
 
 public:
-  enum RegSetKind {
-    GPRegSet,
-    FPRegSet,
-    LSXRegSet,
-    LASXRegSet,
+  // RISC-V32 register set mask value
+  enum {
+    eRegsetMaskDefault = 0,
+    eRegsetMaskFP = 1,
+    eRegsetMaskAll = -1,
   };
 
   struct GPR {
-    uint64_t gpr[32];
-
-    uint64_t orig_a0;
-    uint64_t csr_era;
-    uint64_t csr_badv;
-    uint64_t reserved[10];
+    // gpr[0] is pc, not x0, which is the zero register.
+    uint32_t gpr[32];
   };
 
   struct FPR {
-    uint64_t fpr[32];
-    uint64_t fcc;
+    uint32_t fpr[32];
     uint32_t fcsr;
   };
 
-  /* 32 registers, 128 bits width per register. */
-  struct LSX {
-    uint64_t vr[32 * 2];
-  };
-
-  /* 32 registers, 256 bits width per register. */
-  struct LASX {
-    uint64_t xr[32 * 4];
-  };
-
-  RegisterInfoPOSIX_loongarch64(const lldb_private::ArchSpec &target_arch,
-                                lldb_private::Flags flags);
+  RegisterInfo_riscv32(const lldb_private::ArchSpec &target_arch,
+                            lldb_private::Flags flags);
 
   size_t GetGPRSize() const override;
 
@@ -73,9 +60,12 @@ public:
 
   size_t GetRegisterSetFromRegisterIndex(uint32_t reg_index) const override;
 
+  bool IsFPPresent() const { return m_opt_regsets.AnySet(eRegsetMaskFP); }
+
 private:
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
+  lldb_private::Flags m_opt_regsets;
 };
 
 #endif
