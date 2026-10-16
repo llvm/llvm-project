@@ -151,7 +151,6 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
-  static bool atomicAMDGPUNoaliasAddrspace() { return false; }
   static bool atomicAMDGPUAvailableVisibleMMRA() { return false; }
 
   // Global ctor handling
