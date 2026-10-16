@@ -57,7 +57,7 @@ static bool canPromoteArgToInReg(const Argument &A) {
 // A call site's parameter attributes need not agree with the callee's, so the
 // exclusions in canPromoteArgToInReg are rechecked here. paramHasAttr would
 // fall back to the declaration, which has already been found clean.
-static bool callSiteBlocksInReg(const CallBase &CB, unsigned ArgNo) {
+static bool hasIncompatibleParamAttr(const CallBase &CB, unsigned ArgNo) {
   AttributeSet PA = CB.getParamAttributes(ArgNo);
   return PA.hasAttribute(Attribute::ByVal) ||
          PA.hasAttribute(Attribute::StructRet) ||
@@ -66,28 +66,9 @@ static bool callSiteBlocksInReg(const CallBase &CB, unsigned ArgNo) {
          PA.hasAttribute(Attribute::ByRef) || PA.hasAttribute(Attribute::Nest);
 }
 
-// A musttail call in F's body requires F's ABI-impacting parameter attributes
-// to agree positionally with its callee's, so F cannot be promoted on its own.
-// TODO: Promote both in lockstep.
-static bool hasMustTailCallInBody(const Function &F) {
-  // A musttail call must immediately precede a ret, so no other slot needs
-  // checking.
-  for (const BasicBlock &BB : F) {
-    const Instruction *Term = BB.getTerminator();
-    if (!isa<ReturnInst>(Term))
-      continue;
-    const auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode());
-    if (CI && CI->isMustTailCall())
-      return true;
-  }
-  return false;
-}
-
 static bool collectDirectCallSites(Function &F,
                                    SmallVectorImpl<CallBase *> &Calls) {
-  if (F.isDeclaration() || !F.canChangeSignature())
-    return false;
-  if (!F.hasLocalLinkage())
+  if (F.isDeclaration() || !F.canChangeSignature() || !F.hasLocalLinkage())
     return false;
 
   if (!any_of(F.args(), canPromoteArgToInReg))
@@ -109,9 +90,19 @@ static bool collectDirectCallSites(Function &F,
   if (Calls.empty())
     return false;
 
-  // Checked last: only gate here that is linear in the size of F's
-  // body.
-  return !hasMustTailCallInBody(F);
+  // Checked last: the only gate here that walks F's body. A musttail call must
+  // immediately precede a ret, and it requires F's ABI-impacting parameter
+  // attributes to agree positionally with its callee's, so F cannot be promoted
+  // on its own. Promoting both in lockstep is left for later.
+  for (const BasicBlock &BB : F) {
+    const Instruction *Term = BB.getTerminator();
+    if (!isa<ReturnInst>(Term))
+      continue;
+    const auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode());
+    if (CI && CI->isMustTailCall())
+      return false;
+  }
+  return true;
 }
 
 static bool isTriviallyUniform(const Use &U, const TargetTransformInfo &TTI) {
@@ -147,7 +138,7 @@ static bool promoteUniformArgsToInReg(
       unsigned ArgNo = A.getArgNo();
       bool AllUniform = true;
       for (CallBase *CB : Calls) {
-        if (callSiteBlocksInReg(*CB, ArgNo) ||
+        if (hasIncompatibleParamAttr(*CB, ArgNo) ||
             !isTriviallyUniform(CB->getArgOperandUse(ArgNo),
                                 GetTTI(*CB->getFunction()))) {
           AllUniform = false;
