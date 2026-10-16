@@ -10945,6 +10945,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           .Case([&](omp::GroupprivateOp) {
             return convertOmpGroupprivate(*op, builder, moduleTranslation);
           })
+          .Case([&](omp::DeclareSimdOp) {
+            // TODO: Implement.
+            // DECLARE_SIMD can be ignored. There is warning emitted in
+            // semantic checks about the current situation, but not having an
+            // implementation should not prevent compilation.
+            return success();
+          })
           .Default([&](Operation *inst) {
             return inst->emitError()
                    << "not yet implemented: " << inst->getName();
