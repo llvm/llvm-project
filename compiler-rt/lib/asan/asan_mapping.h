@@ -300,7 +300,7 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 #  if defined(__sparc__) && SANITIZER_WORDSIZE == 64
 #    include "asan_mapping_sparc64.h"
-#  elif SANITIZER_WORDSIZE == 64 && SANITIZER_AIX
+#  elif SANITIZER_AIX && SANITIZER_WORDSIZE == 64
 #    include "asan_mapping_aix64.h"
 #  else
 #    define MEM_TO_SHADOW(mem) \

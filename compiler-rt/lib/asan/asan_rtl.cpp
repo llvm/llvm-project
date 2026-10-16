@@ -95,7 +95,7 @@ bool AsanInited() {
 bool replace_intrin_cached;
 
 #if !ASAN_FIXED_MAPPING
-#  if !(SANITIZER_AIX && __powerpc64__)
+#  if !(SANITIZER_AIX && SANITIZER_WORDSIZE == 64)
 uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;
 #  else
 uptr kHighMemEnd;
@@ -370,29 +370,18 @@ void PrintAddressSpaceLayout() {
     Printf("|| `[%p, %p]` || HighShadow ||\n",
            (void*)kHighShadowBeg, (void*)kHighShadowEnd);
   }
-  // Shadow gaps are only printed if they are non-empty (e.g. there are no
-  // shadow gaps on 64-bit AIX).
   if (kMidMemBeg) {
-    if (kShadowGap3Beg != kShadowGap3End)
-      Printf("|| `[%p, %p]` || ShadowGap3 ||\n", (void*)kShadowGap3Beg,
-             (void*)kShadowGap3End);
+    Printf("|| `[%p, %p]` || ShadowGap3 ||\n",
+           (void*)kShadowGap3Beg, (void*)kShadowGap3End);
     Printf("|| `[%p, %p]` || MidMem     ||\n",
            (void*)kMidMemBeg, (void*)kMidMemEnd);
-    if (kShadowGap2Beg != kShadowGap2End)
-      Printf("|| `[%p, %p]` || ShadowGap2 ||\n", (void*)kShadowGap2Beg,
-             (void*)kShadowGap2End);
+    Printf("|| `[%p, %p]` || ShadowGap2 ||\n",
+           (void*)kShadowGap2Beg, (void*)kShadowGap2End);
     Printf("|| `[%p, %p]` || MidShadow  ||\n",
            (void*)kMidShadowBeg, (void*)kMidShadowEnd);
   }
-#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
-  Printf("|| `[%p, %p]` || Mid2Shadow  ||\n", (void*)kMid2ShadowBeg,
-         (void*)kMid2ShadowEnd);
-  Printf("|| `[%p, %p]` || Mid3Shadow  ||\n", (void*)kMid3ShadowBeg,
-         (void*)kMid3ShadowEnd);
-#endif
-  if (kShadowGapBeg != kShadowGapEnd)
-    Printf("|| `[%p, %p]` || ShadowGap  ||\n", (void*)kShadowGapBeg,
-           (void*)kShadowGapEnd);
+  Printf("|| `[%p, %p]` || ShadowGap  ||\n",
+         (void*)kShadowGapBeg, (void*)kShadowGapEnd);
   if (kLowShadowBeg) {
     Printf("|| `[%p, %p]` || LowShadow  ||\n",
            (void*)kLowShadowBeg, (void*)kLowShadowEnd);
@@ -412,13 +401,6 @@ void PrintAddressSpaceLayout() {
            (void*)MEM_TO_SHADOW(kMidShadowBeg),
            (void*)MEM_TO_SHADOW(kMidShadowEnd));
   }
-// On AIX, for 64-bit, there are totally 3 mid memory regions.
-#if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
-  Printf(" %p %p", (void*)MEM_TO_SHADOW(kMid2ShadowBeg),
-         (void*)MEM_TO_SHADOW(kMid2ShadowEnd));
-  Printf(" %p %p", (void*)MEM_TO_SHADOW(kMid3ShadowBeg),
-         (void*)MEM_TO_SHADOW(kMid3ShadowEnd));
-#endif
   Printf("\n");
   Printf("redzone=%zu\n", (uptr)flags()->redzone);
   Printf("max_redzone=%zu\n", (uptr)flags()->max_redzone);

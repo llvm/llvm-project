@@ -43,26 +43,6 @@ static void ProtectGap(uptr addr, uptr size) {
                           kZeroBaseMaxShadowStart);
 }
 
-static void HandleShadowGap() {
-#  if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
-  // For 64-bit AIX, there is a very customized memory layout, we don't have
-  // the ability to protect all the shadow gaps. But we need to reserve
-  // shadow memory for middle memory.
-  if (kMidShadowBeg)
-    ReserveShadowMemoryRange(kMidShadowBeg, kMidShadowEnd, "mid shadow");
-  if (kMid2ShadowBeg)
-    ReserveShadowMemoryRange(kMid2ShadowBeg, kMid2ShadowEnd, "mid2 shadow");
-  if (kMid3ShadowBeg)
-    ReserveShadowMemoryRange(kMid3ShadowBeg, kMid3ShadowEnd, "mid3 shadow");
-#  else
-  if (kShadowGapBeg) {
-    // protect the gap.
-    ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
-    CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
-  }
-#  endif
-}
-
 static void MaybeReportLinuxPIEBug() {
 #if SANITIZER_LINUX && \
     (defined(__x86_64__) || defined(__aarch64__) || SANITIZER_RISCV64)
@@ -157,7 +137,16 @@ void InitializeShadowMemory() {
         GetMaxUserVirtualAddress()) {
       DCHECK_LE(kHighMemBeg, kHighMemEnd);
       ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
-      HandleShadowGap();
+#  if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+      // 64-bit AIX has no shadow gap to protect. Its three mid memory regions
+      // have their own shadows, which are reserved here.
+      ReserveShadowMemoryRange(kMidShadowBeg, kMidShadowEnd, "mid shadow");
+      ReserveShadowMemoryRange(kMid2ShadowBeg, kMid2ShadowEnd, "mid2 shadow");
+      ReserveShadowMemoryRange(kMid3ShadowBeg, kMid3ShadowEnd, "mid3 shadow");
+#  else
+      ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
+      CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
+#  endif
     }
   } else if (kMidMemBeg &&
              MemoryRangeIsAvailable(shadow_start, kMidMemBeg - 1) &&
