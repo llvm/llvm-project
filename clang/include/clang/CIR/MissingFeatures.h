@@ -151,7 +151,6 @@ struct MissingFeatures {
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
-  static bool atomicAMDGPUNoaliasAddrspace() { return false; }
   static bool atomicAMDGPUAvailableVisibleMMRA() { return false; }
 
   // Global ctor handling
@@ -241,7 +240,6 @@ struct MissingFeatures {
   static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
-  static bool fastMathGuard() { return false; }
   // Should be implemented with a moduleOp level attribute and directly
   // mapped to LLVM - those can be set directly for every relevant LLVM IR
   // dialect operation (log10, ...).
