@@ -860,7 +860,7 @@ def smrd_zextloadi16 : SMRDLoadPat<zextloadi16>;
 def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
 // Unless a vector prefetch can be used, a divergent pointer is read from the
-// first active lane. A prefetch is only a hint, so this is safe.
+// first active lane. A prefetch is only a hint.
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
                              [{ return Subtarget->hasSafeSmemPrefetch() &&

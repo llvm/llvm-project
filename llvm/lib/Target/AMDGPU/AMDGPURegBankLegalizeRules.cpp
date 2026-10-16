@@ -1650,8 +1650,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}}, !HasSMemPF)
 
       .Any({{{DivPtr64}, IsDataPF}, {{}, {VgprPtr64}}}, HasVMemPF)
-      // Otherwise prefetch the address of the first active lane. A prefetch
-      // is only a hint, so this is safe.
+      // Otherwise prefetch the first active lane's address. A prefetch is
+      // only a hint.
       .Any({{DivPtr64}, {{}, {SgprB64_ReadFirstLane}}}, HasSMemPF)
       .Any({{DivPtr64}, {{}, {}, DeletePrefetch}})
 

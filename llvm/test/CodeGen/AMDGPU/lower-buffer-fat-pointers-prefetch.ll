@@ -3,7 +3,8 @@
 ; RUN: opt -S -mtriple=amdgpu12.00 -mattr=+safe-smem-prefetch -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck --check-prefix=SPREFETCH %s
 
 ; A data prefetch at a constant offset becomes s_buffer_prefetch_data where a
-; scalar prefetch is safe. Other buffer prefetches are dropped.
+; scalar prefetch is safe. Other buffer prefetches, including the s_prefetch
+; intrinsics, are dropped.
 
 define void @prefetch_const_offset(ptr addrspace(8) %rsrc) {
 ; NOSPREFETCH-LABEL: define void @prefetch_const_offset(
@@ -97,4 +98,20 @@ define void @prefetch_inst_const_offset(ptr addrspace(8) %rsrc) {
   ret void
 }
 
+define void @s_prefetch_inst(ptr addrspace(8) %rsrc) {
+; NOSPREFETCH-LABEL: define void @s_prefetch_inst(
+; NOSPREFETCH-SAME: ptr addrspace(8) [[RSRC:%.*]]) {
+; NOSPREFETCH-NEXT:    ret void
+;
+; SPREFETCH-LABEL: define void @s_prefetch_inst(
+; SPREFETCH-SAME: ptr addrspace(8) [[RSRC:%.*]]) #[[ATTR0]] {
+; SPREFETCH-NEXT:    ret void
+;
+  %p = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+  %q = getelementptr i8, ptr addrspace(7) %p, i32 128
+  call void @llvm.amdgcn.s.prefetch.inst.p7(ptr addrspace(7) %q, i32 0)
+  ret void
+}
+
 declare void @llvm.prefetch.p7(ptr addrspace(7) nocapture readonly, i32 immarg, i32 immarg, i32 immarg)
+declare void @llvm.amdgcn.s.prefetch.inst.p7(ptr addrspace(7), i32)

@@ -673,14 +673,3 @@ define ptr addrspace(7) @invariant_group(ptr addrspace(7) %p) {
   %laundered = call ptr addrspace(7) @llvm.launder.invariant.group.p7(ptr addrspace(7) %p)
   ret ptr addrspace(7) %laundered
 }
-
-declare void @llvm.prefetch.p7(ptr addrspace(7) nocapture readonly, i32 immarg, i32 immarg, i32 immarg)
-
-define void @prefetch(ptr addrspace(7) %p) {
-; CHECK-LABEL: define void @prefetch
-; CHECK-SAME: ({ ptr addrspace(8), i32 } [[P:%.*]]) {
-; CHECK-NEXT:    ret void
-;
-  call void @llvm.prefetch.p7(ptr addrspace(7) %p, i32 0, i32 3, i32 1)
-  ret void
-}
