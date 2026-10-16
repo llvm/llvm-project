@@ -16974,6 +16974,20 @@ libc_function(
 )
 
 libc_function(
+    name = "sched_getscheduler",
+    srcs = ["src/sched/linux/sched_getscheduler.cpp"],
+    hdrs = ["src/sched/sched_getscheduler.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sched_getscheduler",
+        ":errno",
+        ":types_pid_t",
+    ],
+)
+
+libc_function(
     name = "sched_rr_get_interval",
     srcs = ["src/sched/linux/sched_rr_get_interval.cpp"],
     hdrs = ["src/sched/sched_rr_get_interval.h"],
