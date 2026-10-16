@@ -5,9 +5,8 @@
 ; RUN: FileCheck --check-prefix=RESULT-OPTNONE %s < %t.1
 
 
-; Make sure this doesn't hit the "Attribute 'optnone' requires
-; 'noinline'!" verifier error. optnone can be dropped separately from
-; noinline, but removing noinline requires removing the pair together.
+; optnone implies noinline (but does not require it), so optnone and noinline
+; can each be dropped independently of the other.
 
 
 ; INTERESTING: @keep_func() [[KEEP_ATTRS:#[0-9]+]]
@@ -17,7 +16,6 @@ define void @keep_func() #0 {
   ret void
 }
 
-; Both should be removed together
 ; INTERESTING: @drop_func()
 ; RESULT-NOINLINE: define void @drop_func() {
 ; RESULT-OPTNONE: define void @drop_func() {
@@ -26,7 +24,7 @@ define void @drop_func() #0 {
 }
 
 ; RESULT-NOINLINE: attributes [[KEEP_ATTRS]] = { noinline }
-; RESULT-OPTNONE: attributes [[KEEP_ATTRS]] = { noinline optnone }
+; RESULT-OPTNONE: attributes [[KEEP_ATTRS]] = { optnone }
 
 
 ; INTERESTING-NOINLINE: attributes [[KEEP_ATTRS]] =

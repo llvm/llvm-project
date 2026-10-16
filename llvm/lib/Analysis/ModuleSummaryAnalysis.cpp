@@ -744,8 +744,7 @@ static void computeFunctionSummary(
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
       // FIXME: refactor this to use the same code that inliner is using.
       // Don't try to import functions with noinline attribute.
-      F.getAttributes().hasFnAttr(Attribute::NoInline),
-      F.hasFnAttribute(Attribute::AlwaysInline),
+      F.isNoInline(), F.hasFnAttribute(Attribute::AlwaysInline),
       F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall,
       mustBeUnreachableFunction(F)};
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;

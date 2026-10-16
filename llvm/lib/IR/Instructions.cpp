@@ -460,6 +460,14 @@ bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
   return false;
 }
 
+bool CallBase::isNoInline() const {
+  if (Attrs.hasFnAttr(Attribute::NoInline))
+    return true;
+  if (const auto *F = dyn_cast<Function>(getCalledOperand()))
+    return F->isNoInline();
+  return false;
+}
+
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
