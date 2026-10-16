@@ -1264,8 +1264,18 @@ private:
 
   union ppc64_vsr_t {
     struct asfloat_s {
+#if defined(__VSX__) && defined(__LITTLE_ENDIAN__)
+      // With VSX, unw_getcontext() stores each VSR with xxswapd + stxvd2x and
+      // jumpto() loads it back with lxvd2x + xxswapd, so a slot holds the
+      // little-endian image of the register and doubleword 0, the one that
+      // aliases the FPR, is in the upper eight bytes.  Without VSX the FPR is
+      // stored with stfd at the start of the slot, as on big endian.
+      uint64_t v2;
+      double f;
+#else
       double f;
       uint64_t v2;
+#endif
     } asfloat;
     v128 v;
   };
