@@ -159,6 +159,8 @@ void operator delete[](void *ptr) { free(ptr); }
 
 void operator delete(void *ptr, size_t) { free(ptr); }
 
+void operator delete[](void *ptr, size_t) { free(ptr); }
+
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
 // argument.
@@ -168,6 +170,12 @@ enum class align_val_t : size_t {};
 
 void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
 
+void operator delete[](void *ptr, std::align_val_t) noexcept { free(ptr); }
+
 void operator delete(void *ptr, size_t, std::align_val_t) noexcept {
+  free(ptr);
+}
+
+void operator delete[](void *ptr, size_t, std::align_val_t) noexcept {
   free(ptr);
 }
