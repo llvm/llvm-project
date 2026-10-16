@@ -6781,21 +6781,22 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
         return any_of(*DiffChecks, [&](const PointerDiffInfo &C) {
           return IsUnsupported(C.SrcStart) || IsUnsupported(C.SinkStart);
         });
-      return any_of(RtPtrChecking.CheckingGroups,
-                    [&](const RuntimeCheckingPtrGroup &CG) {
-                      return IsUnsupported(CG.Low) || IsUnsupported(CG.High);
-                    });
+      return any_of(
+          RtPtrChecking.CheckingGroups, [&](const RuntimeCheckingPtrGroup &CG) {
+            RuntimeCheckBounds Bounds =
+                getRuntimeCheckBounds(&CG, OrigLoop, *PSE.getSE(),
+                                      VectorizerParams::HoistRuntimeChecks);
+            return IsUnsupported(Bounds.Low) || IsUnsupported(Bounds.High);
+          });
     };
-    // The VPlan expander cannot hoist bounds out of an enclosing loop.
-    if (OrigLoop->getParentLoop() || HasUnsupportedBounds())
+    if (HasUnsupportedBounds())
       return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
                             MemCheckCond, MemCheckBlock, HasBranchWeights);
 
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
     RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
-                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
-                   HasBranchWeights);
+                   OrigLoop, *PSE.getSE(), VF, UF, HasBranchWeights);
   }
 }
 

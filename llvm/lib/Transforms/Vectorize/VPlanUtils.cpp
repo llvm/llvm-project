@@ -47,7 +47,8 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                                bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());
   // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
@@ -57,7 +58,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   auto *U = dyn_cast<SCEVUnknown>(Expr);
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
-  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  auto *Expanded = new VPExpandSCEVRecipe(Expr, ExpandInIR);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   auto Iter = EntryVPBB->getFirstNonPhi();
   while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
@@ -927,6 +928,15 @@ VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
+
+  auto IsUnsafeToHoist = [](const SCEV *Op) {
+    auto *D = dyn_cast<SCEVUDivExpr>(Op);
+    return D && !isa<SCEVConstant>(D->getRHS());
+  };
+  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+      !SCEVExprContains(S, IsUnsafeToHoist))
+    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
+                                                  /*ExpandInIR=*/true);
 
   switch (S->getSCEVType()) {
   case scConstant:

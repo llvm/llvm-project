@@ -435,9 +435,9 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr)
+VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr, bool ExpandInIR)
     : VPSingleDefRecipe(VPRecipeBase::VPExpandSCEVSC, {}, Expr->getType()),
-      Expr(Expr) {}
+      Expr(Expr), ExpandInIR(ExpandInIR) {}
 
 /// For call VPInstruction operands, return the operand index of the called
 /// function. The function is either the last operand (for unmasked calls) or
