@@ -1211,9 +1211,9 @@ define void @store_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], -1
+; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], -2
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], -3
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 0
@@ -1503,9 +1503,9 @@ define void @store_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i32
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], -1
+; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], -2
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = add i32 [[TMP6]], -3
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP2]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP3]], i32 0
 ; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 [[TMP4]], i32 0
