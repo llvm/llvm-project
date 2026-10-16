@@ -285,8 +285,8 @@ private:
     // when at compatible levels, preserving label's indent.
     if (Style.CompactCaseLabels &&
         NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
-        endsWithKwBreakOrFallthrough(TheLine) &&
-        TheLine->Level <= NextLine.Level + 1) {
+        TheLine->Level <= NextLine.Level + 1 &&
+        canJoinWithCaseLabel(TheLine, *NextLine.First)) {
       IndentTracker.nextLine(NextLine);
       return 1;
     }
@@ -673,10 +673,17 @@ private:
     return 0;
   }
 
-  static bool endsWithKwBreakOrFallthrough(const AnnotatedLine *Line) {
-    return (Line->endsWith(tok::semi, tok::kw_break)) ||
-           (Line->startsWith(TT_AttributeLSquare) &&
-            Line->endsWith(tok::semi, TT_AttributeRSquare));
+  bool canJoinWithCaseLabel(const AnnotatedLine *Line,
+                            const FormatToken &LabelTok) {
+    if (Line->endsWith(tok::semi, tok::kw_break))
+      return true;
+
+    if (Line->startsWith(TT_AttributeLSquare) &&
+        Line->endsWith(tok::semi, TT_AttributeRSquare)) {
+      return !LabelTok.mustBreakAfterAttributes(Style);
+    }
+
+    return false;
   }
 
   unsigned

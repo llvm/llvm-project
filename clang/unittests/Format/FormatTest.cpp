@@ -2908,6 +2908,26 @@ TEST_F(FormatTest, FormatsSwitchStatementCompactCaseLabels) {
                "      }\n"
                "  }",
                Style);
+
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Never;
+  Style.BraceWrapping.AfterCaseLabel = false;
+  Style.BraceWrapping.IndentBraces = false;
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "    [[fallthrough]];\n"
+               "  case 1:\n"
+               "    bar();\n"
+               "}",
+               "switch (n) {\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "  [[fallthrough]]; case 1:\n"
+               "    bar();\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, CaseRanges) {
