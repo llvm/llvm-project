@@ -54,8 +54,6 @@ MCCodeEmitter *llvm::createSPIRVMCCodeEmitter(const MCInstrInfo &MCII,
   return new SPIRVMCCodeEmitter(MCII);
 }
 
-using EndianWriter = support::endian::Writer;
-
 // Check if the instruction has a type argument for operand 1, and defines an ID
 // output register in operand 0. If so, we need to swap operands 0 and 1 so the
 // type comes first in the output, despide coming second in the MCInst.
