@@ -326,24 +326,29 @@ struct OffloadContext {
 
   /// Get a device belonging to the host platform.
   Expected<ol_device_handle_t> getHostDevice() {
-    if (auto *Cached = HostDevice.load())
+    if (auto *Cached = HostDevice.load(std::memory_order_acquire))
       return Cached;
 
+    ol_platform_handle_t HostPlatform = nullptr;
     for (auto &Platform : Platforms) {
-      if (Platform->BackendType != OL_PLATFORM_BACKEND_HOST)
-        continue;
-      auto DevicesOrErr = Platform->getDevices();
-      if (!DevicesOrErr)
-        return DevicesOrErr.takeError();
-      if (!DevicesOrErr->empty()) {
-        auto *Device = DevicesOrErr->front().get();
-        HostDevice.store(Device);
-        return Device;
+      if (Platform->BackendType == OL_PLATFORM_BACKEND_HOST) {
+        HostPlatform = Platform.get();
+        break;
       }
     }
+    if (!HostPlatform)
+      return createOffloadError(ErrorCode::INVALID_DEVICE,
+                                "no host device is available");
 
-    return createOffloadError(ErrorCode::INVALID_DEVICE,
-                              "no host device is available");
+    auto DevicesOrErr = HostPlatform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    if (DevicesOrErr->empty())
+      return createOffloadError(ErrorCode::INVALID_DEVICE,
+                                "no host device is available");
+    auto *Device = DevicesOrErr->front().get();
+    HostDevice.store(Device, std::memory_order_release);
+    return Device;
   }
 
   std::atomic<ol_device_handle_t> HostDevice{nullptr};
