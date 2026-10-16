@@ -242,7 +242,7 @@ private:
   std::int64_t frameOffsetInFile_{0};
   std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
   std::int64_t unformattedDiskExtent_{0};
-  FileOffset streamReadPos_{0};
+  std::int64_t streamReadPos_{0};
   std::size_t streamReadRemain_{0};
   bool streamRead_{false};
   bool swapEndianness_{false};
