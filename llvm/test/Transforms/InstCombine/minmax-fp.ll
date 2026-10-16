@@ -215,8 +215,7 @@ define i8 @t14(float %a) {
 
 define i8 @t14_commute(float %a) {
 ; CHECK-LABEL: @t14_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], float [[A]], float 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maximumnum.f32(float [[A:%.*]], float 0.000000e+00)
 ; CHECK-NEXT:    [[TMP3:%.*]] = fptosi float [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP3]]
 ;

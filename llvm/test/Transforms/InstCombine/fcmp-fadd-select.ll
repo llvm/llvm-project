@@ -566,8 +566,7 @@ define float @test_select_without_nnan_nsz(float %in) {
 define float @test_fcmp_without_nnan_nsz(float %in) {
 ; CHECK-LABEL: define float @test_fcmp_without_nnan_nsz(
 ; CHECK-SAME: float [[IN:%.*]]) {
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[IN]], 0.000000e+00
-; CHECK-NEXT:    [[SEL:%.*]] = select nnan nsz i1 [[CMP1]], float [[IN]], float 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = call nnan nsz float @llvm.maximumnum.f32(float [[IN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan nsz float [[SEL]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[ADD]]
 ;

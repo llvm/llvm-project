@@ -4966,6 +4966,22 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // Fold (X > +0.0) ? X : +0.0 or (+0.0 < X) ? X : +0.0 to
+  // maximumnum(X, +0.0).
+  if (auto *FCmp = dyn_cast<FCmpInst>(CondVal)) {
+    auto Pred = FCmp->getPredicate();
+    Value *Cmp0 = FCmp->getOperand(0), *Cmp1 = FCmp->getOperand(1);
+    if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OLT) {
+      if (Pred == FCmpInst::FCMP_OLT)
+        std::swap(Cmp0, Cmp1);
+
+      if (Cmp0 == TrueVal && Cmp1 == FalseVal && match(FalseVal, m_PosZeroFP()))
+        return replaceInstUsesWith(
+            SI, Builder.CreateBinaryIntrinsic(Intrinsic::maximumnum, TrueVal,
+                                              FalseVal, &SI));
+    }
+  }
+
   // Fold selecting to fabs.
   if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
     return Fabs;
