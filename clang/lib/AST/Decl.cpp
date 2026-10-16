@@ -1188,6 +1188,12 @@ Linkage NamedDecl::getLinkageInternal() const {
       .getLinkage();
 }
 
+Linkage NamedDecl::computeLinkageInternal() const {
+  return LinkageComputer{}
+      .computeLVForDecl(this, LVComputationKind::forLinkageOnly())
+      .getLinkage();
+}
+
 static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
   // FIXME: Handle isModulePrivate.
   switch (D->getModuleOwnershipKind()) {
