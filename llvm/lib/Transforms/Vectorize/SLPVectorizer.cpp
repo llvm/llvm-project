@@ -163,6 +163,8 @@ struct ReductionVectorPart {
   /// the final reduction result. Used for reassociated fadd reductions,
   /// flattened through fsub/fneg operations.
   bool Negated = false;
+  /// Context hint for deciding the reduction pattern
+  TTI::CastContextHint Ctx = TTI::CastContextHint::None;
 };
 } // namespace
 
@@ -33178,7 +33180,8 @@ public:
             VectorValuesAndScales.push_back({Splat, /*Scale=*/1,
                                              /*IsSigned=*/true,
                                              /*ReducedInTree=*/false,
-                                             GroupNegated});
+                                             GroupNegated,
+                                             TTI::CastContextHint::None});
           } else {
             Value *RedVal =
                 emitScaleForReusedOps(Candidates.front(), Builder, Cnt);
@@ -33577,7 +33580,7 @@ public:
                  : true,
              V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
                  !VectorizedRoot->getType()->isVectorTy(),
-             GroupNegated});
+             GroupNegated, V.getCastContextHint(V.getRootNode())});
         LoopAccVectorized = UseLoopAccForm;
 
         // Count vectorized reduced values to exclude them from final reduction.
@@ -33637,9 +33640,8 @@ public:
     Value *AccV = LoopAcc.tryEmit(
         Builder, RdxFMF, LoopAccVectorized, VectorizedTree, LeftoverReductions,
         VectorValuesAndScales, RequiredExtract, ReducedValsToOps, ReductionOps,
-        [this, TTI = TTI, &V](Value *Vec, IRBuilderBase &B, Type *Ty) {
-          return emitReduction(Vec, B, TTI,
-                               V.getCastContextHint(V.getRootNode()), Ty);
+        [this, TTI = TTI](Value *Vec, IRBuilderBase &B, Type *Ty) {
+          return emitReduction(Vec, B, TTI, TTI::CastContextHint::None, Ty);
         });
     if (AccV)
       VectorizedTree = AccV;
@@ -33664,7 +33666,7 @@ public:
                                          V.getCostKind());
       if (!Res)
         std::tie(Res, ResNegated) = emitReduction(
-            Builder, *TTI, V.getCastContextHint(V.getRootNode()),
+            Builder, *TTI,
             BoolReduxWideTy ? BoolReduxWideTy : ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
@@ -34674,7 +34676,6 @@ private:
   /// combine.
   std::pair<Value *, bool> emitReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo &TTI,
-                                         TTI::CastContextHint Ctx,
                                          Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     bool ResNegated = false;
@@ -34701,7 +34702,9 @@ private:
     // Creates reduction and combines with the previous reduction, respecting
     // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
-                              bool ReducedInTree, bool Negated) {
+                              bool ReducedInTree, bool Negated,
+                              TTI::CastContextHint Ctx =
+                                  TTI::CastContextHint::None) {
       Value *Rdx = createSingleOp(Builder, TTI, Ctx, Vec, Scale, IsSigned,
                                   DestTy, ReducedInTree);
       if (!ReducedSubTree) {
@@ -34715,7 +34718,8 @@ private:
     };
     if (VectorValuesAndScales.size() == 1) {
       const ReductionVectorPart &P = VectorValuesAndScales.front();
-      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
+      CreateSingleOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated,
+                     P.Ctx);
       return {ReducedSubTree, ResNegated};
     }
     // Scales Vec using given Cnt scale factor and then performs vector combine
