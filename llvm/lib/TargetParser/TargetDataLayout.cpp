@@ -478,8 +478,8 @@ static std::string computeSuperHDataLayout(const Triple &T) {
   Ret += "-p:32:32";
 
   // Integer alignments
-  Ret += "-i18:32";
-  Ret += "-i16:32";
+  Ret += "-i8:8";
+  Ret += "-i16:16";
   Ret += "-i32:32";
   Ret += "-i64:64";
 

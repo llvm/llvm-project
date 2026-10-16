@@ -30,7 +30,7 @@ public:
     PointerWidth = 32;
     PointerAlign = 32;
     ShortWidth = 16;
-    ShortAlign = 32;
+    ShortAlign = 16;
     IntWidth = 32;
     IntAlign = 32;
     LongWidth = 32;
@@ -40,7 +40,7 @@ public:
     SuitableAlign = 32;
     DefaultAlignForAttributeAligned = 32;
     HalfWidth = 16;
-    HalfAlign = 32;
+    HalfAlign = 16;
     FloatWidth = 32;
     FloatAlign = 32;
     DoubleWidth = 32;
