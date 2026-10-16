@@ -6585,9 +6585,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       auto IdentityCopyInstr =
           BuildMI(*CurrBB, MI, DL, TII->get(AMDGPU::COPY), IdentityVGPR)
               .addReg(IdentitySGPR);
-      auto DPPClampOpcPair = getDPPOpcForWaveReduction(Opc, ST);
-      unsigned DPPOpc = std::get<0>(DPPClampOpcPair);
-      unsigned ClampOpc = std::get<1>(DPPClampOpcPair);
+      unsigned DPPOpc, ClampOpc;
+      std::tie(DPPOpc, ClampOpc) = getDPPOpcForWaveReduction(Opc, ST);
       auto BuildSetInactiveInstr = [&](Register Dst, Register Src0,
                                        Register Src1) {
         return BuildMI(BB, MI, DL, TII->get(AMDGPU::V_SET_INACTIVE_B32),
@@ -10792,12 +10791,16 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     Ops.push_back(VAddr);
   SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
   EVT RsrcVT = Rsrc.getValueType();
-  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+  bool IndexedRsrc = IsGFX13 && RsrcVT == MVT::i32;
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32 && !IndexedRsrc)
     return Op;
   Ops.push_back(Rsrc);
+  bool IsSampIndexed = false;
   if (BaseOpcode->Sampler) {
     SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
-    if (Samp.getValueType() != MVT::v4i32)
+    EVT SampVT = Samp.getValueType();
+    IsSampIndexed = IsGFX13 && SampVT == MVT::i32;
+    if (SampVT != MVT::v4i32 && !IsSampIndexed)
       return Op;
     Ops.push_back(Samp);
   }
@@ -10836,8 +10839,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   int Opcode = -1;
 
   if (IsGFX13) {
-    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13, NumVDataDwords,
+                              NumVAddrDwords, IndexedRsrc, IsSampIndexed);
   } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
