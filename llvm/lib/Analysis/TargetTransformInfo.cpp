@@ -180,9 +180,6 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 
     // Make sure this blocks ends with a conditional branch.
     Instruction *TI = BB->getTerminator();
-    if (!TI)
-      continue;
-
     if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
       ExitBranch = BI;
     else
