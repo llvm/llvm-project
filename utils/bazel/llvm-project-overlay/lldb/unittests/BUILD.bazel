@@ -82,6 +82,7 @@ cc_test(
     srcs = ["Editline/EditlineTest.cpp"],
     deps = [
         ":lldbUtilityHelpers",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Utility",
         "//llvm:Support",
@@ -106,6 +107,7 @@ cc_test(
         ":lldbHostHelpers",
         ":lldbUtilityHelpers",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Utility",
         "//llvm:Support",
@@ -139,6 +141,7 @@ cc_test(
     srcs = ["Signals/UnixSignalsTest.cpp"],
     deps = [
         "//lldb:Target",
+        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
         "//third-party/unittest:gmock",
@@ -156,6 +159,7 @@ cc_test(
     data = ["Inputs/" + src.rsplit("/", 1)[1] for src in _TEST_INPUTS["UtilityTests"]],
     deps = [
         ":lldbUtilityHelpers",
+        "//lldb:Headers",
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
