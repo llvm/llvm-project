@@ -124,6 +124,27 @@ define internal i16 @bar3(ptr %p1, i16 %p2) {
   ret i16 %p2
 }
 
+define i32 @indirect_call_return_load(ptr %callee) {
+  %ptr = call ptr %callee()
+  %value = load i32, ptr %ptr
+  ret i32 %value
+}
+
+define i32 @null_invoke_return_load() personality ptr null {
+entry:
+  %ptr = invoke ptr null(i64 0)
+          to label %cont unwind label %lpad
+
+cont:
+  %value = load i32, ptr %ptr
+  ret i32 %value
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+          catch ptr null
+  ret i32 0
+}
+
 declare void @func6(ptr)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
