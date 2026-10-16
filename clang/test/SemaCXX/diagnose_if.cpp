@@ -692,3 +692,36 @@ void run() {
 }
 
 }
+
+namespace GH229664 {
+template <bool, class = void>
+struct enable_if {};
+
+template <class T>
+struct enable_if<true, T> {
+  using type = T;
+};
+
+template <class T, class = void>
+struct S {
+  static constexpr bool value = false;
+};
+
+template <class T>
+struct S<T, typename enable_if<sizeof(T::foo(-1)) == 1>::type> {
+  static constexpr bool value = true;
+};
+
+struct ArgDependent {
+  static constexpr char foo(int x) _diagnose_if(sizeof(x) != 0, "", "error");
+  static constexpr char (&foo(long x))[2] _diagnose_if(sizeof(x) != 0, "", "warning");
+};
+
+struct ArgIndependent {
+  static constexpr char foo(int) _diagnose_if(true, "", "error");
+  static constexpr char (&foo(long))[2] _diagnose_if(true, "", "warning");
+};
+
+static_assert(S<ArgDependent>::value, "");
+static_assert(S<ArgIndependent>::value, "");
+}

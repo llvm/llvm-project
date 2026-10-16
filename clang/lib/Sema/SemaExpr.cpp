@@ -342,12 +342,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
       return MD->findPropertyDecl();
     return nullptr;
   };
-  if (const ObjCPropertyDecl *ObjCPDecl = getReferencedObjCProp(D)) {
-    if (diagnoseArgIndependentDiagnoseIfAttrs(ObjCPDecl, Loc))
-      return true;
-  } else if (diagnoseArgIndependentDiagnoseIfAttrs(D, Loc)) {
-      return true;
-  }
+  if (const ObjCPropertyDecl *ObjCPDecl = getReferencedObjCProp(D))
+    diagnoseArgIndependentDiagnoseIfAttrs(ObjCPDecl, Loc);
+  else
+    diagnoseArgIndependentDiagnoseIfAttrs(D, Loc);
 
   // [OpenMP 4.0], 2.15 declare reduction Directive, Restrictions
   // Only the variables omp_in and omp_out are allowed in the combiner.
