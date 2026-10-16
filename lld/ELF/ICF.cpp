@@ -449,7 +449,10 @@ void ICF<ELFT>::parallelForEachClass(
 }
 
 // Combine two 64-bit values using a golden-ratio hash combine followed by a
-// single-multiply SplitMix64 bit mixer (see llvm/ADT/Hashing.h).
+// single-multiply SplitMix64 bit mixer (see llvm/ADT/Hashing.h). We avoid
+// llvm::hash_combine here because it incorporates a per-execution address seed
+// under LLVM_ENABLE_ABI_BREAKING_CHECKS, which would make initial equivalence
+// class ordering (and --print-icf-sections output) non-deterministic.
 static uint64_t mixKey(uint64_t a, uint64_t b) {
   uint64_t x = a ^ (b + 0x9e3779b97f4a7c15ULL);
   x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
@@ -465,36 +468,26 @@ uint64_t ICF<ELFT>::constantKey(const InputSection *sec, Relocs<RelTy> rels) {
   for (RelTy rel : rels) {
     uint64_t addend = getAddend<ELFT>(rel);
     Symbol &s = sec->file->getRelocTargetSym(rel);
-    uint64_t v;
+    uint64_t v = 0;
     auto *d = dyn_cast<Defined>(&s);
     if (!d || d->scriptDefined || d->isPreemptible) {
       // Undefined, preemptible, or linker-script symbols must be the exact
       // same symbol and addend.
-      v = mixKey(1, xxh3_64bits(s.getName()) + addend);
-    } else if (!d->section) {
-      // Absolute symbols (not associated with a section) must have the same
-      // resolved value + addend.
-      v = mixKey(2, d->value + addend);
-    } else if (isa<InputSection>(d->section)) {
-      // Regular InputSection targets must have the same section kind and
-      // offset; the target section's equivalence class is handled by
-      // combineRelocHashes.
-      v = mixKey(3 + d->section->kind(), d->value + addend);
-    } else if (auto *ms = dyn_cast<MergeInputSection>(d->section)) {
+      v = xxh3_64bits(s.getName()) + addend;
+    } else if (auto *ms = dyn_cast_or_null<MergeInputSection>(d->section)) {
       // MergeInputSection targets (e.g. string literals and constant pools)
       // must resolve to the same offset in the merged parent section.
-      uint64_t off = 0;
       if (!s.isSection())
-        off = ms->getParentOffset(d->value) + addend;
+        v = ms->getParentOffset(d->value) + addend;
       else if (addend < ms->content().size())
-        off = ms->getParentOffset(addend);
-      v = mixKey(6 + ms->entsize, off);
+        v = ms->getParentOffset(addend);
     } else {
-      // Any other section kind (e.g. EHInputSection) requires the exact same
-      // symbol and addend in constantEq().
-      v = mixKey(7, xxh3_64bits(s.getName()) + addend);
+      // Regular InputSection or absolute targets must have the same section
+      // offset + addend; the target InputSection's equivalence class is
+      // propagated by combineRelocHashes().
+      v = d->value + addend;
     }
-    h = mixKey(h, (uint64_t(rel.r_offset) << 32) ^
+    h = mixKey(h, (uint64_t(rel.r_offset) << 32) |
                       rel.getType(ctx.arg.isMips64EL));
     h = mixKey(h, v);
   }
