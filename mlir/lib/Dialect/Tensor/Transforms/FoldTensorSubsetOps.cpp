@@ -78,8 +78,6 @@ static LogicalResult preconditionsFoldExtractOrInsertWithTransferOp(
     ExtractOrInsertOp extractOrInsertSliceOp) {
   if (xferOp.hasOutOfBoundsDim())
     return rewriter.notifyMatchFailure(xferOp, "out of bounds transfer dim");
-  if (xferOp.getMask())
-    return rewriter.notifyMatchFailure(xferOp, "masked transfer");
   if (!extractOrInsertSliceOp.hasUnitStride()) {
     return rewriter.notifyMatchFailure(
         xferOp, "non-1 stride insert/extract, requires keeping track of "
@@ -119,7 +117,8 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
           readOp.getPermutationMap(), extractSliceOp.getSourceType().getRank(),
           extractSliceOp.getDroppedDims())),
       readOp.getPadding(),
-      /*mask=*/Value(), readOp.getInBoundsAttr());
+      /*mask=*/readOp.getMask(),
+      readOp.getInBoundsAttr());
   if (maskOp)
     newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask());
   return newOp->getResults()[0];
@@ -131,7 +130,8 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
                      .template getDefiningOp<vector::TransferWriteOp>();
   if (!writeOp)
     return rewriter.notifyMatchFailure(insertSliceOp, "not a transfer_write");
-
+  if (writeOp.getMask())
+    return rewriter.notifyMatchFailure(writeOp, "masked transfer");
   LogicalResult preconditionResult =
       preconditionsFoldExtractOrInsertWithTransferOp(rewriter, writeOp,
                                                      insertSliceOp);
