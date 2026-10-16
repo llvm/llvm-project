@@ -117,7 +117,7 @@ using InductionVariableInfos = llvm::SmallVector<InductionVariableInfo>;
 void collectLoopLiveIns(fir::DoConcurrentLoopOp loop,
                         llvm::SmallVectorImpl<mlir::Value> &liveIns) {
   llvm::SmallDenseSet<mlir::Value> seenValues;
-  llvm::SmallPtrSet<mlir::Operation *, 8> seenOps;
+  llvm::SmallPtrSet<mlir::Operation *, 8> seenDeclares;
 
   for (auto [lb, ub, st] : llvm::zip_equal(
            loop.getLowerBound(), loop.getUpperBound(), loop.getStep())) {
@@ -128,15 +128,18 @@ void collectLoopLiveIns(fir::DoConcurrentLoopOp loop,
 
   mlir::visitUsedValuesDefinedAbove(
       loop.getRegion(), [&](mlir::OpOperand *operand) {
-        if (!seenValues.insert(operand->get()).second)
+        mlir::Value value = operand->get();
+        if (!seenValues.insert(value).second)
           return;
 
-        mlir::Operation *definingOp = operand->get().getDefiningOp();
-        // We want to collect ops corresponding to live-ins only once.
-        if (definingOp && !seenOps.insert(definingOp).second)
-          return;
+        // Both results of an `hlfir.declare` are views of the same variable,
+        // which is mapped once. Results of other multi-result ops (e.g.
+        // `fir.box_dims`) are independent values and each must be mapped.
+        if (auto declareOp = value.getDefiningOp<hlfir::DeclareOp>())
+          if (!seenDeclares.insert(declareOp).second)
+            return;
 
-        liveIns.push_back(operand->get());
+        liveIns.push_back(value);
       });
 
   for (mlir::Value local : loop.getLocalVars())
@@ -227,27 +230,35 @@ private:
       if (!shape)
         return;
 
-      auto shapeOp =
-          mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
-      auto shapeShiftOp =
-          mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
+      mlir::Operation *shapeDefOp = shape.getDefiningOp();
 
-      if (!shapeOp && !shapeShiftOp)
-        TODO(liveIn.getLoc(),
-             "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are"
-             "not supported yet.");
-
-      if (shapeShiftOp != nullptr)
+      if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(shapeDefOp)) {
+        extents.assign(shapeOp.getExtents().begin(),
+                       shapeOp.getExtents().end());
+      } else if (auto shapeShiftOp =
+                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shapeDefOp)) {
         startIndices = shapeShiftOp.getOrigins();
-
-      extents = shapeOp != nullptr
-                    ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
-                                               shapeOp.getExtents().end())
-                    : shapeShiftOp.getExtents();
+        extents = shapeShiftOp.getExtents();
+      } else if (auto shiftOp =
+                     mlir::dyn_cast_if_present<fir::ShiftOp>(shapeDefOp)) {
+        startIndices.assign(shiftOp.getOrigins().begin(),
+                            shiftOp.getOrigins().end());
+      } else {
+        TODO(liveIn.getLoc(), "Shapes not defined by `fir.shape`, "
+                              "`fir.shape_shift` or `fir.shift` ops are not "
+                              "supported yet.");
+      }
     }
 
-    bool isShapedValue() const { return !extents.empty(); }
-    bool isShapeShiftedValue() const { return !startIndices.empty(); }
+    bool isShapedValue() const {
+      return !extents.empty() || !startIndices.empty();
+    }
+    bool isShapeShiftedValue() const {
+      return !startIndices.empty() && !extents.empty();
+    }
+    bool isShiftedValue() const {
+      return !startIndices.empty() && extents.empty();
+    }
   };
 
   using LiveInShapeInfoMap =
@@ -692,11 +703,16 @@ private:
           mapper.map(hostValue, deviceValue);
       };
 
-      mapHostValueToDevice(mappedVar, liveInDeclare.getOriginalBase());
-
+      // Only one result of a host `hlfir.declare` is collected as a live-in,
+      // but the loop may use both, so map both regardless of which one it is.
       if (auto origDeclareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
-              mappedVar.getDefiningOp()))
+              mappedVar.getDefiningOp())) {
+        mapHostValueToDevice(origDeclareOp.getOriginalBase(),
+                             liveInDeclare.getOriginalBase());
         mapHostValueToDevice(origDeclareOp.getBase(), liveInDeclare.getBase());
+      } else {
+        mapHostValueToDevice(mappedVar, liveInDeclare.getOriginalBase());
+      }
     }
 
     for (auto [arg, hostEval] : llvm::zip_equal(argIface.getHostEvalBlockArgs(),
@@ -734,6 +750,27 @@ private:
                                  : std::string("");
     if (fir::isa_ref_type(liveInType))
       liveInType = fir::unwrapRefType(liveInType);
+
+    if (targetShapeCreationInfo.isShiftedValue()) {
+      // A `fir.shift` is only valid on a box value. Box live-ins are mapped
+      // through a temporary, so load the box before re-declaring it.
+      assert(fir::isa_ref_type(liveInArg.getType()) &&
+             "expected a box live-in mapped through a temporary");
+      mlir::Value box =
+          fir::LoadOp::create(builder, liveInArg.getLoc(), liveInArg);
+      llvm::SmallVector<mlir::Value> origins;
+      for (auto [idx, startIndex] :
+           llvm::enumerate(targetShapeCreationInfo.startIndices))
+        origins.push_back(Fortran::utils::openmp::mapTemporaryValue(
+            builder, targetOp, startIndex,
+            liveInName + ".start_idx.dim" + std::to_string(idx)));
+      auto shiftType =
+          fir::ShiftType::get(builder.getContext(), origins.size());
+      mlir::Value shift =
+          fir::ShiftOp::create(builder, liveInArg.getLoc(), shiftType, origins);
+      return hlfir::DeclareOp::create(builder, liveInArg.getLoc(), box,
+                                      liveInName, shift);
+    }
 
     mlir::Value shape = [&]() -> mlir::Value {
       if (!targetShapeCreationInfo.isShapedValue())
