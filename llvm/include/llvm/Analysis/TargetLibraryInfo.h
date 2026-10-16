@@ -559,6 +559,12 @@ private:
   }
 
 public:
+  static Attribute::AttrKind getExtAttrForBoolReturn(const Triple &T) {
+    bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
+    initBoolExtensionsForTriple(ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
+    return ShouldZExtBoolReturn ? Attribute::ZExt : Attribute::None;
+  }
+
   static Attribute::AttrKind getExtAttrForI32Return(const Triple &T,
                                                    bool Signed = true) {
     bool ShouldExtI32Param, ShouldExtI32Return;

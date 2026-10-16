@@ -2244,6 +2244,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   LLVMContext &Ctx = I->getContext();
   Module *M = I->getModule();
   const DataLayout &DL = M->getDataLayout();
+  const Triple &TT = M->getTargetTriple();
   IRBuilder<> Builder(I);
   IRBuilder<> AllocaBuilder(&I->getFunction()->getEntryBlock().front());
 
@@ -2408,7 +2409,8 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   // Now, the return type.  FIXME: Properly add extension attributes.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
-    Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
+    if (auto AK = TargetLibraryInfo::getExtAttrForBoolReturn(TT))
+      Attr = Attr.addRetAttribute(Ctx, AK);
   } else if (HasResult && UseSizedLibcall)
     ResultTy = SizedIntTy;
   else
