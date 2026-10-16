@@ -395,13 +395,13 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
 
     QualType ArgTy = ArgExp->getType();
 
-    // A pointer to member expression of the form  &MyClass::mu is treated
-    // specially -- we need to look at the type of the member.
+    // A pointer to member expression of the form &MyClass::mu is treated
+    // specially -- we need to look at the type of the member. The analysis
+    // reads it as that member of any object.
     if (const auto *UOp = dyn_cast<UnaryOperator>(ArgExp))
       if (UOp->getOpcode() == UO_AddrOf)
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(UOp->getSubExpr()))
-          if (DRE->getDecl()->isCXXInstanceMember())
-            ArgTy = DRE->getDecl()->getType();
+        if (const auto *MPT = ArgTy->getAs<MemberPointerType>())
+          ArgTy = MPT->getPointeeType();
 
     // First see if we can just cast to record type, or pointer to record type.
     const auto *RD = getRecordDecl(ArgTy);
@@ -493,7 +493,7 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
 bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
   if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
-           RequiresCapabilityAttr, LocksExcludedAttr>(A))
+           RequiresCapabilityAttr, LocksExcludedAttr, LockReturnedAttr>(A))
     return true;
 
   const auto *VD = dyn_cast<ValueDecl>(D);
@@ -502,7 +502,9 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
 
   // Parameters of template functions need to be re-checked during
   // instantiation because their types might have been dependent.
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+  // lock_returned does not apply to scoped_lockable references.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD);
+      PVD && !isa<LockReturnedAttr>(A)) {
     if (isCallbackOrDependent(PVD->getType()))
       return true;
     return checkFunParamsAreScopedLockable(*this, PVD, *A);
@@ -684,6 +686,9 @@ static bool checkTryLockFunAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 }
 
 static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   // check that the argument is lockable object
   SmallVector<Expr*, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args);
@@ -4157,8 +4162,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
-  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D, /*IncludeThis=*/true);
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
   StringRef Format = Info->Identifier->getName();
@@ -4194,7 +4198,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   // FIXME: Do we need to bounds check?
   unsigned ArgIdx = Info->FormatStringIdx - 1;
 
-  if (HasImplicitThisParam) {
+  if (hasImplicitObjectParameter(D)) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)

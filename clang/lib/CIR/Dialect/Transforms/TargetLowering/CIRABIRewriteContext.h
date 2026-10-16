@@ -25,6 +25,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -43,7 +44,7 @@ namespace cir {
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
   CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
-      : module(module), dl(dl), aliasAnalysis(module) {
+      : module(module), dl(dl), cirDataLayout(module), aliasAnalysis(module) {
     cir::registerCIRAliasAnalyses(aliasAnalysis, module);
   }
 
@@ -114,6 +115,10 @@ public:
 private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
+
+  /// The CIR view of the module's data layout, which provides the store and
+  /// alloc sizes that \c dl does not.
+  cir::CIRDataLayout cirDataLayout;
 
   /// Alias analysis over the module with the CIR implementations registered.
   /// rewriteCallSite asks it whether a byval operand's storage is written
