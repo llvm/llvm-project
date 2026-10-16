@@ -60,6 +60,17 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
+  bool isTruncateFree(EVT SrcVT, EVT DestVT) const override {
+    // Truncating 64-bit to 32-bit is free in SASS.
+    return SrcVT == MVT::i64 && DestVT == MVT::i32;
+  }
+
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override {
+    // Narrowing to a single 32-bit register is always profitable.
+    return SrcVT.isScalarInteger() && SrcVT.getSizeInBits() > 32 &&
+           DestVT == MVT::i32;
+  }
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
     if (VT.isVector())

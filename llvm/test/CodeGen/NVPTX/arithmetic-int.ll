@@ -340,3 +340,44 @@ define i64 @sub_i64_ir(i64 %a) {
   %ret = sub i64 56, %a
   ret i64 %ret
 }
+
+; Free truncations allow the select to operate on 32-bit values.
+define i32 @trunc_select_i64(i1 %cond, ptr %ap, ptr %bp, i32 %c) {
+; CHECK-LABEL: trunc_select_i64(
+; CHECK-NOT: selp.b64
+; CHECK: selp.b32
+; CHECK: add.s32
+; CHECK: ret
+  %a = load volatile i64, ptr %ap, align 8
+  %b = load volatile i64, ptr %bp, align 8
+  %sel = select i1 %cond, i64 %a, i64 %b
+  %trunc = trunc i64 %sel to i32
+  %ret = add i32 %trunc, %c
+  ret i32 %ret
+}
+
+; Narrow read/modify/write operations to the 32 bits that can change, including
+; when the original integer type is wider than i64.
+define void @or_i64_low32(ptr %p) {
+; CHECK-LABEL: or_i64_low32(
+; CHECK: ld.b32
+; CHECK: or.b32
+; CHECK: st.b32
+; CHECK: ret
+  %val = load i64, ptr %p, align 8
+  %ret = or i64 %val, 65536
+  store i64 %ret, ptr %p, align 8
+  ret void
+}
+
+define void @or_i128_low32(ptr %p) {
+; CHECK-LABEL: or_i128_low32(
+; CHECK: ld.b32
+; CHECK: or.b32
+; CHECK: st.b32
+; CHECK: ret
+  %val = load i128, ptr %p, align 16
+  %ret = or i128 %val, 65536
+  store i128 %ret, ptr %p, align 16
+  ret void
+}
