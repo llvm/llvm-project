@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "InefficientAlgorithmCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -24,6 +26,60 @@ static bool areTypesCompatible(QualType Left, QualType Right) {
          Right->getCanonicalTypeUnqualified();
 }
 
+/// Returns true if built-in `<` orders `T` the way `std::less<T>` does,
+/// excluding floating point (NaN compares unordered).
+static bool hasBuiltinOrder(QualType T) {
+  return T->isIntegralOrEnumerationType() || T->isPointerType();
+}
+
+/// Returns true if converting `Bound` to `KeyType` cannot change its value.
+static bool boundConvertsExactly(const Expr *Bound, QualType KeyType,
+                                 const ASTContext &Ctx) {
+  if (!KeyType->isIntegralType(Ctx))
+    return false;
+  const bool KeySigned = KeyType->isSignedIntegerOrEnumerationType();
+
+  const QualType BoundType = Bound->getType();
+  if (BoundType->isIntegerType()) {
+    const bool BoundSigned = BoundType->isSignedIntegerOrEnumerationType();
+    const unsigned BoundWidth = Ctx.getIntWidth(BoundType);
+    const unsigned KeyWidth = Ctx.getIntWidth(KeyType);
+    if ((BoundSigned == KeySigned) ? (BoundWidth <= KeyWidth)
+                                   : (!BoundSigned && BoundWidth < KeyWidth))
+      return true;
+  }
+
+  // Otherwise the bound must be a constant that survives the conversion.
+  Expr::EvalResult Eval;
+  if (!Bound->EvaluateAsInt(Eval, Ctx))
+    return false;
+  const llvm::APSInt Value = Eval.Val.getInt();
+  llvm::APSInt Converted = Value.extOrTrunc(Ctx.getIntWidth(KeyType));
+  Converted.setIsSigned(KeySigned);
+  return llvm::APSInt::isSameValue(Converted, Value);
+}
+
+/// Matches a call taking `c.begin()` and `c.end()` as its first two arguments,
+/// where `c` is a `Container`. Binds `c` as "IneffContExpr", its
+/// declaration as "IneffContObj" and its class as "IneffCont", or as
+/// "IneffContPtr" when `c` is a pointer.
+static ast_matchers::internal::Matcher<CallExpr> hasWholeContainerRange(
+    const ast_matchers::internal::BindableMatcher<Decl> &Container) {
+  return callExpr(
+      hasArgument(
+          0, cxxMemberCallExpr(
+                 callee(cxxMethodDecl(hasName("begin"))),
+                 on(declRefExpr(hasDeclaration(decl().bind("IneffContObj")),
+                                anyOf(hasType(Container.bind("IneffCont")),
+                                      hasType(pointsTo(
+                                          Container.bind("IneffContPtr")))))
+                        .bind("IneffContExpr")))),
+      hasArgument(1,
+                  cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))),
+                                    on(declRefExpr(hasDeclaration(
+                                        equalsBoundNode("IneffContObj")))))));
+}
+
 void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
   const auto Algorithms =
       hasAnyName("::std::find", "::std::count", "::std::equal_range",
@@ -33,29 +89,68 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
       "::std::unordered_set", "::std::unordered_map",
       "::std::unordered_multiset", "::std::unordered_multimap"));
 
-  const auto Matcher =
-      callExpr(
-          callee(functionDecl(Algorithms)), argumentCountAtLeast(3),
-          hasArgument(
-              0, cxxMemberCallExpr(
-                     callee(cxxMethodDecl(hasName("begin"))),
-                     on(declRefExpr(
-                            hasDeclaration(decl().bind("IneffContObj")),
-                            anyOf(hasType(ContainerMatcher.bind("IneffCont")),
-                                  hasType(pointsTo(
-                                      ContainerMatcher.bind("IneffContPtr")))))
-                            .bind("IneffContExpr")))),
-          hasArgument(
-              1, cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))),
-                                   on(declRefExpr(hasDeclaration(
-                                       equalsBoundNode("IneffContObj")))))))
-          .bind("IneffAlg");
+  Finder->addMatcher(callExpr(callee(functionDecl(Algorithms)),
+                              argumentCountAtLeast(3),
+                              hasWholeContainerRange(ContainerMatcher))
+                         .bind("IneffAlg"),
+                     this);
 
-  Finder->addMatcher(Matcher, this);
+  // `upper_bound` (for `>`) and `lower_bound` (for `>=`) binary search where
+  // `std::find_if` linearly scans. Only in containers ordered by `std::less`.
+  const auto SortedContainer = classTemplateSpecializationDecl(
+      hasAnyName("::std::set", "::std::multiset"),
+      hasTemplateArgument(
+          1, refersToType(hasDeclaration(
+                 classTemplateSpecializationDecl(hasName("::std::less"))))));
+  const auto RefersToElement =
+      declRefExpr(to(parmVarDecl(equalsBoundNode("PredElement"))));
+  // The bound is lifted out of the predicate, so it must not name the element.
+  const auto Bound = expr(unless(findAll(RefersToElement))).bind("Bound");
+  const auto BoundComparison =
+      binaryOperator(
+          anyOf(allOf(hasAnyOperatorName(">", ">="),
+                      hasLHS(ignoringParenImpCasts(RefersToElement)),
+                      hasRHS(ignoringParenImpCasts(Bound))),
+                allOf(hasAnyOperatorName("<", "<="),
+                      hasLHS(ignoringParenImpCasts(Bound)),
+                      hasRHS(ignoringParenImpCasts(RefersToElement)))))
+          .bind("PredOp");
+  // A second parameter or an init-capture would let the bound name a
+  // declaration that is not in scope at the call site the fix moves it to.
+  const auto BoundPredicate =
+      lambdaExpr(
+          matchers::hasCallOperator(cxxMethodDecl(
+              parameterCountIs(1),
+              hasParameter(0, parmVarDecl().bind("PredElement")))),
+          unless(hasAnyCapture(capturesVar(varDecl(isInitCapture())))),
+          has(compoundStmt(statementCountIs(1),
+                           hasAnySubstatement(returnStmt(hasReturnValue(
+                               ignoringParenImpCasts(BoundComparison)))))))
+          .bind("Pred");
+
+  Finder->addMatcher(
+      callExpr(callee(functionDecl(hasName("::std::find_if"))),
+               hasWholeContainerRange(SortedContainer),
+               hasArgument(2, ignoringElidableConstructorCall(BoundPredicate)))
+          .bind("IneffAlg"),
+      this);
 }
 
 void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AlgCall = Result.Nodes.getNodeAs<CallExpr>("IneffAlg");
+  const auto *PredOp = Result.Nodes.getNodeAs<BinaryOperator>("PredOp");
+
+  const Expr *ValueExpr = AlgCall->getArg(2);
+  const Expr *ValueExprAsWritten = ValueExpr;
+  const Expr *ElementExpr = nullptr;
+  if (PredOp) {
+    const BinaryOperatorKind Opcode = PredOp->getOpcode();
+    const bool ElementOnLeft = Opcode == BO_GT || Opcode == BO_GE;
+    ValueExpr = Result.Nodes.getNodeAs<Expr>("Bound");
+    ValueExprAsWritten = ElementOnLeft ? PredOp->getRHS() : PredOp->getLHS();
+    ElementExpr = ElementOnLeft ? PredOp->getLHS() : PredOp->getRHS();
+  }
+
   const auto *IneffCont =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("IneffCont");
   bool PtrToContainer = false;
@@ -68,12 +163,42 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   const bool Unordered = IneffContName.contains("unordered");
   const bool Maplike = IneffContName.contains("map");
 
-  // Store if the key type of the container is compatible with the value
-  // that is searched for.
-  const QualType ValueType = AlgCall->getArg(2)->getType();
+  const QualType ValueType = ValueExpr->getType();
   const QualType KeyType =
       IneffCont->getTemplateArgs()[0].getAsType().getCanonicalType();
-  const bool CompatibleTypes = areTypesCompatible(KeyType, ValueType);
+  bool CompatibleTypes = areTypesCompatible(KeyType, ValueType);
+
+  if (PredOp) {
+    if (!hasBuiltinOrder(KeyType))
+      return;
+
+    if (ValueExpr->getType().isVolatileQualified() ||
+        ValueExpr->HasSideEffects(*Result.Context))
+      return;
+
+    // A generic lambda's template parameters are not in scope at the call
+    // site, and its dependent body is not reliably spelled as a
+    // `binaryOperator`.
+    if (Result.Nodes.getNodeAs<LambdaExpr>("Pred")->isGenericLambda())
+      return;
+
+    const QualType PredType =
+        Result.Nodes.getNodeAs<ParmVarDecl>("PredElement")->getType();
+    if (!areTypesCompatible(KeyType, PredType))
+      return;
+
+    // Arithmetic conversions can make the predicate compare as unsigned
+    // while the container method compares as signed.
+    if (KeyType->isSignedIntegerOrEnumerationType() &&
+        ElementExpr->getType()->isUnsignedIntegerOrEnumerationType())
+      return;
+
+    if (!CompatibleTypes) {
+      if (!boundConvertsExactly(ValueExpr, KeyType, *Result.Context))
+        return;
+      CompatibleTypes = true;
+    }
+  }
 
   // Check if the comparison type for the algorithm and the container matches.
   if (AlgCall->getNumArgs() == 4 && !Unordered) {
@@ -98,6 +223,13 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (Unordered && AlgDecl->getName().contains("bound"))
     return;
+
+  StringRef MethodName = AlgDecl->getName();
+  if (PredOp) {
+    const BinaryOperatorKind Opcode = PredOp->getOpcode();
+    MethodName =
+        Opcode == BO_GT || Opcode == BO_LT ? "upper_bound" : "lower_bound";
+  }
 
   const auto *IneffContExpr = Result.Nodes.getNodeAs<Expr>("IneffContExpr");
   FixItHint Hint;
@@ -130,7 +262,7 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
         CharSourceRange::getTokenRange(IneffContExpr->getSourceRange()), SM,
         LangOpts);
     const StringRef ParamText = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(AlgCall->getArg(2)->getSourceRange()),
+        CharSourceRange::getTokenRange(ValueExprAsWritten->getSourceRange()),
         SM, LangOpts);
     // There is no source text for an expression that covers only part of a
     // macro expansion. Building the replacement from an empty string would
@@ -138,15 +270,16 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
     if (!ContainerText.empty() && !ParamText.empty()) {
       const std::string ReplacementText =
           (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
-           AlgDecl->getName() + "(" + ParamText + ")")
+           MethodName + "(" + ParamText + ")")
               .str();
       Hint = FixItHint::CreateReplacement(CallRange, ReplacementText);
     }
   }
 
   diag(AlgCall->getBeginLoc(),
-       "this STL algorithm call should be replaced with a container method")
-      << Hint;
+       "this STL algorithm call should be replaced with the container "
+       "method '%0'")
+      << MethodName << Hint;
 }
 
 } // namespace clang::tidy::performance
