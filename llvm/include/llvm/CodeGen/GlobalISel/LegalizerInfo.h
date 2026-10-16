@@ -932,6 +932,12 @@ public:
       return *this;
     return actionFor(LegalizeAction::Custom, Types);
   }
+  LegalizeRuleSet &
+  customFor(bool Pred, std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Custom, Types);
+  }
 
   LegalizeRuleSet &customForCartesianProduct(std::initializer_list<LLT> Types) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types);
