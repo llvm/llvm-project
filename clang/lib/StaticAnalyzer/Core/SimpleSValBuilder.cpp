@@ -394,7 +394,6 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
     SingleTy = LSym->getType();
     if (ResultTy != SVB.getConditionType())
       return std::nullopt;
-    // Initialize SingleTy later with a symbol's type.
   } else if (BinaryOperator::isAdditiveOp(Op)) {
     SingleTy = ResultTy;
     if (LSym->getType() != SingleTy)
