@@ -3560,12 +3560,9 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   EXPECT_FALSE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
 
-  // xnack is only a valid modifier when the processor supports on/off modes.
-  // gfx1250 has xnack permanently enabled (xnack supported but without
-  // on/off modes), so an xnack modifier is rejected.
-  EXPECT_FALSE(TargetID::parseTargetIDString(
+  EXPECT_TRUE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx1250:xnack+"));
-  EXPECT_FALSE(TargetID::parseTargetIDString(
+  EXPECT_TRUE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx1250:xnack-"));
 
   // A feature modifier with no "+"/"-" sign is rejected.

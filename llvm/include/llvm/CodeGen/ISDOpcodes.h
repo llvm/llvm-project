@@ -725,6 +725,14 @@ enum NodeType {
   AVGCEILS,
   AVGCEILU,
 
+  /// AVGSUBFLOORS/AVGSUBFLOORU - Averaging subtract - Subtract two integers
+  /// using an integer of type i[N+1], halving the result by shifting it one bit
+  /// right, i.e. rounding towards negative infinity. This is a signed
+  /// difference, not an absolute difference like ABDS/ABDU.
+  /// shr(sub(ext(X), ext(Y)), 1)
+  AVGSUBFLOORS,
+  AVGSUBFLOORU,
+
   /// ABDS/ABDU - Absolute difference - Return the absolute difference between
   /// two numbers interpreted as signed/unsigned.
   /// i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
@@ -1875,6 +1883,33 @@ inline bool isUnsignedIntSetCC(CondCode Code) {
 /// comparison when used with integer operands.
 inline bool isIntEqualitySetCC(CondCode Code) {
   return Code == SETEQ || Code == SETNE;
+}
+
+/// Convert a signed integer condition code to unsigned.
+/// For equality and unsigned conditions, returns the condition unchanged.
+/// For signed conditions, returns the corresponding unsigned condition.
+inline CondCode getUnsignedSetCC(CondCode Code) {
+  switch (Code) {
+  default:
+    llvm_unreachable("Non-integer setcc condition!");
+  case SETEQ:
+  case SETNE:
+  case SETUGT:
+  case SETULT:
+  case SETUGE:
+  case SETULE:
+  case SETTRUE:
+  case SETFALSE:
+    return Code;
+  case SETGT:
+    return SETUGT;
+  case SETLT:
+    return SETULT;
+  case SETGE:
+    return SETUGE;
+  case SETLE:
+    return SETULE;
+  }
 }
 
 /// Return true if this is a setcc instruction that performs an equality

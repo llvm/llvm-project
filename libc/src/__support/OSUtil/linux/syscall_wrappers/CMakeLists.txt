@@ -80,6 +80,34 @@ add_header_library(
 )
 
 add_header_library(
+  sched_rr_get_interval
+  HDRS
+    sched_rr_get_interval.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sched_setaffinity
+  HDRS
+    sched_setaffinity.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_setparam
   HDRS
     sched_setparam.h
@@ -1705,4 +1733,16 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.common
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  execveat
+  HDRS
+    execveat.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
 )
