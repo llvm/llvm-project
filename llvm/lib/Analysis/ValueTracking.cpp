@@ -10986,9 +10986,6 @@ void llvm::findValuesAffectedByCondition(
               AddAffected(X);
               AddAffected(Y);
             }
-            // X nuw- Y u> C -> X u> C
-            if (match(A, m_NUWSub(m_Value(X), m_Value())))
-              AddAffected(X);
           }
         }
 
