@@ -99,9 +99,9 @@ public:
 
   // Returns the subreg index that results from composing this with Idx.
   // Returns NULL if this and Idx don't compose.
-  CodeGenSubRegIndex *compose(CodeGenSubRegIndex *Idx) const {
-    CompMap::const_iterator I = Composed.find(Idx);
-    return I == Composed.end() ? nullptr : I->second;
+  CodeGenSubRegIndex *compose(const CodeGenSubRegIndex *Idx) const {
+    return Idx->EnumValue < ComposedByIdx.size() ? ComposedByIdx[Idx->EnumValue]
+                                                 : nullptr;
   }
 
   // Add a composite subreg index: this+A = B.
@@ -109,14 +109,19 @@ public:
   CodeGenSubRegIndex *addComposite(CodeGenSubRegIndex *A, CodeGenSubRegIndex *B,
                                    const CodeGenHwModes &CGH) {
     assert(A && B);
-    std::pair<CompMap::iterator, bool> Ins = Composed.try_emplace(A, B);
     unsigned NumModes = CGH.getNumModeIds();
 
     // An earlier identical call already added the ranges for every mode, so
     // there is nothing left to do once B has an offset in all of them.
-    if (!Ins.second && Ins.first->second == B &&
-        B->hasOffsetInAllModes(NumModes))
+    if (compose(A) == B && B->hasOffsetInAllModes(NumModes))
       return nullptr;
+
+    std::pair<CompMap::iterator, bool> Ins = Composed.try_emplace(A, B);
+    if (Ins.second) {
+      if (ComposedByIdx.size() <= A->EnumValue)
+        ComposedByIdx.resize(A->EnumValue + 1);
+      ComposedByIdx[A->EnumValue] = B;
+    }
 
     // Synthetic subreg indices that aren't contiguous (for instance ARM
     // register tuples) don't have a bit range, so it's OK to let
@@ -186,6 +191,8 @@ private:
 
   bool OffsetInAllModes = false;
   CompMap Composed;
+  // Composed indexed by the EnumValue of the first index, for compose().
+  SmallVector<CodeGenSubRegIndex *, 0> ComposedByIdx;
 };
 
 /// CodeGenRegister - Represents a register definition.
