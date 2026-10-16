@@ -964,11 +964,15 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       continue;
     MachineInstr *UseMI = UseMO.getParent();
     if (UseMI->isDebugInstr()) {
-      // Debug instructions have no index; use the slot LiveDebugVariables
-      // gives them. Values of IntA other than AValNo stay in IntA.
-      SlotIndex DbgIdx =
-          LIS->getSlotIndexes()->getIndexBefore(*UseMI).getRegSlot();
-      if (IntA.getVNInfoAt(DbgIdx) == AValNo)
+      // Debug instructions have no index; use the instruction that
+      // LiveDebugVariables places them after. A value killed there is still
+      // the one described. Values of IntA other than AValNo stay in IntA.
+      LiveQueryResult LRQ =
+          IntA.Query(LIS->getSlotIndexes()->getIndexBefore(*UseMI));
+      const VNInfo *DbgVNI = LRQ.valueOutOrDead();
+      if (!DbgVNI)
+        DbgVNI = LRQ.valueIn();
+      if (DbgVNI == AValNo)
         UseMO.setReg(NewReg);
       continue;
     }
