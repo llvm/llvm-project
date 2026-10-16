@@ -68,24 +68,11 @@ unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
   return CallSiteEncoding;
 }
 
-static bool isNullOrUndef(const Constant *C) {
-  // Check that the constant isn't all zeros or undefs.
-  if (C->isNullValue() || isa<UndefValue>(C))
-    return true;
-  if (!isa<ConstantAggregate>(C))
-    return false;
-  for (const auto *Operand : C->operand_values()) {
-    if (!isNullOrUndef(cast<Constant>(Operand)))
-      return false;
-  }
-  return true;
-}
-
 static bool isSuitableForBSS(const GlobalVariable *GV) {
   const Constant *C = GV->getInitializer();
 
   // Must have zero initializer.
-  if (!isNullOrUndef(C))
+  if (!C->isNullOrUndef())
     return false;
 
   // Leave constant zeros in readonly constant sections, so they can be shared.
