@@ -641,11 +641,10 @@ static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
 
 static Cursor maybeLexInfinityLiteral(Cursor C, MIToken &Token) {
   if ((C.peek() != '+' && C.peek() != '-') || C.peek(1) != 'i' ||
-      C.peek(2) != 'n' || C.peek(3) != 'f' ||
-      isIdentifierChar(C.peek(4)))
+      C.peek(2) != 'n' || C.peek(3) != 'f' || isIdentifierChar(C.peek(4)))
     return std::nullopt;
 
-  auto Range = C;
+  Cursor Range = C;
   C.advance(4);
   Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
   return C;
