@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
@@ -74,11 +75,19 @@ void TextDiagnosticPrinter::printLocForRemarks(
   // remark message received
   if (tokens.size() == 2) {
     // tokens[0] has the form [base file name]:[line]:[column] and tokens[1] is
-    // the full path to the file. Display the full path (as presented on the
-    // command line) with the line and column, matching Clang: relative paths
-    // (e.g. ../vec.f90, dir/vec.f90) stay relative, and absolute paths are
-    // shown in full. The ":[line]:[column]" suffix is taken from tokens[0].
+    // the path to the file as presented on the command line. The
+    // ":[line]:[column]" suffix is taken from tokens[0].
     llvm::StringRef path = tokens[1];
+
+    // When -fdiagnostics-absolute-paths is in effect, resolve the
+    // file to a simplified absolute path, mirroring clang's
+    // TextDiagnostic::emitFilename() and flang's source-location diagnostics.
+    // Paths that cannot be resolved (e.g. the file no longer exists) are left
+    // unchanged.
+    llvm::SmallString<256> absPath;
+    if (diagOpts.AbsolutePath && !llvm::sys::fs::real_path(path, absPath))
+      path = absPath;
+
     llvm::StringRef lineAndColumn = tokens[0].substr(tokens[0].find(':'));
 
     // Used for changing only the bold attribute

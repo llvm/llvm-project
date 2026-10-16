@@ -177,6 +177,10 @@ public:
   }
   void setShowColors(bool showColors) { showColors_ = showColors; }
   bool getShowColors() const { return showColors_; }
+  void setShowAbsolutePaths(bool showAbsolutePaths) {
+    showAbsolutePaths_ = showAbsolutePaths;
+  }
+  bool getShowAbsolutePaths() const { return showAbsolutePaths_; }
   std::optional<ProvenanceRange> GetInclusionInfo(
       const std::optional<ProvenanceRange> &) const;
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
@@ -230,6 +234,7 @@ private:
   std::list<std::string> searchPath_;
   Encoding encoding_{Encoding::UTF_8};
   bool showColors_{false};
+  bool showAbsolutePaths_{false};
 };
 
 // Represents the result of preprocessing and prescanning a single source

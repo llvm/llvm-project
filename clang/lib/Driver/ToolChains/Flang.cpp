@@ -1373,6 +1373,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   handleColorDiagnosticsArgs(D, Args, CmdArgs);
 
+  if (Args.hasArg(options::OPT_fdiagnostics_absolute_paths))
+    CmdArgs.push_back("-fdiagnostics-absolute-paths");
+
   addLTOOptions(Args, CmdArgs);
 
   // -fPIC and related options.

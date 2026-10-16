@@ -158,6 +158,10 @@ page](https://llvm.org/releases/).
   Both modes fill every storage byte including struct padding.
   PowerPC vector locals (`vector(real(4))` etc.) are not initialized.
 
+- Added the clang-compatible `-fdiagnostics-absolute-paths` flag, which makes
+  flang print absolute paths in its diagnostics instead of the (relative) path
+  it was invoked with.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
