@@ -11657,21 +11657,28 @@ describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
 
   auto Expr = DIExpression::get(MI.getMF()->getFunction().getContext(), {});
 
+  // A copy from the zero register loads zero. WZR and XZR share DWARF register
+  // 31 with WSP and SP, so naming the source register would describe the
+  // stack pointer instead.
+  auto LoadedFrom = [&](Register Src) {
+    if (Src == AArch64::WZR || Src == AArch64::XZR)
+      return ParamLoadedValue(MachineOperand::CreateImm(0), Expr);
+    return ParamLoadedValue(MachineOperand::CreateReg(Src, false), Expr);
+  };
+
   // If the described register is the destination, just return the source.
   if (DestReg == DescribedReg)
-    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
+    return LoadedFrom(SrcReg);
 
   // ORRWrs zero-extends to 64-bits, so we need to consider such cases.
   if (MI.getOpcode() == AArch64::ORRWrs &&
       TRI->isSuperRegister(DestReg, DescribedReg))
-    return ParamLoadedValue(MachineOperand::CreateReg(SrcReg, false), Expr);
+    return LoadedFrom(SrcReg);
 
   // We may need to describe the lower part of a ORRXrs move.
   if (MI.getOpcode() == AArch64::ORRXrs &&
-      TRI->isSubRegister(DestReg, DescribedReg)) {
-    Register SrcSubReg = TRI->getSubReg(SrcReg, AArch64::sub_32);
-    return ParamLoadedValue(MachineOperand::CreateReg(SrcSubReg, false), Expr);
-  }
+      TRI->isSubRegister(DestReg, DescribedReg))
+    return LoadedFrom(TRI->getSubReg(SrcReg, AArch64::sub_32));
 
   assert(!TRI->isSuperOrSubRegisterEq(DestReg, DescribedReg) &&
          "Unhandled ORR[XW]rs copy case");

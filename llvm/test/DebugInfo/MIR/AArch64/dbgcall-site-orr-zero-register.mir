@@ -1,0 +1,143 @@
+# RUN: llc -emit-call-site-info -start-before=aarch64-asm-printer -filetype=obj -o - %s \
+# RUN:   | llvm-dwarfdump --debug-info - | FileCheck %s --implicit-check-not=breg31
+
+# A copy from the zero register loads zero. WZR and XZR are DWARF register 31,
+# which is also WSP and SP, so naming the copy's source register described the
+# argument as the stack pointer (DW_OP_breg31 WSP+0).
+#
+# These cases cover the paths of describeORRLoadedValue() that the IR test
+# DebugInfo/AArch64/call-site-param-zero-register.ll does not reach:
+#
+#   super_reg: $w0 = ORRWrs $wzr, $wzr describes the 64-bit $x0 parameter,
+#              the super-register the 32-bit copy zero-extends into.
+#   sub_reg:   $x0 = ORRXrs $xzr, $xzr describes the 32-bit $w0 parameter,
+#              the low half of the 64-bit copy.
+#
+# extern void call_int(int);
+# extern void call_long(long);
+#
+# void super_reg(void) { call_long(0); }
+# void sub_reg(void) { call_int(0); }
+
+# CHECK:      DW_TAG_call_site
+# CHECK-NEXT:   DW_AT_call_origin ({{.*}} "call_long")
+# CHECK:        DW_TAG_call_site_parameter
+# CHECK-NEXT:     DW_AT_location (DW_OP_reg0 W0)
+# CHECK-NEXT:     DW_AT_call_value (DW_OP_lit0)
+
+# CHECK:      DW_TAG_call_site
+# CHECK-NEXT:   DW_AT_call_origin ({{.*}} "call_int")
+# CHECK:        DW_TAG_call_site_parameter
+# CHECK-NEXT:     DW_AT_location (DW_OP_reg0 W0)
+# CHECK-NEXT:     DW_AT_call_value (DW_OP_lit0)
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64"
+
+  define void @super_reg() #0 !dbg !14 {
+  entry:
+    tail call void @call_long(i64 0), !dbg !15
+    ret void, !dbg !16
+  }
+
+  define void @sub_reg() #0 !dbg !17 {
+  entry:
+    tail call void @call_int(i32 0), !dbg !18
+    ret void, !dbg !19
+  }
+
+  declare !dbg !4 void @call_int(i32)
+  declare !dbg !8 void @call_long(i64)
+
+  attributes #0 = { noinline nounwind "frame-pointer"="all" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, isOptimized: true, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "zero.c", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !DISubprogram(name: "call_int", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !DISubprogram(name: "call_long", scope: !1, file: !1, line: 2, type: !9, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{null, !11}
+  !11 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null}
+  !14 = distinct !DISubprogram(name: "super_reg", scope: !1, file: !1, line: 4, type: !12, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !15 = !DILocation(line: 4, column: 24, scope: !14)
+  !16 = !DILocation(line: 4, column: 38, scope: !14)
+  !17 = distinct !DISubprogram(name: "sub_reg", scope: !1, file: !1, line: 5, type: !12, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !18 = !DILocation(line: 5, column: 22, scope: !17)
+  !19 = !DILocation(line: 5, column: 35, scope: !17)
+
+...
+---
+name:            super_reg
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
+callSites:
+  - { bb: 0, offset: 6, fwdArgRegs:
+      - { arg: 0, reg: '$x0' } }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $lr
+
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    $w0 = ORRWrs $wzr, $wzr, 0, implicit-def $x0, debug-location !15
+    BL @call_long, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !15
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !16 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    RET undef $lr, debug-location !16
+
+...
+---
+name:            sub_reg
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp' }
+callSites:
+  - { bb: 0, offset: 6, fwdArgRegs:
+      - { arg: 0, reg: '$w0' } }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $lr
+
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    $x0 = ORRXrs $xzr, $xzr, 0, debug-location !18
+    BL @call_int, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp, debug-location !18
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !19 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    RET undef $lr, debug-location !19
+
+...
