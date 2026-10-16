@@ -1664,3 +1664,97 @@ entry:
   %or = or <2 x i32> %add, %c
   ret <2 x i32> %or
 }
+
+define i32 @xor_disjoint_or_fold_basic(i32 %x, i32 %y) {
+; CHECK-LABEL: @xor_disjoint_or_fold_basic(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[TMP1]], 17
+; CHECK-NEXT:    ret i32 [[XOR2]]
+;
+  %od = or disjoint i32 %y, 1
+  %xor1 = xor i32 %x, %od
+  %xor2 = xor i32 %xor1, 16
+  ret i32 %xor2
+}
+
+define i32 @xor_disjoint_or_fold_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @xor_disjoint_or_fold_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[TMP1]], 17
+; CHECK-NEXT:    ret i32 [[XOR2]]
+;
+  %od = or disjoint i32 %y, 1
+  %xor1 = xor i32 %od, %x
+  %xor2 = xor i32 %xor1, 16
+  ret i32 %xor2
+}
+
+define <4 x i32> @xor_disjoint_or_fold_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @xor_disjoint_or_fold_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor <4 x i32> [[TMP1]], splat (i32 17)
+; CHECK-NEXT:    ret <4 x i32> [[XOR2]]
+;
+  %od = or disjoint <4 x i32> %y, splat (i32 1)
+  %xor1 = xor <4 x i32> %x, %od
+  %xor2 = xor <4 x i32> %xor1, splat (i32 16)
+  ret <4 x i32> %xor2
+}
+
+; Negative test: plain or without disjoint flag
+define i32 @xor_or_no_disjoint_flag(i32 %x, i32 %y) {
+; CHECK-LABEL: @xor_or_no_disjoint_flag(
+; CHECK-NEXT:    [[OD:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[X:%.*]], [[OD]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[XOR1]], 16
+; CHECK-NEXT:    ret i32 [[XOR2]]
+;
+  %od = or i32 %y, 1
+  %xor1 = xor i32 %x, %od
+  %xor2 = xor i32 %xor1, 16
+  ret i32 %xor2
+}
+
+; Positive test: inner xor has multiple uses (oneuse is on or disjoint, not xor)
+define i8 @xor_disjoint_or_fold_multiuse_xor(i8 %x, i8 %y) {
+; CHECK-LABEL: @xor_disjoint_or_fold_multiuse_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[TMP1]], 1
+; CHECK-NEXT:    call void @use(i8 [[XOR1]])
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[TMP1]], 17
+; CHECK-NEXT:    ret i8 [[XOR2]]
+;
+  %od = or disjoint i8 %y, 1
+  %xor1 = xor i8 %x, %od
+  call void @use(i8 %xor1)
+  %xor2 = xor i8 %xor1, 16
+  ret i8 %xor2
+}
+
+; Negative test: or disjoint has multiple uses
+define i8 @xor_disjoint_or_fold_multiuse_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @xor_disjoint_or_fold_multiuse_or(
+; CHECK-NEXT:    [[OD:%.*]] = or disjoint i8 [[Y:%.*]], 1
+; CHECK-NEXT:    call void @use(i8 [[OD]])
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[X:%.*]], [[OD]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[XOR1]], 16
+; CHECK-NEXT:    ret i8 [[XOR2]]
+;
+  %od = or disjoint i8 %y, 1
+  call void @use(i8 %od)
+  %xor1 = xor i8 %x, %od
+  %xor2 = xor i8 %xor1, 16
+  ret i8 %xor2
+}
+
+; Negative test: avoid hoisting with ConstantExpr operands.
+define i32 @xor_disjoint_or_fold_constantexpr(i32 %x) {
+; CHECK-LABEL: @xor_disjoint_or_fold_constantexpr(
+; CHECK-NOT:    xor i32 {{.*}}, 17
+; CHECK:        ret i32
+;
+  %od = or disjoint i32 ptrtoint (ptr @G1 to i32), 1
+  %xor1 = xor i32 %x, %od
+  %xor2 = xor i32 %xor1, 16
+  ret i32 %xor2
+}
