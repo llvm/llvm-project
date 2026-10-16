@@ -517,8 +517,8 @@ define <2 x float> @buildvector(<2 x float> %A, <2 x float> %B) nounwind  {
 ; SSE-NEXT:    ## xmm3 = xmm1[1,1,3,3]
 ; SSE-NEXT:    addss %xmm2, %xmm3 ## encoding: [0xf3,0x0f,0x58,0xda]
 ; SSE-NEXT:    addss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x58,0xc1]
-; SSE-NEXT:    insertps $16, %xmm3, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x21,0xc3,0x10]
-; SSE-NEXT:    ## xmm0 = xmm0[0],xmm3[0],xmm0[2,3]
+; SSE-NEXT:    insertps $28, %xmm3, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x21,0xc3,0x1c]
+; SSE-NEXT:    ## xmm0 = xmm0[0],xmm3[0],zero,zero
 ; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 ;
 ; AVX1-LABEL: buildvector:
@@ -529,8 +529,8 @@ define <2 x float> @buildvector(<2 x float> %A, <2 x float> %B) nounwind  {
 ; AVX1-NEXT:    ## xmm3 = xmm1[1,1,3,3]
 ; AVX1-NEXT:    vaddss %xmm3, %xmm2, %xmm2 ## encoding: [0xc5,0xea,0x58,0xd3]
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x58,0xc1]
-; AVX1-NEXT:    vinsertps $16, %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0xc2,0x10]
-; AVX1-NEXT:    ## xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps $28, %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0xc2,0x1c]
+; AVX1-NEXT:    ## xmm0 = xmm0[0],xmm2[0],zero,zero
 ; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 ;
 ; AVX512-LABEL: buildvector:
@@ -541,8 +541,8 @@ define <2 x float> @buildvector(<2 x float> %A, <2 x float> %B) nounwind  {
 ; AVX512-NEXT:    ## xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vaddss %xmm3, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xea,0x58,0xd3]
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x58,0xc1]
-; AVX512-NEXT:    vinsertps $16, %xmm2, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc2,0x10]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX512-NEXT:    vinsertps $28, %xmm2, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x21,0xc2,0x1c]
+; AVX512-NEXT:    ## xmm0 = xmm0[0],xmm2[0],zero,zero
 ; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 entry:
   %tmp7 = extractelement <2 x float> %A, i32 0
