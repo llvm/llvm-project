@@ -359,6 +359,8 @@ private:
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderPrefetchLen(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                           int OpIdx) const;
 

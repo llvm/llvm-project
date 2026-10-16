@@ -297,6 +297,14 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
     break;
   }
+  case Intrinsic::amdgcn_flat_prefetch:
+  case Intrinsic::amdgcn_global_prefetch: {
+    // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
+    uint64_t CPol = cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue();
+    Check(CPol <= 0x3f && (CPol & 0x7) != 0x7,
+          "invalid cache policy for prefetch", &Call);
+    break;
+  }
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:

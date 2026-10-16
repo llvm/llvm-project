@@ -7590,6 +7590,13 @@ void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
     MIB.addImm(Op.getImm());
 }
 
+void AMDGPUInstructionSelector::renderPrefetchLen(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  Register Len = MI.getOperand(OpIdx).getReg();
+  MIB.addImm(*getIConstantVRegSExtVal(Len, *MRI) & 0x1f);
+}
+
 void AMDGPUInstructionSelector::renderZextBoolTImm(MachineInstrBuilder &MIB,
                                                    const MachineInstr &MI,
                                                    int OpIdx) const {
