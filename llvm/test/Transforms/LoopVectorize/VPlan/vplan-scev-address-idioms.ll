@@ -534,7 +534,7 @@ define void @ptrtoaddr_gep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%p> = getelementptr inbounds ir<null>, ir<%iv>
-; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = ptrtoaddr ir<%p> to i64
+; CHECK-NEXT:      EMIT ir<%idx> = ptrtoaddr ir<%p> to i64
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP4]]>
@@ -601,7 +601,7 @@ define void @ptrtoint_gep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%p> = getelementptr inbounds ir<null>, ir<%iv>
-; CHECK-NEXT:      EMIT-SCALAR ir<%idx> = ptrtoint ir<%p> to i64
+; CHECK-NEXT:      EMIT ir<%idx> = ptrtoint ir<%p> to i64
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%B>, ir<%iv>
