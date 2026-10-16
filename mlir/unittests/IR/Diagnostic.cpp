@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -123,12 +125,13 @@ TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
     {
       ParallelDiagnosticHandler inner(&ctx);
       // The slot is taken by outer, so these go through the map fallback.
-      inner.setOrderIDForThread(2);
-      emitError(UnknownLoc::get(&ctx), "inner-2");
-      inner.setOrderIDForThread(1);
-      emitError(UnknownLoc::get(&ctx), "inner-1");
+      // Inner ids are deliberately disjoint from outer's 0/1.
+      inner.setOrderIDForThread(12);
+      emitError(UnknownLoc::get(&ctx), "inner-12");
+      inner.setOrderIDForThread(11);
+      emitError(UnknownLoc::get(&ctx), "inner-11");
       inner.eraseOrderIDForThread();
-    } // inner emits sorted: inner-1, inner-2.
+    } // inner emits sorted: inner-11, inner-12.
     // The slot still names outer after the nested use: the inner flush was
     // attributed to outer's element, and this is held with id 1, so the
     // id-0 diagnostic below sorts first.
@@ -139,9 +142,39 @@ TEST(ParallelDiagnosticHandler, NestedFallbackPreservesOrder) {
   } // outer emits sorted: outer-B, then the id-1 group in arrival order.
   ASSERT_EQ(seen.size(), 4u);
   EXPECT_NE(seen[0].find("outer-B"), std::string::npos);
-  EXPECT_NE(seen[1].find("inner-1"), std::string::npos);
-  EXPECT_NE(seen[2].find("inner-2"), std::string::npos);
+  EXPECT_NE(seen[1].find("inner-11"), std::string::npos);
+  EXPECT_NE(seen[2].find("inner-12"), std::string::npos);
   EXPECT_NE(seen[3].find("outer-A"), std::string::npos);
+}
+
+TEST(ParallelDiagnosticHandler, MultithreadedOrderingHonored) {
+  MLIRContext ctx;
+  // Element i emits "diag-i"; whatever the thread interleaving, the flush
+  // must come out in index order.
+  constexpr unsigned numElements = 1000;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  std::vector<unsigned> indices(numElements);
+  std::iota(indices.begin(), indices.end(), 0);
+  ASSERT_TRUE(succeeded(
+      failableParallelForEach(&ctx, indices, [&](unsigned i) -> LogicalResult {
+        emitError(UnknownLoc::get(&ctx), "diag-" + Twine(i));
+        return success();
+      })));
+
+  ASSERT_EQ(seen.size(), numElements);
+  for (size_t i = 0; i < seen.size(); ++i) {
+    size_t pos = seen[i].find("diag-");
+    ASSERT_NE(pos, std::string::npos);
+    EXPECT_EQ(std::stoul(seen[i].substr(pos + 5)), i);
+  }
 }
 
 TEST(SourceMgrDiagnosticVerifierHandler, OutlivesRegisteredContext) {
