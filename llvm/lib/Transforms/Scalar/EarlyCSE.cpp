@@ -269,18 +269,16 @@ static unsigned getHashValueImpl(SimpleValue Val) {
                       hash_combine_range(Inst->operand_values()));
 }
 
-#ifndef NDEBUG
-// -earlycse-debug-hash of the function being processed, bound once per run.
-static LLVM_THREAD_LOCAL bool DebugHash;
-#endif
-
 unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
 #ifndef NDEBUG
   // If -earlycse-debug-hash was specified, return a constant -- this
   // will force all hashing to collide, so we'll exhaustively search
   // the table for a match, and the assertion in isEqual will fire if
   // there's a bug causing equal keys to hash differently.
-  if (DebugHash)
+  if (Val.Inst->getContext()
+          .getLibraryOptions()
+          .get<ScalarOptions>()
+          .earlycse_debug_hash)
     return 0;
 #endif
   return getHashValueImpl(Val);
@@ -1688,9 +1686,6 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 }
 
 bool EarlyCSE::run() {
-#ifndef NDEBUG
-  DebugHash = Opts.earlycse_debug_hash;
-#endif
   // Note, deque is being used here because there is significant performance
   // gains over vector when the container becomes very large due to the
   // specific access patterns. For more information see the mailing list

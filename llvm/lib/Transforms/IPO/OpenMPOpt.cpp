@@ -57,6 +57,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/AtomicScope.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -1838,7 +1840,7 @@ private:
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
     Function *F = RuntimeCall.getCaller();
     BasicBlock &Entry = F->getEntryBlock();
-    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrAlloca());
     Value *Handle = IRBuilder.Builder.CreateAlloca(
         IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
     Handle =
@@ -3820,6 +3822,33 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   static const char ID;
 };
 
+// Fences stronger than a workgroup order memory the SPMD barrier does not.
+static bool strictFence(const FenceInst &FI) {
+  SyncScope::ID SS = FI.getSyncScopeID();
+  if (SS == SyncScope::SingleThread)
+    return false;
+  if (SS == SyncScope::System)
+    return true;
+  std::optional<StringRef> Name = FI.getContext().getSyncScopeName(SS);
+  if (!Name)
+    return true;
+  auto Parsed = parseAtomicScopeIRString(
+      Triple(FI.getModule()->getTargetTriple()), *Name);
+  if (!Parsed)
+    return true;
+  switch (Parsed->first) {
+  case AtomicScope::Single:
+  case AtomicScope::Wavefront:
+  case AtomicScope::Workgroup:
+    return false;
+  case AtomicScope::Cluster:
+  case AtomicScope::Device:
+  case AtomicScope::System:
+    return true;
+  }
+  return true;
+}
+
 /// The function kernel info abstract attribute, basically, what can we say
 /// about a function with regards to the KernelInfoState.
 struct AAKernelInfoFunction : AAKernelInfo {
@@ -4259,6 +4288,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     };
 
     auto &AllocSharedRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    auto IsStrictFence = [](const Instruction &I) {
+      if (const auto *FI = dyn_cast<FenceInst>(&I))
+        return strictFence(*FI);
+      return false;
+    };
     SmallPtrSet<BasicBlock *, 8> Visited;
     for (Instruction *GuardedI : SPMDCompatibilityTracker) {
       BasicBlock *BB = GuardedI->getParent();
@@ -4274,7 +4308,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
         Instruction *I = &*IP;
         if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
           continue;
-        if (!I->user_empty() || !SPMDCompatibilityTracker.contains(I)) {
+        // Nothing tracked is sunk across a strict fence.
+        if (IsStrictFence(*I) || !I->user_empty() ||
+            !SPMDCompatibilityTracker.contains(I)) {
           LastEffect = nullptr;
           continue;
         }
@@ -4301,6 +4337,19 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
       Instruction *GuardedRegionStart = nullptr, *GuardedRegionEnd = nullptr;
       for (Instruction &I : *BB) {
+        // A strict fence splits a guarded region so it stays outside it.
+        if (IsStrictFence(I)) {
+          if (SPMDCompatibilityTracker.contains(&I))
+            CalleeAAFunction.getGuardedInstructions().insert(&I);
+          if (GuardedRegionStart) {
+            GuardedRegions.push_back(
+                std::make_pair(GuardedRegionStart, GuardedRegionEnd));
+            GuardedRegionStart = nullptr;
+            GuardedRegionEnd = nullptr;
+          }
+          continue;
+        }
+
         // If instruction I needs to be guarded update the guarded region
         // bounds.
         if (SPMDCompatibilityTracker.contains(&I)) {

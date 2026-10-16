@@ -4377,8 +4377,11 @@ class GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 
+  // Always uses MemDep, ignoring -enable-gvn-memdep and -enable-gvn-memoryssa.
   explicit GVNLegacyPass(bool ScalarPRE = true)
-      : FunctionPass(ID), Impl(GVNOptions().setScalarPRE(ScalarPRE)) {
+      : FunctionPass(ID),
+        Impl(GVNOptions().setMemDep(true).setMemorySSA(false).setScalarPRE(
+            ScalarPRE)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -4387,26 +4390,16 @@ public:
       return false;
 
     Impl.Opts = &F.getContext().getLibraryOptions().get<ScalarOptions>();
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    MemorySSA *MSSA = nullptr;
-    std::unique_ptr<MemorySSA> LocalMSSA;
-    if (auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>()) {
-      MSSA = &MSSAWP->getMSSA();
-    } else if (Impl.isMemorySSAEnabled()) {
-      // getAnalysisUsage cannot read the context's -enable-gvn-memoryssa.
-      LocalMSSA = std::make_unique<MemorySSA>(F, &AA, &DT);
-      MSSA = LocalMSSA.get();
-    }
-
+    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     return Impl.run(
-        F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
-        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F), AA,
-        Impl.isMemDepEnabled()
-            ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
-            : nullptr,
+        F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
+        getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
+        getAnalysis<AAResultsWrapperPass>().getAAResults(),
+        &getAnalysis<MemoryDependenceWrapperPass>().getMemDep(),
         getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
-        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(), MSSA);
+        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
+        MSSAWP ? &MSSAWP->getMSSA() : nullptr);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -4433,7 +4426,6 @@ char GVNLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)

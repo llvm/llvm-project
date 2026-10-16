@@ -25,6 +25,7 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
@@ -38,6 +39,7 @@
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/thread_attributes.h"
+#include "src/string/memory_utils/inline_memset.h"
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
@@ -45,9 +47,10 @@
 #include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
-#include <linux/param.h>         // For EXEC_PAGESIZE.
-#include <linux/prctl.h>         // For PR_SET_NAME
-#include <sys/syscall.h>         // For syscall numbers.
+#include "hdr/types/sigset_t.h"
+#include <linux/param.h> // For EXEC_PAGESIZE.
+#include <linux/prctl.h> // For PR_SET_NAME
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -505,6 +508,12 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   if (!attrib->detach_state.compare_exchange_strong(
           joinable_state, uint32_t(DetachState::EXITING))) {
     // Thread is detached so cleanup the resources.
+    // Signals must be blocked before unmapping the stack to prevent any signal
+    // handler from running without a stack.
+    sigset_t set;
+    inline_memset(&set, 0xff, sizeof(sigset_t));
+    (void)linux_syscalls::rt_sigprocmask(SIG_BLOCK, &set, nullptr);
+
     cleanup_thread_resources(attrib);
 
     // Set the CLEAR_TID address to nullptr to prevent the kernel

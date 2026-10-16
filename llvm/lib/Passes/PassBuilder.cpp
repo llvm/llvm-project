@@ -1165,21 +1165,19 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName == "recover") {
-      Result.RecoverParam = true;
+      Result.Recover = true;
     } else if (ParamName == "kernel") {
-      Result.KernelParam = true;
+      Result.Kernel = true;
     } else if (ParamName.consume_front("track-origins=")) {
-      int TrackOrigins;
-      if (ParamName.getAsInteger(0, TrackOrigins))
+      if (ParamName.getAsInteger(0, Result.TrackOrigins))
         return make_error<StringError>(
             formatv("invalid argument to MemorySanitizer pass track-origins "
                     "parameter: '{}'",
                     ParamName)
                 .str(),
             inconvertibleErrorCode());
-      Result.TrackOriginsParam = TrackOrigins;
     } else if (ParamName == "eager-checks") {
-      Result.EagerChecksParam = true;
+      Result.EagerChecks = true;
     } else {
       return make_error<StringError>(
           formatv("invalid MemorySanitizer pass parameter '{}'", ParamName)

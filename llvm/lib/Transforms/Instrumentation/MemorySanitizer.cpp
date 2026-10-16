@@ -595,30 +595,14 @@ void insertModuleCtor(const InstrumentationOptions &Opts, Module &M) {
 MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC)
     : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC) {}
 
-static MemorySanitizerOptions applyParams(MemorySanitizerOptions O) {
-  O.Kernel = O.KernelParam.value_or(O.Kernel);
-  O.TrackOrigins = O.TrackOriginsParam.value_or(O.TrackOrigins);
-  O.Recover = O.RecoverParam.value_or(O.Recover);
-  O.EagerChecks = O.EagerChecksParam.value_or(O.EagerChecks);
-  return O;
-}
-
-static MemorySanitizerOptions applyKernelDefaults(MemorySanitizerOptions O) {
-  if (O.Kernel) {
-    O.TrackOrigins = 2;
-    O.Recover = true;
-  }
-  return O;
-}
-
 static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
                                              MemorySanitizerOptions O) {
   O.Kernel = valueOr(Opts.msan_kernel, O.Kernel);
-  O = applyKernelDefaults(O);
-  O.TrackOrigins = Opts.msan_track_origins.value_or(O.TrackOrigins);
-  O.Recover = valueOr(Opts.msan_keep_going, O.Recover);
+  O.TrackOrigins =
+      Opts.msan_track_origins.value_or(O.Kernel ? 2 : O.TrackOrigins);
+  O.Recover = valueOr(Opts.msan_keep_going, O.Kernel || O.Recover);
   O.EagerChecks = valueOr(Opts.msan_eager_checks, O.EagerChecks);
-  return applyParams(O);
+  return O;
 }
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
@@ -660,14 +644,13 @@ void MemorySanitizerPass::printPipeline(
   static_cast<PassInfoMixin<MemorySanitizerPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << '<';
-  MemorySanitizerOptions O = applyParams(applyKernelDefaults(Options));
-  if (O.Recover)
+  if (Options.Recover)
     OS << "recover;";
-  if (O.Kernel)
+  if (Options.Kernel)
     OS << "kernel;";
-  if (O.EagerChecks)
+  if (Options.EagerChecks)
     OS << "eager-checks;";
-  OS << "track-origins=" << O.TrackOrigins;
+  OS << "track-origins=" << Options.TrackOrigins;
   OS << '>';
 }
 

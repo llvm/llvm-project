@@ -15,7 +15,6 @@ from lldbsuite.test.tools.lldb_dap.types import (
 class TestDAP_setDataBreakpoints(DAPTestCaseBase):
     ACCESS_TYPES = ["read", "write", "readWrite"]
 
-    @skipIfWindows
     def test_duplicate_start_addresses(self):
         """Test setDataBreakpoints with multiple watchpoints starting at the same addresses."""
         program = self.getBuildArtifact("a.out")
@@ -67,7 +66,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_expression(self):
         """Tests setting data breakpoints on expression."""
         source = "main.cpp"
@@ -112,7 +110,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_functionality(self):
         """Tests setting data breakpoints on variable."""
         source = "main.cpp"
@@ -188,7 +185,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
     # Test works but test program faults after continuing.
     # https://github.com/llvm/llvm-project/issues/217961
     @skipIf(oslist=["linux"], archs=["arm$"])
-    @skipIfWindows
     def test_console_watchpoint_preserved(self):
         """Test setDataBreakpoints must not delete watchpoints created via the console."""
         source = "main.cpp"
@@ -235,7 +231,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.evaluate("`watchpoint delete 1", context="repl")
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_hit_count_preserved(self):
         """Test setDataBreakpoints preserves hit counts of existing watchpoints."""
         source = "main.cpp"
@@ -298,7 +293,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_type_change_recreates(self):
         """Test setDataBreakpoints recreates watchpoint in case of changing type."""
         source = "main.cpp"
@@ -341,7 +335,6 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.set_data_breakpoints([])
         session.continue_to_exit()
 
-    @skipIfWindows
     def test_bytes(self):
         """Tests setting data breakpoints on memory range."""
         source = self.getSourcePath("main.cpp")

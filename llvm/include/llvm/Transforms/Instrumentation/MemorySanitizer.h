@@ -16,7 +16,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <optional>
 
 namespace llvm {
 class Module;
@@ -33,11 +32,6 @@ struct MemorySanitizerOptions {
   int TrackOrigins;
   bool Recover;
   bool EagerChecks;
-  // msan<...> parameters, which override the -msan-* options.
-  std::optional<bool> KernelParam;
-  std::optional<int> TrackOriginsParam;
-  std::optional<bool> RecoverParam;
-  std::optional<bool> EagerChecksParam;
 };
 
 /// A module pass for msan instrumentation.

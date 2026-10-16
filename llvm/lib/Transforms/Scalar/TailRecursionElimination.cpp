@@ -1103,7 +1103,7 @@ bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
 
   if (UncondBrInst *BI = dyn_cast<UncondBrInst>(TI)) {
     BasicBlock *Succ = BI->getSuccessor();
-    ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrDbg(true));
+    ReturnInst *Ret = dyn_cast<ReturnInst>(Succ->getFirstNonPHIOrPseudoProbe());
 
     if (!Ret)
       return false;
