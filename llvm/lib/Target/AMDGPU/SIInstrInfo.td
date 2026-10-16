@@ -923,23 +923,6 @@ def cond_as_i32imm: SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(N->get(), SDLoc(N), MVT::i32);
 }]>;
 
-// Copied from the AArch64 backend:
-def bitcast_fpimm_to_i16 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i16);
-}]>;
-
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-// Copied from the AArch64 backend:
-def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
 def as_hw_round_mode : SDNodeXForm<timm, [{
   // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
   // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
@@ -2900,6 +2883,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsPacked = Src0VT.isVector;
   field bit HasOpSel = IsPacked;
+  // The instruction has no op_sel_hi field, so encode those bits as 0. Note
+  // that some VOP3P instructions may reuse the op_sel_hi bits for other
+  // purposes (for example, IsDOT), and thus should not be forced to 0.
+  field bit HasNoOpSelHi = 0;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
 

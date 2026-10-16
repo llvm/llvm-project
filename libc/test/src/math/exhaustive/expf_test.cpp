@@ -54,6 +54,27 @@ TEST_F(LlvmLibcExpfFloatExhaustiveTest, NegativeRange) {
   test_full_range(mpfr::RoundingMode::Nearest, NEG_START, NEG_STOP);
 }
 
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+// Float-eval implementation correctly rounded only in round-to-nearest,
+// ties-to-even mode: tested against the double-eval version in that mode
+// with a 0 ULP bound.
+static float cr_expf_rn(float x) {
+  return LIBC_NAMESPACE::math::float_eval::cr_expf_rn(x);
+}
+
+using LlvmLibcExpfFloatCrRnExhaustiveTest =
+    LlvmLibcUnaryOpAgainstBaselineExhaustiveMathTest<
+        float, LIBC_NAMESPACE::math::double_eval::expf, cr_expf_rn, 0>;
+
+TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, PositiveRange) {
+  test_full_range(mpfr::RoundingMode::Nearest, POS_START, POS_STOP);
+}
+
+TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, NegativeRange) {
+  test_full_range(mpfr::RoundingMode::Nearest, NEG_START, NEG_STOP);
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+
 // Statically rounded implementation: tested against double_eval across all
 // roundings.
 using LlvmLibcExpfStaticRoundingExhaustiveTest =

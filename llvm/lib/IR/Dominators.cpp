@@ -66,7 +66,7 @@ template class LLVM_EXPORT_TEMPLATE
 template class LLVM_EXPORT_TEMPLATE
     llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
 
-template class llvm::cfg::Update<BasicBlock *>;
+template class LLVM_EXPORT_TEMPLATE llvm::cfg::Update<BasicBlock *>;
 
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
