@@ -325,14 +325,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   }
 }
 
-bool Attribute::isExistingAttribute(StringRef Name) {
-  return StringSwitch<bool>(Name)
-#define GET_ATTR_NAMES
-#define ATTRIBUTE_ALL(ENUM_NAME, DISPLAY_NAME) .Case(#DISPLAY_NAME, true)
-#include "llvm/IR/Attributes.inc"
-      .Default(false);
-}
-
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -1681,17 +1673,6 @@ AttributeList AttributeList::get(LLVMContext &C, unsigned Index,
 }
 
 AttributeList AttributeList::get(LLVMContext &C, unsigned Index,
-                                 ArrayRef<Attribute::AttrKind> Kinds,
-                                 ArrayRef<uint64_t> Values) {
-  assert(Kinds.size() == Values.size() && "Mismatched attribute values.");
-  SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
-  auto VI = Values.begin();
-  for (const auto K : Kinds)
-    Attrs.emplace_back(Index, Attribute::get(C, K, *VI++));
-  return get(C, Attrs);
-}
-
-AttributeList AttributeList::get(LLVMContext &C, unsigned Index,
                                  ArrayRef<StringRef> Kinds) {
   SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
   for (const auto &K : Kinds)
@@ -2799,19 +2780,6 @@ bool AttributeFuncs::areOutlineCompatible(const Function &A,
 void AttributeFuncs::mergeAttributesForInlining(Function &Caller,
                                                 const Function &Callee) {
   mergeFnAttrs(Caller, Callee);
-}
-
-void AttributeFuncs::mergeAttributesForOutlining(Function &Base,
-                                                const Function &ToMerge) {
-
-  // We merge functions so that they meet the most general case.
-  // For example, if the NoNansFPMathAttr is set in one function, but not in
-  // the other, in the merged function we can say that the NoNansFPMathAttr
-  // is not set.
-  // However if we have the SpeculativeLoadHardeningAttr set true in one
-  // function, but not the other, we make sure that the function retains
-  // that aspect in the merged function.
-  mergeFnAttrs(Base, ToMerge);
 }
 
 void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
