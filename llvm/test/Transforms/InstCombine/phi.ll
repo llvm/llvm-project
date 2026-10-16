@@ -923,14 +923,16 @@ define i1 @test_multiple_identical_users_fmf(i1 %c, float %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd nnan float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[U1:%.*]] = phi float [ [[TMP0]], [[IF]] ], [ 3.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi float [ [[X:%.*]], [[IF]] ], [ 2.000000e+00, [[ELSE]] ]
+; CHECK-NEXT:    [[U1:%.*]] = fadd nnan float [[P]], 1.000000e+00
 ; CHECK-NEXT:    call void @use.float(float [[U1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[U2:%.*]] = fadd float [[P]], 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp uno float [[U2]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
   br i1 %c, label %if, label %else
