@@ -219,6 +219,8 @@ jobs:
           xcode-version: '26.6'
         - config: generic-modules
           xcode-version: '26.6'
+        - config: generic-no-exceptions
+          xcode-version: '26.6'
         - config: apple-configuration
           xcode-version: '26.6'
         # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
