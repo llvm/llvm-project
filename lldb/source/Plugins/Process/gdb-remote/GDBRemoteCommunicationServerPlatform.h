@@ -65,8 +65,6 @@ protected:
 
   PacketResult Handle_qC(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jSignalsInfo(StringExtractorGDBRemote &packet);
-
 private:
   bool KillSpawnedProcess(lldb::pid_t pid);
   bool SpawnedProcessIsRunning(lldb::pid_t pid);

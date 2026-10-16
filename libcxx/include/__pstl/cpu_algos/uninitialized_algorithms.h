@@ -36,17 +36,17 @@ namespace __pstl {
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_uninitialized_copy {
-  template <class _Policy, class _InputIterator, class _ForwardIterator>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-  operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_InputIterator>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
       auto __res = __pstl::__parallel_for_each_iter_pair<_Backend>(
           __first,
           __last,
           __result,
-          [](_InputIterator __brick_first, _InputIterator __brick_last, _ForwardIterator __brick_result) {
+          [](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last, _ForwardIterator2 __brick_result) {
             std::uninitialized_copy(std::move(__brick_first), std::move(__brick_last), std::move(__brick_result));
           });
       if (!__res) {
@@ -62,17 +62,17 @@ struct __cpu_parallel_uninitialized_copy {
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_uninitialized_move {
-  template <class _Policy, class _InputIterator, class _ForwardIterator>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
-  operator()(_Policy&&, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const noexcept {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_InputIterator>::value &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
       auto __res = __pstl::__parallel_for_each_iter_pair<_Backend>(
           __first,
           __last,
           __result,
-          [](_InputIterator __brick_first, _InputIterator __brick_last, _ForwardIterator __brick_result) {
+          [](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last, _ForwardIterator2 __brick_result) {
             std::uninitialized_move(std::move(__brick_first), std::move(__brick_last), std::move(__brick_result));
           });
       if (!__res) {

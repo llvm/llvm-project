@@ -27,7 +27,7 @@ namespace __comp_detail {
 enum _ClassifyCompCategory : unsigned { _None, _PartialOrd, _WeakOrd, _StrongOrd, _CCC_Size };
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _ClassifyCompCategory __type_to_enum() noexcept {
+constexpr _ClassifyCompCategory __type_to_enum() noexcept {
   if (is_same_v<_Tp, partial_ordering>)
     return _PartialOrd;
   if (is_same_v<_Tp, weak_ordering>)
@@ -38,8 +38,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _ClassifyCompCategory __type_to_enum() noexcept 
 }
 
 template <size_t _Size>
-_LIBCPP_HIDE_FROM_ABI constexpr _ClassifyCompCategory
-__compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
+constexpr _ClassifyCompCategory __compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
   int __seen[_CCC_Size] = {};
   for (auto __type : __types)
     ++__seen[__type];
@@ -53,7 +52,7 @@ __compute_comp_type(const _ClassifyCompCategory (&__types)[_Size]) {
 }
 
 template <class... _Ts, bool _False = false>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __get_comp_type() {
+constexpr auto __get_comp_type() {
   using _CCC                    = _ClassifyCompCategory;
   constexpr _CCC __type_kinds[] = {_StrongOrd, __comp_detail::__type_to_enum<_Ts>()...};
   constexpr _CCC __cat          = __comp_detail::__compute_comp_type(__type_kinds);

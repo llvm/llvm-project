@@ -54,7 +54,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -826,6 +825,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
           return 1;
       }
       TPC.setInitialized();
+      if (TPC.getMachineVerifierMode() == MachineVerifierMode::End)
+        PM.add(createMachineVerifierPass("At end of pipeline"));
       PM.add(createPrintMIRPass(*OS));
 
       // Add MIR2Vec vocabulary printer if requested
@@ -858,8 +859,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
       }
     }
 
-    Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
-                                             *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

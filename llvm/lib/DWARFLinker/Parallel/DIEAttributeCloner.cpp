@@ -115,10 +115,10 @@ void DIEAttributeCloner::clone() {
   }
 
   // We convert source strings into the indexed form for DWARFv5.
-  // Check if original compile unit already has DW_AT_str_offsets_base
+  // Check if original unit already has DW_AT_str_offsets_base
   // attribute.
-  if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      InUnit.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasStringOffsetBaseAttr && OutUnit.isCompileUnit()) {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{AttrOutOffset,
                          &OutUnit->getOrCreateSectionDescriptor(

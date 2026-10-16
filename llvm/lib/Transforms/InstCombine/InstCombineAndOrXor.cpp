@@ -3391,7 +3391,11 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
     if (InvertFalseVal)
       D = Builder.CreateNot(D);
     Value *BitcastD = Builder.CreateBitCast(D, SelTy);
-    Value *Select = Builder.CreateSelect(Cond, BitcastB, BitcastD);
+    // The condition here is synthesized and thus we have no way of knowing the
+    // distribution in general. Thus, mark the branch weights of the created
+    // select unknown.
+    Value *Select = Builder.CreateSelectWithUnknownProfile(
+        Cond, BitcastB, BitcastD, DEBUG_TYPE);
     return Builder.CreateBitCast(Select, OrigType);
   }
 
@@ -5228,10 +5232,15 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
 
   Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewBinOp;
-  if (IsBinaryOp)
+  if (IsBinaryOp) {
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
-  else
-    NewBinOp = Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  } else {
+    NewBinOp =
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+    if (auto *NewSI = dyn_cast<SelectInst>(NewBinOp))
+      NewSI->swapProfMetadata();
+  }
   replaceInstUsesWith(I, NewBinOp);
   // We can not just create an outer `not`, it will most likely be immediately
   // folded back, reconstructing our initial pattern, and causing an

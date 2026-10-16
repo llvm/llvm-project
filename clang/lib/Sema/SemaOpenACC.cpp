@@ -532,6 +532,8 @@ void SemaOpenACC::ActOnStartParseVar(OpenACCDirectiveKind DK,
 void SemaOpenACC::ActOnInvalidParseVar() {
   CacheInfo.ParsingCacheVarList = false;
   CacheInfo.IsInvalidCacheRef = false;
+  // This makes sure that we properly mark variables 'used' that are referenced.
+  SemaRef.CleanupVarDeclMarking();
 }
 
 ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
@@ -723,6 +725,9 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
 
 ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                  Expr *VarExpr) {
+  // This makes sure that we properly mark variables 'used' that are referenced.
+  SemaRef.CleanupVarDeclMarking();
+
   // This has unique enough restrictions that we should split it to a separate
   // function.
   if (DK == OpenACCDirectiveKind::Cache)

@@ -32,6 +32,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <atomic>
+#include <list>
 
 using namespace llvm;
 using namespace lto;
