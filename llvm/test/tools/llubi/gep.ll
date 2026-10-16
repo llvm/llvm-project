@@ -26,6 +26,7 @@ define void @main() {
   %large_address = inttoptr i64 -1 to ptr
   %gep_update_idx_bits = getelementptr i32, ptr %large_address, i64 1
   %gep_struct = getelementptr %struct, ptr %alloc_struct, i64 0, i32 1, i32 1
+  %gep_struct_splat_idx = getelementptr %struct, ptr %alloc_struct, i64 0, <2 x i32> splat (i32 1), i32 1
   %gep_scalable_vec = getelementptr <vscale x 4 x i32>, ptr null, i64 4
 
   %gep_vec_idx = getelementptr [2 x i32], ptr %alloc, i64 1, <2 x i64> <i64 0, i64 2>
@@ -105,6 +106,7 @@ define void @main() {
 ; CHECK-NEXT:   %large_address = inttoptr i64 -1 to ptr => ptr 0xFFFFFFFFFFFFFFFF [nullary]
 ; CHECK-NEXT:   %gep_update_idx_bits = getelementptr i32, ptr %large_address, i64 1 => ptr 0xFFFFFFFF00000003 [nullary]
 ; CHECK-NEXT:   %gep_struct = getelementptr %struct, ptr %alloc_struct, i64 0, i32 1, i32 1 => ptr 0x1C [alloc_struct + 12]
+; CHECK-NEXT:   %gep_struct_splat_idx = getelementptr %struct, ptr %alloc_struct, i64 0, <2 x i32> splat (i32 1), i32 1 => { ptr 0x1C [alloc_struct + 12], ptr 0x1C [alloc_struct + 12] }
 ; CHECK-NEXT:   %gep_scalable_vec = getelementptr <vscale x 4 x i32>, ptr null, i64 4 => ptr 0x100 [nullary]
 ; CHECK-NEXT:   %gep_vec_idx = getelementptr [2 x i32], ptr %alloc, i64 1, <2 x i64> <i64 0, i64 2> => { ptr 0x10 [alloc + 8], ptr 0x18 [alloc + 16] }
 ; CHECK-NEXT:   %ptr_vec_insert = insertelement <2 x ptr> poison, ptr %alloc, i32 0 => { ptr 0x8 [alloc], poison }

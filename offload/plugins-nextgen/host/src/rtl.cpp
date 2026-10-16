@@ -85,9 +85,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "Incompatible kernel argument version for plugin");
     // Cooperative kernel launch is not supported for host
     if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,

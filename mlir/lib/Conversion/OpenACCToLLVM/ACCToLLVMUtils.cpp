@@ -224,6 +224,18 @@ Value acc::castToI64(Location loc, Value value, OpBuilder &builder) {
   return arith::ExtSIOp::create(builder, loc, i64Ty, value);
 }
 
+Value acc::constantI64(Location loc, int64_t value, OpBuilder &builder) {
+  return LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), value);
+}
+
+Value acc::remapOrSelf(Value value, ConversionPatternRewriter &rewriter) {
+  if (!value)
+    return {};
+  if (Value converted = rewriter.getRemappedValue(value))
+    return converted;
+  return value;
+}
+
 Value acc::getAsyncQueue(Location loc, Value asyncOperand, bool asyncOnly,
                          OpBuilder &builder,
                          const ACCRuntimeCallConfig &config) {

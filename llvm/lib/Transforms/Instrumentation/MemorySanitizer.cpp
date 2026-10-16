@@ -1825,6 +1825,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Set SV to be the shadow value for V.
   void setShadow(Value *V, Value *SV) {
     assert(!ShadowMap.count(V) && "Values may only have one shadow");
+
+    // getShadowTy(VoidType) == nullptr
+    if (SV && !V->getType()->isVoidTy() && getShadowTy(V) != SV->getType()) {
+      LLVM_DEBUG(dbgs() << "V:  " << *V << "\n");
+      LLVM_DEBUG(dbgs() << "SV: " << *SV << "\n");
+      assert(getShadowTy(V) == SV->getType() &&
+             "setShadow called with mismatching types");
+    }
+
     ShadowMap[V] = PropagateShadow ? SV : getCleanShadow(V);
   }
 
