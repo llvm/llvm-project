@@ -87,6 +87,11 @@ typedef _BitInt(64) GnuVec64x4 __attribute__((vector_size(32)));
 typedef _BitInt(256) GnuVec256x2 __attribute__((vector_size(64)));
 typedef _BitInt(1024) GnuVec1024x2 __attribute__((vector_size(256)));
 typedef unsigned _BitInt(256) GnuUVec256x2 __attribute__((vector_size(64)));
+typedef char CharExt4 __attribute__((ext_vector_type(4)));
+typedef int IntExt4 __attribute__((ext_vector_type(4)));
+typedef __int128 Int128Ext4 __attribute__((ext_vector_type(4)));
+typedef char CharGnu4 __attribute__((vector_size(4)));
+typedef long long LongLongGnu4 __attribute__((vector_size(32)));
 
 void GH200665(ExtVec4x4 e4a, ExtVec4x4 e4b, ExtVec8x4 e8a, ExtVec8x4 e8b,
               ExtVec32x4 e32a, ExtVec32x4 e32b, ExtVec128x4 e128a,
@@ -96,27 +101,27 @@ void GH200665(ExtVec4x4 e4a, ExtVec4x4 e4b, ExtVec8x4 e8a, ExtVec8x4 e8b,
               GnuVec8x4 g8a, GnuVec8x4 g8b, GnuVec64x4 g64a, GnuVec64x4 g64b,
               GnuVec256x2 g256a, GnuVec256x2 g256b, GnuVec1024x2 g1024a,
               GnuVec1024x2 g1024b, GnuUVec256x2 gu256a, GnuUVec256x2 gu256b) {
-  _Static_assert(EXPR_HAS_TYPE(e4a == e4b, ExtVec4x4), "");
-  _Static_assert(EXPR_HAS_TYPE(e8a != e8b, ExtVec8x4), "");
-  _Static_assert(EXPR_HAS_TYPE(e32a < e32b, ExtVec32x4), "");
-  _Static_assert(EXPR_HAS_TYPE(e128a <= e128b, ExtVec128x4), "");
+  _Static_assert(EXPR_HAS_TYPE(e4a == e4b, CharExt4), "");
+  _Static_assert(EXPR_HAS_TYPE(e8a != e8b, CharExt4), "");
+  _Static_assert(EXPR_HAS_TYPE(e32a < e32b, IntExt4), "");
+  _Static_assert(EXPR_HAS_TYPE(e128a <= e128b, Int128Ext4), "");
   _Static_assert(EXPR_HAS_TYPE(e256a > e256b, ExtVec256x2), "");
   _Static_assert(EXPR_HAS_TYPE(e512a >= e512b, ExtVec512x3), "");
   _Static_assert(EXPR_HAS_TYPE(e512a > 0, ExtVec512x3), "");
   _Static_assert(EXPR_HAS_TYPE(0 == e1024a, ExtVec1024x2), "");
   _Static_assert(EXPR_HAS_TYPE(e1024a != e1024b, ExtVec1024x2), "");
   _Static_assert(EXPR_HAS_TYPE(eu512a == eu512b, ExtVec512x3), "");
-  _Static_assert(EXPR_HAS_TYPE(!e4a, ExtVec4x4), "");
+  _Static_assert(EXPR_HAS_TYPE(!e4a, CharExt4), "");
   _Static_assert(EXPR_HAS_TYPE(!e512a, ExtVec512x3), "");
   _Static_assert(EXPR_HAS_TYPE(!eu512a, ExtVec512x3), "");
   _Static_assert(EXPR_HAS_TYPE(e512a && e512b, ExtVec512x3), "");
-  _Static_assert(EXPR_HAS_TYPE(e4a || e4b, ExtVec4x4), "");
+  _Static_assert(EXPR_HAS_TYPE(e4a || e4b, CharExt4), "");
   _Static_assert(EXPR_HAS_TYPE(e512a ? e512a : e512b, ExtVec512x3), "");
   _Static_assert(EXPR_HAS_TYPE((e512a > 0) ? e512a : e512b, ExtVec512x3), "");
   _Static_assert(EXPR_HAS_TYPE((eu512a == eu512b) ? eu512a : eu512b, ExtUVec512x3), "");
 
-  _Static_assert(EXPR_HAS_TYPE(g8a == g8b, GnuVec8x4), "");
-  _Static_assert(EXPR_HAS_TYPE(g64a < g64b, GnuVec64x4), "");
+  _Static_assert(EXPR_HAS_TYPE(g8a == g8b, CharGnu4), "");
+  _Static_assert(EXPR_HAS_TYPE(g64a < g64b, LongLongGnu4), "");
   _Static_assert(EXPR_HAS_TYPE(g256a > g256b, GnuVec256x2), "");
   _Static_assert(EXPR_HAS_TYPE(g256a >= 0, GnuVec256x2), "");
   _Static_assert(EXPR_HAS_TYPE(g1024a != g1024b, GnuVec1024x2), "");
