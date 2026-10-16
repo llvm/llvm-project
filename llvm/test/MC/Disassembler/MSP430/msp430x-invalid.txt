@@ -1,0 +1,13 @@
+# RUN: llvm-mc -disassemble %s -triple=msp430 -mcpu=msp430x 2>&1 >/dev/null \
+# RUN:   | FileCheck %s --check-prefix=WARN
+# RUN: llvm-mc -disassemble %s -triple=msp430 -mcpu=msp430x 2>/dev/null \
+# RUN:   | FileCheck %s
+
+# An unsupported extended instruction (rpt #4 + rrax r12) is skipped as a
+# whole. Its instruction word must not show up as rra r12.
+# CHECK: rram #1, r12
+# CHECK-NEXT: rram #2, r12
+# WARN: :[[@LINE+2]]:1: warning: invalid instruction encoding
+0x5c 0x01
+0x43 0x18 0x0c 0x11
+0x5c 0x05
