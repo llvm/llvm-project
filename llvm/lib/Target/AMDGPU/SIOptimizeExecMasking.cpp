@@ -464,18 +464,14 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     // can happen if control flow pseudos had their outputs used by phis.
     Register CopyToExec;
 
-    unsigned SearchCount = 0;
-    const unsigned SearchLimit = 5;
-    while (I != E && SearchCount < SearchLimit) {
-      if (I->isDebugInstr()) {
-        ++I;
+    for (unsigned SearchCount = 0, SearchLimit = 5;
+         I != E && SearchCount < SearchLimit; ++I) {
+      if (I->isDebugInstr())
         continue;
-      }
       ++SearchCount;
       CopyToExec = isCopyToExec(*I);
       if (CopyToExec)
         break;
-      ++I;
     }
 
     if (!CopyToExec)
