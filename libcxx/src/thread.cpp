@@ -66,8 +66,8 @@ void thread::detach() {
 
 // Defined here only for backwards compatibility.
 // No backward compatibility on Windows, since otherwise static-linked libc++ defines this symbol twice.
-if !defined (_WIN32)
-  unsigned thread::hardware_concurrency() noexcept { return __thread_hardware_concurrency(); }
+#if !defined(_WIN32)
+unsigned thread::hardware_concurrency() noexcept { return __thread_hardware_concurrency(); }
 #endif
 
 namespace this_thread {
