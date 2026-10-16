@@ -152,7 +152,8 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
         ASTCtx.getTargetInfo().getPointerWidth(QT.getAddressSpace()),
         llvm::Align(
             ASTCtx.getTargetInfo().getPointerAlign(QT.getAddressSpace()) / 8),
-        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()));
+        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()),
+        QT.hasAddressSpace());
   case Type::OverflowBehavior:
     return convertType(cast<OverflowBehaviorType>(QT)->getUnderlyingType());
   case Type::Auto:
@@ -632,8 +633,9 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
-                                TargetAddrSpace);
+  return Builder.getPointerType(
+      PointerSize, llvm::Align(Alignment.value() / 8), TargetAddrSpace,
+      PointeeType.hasAddressSpace());
 }
 
 /// Processes the fields of a record (struct/class/union) and populates

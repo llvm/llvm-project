@@ -1787,9 +1787,17 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
   const ABIType *PtrWithEmptyBase = makeRecord(
       {FieldInfo(Ptr, 0)}, 64, llvm::Align(8),
       /*UnadjustedAlign=*/llvm::Align(8), CXX, {FieldInfo(EmptyBase, 0)});
-  const ABIType *ASPtr = TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/1);
+  const ABIType *ASPtr =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/1,
+                        /*HasAddressSpaceQualifier=*/true);
   const ABIType *ASPtrRecord =
       makeRecord({FieldInfo(ASPtr, 0)}, 64, llvm::Align(8),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *AS0Ptr =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                        /*HasAddressSpaceQualifier=*/true);
+  const ABIType *AS0PtrRecord =
+      makeRecord({FieldInfo(AS0Ptr, 0)}, 64, llvm::Align(8),
                  /*UnadjustedAlign=*/llvm::Align(8));
   const ABIType *OveralignedPtr =
       makeRecord({FieldInfo(Ptr, 0)}, 128, llvm::Align(16),
@@ -1852,6 +1860,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
                           0);
     expectDirectIntSlot(Classify(Kind, PtrWithEmptyBase), 64);
     expectDirectIntSlot(Classify(Kind, ASPtrRecord), 64);
+    expectDirectIntSlot(Classify(Kind, AS0PtrRecord), 64);
     expectDirectIntSlot(Classify(Kind, NarrowPtrRecord), 64);
     expectDirectPointerSlot(Classify(Kind, PtrUnion));
     expectDirectIntSlot(Classify(Kind, MixedUnion), 64);
@@ -1969,6 +1978,9 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnSmallAggregate) {
   expectDirectI64Pair(Classify(FourInts, /*BigEndian=*/false));
   expectDirectCoercedInteger(Classify(AlignedI128, /*BigEndian=*/false), 128);
   expectDirectCoercedInteger(Classify(OveralignedInt, /*BigEndian=*/false),
+                             128);
+  expectDirectCoercedInteger(Classify(AlignedI128, /*BigEndian=*/true), 128);
+  expectDirectCoercedInteger(Classify(OveralignedInt, /*BigEndian=*/true),
                              128);
   expectNaturalAlignIndirect(Classify(FiveInts, /*BigEndian=*/false),
                              llvm::Align(4), /*ByVal=*/true);

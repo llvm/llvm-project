@@ -477,6 +477,14 @@ void arg_as_ptr(ASPtrRecord s) {}
 // GPR64: define{{.*}} void @arg_as_ptr(i64 %{{.*}})
 // ILP32: define{{.*}} void @arg_as_ptr(i32 %{{.*}})
 
+typedef int __attribute__((address_space(0))) *AS0Ptr;
+typedef struct {
+  AS0Ptr p;
+} AS0PtrRecord;
+void arg_as0_ptr(AS0PtrRecord s) {}
+// GPR64: define{{.*}} void @arg_as0_ptr(i64 %{{.*}})
+// ILP32: define{{.*}} void @arg_as0_ptr(i32 %{{.*}})
+
 typedef struct {
   long a, b, c;
 } ThreeLongs;

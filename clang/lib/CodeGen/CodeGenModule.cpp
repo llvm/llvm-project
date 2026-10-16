@@ -437,7 +437,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
     Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
-    Opts.IsBigEndian = T.getArch() == llvm::Triple::aarch64_be;
+    Opts.IsBigEndian = !T.isLittleEndian();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
                                   getLangOpts().getClangABICompat());
