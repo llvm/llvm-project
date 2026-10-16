@@ -300,6 +300,38 @@ define <2 x i16> @test_mul(<2 x i16> %a, <2 x i16> %b) #0 {
   ret <2 x i16> %r
 }
 
+define <2 x i16> @test_smulh(<2 x i16> %a, <2 x i16> %b) #0 {
+; COMMON-LABEL: test_smulh(
+; COMMON:       {
+; COMMON-NEXT:    .reg .b16 %rs<7>;
+; COMMON-EMPTY:
+; COMMON-NEXT:  // %bb.0:
+; COMMON-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_smulh_param_0];
+; COMMON-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_smulh_param_1];
+; COMMON-NEXT:    mul.hi.s16 %rs5, %rs2, %rs4;
+; COMMON-NEXT:    mul.hi.s16 %rs6, %rs1, %rs3;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
+; COMMON-NEXT:    ret;
+  %r = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %r
+}
+
+define <2 x i16> @test_umulh(<2 x i16> %a, <2 x i16> %b) #0 {
+; COMMON-LABEL: test_umulh(
+; COMMON:       {
+; COMMON-NEXT:    .reg .b16 %rs<7>;
+; COMMON-EMPTY:
+; COMMON-NEXT:  // %bb.0:
+; COMMON-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_umulh_param_0];
+; COMMON-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_umulh_param_1];
+; COMMON-NEXT:    mul.hi.u16 %rs5, %rs2, %rs4;
+; COMMON-NEXT:    mul.hi.u16 %rs6, %rs1, %rs3;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
+; COMMON-NEXT:    ret;
+  %r = call <2 x i16> @llvm.umulh.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %r
+}
+
 ;; Logical ops are available on all GPUs as regular 32-bit logical ops
 define <2 x i16> @test_or(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_or(
