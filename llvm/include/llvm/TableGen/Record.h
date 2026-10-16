@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -791,9 +792,6 @@ public:
   ArrayRef<const Init *> getElements() const {
     return ArrayRef(getTrailingObjects(), NumElements);
   }
-
-  LLVM_DEPRECATED_WITH_FIXIT("Use getElements instead", "getElements")
-  ArrayRef<const Init *> getValues() const { return getElements(); }
 
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
 
@@ -2043,7 +2041,7 @@ public:
 raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
 class RecordKeeper {
-  using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
+  using RecordMap = StringMap<std::unique_ptr<Record>>;
   using GlobalMap = std::map<std::string, const Init *, std::less<>>;
 
 public:
@@ -2056,25 +2054,25 @@ public:
   /// Get the main TableGen input file's name.
   StringRef getInputFilename() const { return InputFilename; }
 
-  /// Get the map of classes.
-  const RecordMap &getClasses() const { return Classes; }
+  /// Get all classes, sorted by name.
+  ArrayRef<const Record *> getClasses() const;
 
-  /// Get the map of records (defs).
-  const RecordMap &getDefs() const { return Defs; }
+  /// Get all records (defs), sorted by name.
+  ArrayRef<const Record *> getDefs() const;
 
   /// Get the map of global variables.
   const GlobalMap &getGlobals() const { return ExtraGlobals; }
 
   /// Get the class with the specified name.
   const Record *getClass(StringRef Name) const {
-    auto I = Classes.find(Name);
-    return I == Classes.end() ? nullptr : I->second.get();
+    auto It = Classes.find(Name);
+    return It == Classes.end() ? nullptr : It->second.get();
   }
 
   /// Get the concrete record with the specified name.
   const Record *getDef(StringRef Name) const {
-    auto I = Defs.find(Name);
-    return I == Defs.end() ? nullptr : I->second.get();
+    auto It = Defs.find(Name);
+    return It == Defs.end() ? nullptr : It->second.get();
   }
 
   /// Get the \p Init value of the specified global variable.
@@ -2090,14 +2088,13 @@ public:
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins =
-        Classes.try_emplace(std::string(R->getName()), std::move(R)).second;
+    bool Ins = Classes.try_emplace(R->getName(), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
+    bool Ins = Defs.try_emplace(R->getName(), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
     // Clear cache
@@ -2145,6 +2142,8 @@ private:
 
   std::string InputFilename;
   RecordMap Classes, Defs;
+  // Classes and Defs sorted by name, built on demand.
+  mutable std::vector<const Record *> SortedClasses, SortedDefs;
   mutable std::map<std::string, std::vector<const Record *>> Cache;
   GlobalMap ExtraGlobals;
 

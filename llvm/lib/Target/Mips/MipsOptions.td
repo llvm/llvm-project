@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def MipsOptions : OptionsStruct<prefix = "mips-", perContext = false>;
+def MipsOptions : OptionsStruct<prefix = "mips-">;
 
 // Mips16ISelLowering.cpp
 defm : BoolField<"mips16-dont-expand-cond-pseudo", "false",

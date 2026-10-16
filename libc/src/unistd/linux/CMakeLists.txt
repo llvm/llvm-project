@@ -265,6 +265,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fexecve
+  SRCS
+    fexecve.cpp
+  HDRS
+    ../fexecve.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execveat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fsync
   SRCS
     fsync.cpp

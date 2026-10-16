@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def RISCVMCOptions : OptionsStruct<prefix = "riscv-", perContext = false>;
+def RISCVMCOptions : OptionsStruct<prefix = "riscv-">;
 
 // AsmParser/RISCVAsmParser.cpp
 defm : BoolField<"riscv-add-build-attributes", "false", "">;

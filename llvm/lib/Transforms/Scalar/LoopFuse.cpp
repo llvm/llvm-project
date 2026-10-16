@@ -892,8 +892,8 @@ private:
           assert(FC1.GuardBranch && "Expecting valid FC1 guard branch");
 
           if (!isSafeToMoveBefore(*FC0.ExitBlock,
-                                  *FC1.ExitBlock->getFirstNonPHIOrDbg(), DT,
-                                  &PDT, &DI)) {
+                                  *FC1.ExitBlock->getFirstNonPHIOrPseudoProbe(),
+                                  DT, &PDT, &DI)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
                                  "instructions in exit block. Not fusing.\n");
             ++NonEmptyExitBlock;

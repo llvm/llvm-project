@@ -51,6 +51,7 @@ endif()
 
 add_subdirectory(assert)
 add_subdirectory(compiler)
+add_subdirectory(libintl)
 add_subdirectory(locale)
 add_subdirectory(netdb)
 add_subdirectory(nl_types)
