@@ -66,7 +66,6 @@ enum class LoopOrderingStrategy : unsigned {
   kLoopUseOuter,
   kLoopUseInner,
 };
-
 } // namespace sparse_tensor
 
 #define GEN_PASS_DECL
