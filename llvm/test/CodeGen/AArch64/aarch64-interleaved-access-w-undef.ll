@@ -72,18 +72,19 @@ define void @f_undef_1(<8 x i64> %a, ptr %dst) {
 ;
 ; CHECK-IADISABLED-LABEL: f_undef_1:
 ; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    dup v4.2d, v3.d[1]
-; CHECK-IADISABLED-NEXT:    dup v3.2d, v3.d[0]
-; CHECK-IADISABLED-NEXT:    dup v5.2d, v2.d[1]
-; CHECK-IADISABLED-NEXT:    dup v2.2d, v2.d[0]
-; CHECK-IADISABLED-NEXT:    stp q3, q4, [x0, #96]
-; CHECK-IADISABLED-NEXT:    dup v4.2d, v1.d[1]
-; CHECK-IADISABLED-NEXT:    dup v1.2d, v1.d[0]
-; CHECK-IADISABLED-NEXT:    dup v3.2d, v0.d[1]
-; CHECK-IADISABLED-NEXT:    dup v0.2d, v0.d[0]
-; CHECK-IADISABLED-NEXT:    stp q2, q5, [x0, #64]
-; CHECK-IADISABLED-NEXT:    stp q1, q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    stp q0, q3, [x0]
+; CHECK-IADISABLED-NEXT:    mov v5.16b, v2.16b
+; CHECK-IADISABLED-NEXT:    mov v16.16b, v0.16b
+; CHECK-IADISABLED-NEXT:    // kill: def $q3 killed $q3 def $q3_q4
+; CHECK-IADISABLED-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-IADISABLED-NEXT:    add x8, x0, #64
+; CHECK-IADISABLED-NEXT:    mov v4.16b, v3.16b
+; CHECK-IADISABLED-NEXT:    mov v2.16b, v1.16b
+; CHECK-IADISABLED-NEXT:    mov v6.16b, v5.16b
+; CHECK-IADISABLED-NEXT:    mov v17.16b, v16.16b
+; CHECK-IADISABLED-NEXT:    st2 { v5.2d, v6.2d }, [x8], #32
+; CHECK-IADISABLED-NEXT:    st2 { v3.2d, v4.2d }, [x8]
+; CHECK-IADISABLED-NEXT:    st2 { v16.2d, v17.2d }, [x0], #32
+; CHECK-IADISABLED-NEXT:    st2 { v1.2d, v2.2d }, [x0]
 ; CHECK-IADISABLED-NEXT:    ret
 BB:
   %S = shufflevector <8 x i64> %a, <8 x i64> %a, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 undef, i32 14, i32 7, i32 15>
@@ -93,25 +94,15 @@ BB:
 
 ; noundefs and undefs should have the same results.
 define void @noundefs(<8 x i32> %a, <8 x i32> %b, ptr %dst) {
-; CHECK-IAENABLED-LABEL: noundefs:
-; CHECK-IAENABLED:       // %bb.0: // %BB
-; CHECK-IAENABLED-NEXT:    mov v5.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
-; CHECK-IAENABLED-NEXT:    mov v4.16b, v0.16b
-; CHECK-IAENABLED-NEXT:    mov v2.16b, v1.16b
-; CHECK-IAENABLED-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
-; CHECK-IAENABLED-NEXT:    st2 { v2.4s, v3.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: noundefs:
-; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v3.4s, v0.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    stp q1, q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    stp q0, q3, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: noundefs:
+; CHECK:       // %bb.0: // %BB
+; CHECK-NEXT:    mov v5.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
+; CHECK-NEXT:    mov v4.16b, v0.16b
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
+; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
+; CHECK-NEXT:    ret
 BB:
   %S = shufflevector <8 x i32> %a, <8 x i32> %b, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 undef, i32 14, i32 7, i32 15>
   store <16 x i32> %S, ptr %dst, align 64
@@ -119,23 +110,15 @@ BB:
 }
 
 define void @undefs(<8 x i32> %a, <8 x i32> %b, ptr %dst) {
-; CHECK-IAENABLED-LABEL: undefs:
-; CHECK-IAENABLED:       // %bb.0: // %BB
-; CHECK-IAENABLED-NEXT:    mov v5.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
-; CHECK-IAENABLED-NEXT:    mov v4.16b, v0.16b
-; CHECK-IAENABLED-NEXT:    mov v2.16b, v1.16b
-; CHECK-IAENABLED-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
-; CHECK-IAENABLED-NEXT:    st2 { v2.4s, v3.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: undefs:
-; CHECK-IADISABLED:       // %bb.0: // %BB
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v0.4s, v0.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    str q1, [x0, #48]
-; CHECK-IADISABLED-NEXT:    str q0, [x0, #16]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: undefs:
+; CHECK:       // %bb.0: // %BB
+; CHECK-NEXT:    mov v5.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
+; CHECK-NEXT:    mov v4.16b, v0.16b
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
+; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
+; CHECK-NEXT:    ret
 BB:
   %S = shufflevector <8 x i32> %a, <8 x i32> %b, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 3, i32 11, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 15>
   store <16 x i32> %S, ptr %dst, align 64

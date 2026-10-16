@@ -212,159 +212,82 @@ for.body:                                         ; preds = %for.body.preheader2
 }
 
 define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture noundef readonly %data, i32 noundef %width) {
-; CHECK-IAENABLED-LABEL: loop2:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    subs w8, w2, #1
-; CHECK-IAENABLED-NEXT:    b.lt .LBB1_6
-; CHECK-IAENABLED-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-IAENABLED-NEXT:    cmp w8, #2
-; CHECK-IAENABLED-NEXT:    b.ls .LBB1_3
-; CHECK-IAENABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IAENABLED-NEXT:    ubfiz x9, x8, #1, #32
-; CHECK-IAENABLED-NEXT:    add x9, x9, #2
-; CHECK-IAENABLED-NEXT:    add x10, x0, x9
-; CHECK-IAENABLED-NEXT:    add x9, x1, x9, lsl #2
-; CHECK-IAENABLED-NEXT:    cmp x10, x1
-; CHECK-IAENABLED-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-IAENABLED-NEXT:    b.ls .LBB1_7
-; CHECK-IAENABLED-NEXT:  .LBB1_3:
-; CHECK-IAENABLED-NEXT:    mov w10, wzr
-; CHECK-IAENABLED-NEXT:    mov x8, x1
-; CHECK-IAENABLED-NEXT:    mov x9, x0
-; CHECK-IAENABLED-NEXT:  .LBB1_4: // %for.body.preheader1
-; CHECK-IAENABLED-NEXT:    movi d0, #0000000000000000
-; CHECK-IAENABLED-NEXT:    mov w11, #1132396544 // =0x437f0000
-; CHECK-IAENABLED-NEXT:    sub w10, w2, w10
-; CHECK-IAENABLED-NEXT:    fmov s1, w11
-; CHECK-IAENABLED-NEXT:  .LBB1_5: // %for.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ldp s2, s3, [x8], #8
-; CHECK-IAENABLED-NEXT:    fcmp s2, s1
-; CHECK-IAENABLED-NEXT:    fcsel s4, s1, s2, gt
-; CHECK-IAENABLED-NEXT:    fcmp s2, #0.0
-; CHECK-IAENABLED-NEXT:    fcsel s2, s0, s4, mi
-; CHECK-IAENABLED-NEXT:    fcmp s3, s1
-; CHECK-IAENABLED-NEXT:    fcsel s4, s1, s3, gt
-; CHECK-IAENABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IAENABLED-NEXT:    fcvtzs s2, s2
-; CHECK-IAENABLED-NEXT:    fcsel s3, s0, s4, mi
-; CHECK-IAENABLED-NEXT:    subs w10, w10, #1
-; CHECK-IAENABLED-NEXT:    str b2, [x9]
-; CHECK-IAENABLED-NEXT:    fcvtzs s3, s3
-; CHECK-IAENABLED-NEXT:    stur b3, [x9, #1]
-; CHECK-IAENABLED-NEXT:    add x9, x9, #2
-; CHECK-IAENABLED-NEXT:    b.ne .LBB1_5
-; CHECK-IAENABLED-NEXT:  .LBB1_6: // %for.cond.cleanup
-; CHECK-IAENABLED-NEXT:    ret
-; CHECK-IAENABLED-NEXT:  .LBB1_7: // %vector.ph
-; CHECK-IAENABLED-NEXT:    add x11, x8, #1
-; CHECK-IAENABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IAENABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IAENABLED-NEXT:    dup v0.4s, w8
-; CHECK-IAENABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IAENABLED-NEXT:    add x8, x1, x10, lsl #3
-; CHECK-IAENABLED-NEXT:    add x9, x0, x10, lsl #1
-; CHECK-IAENABLED-NEXT:  .LBB1_8: // %vector.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x1], #32
-; CHECK-IAENABLED-NEXT:    subs x12, x12, #4
-; CHECK-IAENABLED-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-IAENABLED-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-IAENABLED-NEXT:    bsl v4.16b, v0.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    fcmlt v1.4s, v2.4s, #0.0
-; CHECK-IAENABLED-NEXT:    bic v2.16b, v3.16b, v5.16b
-; CHECK-IAENABLED-NEXT:    bic v1.16b, v4.16b, v1.16b
-; CHECK-IAENABLED-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    xtn v2.4h, v2.4s
-; CHECK-IAENABLED-NEXT:    xtn v1.4h, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v1.8b, v2.8b, v1.8b
-; CHECK-IAENABLED-NEXT:    str d1, [x0], #8
-; CHECK-IAENABLED-NEXT:    b.ne .LBB1_8
-; CHECK-IAENABLED-NEXT:  // %bb.9: // %middle.block
-; CHECK-IAENABLED-NEXT:    cmp x11, x10
-; CHECK-IAENABLED-NEXT:    b.ne .LBB1_4
-; CHECK-IAENABLED-NEXT:    b .LBB1_6
-;
-; CHECK-IADISABLED-LABEL: loop2:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    subs w8, w2, #1
-; CHECK-IADISABLED-NEXT:    b.lt .LBB1_6
-; CHECK-IADISABLED-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-IADISABLED-NEXT:    cmp w8, #2
-; CHECK-IADISABLED-NEXT:    b.ls .LBB1_3
-; CHECK-IADISABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IADISABLED-NEXT:    ubfiz x9, x8, #1, #32
-; CHECK-IADISABLED-NEXT:    add x9, x9, #2
-; CHECK-IADISABLED-NEXT:    add x10, x0, x9
-; CHECK-IADISABLED-NEXT:    add x9, x1, x9, lsl #2
-; CHECK-IADISABLED-NEXT:    cmp x10, x1
-; CHECK-IADISABLED-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-IADISABLED-NEXT:    b.ls .LBB1_7
-; CHECK-IADISABLED-NEXT:  .LBB1_3:
-; CHECK-IADISABLED-NEXT:    mov w10, wzr
-; CHECK-IADISABLED-NEXT:    mov x8, x1
-; CHECK-IADISABLED-NEXT:    mov x9, x0
-; CHECK-IADISABLED-NEXT:  .LBB1_4: // %for.body.preheader1
-; CHECK-IADISABLED-NEXT:    movi d0, #0000000000000000
-; CHECK-IADISABLED-NEXT:    mov w11, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    sub w10, w2, w10
-; CHECK-IADISABLED-NEXT:    fmov s1, w11
-; CHECK-IADISABLED-NEXT:  .LBB1_5: // %for.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp s2, s3, [x8], #8
-; CHECK-IADISABLED-NEXT:    fcmp s2, s1
-; CHECK-IADISABLED-NEXT:    fcsel s4, s1, s2, gt
-; CHECK-IADISABLED-NEXT:    fcmp s2, #0.0
-; CHECK-IADISABLED-NEXT:    fcsel s2, s0, s4, mi
-; CHECK-IADISABLED-NEXT:    fcmp s3, s1
-; CHECK-IADISABLED-NEXT:    fcsel s4, s1, s3, gt
-; CHECK-IADISABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IADISABLED-NEXT:    fcvtzs s2, s2
-; CHECK-IADISABLED-NEXT:    fcsel s3, s0, s4, mi
-; CHECK-IADISABLED-NEXT:    subs w10, w10, #1
-; CHECK-IADISABLED-NEXT:    str b2, [x9]
-; CHECK-IADISABLED-NEXT:    fcvtzs s3, s3
-; CHECK-IADISABLED-NEXT:    stur b3, [x9, #1]
-; CHECK-IADISABLED-NEXT:    add x9, x9, #2
-; CHECK-IADISABLED-NEXT:    b.ne .LBB1_5
-; CHECK-IADISABLED-NEXT:  .LBB1_6: // %for.cond.cleanup
-; CHECK-IADISABLED-NEXT:    ret
-; CHECK-IADISABLED-NEXT:  .LBB1_7: // %vector.ph
-; CHECK-IADISABLED-NEXT:    add x11, x8, #1
-; CHECK-IADISABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:    dup v0.4s, w8
-; CHECK-IADISABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:    add x8, x1, x10, lsl #3
-; CHECK-IADISABLED-NEXT:    add x9, x0, x10, lsl #1
-; CHECK-IADISABLED-NEXT:  .LBB1_8: // %vector.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q2, q1, [x1], #32
-; CHECK-IADISABLED-NEXT:    subs x12, x12, #4
-; CHECK-IADISABLED-NEXT:    uzp1 v3.4s, v2.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v2.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v2.4s, v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v4.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    bsl v2.16b, v0.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v3.4s, v3.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v4.16b, v0.16b, v1.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v1.4s, v1.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bic v2.16b, v2.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    bic v1.16b, v4.16b, v1.16b
-; CHECK-IADISABLED-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    xtn v2.4h, v2.4s
-; CHECK-IADISABLED-NEXT:    xtn v1.4h, v1.4s
-; CHECK-IADISABLED-NEXT:    trn1 v1.8b, v2.8b, v1.8b
-; CHECK-IADISABLED-NEXT:    str d1, [x0], #8
-; CHECK-IADISABLED-NEXT:    b.ne .LBB1_8
-; CHECK-IADISABLED-NEXT:  // %bb.9: // %middle.block
-; CHECK-IADISABLED-NEXT:    cmp x11, x10
-; CHECK-IADISABLED-NEXT:    b.ne .LBB1_4
-; CHECK-IADISABLED-NEXT:    b .LBB1_6
+; CHECK-LABEL: loop2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs w8, w2, #1
+; CHECK-NEXT:    b.lt .LBB1_6
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    cmp w8, #2
+; CHECK-NEXT:    b.ls .LBB1_3
+; CHECK-NEXT:  // %bb.2: // %vector.memcheck
+; CHECK-NEXT:    ubfiz x9, x8, #1, #32
+; CHECK-NEXT:    add x9, x9, #2
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    add x9, x1, x9, lsl #2
+; CHECK-NEXT:    cmp x10, x1
+; CHECK-NEXT:    ccmp x9, x0, #0, hi
+; CHECK-NEXT:    b.ls .LBB1_7
+; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:  .LBB1_4: // %for.body.preheader1
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    sub w10, w2, w10
+; CHECK-NEXT:    fmov s1, w11
+; CHECK-NEXT:  .LBB1_5: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldp s2, s3, [x8], #8
+; CHECK-NEXT:    fcmp s2, s1
+; CHECK-NEXT:    fcsel s4, s1, s2, gt
+; CHECK-NEXT:    fcmp s2, #0.0
+; CHECK-NEXT:    fcsel s2, s0, s4, mi
+; CHECK-NEXT:    fcmp s3, s1
+; CHECK-NEXT:    fcsel s4, s1, s3, gt
+; CHECK-NEXT:    fcmp s3, #0.0
+; CHECK-NEXT:    fcvtzs s2, s2
+; CHECK-NEXT:    fcsel s3, s0, s4, mi
+; CHECK-NEXT:    subs w10, w10, #1
+; CHECK-NEXT:    str b2, [x9]
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    stur b3, [x9, #1]
+; CHECK-NEXT:    add x9, x9, #2
+; CHECK-NEXT:    b.ne .LBB1_5
+; CHECK-NEXT:  .LBB1_6: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_7: // %vector.ph
+; CHECK-NEXT:    add x11, x8, #1
+; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
+; CHECK-NEXT:    and x10, x11, #0x1fffffffc
+; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
+; CHECK-NEXT:    add x8, x1, x10, lsl #3
+; CHECK-NEXT:    add x9, x0, x10, lsl #1
+; CHECK-NEXT:  .LBB1_8: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld2 { v1.4s, v2.4s }, [x1], #32
+; CHECK-NEXT:    subs x12, x12, #4
+; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bsl v4.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fcmlt v1.4s, v2.4s, #0.0
+; CHECK-NEXT:    bic v2.16b, v3.16b, v5.16b
+; CHECK-NEXT:    bic v1.16b, v4.16b, v1.16b
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    xtn v1.8b, v1.8h
+; CHECK-NEXT:    str d1, [x0], #8
+; CHECK-NEXT:    b.ne .LBB1_8
+; CHECK-NEXT:  // %bb.9: // %middle.block
+; CHECK-NEXT:    cmp x11, x10
+; CHECK-NEXT:    b.ne .LBB1_4
+; CHECK-NEXT:    b .LBB1_6
 ;
 ; CHECK-GI-LABEL: loop2:
 ; CHECK-GI:       // %bb.0: // %entry
@@ -543,211 +466,109 @@ for.body:                                         ; preds = %for.body.preheader3
 }
 
 define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture noundef readonly %data, i32 noundef %width) {
-; CHECK-IAENABLED-LABEL: loop3:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    subs w8, w2, #1
-; CHECK-IAENABLED-NEXT:    b.lt .LBB2_6
-; CHECK-IAENABLED-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-IAENABLED-NEXT:    cmp w8, #2
-; CHECK-IAENABLED-NEXT:    b.ls .LBB2_3
-; CHECK-IAENABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IAENABLED-NEXT:    add x9, x8, w8, uxtw #1
-; CHECK-IAENABLED-NEXT:    add x9, x9, #3
-; CHECK-IAENABLED-NEXT:    add x10, x0, x9
-; CHECK-IAENABLED-NEXT:    add x9, x1, x9, lsl #2
-; CHECK-IAENABLED-NEXT:    cmp x10, x1
-; CHECK-IAENABLED-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-IAENABLED-NEXT:    b.ls .LBB2_7
-; CHECK-IAENABLED-NEXT:  .LBB2_3:
-; CHECK-IAENABLED-NEXT:    mov w10, wzr
-; CHECK-IAENABLED-NEXT:    mov x8, x1
-; CHECK-IAENABLED-NEXT:    mov x9, x0
-; CHECK-IAENABLED-NEXT:  .LBB2_4: // %for.body.preheader1
-; CHECK-IAENABLED-NEXT:    movi d0, #0000000000000000
-; CHECK-IAENABLED-NEXT:    mov w11, #1132396544 // =0x437f0000
-; CHECK-IAENABLED-NEXT:    sub w10, w2, w10
-; CHECK-IAENABLED-NEXT:    fmov s1, w11
-; CHECK-IAENABLED-NEXT:  .LBB2_5: // %for.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ldp s2, s3, [x8]
-; CHECK-IAENABLED-NEXT:    fcmp s2, s1
-; CHECK-IAENABLED-NEXT:    fcsel s4, s1, s2, gt
-; CHECK-IAENABLED-NEXT:    fcmp s2, #0.0
-; CHECK-IAENABLED-NEXT:    fcsel s2, s0, s4, mi
-; CHECK-IAENABLED-NEXT:    fcmp s3, s1
-; CHECK-IAENABLED-NEXT:    fcsel s4, s1, s3, gt
-; CHECK-IAENABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IAENABLED-NEXT:    ldr s3, [x8, #8]
-; CHECK-IAENABLED-NEXT:    fcvtzs s2, s2
-; CHECK-IAENABLED-NEXT:    add x8, x8, #12
-; CHECK-IAENABLED-NEXT:    fcsel s4, s0, s4, mi
-; CHECK-IAENABLED-NEXT:    fcmp s3, s1
-; CHECK-IAENABLED-NEXT:    str b2, [x9]
-; CHECK-IAENABLED-NEXT:    fcsel s5, s1, s3, gt
-; CHECK-IAENABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IAENABLED-NEXT:    fcvtzs s4, s4
-; CHECK-IAENABLED-NEXT:    fcsel s3, s0, s5, mi
-; CHECK-IAENABLED-NEXT:    subs w10, w10, #1
-; CHECK-IAENABLED-NEXT:    stur b4, [x9, #1]
-; CHECK-IAENABLED-NEXT:    fcvtzs s3, s3
-; CHECK-IAENABLED-NEXT:    stur b3, [x9, #2]
-; CHECK-IAENABLED-NEXT:    add x9, x9, #3
-; CHECK-IAENABLED-NEXT:    b.ne .LBB2_5
-; CHECK-IAENABLED-NEXT:  .LBB2_6: // %for.cond.cleanup
-; CHECK-IAENABLED-NEXT:    ret
-; CHECK-IAENABLED-NEXT:  .LBB2_7: // %vector.ph
-; CHECK-IAENABLED-NEXT:    add x11, x8, #1
-; CHECK-IAENABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IAENABLED-NEXT:    adrp x12, .LCPI2_0
-; CHECK-IAENABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IAENABLED-NEXT:    dup v0.4s, w8
-; CHECK-IAENABLED-NEXT:    ldr q1, [x12, :lo12:.LCPI2_0]
-; CHECK-IAENABLED-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-IAENABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IAENABLED-NEXT:    add x8, x1, x9, lsl #2
-; CHECK-IAENABLED-NEXT:    add x9, x0, x9
-; CHECK-IAENABLED-NEXT:  .LBB2_8: // %vector.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
-; CHECK-IAENABLED-NEXT:    subs x12, x12, #4
-; CHECK-IAENABLED-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmlt v16.4s, v2.4s, #0.0
-; CHECK-IAENABLED-NEXT:    fcmlt v17.4s, v3.4s, #0.0
-; CHECK-IAENABLED-NEXT:    bsl v5.16b, v0.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    bsl v6.16b, v0.16b, v3.16b
-; CHECK-IAENABLED-NEXT:    bsl v7.16b, v0.16b, v4.16b
-; CHECK-IAENABLED-NEXT:    fcmlt v2.4s, v4.4s, #0.0
-; CHECK-IAENABLED-NEXT:    bic v3.16b, v5.16b, v16.16b
-; CHECK-IAENABLED-NEXT:    bic v4.16b, v6.16b, v17.16b
-; CHECK-IAENABLED-NEXT:    bic v2.16b, v7.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    fcvtzs v3.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-IAENABLED-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    xtn v5.4h, v3.4s
-; CHECK-IAENABLED-NEXT:    xtn v6.4h, v4.4s
-; CHECK-IAENABLED-NEXT:    xtn v7.4h, v2.4s
-; CHECK-IAENABLED-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
-; CHECK-IAENABLED-NEXT:    mov s3, v2.s[2]
-; CHECK-IAENABLED-NEXT:    str d2, [x0]
-; CHECK-IAENABLED-NEXT:    str s3, [x0, #8]
-; CHECK-IAENABLED-NEXT:    add x0, x0, #12
-; CHECK-IAENABLED-NEXT:    b.ne .LBB2_8
-; CHECK-IAENABLED-NEXT:  // %bb.9: // %middle.block
-; CHECK-IAENABLED-NEXT:    cmp x11, x10
-; CHECK-IAENABLED-NEXT:    b.ne .LBB2_4
-; CHECK-IAENABLED-NEXT:    b .LBB2_6
-;
-; CHECK-IADISABLED-LABEL: loop3:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    subs w8, w2, #1
-; CHECK-IADISABLED-NEXT:    b.lt .LBB2_6
-; CHECK-IADISABLED-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-IADISABLED-NEXT:    cmp w8, #2
-; CHECK-IADISABLED-NEXT:    b.ls .LBB2_3
-; CHECK-IADISABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IADISABLED-NEXT:    add x9, x8, w8, uxtw #1
-; CHECK-IADISABLED-NEXT:    add x9, x9, #3
-; CHECK-IADISABLED-NEXT:    add x10, x0, x9
-; CHECK-IADISABLED-NEXT:    add x9, x1, x9, lsl #2
-; CHECK-IADISABLED-NEXT:    cmp x10, x1
-; CHECK-IADISABLED-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-IADISABLED-NEXT:    b.ls .LBB2_7
-; CHECK-IADISABLED-NEXT:  .LBB2_3:
-; CHECK-IADISABLED-NEXT:    mov w10, wzr
-; CHECK-IADISABLED-NEXT:    mov x8, x1
-; CHECK-IADISABLED-NEXT:    mov x9, x0
-; CHECK-IADISABLED-NEXT:  .LBB2_4: // %for.body.preheader1
-; CHECK-IADISABLED-NEXT:    movi d0, #0000000000000000
-; CHECK-IADISABLED-NEXT:    mov w11, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    sub w10, w2, w10
-; CHECK-IADISABLED-NEXT:    fmov s1, w11
-; CHECK-IADISABLED-NEXT:  .LBB2_5: // %for.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp s2, s3, [x8]
-; CHECK-IADISABLED-NEXT:    fcmp s2, s1
-; CHECK-IADISABLED-NEXT:    fcsel s4, s1, s2, gt
-; CHECK-IADISABLED-NEXT:    fcmp s2, #0.0
-; CHECK-IADISABLED-NEXT:    fcsel s2, s0, s4, mi
-; CHECK-IADISABLED-NEXT:    fcmp s3, s1
-; CHECK-IADISABLED-NEXT:    fcsel s4, s1, s3, gt
-; CHECK-IADISABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IADISABLED-NEXT:    ldr s3, [x8, #8]
-; CHECK-IADISABLED-NEXT:    fcvtzs s2, s2
-; CHECK-IADISABLED-NEXT:    add x8, x8, #12
-; CHECK-IADISABLED-NEXT:    fcsel s4, s0, s4, mi
-; CHECK-IADISABLED-NEXT:    fcmp s3, s1
-; CHECK-IADISABLED-NEXT:    str b2, [x9]
-; CHECK-IADISABLED-NEXT:    fcsel s5, s1, s3, gt
-; CHECK-IADISABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IADISABLED-NEXT:    fcvtzs s4, s4
-; CHECK-IADISABLED-NEXT:    fcsel s3, s0, s5, mi
-; CHECK-IADISABLED-NEXT:    subs w10, w10, #1
-; CHECK-IADISABLED-NEXT:    stur b4, [x9, #1]
-; CHECK-IADISABLED-NEXT:    fcvtzs s3, s3
-; CHECK-IADISABLED-NEXT:    stur b3, [x9, #2]
-; CHECK-IADISABLED-NEXT:    add x9, x9, #3
-; CHECK-IADISABLED-NEXT:    b.ne .LBB2_5
-; CHECK-IADISABLED-NEXT:  .LBB2_6: // %for.cond.cleanup
-; CHECK-IADISABLED-NEXT:    ret
-; CHECK-IADISABLED-NEXT:  .LBB2_7: // %vector.ph
-; CHECK-IADISABLED-NEXT:    add x11, x8, #1
-; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI2_0
-; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI2_1
-; CHECK-IADISABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
-; CHECK-IADISABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    add x12, x10, x10, lsl #1
-; CHECK-IADISABLED-NEXT:    ldr q1, [x9, :lo12:.LCPI2_1]
-; CHECK-IADISABLED-NEXT:    adrp x9, .LCPI2_2
-; CHECK-IADISABLED-NEXT:    dup v2.4s, w8
-; CHECK-IADISABLED-NEXT:    adrp x13, .LCPI2_3
-; CHECK-IADISABLED-NEXT:    ldr q3, [x9, :lo12:.LCPI2_2]
-; CHECK-IADISABLED-NEXT:    add x8, x1, x12, lsl #2
-; CHECK-IADISABLED-NEXT:    ldr q4, [x13, :lo12:.LCPI2_3]
-; CHECK-IADISABLED-NEXT:    add x9, x0, x12
-; CHECK-IADISABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:  .LBB2_8: // %vector.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q5, q6, [x1]
-; CHECK-IADISABLED-NEXT:    subs x12, x12, #4
-; CHECK-IADISABLED-NEXT:    ldr q7, [x1, #32]
-; CHECK-IADISABLED-NEXT:    tbl v16.16b, { v5.16b, v6.16b }, v0.16b
-; CHECK-IADISABLED-NEXT:    tbl v17.16b, { v5.16b, v6.16b }, v1.16b
-; CHECK-IADISABLED-NEXT:    add x1, x1, #48
-; CHECK-IADISABLED-NEXT:    mov v16.s[3], v7.s[1]
-; CHECK-IADISABLED-NEXT:    mov v17.s[3], v7.s[2]
-; CHECK-IADISABLED-NEXT:    mov v6.s[0], v5.s[2]
-; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v3.16b
-; CHECK-IADISABLED-NEXT:    fcmgt v6.4s, v16.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v7.4s, v17.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v18.4s, v5.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    bsl v6.16b, v2.16b, v16.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v16.4s, v16.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v7.16b, v2.16b, v17.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v17.4s, v17.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v18.16b, v2.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v5.4s, v5.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bic v6.16b, v6.16b, v16.16b
-; CHECK-IADISABLED-NEXT:    bic v7.16b, v7.16b, v17.16b
-; CHECK-IADISABLED-NEXT:    fcvtzs v6.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    bic v5.16b, v18.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    fcvtzs v7.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v5.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    xtn v16.4h, v6.4s
-; CHECK-IADISABLED-NEXT:    xtn v17.4h, v7.4s
-; CHECK-IADISABLED-NEXT:    xtn v18.4h, v5.4s
-; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v16.16b, v17.16b, v18.16b }, v4.16b
-; CHECK-IADISABLED-NEXT:    mov s6, v5.s[2]
-; CHECK-IADISABLED-NEXT:    str d5, [x0]
-; CHECK-IADISABLED-NEXT:    str s6, [x0, #8]
-; CHECK-IADISABLED-NEXT:    add x0, x0, #12
-; CHECK-IADISABLED-NEXT:    b.ne .LBB2_8
-; CHECK-IADISABLED-NEXT:  // %bb.9: // %middle.block
-; CHECK-IADISABLED-NEXT:    cmp x11, x10
-; CHECK-IADISABLED-NEXT:    b.ne .LBB2_4
-; CHECK-IADISABLED-NEXT:    b .LBB2_6
+; CHECK-LABEL: loop3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs w8, w2, #1
+; CHECK-NEXT:    b.lt .LBB2_7
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    cmp w8, #2
+; CHECK-NEXT:    b.ls .LBB2_3
+; CHECK-NEXT:  // %bb.2: // %vector.memcheck
+; CHECK-NEXT:    add x9, x8, w8, uxtw #1
+; CHECK-NEXT:    add x9, x9, #3
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    add x9, x1, x9, lsl #2
+; CHECK-NEXT:    cmp x10, x1
+; CHECK-NEXT:    ccmp x9, x0, #0, hi
+; CHECK-NEXT:    b.ls .LBB2_8
+; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:  .LBB2_4: // %for.body.preheader1
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    sub w10, w2, w10
+; CHECK-NEXT:    fmov s1, w11
+; CHECK-NEXT:  .LBB2_5: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldp s2, s3, [x8]
+; CHECK-NEXT:    fcmp s2, s1
+; CHECK-NEXT:    fcsel s4, s1, s2, gt
+; CHECK-NEXT:    fcmp s2, #0.0
+; CHECK-NEXT:    fcsel s2, s0, s4, mi
+; CHECK-NEXT:    fcmp s3, s1
+; CHECK-NEXT:    fcsel s4, s1, s3, gt
+; CHECK-NEXT:    fcmp s3, #0.0
+; CHECK-NEXT:    ldr s3, [x8, #8]
+; CHECK-NEXT:    fcvtzs s2, s2
+; CHECK-NEXT:    add x8, x8, #12
+; CHECK-NEXT:    fcsel s4, s0, s4, mi
+; CHECK-NEXT:    fcmp s3, s1
+; CHECK-NEXT:    str b2, [x9]
+; CHECK-NEXT:    fcsel s5, s1, s3, gt
+; CHECK-NEXT:    fcmp s3, #0.0
+; CHECK-NEXT:    fcvtzs s4, s4
+; CHECK-NEXT:    fcsel s3, s0, s5, mi
+; CHECK-NEXT:    subs w10, w10, #1
+; CHECK-NEXT:    stur b4, [x9, #1]
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    stur b3, [x9, #2]
+; CHECK-NEXT:    add x9, x9, #3
+; CHECK-NEXT:    b.ne .LBB2_5
+; CHECK-NEXT:  .LBB2_6:
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:  .LBB2_7: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_8: // %vector.ph
+; CHECK-NEXT:    add x11, x8, #1
+; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
+; CHECK-NEXT:    adrp x12, .LCPI2_0
+; CHECK-NEXT:    and x10, x11, #0x1fffffffc
+; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI2_0]
+; CHECK-NEXT:    add x9, x10, x10, lsl #1
+; CHECK-NEXT:    add x12, sp, #8
+; CHECK-NEXT:    and x13, x11, #0x1fffffffc
+; CHECK-NEXT:    add x8, x1, x9, lsl #2
+; CHECK-NEXT:    add x9, x0, x9
+; CHECK-NEXT:  .LBB2_9: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
+; CHECK-NEXT:    subs x13, x13, #4
+; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
+; CHECK-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fcmlt v16.4s, v2.4s, #0.0
+; CHECK-NEXT:    fcmlt v17.4s, v3.4s, #0.0
+; CHECK-NEXT:    bsl v5.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v6.16b, v0.16b, v3.16b
+; CHECK-NEXT:    bsl v7.16b, v0.16b, v4.16b
+; CHECK-NEXT:    fcmlt v2.4s, v4.4s, #0.0
+; CHECK-NEXT:    bic v3.16b, v5.16b, v16.16b
+; CHECK-NEXT:    bic v4.16b, v6.16b, v17.16b
+; CHECK-NEXT:    bic v2.16b, v7.16b, v2.16b
+; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
+; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    xtn v5.4h, v3.4s
+; CHECK-NEXT:    xtn v6.4h, v4.4s
+; CHECK-NEXT:    xtn v7.4h, v2.4s
+; CHECK-NEXT:    st3 { v5.4h, v6.4h, v7.4h }, [x12]
+; CHECK-NEXT:    ldp d3, d4, [sp, #16]
+; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    tbl v2.16b, { v2.16b, v3.16b, v4.16b }, v1.16b
+; CHECK-NEXT:    mov s3, v2.s[2]
+; CHECK-NEXT:    str d2, [x0]
+; CHECK-NEXT:    str s3, [x0, #8]
+; CHECK-NEXT:    add x0, x0, #12
+; CHECK-NEXT:    b.ne .LBB2_9
+; CHECK-NEXT:  // %bb.10: // %middle.block
+; CHECK-NEXT:    cmp x11, x10
+; CHECK-NEXT:    b.ne .LBB2_4
+; CHECK-NEXT:    b .LBB2_6
 ;
 ; CHECK-GI-LABEL: loop3:
 ; CHECK-GI:       // %bb.0: // %entry
@@ -983,230 +804,113 @@ for.body:                                         ; preds = %for.body.preheader4
 }
 
 define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture noundef readonly %data, i32 noundef %width) {
-; CHECK-IAENABLED-LABEL: loop4:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    subs w8, w2, #1
-; CHECK-IAENABLED-NEXT:    b.lt .LBB3_6
-; CHECK-IAENABLED-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-IAENABLED-NEXT:    cmp w8, #2
-; CHECK-IAENABLED-NEXT:    b.ls .LBB3_3
-; CHECK-IAENABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IAENABLED-NEXT:    ubfiz x9, x8, #2, #32
-; CHECK-IAENABLED-NEXT:    add x9, x9, #4
-; CHECK-IAENABLED-NEXT:    add x10, x0, x9
-; CHECK-IAENABLED-NEXT:    add x9, x1, x9, lsl #2
-; CHECK-IAENABLED-NEXT:    cmp x10, x1
-; CHECK-IAENABLED-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-IAENABLED-NEXT:    b.ls .LBB3_7
-; CHECK-IAENABLED-NEXT:  .LBB3_3:
-; CHECK-IAENABLED-NEXT:    mov w10, wzr
-; CHECK-IAENABLED-NEXT:    mov x8, x1
-; CHECK-IAENABLED-NEXT:    mov x9, x0
-; CHECK-IAENABLED-NEXT:  .LBB3_4: // %for.body.preheader1
-; CHECK-IAENABLED-NEXT:    movi d0, #0000000000000000
-; CHECK-IAENABLED-NEXT:    mov w11, #1132396544 // =0x437f0000
-; CHECK-IAENABLED-NEXT:    sub w10, w2, w10
-; CHECK-IAENABLED-NEXT:    fmov s1, w11
-; CHECK-IAENABLED-NEXT:  .LBB3_5: // %for.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ldp s2, s3, [x8]
-; CHECK-IAENABLED-NEXT:    fcmp s2, s1
-; CHECK-IAENABLED-NEXT:    fcsel s4, s1, s2, gt
-; CHECK-IAENABLED-NEXT:    fcmp s2, #0.0
-; CHECK-IAENABLED-NEXT:    fcsel s2, s0, s4, mi
-; CHECK-IAENABLED-NEXT:    fcmp s3, s1
-; CHECK-IAENABLED-NEXT:    fcsel s4, s1, s3, gt
-; CHECK-IAENABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IAENABLED-NEXT:    fcvtzs s2, s2
-; CHECK-IAENABLED-NEXT:    ldp s3, s5, [x8, #8]
-; CHECK-IAENABLED-NEXT:    add x8, x8, #16
-; CHECK-IAENABLED-NEXT:    fcsel s4, s0, s4, mi
-; CHECK-IAENABLED-NEXT:    fcmp s3, s1
-; CHECK-IAENABLED-NEXT:    str b2, [x9]
-; CHECK-IAENABLED-NEXT:    fcvtzs s4, s4
-; CHECK-IAENABLED-NEXT:    fcsel s6, s1, s3, gt
-; CHECK-IAENABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IAENABLED-NEXT:    fcsel s3, s0, s6, mi
-; CHECK-IAENABLED-NEXT:    fcmp s5, s1
-; CHECK-IAENABLED-NEXT:    stur b4, [x9, #1]
-; CHECK-IAENABLED-NEXT:    fcsel s6, s1, s5, gt
-; CHECK-IAENABLED-NEXT:    fcmp s5, #0.0
-; CHECK-IAENABLED-NEXT:    fcvtzs s3, s3
-; CHECK-IAENABLED-NEXT:    fcsel s5, s0, s6, mi
-; CHECK-IAENABLED-NEXT:    subs w10, w10, #1
-; CHECK-IAENABLED-NEXT:    stur b3, [x9, #2]
-; CHECK-IAENABLED-NEXT:    fcvtzs s5, s5
-; CHECK-IAENABLED-NEXT:    stur b5, [x9, #3]
-; CHECK-IAENABLED-NEXT:    add x9, x9, #4
-; CHECK-IAENABLED-NEXT:    b.ne .LBB3_5
-; CHECK-IAENABLED-NEXT:  .LBB3_6: // %for.cond.cleanup
-; CHECK-IAENABLED-NEXT:    ret
-; CHECK-IAENABLED-NEXT:  .LBB3_7: // %vector.ph
-; CHECK-IAENABLED-NEXT:    add x11, x8, #1
-; CHECK-IAENABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IAENABLED-NEXT:    adrp x12, .LCPI3_0
-; CHECK-IAENABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IAENABLED-NEXT:    dup v0.4s, w8
-; CHECK-IAENABLED-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
-; CHECK-IAENABLED-NEXT:    add x8, x1, x10, lsl #4
-; CHECK-IAENABLED-NEXT:    add x9, x0, x10, lsl #2
-; CHECK-IAENABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IAENABLED-NEXT:  .LBB3_8: // %vector.body
-; CHECK-IAENABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IAENABLED-NEXT:    ld4 { v2.4s, v3.4s, v4.4s, v5.4s }, [x1], #64
-; CHECK-IAENABLED-NEXT:    subs x12, x12, #4
-; CHECK-IAENABLED-NEXT:    fcmgt v6.4s, v2.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmgt v7.4s, v3.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmgt v16.4s, v4.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmgt v17.4s, v5.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    fcmlt v18.4s, v2.4s, #0.0
-; CHECK-IAENABLED-NEXT:    fcmlt v19.4s, v3.4s, #0.0
-; CHECK-IAENABLED-NEXT:    fcmlt v20.4s, v4.4s, #0.0
-; CHECK-IAENABLED-NEXT:    bsl v6.16b, v0.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    bsl v7.16b, v0.16b, v3.16b
-; CHECK-IAENABLED-NEXT:    bsl v16.16b, v0.16b, v4.16b
-; CHECK-IAENABLED-NEXT:    bsl v17.16b, v0.16b, v5.16b
-; CHECK-IAENABLED-NEXT:    fcmlt v2.4s, v5.4s, #0.0
-; CHECK-IAENABLED-NEXT:    bic v3.16b, v6.16b, v18.16b
-; CHECK-IAENABLED-NEXT:    bic v4.16b, v7.16b, v19.16b
-; CHECK-IAENABLED-NEXT:    bic v5.16b, v16.16b, v20.16b
-; CHECK-IAENABLED-NEXT:    bic v2.16b, v17.16b, v2.16b
-; CHECK-IAENABLED-NEXT:    fcvtzs v3.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-IAENABLED-NEXT:    fcvtzs v5.4s, v5.4s
-; CHECK-IAENABLED-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    xtn v16.4h, v3.4s
-; CHECK-IAENABLED-NEXT:    xtn v17.4h, v4.4s
-; CHECK-IAENABLED-NEXT:    xtn v18.4h, v5.4s
-; CHECK-IAENABLED-NEXT:    xtn v19.4h, v2.4s
-; CHECK-IAENABLED-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
-; CHECK-IAENABLED-NEXT:    str q2, [x0], #16
-; CHECK-IAENABLED-NEXT:    b.ne .LBB3_8
-; CHECK-IAENABLED-NEXT:  // %bb.9: // %middle.block
-; CHECK-IAENABLED-NEXT:    cmp x11, x10
-; CHECK-IAENABLED-NEXT:    b.ne .LBB3_4
-; CHECK-IAENABLED-NEXT:    b .LBB3_6
-;
-; CHECK-IADISABLED-LABEL: loop4:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    subs w8, w2, #1
-; CHECK-IADISABLED-NEXT:    b.lt .LBB3_6
-; CHECK-IADISABLED-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-IADISABLED-NEXT:    cmp w8, #2
-; CHECK-IADISABLED-NEXT:    b.ls .LBB3_3
-; CHECK-IADISABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IADISABLED-NEXT:    ubfiz x9, x8, #2, #32
-; CHECK-IADISABLED-NEXT:    add x9, x9, #4
-; CHECK-IADISABLED-NEXT:    add x10, x0, x9
-; CHECK-IADISABLED-NEXT:    add x9, x1, x9, lsl #2
-; CHECK-IADISABLED-NEXT:    cmp x10, x1
-; CHECK-IADISABLED-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-IADISABLED-NEXT:    b.ls .LBB3_7
-; CHECK-IADISABLED-NEXT:  .LBB3_3:
-; CHECK-IADISABLED-NEXT:    mov w10, wzr
-; CHECK-IADISABLED-NEXT:    mov x8, x1
-; CHECK-IADISABLED-NEXT:    mov x9, x0
-; CHECK-IADISABLED-NEXT:  .LBB3_4: // %for.body.preheader1
-; CHECK-IADISABLED-NEXT:    movi d0, #0000000000000000
-; CHECK-IADISABLED-NEXT:    mov w11, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    sub w10, w2, w10
-; CHECK-IADISABLED-NEXT:    fmov s1, w11
-; CHECK-IADISABLED-NEXT:  .LBB3_5: // %for.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp s2, s3, [x8]
-; CHECK-IADISABLED-NEXT:    fcmp s2, s1
-; CHECK-IADISABLED-NEXT:    fcsel s4, s1, s2, gt
-; CHECK-IADISABLED-NEXT:    fcmp s2, #0.0
-; CHECK-IADISABLED-NEXT:    fcsel s2, s0, s4, mi
-; CHECK-IADISABLED-NEXT:    fcmp s3, s1
-; CHECK-IADISABLED-NEXT:    fcsel s4, s1, s3, gt
-; CHECK-IADISABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IADISABLED-NEXT:    fcvtzs s2, s2
-; CHECK-IADISABLED-NEXT:    ldp s3, s5, [x8, #8]
-; CHECK-IADISABLED-NEXT:    add x8, x8, #16
-; CHECK-IADISABLED-NEXT:    fcsel s4, s0, s4, mi
-; CHECK-IADISABLED-NEXT:    fcmp s3, s1
-; CHECK-IADISABLED-NEXT:    str b2, [x9]
-; CHECK-IADISABLED-NEXT:    fcvtzs s4, s4
-; CHECK-IADISABLED-NEXT:    fcsel s6, s1, s3, gt
-; CHECK-IADISABLED-NEXT:    fcmp s3, #0.0
-; CHECK-IADISABLED-NEXT:    fcsel s3, s0, s6, mi
-; CHECK-IADISABLED-NEXT:    fcmp s5, s1
-; CHECK-IADISABLED-NEXT:    stur b4, [x9, #1]
-; CHECK-IADISABLED-NEXT:    fcsel s6, s1, s5, gt
-; CHECK-IADISABLED-NEXT:    fcmp s5, #0.0
-; CHECK-IADISABLED-NEXT:    fcvtzs s3, s3
-; CHECK-IADISABLED-NEXT:    fcsel s5, s0, s6, mi
-; CHECK-IADISABLED-NEXT:    subs w10, w10, #1
-; CHECK-IADISABLED-NEXT:    stur b3, [x9, #2]
-; CHECK-IADISABLED-NEXT:    fcvtzs s5, s5
-; CHECK-IADISABLED-NEXT:    stur b5, [x9, #3]
-; CHECK-IADISABLED-NEXT:    add x9, x9, #4
-; CHECK-IADISABLED-NEXT:    b.ne .LBB3_5
-; CHECK-IADISABLED-NEXT:  .LBB3_6: // %for.cond.cleanup
-; CHECK-IADISABLED-NEXT:    ret
-; CHECK-IADISABLED-NEXT:  .LBB3_7: // %vector.ph
-; CHECK-IADISABLED-NEXT:    add x11, x8, #1
-; CHECK-IADISABLED-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-IADISABLED-NEXT:    adrp x12, .LCPI3_0
-; CHECK-IADISABLED-NEXT:    adrp x13, .LCPI3_1
-; CHECK-IADISABLED-NEXT:    adrp x14, .LCPI3_2
-; CHECK-IADISABLED-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:    dup v0.4s, w8
-; CHECK-IADISABLED-NEXT:    add x8, x1, x10, lsl #4
-; CHECK-IADISABLED-NEXT:    add x9, x0, x10, lsl #2
-; CHECK-IADISABLED-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
-; CHECK-IADISABLED-NEXT:    ldr q2, [x13, :lo12:.LCPI3_1]
-; CHECK-IADISABLED-NEXT:    ldr q3, [x14, :lo12:.LCPI3_2]
-; CHECK-IADISABLED-NEXT:    and x12, x11, #0x1fffffffc
-; CHECK-IADISABLED-NEXT:  .LBB3_8: // %vector.body
-; CHECK-IADISABLED-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-IADISABLED-NEXT:    ldp q4, q5, [x1, #32]
-; CHECK-IADISABLED-NEXT:    subs x12, x12, #4
-; CHECK-IADISABLED-NEXT:    ldp q6, q7, [x1], #64
-; CHECK-IADISABLED-NEXT:    tbl v17.16b, { v4.16b, v5.16b }, v1.16b
-; CHECK-IADISABLED-NEXT:    zip1 v18.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    trn1 v20.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    zip1 v16.4s, v6.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    trn2 v19.4s, v6.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    zip2 v21.4s, v6.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v4.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    tbl v5.16b, { v6.16b, v7.16b }, v2.16b
-; CHECK-IADISABLED-NEXT:    mov v16.d[1], v17.d[1]
-; CHECK-IADISABLED-NEXT:    mov v19.d[1], v18.d[1]
-; CHECK-IADISABLED-NEXT:    mov v21.d[1], v20.d[1]
-; CHECK-IADISABLED-NEXT:    mov v5.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    fcmgt v4.4s, v16.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v6.4s, v19.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v7.4s, v21.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmgt v17.4s, v5.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    fcmlt v18.4s, v19.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v4.16b, v0.16b, v16.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v16.4s, v16.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v6.16b, v0.16b, v19.16b
-; CHECK-IADISABLED-NEXT:    bsl v7.16b, v0.16b, v21.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v19.4s, v21.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bsl v17.16b, v0.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    fcmlt v5.4s, v5.4s, #0.0
-; CHECK-IADISABLED-NEXT:    bic v4.16b, v4.16b, v16.16b
-; CHECK-IADISABLED-NEXT:    bic v6.16b, v6.16b, v18.16b
-; CHECK-IADISABLED-NEXT:    bic v7.16b, v7.16b, v19.16b
-; CHECK-IADISABLED-NEXT:    bic v5.16b, v17.16b, v5.16b
-; CHECK-IADISABLED-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v6.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v7.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    fcvtzs v5.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    xtn v16.4h, v4.4s
-; CHECK-IADISABLED-NEXT:    xtn v17.4h, v6.4s
-; CHECK-IADISABLED-NEXT:    xtn v18.4h, v7.4s
-; CHECK-IADISABLED-NEXT:    xtn v19.4h, v5.4s
-; CHECK-IADISABLED-NEXT:    tbl v4.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v3.16b
-; CHECK-IADISABLED-NEXT:    str q4, [x0], #16
-; CHECK-IADISABLED-NEXT:    b.ne .LBB3_8
-; CHECK-IADISABLED-NEXT:  // %bb.9: // %middle.block
-; CHECK-IADISABLED-NEXT:    cmp x11, x10
-; CHECK-IADISABLED-NEXT:    b.ne .LBB3_4
-; CHECK-IADISABLED-NEXT:    b .LBB3_6
+; CHECK-LABEL: loop4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs w8, w2, #1
+; CHECK-NEXT:    b.lt .LBB3_6
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    cmp w8, #2
+; CHECK-NEXT:    b.ls .LBB3_3
+; CHECK-NEXT:  // %bb.2: // %vector.memcheck
+; CHECK-NEXT:    ubfiz x9, x8, #2, #32
+; CHECK-NEXT:    add x9, x9, #4
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    add x9, x1, x9, lsl #2
+; CHECK-NEXT:    cmp x10, x1
+; CHECK-NEXT:    ccmp x9, x0, #0, hi
+; CHECK-NEXT:    b.ls .LBB3_7
+; CHECK-NEXT:  .LBB3_3:
+; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:  .LBB3_4: // %for.body.preheader1
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov w11, #1132396544 // =0x437f0000
+; CHECK-NEXT:    sub w10, w2, w10
+; CHECK-NEXT:    fmov s1, w11
+; CHECK-NEXT:  .LBB3_5: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldp s2, s3, [x8]
+; CHECK-NEXT:    fcmp s2, s1
+; CHECK-NEXT:    fcsel s4, s1, s2, gt
+; CHECK-NEXT:    fcmp s2, #0.0
+; CHECK-NEXT:    fcsel s2, s0, s4, mi
+; CHECK-NEXT:    fcmp s3, s1
+; CHECK-NEXT:    fcsel s4, s1, s3, gt
+; CHECK-NEXT:    fcmp s3, #0.0
+; CHECK-NEXT:    fcvtzs s2, s2
+; CHECK-NEXT:    ldp s3, s5, [x8, #8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    fcsel s4, s0, s4, mi
+; CHECK-NEXT:    fcmp s3, s1
+; CHECK-NEXT:    str b2, [x9]
+; CHECK-NEXT:    fcvtzs s4, s4
+; CHECK-NEXT:    fcsel s6, s1, s3, gt
+; CHECK-NEXT:    fcmp s3, #0.0
+; CHECK-NEXT:    fcsel s3, s0, s6, mi
+; CHECK-NEXT:    fcmp s5, s1
+; CHECK-NEXT:    stur b4, [x9, #1]
+; CHECK-NEXT:    fcsel s6, s1, s5, gt
+; CHECK-NEXT:    fcmp s5, #0.0
+; CHECK-NEXT:    fcvtzs s3, s3
+; CHECK-NEXT:    fcsel s5, s0, s6, mi
+; CHECK-NEXT:    subs w10, w10, #1
+; CHECK-NEXT:    stur b3, [x9, #2]
+; CHECK-NEXT:    fcvtzs s5, s5
+; CHECK-NEXT:    stur b5, [x9, #3]
+; CHECK-NEXT:    add x9, x9, #4
+; CHECK-NEXT:    b.ne .LBB3_5
+; CHECK-NEXT:  .LBB3_6: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_7: // %vector.ph
+; CHECK-NEXT:    add x11, x8, #1
+; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
+; CHECK-NEXT:    and x10, x11, #0x1fffffffc
+; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
+; CHECK-NEXT:    add x8, x1, x10, lsl #4
+; CHECK-NEXT:    add x9, x0, x10, lsl #2
+; CHECK-NEXT:  .LBB3_8: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld4 { v1.4s, v2.4s, v3.4s, v4.4s }, [x1], #64
+; CHECK-NEXT:    subs x12, x12, #4
+; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fcmgt v6.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fcmgt v7.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fcmgt v16.4s, v3.4s, v0.4s
+; CHECK-NEXT:    fcmlt v17.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmlt v18.4s, v2.4s, #0.0
+; CHECK-NEXT:    fcmlt v19.4s, v4.4s, #0.0
+; CHECK-NEXT:    bsl v5.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bsl v6.16b, v0.16b, v4.16b
+; CHECK-NEXT:    bsl v7.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bsl v16.16b, v0.16b, v3.16b
+; CHECK-NEXT:    fcmlt v1.4s, v3.4s, #0.0
+; CHECK-NEXT:    bic v2.16b, v5.16b, v18.16b
+; CHECK-NEXT:    bic v3.16b, v6.16b, v19.16b
+; CHECK-NEXT:    bic v4.16b, v7.16b, v17.16b
+; CHECK-NEXT:    bic v1.16b, v16.16b, v1.16b
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
+; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
+; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    xtn v3.4h, v3.4s
+; CHECK-NEXT:    xtn v4.4h, v4.4s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    zip2 v5.4h, v2.4h, v3.4h
+; CHECK-NEXT:    zip1 v2.4h, v2.4h, v3.4h
+; CHECK-NEXT:    zip2 v6.4h, v4.4h, v1.4h
+; CHECK-NEXT:    zip1 v1.4h, v4.4h, v1.4h
+; CHECK-NEXT:    zip1 v3.8h, v6.8h, v5.8h
+; CHECK-NEXT:    zip1 v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    str q1, [x0], #16
+; CHECK-NEXT:    b.ne .LBB3_8
+; CHECK-NEXT:  // %bb.9: // %middle.block
+; CHECK-NEXT:    cmp x11, x10
+; CHECK-NEXT:    b.ne .LBB3_4
+; CHECK-NEXT:    b .LBB3_6
 ;
 ; CHECK-GI-LABEL: loop4:
 ; CHECK-GI:       // %bb.0: // %entry
@@ -2530,3 +2234,6 @@ exit:
   ret void
 }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}

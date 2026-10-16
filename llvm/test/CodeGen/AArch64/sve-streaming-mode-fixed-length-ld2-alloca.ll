@@ -40,7 +40,9 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-IADISABLED-NEXT:    ptrue p0.h, vl4
 ; CHECK-IADISABLED-NEXT:    ld1b { z0.h }, p0/z, [x20]
 ; CHECK-IADISABLED-NEXT:    ptrue p0.s, vl2
-; CHECK-IADISABLED-NEXT:    mov z1.h, z0.h[2]
+; CHECK-IADISABLED-NEXT:    uunpklo z0.s, z0.h
+; CHECK-IADISABLED-NEXT:    movprfx z1, z0
+; CHECK-IADISABLED-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-IADISABLED-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-IADISABLED-NEXT:    st1b { z0.s }, p0, [x19]
 ; CHECK-IADISABLED-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -81,16 +83,18 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    add x8, sp, #4
 ; CHECK-NEXT:    ptrue p1.s, vl2
-; CHECK-NEXT:    mov z1.b, z0.b[3]
-; CHECK-NEXT:    mov z2.b, z0.b[1]
-; CHECK-NEXT:    mov z0.b, z0.b[5]
+; CHECK-NEXT:    mov z1.b, z0.b[7]
+; CHECK-NEXT:    mov z2.b, z0.b[5]
+; CHECK-NEXT:    mov z3.b, z0.b[3]
+; CHECK-NEXT:    mov z0.b, z0.b[1]
 ; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z1.s, z1.s, z0.s
-; CHECK-NEXT:    st1b { z1.h }, p0, [x8]
-; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x8]
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    st1b { z0.h }, p0, [x8]
+; CHECK-NEXT:    ld1h { z0.s }, p1/z, [x8]
+; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    strb w8, [x19, #2]
-; CHECK-NEXT:    str h1, [x19]
+; CHECK-NEXT:    str h0, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
@@ -208,18 +212,21 @@ define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ;
 ; CHECK-IADISABLED-LABEL: alloc_v8f64:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    sub sp, sp, #80
-; CHECK-IADISABLED-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-IADISABLED-NEXT:    sub sp, sp, #96
+; CHECK-IADISABLED-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-IADISABLED-NEXT:    mov x19, x0
 ; CHECK-IADISABLED-NEXT:    mov x0, sp
+; CHECK-IADISABLED-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-IADISABLED-NEXT:    mov x20, sp
 ; CHECK-IADISABLED-NEXT:    bl def
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [sp, #32]
-; CHECK-IADISABLED-NEXT:    ldp q3, q2, [sp]
-; CHECK-IADISABLED-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-IADISABLED-NEXT:    zip1 z1.d, z3.d, z2.d
+; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
+; CHECK-IADISABLED-NEXT:    mov x8, #4 // =0x4
+; CHECK-IADISABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20, x8, lsl #3]
+; CHECK-IADISABLED-NEXT:    ld2d { z1.d, z2.d }, p0/z, [x20]
+; CHECK-IADISABLED-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-IADISABLED-NEXT:    stp q1, q0, [x19]
-; CHECK-IADISABLED-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-IADISABLED-NEXT:    add sp, sp, #80
+; CHECK-IADISABLED-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-IADISABLED-NEXT:    add sp, sp, #96
 ; CHECK-IADISABLED-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: alloc_v8f64:
@@ -229,12 +236,12 @@ define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ; NONEON-NOSVE-NEXT:    mov x19, x0
 ; NONEON-NOSVE-NEXT:    add x0, sp, #96
 ; NONEON-NOSVE-NEXT:    bl def
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [sp, #96]
-; NONEON-NOSVE-NEXT:    ldp q2, q3, [sp, #128]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #96]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #128]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [sp]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [sp]
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldr d1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp]
