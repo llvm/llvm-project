@@ -878,6 +878,16 @@ def Alias : Attr {
   let Documentation = [Undocumented];
 }
 
+def Copy : InheritableAttr {
+  let Spellings = [GCC<"copy">];
+  let Args = [ExprArgument<"Source">];
+  let Subjects = SubjectList<[Function, Var, Field, Tag, TypedefName]>;
+  let ParseArgumentsAsUnevaluated = 1;
+  let TemplateDependent = 1;
+  let MeaningfulToClassTemplateDefinition = 1;
+  let Documentation = [CopyDocs];
+}
+
 def BuiltinAlias : Attr {
   let Spellings = [CXX11<"clang", "builtin_alias">,
                    C23<"clang", "builtin_alias">,

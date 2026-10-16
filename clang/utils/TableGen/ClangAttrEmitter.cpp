@@ -5006,12 +5006,66 @@ static bool IsKnownToGCC(const Record &Attr) {
                 [](const FlattenedSpelling &S) { return S.knownToGCC(); });
 }
 
+// Reconstruct the arguments of GNU declaration attributes so that copy can run
+// the ordinary attribute handlers on the destination declaration. Cloning an
+// Attr would bypass subject, parameter-index, and mutual-exclusion checks.
+static void GenerateAttributeCopyArgs(const RecordKeeper &Records,
+                                      raw_ostream &OS) {
+  OS << "static bool getAttributeCopyArgs(ASTContext &Context, const Attr *At, "
+        "SourceLocation Loc, SmallVectorImpl<ArgsUnion> &Args) {\n"
+        "  switch (At->getKind()) {\n"
+        "  default: return false;\n";
+  for (const Record *R : Records.getAllDerivedDefinitions("Attr")) {
+    if (!R->getValueAsBit("ASTNode") || !R->getValueAsBit("SemaHandler") ||
+        R->isSubClassOf("TypeAttr") || !IsKnownToGCC(*R) ||
+        R->getName() == "Aligned")
+      continue;
+
+    OS << "  case attr::" << R->getName() << ": {\n";
+    auto Args = R->getValueAsListOfDefs("Args");
+    if (!Args.empty())
+      OS << "    const auto *A = cast<" << R->getName() << "Attr>(At);\n";
+    for (const Record *Arg : Args) {
+      if (Arg->getValueAsBit("Fake"))
+        continue;
+      auto A = createArgument(*Arg, R->getName());
+      std::string Value = "A->get" + A->getUpperName().str() + "()";
+      if (A->isVariadic()) {
+        OS << "    for (auto V : A->" << A->getLowerName() << "())\n";
+        Value = "V";
+      } else if (Arg->getValueAsBit("Optional")) {
+        if (Arg->isSubClassOf("ExprArgument") ||
+            Arg->isSubClassOf("IdentifierArgument"))
+          OS << "    if (" << Value << ")\n";
+        else if (Arg->isSubClassOf("ParamIdxArgument"))
+          OS << "    if (" << Value << ".isValid())\n";
+        else if (Arg->isSubClassOf("StringArgument"))
+          OS << "    if (!" << Value << ".empty())\n";
+      }
+      if (A->isEnumArg() || A->isVariadicEnumArg()) {
+        StringRef Type = Arg->getValueAsString("Type");
+        Type = Type.substr(Type.rfind(':') + 1);
+        Value = R->getName().str() + "Attr::Convert" + Type.str() + "ToStr(" +
+                Value + ")";
+        if (Arg->getValueAsBit("IsString"))
+          Value = "StringRef(" + Value + ")";
+        else
+          Value = "&Context.Idents.get(" + Value + ")";
+      }
+      OS << "      Args.push_back(createCopyAttrArgument(Context, Loc, "
+         << Value << "));\n";
+    }
+    OS << "    return true;\n  }\n";
+  }
+  OS << "  }\n}\n\n";
+}
+
 /// Emits the parsed attribute helpers
 void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Parsed attribute helpers", OS, Records);
 
   OS << "#if !defined(WANT_DECL_MERGE_LOGIC) && "
-     << "!defined(WANT_STMT_MERGE_LOGIC)\n";
+     << "!defined(WANT_STMT_MERGE_LOGIC) && !defined(WANT_DECL_COPY_LOGIC)\n";
   PragmaClangAttributeSupport &PragmaAttributeSupport =
       getPragmaAttributeSupport(Records);
 
@@ -5145,6 +5199,9 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Generate the attribute match rules.
   emitAttributeMatchRules(PragmaAttributeSupport, OS);
+
+  OS << "#elif defined(WANT_DECL_COPY_LOGIC)\n\n";
+  GenerateAttributeCopyArgs(Records, OS);
 
   OS << "#elif defined(WANT_DECL_MERGE_LOGIC)\n\n";
 

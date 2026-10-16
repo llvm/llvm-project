@@ -88,6 +88,17 @@ bool TemplateDeclInstantiator::SubstQualifier(const TagDecl *OldDecl,
 // Include attribute instantiation code.
 #include "clang/Sema/AttrTemplateInstantiate.inc"
 
+static void
+instantiateDependentCopyAttr(Sema &S,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             const CopyAttr *A, Decl *New) {
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::Unevaluated);
+  ExprResult E = S.SubstExpr(A->getSource(), TemplateArgs);
+  if (!E.isInvalid())
+    S.AddCopyAttr(New, *A, E.get(), A->isImplicit());
+}
+
 static void instantiateDependentAlignedAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const AlignedAttr *Aligned, Decl *New, bool IsPackExpansion) {
@@ -847,6 +858,11 @@ void Sema::InstantiateAttrsForDecl(
       if (!isRelevantAttr(*this, New, TmplAttr))
         continue;
 
+      if (const auto *A = dyn_cast<CopyAttr>(TmplAttr)) {
+        instantiateDependentCopyAttr(*this, TemplateArgs, A, New);
+        continue;
+      }
+
       // FIXME: If any of the special case versions from InstantiateAttrs become
       // applicable to template declaration, we'll need to add them here.
       CXXThisScopeRAII ThisScope(
@@ -888,6 +904,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
   for (const auto *TmplAttr : Tmpl->attrs()) {
     if (!isRelevantAttr(*this, New, TmplAttr))
       continue;
+
+    if (const auto *A = dyn_cast<CopyAttr>(TmplAttr)) {
+      instantiateDependentCopyAttr(*this, TemplateArgs, A, New);
+      continue;
+    }
 
     // FIXME: This should be generalized to more than just the AlignedAttr.
     const AlignedAttr *Aligned = dyn_cast<AlignedAttr>(TmplAttr);
