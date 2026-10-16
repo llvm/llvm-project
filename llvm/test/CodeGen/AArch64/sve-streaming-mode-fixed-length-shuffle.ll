@@ -10,19 +10,13 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 define void @hang_when_merging_stores_after_legalisation(ptr %a, <2 x i32> %b) {
-; CHECK-IAENABLED-LABEL: hang_when_merging_stores_after_legalisation:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    mov z0.s, s0
-; CHECK-IAENABLED-NEXT:    ptrue p0.s, vl4
-; CHECK-IAENABLED-NEXT:    mov z1.d, z0.d
-; CHECK-IAENABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: hang_when_merging_stores_after_legalisation:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    mov z0.s, s0
-; CHECK-IADISABLED-NEXT:    stp q0, q0, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: hang_when_merging_stores_after_legalisation:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, s0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
+; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: hang_when_merging_stores_after_legalisation:
 ; NONEON-NOSVE:       // %bb.0:
@@ -43,45 +37,33 @@ define void @hang_when_merging_stores_after_legalisation(ptr %a, <2 x i32> %b) {
 }
 
 define void @interleave_store_without_splat(ptr %a, <4 x i32> %v1, <4 x i32> %v2) {
-; CHECK-IAENABLED-LABEL: interleave_store_without_splat:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ptrue p0.s, vl4
-; CHECK-IAENABLED-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: interleave_store_without_splat:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    mov z2.s, z1.s[3]
-; CHECK-IADISABLED-NEXT:    mov z3.s, z0.s[3]
-; CHECK-IADISABLED-NEXT:    mov z4.s, z1.s[2]
-; CHECK-IADISABLED-NEXT:    mov z5.s, z0.s[2]
-; CHECK-IADISABLED-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-IADISABLED-NEXT:    zip1 z2.s, z3.s, z2.s
-; CHECK-IADISABLED-NEXT:    zip1 z3.s, z5.s, z4.s
-; CHECK-IADISABLED-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: interleave_store_without_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
+; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: interleave_store_without_splat:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #64
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #44]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
+; NONEON-NOSVE-NEXT:    str q0, [x0, #16]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #44]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    ldr q1, [sp]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #56]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #48]
-; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp]
+; NONEON-NOSVE-NEXT:    str q0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %shuffle = shufflevector <4 x i32> %v1, <4 x i32> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -104,24 +86,13 @@ define void @interleave_store_legalization(ptr %a, <8 x i32> %v1, <8 x i32> %v2)
 ;
 ; CHECK-IADISABLED-LABEL: interleave_store_legalization:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    mov z4.s, z3.s[3]
-; CHECK-IADISABLED-NEXT:    mov z5.s, z1.s[3]
-; CHECK-IADISABLED-NEXT:    mov z6.s, z3.s[2]
-; CHECK-IADISABLED-NEXT:    mov z7.s, z1.s[2]
-; CHECK-IADISABLED-NEXT:    mov z16.s, z2.s[3]
-; CHECK-IADISABLED-NEXT:    mov z17.s, z0.s[3]
-; CHECK-IADISABLED-NEXT:    mov z18.s, z2.s[2]
-; CHECK-IADISABLED-NEXT:    mov z19.s, z0.s[2]
-; CHECK-IADISABLED-NEXT:    zip1 z1.s, z1.s, z3.s
-; CHECK-IADISABLED-NEXT:    zip1 z4.s, z5.s, z4.s
-; CHECK-IADISABLED-NEXT:    zip1 z0.s, z0.s, z2.s
-; CHECK-IADISABLED-NEXT:    zip1 z5.s, z7.s, z6.s
-; CHECK-IADISABLED-NEXT:    zip1 z3.s, z17.s, z16.s
-; CHECK-IADISABLED-NEXT:    zip1 z6.s, z19.s, z18.s
-; CHECK-IADISABLED-NEXT:    zip1 z4.d, z5.d, z4.d
-; CHECK-IADISABLED-NEXT:    zip1 z2.d, z6.d, z3.d
-; CHECK-IADISABLED-NEXT:    stp q1, q4, [x0, #32]
-; CHECK-IADISABLED-NEXT:    stp q0, q2, [x0]
+; CHECK-IADISABLED-NEXT:    mov z5.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov z2.d, z1.d
+; CHECK-IADISABLED-NEXT:    mov x8, #8 // =0x8
+; CHECK-IADISABLED-NEXT:    mov z4.d, z0.d
+; CHECK-IADISABLED-NEXT:    ptrue p0.s, vl4
+; CHECK-IADISABLED-NEXT:    st2w { z2.s, z3.s }, p0, [x0, x8, lsl #2]
+; CHECK-IADISABLED-NEXT:    st2w { z4.s, z5.s }, p0, [x0]
 ; CHECK-IADISABLED-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: interleave_store_legalization:
@@ -129,36 +100,39 @@ define void @interleave_store_legalization(ptr %a, <8 x i32> %v1, <8 x i32> %v2)
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #128
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 128
 ; NONEON-NOSVE-NEXT:    stp q1, q3, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #44]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr q1, [sp, #48]
+; NONEON-NOSVE-NEXT:    str q1, [x0, #48]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #36]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp]
+; NONEON-NOSVE-NEXT:    ldr q1, [sp]
+; NONEON-NOSVE-NEXT:    str q1, [x0, #32]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp, #80]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #100]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #84]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #72]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #96]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #80]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #108]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #120]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #104]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #112]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #36]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    ldr q3, [sp, #112]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #44]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    ldr q1, [sp]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #56]
-; NONEON-NOSVE-NEXT:    ldr w9, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #48]
-; NONEON-NOSVE-NEXT:    ldp q0, q2, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp q2, q3, [x0]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [x0, #32]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #112]
+; NONEON-NOSVE-NEXT:    str q0, [x0, #16]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #100]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #84]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #72]
+; NONEON-NOSVE-NEXT:    ldr w9, [sp, #96]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #80]
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #64]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #64]
+; NONEON-NOSVE-NEXT:    str q0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %interleaved.vec = shufflevector <8 x i32> %v1, <8 x i32> %v2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11,

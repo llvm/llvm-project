@@ -673,36 +673,18 @@ define <8 x i64> @zext_add(<32 x i16> %l) {
 }
 
 define <8 x i64> @zext_load_add(ptr %p) {
-; CHECK-IAENABLED-LABEL: zext_load_add:
-; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
-; CHECK-IAENABLED-NEXT:    uaddl v4.4s, v0.4h, v1.4h
-; CHECK-IAENABLED-NEXT:    uaddl v5.4s, v2.4h, v3.4h
-; CHECK-IAENABLED-NEXT:    uaddl2 v6.4s, v0.8h, v1.8h
-; CHECK-IAENABLED-NEXT:    uaddl2 v2.4s, v2.8h, v3.8h
-; CHECK-IAENABLED-NEXT:    uaddl v0.2d, v4.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    uaddl2 v1.2d, v4.4s, v5.4s
-; CHECK-IAENABLED-NEXT:    uaddl2 v3.2d, v6.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    uaddl v2.2d, v6.2s, v2.2s
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: zext_load_add:
-; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
-; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x0, #32]
-; CHECK-IADISABLED-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uaddlp v3.4s, v4.8h
-; CHECK-IADISABLED-NEXT:    uaddlp v4.4s, v0.8h
-; CHECK-IADISABLED-NEXT:    uaddlp v5.4s, v1.8h
-; CHECK-IADISABLED-NEXT:    uaddlp v2.4s, v2.8h
-; CHECK-IADISABLED-NEXT:    uaddl v0.2d, v3.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    uaddl2 v1.2d, v3.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    uaddl2 v3.2d, v5.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uaddl v2.2d, v5.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: zext_load_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
+; CHECK-NEXT:    uaddl v4.4s, v0.4h, v1.4h
+; CHECK-NEXT:    uaddl v5.4s, v2.4h, v3.4h
+; CHECK-NEXT:    uaddl2 v6.4s, v0.8h, v1.8h
+; CHECK-NEXT:    uaddl2 v2.4s, v2.8h, v3.8h
+; CHECK-NEXT:    uaddl v0.2d, v4.2s, v5.2s
+; CHECK-NEXT:    uaddl2 v1.2d, v4.4s, v5.4s
+; CHECK-NEXT:    uaddl2 v3.2d, v6.4s, v2.4s
+; CHECK-NEXT:    uaddl v2.2d, v6.2s, v2.2s
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: zext_load_add:
 ; CHECK-GI:       // %bb.0:
@@ -927,61 +909,59 @@ define <8 x double> @uitofp_fadd(<32 x i16> %l) {
 define <8 x double> @uitofp_load_fadd(ptr %p) {
 ; CHECK-LABEL: uitofp_load_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    movi v0.2d, #0x0000000000ffff
-; CHECK-NEXT:    ldp q3, q4, [x0, #32]
-; CHECK-NEXT:    ushr v5.2d, v1.2d, #16
-; CHECK-NEXT:    ushr v6.2d, v2.2d, #16
-; CHECK-NEXT:    ushr v20.2d, v1.2d, #32
-; CHECK-NEXT:    ushr v7.2d, v3.2d, #16
-; CHECK-NEXT:    ushr v17.2d, v4.2d, #16
-; CHECK-NEXT:    ushr v22.2d, v2.2d, #32
-; CHECK-NEXT:    ushr v23.2d, v3.2d, #32
-; CHECK-NEXT:    ushr v24.2d, v4.2d, #32
-; CHECK-NEXT:    and v16.16b, v1.16b, v0.16b
-; CHECK-NEXT:    and v18.16b, v2.16b, v0.16b
-; CHECK-NEXT:    and v19.16b, v3.16b, v0.16b
-; CHECK-NEXT:    and v21.16b, v4.16b, v0.16b
-; CHECK-NEXT:    and v5.16b, v5.16b, v0.16b
-; CHECK-NEXT:    and v6.16b, v6.16b, v0.16b
-; CHECK-NEXT:    and v7.16b, v7.16b, v0.16b
-; CHECK-NEXT:    and v17.16b, v17.16b, v0.16b
-; CHECK-NEXT:    and v20.16b, v20.16b, v0.16b
-; CHECK-NEXT:    and v22.16b, v22.16b, v0.16b
-; CHECK-NEXT:    and v23.16b, v23.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v24.16b, v0.16b
-; CHECK-NEXT:    ushr v1.2d, v1.2d, #48
-; CHECK-NEXT:    ushr v2.2d, v2.2d, #48
-; CHECK-NEXT:    ushr v3.2d, v3.2d, #48
-; CHECK-NEXT:    ushr v4.2d, v4.2d, #48
-; CHECK-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-NEXT:    ucvtf v19.2d, v19.2d
-; CHECK-NEXT:    ucvtf v21.2d, v21.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-NEXT:    ucvtf v17.2d, v17.2d
-; CHECK-NEXT:    ucvtf v20.2d, v20.2d
-; CHECK-NEXT:    ucvtf v22.2d, v22.2d
-; CHECK-NEXT:    ucvtf v23.2d, v23.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
+; CHECK-NEXT:    ushll2 v4.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v5.4s, v0.4h, #0
+; CHECK-NEXT:    ushll2 v6.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v7.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v16.4s, v2.8h, #0
+; CHECK-NEXT:    ushll v17.4s, v2.4h, #0
+; CHECK-NEXT:    ushll2 v18.4s, v3.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v3.4h, #0
+; CHECK-NEXT:    ushll2 v1.2d, v4.4s, #0
+; CHECK-NEXT:    ushll2 v2.2d, v5.4s, #0
+; CHECK-NEXT:    ushll v3.2d, v4.2s, #0
+; CHECK-NEXT:    ushll v4.2d, v5.2s, #0
+; CHECK-NEXT:    ushll2 v5.2d, v6.4s, #0
+; CHECK-NEXT:    ushll2 v19.2d, v7.4s, #0
+; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
+; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-NEXT:    ushll2 v20.2d, v16.4s, #0
+; CHECK-NEXT:    ushll2 v21.2d, v17.4s, #0
+; CHECK-NEXT:    ushll v16.2d, v16.2s, #0
+; CHECK-NEXT:    ushll v17.2d, v17.2s, #0
+; CHECK-NEXT:    ushll v22.2d, v0.2s, #0
+; CHECK-NEXT:    ushll2 v23.2d, v18.4s, #0
+; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-NEXT:    ushll v18.2d, v18.2s, #0
 ; CHECK-NEXT:    ucvtf v1.2d, v1.2d
 ; CHECK-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-NEXT:    fadd v6.2d, v18.2d, v6.2d
-; CHECK-NEXT:    fadd v5.2d, v16.2d, v5.2d
-; CHECK-NEXT:    fadd v17.2d, v21.2d, v17.2d
-; CHECK-NEXT:    fadd v7.2d, v19.2d, v7.2d
-; CHECK-NEXT:    fadd v1.2d, v20.2d, v1.2d
-; CHECK-NEXT:    fadd v3.2d, v23.2d, v3.2d
-; CHECK-NEXT:    fadd v2.2d, v22.2d, v2.2d
-; CHECK-NEXT:    fadd v4.2d, v0.2d, v4.2d
-; CHECK-NEXT:    fadd v0.2d, v5.2d, v1.2d
-; CHECK-NEXT:    fadd v1.2d, v6.2d, v2.2d
-; CHECK-NEXT:    fadd v2.2d, v7.2d, v3.2d
-; CHECK-NEXT:    fadd v3.2d, v17.2d, v4.2d
+; CHECK-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-NEXT:    ucvtf v22.2d, v22.2d
+; CHECK-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-NEXT:    fadd v1.2d, v1.2d, v5.2d
+; CHECK-NEXT:    fadd v4.2d, v4.2d, v7.2d
+; CHECK-NEXT:    fadd v6.2d, v3.2d, v6.2d
+; CHECK-NEXT:    fadd v2.2d, v2.2d, v19.2d
+; CHECK-NEXT:    fadd v3.2d, v17.2d, v22.2d
+; CHECK-NEXT:    fadd v5.2d, v16.2d, v18.2d
+; CHECK-NEXT:    fadd v7.2d, v21.2d, v0.2d
+; CHECK-NEXT:    fadd v16.2d, v20.2d, v23.2d
+; CHECK-NEXT:    fadd v0.2d, v4.2d, v3.2d
+; CHECK-NEXT:    fadd v3.2d, v1.2d, v16.2d
+; CHECK-NEXT:    fadd v1.2d, v2.2d, v7.2d
+; CHECK-NEXT:    fadd v2.2d, v6.2d, v5.2d
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uitofp_load_fadd:
@@ -1435,3 +1415,6 @@ define <8 x i64> @zext_load_add_intrinsic(ptr %p) {
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { vscale_range(2,2) "target-features"="+sve" }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}

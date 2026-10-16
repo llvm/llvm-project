@@ -27317,6 +27317,174 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   return DAG.getMergeValues({Extract, TokenFactor}, DL);
 }
 
+// Recover a shuffle mask relative to the wide load. Shrinking IR shuffles use
+// either BUILD_VECTOR of extracted elements or a shuffle of extracted
+// subvectors.
+static bool getShuffleMaskRelativeToLoad(SDValue V, SDValue Load,
+                                         SmallVectorImpl<int> &Mask) {
+  if (V.getOpcode() == ISD::BUILD_VECTOR) {
+    for (SDValue Op : V->ops()) {
+      if (Op.isUndef()) {
+        Mask.push_back(-1);
+        continue;
+      }
+      if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+          Op.getOperand(0) != Load ||
+          Op.getValueType() != V.getValueType().getScalarType())
+        return false;
+      auto *Index = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+      if (!Index ||
+          Index->getZExtValue() >= Load.getValueType().getVectorNumElements())
+        return false;
+      Mask.push_back(Index->getZExtValue());
+    }
+    return true;
+  }
+
+  auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(V);
+  if (!Shuffle)
+    return false;
+  unsigned NumElts = V.getValueType().getVectorNumElements();
+  for (int M : Shuffle->getMask()) {
+    if (M < 0) {
+      Mask.push_back(-1);
+      continue;
+    }
+    SDValue Op = Shuffle->getOperand(M / NumElts);
+    if (Op.isUndef()) {
+      Mask.push_back(-1);
+      continue;
+    }
+    if (Op.getOpcode() != ISD::EXTRACT_SUBVECTOR || Op.getOperand(0) != Load)
+      return false;
+    Mask.push_back(Op.getConstantOperandVal(1) + M % NumElts);
+  }
+  return true;
+}
+
+// Recover deinterleaving shuffles of a wide load.
+// All value users must belong to the matched group.
+static bool combineDeinterleavingLoad(LoadSDNode *LD,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  EVT WideVT = LD->getValueType(0);
+  if (!DCI.isBeforeLegalize() || !WideVT.isFixedLengthVector() ||
+      !ISD::isNormalLoad(LD) || !LD->isSimple() || LD->isNonTemporal())
+    return false;
+
+  SmallVector<SDValue, 4> Shuffles;
+  SmallPtrSet<SDNode *, 4> Visited;
+  for (SDUse &Use : LD->uses()) {
+    SDNode *Extract = Use.getUser();
+    if (Use.getResNo() != 0 || Extract->use_empty())
+      continue;
+    if (Extract->getOpcode() != ISD::EXTRACT_VECTOR_ELT &&
+        Extract->getOpcode() != ISD::EXTRACT_SUBVECTOR)
+      return false;
+    for (SDNode *User : Extract->users())
+      if (!User->use_empty() && Visited.insert(User).second)
+        Shuffles.emplace_back(User, 0);
+  }
+  if (Shuffles.empty())
+    return false;
+
+  EVT VT = Shuffles.front().getValueType();
+  if (!VT.isFixedLengthVector() || VT.getScalarType() != WideVT.getScalarType())
+    return false;
+  unsigned NumElts = WideVT.getVectorNumElements();
+  unsigned NumFieldElts = VT.getVectorNumElements();
+  unsigned Factor = NumElts / NumFieldElts;
+  // Interleaving one-element fields is an identity permutation.
+  if (NumFieldElts < 2 || NumElts % NumFieldElts || Factor < 2 || Factor > 4)
+    return false;
+
+  SmallVector<unsigned, 4> Fields;
+  for (SDValue Shuffle : Shuffles) {
+    SmallVector<int> Mask;
+    unsigned Field;
+    if (Shuffle.getValueType() != VT ||
+        !getShuffleMaskRelativeToLoad(Shuffle, SDValue(LD, 0), Mask) ||
+        !ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Field))
+      return false;
+    Fields.push_back(Field);
+  }
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(LD);
+  SmallVector<SDValue, 4> Ops;
+  for (unsigned I = 0; I != Factor; ++I)
+    Ops.push_back(
+        DAG.getExtractSubvector(DL, VT, SDValue(LD, 0), I * NumFieldElts));
+  SDValue Deinterleave =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                  DAG.getVTList(SmallVector<EVT, 4>(Factor, VT)), Ops);
+  SmallVector<SDValue, 4> To;
+  for (unsigned Field : Fields)
+    To.push_back(Deinterleave.getValue(Field));
+  // Replacing one shuffle can CSE another shuffle in the group.
+  DAG.ReplaceAllUsesOfValuesWith(Shuffles.data(), To.data(), Shuffles.size());
+  DCI.AddToWorklist(Deinterleave.getNode());
+  return true;
+}
+
+// Recover the field vectors of an interleaving shuffle feeding a wide store.
+static SDValue combineInterleavingStore(StoreSDNode *ST,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Value = ST->getValue();
+  EVT WideVT = Value.getValueType();
+  if (!DCI.isBeforeLegalize() || !WideVT.isFixedLengthVector() ||
+      !ISD::isNormalStore(ST) || !ST->isSimple() || ST->isNonTemporal() ||
+      !Value.hasOneUse())
+    return SDValue();
+
+  // DAGBuilder removes trailing shuffle padding with an extract at index zero.
+  if (Value.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    if (Value.getConstantOperandVal(1) != 0)
+      return SDValue();
+    Value = Value.getOperand(0);
+  }
+  auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Value);
+  if (!Shuffle)
+    return SDValue();
+
+  unsigned NumElts = WideVT.getVectorNumElements();
+  unsigned NumSrcElts = Value.getValueType().getVectorNumElements();
+  ArrayRef<int> Mask = Shuffle->getMask().take_front(NumElts);
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(ST);
+  for (unsigned Factor : {2, 3, 4}) {
+    unsigned NumFieldElts = NumElts / Factor;
+    if (NumFieldElts < 2)
+      return SDValue();
+
+    SmallVector<unsigned, 4> Starts;
+    if (!ShuffleVectorInst::isInterleaveMask(Mask, Factor, 2 * NumSrcElts,
+                                             Starts))
+      continue;
+    // Each field must be an aligned subvector of one shuffle operand.
+    if (any_of(Starts, [&](unsigned Start) {
+          unsigned Index = Start % NumSrcElts;
+          return Index % NumFieldElts || Index + NumFieldElts > NumSrcElts;
+        }))
+      continue;
+
+    EVT VT = EVT::getVectorVT(*DAG.getContext(), WideVT.getScalarType(),
+                              NumFieldElts);
+    SmallVector<SDValue, 4> Ops;
+    for (unsigned Start : Starts)
+      Ops.push_back(DAG.getExtractSubvector(
+          DL, VT, Shuffle->getOperand(Start / NumSrcElts), Start % NumSrcElts));
+    SDValue Interleave =
+        DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                    DAG.getVTList(SmallVector<EVT, 4>(Factor, VT)), Ops);
+    for (unsigned I = 0; I != Factor; ++I)
+      Ops[I] = Interleave.getValue(I);
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Ops);
+    return DAG.getStore(ST->getChain(), DL, Concat, ST->getBasePtr(),
+                        ST->getMemOperand());
+  }
+  return SDValue();
+}
+
 // Perform TBI simplification if supported by the target and try to break up
 // nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
 // load instructions can be selected.
@@ -27328,6 +27496,9 @@ static SDValue performLOADCombine(SDNode *N,
     performTBISimplification(N->getOperand(1), DCI, DAG);
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
+  if (combineDeinterleavingLoad(LD, DCI))
+    return SDValue(N, 0);
+
   EVT RegVT = LD->getValueType(0);
   EVT MemVT = LD->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -27907,6 +28078,9 @@ static SDValue performSTORECombine(SDNode *N,
                         ST->getAAInfo());
 
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
+    return Res;
+
+  if (SDValue Res = combineInterleavingStore(ST, DCI))
     return Res;
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))

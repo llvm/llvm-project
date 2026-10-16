@@ -251,10 +251,8 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-IADISABLED-NEXT:    mov v7.d[1], v18.d[1]
 ; CHECK-IADISABLED-NEXT:    mov v2.d[1], v6.d[1]
 ; CHECK-IADISABLED-NEXT:    fadd v3.4s, v17.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fadd v2.4s, v2.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    stp q2, q4, [x9]
+; CHECK-IADISABLED-NEXT:    fadd v4.4s, v2.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    st2 { v3.4s, v4.4s }, [x9]
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB2_1
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
 ; CHECK-IADISABLED-NEXT:    ret
@@ -656,10 +654,8 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-IADISABLED-NEXT:    mov v7.d[1], v18.d[1]
 ; CHECK-IADISABLED-NEXT:    mov v2.d[1], v6.d[1]
 ; CHECK-IADISABLED-NEXT:    fadd v3.4s, v17.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    fadd v2.4s, v2.4s, v7.4s
-; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v3.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    stp q2, q4, [x9]
+; CHECK-IADISABLED-NEXT:    fadd v4.4s, v2.4s, v7.4s
+; CHECK-IADISABLED-NEXT:    st2 { v3.4s, v4.4s }, [x9]
 ; CHECK-IADISABLED-NEXT:    b.ne .LBB6_1
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %while.end
 ; CHECK-IADISABLED-NEXT:    ret
@@ -735,44 +731,27 @@ while.end:                                        ; preds = %vector.body
 ; This example has store(shuffle(shuffle(... that would be better to be treated
 ; as a single store. This avoids the vld2 for data that is already shuffled.
 define void @transpose_s16_8x8_simpler(ptr nocapture noundef %a) {
-; CHECK-IAENABLED-LABEL: transpose_s16_8x8_simpler:
-; CHECK-IAENABLED:       .Lfunc_begin7:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IAENABLED-NEXT:    ldp q2, q3, [x0, #64]
-; CHECK-IAENABLED-NEXT:    ldp q4, q5, [x0, #32]
-; CHECK-IAENABLED-NEXT:    ldp q6, q7, [x0, #96]
-; CHECK-IAENABLED-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-IAENABLED-NEXT:    trn1 v1.8h, v2.8h, v3.8h
-; CHECK-IAENABLED-NEXT:    trn1 v2.8h, v4.8h, v5.8h
-; CHECK-IAENABLED-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-IAENABLED-NEXT:    trn1 v0.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v1.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    zip2 v2.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    str q2, [x0, #64]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: transpose_s16_8x8_simpler:
-; CHECK-IADISABLED:       .Lfunc_begin7:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-IADISABLED-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-IADISABLED-NEXT:    ldp q6, q7, [x0, #96]
-; CHECK-IADISABLED-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-IADISABLED-NEXT:    trn1 v1.8h, v2.8h, v3.8h
-; CHECK-IADISABLED-NEXT:    trn1 v2.8h, v4.8h, v5.8h
-; CHECK-IADISABLED-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-IADISABLED-NEXT:    trn1 v0.4s, v0.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    trn1 v1.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    str q2, [x0]
-; CHECK-IADISABLED-NEXT:    str q0, [x0, #64]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: transpose_s16_8x8_simpler:
+; CHECK:       .Lfunc_begin7:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    ldp q3, q6, [x0, #80]
+; CHECK-NEXT:    ldr q7, [x0, #112]
+; CHECK-NEXT:    ldr q0, [x8, #64]!
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    trn1 v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    trn1 v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    trn1 v3.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn1 v2.8h, v4.8h, v5.8h
+; CHECK-NEXT:    trn1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    trn1 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x0]
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x8]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: transpose_s16_8x8_simpler:
 ; CHECK-GI:       .Lfunc_begin7:
@@ -832,39 +811,45 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK-IAENABLED:       .Lfunc_begin8:
 ; CHECK-IAENABLED-NEXT:    .cfi_startproc
 ; CHECK-IAENABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IAENABLED-NEXT:    ldp q2, q3, [x0, #64]
-; CHECK-IAENABLED-NEXT:    ldp q4, q5, [x0, #96]
-; CHECK-IAENABLED-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-IAENABLED-NEXT:    zip1 v1.8h, v2.8h, v3.8h
-; CHECK-IAENABLED-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-IAENABLED-NEXT:    trn1 v4.8h, v4.8h, v5.8h
-; CHECK-IAENABLED-NEXT:    zip1 v3.8h, v2.8h, v3.8h
-; CHECK-IAENABLED-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    dup v0.4s, v4.s[2]
-; CHECK-IAENABLED-NEXT:    zip2 v0.4s, v2.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    st2 { v2.2s, v3.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    str q0, [x0, #64]
+; CHECK-IAENABLED-NEXT:    mov x8, x0
+; CHECK-IAENABLED-NEXT:    ldp q1, q2, [x0]
+; CHECK-IAENABLED-NEXT:    ldp q3, q6, [x0, #80]
+; CHECK-IAENABLED-NEXT:    ldr q7, [x0, #112]
+; CHECK-IAENABLED-NEXT:    ldr q0, [x8, #64]!
+; CHECK-IAENABLED-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-IAENABLED-NEXT:    trn1 v1.8h, v1.8h, v2.8h
+; CHECK-IAENABLED-NEXT:    zip1 v0.8h, v0.8h, v3.8h
+; CHECK-IAENABLED-NEXT:    trn1 v3.8h, v6.8h, v7.8h
+; CHECK-IAENABLED-NEXT:    zip1 v2.8h, v4.8h, v5.8h
+; CHECK-IAENABLED-NEXT:    trn1 v0.4s, v1.4s, v0.4s
+; CHECK-IAENABLED-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
+; CHECK-IAENABLED-NEXT:    mov d3, v1.d[1]
+; CHECK-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x0]
+; CHECK-IAENABLED-NEXT:    mov d2, v0.d[1]
+; CHECK-IAENABLED-NEXT:    st2 { v2.2s, v3.2s }, [x8]
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: transpose_s16_8x8_simpler2:
 ; CHECK-IADISABLED:       .Lfunc_begin8:
 ; CHECK-IADISABLED-NEXT:    .cfi_startproc
 ; CHECK-IADISABLED-NEXT:  // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-IADISABLED-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-IADISABLED-NEXT:    ldp q6, q7, [x0, #96]
-; CHECK-IADISABLED-NEXT:    trn1 v0.8h, v0.8h, v1.8h
-; CHECK-IADISABLED-NEXT:    zip1 v1.8h, v2.8h, v3.8h
-; CHECK-IADISABLED-NEXT:    zip1 v2.8h, v4.8h, v5.8h
-; CHECK-IADISABLED-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-IADISABLED-NEXT:    trn1 v0.4s, v0.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    str q2, [x0]
-; CHECK-IADISABLED-NEXT:    str q0, [x0, #64]
+; CHECK-IADISABLED-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-IADISABLED-NEXT:    mov x8, x0
+; CHECK-IADISABLED-NEXT:    ldp q2, q3, [x0, #96]
+; CHECK-IADISABLED-NEXT:    ldr d4, [x0, #80]
+; CHECK-IADISABLED-NEXT:    ldr d5, [x8, #64]!
+; CHECK-IADISABLED-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; CHECK-IADISABLED-NEXT:    trn1 v1.8h, v2.8h, v3.8h
+; CHECK-IADISABLED-NEXT:    zip1 v2.4h, v5.4h, v4.4h
+; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v0.4s, v1.4s
+; CHECK-IADISABLED-NEXT:    dup v0.2s, v2.s[0]
+; CHECK-IADISABLED-NEXT:    ldr q2, [x0]
+; CHECK-IADISABLED-NEXT:    st2 { v0.2s, v1.2s }, [x0], #16
+; CHECK-IADISABLED-NEXT:    ldr q3, [x0]
+; CHECK-IADISABLED-NEXT:    mov d1, v1.d[1]
+; CHECK-IADISABLED-NEXT:    trn1 v2.8h, v2.8h, v3.8h
+; CHECK-IADISABLED-NEXT:    mov d0, v2.d[1]
+; CHECK-IADISABLED-NEXT:    st2 { v0.2s, v1.2s }, [x8]
 ; CHECK-IADISABLED-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: transpose_s16_8x8_simpler2:
@@ -925,93 +910,51 @@ entry:
 
 
 define void @transpose_s16_8x8(ptr nocapture noundef %0, ptr nocapture noundef %1, ptr nocapture noundef %2, ptr nocapture noundef %3, ptr nocapture noundef %4, ptr nocapture noundef %5, ptr nocapture noundef %6, ptr nocapture noundef %7) {
-; CHECK-IAENABLED-LABEL: transpose_s16_8x8:
-; CHECK-IAENABLED:       .Lfunc_begin9:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0:
-; CHECK-IAENABLED-NEXT:    ldr q0, [x0]
-; CHECK-IAENABLED-NEXT:    ldr q1, [x1]
-; CHECK-IAENABLED-NEXT:    ldr q3, [x4]
-; CHECK-IAENABLED-NEXT:    ldr q4, [x5]
-; CHECK-IAENABLED-NEXT:    ldr q2, [x2]
-; CHECK-IAENABLED-NEXT:    ldr q5, [x3]
-; CHECK-IAENABLED-NEXT:    trn1 v16.8h, v0.8h, v1.8h
-; CHECK-IAENABLED-NEXT:    trn2 v0.8h, v0.8h, v1.8h
-; CHECK-IAENABLED-NEXT:    ldr q6, [x6]
-; CHECK-IAENABLED-NEXT:    ldr q7, [x7]
-; CHECK-IAENABLED-NEXT:    trn1 v17.8h, v3.8h, v4.8h
-; CHECK-IAENABLED-NEXT:    trn2 v1.8h, v3.8h, v4.8h
-; CHECK-IAENABLED-NEXT:    trn1 v18.8h, v2.8h, v5.8h
-; CHECK-IAENABLED-NEXT:    trn2 v2.8h, v2.8h, v5.8h
-; CHECK-IAENABLED-NEXT:    trn1 v19.8h, v6.8h, v7.8h
-; CHECK-IAENABLED-NEXT:    trn2 v3.8h, v6.8h, v7.8h
-; CHECK-IAENABLED-NEXT:    trn1 v4.4s, v16.4s, v17.4s
-; CHECK-IAENABLED-NEXT:    trn1 v6.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn2 v16.4s, v16.4s, v17.4s
-; CHECK-IAENABLED-NEXT:    trn2 v0.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v5.4s, v18.4s, v19.4s
-; CHECK-IAENABLED-NEXT:    trn1 v7.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    trn2 v17.4s, v18.4s, v19.4s
-; CHECK-IAENABLED-NEXT:    trn2 v1.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    st2 { v4.2s, v5.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    zip2 v2.4s, v4.4s, v5.4s
-; CHECK-IAENABLED-NEXT:    zip2 v3.4s, v6.4s, v7.4s
-; CHECK-IAENABLED-NEXT:    zip2 v4.4s, v16.4s, v17.4s
-; CHECK-IAENABLED-NEXT:    st2 { v6.2s, v7.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    st2 { v16.2s, v17.2s }, [x2]
-; CHECK-IAENABLED-NEXT:    st2 { v0.2s, v1.2s }, [x3]
-; CHECK-IAENABLED-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    str q2, [x4]
-; CHECK-IAENABLED-NEXT:    str q3, [x5]
-; CHECK-IAENABLED-NEXT:    str q4, [x6]
-; CHECK-IAENABLED-NEXT:    str q0, [x7]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: transpose_s16_8x8:
-; CHECK-IADISABLED:       .Lfunc_begin9:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr q0, [x2]
-; CHECK-IADISABLED-NEXT:    ldr q1, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q2, [x1]
-; CHECK-IADISABLED-NEXT:    ldr q3, [x3]
-; CHECK-IADISABLED-NEXT:    ldr q4, [x4]
-; CHECK-IADISABLED-NEXT:    ldr q5, [x5]
-; CHECK-IADISABLED-NEXT:    trn1 v16.8h, v1.8h, v2.8h
-; CHECK-IADISABLED-NEXT:    trn2 v1.8h, v1.8h, v2.8h
-; CHECK-IADISABLED-NEXT:    ldr q6, [x6]
-; CHECK-IADISABLED-NEXT:    ldr q7, [x7]
-; CHECK-IADISABLED-NEXT:    trn1 v2.8h, v0.8h, v3.8h
-; CHECK-IADISABLED-NEXT:    trn1 v17.8h, v4.8h, v5.8h
-; CHECK-IADISABLED-NEXT:    trn2 v0.8h, v0.8h, v3.8h
-; CHECK-IADISABLED-NEXT:    trn2 v3.8h, v4.8h, v5.8h
-; CHECK-IADISABLED-NEXT:    trn1 v18.8h, v6.8h, v7.8h
-; CHECK-IADISABLED-NEXT:    trn2 v4.8h, v6.8h, v7.8h
-; CHECK-IADISABLED-NEXT:    trn1 v5.4s, v16.4s, v17.4s
-; CHECK-IADISABLED-NEXT:    trn2 v16.4s, v16.4s, v17.4s
-; CHECK-IADISABLED-NEXT:    trn1 v7.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    trn2 v1.4s, v1.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    trn1 v6.4s, v2.4s, v18.4s
-; CHECK-IADISABLED-NEXT:    trn1 v19.4s, v0.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    trn2 v2.4s, v2.4s, v18.4s
-; CHECK-IADISABLED-NEXT:    trn2 v0.4s, v0.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    zip1 v3.4s, v5.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v7.4s, v19.4s
-; CHECK-IADISABLED-NEXT:    zip1 v17.4s, v16.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip1 v18.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip2 v5.4s, v5.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip2 v2.4s, v16.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    str q3, [x0]
-; CHECK-IADISABLED-NEXT:    zip2 v3.4s, v7.4s, v19.4s
-; CHECK-IADISABLED-NEXT:    str q4, [x1]
-; CHECK-IADISABLED-NEXT:    str q17, [x2]
-; CHECK-IADISABLED-NEXT:    str q18, [x3]
-; CHECK-IADISABLED-NEXT:    str q5, [x4]
-; CHECK-IADISABLED-NEXT:    str q3, [x5]
-; CHECK-IADISABLED-NEXT:    str q2, [x6]
-; CHECK-IADISABLED-NEXT:    str q0, [x7]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: transpose_s16_8x8:
+; CHECK:       .Lfunc_begin9:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldr q3, [x4]
+; CHECK-NEXT:    ldr q4, [x5]
+; CHECK-NEXT:    ldr q2, [x2]
+; CHECK-NEXT:    ldr q5, [x3]
+; CHECK-NEXT:    trn1 v16.8h, v0.8h, v1.8h
+; CHECK-NEXT:    trn2 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ldr q6, [x6]
+; CHECK-NEXT:    ldr q7, [x7]
+; CHECK-NEXT:    trn1 v17.8h, v3.8h, v4.8h
+; CHECK-NEXT:    trn1 v18.8h, v2.8h, v5.8h
+; CHECK-NEXT:    trn2 v1.8h, v3.8h, v4.8h
+; CHECK-NEXT:    trn2 v2.8h, v2.8h, v5.8h
+; CHECK-NEXT:    trn1 v19.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn2 v3.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn1 v4.4s, v16.4s, v17.4s
+; CHECK-NEXT:    trn2 v16.4s, v16.4s, v17.4s
+; CHECK-NEXT:    trn1 v6.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn1 v5.4s, v18.4s, v19.4s
+; CHECK-NEXT:    trn1 v7.4s, v2.4s, v3.4s
+; CHECK-NEXT:    trn2 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    trn2 v17.4s, v18.4s, v19.4s
+; CHECK-NEXT:    mov d3, v5.d[1]
+; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x0]
+; CHECK-NEXT:    mov d2, v4.d[1]
+; CHECK-NEXT:    mov d5, v7.d[1]
+; CHECK-NEXT:    st2 { v6.2s, v7.2s }, [x1]
+; CHECK-NEXT:    mov d4, v6.d[1]
+; CHECK-NEXT:    mov d7, v17.d[1]
+; CHECK-NEXT:    mov d6, v16.d[1]
+; CHECK-NEXT:    st2 { v16.2s, v17.2s }, [x2]
+; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x3]
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x4]
+; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x5]
+; CHECK-NEXT:    st2 { v6.2s, v7.2s }, [x6]
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x7]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: transpose_s16_8x8:
 ; CHECK-GI:       .Lfunc_begin9:
@@ -1114,38 +1057,53 @@ define void @transpose_s16_8x8_(ptr nocapture noundef %0) {
 ; CHECK:       .Lfunc_begin10:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    mov x14, x0
+; CHECK-NEXT:    mov x11, x0
+; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    mov x13, x0
+; CHECK-NEXT:    mov x12, x0
+; CHECK-NEXT:    ldr q1, [x14, #16]!
+; CHECK-NEXT:    mov x10, x0
+; CHECK-NEXT:    ldr q4, [x11, #64]!
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr q5, [x9, #80]!
 ; CHECK-NEXT:    trn1 v16.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ldr q2, [x13, #32]!
 ; CHECK-NEXT:    trn2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    trn1 v1.8h, v2.8h, v3.8h
-; CHECK-NEXT:    trn2 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    ldr q3, [x12, #48]!
 ; CHECK-NEXT:    trn1 v17.8h, v4.8h, v5.8h
-; CHECK-NEXT:    trn2 v3.8h, v4.8h, v5.8h
-; CHECK-NEXT:    trn1 v18.8h, v6.8h, v7.8h
-; CHECK-NEXT:    trn2 v4.8h, v6.8h, v7.8h
-; CHECK-NEXT:    trn1 v5.4s, v16.4s, v17.4s
-; CHECK-NEXT:    trn1 v7.4s, v0.4s, v3.4s
+; CHECK-NEXT:    ldr q6, [x10, #96]!
+; CHECK-NEXT:    trn2 v1.8h, v4.8h, v5.8h
+; CHECK-NEXT:    ldr q7, [x8, #112]!
+; CHECK-NEXT:    trn1 v18.8h, v2.8h, v3.8h
+; CHECK-NEXT:    trn2 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    trn1 v19.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn1 v4.4s, v16.4s, v17.4s
+; CHECK-NEXT:    trn2 v3.8h, v6.8h, v7.8h
+; CHECK-NEXT:    trn1 v6.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    trn2 v16.4s, v16.4s, v17.4s
-; CHECK-NEXT:    trn1 v6.4s, v1.4s, v18.4s
-; CHECK-NEXT:    trn1 v19.4s, v2.4s, v4.4s
-; CHECK-NEXT:    trn2 v1.4s, v1.4s, v18.4s
-; CHECK-NEXT:    trn2 v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    trn2 v2.4s, v2.4s, v4.4s
-; CHECK-NEXT:    zip1 v3.4s, v5.4s, v6.4s
-; CHECK-NEXT:    zip1 v4.4s, v7.4s, v19.4s
-; CHECK-NEXT:    zip1 v17.4s, v16.4s, v1.4s
-; CHECK-NEXT:    zip1 v18.4s, v0.4s, v2.4s
-; CHECK-NEXT:    zip2 v5.4s, v5.4s, v6.4s
-; CHECK-NEXT:    zip2 v1.4s, v16.4s, v1.4s
-; CHECK-NEXT:    zip2 v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    stp q3, q4, [x0]
-; CHECK-NEXT:    zip2 v3.4s, v7.4s, v19.4s
-; CHECK-NEXT:    stp q17, q18, [x0, #32]
-; CHECK-NEXT:    stp q1, q0, [x0, #96]
-; CHECK-NEXT:    stp q5, q3, [x0, #64]
+; CHECK-NEXT:    trn1 v5.4s, v18.4s, v19.4s
+; CHECK-NEXT:    trn1 v7.4s, v2.4s, v3.4s
+; CHECK-NEXT:    trn2 v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    trn2 v17.4s, v18.4s, v19.4s
+; CHECK-NEXT:    mov d3, v5.d[1]
+; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x0]
+; CHECK-NEXT:    mov d2, v4.d[1]
+; CHECK-NEXT:    mov d5, v7.d[1]
+; CHECK-NEXT:    st2 { v6.2s, v7.2s }, [x14]
+; CHECK-NEXT:    mov d4, v6.d[1]
+; CHECK-NEXT:    mov d7, v17.d[1]
+; CHECK-NEXT:    mov d6, v16.d[1]
+; CHECK-NEXT:    st2 { v16.2s, v17.2s }, [x13]
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x11]
+; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x12]
+; CHECK-NEXT:    st2 { v4.2s, v5.2s }, [x9]
+; CHECK-NEXT:    st2 { v6.2s, v7.2s }, [x10]
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x8]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: transpose_s16_8x8_:
@@ -1244,25 +1202,14 @@ define void @transpose_s16_8x8_(ptr nocapture noundef %0) {
 }
 
 define void @store_factor2(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-IAENABLED-LABEL: store_factor2:
-; CHECK-IAENABLED:       .Lfunc_begin11:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0:
-; CHECK-IAENABLED-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v3.4s, v1.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    st2 { v2.4s, v3.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: store_factor2:
-; CHECK-IADISABLED:       .Lfunc_begin11:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0:
-; CHECK-IADISABLED-NEXT:    trn1 v2.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    trn1 v0.4s, v1.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip2 v1.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v2.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    stp q0, q1, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: store_factor2:
+; CHECK:       .Lfunc_begin11:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn1 v3.4s, v1.4s, v0.4s
+; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor2:
 ; CHECK-GI:       .Lfunc_begin11:
@@ -1289,10 +1236,11 @@ define void @store_factor2_high(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %a
 ; CHECK-NEXT:    trn1 v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    trn1 v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    zip1 v1.4s, v2.4s, v0.4s
-; CHECK-NEXT:    trn1 v1.4s, v1.4s, v0.4s
-; CHECK-NEXT:    zip2 v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    str q1, [x0]
-; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    mov d3, v2.d[1]
+; CHECK-NEXT:    trn1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    st2 { v3.2s, v4.2s }, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor2_high:
@@ -1323,10 +1271,11 @@ define void @store_factor2_high2(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    zip1 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    zip2 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    trn1 v2.4s, v2.4s, v1.4s
-; CHECK-NEXT:    str q2, [x0]
-; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    mov d4, v1.d[1]
+; CHECK-NEXT:    mov d3, v0.d[1]
+; CHECK-NEXT:    trn1 v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    str q1, [x0]
+; CHECK-NEXT:    st2 { v3.2s, v4.2s }, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor2_high2:
@@ -1350,38 +1299,21 @@ define void @store_factor2_high2(ptr %ptr, ptr %ptr2, <4 x i32> %a0, <4 x i32> %
 }
 
 define void @store_factor3(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
-; CHECK-IAENABLED-LABEL: store_factor3:
-; CHECK-IAENABLED:       .Lfunc_begin14:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0:
-; CHECK-IAENABLED-NEXT:    ext v3.16b, v0.16b, v1.16b, #12
-; CHECK-IAENABLED-NEXT:    ext v6.16b, v1.16b, v2.16b, #12
-; CHECK-IAENABLED-NEXT:    zip2 v3.4s, v0.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    mov v3.s[0], v0.s[0]
-; CHECK-IAENABLED-NEXT:    ext v0.16b, v2.16b, v0.16b, #12
-; CHECK-IAENABLED-NEXT:    zip2 v4.4s, v1.4s, v6.4s
-; CHECK-IAENABLED-NEXT:    mov v4.s[0], v1.s[0]
-; CHECK-IAENABLED-NEXT:    zip2 v5.4s, v2.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    mov v5.s[0], v2.s[0]
-; CHECK-IAENABLED-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: store_factor3:
-; CHECK-IADISABLED:       .Lfunc_begin14:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0:
-; CHECK-IADISABLED-NEXT:    trn2 v3.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip2 v4.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-IADISABLED-NEXT:    ext v4.16b, v4.16b, v4.16b, #12
-; CHECK-IADISABLED-NEXT:    mov v1.s[2], v2.s[0]
-; CHECK-IADISABLED-NEXT:    uzp2 v5.4s, v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    mov v4.s[3], v0.s[2]
-; CHECK-IADISABLED-NEXT:    str q1, [x0]
-; CHECK-IADISABLED-NEXT:    ext v0.16b, v5.16b, v3.16b, #4
-; CHECK-IADISABLED-NEXT:    stp q0, q4, [x0, #16]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: store_factor3:
+; CHECK:       .Lfunc_begin14:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ext v3.16b, v0.16b, v1.16b, #12
+; CHECK-NEXT:    ext v6.16b, v1.16b, v2.16b, #12
+; CHECK-NEXT:    zip2 v3.4s, v0.4s, v3.4s
+; CHECK-NEXT:    mov v3.s[0], v0.s[0]
+; CHECK-NEXT:    ext v0.16b, v2.16b, v0.16b, #12
+; CHECK-NEXT:    zip2 v4.4s, v1.4s, v6.4s
+; CHECK-NEXT:    mov v4.s[0], v1.s[0]
+; CHECK-NEXT:    zip2 v5.4s, v2.4s, v0.4s
+; CHECK-NEXT:    mov v5.s[0], v2.s[0]
+; CHECK-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x0]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3:
 ; CHECK-GI:       .Lfunc_begin14:
@@ -1422,38 +1354,16 @@ define void @store_factor3(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
 }
 
 define void @store_factor4(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> %a3) {
-; CHECK-IAENABLED-LABEL: store_factor4:
-; CHECK-IAENABLED:       .Lfunc_begin15:
-; CHECK-IAENABLED-NEXT:    .cfi_startproc
-; CHECK-IAENABLED-NEXT:  // %bb.0:
-; CHECK-IAENABLED-NEXT:    trn1 v4.4s, v0.4s, v1.4s
-; CHECK-IAENABLED-NEXT:    trn1 v5.4s, v1.4s, v2.4s
-; CHECK-IAENABLED-NEXT:    trn1 v6.4s, v2.4s, v3.4s
-; CHECK-IAENABLED-NEXT:    trn1 v7.4s, v3.4s, v0.4s
-; CHECK-IAENABLED-NEXT:    st4 { v4.4s, v5.4s, v6.4s, v7.4s }, [x0]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: store_factor4:
-; CHECK-IADISABLED:       .Lfunc_begin15:
-; CHECK-IADISABLED-NEXT:    .cfi_startproc
-; CHECK-IADISABLED-NEXT:  // %bb.0:
-; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip1 v5.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    trn1 v6.4s, v3.4s, v0.4s
-; CHECK-IADISABLED-NEXT:    zip2 v7.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    trn1 v16.4s, v2.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    zip2 v17.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    ext v3.16b, v3.16b, v4.16b, #8
-; CHECK-IADISABLED-NEXT:    zip1 v4.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    ext v1.16b, v2.16b, v5.16b, #8
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v6.d[1]
-; CHECK-IADISABLED-NEXT:    mov v17.d[1], v16.d[1]
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v1.d[1]
-; CHECK-IADISABLED-NEXT:    stp q17, q7, [x0, #32]
-; CHECK-IADISABLED-NEXT:    stp q0, q4, [x0]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: store_factor4:
+; CHECK:       .Lfunc_begin15:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    trn1 v4.4s, v0.4s, v1.4s
+; CHECK-NEXT:    trn1 v5.4s, v1.4s, v2.4s
+; CHECK-NEXT:    trn1 v6.4s, v2.4s, v3.4s
+; CHECK-NEXT:    trn1 v7.4s, v3.4s, v0.4s
+; CHECK-NEXT:    st4 { v4.4s, v5.4s, v6.4s, v7.4s }, [x0]
+; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor4:
 ; CHECK-GI:       .Lfunc_begin15:
@@ -1498,10 +1408,11 @@ define void @debuginfo(ptr nocapture noundef writeonly %buf, <8 x i16> noundef %
 ; CHECK:       .Lfunc_begin16:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    zip1 v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    zip2 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    st2 { v0.4h, v1.4h }, [x0], #16
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    st2 { v0.4h, v1.4h }, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: debuginfo:
@@ -1672,6 +1583,26 @@ define void @vld4_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture 
 ; CHECK-NEXT:    b.ne .LBB19_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
+;
+; CHECK-GI-LABEL: vld4_intrinsic:
+; CHECK-GI:       .Lfunc_begin19:
+; CHECK-GI-NEXT:    .cfi_startproc
+; CHECK-GI-NEXT:  // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, xzr
+; CHECK-GI-NEXT:  .LBB19_1: // %vector.body
+; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-GI-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
+; CHECK-GI-NEXT:    add x9, x1, x8
+; CHECK-GI-NEXT:    add x8, x8, #32
+; CHECK-GI-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-GI-NEXT:    fmul v4.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v4.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    fmul v5.4s, v2.4s, v2.4s
+; CHECK-GI-NEXT:    fmla v5.4s, v3.4s, v3.4s
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-GI-NEXT:    b.ne .LBB19_1
+; CHECK-GI-NEXT:  // %bb.2: // %while.end
+; CHECK-GI-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -1801,6 +1732,25 @@ define void @vld2_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias n
 ; CHECK-NEXT:    b.ne .LBB21_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
+;
+; CHECK-GI-LABEL: vld2_multiuse_intrinsic:
+; CHECK-GI:       .Lfunc_begin21:
+; CHECK-GI-NEXT:    .cfi_startproc
+; CHECK-GI-NEXT:  // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, xzr
+; CHECK-GI-NEXT:  .LBB21_1: // %vector.body
+; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-GI-NEXT:    ldp q0, q1, [x0], #32
+; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fmul v1.4s, v2.4s, v2.4s
+; CHECK-GI-NEXT:    fmla v1.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    str q1, [x1, x8]
+; CHECK-GI-NEXT:    add x8, x8, #16
+; CHECK-GI-NEXT:    cmp x8, #1, lsl #12 // =4096
+; CHECK-GI-NEXT:    b.ne .LBB21_1
+; CHECK-GI-NEXT:  // %bb.2: // %while.end
+; CHECK-GI-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -1910,6 +1860,26 @@ define void @vld4_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias n
 ; CHECK-NEXT:    b.ne .LBB23_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
+;
+; CHECK-GI-LABEL: vld4_multiuse_intrinsic:
+; CHECK-GI:       .Lfunc_begin23:
+; CHECK-GI-NEXT:    .cfi_startproc
+; CHECK-GI-NEXT:  // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, xzr
+; CHECK-GI-NEXT:  .LBB23_1: // %vector.body
+; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-GI-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0], #64
+; CHECK-GI-NEXT:    add x9, x1, x8
+; CHECK-GI-NEXT:    add x8, x8, #32
+; CHECK-GI-NEXT:    cmp x8, #2, lsl #12 // =8192
+; CHECK-GI-NEXT:    fmul v4.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v4.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    fmul v5.4s, v2.4s, v2.4s
+; CHECK-GI-NEXT:    fmla v5.4s, v3.4s, v3.4s
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-GI-NEXT:    b.ne .LBB23_1
+; CHECK-GI-NEXT:  // %bb.2: // %while.end
+; CHECK-GI-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -2249,6 +2219,17 @@ define void @store_factor2_intrinsic(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-NEXT:    trn1 v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
 ; CHECK-NEXT:    ret
+;
+; CHECK-GI-LABEL: store_factor2_intrinsic:
+; CHECK-GI:       .Lfunc_begin27:
+; CHECK-GI-NEXT:    .cfi_startproc
+; CHECK-GI-NEXT:  // %bb.0:
+; CHECK-GI-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    trn1 v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    zip1 v1.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    zip2 v0.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    stp q1, q0, [x0]
+; CHECK-GI-NEXT:    ret
   %v0 = shufflevector <4 x i32> %a0, <4 x i32> %a1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %v1 = shufflevector <4 x i32> %a1, <4 x i32> %a0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %interleaved.vec = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %v0, <4 x i32> %v1)
