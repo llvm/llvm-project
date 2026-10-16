@@ -1086,21 +1086,20 @@ mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
       builder, loc, getTotalElements(builder, loc, entity), elemBytes);
 }
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
-  auto ref = object.ref();
-  if (!ref)
-    return false;
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges) {
+  llvm::SmallVector<IteratorRange> objectRanges;
+  if (ranges.empty())
+    return objectRanges;
 
-  Fortran::lower::SomeExpr expr = toEvExpr(*ref);
-
-  for (Fortran::evaluate::SymbolRef s : CollectSymbols(expr)) {
-    const Fortran::semantics::Symbol &ult = s->GetUltimate();
-    if (ivSyms.contains(&ult))
-      return true;
-  }
-  return false;
+  assert(object.sourceIteratorReferences &&
+         "expected source iterator references for the locator");
+  for (const IteratorRange &range : ranges)
+    if (llvm::is_contained(*object.sourceIteratorReferences,
+                           &range.ivSym->GetUltimate()))
+      objectRanges.push_back(range);
+  return objectRanges;
 }
 
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
@@ -1287,117 +1286,6 @@ mlir::FlatSymbolRefAttr resolveMapperId(
     mapperId =
         mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
   return mapperId;
-}
-
-// Build the array coordinate for an object that uses iterator variables.
-// If the object is a section, use the first element of that section
-// as the coordinate. Currently only support top-level ArrayRef designators.
-//
-// Examples:
-//   a(i, j)       -> coordinates for a(i, j)
-//   a(i:i+1, j+2) -> coordinates for a(i, j+2)
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
-    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
-  const std::optional<ExprTy> &ref = object.ref();
-  assert(ref && "expected iterator-dependent object to have a reference");
-
-  std::optional<Fortran::evaluate::DataRef> dataRef =
-      Fortran::evaluate::ExtractDataRef(*ref);
-  if (!dataRef)
-    return std::nullopt;
-  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
-  if (!arrayRef || arrayRef->subscript().empty())
-    return std::nullopt;
-
-  auto &builder = converter.getFirOpBuilder();
-  const Fortran::semantics::Symbol *sym = object.sym();
-  assert(sym && "expected symbol for iterator-dependent object");
-  fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
-  mlir::Value one =
-      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  llvm::SmallVector<mlir::Value> indices;
-  indices.reserve(arrayRef->subscript().size());
-
-  for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
-    mlir::Value idx;
-    if (const auto *triplet =
-            std::get_if<Fortran::evaluate::Triplet>(&subscript.u)) {
-      // Sections use the first element of the section as the base address, so
-      // the coordinate for this dimension comes from the triplet lower bound.
-      std::optional<
-          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
-          lowerBound = triplet->lower();
-      if (!lowerBound) {
-        // Get lower bound if not provided by user.
-        // For example: !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(:i+1,
-        // j+2))
-        idx = fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
-      } else {
-        idx = fir::getBase(
-            converter.genExprValue(toEvExpr(*lowerBound), stmtCtx, &loc));
-      }
-    } else {
-      // Not handling vector subscripts for now.
-      if (subscript.Rank() > 0)
-        return std::nullopt;
-
-      const auto *indirect =
-          std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
-              &subscript.u);
-      assert(indirect && "expected non-triplet subscript");
-
-      // Scalar subscripts, including reordered indices and expressions like
-      // i+1 or j+2, lower directly through expression lowering.
-      idx = fir::getBase(
-          converter.genExprValue(toEvExpr(indirect->value()), stmtCtx, &loc));
-    }
-    indices.push_back(idx);
-  }
-
-  return indices;
-}
-
-// Build the element address for an iterator-dependent affinity object from a
-// base entity and lowered indices.
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc) {
-  auto &builder = converter.getFirOpBuilder();
-  mlir::Value base = entity.getBase();
-
-  // If base is a reference-to-box, load it so array_coor sees the box value
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(base.getType())) {
-    if (mlir::isa<fir::BoxType>(refTy.getEleTy()))
-      base = fir::LoadOp::create(builder, loc, base);
-  }
-
-  // Build shape from the entity extents
-  mlir::Value shape;
-  auto extents = hlfir::genExtentsVector(loc, builder, entity);
-  assert(extents.size() == ivs.size() &&
-         "expected the number of extents and iteration variables to match for "
-         "iterator");
-  if (entity.mayHaveNonDefaultLowerBounds()) {
-    llvm::SmallVector<mlir::Value> lowerBounds;
-    lowerBounds.reserve(ivs.size());
-    for (unsigned dim = 0; dim < ivs.size(); ++dim)
-      lowerBounds.push_back(hlfir::genLBound(loc, builder, entity, dim));
-    shape = builder.genShape(loc, lowerBounds, extents);
-  } else {
-    shape = fir::ShapeOp::create(builder, loc, extents);
-  }
-
-  mlir::Type elementToRefTy =
-      fir::ReferenceType::get(entity.getFortranElementType());
-
-  return fir::ArrayCoorOp::create(builder, loc, elementToRefTy,
-                                  /*memref=*/base,
-                                  /*shape=*/shape,
-                                  /*slice=*/mlir::Value{},
-                                  /*indices=*/ivs,
-                                  /*typeparams=*/mlir::ValueRange{});
 }
 
 // ---------------------------------------------------------------------------

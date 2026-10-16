@@ -989,7 +989,7 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
                            const MachineRegisterInfo &MRI, bool PrintDef) {
   LLT TypeToPrint = MI.getTypeToPrint(OpIdx, PrintedTypes, MRI);
   const MachineOperand &Op = MI.getOperand(OpIdx);
-  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx, TRI);
+  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx);
 
   switch (Op.getType()) {
   case MachineOperand::MO_Immediate:
@@ -1010,10 +1010,10 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
         InlineAsm::Flag F(Op.getImm());
         OS << F.getKindName();
 
+        bool IsReg = F.isRegDefKind() || F.isRegUseKind() ||
+                     F.isRegDefEarlyClobberKind();
         unsigned RCID;
-        if ((F.isRegDefKind() || F.isRegUseKind() ||
-             F.isRegDefEarlyClobberKind()) &&
-            F.hasRegClassConstraint(RCID))
+        if (IsReg && F.hasRegClassConstraint(RCID))
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
 
         if (F.isMemKind()) {
@@ -1024,6 +1024,9 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
         unsigned TiedTo;
         if (F.isUseOperandTiedToDef(TiedTo))
           OS << " tiedto:$" << TiedTo;
+        if (IsReg && F.getRegMayBeFolded())
+          OS << " foldable";
+
         break;
       }
     }

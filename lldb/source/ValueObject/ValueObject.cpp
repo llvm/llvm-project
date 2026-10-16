@@ -2042,18 +2042,17 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
 // "looks like" an array, in which case it has a leading [ symbol). while the [
 // is meaningful and should be shown to the user, . and -> are just parser
 // design, but by no means added information for the user.. strip them off
-static const char *SkipLeadingExpressionPathSeparators(const char *expression) {
-  if (!expression || !expression[0])
-    return expression;
-  if (expression[0] == '.')
-    return expression + 1;
-  if (expression[0] == '-' && expression[1] == '>')
-    return expression + 2;
+static llvm::StringRef
+SkipLeadingExpressionPathSeparators(llvm::StringRef expression) {
+  if (expression.starts_with('.'))
+    return expression.drop_front();
+  if (expression.starts_with("->"))
+    return expression.drop_front(2);
   return expression;
 }
 
 ValueObjectSP
-ValueObject::GetSyntheticExpressionPathChild(const char *expression,
+ValueObject::GetSyntheticExpressionPathChild(llvm::StringRef expression,
                                              bool can_create) {
   ValueObjectSP synthetic_child_sp;
   ConstString name_const_string(expression);

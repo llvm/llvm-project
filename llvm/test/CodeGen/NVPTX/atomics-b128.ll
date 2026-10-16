@@ -873,7 +873,7 @@ define i128 @test_atomicrmw_xor(ptr %ptr, i128 %val) {
 define i128 @test_atomicrmw_min(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_min(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<7>;
+; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -890,12 +890,10 @@ define i128 @test_atomicrmw_min(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  $L__BB37_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    setp.lt.u64 %p1, %rd12, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.lt.s64 %p4, %rd13, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    setp.eq.and.b64 %p2, %rd13, %rd5, %p1;
+; CHECK-NEXT:    setp.lt.or.s64 %p3, %rd13, %rd5, %p2;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p3;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p3;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
@@ -906,10 +904,10 @@ define i128 @test_atomicrmw_min(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
 ; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
 ; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    setp.ne.b64 %p4, %rd11, 0;
 ; CHECK-NEXT:    mov.b64 %rd12, %rd1;
 ; CHECK-NEXT:    mov.b64 %rd13, %rd2;
-; CHECK-NEXT:    @%p6 bra $L__BB37_1;
+; CHECK-NEXT:    @%p4 bra $L__BB37_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
@@ -920,7 +918,7 @@ define i128 @test_atomicrmw_min(ptr %ptr, i128 %val) {
 define i128 @test_atomicrmw_max(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_max(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<7>;
+; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -937,12 +935,10 @@ define i128 @test_atomicrmw_max(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  $L__BB38_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    setp.gt.u64 %p1, %rd12, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.gt.s64 %p4, %rd13, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    setp.eq.and.b64 %p2, %rd13, %rd5, %p1;
+; CHECK-NEXT:    setp.gt.or.s64 %p3, %rd13, %rd5, %p2;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p3;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p3;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
@@ -953,10 +949,10 @@ define i128 @test_atomicrmw_max(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
 ; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
 ; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    setp.ne.b64 %p4, %rd11, 0;
 ; CHECK-NEXT:    mov.b64 %rd12, %rd1;
 ; CHECK-NEXT:    mov.b64 %rd13, %rd2;
-; CHECK-NEXT:    @%p6 bra $L__BB38_1;
+; CHECK-NEXT:    @%p4 bra $L__BB38_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
@@ -967,7 +963,7 @@ define i128 @test_atomicrmw_max(ptr %ptr, i128 %val) {
 define i128 @test_atomicrmw_umin(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_umin(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<7>;
+; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -984,12 +980,10 @@ define i128 @test_atomicrmw_umin(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  $L__BB39_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    setp.lt.u64 %p1, %rd12, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.lt.u64 %p4, %rd13, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    setp.eq.and.b64 %p2, %rd13, %rd5, %p1;
+; CHECK-NEXT:    setp.lt.or.u64 %p3, %rd13, %rd5, %p2;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p3;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p3;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
@@ -1000,10 +994,10 @@ define i128 @test_atomicrmw_umin(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
 ; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
 ; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    setp.ne.b64 %p4, %rd11, 0;
 ; CHECK-NEXT:    mov.b64 %rd12, %rd1;
 ; CHECK-NEXT:    mov.b64 %rd13, %rd2;
-; CHECK-NEXT:    @%p6 bra $L__BB39_1;
+; CHECK-NEXT:    @%p4 bra $L__BB39_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
@@ -1014,7 +1008,7 @@ define i128 @test_atomicrmw_umin(ptr %ptr, i128 %val) {
 define i128 @test_atomicrmw_umax(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_umax(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<7>;
+; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1031,12 +1025,10 @@ define i128 @test_atomicrmw_umax(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  $L__BB40_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    setp.gt.u64 %p1, %rd12, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.gt.u64 %p4, %rd13, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    setp.eq.and.b64 %p2, %rd13, %rd5, %p1;
+; CHECK-NEXT:    setp.gt.or.u64 %p3, %rd13, %rd5, %p2;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p3;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p3;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
@@ -1047,10 +1039,10 @@ define i128 @test_atomicrmw_umax(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
 ; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
 ; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    setp.ne.b64 %p4, %rd11, 0;
 ; CHECK-NEXT:    mov.b64 %rd12, %rd1;
 ; CHECK-NEXT:    mov.b64 %rd13, %rd2;
-; CHECK-NEXT:    @%p6 bra $L__BB40_1;
+; CHECK-NEXT:    @%p4 bra $L__BB40_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;

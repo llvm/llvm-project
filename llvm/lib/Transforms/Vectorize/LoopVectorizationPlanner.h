@@ -51,6 +51,7 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
+struct VectorizeOptions;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
@@ -499,21 +500,22 @@ public:
 
   /// Create a single-scalar recipe with \p Opcode and \p Operands without
   /// inserting it.
-  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
-                                                 ArrayRef<VPValue *> Operands,
-                                                 VPValue *Mask,
-                                                 const VPIRFlags &Flags,
-                                                 const VPIRMetadata &Metadata,
-                                                 DebugLoc DL, Instruction *UV) {
+  static VPSingleDefRecipe *
+  createSingleScalarOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                       VPValue *Mask, const VPIRFlags &Flags,
+                       const VPIRMetadata &Metadata, DebugLoc DL,
+                       Type *ResultTy, Instruction *UV) {
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
       auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
-                                    UV->getName(), UV->getType());
+                                    UV->getName(), ResultTy);
       VPI->setUnderlyingValue(UV);
       return VPI;
     }
-    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
-                                 Flags, Metadata, DL);
+    auto *RepR = new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true,
+                                       Mask, Flags, Metadata, DL);
+    assert(RepR->getScalarType() == ResultTy && "unexpected result type");
+    return RepR;
   }
 
   VPScalarIVStepsRecipe *
@@ -702,6 +704,7 @@ class VFSelectionContext {
   /// return the value returned by the corresponding TTI method.
   void initializeVScaleForTuning();
 
+  const VectorizeOptions &Opts;
   const TargetTransformInfo &TTI;
   const LoopVectorizationLegality *Legal;
   const Loop *TheLoop;
@@ -748,14 +751,15 @@ public:
   /// or profile information.
   const bool OptForSize;
 
-  VFSelectionContext(const TargetTransformInfo &TTI,
+  VFSelectionContext(const VectorizeOptions &Opts,
+                     const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
                      PredicatedScalarEvolution &PSE, DemandedBits *DB,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), DB(DB),
-        ORE(ORE), Hints(Hints),
+      : Opts(Opts), TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE),
+        DB(DB), ORE(ORE), Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
@@ -763,6 +767,8 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const VectorizeOptions &getOpts() const { return Opts; }
 
   const TargetTransformInfo &getTTI() const { return TTI; }
 
@@ -867,6 +873,8 @@ public:
 /// Planner drives the vectorization process after having passed
 /// Legality checks.
 class LoopVectorizationPlanner {
+  const VectorizeOptions &Opts;
+
   /// The loop that we evaluate.
   Loop *OrigLoop;
 
@@ -945,6 +953,15 @@ public:
   /// Destroy the cost model.
   void clearCostModel();
 
+  /// Return true if there is at least one VPlan for a vector VF
+  bool hasVectorPlan() const {
+    return any_of(
+        VPlans, [&](const VPlanPtr &Plan) { return !Plan->hasScalarVFOnly(); });
+  }
+
+  /// Returns true if there is at least one VPlan.
+  bool hasAPlan() const { return !VPlans.empty(); }
+
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
@@ -1022,8 +1039,10 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
-  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
+  /// used to compute the thresholds of difference checks.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           ElementCount VF, unsigned UF,
                            bool HasBranchWeights) const;
 
   /// Update loop metadata and profile info for both the scalar remainder loop
