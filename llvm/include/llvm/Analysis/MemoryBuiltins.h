@@ -113,6 +113,12 @@ LLVM_ABI std::optional<APInt> getAllocSize(
       return V;
     });
 
+/// Return true if the size of the allocation performed by \p CB can be
+/// determined, as a constant or as a value ObjectSizeOffsetEvaluator can
+/// materialize at runtime.
+LLVM_ABI bool hasComputableAllocSize(const CallBase *CB,
+                                     const TargetLibraryInfo *TLI);
+
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return
 /// nullptr.
