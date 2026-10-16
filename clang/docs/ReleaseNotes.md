@@ -186,8 +186,6 @@ features cannot lower the translation-unit ABI level;
 
 #### C++2c Feature Support
 
-- Clang now supports reflecting over arbitrary types.
-
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 

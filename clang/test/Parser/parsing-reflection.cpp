@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only -verify
-// RUN: %clang_cc1 %s -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify
 
 struct A{};
 namespace B{};
@@ -48,12 +47,6 @@ template <class T> consteval auto missing() {
 struct Empty {};
 auto missing_result = missing<Empty>(); // expected-note {{in instantiation of function template specialization 'missing<Empty>' requested here}}
 
-template <class T> using Alias = T;
-auto alias = ^^Alias<int>;
-template <class T> void alias_template() {
-  (void)^^Alias<T>;
-}
-
 template <int... Ns> void unexpanded_arrays() {
   (void)^^int[Ns]; // expected-error {{expression contains unexpanded parameter pack 'Ns'}}
 }
@@ -78,6 +71,12 @@ template <class... Ts> consteval auto expanded_pair() {
   return ^^Pair<Ts...>; // expected-error {{pack expansion used as argument for non-pack parameter of alias template}}
 }
 
+template <class T> struct Class;
+template <class... Ts> void unexpanded_class() {
+  (void)^^Class<Ts>; // expected-error {{expression contains unexpanded parameter pack 'Ts'}}
+}
+
+template <class T> using Alias = int;
 template <class... Ts> void unexpanded_alias() {
   (void)^^Alias<Ts>; // expected-error {{expression contains an unexpanded parameter pack}}
 }

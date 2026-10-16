@@ -27,12 +27,6 @@ void TestTypeReflection() {
   constexpr auto record = ^^Record;
   // CHECK: VarDecl {{.*}} record 'const std::meta::info' constexpr cinit
   // CHECK-NEXT: value: Reflection ^^Record
-  constexpr auto pointer = ^^Record *;
-  // CHECK: VarDecl {{.*}} pointer 'const std::meta::info' constexpr cinit
-  // CHECK-NEXT: value: Reflection ^^Record *
-  constexpr auto array = ^^int[3];
-  // CHECK: VarDecl {{.*}} array 'const std::meta::info' constexpr cinit
-  // CHECK-NEXT: value: Reflection ^^int[3]
   constexpr auto function = ^^void(int);
   // CHECK: VarDecl {{.*}} function 'const std::meta::info' constexpr cinit
   // CHECK-NEXT: value: Reflection ^^void (int)

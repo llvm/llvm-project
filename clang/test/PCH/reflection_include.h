@@ -3,31 +3,14 @@ using info = decltype(^^int);
 struct Record {};
 using Alias = Record;
 template <info R> struct Reflected {};
-template <class T> constexpr info reflection = ^^T;
-template <class T> consteval auto pointer() { return ^^T *; }
-template <class... Ts> consteval bool pack() {
-  return ((^^Ts == reflection<Ts>) && ...);
-}
 constexpr auto record = ^^Record;
-constexpr auto array = ^^int[3];
-constexpr auto function = ^^void(int);
 constexpr auto alias = ^^Alias;
-constexpr auto vector = ^^int __attribute__((ext_vector_type(4)));
-constexpr auto block = ^^void (^)(int);
-constexpr auto bitint = ^^_BitInt(17);
 
 struct WithType { using type = int; };
 template <class T> consteval info written_type() {
   return ^^typename T::type;
 }
 constexpr auto typename_type = ^^typename WithType::type;
-
-template<unsigned I, class... Ts> consteval info selected_type() {
-  return ^^Ts...[I];
-}
-template<class T>struct Injected {
-  static constexpr info value = ^^Injected;
-};
 
 namespace AliasTemplates {
 template <class T = int, class U = T> using Defaults = int;

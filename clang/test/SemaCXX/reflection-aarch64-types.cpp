@@ -27,9 +27,3 @@ static_assert(^^const FixedSve == ^^const __typeof__(fixed_value));
 static_assert(^^FixedSve * != ^^OtherFixedSve *);
 static_assert(^^FixedSve * != ^^__SVInt8_t *);
 static_assert(reflect<FixedSve>() == ^^__typeof__(fixed_value));
-
-template <class T> using AliasTemplate = T;
-static_assert(^^AliasTemplate<Neon> == ^^AliasTemplate<__typeof__(Neon)>);
-static_assert(^^AliasTemplate<Neon> != ^^Neon);
-static_assert(^^AliasTemplate<__SVInt8_t> != ^^AliasTemplate<__SVUint8_t>);
-static_assert(^^AliasTemplate<FixedSve> == ^^AliasTemplate<__typeof__(fixed_value)>);

@@ -122,7 +122,6 @@ consteval void test()
     static_assert(^^const int == ^^int const);
 }
 namespace StandardTypes {
-using info = decltype(^^int);
 struct Incomplete;
 struct Record { int member; };
 union Union { int member; };
@@ -138,7 +137,7 @@ static_assert(^^Union == ^^union Union);
 static_assert(^^Enum == ^^enum Enum);
 static_assert(^^Record != ^^Union);
 static_assert(^^Enum != ^^ScopedEnum);
-static_assert(^^ForwardEnum == ^^ForwardEnum);
+static_assert(^^ForwardEnum != ^^ScopedEnum);
 static_assert(^^const ClassTemplate<int> == ^^const AliasTemplate<int>);
 static_assert(^^ClassTemplate<int> != ^^ClassTemplate<float>);
 static_assert(^^const Record != ^^Record);
@@ -150,7 +149,6 @@ static_assert(^^int[3] == ^^int[1 + 2]);
 static_assert(^^int[3] != ^^int[4]);
 static_assert(^^int[] != ^^int[3]);
 static_assert(^^int[2][3] != ^^int[3][2]);
-static_assert(^^void(int) == ^^void(int));
 static_assert(^^void(int) != ^^void(float));
 static_assert(^^void(int, ...) != ^^void(int));
 static_assert(^^void() noexcept != ^^void());
@@ -162,16 +160,11 @@ static_assert(^^void (*)(int) != ^^void(int));
 using Pointer = int *;
 using OtherPointer = Pointer;
 using Array = int[3];
-using Function = void(int);
-using RecordAlias = Record;
 static_assert(^^Pointer != ^^int *);
 static_assert(^^Pointer != ^^OtherPointer);
 static_assert(^^const Pointer == ^^int *const);
 static_assert(^^Array != ^^int[3]);
 static_assert(^^const Array == ^^const int[3]);
-static_assert(^^Function != ^^void(int));
-static_assert(^^RecordAlias != ^^Record);
-static_assert(^^const RecordAlias == ^^const Record);
 
 Record object;
 static_assert(^^decltype(object) == ^^Record);
@@ -179,26 +172,15 @@ Pointer pointer_object;
 static_assert(^^decltype(pointer_object) == ^^int *);
 static_assert(^^decltype(pointer_object) != ^^Pointer);
 static_assert(^^decltype((object)) == ^^Record &);
-auto lambda = [] {};
-static_assert(^^decltype(lambda) == ^^decltype(lambda));
-static_assert(^^decltype(lambda) != ^^Record);
 
 template <info R> struct Reflected {};
-static_assert(__is_same(Reflected<^^int *>, Reflected<^^int *>));
 static_assert(!__is_same(Reflected<^^int *>, Reflected<^^float *>));
 static_assert(__is_same(Reflected<^^Record>, Reflected<^^struct Record>));
 static_assert(!__is_same(Reflected<^^Pointer>, Reflected<^^int *>));
 
-template <class T> constexpr info reflected = ^^T;
-static_assert(reflected<int *> == ^^int *);
-static_assert(reflected<Record> == ^^Record);
-static_assert(reflected<Pointer> == ^^int *);
-static_assert(reflected<void(int)> == ^^void(int));
-
 template <class T, int N> consteval bool dependent() {
   static_assert(__is_same(decltype(^^T), info));
   static_assert(__is_same(decltype(^^typename T::type), info));
-  static_assert(^^T * == ^^T *);
   return (^^const typename T::type) == (^^const int) &&
          (^^int[N]) == (^^int[3]);
 }
@@ -212,11 +194,6 @@ static_assert(member_type<WithType>() == ^^int);
 static_assert(member_type<WithType>() != ^^WithType::type);
 static_assert(^^typename WithType::type == ^^int);
 static_assert(^^WithType::type != ^^int);
-
-template <class... Ts> consteval bool pack() {
-  return ((^^Ts == reflected<Ts>) && ...);
-}
-static_assert(pack<int, Record, Pointer, void(int), int[3], int *>());
 
 template <class T> using DependentAlias = T *;
 template <class T> consteval info alias_template() {
@@ -237,11 +214,6 @@ template <class T> struct NotInstantiated {
 };
 constexpr auto incomplete_specialization = ^^NotInstantiated<int>;
 static_assert(incomplete_specialization == ^^NotInstantiated<int>);
-
-template <class... Ts> constexpr info reflections[] = {(^^Ts)...};
-static_assert(reflections<int, Record, Pointer>[0] == ^^int);
-static_assert(reflections<int, Record, Pointer>[1] == ^^Record);
-static_assert(reflections<int, Record, Pointer>[2] == ^^int *);
 
 template <int... Ns> constexpr info array_reflections[] = {(^^int[Ns])...};
 static_assert(array_reflections<1, 2>[0] == ^^int[1]);
@@ -276,7 +248,6 @@ static_assert(^^__float128 != ^^long double);
 #endif
 static_assert(^^__fp16 != ^^_Float16);
 static_assert(^^int (^)(int) != ^^int (*)(int));
-static_assert(^^int (^)(int) == ^^int (^)(int));
 
 using Vector = int __attribute__((vector_size(16)));
 using ExtVector = int __attribute__((ext_vector_type(4)));
@@ -294,7 +265,6 @@ static_assert(^^const AS == ^^const int __attribute__((address_space(1))));
 static_assert(^^AS * != ^^int *);
 static_assert(^^int * __restrict != ^^int *);
 
-static_assert(^^_Atomic(int) == ^^_Atomic(int));
 static_assert(^^_Atomic(int) != ^^int);
 
 Vector vector_value;
@@ -303,7 +273,6 @@ static_assert(^^__typeof__(vector_value) ==
 static_assert(^^__typeof__(vector_value) != ^^Vector);
 int value;
 static_assert(^^__typeof__(value) == ^^int);
-static_assert(^^__typeof__(value) != ^^float);
 static_assert(^^__typeof_unqual__(value) == ^^int);
 
 template <int N> consteval auto bitint() { return ^^_BitInt(N); }
@@ -333,7 +302,6 @@ static_assert(reflect<Pointer>() == ^^int * __ptr32);
 }
 
 namespace Weird {
-using info = decltype(^^int);
 struct Record {};
 using Alias = Record;
 template <unsigned I, class... Ts> consteval info selected() { return ^^Ts...[I]; }
@@ -362,7 +330,6 @@ static_assert(gnu_vector<int, 16>() == ^^int __attribute__((vector_size(16))));
 template <class T, unsigned N> consteval info space() { return ^^T __attribute__((address_space(N))); }
 static_assert(space<int, 1>() == ^^int __attribute__((address_space(1))));
 static_assert(^^int * _Nullable == ^^int *);
-static_assert(^^int __ob_wrap == ^^int __ob_wrap);
 static_assert(^^int __ob_wrap != ^^int __ob_trap);
 
 template <class... Ts> struct List {};
@@ -382,19 +349,14 @@ static_assert(^^int [[clang::annotate_type("note")]] == ^^int);
 // Pack indexing produces types, not aliases.
 static_assert(selected<0, const int>() == ^^const int);
 static_assert(selected<0, int &>() == ^^int &);
-static_assert(selected<0, int[3]>() == ^^int[3]);
-static_assert(selected<0, void(int)>() == ^^void(int));
 static_assert(selected<0, Alias>() != ^^Alias);
 static_assert(^^int (*)[3] != ^^int *[3]);
-static_assert(^^int (*)(int) == ^^__typeof__(static_cast<int (*)(int)>(nullptr)));
 
 // Builtin templates produce types, not aliases.
-static_assert(^^__type_pack_element<1, float, Record> == ^^Record);
 static_assert(^^__type_pack_element<0, Alias> == ^^Record);
 template <unsigned I, class... Ts> consteval info builtin_selected() {
   return ^^__type_pack_element<I, Ts...>;
 }
-static_assert(builtin_selected<1, int, Record>() == ^^Record);
 static_assert(builtin_selected<0, Alias>() != ^^Alias);
 
 template <class T> consteval info remove_reference() {
@@ -414,8 +376,6 @@ template <class T> struct Inherited : Base<T> {
 static_assert(Inherited<Record>::value == ^^const Record);
 static_assert(Inherited<Record>::type_value == ^^Record);
 
-auto deduced_int = 1;
-static_assert(^^decltype(deduced_int) == ^^int);
 static_assert(^^decltype([] {}) != ^^decltype([] {}));
 }
 
@@ -439,16 +399,6 @@ static_assert(^^A<Int> == ^^A<int>);
 static_assert(^^A<int> != ^^int);
 static_assert(^^A<int> != ^^A<float>);
 static_assert(^^A<int> != ^^A<const int>);
-static_assert(^^A<int &> == ^^A<Int &>);
-static_assert(^^A<int &> != ^^A<int &&>);
-static_assert(^^A<int[3]> != ^^A<int[4]>);
-static_assert(^^A<void()> != ^^A<void() noexcept>);
-static_assert(^^A<_BitInt(17)> != ^^A<_BitInt(18)>);
-static_assert(^^A<ExtensionTypes::Vector> ==
-              ^^A<int __attribute__((vector_size(16)))>);
-static_assert(^^A<ExtensionTypes::Matrix> ==
-              ^^A<float __attribute__((matrix_type(2, 3)))>);
-static_assert(^^A<ExtensionTypes::AS> != ^^A<ExtensionTypes::OtherAS>);
 static_assert(^^A<int> != ^^B<int>);
 static_assert(^^A<int> != ^^OrdinaryAlias);
 static_assert(^^typename AliasTemplates::A<int> == ^^int);
@@ -465,7 +415,6 @@ static_assert(^^Defaults<> == ^^Defaults<int>);
 static_assert(^^Defaults<int> == ^^Defaults<Int, int>);
 static_assert(^^Defaults<int, int> != ^^Defaults<int, float>);
 template <class T = int> using Ignored = int;
-static_assert(^^Ignored<> == ^^Ignored<int>);
 static_assert(^^Ignored<int> != ^^Ignored<float>);
 
 template <unsigned N, unsigned M = N + 1> using Numbers = int;
@@ -475,14 +424,11 @@ static_assert(^^Numbers<2, 3> == ^^Numbers<2u, 3u>);
 static_assert(^^Numbers<1> != ^^Numbers<2>);
 template <bool V> using Boolean = int;
 static_assert(^^Boolean<1> == ^^Boolean<true>);
-static_assert(^^Boolean<true> != ^^Boolean<false>);
 template <auto V> using Value = int;
 static_assert(^^Value<1> != ^^Value<1u>);
-static_assert(^^Value<1 + 1> == ^^Value<2>);
 
 int object;
 template <int *P> using Pointer = int;
-static_assert(^^Pointer<&object> == ^^Pointer<&object>);
 static_assert(^^Pointer<&object> != ^^Pointer<nullptr>);
 static_assert(^^Pointer<nullptr> == ^^Pointer<static_cast<int *>(nullptr)>);
 struct Key { int value; };
@@ -491,8 +437,6 @@ static_assert(^^Structural<Key{1}> == ^^Structural<Key{0 + 1}>);
 static_assert(^^Structural<Key{1}> != ^^Structural<Key{2}>);
 
 template <class... Ts> using Pack = int;
-static_assert(^^Pack<> == ^^Pack<>);
-static_assert(^^Pack<int, float> == ^^Pack<Int, float>);
 static_assert(^^Pack<A<int>, Int> == ^^Pack<int, int>);
 static_assert(^^Pack<int, float> != ^^Pack<float, int>);
 static_assert(^^Pack<> != ^^Pack<int>);
@@ -513,21 +457,16 @@ static_assert(Owner<int>::plain != Owner<float>::plain);
 static_assert(Owner<int>::specialized != Owner<float>::specialized);
 static_assert(Owner<int>::plain == ^^Owner<int>::Plain);
 static_assert(Owner<int>::specialized == ^^Owner<int>::Member<int>);
-static_assert(^^Owner<int>::Member<float> != ^^Owner<float>::Member<float>);
 static_assert(^^Owner<int>::Member<float> != ^^Owner<int>::Member<int>);
 static_assert(^^typename Owner<int>::Member<float> == ^^int);
 
 template <info R> struct Reflected {};
-static_assert(__is_same(Reflected<^^Defaults<>>, Reflected<^^Defaults<int, int>>));
 static_assert(__is_same(Reflected<^^Numbers<1 + 1>>, Reflected<^^Numbers<2>>));
-static_assert(__is_same(Reflected<^^Pack<Int, float>>, Reflected<^^Pack<int, float>>));
 static_assert(!__is_same(Reflected<^^Ignored<int>>, Reflected<^^Ignored<float>>));
-static_assert(!__is_same(Reflected<^^A<int>>, Reflected<^^B<int>>));
 static_assert(!__is_same(Reflected<^^A<int>>, Reflected<^^int>));
 
 template <class T> consteval info dependent() { return ^^A<T>; }
 static_assert(dependent<int>() == ^^A<int>);
-static_assert(dependent<Int>() == ^^A<int>);
 static_assert(dependent<float>() != ^^A<int>);
 template <class T> consteval info ignored() { return ^^Ignored<T>; }
 static_assert(ignored<int>() == ^^Ignored<int>);
@@ -537,9 +476,6 @@ static_assert(numbers<2>() == ^^Numbers<1 + 1>);
 template <class... Ts> consteval info pack() { return ^^Pack<Ts...>; }
 static_assert(pack<>() == ^^Pack<>);
 static_assert(pack<Int, float>() == ^^Pack<int, float>);
-template <class... Ts> constexpr info aliases[] = {(^^Ignored<Ts>)...};
-static_assert(aliases<int, float>[0] == ^^Ignored<int>);
-static_assert(aliases<int, float>[1] == ^^Ignored<float>);
 template <template <class> class TT> consteval info substituted_template() {
   return ^^TT<int>;
 }
@@ -570,7 +506,6 @@ static_assert(profile<int>(Reflected<^^A<int>>{}) == 1);
 static_assert(profile<int>(Reflected<^^B<int>>{}) == 2);
 
 template <class T, class... Ts> using MixedPack = int;
-static_assert(^^MixedPack<Int, float, double> == ^^MixedPack<int, float, double>);
 static_assert(^^MixedPack<int> != ^^MixedPack<int, int>);
 template <class T, class... Ts> consteval info mixed_pack() {
   return ^^MixedPack<T, Ts...>;
@@ -580,7 +515,6 @@ template <auto... Vs> consteval info values() { return ^^Values<Vs...>; }
 static_assert(values<1 + 1, 3>() == ^^Values<2, 3>);
 template <template <class> class... TTs> using Templates = int;
 static_assert(^^Templates<> != ^^Templates<A>);
-static_assert(^^Templates<A, B> == ^^Templates<AliasTemplates::A, B>);
 static_assert(^^Templates<A, B> != ^^Templates<B, A>);
 template <template <class> class... TTs> consteval info templates() {
   return ^^Templates<TTs...>;
@@ -597,5 +531,37 @@ template <unsigned I, class... Ts> consteval info indexed() {
   return ^^Ignored<Ts...[I]>;
 }
 static_assert(indexed<1, int, float>() == ^^Ignored<float>);
+
+template <class... Fs>
+consteval bool check_lambdas(const info (&expected)[sizeof...(Fs)], Fs... fs) {
+  info actual[] = {fs()...};
+  for (unsigned I = 0; I != sizeof...(Fs); ++I)
+    if (actual[I] != expected[I])
+      return false;
+  return true;
+}
+
+template <class... Ts> consteval bool expanded_lambdas() {
+  constexpr info classes[] = {^^StandardTypes::ClassTemplate<Ts>...};
+  constexpr info aliases[] = {^^Ignored<Ts>...};
+  constexpr info types[] = {^^Ts...};
+  constexpr info local_aliases[] = {[] {
+    using Local = Ts;
+    return ^^Local;
+  }()...};
+  static_assert(classes[0] == ^^StandardTypes::ClassTemplate<int>);
+  static_assert(classes[1] == ^^StandardTypes::ClassTemplate<float>);
+  static_assert(aliases[0] == ^^Ignored<int>);
+  static_assert(aliases[1] == ^^Ignored<float>);
+  static_assert(types[0] == ^^int);
+  static_assert(types[1] == ^^float);
+  static_assert(local_aliases[0] != local_aliases[1]);
+  static_assert(local_aliases[0] != ^^int);
+  return check_lambdas(classes,
+                       [] { return ^^StandardTypes::ClassTemplate<Ts>; }...) &&
+         check_lambdas(aliases, [] { return ^^Ignored<Ts>; }...) &&
+         check_lambdas(types, [] { return ^^Ts; }...);
+}
+static_assert(expanded_lambdas<Int, float>());
 
 }

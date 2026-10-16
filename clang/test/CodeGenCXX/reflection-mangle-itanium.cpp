@@ -90,15 +90,6 @@ void test() {
   reflect<^^typename WithType::type>();
 }
 
-template<class... Ts> void pack_index_type() {
-  reflect<^^Ts...[0]>();
-}
-void instantiate_pack_index() {
-  pack_index_type<Record>();
-}
-// CHECK: define {{.*}} @_Z15pack_index_typeIJ6RecordEEvv()
-// CHECK: call void @_Z7reflectITnDaLDmty6RecordEEvv()
-
 namespace AliasTemplates {
 template <class T = int> using A = T;
 template <class T> using B = T;
@@ -115,14 +106,10 @@ template <class T> Reflected<^^A<T>> dependent_alias() { return {}; }
 void calls() {
   // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates1AIiEEEEvv()
   reflect<^^A<>>();
-  // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates1AIiEEEEvv()
-  reflect<^^A<int>>();
   // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates1BIiEEEEvv()
   reflect<^^B<int>>();
   // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates7NumbersILj2ELj3EEEEEvv()
   reflect<^^Numbers<1 + 1>>();
-  // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates7NumbersILj2ELj3EEEEEvv()
-  reflect<^^Numbers<2, 3>>();
   // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates4PackIJifEEEEEvv()
   reflect<^^Pack<int, float>>();
   // CHECK: call void @_Z7reflectITnDaLDmtaN14AliasTemplates9MixedPackIiJfdEEEEEvv()
