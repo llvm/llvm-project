@@ -35,6 +35,7 @@ Symbols:
   - { Name: sym2, Type: Func, Weak: false }
   - { Name: sym3, Type: TLS }
   - { Name: sym4, Type: Unknown, Warning: foo }
+  - { Name: sym5, Version: VER_1, Type: Func }
 ...
 ```
 
@@ -52,8 +53,10 @@ Symbols:
 - `Symbols`: A collection of all data needed to link objects for each symbol, sorted by name in ascending order.
 
   - `Name`: Symbol name.
+  - `Version` (optional): Symbol version.
   - `Type`: Whether the symbol is an object, function, no-type, thread local storage, or unknown. Symbol types not explicitly supported are mapped as unknown to improve signal-to-noise ratio.
   - `Size`: The size of the symbol in question, doesn't apply to functions, and is optional for NoType symbols.
+  - `Default`: Whether or not the symbol is a default version symbol in this shared object file.
   - `Undefined`: Whether or not the symbol is defined in this shared object file.
   - `Weak`: Whether or not the symbol should be treated as weak.
   - `Warning` (optional): Warning text to output when this symbol is linked against.
@@ -76,6 +79,10 @@ A minimum ELF file that can be used by linker should have following sections pro
 
 - Dynamic string table (`.dynstr` section).
 
+- Version symbol table (`.gnu.version` section). (optional)
+
+- Version definition table (`.gnu.version_d` section). (optional)
+
 - Dynamic table (`.dynamic` section).
 
   - `DT_SYMTAB` entry.
@@ -83,6 +90,8 @@ A minimum ELF file that can be used by linker should have following sections pro
   - `DT_STRSZ` entry.
   - `DT_NEEDED` entries. (optional)
   - `DT_SONAME` entry. (optional)
+  - `DT_VERSYM` entry. (optional)
+  - `DT_VERDEF` entry. (optional)
 
 - Section header string table (`.shstrtab` section)
 
@@ -189,4 +198,3 @@ of an object is not a useful part of the abi to track.
 
 If {program}`llvm-ifs` succeeds, it will exit with 0. Otherwise, if an
 error occurs, it will exit with a non-zero value.
-
