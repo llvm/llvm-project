@@ -143,7 +143,9 @@ class TestBoundsSafetyRuntimeDetection(TestBase):
     def test_static_runtime_copies_in_multiple_images(self):
         target = self.start("both", static=True)
         self.check_trap(target, target.GetExecutable().GetFilename())
-        self.check_trap(target, "Unrelated")
+        # A static C++ trap can have C and mangled aliases at the same address.
+        # The selected symbol's display name may include "()".
+        self.check_trap(target, "Unrelated", raw_symbol=False)
 
     def test_runtime_without_dwarf(self):
         target = self.start("dylib", without_debug_info=True)
