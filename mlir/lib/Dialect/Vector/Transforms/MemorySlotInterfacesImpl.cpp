@@ -9,7 +9,7 @@
 // This file implements memory slot interface models for
 // `vector.load`, `vector.store`, `vector.transfer_read`, and
 // `vector.transfer_write`. These models implement
-// `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
+// `PromotableMemOpInterface` so Mem2Reg can replace vector accesses with uses
 // and definitions of a vector SSA value. The models for `memref.subview`
 // live in the MemRef dialect.
 //
@@ -21,6 +21,9 @@
 // pad lanes outside the runtime extent, and writes preserve the previous value
 // of those lanes. `arith.select` implements this behavior and also handles
 // lanes disabled by a transfer's mask operand.
+//
+// Plain loads and stores require whole-slot accesses at zero indices. Dynamic
+// subviews are not supported for these operations.
 //
 // Transfers wrapped in `vector.mask` prevent promotion because that op does
 // not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
@@ -53,6 +56,12 @@ isWholeBufferLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
                       const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
       op.getBase() != slot.ptr || op.getVectorType() != slot.valueType)
+    return false;
+
+  // A dynamic subview's slot holds the whole parent vector, which may be
+  // larger than the view. Matching that type does not prove a whole-view
+  // access, and plain loads/stores do not have transfer padding/mask semantics.
+  if (memref::isDynamicSubViewSlot(slot.ptr))
     return false;
 
   for (Value index : op.getIndices()) {
