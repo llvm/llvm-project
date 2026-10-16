@@ -11,7 +11,7 @@ define i32 @sext_1_32(i1 %a) nounwind ssp {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $r0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:tgpr = COPY [[COPY]]
   ; CHECK-NEXT:   %3:tgpr, dead $cpsr = tLSLri [[COPY1]], 31, 14 /* CC::al */, $noreg
-  ; CHECK-NEXT:   %4:tgpr, dead $cpsr = tASRri killed %3, 31, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   %4:tgpr, dead $cpsr = tASRri %3, 31, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   $r0 = COPY %4
   ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
   %r = sext i1 %a to i32

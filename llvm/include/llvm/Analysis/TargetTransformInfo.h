@@ -997,9 +997,13 @@ public:
   /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
   /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
   /// \p VecTy is the vector type of the instruction to be generated.
+  /// \p Scalars are the scalar instructions of the lanes, if known. The target
+  /// may use them to find the patterns, which depend on the operands, like
+  /// the alternating fused multiply-add.
   LLVM_ABI bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                 unsigned Opcode1,
-                                const SmallBitVector &OpcodeMask) const;
+                                const SmallBitVector &OpcodeMask,
+                                ArrayRef<const Value *> Scalars = {}) const;
 
   /// Enum describing the source/producer of a mask.
   enum class MaskSource {
@@ -1126,10 +1130,13 @@ public:
 
   /// Stores information about the uses of a build vector
   struct BuildVectorUseOp {
-    unsigned Opcode;
-    int OperandIndex;
-    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
-        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+    unsigned Opcode = 0;
+    Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
+    int OperandIndex = -1;
+    BuildVectorUseOp(unsigned Opcode, Intrinsic::ID IntrinsicID,
+                     int OperandIndex)
+        : Opcode(Opcode), IntrinsicID(IntrinsicID), OperandIndex(OperandIndex) {
+    }
   };
 
   /// Calculates a VectorInstrContext from \p I.
@@ -1257,10 +1264,6 @@ public:
 
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;
-
-  /// Return true if the hardware has a fast carry-less multiplication
-  /// instruction.
-  LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
 
   /// Return true if the cost of the instruction is too high to speculatively
   /// execute and should be kept behind a branch.
@@ -1620,10 +1623,13 @@ public:
   /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
   /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
   /// \p VecTy is the vector type of the instruction to be generated.
-  LLVM_ABI InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                           unsigned Opcode1,
-                                           const SmallBitVector &OpcodeMask,
-                                           TTI::TargetCostKind CostKind) const;
+  /// \p Scalars are the scalar instructions of the lanes, if known. The target
+  /// may use them to find the patterns, which depend on the operands, like
+  /// the alternating fused multiply-add.
+  LLVM_ABI InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind,
+      ArrayRef<const Value *> Scalars = {}) const;
 
   /// \return The cost of a shuffle instruction of kind Kind with inputs of type
   /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
@@ -2154,11 +2160,6 @@ public:
 
   /// \return The maximum number of function arguments the target supports.
   LLVM_ABI unsigned getMaxNumArgs() const;
-
-  /// \return For an array of given Size, return alignment boundary to
-  /// pad to. Default is no padding.
-  LLVM_ABI unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                                Type *ArrayType) const;
 
   /// @}
 

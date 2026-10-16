@@ -444,7 +444,6 @@ public:
   std::string getName() const override;
   unsigned getNumArgs() const override;
   FunctionType *getFunctionType(const Module &M) const override;
-  static StringRef getUnmangledName(StringRef MangledName);
 
   bool parseFuncName(StringRef &mangledName) override;
 

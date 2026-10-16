@@ -45,6 +45,8 @@
 
 // Verifies CIR emits correct address spaces for CUDA globals.
 
+// CIR-DEVICE: cir.global "private" internal dso_local target_address_space(3) @_ZZ8fnStructvE1s = #cir.undef : !rec_S
+// LLVM-DEVICE: @_ZZ8fnStructvE1s = internal addrspace(3) global %struct.S undef
 // CIR-DEVICE: cir.global "private" internal dso_local target_address_space(3) @_ZZ2fnvE1j = #cir.undef
 // LLVM-DEVICE: @_ZZ2fnvE1j = internal addrspace(3) global i32 undef
 
@@ -110,6 +112,7 @@ __device__ int ext_device_var_def = 1;
 // CIR-DEVICE: cir.global constant external target_address_space(4) @ext_constant_var_def = #cir.int<2>
 // LLVM-DEVICE: @ext_constant_var_def = addrspace(4) externally_initialized constant i32 2, align 4
 // OGCG-DEVICE: @ext_constant_var_def = addrspace(4) externally_initialized constant i32 2, align 4
+// OGCG-DEVICE: @_ZZ8fnStructvE1s = internal addrspace(3) global %struct.S undef
 // CIR-HOST: cir.global "private" internal {{.*}} @ext_constant_var_def = #cir.undef : {{.*}} {{.*}}{cu.var_registration = #cir.cu.var_registration<ext_constant_var_def, Variable, constant>}
 // LLVM-HOST: @ext_constant_var_def = internal global i32 undef, align 4
 // OGCG-HOST: @ext_constant_var_def = internal global i32
@@ -181,3 +184,17 @@ __global__ void fn() {
 // OGCG-DEVICE:   %[[VAL:.*]] = load i32, ptr %[[ALLOCA]], align 4
 // OGCG-DEVICE:   store i32 %[[VAL]], ptr addrspacecast (ptr addrspace(3) @_ZZ2fnvE1j to ptr), align 4
 // OGCG-DEVICE:   ret void
+
+struct S {
+  int a;
+  float b[4];
+  __device__ S() {}
+};
+
+// CIR-DEVICE-NOT: @_ZN1SC1Ev
+// LLVM-DEVICE-NOT: @_ZN1SC1Ev
+// OGCG-DEVICE-NOT: @_ZN1SC1Ev
+__global__ void fnStruct() {
+  __shared__ S s;
+  s.a = 1;
+}

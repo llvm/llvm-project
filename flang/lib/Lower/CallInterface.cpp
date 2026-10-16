@@ -252,6 +252,36 @@ static bool dummyArgCanUseLLVMReadonly(
          !obj.attrs.test(Attrs::Volatile);
 }
 
+/// Intent of a dummy, recorded on the procedure signature. Both the definition
+/// and a caller-created declaration see this, so intent is available without
+/// the callee body. Other dummy flags stay on their existing attributes.
+static fir::FortranVariableFlagsEnum getDummyIntentFlags(
+    const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+  switch (obj.intent) {
+  case Fortran::common::Intent::In:
+    return fir::FortranVariableFlagsEnum::intent_in;
+  case Fortran::common::Intent::Out:
+    return fir::FortranVariableFlagsEnum::intent_out;
+  case Fortran::common::Intent::InOut:
+    return fir::FortranVariableFlagsEnum::intent_inout;
+  case Fortran::common::Intent::Default:
+    return fir::FortranVariableFlagsEnum::None;
+  }
+  llvm_unreachable("unhandled dummy intent");
+}
+
+static void addFortranVariableFlagsAttr(
+    llvm::SmallVectorImpl<mlir::NamedAttribute> &attrs,
+    mlir::MLIRContext &mlirContext,
+    const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+  fir::FortranVariableFlagsEnum flags = getDummyIntentFlags(obj);
+  if (flags == fir::FortranVariableFlagsEnum::None)
+    return;
+  attrs.emplace_back(
+      mlir::StringAttr::get(&mlirContext, fir::getFortranAttrsAttrName()),
+      fir::FortranVariableFlagsAttr::get(&mlirContext, flags));
+}
+
 static Fortran::evaluate::characteristics::DummyArgument
 asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
   return Fortran::common::visit(
@@ -1138,15 +1168,18 @@ private:
       if (entity) {
         if (entity->isPercentVal()) {
           mlir::Type type = translateDynamicType(dynamicType);
-          addFirOperand(type, nextPassedArgPosition(), Property::Value,
-                        dummyNameAttr(entity));
+          llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+          addFortranVariableFlagsAttr(attrs, mlirContext, obj);
+          addFirOperand(type, nextPassedArgPosition(), Property::Value, attrs);
           addPassedArg(PassEntityBy::Value, entity, characteristics);
           return;
         }
         if (entity->isPercentRef()) {
           mlir::Type refType = getRefType(dynamicType, obj);
+          llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+          addFortranVariableFlagsAttr(attrs, mlirContext, obj);
           addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
-                        dummyNameAttr(entity));
+                        attrs);
           addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
           return;
         }
@@ -1155,8 +1188,10 @@ private:
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
       mlir::Type boxCharTy =
           fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+      llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+      addFortranVariableFlagsAttr(attrs, mlirContext, obj);
       addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
-                    dummyNameAttr(entity));
+                    attrs);
       addPassedArg(PassEntityBy::BoxChar, entity, characteristics);
     } else {
       // non-PDT derived type allowed in implicit interface.
@@ -1168,6 +1203,7 @@ private:
         attrs.emplace_back(
             mlir::StringAttr::get(&mlirContext, fir::getReadOnlyAttrName()),
             mlir::UnitAttr::get(&mlirContext));
+      addFortranVariableFlagsAttr(attrs, mlirContext, obj);
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
                     attrs);
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
@@ -1232,6 +1268,8 @@ private:
     // (see dummyArgCanUseLLVMReadonly).
     if (dummyArgCanUseLLVMReadonly(obj))
       addMLIRAttr(fir::getReadOnlyAttrName());
+    // Intent only. The unit attributes above stay as they are.
+    addFortranVariableFlagsAttr(attrs, mlirContext, obj);
 
     // TODO: intents that require special care (e.g finalization)
 

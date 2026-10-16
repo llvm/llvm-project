@@ -5736,6 +5736,17 @@ static void checkAllocContextIds(
   auto MIBIter = AllocNode.MIBs.begin();
   for (auto &MDOp : MemProfMD->operands()) {
     assert(MIBIter != AllocNode.MIBs.end());
+    // The combined index may have been written without the MIB contexts (see
+    // -combined-index-memprof-context, which defaults to false in NDEBUG
+    // builds), e.g. if the thin link was performed by a release build while
+    // this backend has assertions enabled. Since the MIB context in the summary
+    // can never be empty after trimming the allocation's callsite context, an
+    // empty list means the context was not serialized, and there is nothing to
+    // check.
+    if (MIBIter->StackIdIndices.empty()) {
+      MIBIter++;
+      continue;
+    }
     auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
     auto *MIBMD = cast<const MDNode>(MDOp);
     MDNode *StackMDNode = getMIBStackNode(MIBMD);
