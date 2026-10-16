@@ -699,6 +699,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
+  initLLVM();
   readConfigs(ctx, args);
   checkZOptions(ctx, args);
 
@@ -716,7 +717,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("ExecuteLinker");
 
-    initLLVM();
     createFiles(args);
     if (errCount(ctx))
       return;
@@ -1368,6 +1368,8 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
+  // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
+  // have been called.
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
@@ -3246,7 +3248,8 @@ static void postParseObjectFile(ELFFileBase *file) {
 // extract these embedded ELF files to make a consolidated unoptimized
 // relocatable ELF file to embed in an ELF Dynamic Debugging section in the
 // output. See llvm/docs/DynamicDebugging.md for more details.
-template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
+template <class ELFT>
+static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   Ctx dctx;
   LinkerScript script(dctx);
   dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
@@ -3267,11 +3270,14 @@ template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
   if (errCount(ctx))
     return;
 
+  auto saveArg = [&](const Twine &arg) { return dctx.saver.save(arg).data(); };
   std::vector<const char *> args{
       dctx.arg.progName.data(), "-r", "-o", "-",
-      dctx.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+      saveArg(Twine("-O") + Twine(ctx.arg.optimize))};
   if (ctx.arg.resolveGroups)
     args.push_back("--force-group-allocation");
+  for (const auto &ws : wrapped)
+    args.push_back(saveArg(Twine("--wrap=") + ws.sym->getName()));
   dctx.driver.linkerMain(args);
   if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
     Err(ctx) << "failed to create relocatable dynamic debug object";
@@ -3584,7 +3590,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   if (ctx.hasDynDbg) {
     llvm::TimeTraceScope timeScope("Link dynamic debugging");
-    linkDynamicDebug<ELFT>(ctx);
+    linkDynamicDebug<ELFT>(ctx, wrapped);
     if (errCount(ctx))
       return;
   }

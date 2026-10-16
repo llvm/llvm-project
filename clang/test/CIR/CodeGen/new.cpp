@@ -454,6 +454,25 @@ void t_constant_size_partial_init() {
 // OGCG:   %[[ELEM_3:.*]] = getelementptr inbounds i32, ptr %[[ELEM_2]], i64 1
 // OGCG:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[ELEM_3]], i8 0, i64 52, i1 false)
 
+// Array size is a converted constant expression that overflows converting
+// from double to size_t (UB, Sema only warns). The converted count
+// saturates to SIZE_MAX, and multiplying by the element size overflows
+// size_t, so the allocation size must be folded to SIZE_MAX (causing
+// operator new to fail at runtime) rather than asserting in the compiler.
+void t_new_huge_float_size() {
+  auto p = new int[1e20];
+}
+
+// CHECK:  cir.func {{.*}} @_Z21t_new_huge_float_sizev()
+// CHECK:    %[[ALLOCATION_SIZE:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK:    %{{.*}} = cir.call @_Znam(%[[ALLOCATION_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
+
+// LLVM: define{{.*}} void @_Z21t_new_huge_float_sizev()
+// LLVM:   %{{.*}} = call{{.*}} ptr @_Znam(i64{{.*}} -1)
+
+// OGCG: define{{.*}} void @_Z21t_new_huge_float_sizev()
+// OGCG:   %{{.*}} = call{{.*}} ptr @_Znam(i64{{.*}} -1)
+
 void t_new_var_size(size_t n) {
   auto p = new char[n];
 }
@@ -1214,3 +1233,19 @@ void test_array_new_with_ctor_partial_init_list() {
 // OGCG:   store ptr %[[RAW_PTR]], ptr %[[P_ADDR]], align 8
 // OGCG:   ret void
 //
+
+namespace gh227980 {
+  void huge_float_size() {
+    auto p = new int[1e20];
+  }
+
+// CHECK-LABEL: cir.func{{.*}}@_ZN8gh22798015huge_float_sizeEv()
+// CHECK: %[[NEG:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
+// CHECK: cir.call @_Znam(%[[NEG]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
+
+// LLVM-LABEL: define {{.*}}@_ZN8gh22798015huge_float_sizeEv()
+// LLVM: call{{.*}} ptr @_Znam(i64 noundef -1)
+
+// OGCG-LABEL: define {{.*}}@_ZN8gh22798015huge_float_sizeEv()
+// OGCG: call{{.*}} ptr @_Znam(i64 noundef -1)
+}

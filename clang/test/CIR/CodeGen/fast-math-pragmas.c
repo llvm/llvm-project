@@ -26,14 +26,14 @@ float nested(float a, float b) {
 }
 // CIR-LABEL: cir.func {{.*}}@nested(
 // CIR-PRECISE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>}
+// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [fast]>
 // CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<arcp, reassoc>}
-// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<reassoc>}
-// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<arcp, reassoc>}
+// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [arcp, reassoc]>
+// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [reassoc]>
+// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [arcp, reassoc]>
 // CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
 // CIR-PRECISE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>}
+// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [fast]>
 // LLVM-LABEL: define {{.*}}@nested(
 // LLVM-PRECISE: fdiv float
 // LLVM-FAST: fdiv fast float
@@ -61,7 +61,7 @@ float restored(float a, float b) {
 }
 // CIR-LABEL: cir.func {{.*}}@restored(
 // CIR-PRECISE: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>}
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [fast]>
 // LLVM-LABEL: define {{.*}}@restored(
 // LLVM-PRECISE: fadd float
 // LLVM-FAST: fadd fast float
@@ -78,10 +78,10 @@ float imprecise(float a, float b) {
 }
 // CIR-LABEL: cir.func {{.*}}@imprecise(
 // CIR-PRECISE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>}
-// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>}
+// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [fast]>
+// CIR: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [fast]>
 // CIR-PRECISE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>}
+// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [fast]>
 // LLVM-LABEL: define {{.*}}@imprecise(
 // LLVM-PRECISE: fdiv float
 // LLVM-FAST: fdiv fast float

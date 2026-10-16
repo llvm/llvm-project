@@ -16,26 +16,26 @@ float scalar(float a, float b, float c) {
 }
 // CIR-LABEL: cir.func {{.*}}@scalar(
 // LLVM-LABEL: define {{.*}}@scalar(
-// CIR-NONE: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-NONE: cir.fsub %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-NONE: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-NONE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-NONE: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true>
+// CIR-NONE: cir.fsub %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true>
+// CIR-NONE: cir.fmul %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true>
+// CIR-NONE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true>
 // LLVM-NONE: call float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-NONE: call float @llvm.experimental.constrained.fsub.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-NONE: call float @llvm.experimental.constrained.fmul.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-NONE: call float @llvm.experimental.constrained.fdiv.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CIR-FINITE: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FINITE: cir.fsub %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FINITE: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FINITE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-FINITE: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
+// CIR-FINITE: cir.fsub %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
+// CIR-FINITE: cir.fmul %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
+// CIR-FINITE: cir.fdiv %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
 // LLVM-FINITE: call nnan ninf float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FINITE: call nnan ninf float @llvm.experimental.constrained.fsub.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FINITE: call nnan ninf float @llvm.experimental.constrained.fmul.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FINITE: call nnan ninf float @llvm.experimental.constrained.fdiv.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FAST: cir.fsub %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
+// CIR-FAST: cir.fsub %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
+// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
 // LLVM-FAST: call fast float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FAST: call fast float @llvm.experimental.constrained.fsub.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FAST: call fast float @llvm.experimental.constrained.fmul.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -48,26 +48,26 @@ float4 vector(float4 a, float4 b, float4 c) {
 }
 // CIR-LABEL: cir.func {{.*}}@vector(
 // LLVM-LABEL: define {{.*}}@vector(
-// CIR-NONE: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-NONE: cir.fsub %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-NONE: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-NONE: cir.fdiv %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-NONE: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true>
+// CIR-NONE: cir.fsub %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true>
+// CIR-NONE: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true>
+// CIR-NONE: cir.fdiv %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true>
 // LLVM-NONE: call <4 x float> @llvm.experimental.constrained.fadd.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-NONE: call <4 x float> @llvm.experimental.constrained.fsub.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-NONE: call <4 x float> @llvm.experimental.constrained.fmul.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-NONE: call <4 x float> @llvm.experimental.constrained.fdiv.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CIR-FINITE: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FINITE: cir.fsub %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FINITE: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FINITE: cir.fdiv %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<nnan, ninf>, fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-FINITE: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
+// CIR-FINITE: cir.fsub %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
+// CIR-FINITE: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
+// CIR-FINITE: cir.fdiv %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [nnan, ninf]>
 // LLVM-FINITE: call nnan ninf <4 x float> @llvm.experimental.constrained.fadd.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FINITE: call nnan ninf <4 x float> @llvm.experimental.constrained.fsub.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FINITE: call nnan ninf <4 x float> @llvm.experimental.constrained.fmul.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FINITE: call nnan ninf <4 x float> @llvm.experimental.constrained.fdiv.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FAST: cir.fsub %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
-// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<fast>, fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
+// CIR-FAST: cir.fsub %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
+// CIR-FAST: cir.fdiv %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> fenv<{{.*}}strict_except = true> <fastmath_flags = [fast]>
 // LLVM-FAST: call fast <4 x float> @llvm.experimental.constrained.fadd.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FAST: call fast <4 x float> @llvm.experimental.constrained.fsub.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // LLVM-FAST: call fast <4 x float> @llvm.experimental.constrained.fmul.v4f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")

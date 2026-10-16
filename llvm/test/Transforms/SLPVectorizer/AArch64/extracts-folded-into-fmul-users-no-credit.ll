@@ -14,8 +14,6 @@ define void @fmul_reduction_extracts_free_for_fmul_users(ptr %vp, ptr %sp, ptr %
 ; CHECK-NEXT:    [[B:%.*]] = load double, ptr [[BP]], align 8
 ; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[CP]], align 8
 ; CHECK-NEXT:    [[D:%.*]] = load double, ptr [[DP]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -25,10 +23,11 @@ define void @fmul_reduction_extracts_free_for_fmul_users(ptr %vp, ptr %sp, ptr %
 ; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[SPTR]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x double> [[V]], i64 0
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x double> [[V]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x double> [[V]], [[TMP1]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[S]], [[C]]
-; CHECK-NEXT:    [[R0:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP2]])
+; CHECK-NEXT:    [[R0:%.*]] = fmul fast double [[E0]], [[A]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[E1]], [[B]]
+; CHECK-NEXT:    [[M3:%.*]] = fmul fast double [[S]], [[C]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd fast double [[R0]], [[M2]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd fast double [[R]], [[M3]]
 ; CHECK-NEXT:    [[U0:%.*]] = fmul fast double [[E0]], [[S]]
 ; CHECK-NEXT:    [[U1:%.*]] = fmul fast double [[E1]], [[D]]
 ; CHECK-NEXT:    [[U2:%.*]] = fmul fast double [[E1]], [[S]]
@@ -42,7 +41,7 @@ define void @fmul_reduction_extracts_free_for_fmul_users(ptr %vp, ptr %sp, ptr %
 ; CHECK-NEXT:    store double [[U2]], ptr [[O2]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    [[LT:%.*]] = fcmp fast olt double [[R]], [[D]]
+; CHECK-NEXT:    [[LT:%.*]] = fcmp fast olt double [[R1]], [[D]]
 ; CHECK-NEXT:    [[CONT:%.*]] = and i1 [[CMP]], [[LT]]
 ; CHECK-NEXT:    br i1 [[CONT]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:

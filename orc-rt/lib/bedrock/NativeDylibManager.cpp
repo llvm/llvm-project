@@ -59,12 +59,7 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
 
 void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
                                 void *Handle, SymbolLookupSet Symbols) {
-  std::vector<std::string> Names;
-  Names.reserve(Symbols.size());
-  for (auto &S : Symbols)
-    Names.push_back(std::move(S.first));
-
-  auto Addrs = sys::lookupLibrarySymbols(Handle, Names);
+  auto Addrs = sys::lookupLibrarySymbols(Handle, Symbols);
 
   // Convert weak-missing entries (empty optional from lookupLibrarySymbols)
   // to a present zero address. This matches the resolve semantics of
@@ -72,7 +67,8 @@ void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
   // in the result signals a missing required symbol, while a missing
   // weakly-referenced symbol is reported as a zero address.
   for (size_t I = 0, E = Symbols.size(); I != E; ++I)
-    if (!Addrs[I] && Symbols[I].second == WeaklyReferencedSymbol)
+    if (!Addrs[I] &&
+        Symbols[I].second == SymbolLookupFlags::WeaklyReferencedSymbol)
       Addrs[I] = nullptr;
 
   OnLookupComplete(std::move(Addrs));

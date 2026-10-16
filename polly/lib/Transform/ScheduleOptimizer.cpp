@@ -170,6 +170,33 @@ static cl::list<int>
                                "with --polly-register-tile-size"),
                       cl::Hidden, cl::CommaSeparated, cl::cat(PollyCategory));
 
+static cl::opt<bool> IsolateCompleteTiles(
+    "polly-isolate-complete-tiles",
+    cl::desc("Separate the complete tiles of a tiled band from the partial "
+             "ones, so that the point loops of the complete tiles have "
+             "constant bounds"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<int> IsolateCompleteTileDims(
+    "polly-isolate-complete-tile-dims",
+    cl::desc("Number of innermost tile dimensions that have to be complete for "
+             "a tile to be isolated (0: all of them). Requiring fewer of them "
+             "generates less code, but also gives fewer point loops a constant "
+             "bound"),
+    cl::Hidden, cl::init(0), cl::cat(PollyCategory));
+
+static cl::opt<bool> IsolateCompleteTiles2ndLevel(
+    "polly-isolate-complete-tiles-2nd-level",
+    cl::desc("Separate the complete tiles of the second level of tiling from "
+             "the partial ones"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool> IsolateCompleteRegisterTiles(
+    "polly-isolate-complete-register-tiles",
+    cl::desc("Separate the complete register tiles from the partial ones, so "
+             "that their unrolled point loops need no guards"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 static cl::opt<bool> PragmaBasedOpts(
     "polly-pragma-based-opts",
     cl::desc("Apply user-directed transformation from metadata"),
@@ -404,6 +431,58 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   return Result;
 }
 
+/// Separate the complete tiles of a tiled band from the partial ones.
+///
+/// The point loops of a complete tile run over the whole tile, so isolating
+/// those tiles gives them constant loop bounds instead of the min() expressions
+/// that a tiling of an iteration space which is not a multiple of the tile size
+/// produces. The partial tiles are left to a single atomic copy of the loop
+/// nest to keep the code growth bounded.
+///
+/// @param Node      The point band of the tiling, as returned by tileNode.
+/// @param TileSizes The tile size of each tiled dimension.
+/// @return          The point band of the modified tree.
+static isl::schedule_node isolateCompleteTiles(isl::schedule_node Node,
+                                               ArrayRef<int> TileSizes) {
+  assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band &&
+         "Expecting the point band that tileNode returned");
+
+  // Below the point band, the prefix schedule covers the outer dimensions
+  // followed by the tile and the point dimensions of this tiling.
+  isl::union_set ScheduleRangeUSet =
+      Node.child(0).get_prefix_schedule_relation().range();
+  isl::set ScheduleRange{ScheduleRangeUSet};
+  if (ScheduleRange.is_null())
+    return Node;
+
+  unsigned NumCompleteDims = TileSizes.size();
+  if (IsolateCompleteTileDims > 0)
+    NumCompleteDims =
+        std::min<unsigned>(IsolateCompleteTileDims, TileSizes.size());
+
+  isl::set CompleteTilePrefixes =
+      getCompleteTilePrefixes(ScheduleRange, TileSizes, NumCompleteDims);
+  if (CompleteTilePrefixes.is_null())
+    return Node;
+
+  isl::union_set Options =
+      getIsolateOptions(CompleteTilePrefixes, TileSizes.size())
+          .unite(getDimOptions(Node.ctx(), "atomic"));
+
+  // The option describes the tile dimensions, so it belongs to the tile band,
+  // which sits above the marker separating it from the point band.
+  isl::schedule_node TileBand = Node.parent().parent();
+  if (!TileBand.isa<isl::schedule_node_band>())
+    return Node;
+
+  TileBand =
+      TileBand.as<isl::schedule_node_band>().set_ast_build_options(Options);
+  if (TileBand.is_null())
+    return Node;
+
+  return TileBand.child(0).child(0);
+}
+
 struct InsertSimdMarkers final : ScheduleNodeRewriter<InsertSimdMarkers> {
   isl::schedule_node visitBand(isl::schedule_node_band Band) {
     isl::schedule_node Node = visitChildren(Band);
@@ -524,24 +603,56 @@ bool ScheduleTreeOptimizer::isPMOptimizableBandNode(isl::schedule_node Node) {
   return Node.child(0).isa<isl::schedule_node_leaf>();
 }
 
+/// Resolve the tile size of every dimension of the band @p Node.
+static SmallVector<int, 4> resolveTileSizes(isl::schedule_node Node,
+                                            ArrayRef<int> TileSizes,
+                                            int DefaultTileSize) {
+  SmallVector<int, 4> Sizes;
+  isl::space Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
+  for (unsigned i : rangeIslSize(0, Space.dim(isl::dim::set)))
+    Sizes.push_back(i < TileSizes.size() ? TileSizes[i] : DefaultTileSize);
+  return Sizes;
+}
+
 __isl_give isl::schedule_node
 ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
   if (FirstLevelTiling) {
+    // Resolve the tile size of every dimension before tiling splits the band.
+    SmallVector<int, 4> Sizes;
+    if (IsolateCompleteTiles)
+      Sizes = resolveTileSizes(Node, FirstLevelTileSizes,
+                               FirstLevelDefaultTileSize);
+
     Node = tileNode(Node, "1st level tiling", FirstLevelTileSizes,
                     FirstLevelDefaultTileSize);
     FirstLevelTileOpts++;
+
+    if (IsolateCompleteTiles)
+      Node = isolateCompleteTiles(Node, Sizes);
   }
 
   if (SecondLevelTiling) {
+    SmallVector<int, 4> Sizes;
+    if (IsolateCompleteTiles2ndLevel)
+      Sizes = resolveTileSizes(Node, SecondLevelTileSizes,
+                               SecondLevelDefaultTileSize);
     Node = tileNode(Node, "2nd level tiling", SecondLevelTileSizes,
                     SecondLevelDefaultTileSize);
     SecondLevelTileOpts++;
+    if (IsolateCompleteTiles2ndLevel)
+      Node = isolateCompleteTiles(Node, Sizes);
   }
 
   if (RegisterTiling) {
+    SmallVector<int, 4> Sizes;
+    if (IsolateCompleteRegisterTiles)
+      Sizes =
+          resolveTileSizes(Node, RegisterTileSizes, RegisterDefaultTileSize);
     Node =
         applyRegisterTiling(Node, RegisterTileSizes, RegisterDefaultTileSize);
     RegisterTileOpts++;
+    if (IsolateCompleteRegisterTiles)
+      Node = isolateCompleteTiles(Node, Sizes);
   }
 
   return Node;
@@ -654,6 +765,48 @@ static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
   isl_printer_free(P);
 }
 #endif
+
+/// Return whether the dependence distances of @p Map, which relates instances
+/// of the same statement, are bounded.
+static bool hasBoundedDistances(const isl::map &Map) {
+  isl::set Deltas = Map.deltas();
+  return !Deltas.is_null() && Deltas.is_bounded().is_true();
+}
+
+/// Undo the simplification of the proximity dependences of a statement on
+/// itself where it made their distances unbounded.
+///
+/// The scheduler looks for schedule rows that bound the distance of every
+/// proximity dependence. If the simplification drops the constraints of the
+/// domain that bound the distance of a dependence, such as a value that is
+/// read by all later iterations of a loop, then every row that advances along
+/// that loop has an unbounded distance, and the scheduler falls back to
+/// carrying dependences one row at a time instead of forming a permutable
+/// band.
+///
+/// @param Simplified The simplified proximity dependences.
+/// @param Exact      The proximity dependences before simplification.
+static isl::union_map keepBoundedDistances(const isl::union_map &Simplified,
+                                           const isl::union_map &Exact) {
+  isl::union_map Result = isl::union_map::empty(Simplified.ctx());
+  for (isl::map Map : Simplified.get_map_list()) {
+    isl::space Space = Map.get_space();
+    if (Space.domain().is_equal(Space.range()) && !hasBoundedDistances(Map)) {
+      // Only add the constraints that bound the distances before the
+      // simplification rather than restoring all constraints of the exact
+      // dependence: preferably the hull of the exact distances, which is a
+      // single convex set, otherwise the exact distances themselves.
+      isl::set ExactDeltas = Exact.extract_map(Space).deltas();
+      isl::map Bounded = Map.intersect(ExactDeltas.simple_hull().translation());
+      if (!hasBoundedDistances(Bounded))
+        Bounded = Map.intersect(ExactDeltas.translation());
+      if (hasBoundedDistances(Bounded))
+        Map = Bounded;
+    }
+    Result = Result.unite(isl::union_map(Map));
+  }
+  return Result;
+}
 
 /// Collect statistics for the schedule tree.
 ///
@@ -813,10 +966,12 @@ static void runIslScheduleOptimizerImpl(
     // interesting anyway. In some cases this option may stop the scheduler to
     // find any schedule.
     if (SimplifyDeps == "yes") {
+      isl::union_map ExactProximity = Proximity;
       Validity = Validity.gist_domain(Domain);
       Validity = Validity.gist_range(Domain);
       Proximity = Proximity.gist_domain(Domain);
       Proximity = Proximity.gist_range(Domain);
+      Proximity = keepBoundedDistances(Proximity, ExactProximity);
     } else if (SimplifyDeps != "no") {
       errs()
           << "warning: Option -polly-opt-simplify-deps should either be 'yes' "

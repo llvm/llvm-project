@@ -15,8 +15,8 @@
 __device__ float axpy(float a, float x, float y) { return a * x + y; }
 
 // CIR-LABEL: cir.func {{.*}}@_Z4axpyfff
-// CIR: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
-// CIR: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+// CIR: cir.fmul %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
+// CIR: cir.fadd %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
 
 // LLVM-LABEL: @_Z4axpyfff
 // LLVM: fmul contract float

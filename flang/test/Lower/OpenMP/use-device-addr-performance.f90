@@ -22,7 +22,7 @@
 !CHECK:   %[[TGT_DESC:.*]] = fir.create_box %[[TGT_PTR_CONV]] lbs(%[[ARR_DIMS]]#0) extents(%[[ARR_DIMS]]#1) strides(%[[ARR_DIMS]]#2) : (!fir.ref<!fir.array<?xi32>>, index, index, index) -> !fir.box<!fir.array<?xi32>>
 !CHECK:   fir.store %[[TGT_DESC]] to %[[ALLOCA_TGT_DESC]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 !CHECK:   %[[RES_TGT_DESC:.*]] = fir.load %[[ALLOCA_TGT_DESC]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
-!CHECK:   %[[DECL:.*]] = hlfir.declare %[[RES_TGT_DESC]] {fortran_attrs = #fir.var_attrs<intent_in, target>, uniq_name = "_QFdevice_addr_defaultEx"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+!CHECK:   %[[DECL:.*]] = hlfir.declare %[[RES_TGT_DESC]] uniq_name("_QFdevice_addr_defaultEx") fortran_attrs<intent_in, target> : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
   SUBROUTINE device_addr_default(x)
     INTEGER, TARGET, INTENT(IN)    :: x(:)
     !$omp target data use_device_addr (x)

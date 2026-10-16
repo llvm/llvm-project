@@ -44,6 +44,7 @@ class VPRegionBlock;
 class VPlan;
 class VPSlotTracker;
 class Value;
+struct VectorizeOptions;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -210,9 +211,10 @@ struct VPTransformState {
     DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
-  /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
-  /// is false, otherwise return the generated scalar. \See set.
-  Value *get(const VPValue *Def, bool IsScalar = false);
+  /// Get the generated vector Value for a given VPValue \p Def if
+  /// \p NeedsSingleScalar is false, otherwise return the generated scalar.
+  /// \See set.
+  Value *get(const VPValue *Def, bool NeedsSingleScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(const VPValue *Def, const VPLane &Lane);
@@ -306,6 +308,7 @@ struct VPTransformState {
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
+  const VectorizeOptions &Opts;
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
   LLVMContext &LLVMCtx;
@@ -445,6 +448,9 @@ public:
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
+
+  /// Print a reference to metadata node \p N to \p O.
+  void printMetadataAsOperand(raw_ostream &O, const MDNode *N);
 
   /// Returns the module the plan operates on, if any.
   const Module *getModule() const { return F ? F->getParent() : nullptr; }

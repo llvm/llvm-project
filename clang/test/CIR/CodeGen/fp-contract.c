@@ -71,8 +71,8 @@ float fmuladd_add(float a, float b, float c) {
 // LLVM-OFF: fadd float
 
 // CIR-FAST-LABEL: cir.func {{.*}}@fmuladd_add
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
 // CIR-FAST-NOT: cir.fmuladd
 
 // LLVM-FAST-LABEL: @fmuladd_add
@@ -130,8 +130,8 @@ float4 fmuladd_vec(float4 a, float4 b, float4 c) {
 // LLVM-ON: call <4 x float> @llvm.fmuladd.v4f32
 
 // CIR-FAST-LABEL: cir.func {{.*}}@fmuladd_vec
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<contract>}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> {fastmath_flags = #cir.fastmath<contract>}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> <fastmath_flags = [contract]>
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float> <fastmath_flags = [contract]>
 
 // LLVM-FAST-LABEL: @fmuladd_vec
 // LLVM-FAST: fmul contract <4 x float>
@@ -143,15 +143,15 @@ float fmuladd_strict(float a, float b, float c) {
   return a * b + c;
 }
 // CIR-STRICT-LABEL: cir.func {{.*}}@fmuladd_strict
-// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true>
 // LLVM-STRICT-LABEL: @fmuladd_strict
 // LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
 
 // CIR-STRICT-FAST-LABEL: cir.func {{.*}}@fmuladd_strict
 // CIR-STRICT-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float
-// CIR-STRICT-FAST-SAME: fastmath_flags = #cir.fastmath<contract>
+// CIR-STRICT-FAST-SAME: fastmath_flags = [contract]
 // CIR-STRICT-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float
-// CIR-STRICT-FAST-SAME: fastmath_flags = #cir.fastmath<contract>
+// CIR-STRICT-FAST-SAME: fastmath_flags = [contract]
 
 // LLVM-STRICT-FAST-LABEL: @fmuladd_strict
 // LLVM-STRICT-FAST: call contract float @llvm.experimental.constrained.fmul.f32
@@ -164,7 +164,7 @@ float fmuladd_sub_strict(float a, float b, float c) {
 }
 // CIR-STRICT-LABEL: cir.func {{.*}}@fmuladd_sub_strict
 // CIR-STRICT: cir.fneg %{{.*}} : !cir.float
-// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float fenv<{{.*}}strict_except = true>
 // LLVM-STRICT-LABEL: @fmuladd_sub_strict
 // LLVM-STRICT: fneg float
 // LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
@@ -210,8 +210,8 @@ float contract_across_stmt(float a, float b, float c) {
   return t + c;
 }
 // CIR-FAST-LABEL: cir.func {{.*}}@contract_across_stmt
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
 
 // LLVM-FAST-LABEL: @contract_across_stmt
 // LLVM-FAST: fmul contract float
@@ -239,13 +239,13 @@ float nested_pragmas(float a, float b, float c) {
 // CIR-FAST-LABEL: cir.func {{.*}}@nested_pragmas
 // CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
 // CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
 // CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
 // CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
 // CIR-FAST: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float{{( loc.*)?$}}
-// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
-// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float {fastmath_flags = #cir.fastmath<contract>}
+// CIR-FAST: cir.fmul %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
+// CIR-FAST: cir.fadd %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [contract]>
 
 // float_control(precise, on) enables contraction within the statement even
 // under -ffp-contract=off.

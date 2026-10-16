@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
+#include <vector>
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
@@ -92,6 +93,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
+  options.boundsInStackSlots = config.OptLevel == llvm::OptimizationLevel::O0;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -163,6 +165,21 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
         pm.addPass(mlir::createInlinerPass(
             pipelines, addCanonicalizerPassWithoutRegionSimplification));
       });
+}
+
+static std::vector<PassPipelineConfigCallback> &
+getPassPipelineConfigCallbacks() {
+  static std::vector<PassPipelineConfigCallback> callbacks;
+  return callbacks;
+}
+
+void registerPassPipelineConfigCallback(PassPipelineConfigCallback callback) {
+  getPassPipelineConfigCallbacks().push_back(std::move(callback));
+}
+
+void invokePassPipelineConfigCallbacks(MLIRToLLVMPassPipelineConfig &config) {
+  for (PassPipelineConfigCallback &callback : getPassPipelineConfigCallbacks())
+    callback(config);
 }
 
 void createDefaultFIRPreCFGOptimizerPassPipeline(
@@ -241,7 +258,10 @@ void createDefaultFIRPostCFGOptimizerPassPipeline(
 
   pm.addPass(mlir::createSCFToControlFlowPass());
 
-  pm.addPass(mlir::createCanonicalizerPass(config));
+  if (pc.OptLevel == llvm::OptimizationLevel::O0)
+    pm.addPass(fir::createO0CanonicalizerPass());
+  else
+    pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (!pc.SkipConvertComplexPow)
     pm.addPass(fir::createConvertComplexPow());

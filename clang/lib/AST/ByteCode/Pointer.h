@@ -303,6 +303,10 @@ struct PtrView {
   }
 
   bool isInitialized() const {
+
+    if (!Pointee->isInitialized())
+      return false;
+
     if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
       const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
       return GD.InitState == GlobalInitState::Initialized;
@@ -726,7 +730,7 @@ public:
     case Storage::Block:
       return view().getType();
     case Storage::Fn:
-      return Fn.Func->getDecl()->getType();
+      return Fn.Func->getType();
     case Storage::Typeid:
       return QualType(Typeid.TypeInfoType, 0);
     case Storage::String:
@@ -1214,7 +1218,13 @@ public:
   /// of a primtive array.
   void initializeAllElements() const;
   /// Checks if an object was initialized.
-  bool isInitialized() const;
+  bool isInitialized() const {
+    if (!isBlockPointer())
+      return true;
+
+    return view().isInitialized();
+  }
+
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const {
     if (!isBlockPointer())

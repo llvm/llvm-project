@@ -3002,8 +3002,16 @@ func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
 
 // -----
 
-func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+func.func @omp_map_var_ptr_ptr_missing_type(%arg : memref<?xi32>) {
+  // expected-error @below {{expected attribute value}}
   %map1 = omp.map.info var_ptr(%arg : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) var_ptr_ptr(%arg : memref<?xi32>, ) name("") -> memref<?xi32>
+  return
+}
+
+// -----
+
+func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+  %map1 = "omp.map.info"(%arg, %arg) <{map_capture_type = #omp.variable_capture_kind<ByRef>, map_type = #omp.clause_map_flags<to>, operandSegmentSizes = array<i32: 1, 1, 0, 0>, var_ptr_type = tensor<?xi32>}> : (memref<?xi32>, memref<?xi32>) -> memref<?xi32>
 
   // expected-error @below {{if varPtrPtr or varPtrPtrType is specified, then both must be present}}
   omp.target_update map_entries(%map1 : memref<?xi32>)
@@ -3523,6 +3531,79 @@ func.func @omp_parallel_allocate_type_mismatch(
   // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
   omp.parallel allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
       private(@allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected an allocate private index for each allocate variable}}
+  omp.scope allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@scope_allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{allocate private index is out of range}}
+  omp.scope allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_private_indices([1])
+      private(@scope_allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_x_private : i32
+omp.private {type = private} @scope_y_private : i32
+
+func.func @omp_scope_allocate_map_duplicate(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate private index refers to a private variable more than once}}
+  omp.scope allocate(%allocator : i64 -> %x : !llvm.ptr,
+                     %allocator : i64 -> %y : !llvm.ptr) allocate_private_indices([0, 0])
+      private(@scope_x_private %x -> %x_private,
+              @scope_y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_type_mismatch(
+    %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
+  // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
+  omp.scope allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
+      private(@scope_allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_x_private : i32
+omp.private {type = private} @scope_y_private : i32
+
+func.func @omp_scope_allocate_wrong_private_slot(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate variable does not match private variable at index 1}}
+  omp.scope allocate(%allocator : i64 -> %x : !llvm.ptr) allocate_private_indices([1])
+      private(@scope_x_private %x -> %x_private,
+              @scope_y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   return
@@ -4813,40 +4894,33 @@ func.func @iterator_bad_result_type(%lb : index, %ub : index, %st : index) {
 
 // -----
 
+func.func @iterator_iv_count_mismatch(%lb : i64, %ub : i64, %st : i64, %x : !llvm.ptr) {
+  // expected-error@+1 {{number of range arguments and IVs do not match}}
+  %0 = "omp.iterator"(%lb, %ub, %st) <{operandSegmentSizes = array<i32: 1, 1, 1>}> ({
+    omp.yield(%x : !llvm.ptr)
+  }) : (i64, i64, i64) -> !omp.iterated<!llvm.ptr>
+  return
+}
+
+// -----
+
+func.func @iterator_iv_type_mismatch(%lb : i32, %ub : i32, %st : i32, %x : !llvm.ptr) {
+  // expected-error@+1 {{range argument type does not match corresponding IV type}}
+  %0 = "omp.iterator"(%lb, %ub, %st) <{operandSegmentSizes = array<i32: 1, 1, 1>}> ({
+  ^bb0(%i: i64):
+    omp.yield(%x : !llvm.ptr)
+  }) : (i32, i32, i32) -> !omp.iterated<!llvm.ptr>
+  return
+}
+
+// -----
+
 func.func @iterator_zero_step(%s2 : !llvm.struct<(ptr, i64)>) {
   %lb = arith.constant 1 : index
   %ub = arith.constant 4 : index
   %st = arith.constant 0 : index
 
   // expected-error@+1 {{loop step must not be zero}}
-  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
-  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
-  return
-}
-
-// -----
-
-func.func @iterator_positive_step_wrong_direction(%s2 : !llvm.struct<(ptr, i64)>) {
-  %lb = arith.constant 1000 : index
-  %ub = arith.constant -1 : index
-  %st = arith.constant 10 : index
-
-  // expected-error@+1 {{positive loop step requires lower bound to be less than or equal to upper bound}}
-  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
-    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
-  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
-  return
-}
-
-// -----
-
-func.func @iterator_negative_step_wrong_direction(%s2 : !llvm.struct<(ptr, i64)>) {
-  %lb = arith.constant -1000 : index
-  %ub = arith.constant 4 : index
-  %st = arith.constant -999 : index
-
-  // expected-error@+1 {{negative loop step requires lower bound to be greater than or equal to upper bound}}
   %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
     omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
   } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
@@ -4866,7 +4940,7 @@ func.func @iterator_missing_yield(%lb : index, %ub : index, %st : index) {
 // -----
 
 func.func @iterator_empty_body(%lb : index, %ub : index, %st : index) {
-  // expected-error@+1 {{expects a non-empty block}}
+  // expected-error@+1 {{region must be terminated by omp.yield}}
   %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
   } -> !omp.iterated<index>
   return
@@ -4894,6 +4968,60 @@ func.func @iterator_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
 
 // -----
 
+func.func @iterator_multi_block_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{omp.iterated element type ('i64') does not match omp.yield operand type ('index')}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.br ^bb1
+  ^bb1:
+    omp.yield(%i : index)
+  } -> !omp.iterated<i64>
+  return
+}
+
+// -----
+
+func.func @iterator_two_yields(%lb : index, %ub : index, %st : index, %c : i1) {
+  // expected-error@+1 {{region must contain exactly one omp.yield}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    omp.yield(%i : index)
+  ^bb2:
+    omp.yield(%i : index)
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
+func.func @iterator_return_exit(%lb : index, %ub : index, %st : index, %c : i1) {
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    omp.yield(%i : index)
+  ^bb2:
+    // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
+    llvm.return
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
+func.func @iterator_terminator_exit(%lb : index, %ub : index, %st : index, %c : i1) {
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    omp.yield(%i : index)
+  ^bb2:
+    // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
+    omp.terminator
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
 func.func @map_iterated_not_iterator(%it : !omp.iterated<!llvm.ptr>) {
   // expected-error @below {{'omp.target_update' op 'map_iterated' arguments must be defined by 'omp.iterator' ops}}
   omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
@@ -4905,6 +5033,21 @@ func.func @map_iterated_not_iterator(%it : !omp.iterated<!llvm.ptr>) {
 func.func @map_iterated_yield_not_map_info(%lb : index, %ub : index, %st : index,
                                             %addr : !llvm.ptr) {
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{'omp.target_enter_data' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @map_iterated_multi_block_yield_not_map_info(%lb : index, %ub : index,
+                                                       %st : index,
+                                                       %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    cf.br ^bb1
+  ^bb1:
     omp.yield(%addr : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{'omp.target_enter_data' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}

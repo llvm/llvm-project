@@ -73,3 +73,12 @@ func.func @unranked_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>)
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<*xf32>
   return %0 : tensor<*xf32>
 }
+
+// -----
+
+// Verify ROW_GATHER rejects unranked results during lowering.
+func.func @unranked_row_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %row_count: tensor<1xi32>) -> tensor<*xf32> {
+  // expected-error@+1 {{failed to legalize operation 'tosa.row_gather'}}
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}

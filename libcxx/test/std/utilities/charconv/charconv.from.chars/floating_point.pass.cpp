@@ -17,6 +17,7 @@
 //                              double& value, chars_format fmt = chars_format::general)
 
 #include <array>
+#include <cassert>
 #include <charconv>
 #include <cmath>
 #include <cstring>
@@ -24,8 +25,8 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "charconv_test_helpers.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class F>
 void test_infinity(std::chars_format fmt) {
@@ -325,8 +326,8 @@ void test_fmt_independent(std::chars_format fmt) {
   }
 }
 
-template <class F>
 struct test_basics {
+  template <class F>
   void operator()() {
     for (auto fmt : {std::chars_format::scientific,
                      std::chars_format::fixed,
@@ -335,8 +336,8 @@ struct test_basics {
   }
 };
 
-template <class F>
 struct test_fixed {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -600,8 +601,8 @@ struct test_fixed {
   }
 };
 
-template <class F>
 struct test_scientific {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -874,8 +875,8 @@ struct test_scientific {
   }
 };
 
-template <class F>
 struct test_general {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -1194,8 +1195,8 @@ struct test_general {
   }
 };
 
-template <class F>
 struct test_hex {
+  template <class F>
   void operator()() {
     std::from_chars_result r;
     F x = 0.25;
@@ -1547,12 +1548,13 @@ void test_random_errors() {
 }
 
 int main(int, char**) {
-  run<test_basics>(all_floats);
-  run<test_scientific>(all_floats);
-  run<test_fixed>(all_floats);
-  run<test_general>(all_floats);
+  using all_floats = types::type_list<float, double>; // TODO: Add long double
+  types::for_each(all_floats(), test_basics());
+  types::for_each(all_floats(), test_scientific());
+  types::for_each(all_floats(), test_fixed());
+  types::for_each(all_floats(), test_general());
 
-  run<test_hex>(all_floats);
+  types::for_each(all_floats(), test_hex());
 
   test_random_errors();
 
