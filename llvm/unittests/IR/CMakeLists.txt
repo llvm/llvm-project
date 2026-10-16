@@ -33,6 +33,7 @@ add_llvm_unittest(IRTests
   GlobalObjectTest.cpp
   PassBuilderCallbacksTest.cpp
   IRBuilderTest.cpp
+  InstructionListenerTest.cpp
   InstructionsTest.cpp
   IntrinsicsTest.cpp
   LegacyPassManagerTest.cpp
