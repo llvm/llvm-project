@@ -90,7 +90,7 @@ clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
 }
 
 bool CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
-    int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+    int64_t offset, mlir::Type ty, const cir::CIRDataLayout &layout,
     llvm::SmallVectorImpl<int64_t> &indices) {
   if (!offset)
     return true;
