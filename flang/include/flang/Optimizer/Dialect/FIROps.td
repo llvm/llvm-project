@@ -1660,7 +1660,7 @@ def fir_CoordinateOp
       "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
   let extraClassDeclaration = [{
-    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    constexpr static int32_t kDynamicIndex = Fortran::common::numeric_limits<int32_t>::min();
     CoordinateIndicesAdaptor getIndices();
 
     // FortranObjectViewOpInterface methods:
