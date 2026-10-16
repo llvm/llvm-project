@@ -196,31 +196,24 @@ private:
   Result CallError(
       const evaluate::ProcedureDesignator &proc, bool inHostCode) const {
     const char *procedureType{inHostCode ? "DEVICE" : "HOST"};
-    const char *codeType{inHostCode ? "HOST" : "DEVICE"};
+    const char *codeContext{callContext_ == CallContext::HostDevice
+            ? "HOST,DEVICE code without an ON_DEVICE() guard"
+            : inHostCode ? "HOST code"
+                         : "DEVICE code"};
     if (auto generic{proc.genericName()}) {
       const Symbol *specific{proc.GetInterfaceSymbol()};
       const std::string specificName{specific
               ? specific->GetUltimate().name().ToString()
               : proc.GetName()};
       if (*generic != specificName) {
-        if (callContext_ == CallContext::HostDevice) {
-          return parser::MessageFormattedText(
-              "The %s procedure '%s' (specific procedure '%s') may not be called in HOST,DEVICE code without an ON_DEVICE() guard"_err_en_US,
-              procedureType, *generic, specificName);
-        }
         return parser::MessageFormattedText(
-            "The %s procedure '%s' (specific procedure '%s') may not be called in %s code"_err_en_US,
-            procedureType, *generic, specificName, codeType);
+            "The %s procedure '%s' (specific procedure '%s') may not be called in %s"_err_en_US,
+            procedureType, *generic, specificName, codeContext);
       }
     }
-    if (callContext_ == CallContext::HostDevice) {
-      return parser::MessageFormattedText(
-          "The %s procedure '%s' may not be called in HOST,DEVICE code without an ON_DEVICE() guard"_err_en_US,
-          procedureType, proc.GetName());
-    }
     return parser::MessageFormattedText(
-        "The %s procedure '%s' may not be called in %s code"_err_en_US,
-        procedureType, proc.GetName(), codeType);
+        "The %s procedure '%s' may not be called in %s"_err_en_US,
+        procedureType, proc.GetName(), codeContext);
   }
 };
 
