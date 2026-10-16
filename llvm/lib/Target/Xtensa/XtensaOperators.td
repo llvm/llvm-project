@@ -67,8 +67,7 @@ def Xtensa_callseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_XtensaCallSeqEnd,
 
 def Xtensa_brjt: SDNode<"XtensaISD::BR_JT", SDT_XtensaBrJT, [SDNPHasChain]>;
 
-def Xtensa_select_cc: SDNode<"XtensaISD::SELECT_CC", SDT_XtensaSelectCC,
-                            [SDNPInGlue]>;
+def Xtensa_select_cc: SDNode<"XtensaISD::SELECT_CC", SDT_XtensaSelectCC, []>;
 
 def Xtensa_srcl: SDNode<"XtensaISD::SRCL", SDT_XtensaSRC>;
 
@@ -77,10 +76,9 @@ def Xtensa_srcr: SDNode<"XtensaISD::SRCR", SDT_XtensaSRC>;
 def Xtensa_extui: SDNode<"XtensaISD::EXTUI", SDT_XtensaEXTUI>;
 
 def Xtensa_movsp: SDNode<"XtensaISD::MOVSP", SDT_XtensaMOVSP,
-                        [SDNPHasChain, SDNPSideEffect, SDNPInGlue]>;
+                        [SDNPHasChain, SDNPSideEffect]>;
 
-def Xtensa_rur: SDNode<"XtensaISD::RUR", SDT_XtensaRUR,
-                      [SDNPInGlue]>;
+def Xtensa_rur: SDNode<"XtensaISD::RUR", SDT_XtensaRUR, []>;
 
 def Xtensa_cmpoeq     : SDNode<"XtensaISD::CMPOEQ", SDT_XtensaCmp, [SDNPOutGlue]>;
 def Xtensa_cmpolt     : SDNode<"XtensaISD::CMPOLT", SDT_XtensaCmp, [SDNPOutGlue]>;
@@ -95,4 +93,4 @@ def Xtensa_msub: SDNode<"XtensaISD::MSUB", SDT_XtensaMADD, [SDNPInGlue]>;
 def Xtensa_movs: SDNode<"XtensaISD::MOVS", SDT_XtensaMOVS, [SDNPInGlue]>;
 
 def Xtensa_select_cc_fp: SDNode<"XtensaISD::SELECT_CC_FP", SDT_XtensaSelectCCFP,
-                               [SDNPInGlue]>;
+                               []>;
