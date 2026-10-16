@@ -214,6 +214,26 @@ TEST_F(ABITypesTest, ScalarABISize) {
   EXPECT_EQ(TB.getComplexType(F32, Align(4))->getABISizeInBits(), 64u);
 }
 
+TEST_F(ABITypesTest, IntegerTypeFromTypeSize) {
+  // Power-of-2 byte sizes.
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(8))->getAlignment(), Align(1));
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(16))->getAlignment(),
+            Align(2));
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(32))->getAlignment(),
+            Align(4));
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(64))->getAlignment(),
+            Align(8));
+
+  // Non-byte and non-power-of-2 byte sizes should not assert on alignment.
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(1))->getAlignment(), Align(1));
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(24))->getAlignment(),
+            Align(2));
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(40))->getAlignment(),
+            Align(4));
+  EXPECT_EQ(TB.getIntegerType(TypeSize::getFixed(48))->getAlignment(),
+            Align(4));
+}
+
 // A bool element takes one bit and a one-bit _BitInt element a whole byte.  The
 // total is rounded up to a power of two of at least 8 bits.
 TEST_F(ABITypesTest, VectorABISize) {
