@@ -110,9 +110,10 @@ def OneUse : OneUsePred;
 // `false` makes the generated predicator return `false` early during that
 // stage (detected via the `NoVRegs` machine function property). At least one
 // of the two must be `true`.
-class Fusion<string name, string fieldName, string desc,
-             list<FusionPredicate> predicates, InlineBehavior ib = InlineIgnore>
-  : SubtargetFeature<"fusion-" # name, fieldName, "true", desc, ib=ib> {
+class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
+  : SubtargetFeature<"fusion-" # name, fieldName, "true", desc> {
+  let InlineBehavior = InlineIgnore;
+
   list<FusionPredicate> Predicates = predicates;
   bit IsCommutable = 0;
   bit RunPreRA = true;
