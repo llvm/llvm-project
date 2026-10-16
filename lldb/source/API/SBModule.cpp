@@ -684,7 +684,7 @@ uint32_t SBModule::GetNumberAllocatedModules() {
 void SBModule::GarbageCollectAllocatedModules() {
   LLDB_INSTRUMENT();
 
-  const bool mandatory = false;
+  const bool mandatory = true;
   ModuleList::RemoveOrphanSharedModules(mandatory);
 }
 
