@@ -683,7 +683,10 @@ bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
 
-  for (auto &MI : *NotNullSucc) {
+  // Keep pseudo probes in the scan to preserve existing behavior.
+  for (MachineInstr &MI :
+       instructionsWithoutDebug(NotNullSucc->begin(), NotNullSucc->end(),
+                                /*SkipPseudoOp=*/false)) {
     if (!canHandle(&MI) || InstsSeenSoFar.size() >= MaxInstsToConsider)
       return false;
 
