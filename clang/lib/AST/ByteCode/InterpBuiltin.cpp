@@ -200,6 +200,15 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
 
+static bool diagnoseUnreadableObject(InterpState &S, CodePtr OpPC,
+                                     const Pointer &Ptr, AccessKinds AK) {
+  S.FFDiag(S.Current->getSource(OpPC),
+           diag::note_constexpr_access_unreadable_object)
+      << AK << Ptr.toDiagnosticString(S.getASTContext());
+  noteValueLocation(S, Ptr);
+  return false;
+}
+
 static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
   assert(Val.getFieldDesc()->isPrimitiveArray() &&
          Val.getFieldDesc()->getElemQualType()->isBooleanType() &&
@@ -2029,7 +2038,10 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (!isReadable(DestPtr) || !isReadable(SrcPtr))
+  if (!DestPtr.isBlockPointer())
+    return diagnoseUnreadableObject(S, OpPC, DestPtr, AK_Assign);
+
+  if (!isReadable(SrcPtr))
     return false;
 
   if (DestPtr.getType()->isIncompleteType()) {
@@ -2531,13 +2543,8 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
   }
 
-  if (!Ptr.isBlockPointer()) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_access_unreadable_object)
-        << AK_Read << Ptr.toDiagnosticString(S.getASTContext());
-    noteValueLocation(S, Ptr);
-    return false;
-  }
+  if (!Ptr.isBlockPointer())
+    return diagnoseUnreadableObject(S, OpPC, Ptr, AK_Read);
 
   // Check if we're currently running an initializer.
   if (S.initializingBlock(Ptr.block()))
