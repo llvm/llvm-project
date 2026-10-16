@@ -485,10 +485,6 @@ bool BasicBlock::canSplitPredecessors() const {
 
 bool BasicBlock::isLegalToHoistInto() const {
   auto *Term = getTerminator();
-  // No terminator means the block is under construction.
-  if (!Term)
-    return true;
-
   // If the block has no successors, there can be no instructions to hoist.
   assert(Term->getNumSuccessors() > 0);
 
@@ -504,7 +500,6 @@ bool BasicBlock::isEntryBlock() const {
 }
 
 BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
-  assert(getTerminator() && "Can't use splitBasicBlock on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
 
@@ -534,8 +529,6 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
 }
 
 BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
-  assert(getTerminator() &&
-         "Can't use splitBasicBlockBefore on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
 
