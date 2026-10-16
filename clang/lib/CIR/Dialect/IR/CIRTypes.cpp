@@ -327,11 +327,7 @@ Type StructType::parse(mlir::AsmParser &parser) {
     if (!type)
       return {};
     if (auto structTy = mlir::dyn_cast<StructType>(type)) {
-      if (structTy.isIncomplete()) {
-        structTy.complete(membersRef, packed, kindsRef);
-      } else if (structTy.getMembers() != membersRef ||
-                 structTy.getPacked() != packed ||
-                 structTy.getMemberKinds() != kindsRef) {
+      if (failed(structTy.mutate(membersRef, packed, kindsRef))) {
         parser.emitError(loc, "record '")
             << name.getValue() << "' redefined with a different body";
         return {};
@@ -500,12 +496,7 @@ Type UnionType::parse(mlir::AsmParser &parser) {
     if (!type)
       return {};
     if (auto unionTy = mlir::dyn_cast<UnionType>(type)) {
-      if (unionTy.isIncomplete()) {
-        unionTy.complete(membersRef, packed, padding, kindsRef);
-      } else if (unionTy.getMembers() != membersRef ||
-                 unionTy.getPacked() != packed ||
-                 unionTy.getPadding() != padding ||
-                 unionTy.getMemberKinds() != kindsRef) {
+      if (failed(unionTy.mutate(membersRef, packed, padding, kindsRef))) {
         parser.emitError(loc, "record '")
             << name.getValue() << "' redefined with a different body";
         return {};
