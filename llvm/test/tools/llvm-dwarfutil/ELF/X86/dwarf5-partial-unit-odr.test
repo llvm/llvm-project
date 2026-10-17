@@ -1,0 +1,306 @@
+## Check that ODR deduplication treats a type under a DW_TAG_partial_unit root
+## as one under a DW_TAG_compile_unit root, which is the control. Each unit
+## defines a struct S at unit scope and an unrelated ns::S, so a correct link
+## keeps two definitions, one that merged the scopes keeps one, and one that
+## deduplicated nothing keeps four.
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefix=CLASSIC --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not=DW_TAG_structure_type
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefix=CLASSIC --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not=DW_TAG_structure_type
+
+## Deduplication off tells a deduplicated link from one that dropped types.
+# RUN: llvm-dwarfutil --no-odr-deduplication %t.pu.o %t.pu-noodr.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu-noodr.classic | FileCheck %s --check-prefix=NOODR \
+# RUN:   --implicit-check-not=__artificial_type_unit --implicit-check-not=DW_TAG_structure_type
+# RUN: llvm-dwarfutil --linker parallel --no-odr-deduplication %t.pu.o %t.pu-noodr.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu-noodr.parallel | FileCheck %s --check-prefix=NOODR \
+# RUN:   --implicit-check-not=__artificial_type_unit --implicit-check-not=DW_TAG_structure_type
+
+## The classic linker keeps both definitions in U01.
+# CLASSIC:        DW_AT_name ("U01")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("foo1")
+# CLASSIC:          DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "S")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("foo2")
+# CLASSIC:          DW_AT_type (0x00000000[[NSS:[0-9a-f]{8}]] "ns::S")
+# CLASSIC:      0x[[S]]:   DW_TAG_structure_type
+# CLASSIC-NEXT:   DW_AT_name ("S")
+# CLASSIC:        DW_TAG_member
+# CLASSIC-NEXT:     DW_AT_name ("m1")
+# CLASSIC:        DW_TAG_member
+# CLASSIC-NEXT:     DW_AT_name ("m2")
+# CLASSIC:        DW_TAG_namespace
+# CLASSIC-NEXT:     DW_AT_name ("ns")
+# CLASSIC:      0x[[NSS]]:   DW_TAG_structure_type
+# CLASSIC-NEXT:   DW_AT_name ("S")
+# CLASSIC:        DW_TAG_member
+# CLASSIC-NEXT:     DW_AT_name ("m1")
+# CLASSIC:        DW_TAG_member
+# CLASSIC-NEXT:     DW_AT_name ("m2")
+# CLASSIC:        DW_AT_name ("U02")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("bar1")
+# CLASSIC:          DW_AT_type (0x00000000[[S]] "S")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("bar2")
+# CLASSIC:          DW_AT_type (0x00000000[[NSS]] "ns::S")
+
+## The parallel linker moves both types into the artificial type unit.
+# PARALLEL:      DW_AT_name ("__artificial_type_unit")
+# PARALLEL:      DW_TAG_namespace
+# PARALLEL-NEXT:   DW_AT_name ("ns")
+# PARALLEL:      0x[[NSS:[0-9a-f]{8}]]:   DW_TAG_structure_type
+# PARALLEL-NEXT:   DW_AT_name ("S")
+# PARALLEL:        DW_TAG_member
+# PARALLEL-NEXT:     DW_AT_name ("m1")
+# PARALLEL:        DW_TAG_member
+# PARALLEL-NEXT:     DW_AT_name ("m2")
+# PARALLEL:      0x[[S:[0-9a-f]{8}]]:   DW_TAG_structure_type
+# PARALLEL-NEXT:   DW_AT_name ("S")
+# PARALLEL:        DW_TAG_member
+# PARALLEL-NEXT:     DW_AT_name ("m1")
+# PARALLEL:        DW_TAG_member
+# PARALLEL-NEXT:     DW_AT_name ("m2")
+# PARALLEL:      DW_AT_name ("U01")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("foo1")
+# PARALLEL:        DW_AT_type (0x00000000[[S]] "S")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("foo2")
+# PARALLEL:        DW_AT_type (0x00000000[[NSS]] "ns::S")
+# PARALLEL:      DW_AT_name ("U02")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("bar1")
+# PARALLEL:        DW_AT_type (0x00000000[[S]] "S")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("bar2")
+# PARALLEL:        DW_AT_type (0x00000000[[NSS]] "ns::S")
+
+## Without deduplication each unit keeps its own definitions.
+# NOODR:      DW_AT_name ("U01")
+# NOODR:      DW_TAG_structure_type
+# NOODR-NEXT:   DW_AT_name ("S")
+# NOODR:      DW_TAG_namespace
+# NOODR-NEXT:   DW_AT_name ("ns")
+# NOODR:      DW_TAG_structure_type
+# NOODR-NEXT:   DW_AT_name ("S")
+# NOODR:      DW_AT_name ("U02")
+# NOODR:      DW_TAG_structure_type
+# NOODR-NEXT:   DW_AT_name ("S")
+# NOODR:      DW_TAG_namespace
+# NOODR-NEXT:   DW_AT_name ("ns")
+# NOODR:      DW_TAG_structure_type
+# NOODR-NEXT:   DW_AT_name ("S")
+
+## The units cover disjoint halves of .text so that both are kept. The roots
+## carry DW_AT_str_offsets_base, which the linker adds only to a
+## DW_TAG_compile_unit root (#219365).
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x60
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      AbbrOffset: 0x0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x30
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x63
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1150
+            - Value: 0x10
+            - Value: 0x7e
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 4
+          Values:
+            - CStr: m1
+            - Value: 0x96
+            - Value: 0x0
+        - AbbrCode: 4
+          Values:
+            - CStr: m2
+            - Value: 0x96
+            - Value: 0x4
+        - AbbrCode: 0
+        - AbbrCode: 6
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 4
+          Values:
+            - CStr: m1
+            - Value: 0x96
+            - Value: 0x0
+        - AbbrCode: 4
+          Values:
+            - CStr: m2
+            - Value: 0x96
+            - Value: 0x4
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      AbbrOffset: 0x0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1160
+            - Value: 0x30
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: bar1
+            - Value: 0x1160
+            - Value: 0x10
+            - Value: 0x63
+        - AbbrCode: 2
+          Values:
+            - CStr: bar2
+            - Value: 0x1180
+            - Value: 0x10
+            - Value: 0x7e
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 4
+          Values:
+            - CStr: m1
+            - Value: 0x96
+            - Value: 0x0
+        - AbbrCode: 4
+          Values:
+            - CStr: m2
+            - Value: 0x96
+            - Value: 0x4
+        - AbbrCode: 0
+        - AbbrCode: 6
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 4
+          Values:
+            - CStr: m1
+            - Value: 0x96
+            - Value: 0x0
+        - AbbrCode: 4
+          Values:
+            - CStr: m2
+            - Value: 0x96
+            - Value: 0x4
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+...
