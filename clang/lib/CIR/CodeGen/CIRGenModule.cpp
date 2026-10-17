@@ -195,6 +195,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*preserve_vec_3_type=*/langOpts.PreserveVec3Type,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat())));
 
