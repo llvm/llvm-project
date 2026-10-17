@@ -168,7 +168,7 @@ jobs:
           CI_CONFIG_PATH: ci-config
         run: |
           if [[ "${TEST_TYPE:-}" == "quick" ]]; then
-               PROJECTS_TO_TEST='rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
+               PROJECTS_TO_TEST='rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma,rocgdb-gpu'
                export PROJECTS_TO_TEST
                echo "PROJECTS_TO_TEST=$PROJECTS_TO_TEST" >> "$GITHUB_ENV"
           fi            
