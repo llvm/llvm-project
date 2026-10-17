@@ -156,6 +156,31 @@ SparcTargetInfo::CPUFamily SparcTargetInfo::getCPUFamily(CPUKind Kind) const {
   return Item->Family;
 }
 
+// The CPUs that the backend gives the LeonCASA feature.
+bool SparcTargetInfo::hasLeonCASA(CPUKind Kind) {
+  switch (Kind) {
+  case CK_MYRIAD2100:
+  case CK_MYRIAD2150:
+  case CK_MYRIAD2155:
+  case CK_MYRIAD2450:
+  case CK_MYRIAD2455:
+  case CK_MYRIAD2x5x:
+  case CK_MYRIAD2080:
+  case CK_MYRIAD2085:
+  case CK_MYRIAD2480:
+  case CK_MYRIAD2485:
+  case CK_MYRIAD2x8x:
+  case CK_LEON3:
+  case CK_LEON3_GR712RC:
+  case CK_LEON4:
+  case CK_LEON4_GR740:
+  case CK_LEON5:
+    return true;
+  default:
+    return false;
+  }
+}
+
 SparcTargetInfo::CPUKind SparcTargetInfo::getCPUKind(StringRef Name) const {
   const SparcCPUInfo *Item = llvm::find_if(
       CPUInfo, [Name](const SparcCPUInfo &Info) { return Info.Name == Name; });

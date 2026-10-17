@@ -134,6 +134,7 @@ public:
   CPUGeneration getCPUGeneration(CPUKind Kind) const;
 
   CPUFamily getCPUFamily(CPUKind Kind) const;
+  static bool hasLeonCASA(CPUKind Kind);
 
   CPUKind getCPUKind(StringRef Name) const;
 
@@ -186,15 +187,16 @@ public:
       LongDoubleFormat = &llvm::APFloat::IEEEquad();
     }
 
-    // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
-    // willing to do atomic ops on up to 64 bits.
+    // We're willing to do atomic ops on up to 64 bits.
     MaxAtomicPromoteWidth = 64;
-    if (getCPUGeneration(CPU) == CG_V9)
-      MaxAtomicInlineWidth = 64;
-    else
-      // FIXME: This isn't correct for plain V8 which lacks CAS,
-      // only for LEON 3+ and Myriad.
-      MaxAtomicInlineWidth = 32;
+  }
+
+  // Up to 32 bits are lock-free atomic if the CPU has a compare-and-swap: V9
+  // ones (64-bit atomics on 32-bit V9 aren't implemented in the backend yet),
+  // and the LEON and Myriad 2 ones with CASA. Plain V8 lacks CAS.
+  void setMaxAtomicWidth() override {
+    MaxAtomicInlineWidth =
+        getCPUGeneration(CPU) == CG_V9 || hasLeonCASA(CPU) ? 32 : 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
