@@ -591,6 +591,9 @@ void Parser::Initialize() {
   }
 
   Actions.Initialize();
+  // Let Sema read late-parsed type attributes, which only the Parser can see.
+  Actions.GetLateParsedTypeAttrCallback =
+      &Parser::GetLateParsedTypeAttrCallback;
 
   // Prime the lexer look-ahead.
   ConsumeToken();
