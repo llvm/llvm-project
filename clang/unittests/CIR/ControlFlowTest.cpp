@@ -80,13 +80,10 @@ static void expectTerminatorSuccessors(Region &region,
 }
 
 /// Verify control flow interface consistency beyond what mlir::verify checks:
-///   - Every non-empty region is reachable, unless `requireAllReachable` is
-///     false
+///   - Every non-empty region is reachable
 ///   - Every non-empty region has at least one branching terminator
 ///   - Op and terminator agree on successor regions at every branch point
-static void
-verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op,
-                                      bool requireAllReachable = true) {
+static void verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op) {
   EXPECT_TRUE(succeeded(mlir::verify(op)))
       << "MLIR verifier failed for '" << op->getName().getStringRef().str()
       << "'";
@@ -123,7 +120,7 @@ verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op,
   for (Region &region : op->getRegions()) {
     if (region.empty())
       continue;
-    EXPECT_TRUE(!requireAllReachable || allReachable.contains(&region))
+    EXPECT_TRUE(allReachable.contains(&region))
         << "Region #" << region.getRegionNumber()
         << " is non-empty but not reachable from any branch point";
     EXPECT_TRUE(regionsWithExit.contains(&region))
@@ -135,18 +132,21 @@ verifyControlFlowInterfaceConsistency(RegionBranchOpInterface op,
 }
 
 /// Check a cir.cleanup.scope whose body has a single exit. The parent enters
-/// the body, the body exit enters the cleanup region if `bodyRunsCleanup` and
-/// leaves the op otherwise, and the cleanup region leaves the op.
+/// the body or the cleanup region. The body exit enters the cleanup region,
+/// and also leaves the op unless `bodyRunsCleanup`. The cleanup region leaves
+/// the op.
 static void expectCleanupScopeSuccessors(cir::CleanupScopeOp op,
                                          bool bodyRunsCleanup) {
   Region &body = op.getBodyRegion();
   Region &cleanup = op.getCleanupRegion();
-  expectSuccessors(op, RegionBranchPoint::parent(), {&body});
+  expectSuccessors(op, RegionBranchPoint::parent(), {&body, &cleanup});
 
   RegionBranchTerminatorOpInterface bodyTerm = getTerminator(body);
   ASSERT_TRUE(bodyTerm);
-  expectSuccessors(op, RegionBranchPoint(bodyTerm),
-                   {bodyRunsCleanup ? &cleanup : nullptr});
+  if (bodyRunsCleanup)
+    expectSuccessors(op, RegionBranchPoint(bodyTerm), {&cleanup});
+  else
+    expectSuccessors(op, RegionBranchPoint(bodyTerm), {&cleanup, nullptr});
   expectTerminatorSuccessors(cleanup, {nullptr});
 
   RegionBranchOpInterface branch = op;
@@ -154,10 +154,7 @@ static void expectCleanupScopeSuccessors(cir::CleanupScopeOp op,
   EXPECT_FALSE(branch.isRepetitiveRegion(1));
   EXPECT_FALSE(branch.hasLoop());
 
-  // Without the body edge nothing reaches the cleanup region.
-  verifyControlFlowInterfaceConsistency(
-      op,
-      /*requireAllReachable=*/bodyRunsCleanup);
+  verifyControlFlowInterfaceConsistency(op);
 }
 
 //===----------------------------------------------------------------------===//
@@ -573,7 +570,8 @@ TEST_F(CIRControlFlowTest, CleanupScopeOpYieldEH) {
       cir.return
     }
   )CIR");
-  // An EH-only cleanup is skipped by the body's normal cir.yield.
+  // An EH-only cleanup does not run on the body's normal cir.yield, but stays
+  // a successor for an unwind from the middle of the body.
   expectCleanupScopeSuccessors(findFirstOp<cir::CleanupScopeOp>(*module),
                                /*bodyRunsCleanup=*/false);
 }
@@ -609,7 +607,8 @@ TEST_F(CIRControlFlowTest, CleanupScopeOpResumeNormal) {
       cir.return
     }
   )CIR");
-  // A normal-only cleanup is skipped by the body's unwinding cir.resume.
+  // A normal-only cleanup does not run on the body's unwinding cir.resume, but
+  // stays a successor for a cir.return or similar from the middle of the body.
   expectCleanupScopeSuccessors(findFirstOp<cir::CleanupScopeOp>(*module),
                                /*bodyRunsCleanup=*/false);
 }
@@ -637,8 +636,9 @@ TEST_F(CIRControlFlowTest, CleanupScopeOpMultiBlockBodyNormal) {
   )CIR");
   auto cleanupScopeOp = findFirstOp<cir::CleanupScopeOp>(*module);
 
-  expectSuccessors(cleanupScopeOp, RegionBranchPoint::parent(),
-                   {&cleanupScopeOp.getBodyRegion()});
+  expectSuccessors(
+      cleanupScopeOp, RegionBranchPoint::parent(),
+      {&cleanupScopeOp.getBodyRegion(), &cleanupScopeOp.getCleanupRegion()});
 
   // The cir.brcond block is not a branch point, so only the two exiting
   // blocks show up here.
@@ -653,15 +653,19 @@ TEST_F(CIRControlFlowTest, CleanupScopeOpMultiBlockBodyNormal) {
   EXPECT_TRUE(isa<cir::YieldOp>(*bodyTerms[0]));
   EXPECT_TRUE(isa<cir::ResumeOp>(*bodyTerms[1]));
 
-  // The normal exit runs the cleanup, the unwind exit skips it.
+  // The normal exit runs the cleanup. The unwind exit can also leave the op.
   expectSuccessors(cleanupScopeOp, RegionBranchPoint(bodyTerms[0]),
                    {&cleanupScopeOp.getCleanupRegion()});
-  expectSuccessors(cleanupScopeOp, RegionBranchPoint(bodyTerms[1]), {nullptr});
+  expectSuccessors(cleanupScopeOp, RegionBranchPoint(bodyTerms[1]),
+                   {&cleanupScopeOp.getCleanupRegion(), nullptr});
   expectTerminatorSuccessors(cleanupScopeOp.getCleanupRegion(), {nullptr});
 
-  EXPECT_FALSE(asRegionBranch(cleanupScopeOp).hasLoop());
+  // hasLoop() reports a loop whenever two exits reach the same region, so
+  // check that no region can reach itself instead.
+  RegionBranchOpInterface branch = asRegionBranch(cleanupScopeOp);
+  EXPECT_FALSE(branch.isRepetitiveRegion(0));
+  EXPECT_FALSE(branch.isRepetitiveRegion(1));
 
-  // The cleanup region does have a predecessor here, via the normal exit.
   verifyControlFlowInterfaceConsistency(cleanupScopeOp);
 }
 
