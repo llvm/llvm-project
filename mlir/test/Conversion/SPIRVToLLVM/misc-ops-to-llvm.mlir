@@ -151,3 +151,35 @@ spirv.func @undef_vector() "None" {
   %0 = spirv.Undef : vector<2xi32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.Expect
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @expect_scalar
+// CHECK-SAME:    %[[VAL:.*]]: i32, %[[EXP:.*]]: i32
+spirv.func @expect_scalar(%arg0: i32, %arg1: i32) "None" {
+  // CHECK: llvm.intr.expect %[[VAL]], %[[EXP]] : i32
+  %0 = spirv.KHR.Expect %arg0, %arg1 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @expect_bool
+// CHECK-SAME:    %[[VAL:.*]]: i1, %[[EXP:.*]]: i1
+spirv.func @expect_bool(%arg0: i1, %arg1: i1) "None" {
+  // CHECK: llvm.intr.expect %[[VAL]], %[[EXP]] : i1
+  %0 = spirv.KHR.Expect %arg0, %arg1 : i1
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.AssumeTrue
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @assume_true
+// CHECK-SAME:    %[[COND:.*]]: i1
+spirv.func @assume_true(%arg0: i1) "None" {
+  // CHECK: llvm.intr.assume %[[COND]] : i1
+  spirv.KHR.AssumeTrue %arg0
+  spirv.Return
+}
