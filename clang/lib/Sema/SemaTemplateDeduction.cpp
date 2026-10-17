@@ -6609,11 +6609,9 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   case TemplateDeductionResult::Success:
     return true;
 
-  // It doesn't seem possible to get a non-deduced mismatch when partial
-  // ordering TTPs, except with an invalid template parameter list which has
-  // a parameter after a pack.
+  // An invalid template parameter list can produce a non-deduced mismatch
+  // while finishing the deduction.
   case TemplateDeductionResult::NonDeducedMismatch:
-    assert(PArg->isInvalidDecl() && "Unexpected NonDeducedMismatch");
     return false;
 
   // Substitution failures should have already been diagnosed.
