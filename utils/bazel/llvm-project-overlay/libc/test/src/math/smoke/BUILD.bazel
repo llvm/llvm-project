@@ -2135,6 +2135,13 @@ math_test(
 
 math_test(name = "sin")
 
+math_test(
+    name = "sinbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_test(name = "sinf")
 
 math_test(name = "sincos")
