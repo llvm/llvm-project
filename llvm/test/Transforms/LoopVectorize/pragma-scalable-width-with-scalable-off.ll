@@ -2,10 +2,12 @@
 ;
 ; Clang lowers "#pragma clang loop vectorize_width(1, scalable)" and
 ; "interleave_count(1)" to width 1, scalable.enable, and interleave count 1.
-; -scalable-vectorization=off overrides scalable.enable and disables vectorisation
+; -scalable-vectorization=off must not override scalable.enable and disable vectorization.
 ;
 ; CHECK-LABEL: define void @repro(
-; CHECK-NOT: vector.body:
+; CHECK: vector.body:
+; CHECK: load <vscale x 1 x i8>
+; CHECK: store <vscale x 1 x i8>
 
 define void @repro(ptr %out, ptr %in, i32 %tc) {
 entry:
