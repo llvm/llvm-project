@@ -626,6 +626,19 @@ private:
           {ID, std::move(Cache)});
       return E;
     }
+
+    // concept-ids have a separate "is satisfied" cache.
+    bool knownSatisfied() {
+      if (!Checker.S.SatisfiedConceptIdCache.contains(ID.getRef()))
+        return false;
+      Checker.Satisfaction.IsSatisfied = true;
+      Checker.Satisfaction.ContainsErrors = false;
+      return true;
+    }
+
+    void cacheSatisfied() {
+      Checker.S.SatisfiedConceptIdCache.insert(ID.Intern(Checker.S.BumpAlloc));
+    }
   };
 
 private:
@@ -1107,6 +1120,14 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
 ExprResult ConstraintSatisfactionChecker::Evaluate(
     const ConceptIdConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
+  ParameterMappingInstantiationCache PMCache(*this, Constraint, MLTAL,
+                                             getOuterPackIndex(Constraint));
+
+  // The same concept-id is often checked with the same template arguments,
+  // e.g. for the constraints of different declarations. If it's known to be
+  // satisfied, skip its constraints.
+  if (!BuildExpression && PMCache.knownSatisfied())
+    return ExprEmpty();
 
   const ConceptReference *ConceptId = Constraint.getConceptId();
   Sema::InstantiatingTemplate InstTemplate(
@@ -1140,11 +1161,14 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   // ConceptIdConstraint is only relevant for diagnostics,
   // so if the normalized constraint is satisfied, we should not
   // substitute into the constraint.
-  if (Satisfaction.IsSatisfied)
+  if (Satisfaction.IsSatisfied) {
+    // This only caches the positive case because that's more common by ~2x,
+    // and because the positive case needs to store just one bit.
+    // (The negative case would also have to store expression and details list.)
+    if (!BuildExpression && !Satisfaction.ContainsErrors)
+      PMCache.cacheSatisfied();
     return E;
-
-  ParameterMappingInstantiationCache PMCache(
-      *this, Constraint, MLTAL, getOuterPackIndex(Constraint), Size);
+  }
 
   if (auto *V = PMCache.available())
     return V->SubstExpr;
