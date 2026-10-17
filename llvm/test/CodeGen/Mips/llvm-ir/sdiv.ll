@@ -59,16 +59,19 @@ define signext i1 @sdiv_i1(i1 signext %a, i1 signext %b) {
 ;
 ; MIPS3-LABEL: sdiv_i1:
 ; MIPS3:       # %bb.0: # %entry
+; MIPS3-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS3-NEXT:    jr $ra
 ; MIPS3-NEXT:    move $2, $4
 ;
 ; GP64-LABEL: sdiv_i1:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; GP64-NEXT:    jr $ra
 ; GP64-NEXT:    move $2, $4
 ;
 ; GP64R6-LABEL: sdiv_i1:
 ; GP64R6:       # %bb.0: # %entry
+; GP64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; GP64R6-NEXT:    jr $ra
 ; GP64R6-NEXT:    move $2, $4
 ;

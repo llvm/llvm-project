@@ -23,10 +23,17 @@ extern "C" {
   __attribute__((cold))
   __attribute__((optnone))
   void optnone(){}
-  // CIR: cir.func{{.*}}@optnone() 
+  // CIR: cir.func {{.*}}@optnone()
+  // CIR-SAME: optnone
   // CIR-NOT: optsize
   // CIR-NOT: minsize
   // BOTH: define{{.*}}@optnone(){{.*}} #[[OPTNONE_ATTR:.*]] {
+
+  __attribute__((minsize))
+  void explicit_minsize(){}
+  // CIR: cir.func{{.*}}@explicit_minsize()
+  // CIR-SAME: minsize
+  // BOTH: define{{.*}}@explicit_minsize(){{.*}} #[[MINSIZE_ATTR:.*]] {
 
   // CIR: cir.func{{.*}}@caller()
   void caller() {
@@ -50,11 +57,12 @@ extern "C" {
 // BOTH-SAME: optsize
 //
 // BOTH: attributes #[[OPTNONE_ATTR]]
+// BOTH-SAME: optnone
 // BOTH-NOT: optsize
 // BOTH-NOT: minsize
 //
-// attributes for caller, to block the 'NOT'.
-// BOTH: attributes
+// BOTH: attributes #[[MINSIZE_ATTR]]
+// BOTH-SAME: minsize
 //
 // BOTH: attributes #[[NORMAL_CALL_ATTR]]
 // BOTHOZ-SAME: minsize

@@ -157,3 +157,24 @@ cir.func no_inline dso_local @framePointerWithOthers() attributes {mustprogress,
 // CHECK: cir.func no_inline dso_local @framePointerWithOthers() attributes {mustprogress, frame_pointer = #cir.frame_pointer<reserved>, uwtable = #cir.uwtable<async>} {
 // CHECK:   cir.return
 // CHECK: }
+
+cir.func no_inline @nakedFn() attributes {naked} {
+  cir.return
+}
+// CHECK: cir.func no_inline @nakedFn() attributes {naked} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func no_inline @optnoneFn() attributes {optnone} {
+  cir.return
+}
+// CHECK: cir.func no_inline @optnoneFn() attributes {optnone} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func no_inline dso_local @optnoneWithOthers() attributes {mustprogress, optnone} {
+  cir.return
+}
+// CHECK: cir.func no_inline dso_local @optnoneWithOthers() attributes {mustprogress, optnone} {
+// CHECK:   cir.return
+// CHECK: }

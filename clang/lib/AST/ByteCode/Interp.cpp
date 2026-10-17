@@ -96,34 +96,6 @@ static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
 }
 
-static void noteValueLocation(InterpState &S, const Block *B) {
-  const Descriptor *Desc = B->getDescriptor();
-
-  if (B->isDynamic())
-    S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
-  else if (B->isTemporary())
-    S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
-  else
-    S.Note(Desc->getLocation(), diag::note_declared_at);
-}
-
-static void noteValueLocation(InterpState &S, const Pointer &Ptr) {
-  if (Ptr.isBlockPointer()) {
-    const Block *B = Ptr.block();
-    const Descriptor *Desc = B->getDescriptor();
-    if (B->isDynamic())
-      S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
-    else if (B->isTemporary())
-      S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
-    else
-      S.Note(Desc->getLocation(), diag::note_declared_at);
-    return;
-  }
-
-  if (Ptr.isOpaquePointer())
-    S.Note(Ptr.asOpaquePointer().Base.getLocation(), diag::note_declared_at);
-}
-
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD,
                                      AccessKinds AK = AK_Read);
@@ -226,6 +198,48 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
+static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (auto ID = Ptr.getDeclID()) {
+    if (!Ptr.isStatic())
+      return true;
+
+    if (S.P.getCurrentDecl() == ID)
+      return true;
+
+    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
+    return false;
+  }
+  return true;
+}
+
+namespace clang {
+namespace interp {
+
+static void noteValueLocation(InterpState &S, const Block *B) {
+  const Descriptor *Desc = B->getDescriptor();
+
+  if (B->isDynamic())
+    S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
+  else if (B->isTemporary())
+    S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
+  else
+    S.Note(Desc->getLocation(), diag::note_declared_at);
+}
+
+void noteValueLocation(InterpState &S, const Pointer &Ptr) {
+  if (Ptr.isBlockPointer()) {
+    noteValueLocation(S, Ptr.block());
+    return;
+  }
+
+  if (Ptr.isOpaquePointer())
+    S.Note(Ptr.asOpaquePointer().Base.getLocation(), diag::note_declared_at);
+
+  if (Ptr.isStringPointer())
+    S.Note(Ptr.asStringPointer().getLiteral(),
+           diag::note_constexpr_temporary_here);
+}
+
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
                            AccessKinds AK) {
   if (B->getDeclID()) {
@@ -252,7 +266,6 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
 
   return true;
 }
-
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   if (!Ptr.isBlockPointer())
@@ -260,22 +273,6 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return CheckTemporary(S, OpPC, Ptr.block(), AK);
 }
 
-static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (auto ID = Ptr.getDeclID()) {
-    if (!Ptr.isStatic())
-      return true;
-
-    if (S.P.getCurrentDecl() == ID)
-      return true;
-
-    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
-    return false;
-  }
-  return true;
-}
-
-namespace clang {
-namespace interp {
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
                               PrimType PT);
 
