@@ -78,16 +78,16 @@ body:             |
     %2 = LW %1, target-flags(mips-got-call) @_Z1gi :: (load (s32) from call-entry @_Z1gi)
     $r4 = COPY %0
     $r28 = COPY %1
-    JALRPseudo killed %2, csr_o32_fpxx, implicit-def dead $r31, implicit $r4, implicit $r28, implicit-def $r29, implicit-def $r2
+    JALRPseudo %2, csr_o32_fpxx, implicit-def dead $r31, implicit $r4, implicit $r28, implicit-def $r29, implicit-def $r2
     ADJCALLSTACKUP 16, 0, implicit-def dead $r29, implicit $r29
     %3 = COPY $r2
     %4 = ADDu %3, %0
     %5 = LW %1, target-flags(mips-got) @v :: (load (s32) from got)
-    %6 = LW killed %5, 0 :: (dereferenceable load (s32) from @v)
-    %7 = ADDu killed %4, killed %6
+    %6 = LW %5, 0 :: (dereferenceable load (s32) from @v)
+    %7 = ADDu %4, %6
     %8 = LW %1, target-flags(mips-got) @j :: (load (s32) from got)
-    %9 = LW killed %8, 0 :: (dereferenceable load (s32) from @j)
-    %10 = ADDu killed %7, killed %9
+    %9 = LW %8, 0 :: (dereferenceable load (s32) from @j)
+    %10 = ADDu %7, %9
     $r2 = COPY %10
     RetRA implicit $r2
 

@@ -99,26 +99,26 @@ constants:
 body:             |
   bb.0.entry:
     %0:gpr32 = LUi target-flags(mips-abs-hi) @bArray
-    %1:gpr32 = ADDiu killed %0, target-flags(mips-abs-lo) @bArray
+    %1:gpr32 = ADDiu %0, target-flags(mips-abs-lo) @bArray
     %2:gpr32 = LBuE %1, 5 :: (dereferenceable load (s8) from `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 5)`)
-    %3:gpr32 = ADDiu killed %2, -7
-    SBE killed %3, %1, 3 :: (store (s8) into `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3)`)
+    %3:gpr32 = ADDiu %2, -7
+    SBE %3, %1, 3 :: (store (s8) into `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3)`)
     %4:gpr32 = LBE %1, 5 :: (dereferenceable load (s8) from `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 5)`)
-    %5:gpr32 = ADDiu killed %4, -7
-    SBE killed %5, %1, 3 :: (store (s8) into `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3)`)
+    %5:gpr32 = ADDiu %4, -7
+    SBE %5, %1, 3 :: (store (s8) into `ptr getelementptr inbounds ([13 x i8], ptr @bArray, i32 0, i32 3)`)
     %6:gpr32 = LUi target-flags(mips-abs-hi) @hArray
-    %7:gpr32 = ADDiu killed %6, target-flags(mips-abs-lo) @hArray
+    %7:gpr32 = ADDiu %6, target-flags(mips-abs-lo) @hArray
     %8:gpr32 = LHuE %7, 10 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 5)`)
-    %9:gpr32 = ADDiu killed %8, -7
-    SHE killed %9, %7, 6 :: (store (s16) into `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3)`)
+    %9:gpr32 = ADDiu %8, -7
+    SHE %9, %7, 6 :: (store (s16) into `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3)`)
     %10:gpr32 = LHE %7, 10 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 5)`)
-    %11:gpr32 = ADDiu killed %10, -7
-    SHE killed %11, %7, 6 :: (store (s16) into `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3)`)
+    %11:gpr32 = ADDiu %10, -7
+    SHE %11, %7, 6 :: (store (s16) into `ptr getelementptr inbounds ([13 x i16], ptr @hArray, i32 0, i32 3)`)
     %12:gpr32 = LUi target-flags(mips-abs-hi) @wArray
-    %13:gpr32 = ADDiu killed %12, target-flags(mips-abs-lo) @wArray
+    %13:gpr32 = ADDiu %12, target-flags(mips-abs-lo) @wArray
     %14:gpr32 = LWE %13, 20 :: (dereferenceable load (s32) from `ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 5)`)
-    %15:gpr32 = ADDiu killed %14, -7
-    SWE killed %15, %13, 12 :: (store (s32) into `ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 3)`)
+    %15:gpr32 = ADDiu %14, -7
+    SWE %15, %13, 12 :: (store (s32) into `ptr getelementptr inbounds ([13 x i32], ptr @wArray, i32 0, i32 3)`)
     RetRA
 
 ...
@@ -188,7 +188,7 @@ body:             |
 
   bb.2.entry:
     SYNC 0
-    %5:gpr32 = ADDiu killed %4, 42
+    %5:gpr32 = ADDiu %4, 42
     $r2 = COPY %5
     CACHEE %1, 5, 2
     PREFE %1, 5, 2
