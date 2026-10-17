@@ -3421,6 +3421,10 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     if (MergeAttributes)
       AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 
+    // The callee was folded into the calling block.
+    IFI.InlinedFirstBB = OrigBB;
+    IFI.InlinedLastBB = OrigBB;
+
     // We are now done with the inlining.
     return;
   }
@@ -3555,12 +3559,19 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   // If we inlined any musttail calls and the original return is now
   // unreachable, delete it.  It can only contain a ret.
-  if (InlinedMustTailCalls && pred_empty(AfterCallBB))
+  if (InlinedMustTailCalls && pred_empty(AfterCallBB)) {
     AfterCallBB->eraseFromParent();
+    AfterCallBB = nullptr;
+  }
 
   // We should always be able to fold the entry block of the function into the
   // single predecessor of the block...
   BasicBlock *CalleeEntry = Br->getSuccessor();
+
+  // The inlined code starts in OrigBB and ends in AfterCallBB, unless that
+  // block was removed or is the one being folded into OrigBB.
+  IFI.InlinedFirstBB = OrigBB;
+  IFI.InlinedLastBB = CalleeEntry == AfterCallBB ? OrigBB : AfterCallBB;
 
   // Splice the code entry block into calling block, right before the
   // unconditional branch.
