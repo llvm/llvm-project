@@ -80,10 +80,10 @@
 
 
 ; ASM-LABEL: pad_left: # @pad_left
+; ASM: [[pad_left_begin:\.Lfunc_begin2]]:
+; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $ecx
 ; ASM:         .cv_loc 2 1 24 3                # t.c:24:3
 ; ASM:         movq    %rcx, %rax
-; ASM: [[pad_left_tmp:\.Ltmp[0-9]+]]:
-; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $ecx
 ; ASM:         retq
 ; ASM: [[pad_left_end:\.Lfunc_end2]]:
 
@@ -158,7 +158,7 @@
 ; ASM:        .asciz  "pad_left"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    [[pad_left_tmp]] [[pad_left_end]], subfield_reg, 18, 0
+; ASM:        .cv_def_range    [[pad_left_begin]] [[pad_left_end]], subfield_reg, 18, 0
 
 ; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
