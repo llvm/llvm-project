@@ -1,0 +1,484 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/spe-branch-profile.exe
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/perfscript --spe-branch-profile --skip-symbolization \
+# RUN:   --use-offset=0 --format=text --output=%t/profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --input-file=%t/profile
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/no-ip.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/no-ip.profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --check-prefix=NO-IP --input-file=%t/no-ip.profile
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/malformed.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --show-detailed-warning --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALID
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/malformed.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALID-SUMMARY
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/bad-fallthrough.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/bad-fallthrough.profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-FALLTHROUGH
+# RUN: FileCheck %s --check-prefix=LAST-INST \
+# RUN:   --input-file=%t/bad-fallthrough.profile
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/weighted-mismatch.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WEIGHTED-MISMATCH
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/inconsistent-not-taken.perfscript \
+# RUN:   --spe-branch-profile --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INCONSISTENT-NOT-TAKEN
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/empty.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=EMPTY
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/unusable.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-USABLE
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/partial.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/partial.profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=PARTIAL
+# RUN: FileCheck %s --check-prefix=PARTIAL-PROFILE \
+# RUN:   --input-file=%t/partial.profile
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/perfscript --spe-branch-profile --pid=2 \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=OTHER-PID
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/external-source.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/external-source.profile
+# RUN: FileCheck %s --check-prefix=EXTERNAL-SOURCE \
+# RUN:   --input-file=%t/external-source.profile
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/external-source.perfscript --spe-branch-profile \
+# RUN:   --use-offset=0 --format=text --output=%t/external-source.symbolized
+# RUN: FileCheck %s --check-prefix=SYMBOLIZED \
+# RUN:   --input-file=%t/external-source.symbolized
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/no-mmap.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-MMAP
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/previous-target.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DEEP-STACK
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/lbr.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DEEP-STACK
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/damaged-line.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --show-detailed-warning --use-offset=0 \
+# RUN:   --format=text --output=%t/damaged-line.profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DAMAGED
+# RUN: FileCheck %s --check-prefix=DAMAGED-PROFILE \
+# RUN:   --input-file=%t/damaged-line.profile
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/hybrid.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --show-detailed-warning --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=HYBRID
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/ip-addr.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=IP-ADDR
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/rejected.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/rejected.profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=REJECTED
+# RUN: FileCheck %s --check-prefix=REJECTED-PROFILE \
+# RUN:   --input-file=%t/rejected.profile
+# RUN: yaml2obj -DTYPE=ET_EXEC %t/binary.yaml -o %t/non-pie.exe
+# RUN: llvm-profgen --binary=%t/non-pie.exe \
+# RUN:   --perfscript=%t/non-pie.perfscript --spe-branch-profile \
+# RUN:   --skip-symbolization --use-offset=0 --format=text \
+# RUN:   --output=%t/non-pie.profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NON-PIE
+# RUN: FileCheck %s --check-prefix=NON-PIE-PROFILE \
+# RUN:   --input-file=%t/non-pie.profile
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/perfscript --spe-branch-profile --skip-symbolization \
+# RUN:   --target-triple=x86_64-unknown-linux-gnu --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WRONG-TRIPLE
+# RUN: llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --format=text --output=%t/lbr.profile
+# RUN: FileCheck %s --check-prefix=WITHOUT-OPTION --input-file=%t/lbr.profile
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --unsymbolized-profile=%t/empty.perfscript --spe-branch-profile \
+# RUN:   --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INCOMPATIBLE-INPUT
+# RUN: not llvm-profgen --binary=%t/spe-branch-profile.exe \
+# RUN:   --perfscript=%t/perfscript --spe-branch-profile --show-disassembly-only \
+# RUN:   --output=/dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DISASM-ONLY
+
+## perf prints an Arm SPE branch as a branch stack of one entry preceded by
+## the instruction pointer of the sample. Use different source and destination
+## addresses to verify their order, canonicalize them through the runtime
+## MMAP, and infer the executed range up to the nearest transfer. The first
+## record is given three times, because an Arm SPE trace carries no repeat
+## count. The last record is a not-taken conditional branch, which perf marks
+## with the N flag and reports with the fall-through instruction as its
+## destination.
+# NO-WARN-NOT: warning: {{.*}}branch targets do not match the binary
+# NO-WARN-NOT: warning: Invalid Arm SPE branch record
+## A trace whose records yield counters must not be reported as yielding none,
+## and the report of the branch-stack readers, which describes ranges bounded
+## by consecutive entries, must not run for records that hold one entry each.
+# NO-WARN-NOT: warning: No Arm SPE branch record yields a counter
+# NO-WARN-NOT: warning: No samples in perf script
+
+## The not-taken record contributes the range that follows it, because
+## execution did continue at the fall-through instruction, but no branch
+## counter, because no control was transferred.
+# CHECK:      2
+# CHECK-NEXT: 1000-1008:3
+# CHECK-NEXT: 100c-100c:1
+# CHECK-NEXT: 1
+# CHECK-NEXT: 1008->1000:3
+
+## The instruction pointer of a record repeats the source of its branch, so a
+## trace printed with `-F brstack` alone holds every address the record needs
+## and is read the same way.
+# NO-IP:      1
+# NO-IP-NEXT: 1000-1008:1
+# NO-IP-NEXT: 1
+# NO-IP-NEXT: 1008->1000:1
+
+## Name each malformed record once when asked for detailed warnings: a record
+## holding the instruction pointer alone, a record followed by a trailing
+## field, as a wrong -F field list such as ip,brstack,sym produces, a record
+## whose addresses carry an appended shared-object path, as adding dso to that
+## list produces, and a record whose addresses carry no 0x prefix. A trailing
+## field is read as a branch-stack entry before a record is called a deeper
+## stack, or a field holding the slash that separates the addresses of an entry
+## would abort the run and blame an --itrace option that is already right. The
+## external-to-external record is valid input but cannot contribute to this
+## binary's profile. The last record holds an instruction pointer of decimal
+## digits alone, which is a repeat count of the branch-stack grammar and has to
+## be read as the damaged record it is instead, or the record that follows it
+## would be weighed by an address.
+# INVALID:      warning: Invalid Arm SPE branch record at line 2: 70000000100a
+# INVALID-NEXT: warning: Invalid Arm SPE branch record at line 3: 700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/- foo
+# INVALID-NEXT: warning: Invalid Arm SPE branch record at line 4: 700000001008 0x700000001008(/tmp/spe-branch-profile.exe)/0x700000001000(/tmp/spe-branch-profile.exe)/P/-/-/10/COND/-
+# INVALID-NEXT: warning: Invalid Arm SPE branch record at line 5: 700000001008 700000001008/700000001000/P/-/-/10/COND/-
+# INVALID-NEXT: warning: Invalid Arm SPE branch record at line 6: 700000001004
+# INVALID-NOT:  warning: Invalid Arm SPE branch record
+# INVALID-NOT:  error:
+
+## Without that request the lines are reported as a share instead, because a
+## trace printed with a wrong field list holds millions of such lines. Every
+## share is of the same base, the sample lines of the trace, so that the
+## reports can be read against one another. The one record that was read is
+## dropped, which leaves the profile empty and is reported as well.
+# INVALID-SUMMARY-NOT:  warning: Invalid Arm SPE branch record
+# INVALID-SUMMARY:      warning: 83.33%(5/6) of the sample lines of the trace are not usable Arm SPE branch records.
+# INVALID-SUMMARY-NEXT: warning: 16.67%(1/6) of the sample lines of the trace are Arm SPE branch records whose destination is not an instruction of this binary.
+# INVALID-SUMMARY-NEXT: warning: No Arm SPE branch record yields a counter for this binary!
+
+## A trace whose every line holds two bare addresses was printed with the
+## ip,addr field list of the perf versions that synthesize no branch stack for
+## Arm SPE. That is only known once the whole trace has been read. Name the
+## perf command to use, not the individual lines.
+# IP-ADDR-NOT: warning:
+# IP-ADDR:     error: --spe-branch-profile requires Arm SPE branch records created with `perf script --show-mmap-events --itrace=bl1 -F ip,brstack`, but no line of the input holds a usable one
+
+## Each way a line can fail to hold a usable record leaves the records around
+## it in place: a prediction field holding the value of another field, as a
+## shifted -F list prints; an entry printed without the prediction field; an
+## entry cut short right after the prediction field, whose P may be all that is
+## left of a PN; a source address of zero, which names no instruction; an
+## instruction pointer that is not the source of the entry that follows it, so
+## that neither address can be trusted; and an instruction pointer carrying the
+## 0x prefix that perf prints on the addresses of an entry alone. The one valid
+## record still yields its counters.
+# REJECTED:     warning: 85.71%(6/7) of the sample lines of the trace are not usable Arm SPE branch records.
+# REJECTED-NOT: error:
+# REJECTED-PROFILE:      1
+# REJECTED-PROFILE-NEXT: 1000-1008:1
+# REJECTED-PROFILE-NEXT: 1
+# REJECTED-PROFILE-NEXT: 1008->1000:1
+
+## The addresses of a binary that is not position independent are already the
+## ones of the trace, so they are used as they are and the missing mmap event
+## is only reported.
+# NON-PIE: warning: No relevant mmap event is matched for non-pie.exe
+# NON-PIE-PROFILE:      1
+# NON-PIE-PROFILE-NEXT: 1000-1008:1
+# NON-PIE-PROFILE-NEXT: 1
+# NON-PIE-PROFILE-NEXT: 1008->1000:1
+
+## A direct unconditional branch cannot fall through. Diagnose a recorded
+## destination at the next instruction when it is not the encoded target, and
+## keep its branch counter, because control was transferred there.
+# BAD-FALLTHROUGH: of branch targets do not match the binary.
+
+## Weigh both the mismatch and the denominator by each aggregated sample.
+# WEIGHTED-MISMATCH: warning: 66.67%(2/3) of branch targets do not match the binary.
+
+## A not-taken record must name a conditional branch and its fall-through.
+# INCONSISTENT-NOT-TAKEN: warning: 50.00%(1/2) of branch samples are marked not taken but do not name a conditional branch.
+# INCONSISTENT-NOT-TAKEN-NEXT: warning: 50.00%(1/2) of branch targets do not match the binary.
+
+## No transfer follows the destination of the same record, so its range runs to
+## the last instruction of the binary, where it ends for want of a following
+## instruction.
+# LAST-INST:      1
+# LAST-INST-NEXT: 1010-1014:1
+# LAST-INST-NEXT: 1
+# LAST-INST-NEXT: 100c->1010:1
+
+## A trace that holds no Arm SPE record at all is the wrong input file. Fail
+## instead of writing an empty profile and reporting success, and say which of
+## the two reasons applies: here the trace holds no line to read at all.
+# EMPTY: error: --spe-branch-profile requires Arm SPE branch records created with `perf script --show-mmap-events --itrace=bl1 -F ip,brstack`, but the trace holds no record at all
+
+## A branch from this binary to external code is valid input, but a single SPE
+## record with an external target cannot produce a branch or range counter.
+# NO-USABLE:      warning: 100.00%(1/1) of the sample lines of the trace are Arm SPE branch records whose destination is not an instruction of this binary.
+# NO-USABLE-NEXT: warning: No Arm SPE branch record yields a counter for this binary!
+
+## A record whose destination is not an instruction of this binary is dropped:
+## it reports a branch leaving the binary, a trace of another process or of
+## another build of the program, or a record whose branch target address was
+## lost. Report the share they take of the sample lines of the trace, so that a
+## profile thinned by a trace that does not belong to this binary is not
+## mistaken for a complete one.
+# PARTIAL: warning: 66.67%(2/3) of the sample lines of the trace are Arm SPE branch records whose destination is not an instruction of this binary.
+# PARTIAL-PROFILE:      1
+# PARTIAL-PROFILE-NEXT: 1000-1008:1
+# PARTIAL-PROFILE-NEXT: 1
+# PARTIAL-PROFILE-NEXT: 1008->1000:1
+
+## Only an mmap event of a perf script trace carries a process id, so --pid
+## selects the mapping that addresses are canonicalized against and does not
+## filter the records themselves. Another id therefore leaves every record of
+## this trace pointing outside the binary.
+# OTHER-PID: warning: No relevant mmap event is matched for
+# OTHER-PID: warning: 100.00%(4/4) of the sample lines of the trace are Arm SPE branch records whose destination is not an instruction of this binary.
+# OTHER-PID: warning: No Arm SPE branch record yields a counter for this binary!
+
+## The records of an Arm SPE trace are the branch-stack lines of an LBR trace,
+## holding one entry each, so the same trace is also valid input without the
+## option. It is then read as an LBR trace, which yields the branch counters
+## alone: no range is inferred, because where the range that follows the most
+## recent branch ends is what only the Arm SPE reader recovers from the binary.
+## The N flag that marks a branch as not taken is read by the Arm SPE reader
+## alone, because a hardware branch stack records taken branches only, so the
+## LBR reader counts the not-taken record as an ordinary branch here.
+# WITHOUT-OPTION:      0
+# WITHOUT-OPTION-NEXT: 2
+# WITHOUT-OPTION-NEXT: 1008->1000:3
+# WITHOUT-OPTION-NEXT: 1008->100c:1
+
+## Preserve an external source for a branch entering this binary so downstream
+## symbolization can recognize it as a function-entry sample.
+# EXTERNAL-SOURCE:      1
+# EXTERNAL-SOURCE-NEXT: 1000-1008:1
+# EXTERNAL-SOURCE-NEXT: 1
+# EXTERNAL-SOURCE-NEXT: 1->1000:1
+
+## Symbolization converts the external-to-internal branch into a head sample.
+# SYMBOLIZED: foo:0:1{{$}}
+
+## Without a matching mmap event every address is interpreted against the
+## preferred base address, which leaves all records external and the profile
+## empty. Report the missing event as the cause instead of the empty profile
+## alone.
+# NO-MMAP: warning: No relevant mmap event is matched for
+# NO-MMAP: warning: No Arm SPE branch record yields a counter for this binary!
+
+## A record decoded with a deeper branch stack holds more than the sampled
+## branch: further sampled branches, or the entry perf synthesizes from the
+## target of the branch that preceded the sampled operation, which it prints
+## with the source address 0x0 and which, counted as a branch, fabricates one
+## from outside the binary. Name the perf command that decodes one entry per
+## record instead of accepting it.
+# DEEP-STACK-NOT: warning:
+# DEEP-STACK: error: --spe-branch-profile requires Arm SPE branch records created with `perf script --show-mmap-events --itrace=bl1 -F ip,brstack`, but the record at line 2 holds a branch stack of more than one entry
+
+## A single unreadable line inside a trace whose other records parse is damaged
+## input, not input of the wrong kind, whichever order the lines come in. Warn
+## about that line alone and keep the records around it.
+# DAMAGED:      warning: Invalid Arm SPE branch record at line 3: 700000001008 0x700000001008/0x
+# DAMAGED-NOT:  error:
+# DAMAGED-PROFILE:      2
+# DAMAGED-PROFILE-NEXT: 1000-1008:1
+# DAMAGED-PROFILE-NEXT: 100c-100c:1
+# DAMAGED-PROFILE-NEXT: 1
+# DAMAGED-PROFILE-NEXT: 1008->1000:1
+
+## The call stack frames of a hybrid trace hold no branch-stack entry, so they
+## are named as unreadable lines, and the deeper branch stack that follows them
+## is rejected the way any deeper stack is.
+# HYBRID:      warning: Invalid Arm SPE branch record at line 2: 4006ac
+# HYBRID-NEXT: warning: Invalid Arm SPE branch record at line 3: 40064c
+# HYBRID:      error: --spe-branch-profile requires Arm SPE branch records created with `perf script --show-mmap-events --itrace=bl1 -F ip,brstack`, but the record at line 4 holds a branch stack of more than one entry
+
+## The check uses the triple llvm-profgen was told to use, so an override that
+## names another target is rejected as well.
+# WRONG-TRIPLE: error: --spe-branch-profile requires an AArch64 binary.
+
+## Name the conflicting mode instead of the input the user already gave.
+# INCOMPATIBLE-INPUT: error: --spe-branch-profile requires --perfscript or --perfdata input.
+# DISASM-ONLY: error: --spe-branch-profile cannot be used with --show-disassembly-only.
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  ## Built a second time as ET_EXEC to cover a binary that is not position
+  ## independent.
+  Type:    [[TYPE=ET_DYN]]
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## b.eq 0x1000
+    ## b 0x1000
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5C0FFFF54FDFFFF171F2003D51F2003D5
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x1018
+    MemSize:  0x1018
+    Align:    0x10000
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x18
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 0
+      AddrSize:      8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: spe-branch-profile.c
+        - AbbrCode: 2
+          Values:
+            - CStr:  foo
+            - Value: 0x1000
+            - Value: 0x18
+        - AbbrCode: 0
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+    700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+    700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+    700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+700000001008 0x700000001008/0x70000000100c/PN/-/-/10/COND/-
+#--- no-ip.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+0x700000001008/0x700000001000/P/-/-/10/COND/-
+#--- malformed.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+70000000100a
+700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/- foo
+700000001008 0x700000001008(/tmp/spe-branch-profile.exe)/0x700000001000(/tmp/spe-branch-profile.exe)/P/-/-/10/COND/-
+700000001008 700000001008/700000001000/P/-/-/10/COND/-
+700000001004
+700000003000 0x700000003000/0x700000003004/P/-/-/10/COND/-
+#--- bad-fallthrough.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+70000000100c 0x70000000100c/0x700000001010/P/-/-/10/UNCOND/-
+#--- weighted-mismatch.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+70000000100c 0x70000000100c/0x700000001000/P/-/-/10/UNCOND/-
+70000000100c 0x70000000100c/0x700000001010/P/-/-/10/UNCOND/-
+70000000100c 0x70000000100c/0x700000001010/P/-/-/10/UNCOND/-
+#--- inconsistent-not-taken.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+70000000100c 0x70000000100c/0x700000001010/PN/-/-/10/UNCOND/-
+700000001008 0x700000001008/0x700000001000/PN/-/-/10/COND/-
+#--- empty.perfscript
+#--- unusable.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001008 0x700000001008/0x700000003000/P/-/-/10/COND/-
+#--- partial.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001008 0x700000001008/0x700000003000/P/-/-/10/COND/-
+700000001008 0x700000001008/0x0/P/-/-/10/COND/-
+700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+#--- external-source.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000003000 0x700000003000/0x700000001000/P/-/-/10/CALL/-
+#--- no-mmap.perfscript
+700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+#--- previous-target.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/- 0x0/0x70000000100c/-/-/-/0//-
+#--- lbr.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001008 0x700000001008/0x700000001000/P/-/-/0 0x70000000100c/0x700000001000/P/-/-/0 0x700000001008/0x70000000100c/P/-/-/0
+#--- damaged-line.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+700000001008 0x700000001008/0x
+700000001008 0x700000001008/0x70000000100c/PN/-/-/10/COND/-
+#--- hybrid.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+4006ac
+40064c
+70000000100c 0x70000000100c/0x700000001000/P/-/-/0 0x700000001008/0x70000000100c/P/-/-/0
+#--- ip-addr.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001000 700000001008
+70000000100c 700000001008
+#--- rejected.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/spe-branch-profile.exe
+700000001008 0x700000001008/0x700000001000/COND/-/-/10
+700000001008 0x700000001008/0x700000001000
+700000001008 0x700000001008/0x700000001000/P
+0 0x0/0x700000001000/P/-/-/10/COND/-
+700000001000 0x700000001008/0x700000001000/P/-/-/10/COND/-
+0x700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+700000001008 0x700000001008/0x700000001000/P/-/-/10/COND/-
+#--- non-pie.perfscript
+1008 0x1008/0x1000/P/-/-/10/COND/-

@@ -20,7 +20,10 @@ At least one of the following commands are required:
 :::{option} --perfscript=<string[,string,...]>
 Path of a trace created by the Linux `perf script` command. For LBR or BRBE
 input, the raw perf data must contain branch stacks, for example from recording
-with `-b`.
+with `-b`. With `--spe-branch-profile`, the trace must contain only Arm SPE
+branch samples, for example from recording with
+`arm_spe/branch_filter=1,event_filter=2/`, and must be generated with
+`--show-mmap-events --itrace=bl1 -F ip,brstack`.
 :::
 
 :::{option} --etm=<string>
@@ -30,7 +33,9 @@ Requires the OpenCSD library version 1.5.4 or higher to be enabled during the bu
 
 :::{option} --perfdata=<perfdata>, --pd
 Path of raw perf data created by the Linux perf tool. For LBR or BRBE input, it
-must contain branch stacks, for example from recording with `-b`.
+must contain branch stacks, for example from recording with `-b`. For
+`--spe-branch-profile` input, it must contain only Arm SPE branch samples, from
+recording with `arm_spe/branch_filter=1,event_filter=2/`.
 :::
 
 :::{option} --unsymbolized-profile=<unsymbolized profile>, --up
@@ -67,6 +72,12 @@ descriptions of the format.
 
 :::{option} --show-mmap-events
 Print mmap events.
+:::
+
+:::{option} --spe-branch-profile
+Read the `--perfscript` or `--perfdata` input as an Arm SPE branch profile of
+an AArch64 binary. Requires perf 6.15 or later and hardware with FEAT_SPEv1p2
+and event filtering.
 :::
 
 :::{option} --warn-not-symbolized
