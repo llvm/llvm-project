@@ -58,6 +58,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
   NumTokens = Macro->tokens_end()-Macro->tokens_begin();
   MacroExpansionStart = SourceLocation();
   LexingCXXModuleDirective = false;
+  IsPragmaLexer = false;
 
   SourceManager &SM = PP.getSourceManager();
   MacroStartSLocOffset = SM.getNextLocalOffset();
@@ -115,6 +116,7 @@ void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
   NextTokGetsSpace = false;
   MacroExpansionStart = SourceLocation();
   LexingCXXModuleDirective = false;
+  IsPragmaLexer = false;
 
   // Set HasLeadingSpace/AtStartOfLine so that the first token will be
   // returned unmodified.

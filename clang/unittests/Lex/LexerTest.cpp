@@ -22,6 +22,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -134,6 +135,30 @@ protected:
   std::unique_ptr<Preprocessor> PP;
   std::string PreDefines;
 };
+
+TEST_F(LexerTest, PragmaKeywordAliasesKeepTheirNames) {
+  class RecordingPragmaHandler : public PragmaHandler {
+    std::vector<std::string> &Names;
+
+  public:
+    RecordingPragmaHandler(StringRef Name, std::vector<std::string> &Names)
+        : PragmaHandler(Name), Names(Names) {}
+
+    void HandlePragma(Preprocessor &, PragmaIntroducer, Token &) override {
+      Names.push_back(getName().str());
+    }
+  };
+
+  std::vector<std::string> Names;
+  for (StringRef Name : {"const", "__const__"})
+    PP->AddPragmaHandler(new RecordingPragmaHandler(Name, Names));
+  PP->AddPragmaHandler("test", new RecordingPragmaHandler("__const__", Names));
+
+  Lex("#pragma const\n"
+      "#pragma __const__\n"
+      "#pragma test __const__\n");
+  EXPECT_THAT(Names, ElementsAre("const", "__const__", "__const__"));
+}
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
   std::vector<tok::TokenKind> ExpectedTokens;

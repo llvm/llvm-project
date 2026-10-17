@@ -981,8 +981,18 @@ void Preprocessor::Lex(Token &Result) {
   ++LexLevel;
 
   // We loop here until a lex function returns a token; this avoids recursion.
-  while (!CurLexerCallback(*this, Result))
-    ;
+  do {
+    while (!CurLexerCallback(*this, Result))
+      ;
+    // A nested pragma can defer parsing by injecting an annotation followed by
+    // its arguments and an eod. Its eod must not terminate the enclosing
+    // pragma. Only skip eod from actual pragma lexers; a token stream can also
+    // replay the enclosing pragma's own eod, for example when producing -E
+    // output.
+  } while (Result.is(tok::eod) && !PragmaLexerStackDepths.empty() &&
+           IncludeMacroStack.size() > PragmaLexerStackDepths.back() &&
+           ((CurLexer && CurLexer->isPragmaLexer()) ||
+            (CurTokenLexer && CurTokenLexer->isPragmaLexer())));
 
   if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
     return;
