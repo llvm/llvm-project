@@ -1432,6 +1432,104 @@ final_right:
   ret void
 }
 
+; The condition may be a speculatable intrinsic that does not access memory.
+define void @cond_is_intrinsic(i8 %v0, <4 x i1> %v1) {
+; CHECK-LABEL: @cond_is_intrinsic(
+; CHECK-NEXT:  pred:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[V1:%.*]])
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %dispatch, label %final_right
+dispatch:
+  %c1 = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> %v1)
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
+; Negative test - the intrinsic is speculatable but accesses memory.
+define void @cond_is_widenable_condition(i8 %v0) {
+; CHECK-LABEL: @cond_is_widenable_condition(
+; CHECK-NEXT:  pred:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %dispatch, label %final_right
+dispatch:
+  %c1 = call i1 @llvm.experimental.widenable.condition()
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
+; Negative test - the intrinsic does not access memory but is not speculatable.
+define void @cond_is_expect(i8 %v0, i1 %v1) {
+; CHECK-LABEL: @cond_is_expect(
+; CHECK-NEXT:  pred:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @llvm.expect.i1(i1 [[V1:%.*]], i1 true)
+; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %dispatch, label %final_right
+dispatch:
+  %c1 = call i1 @llvm.expect.i1(i1 %v1, i1 true)
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
 declare float @llvm.fabs.f32(float)
+declare i1 @llvm.vector.reduce.or.v4i1(<4 x i1>)
+declare i1 @llvm.experimental.widenable.condition()
+declare i1 @llvm.expect.i1(i1, i1)
 
 attributes #0 = { nounwind argmemonly speculatable }
