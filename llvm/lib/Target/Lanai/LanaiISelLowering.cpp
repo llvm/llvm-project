@@ -1383,6 +1383,12 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
   if (SwapSelectOps)
     std::swap(TrueVal, FalseVal);
 
+  // There is no benefit in creating a select of constants. In particular, the
+  // generic DAG combiner folds select Cond, 0, -1 back into sext (!Cond),
+  // which can recreate the input to this combine and cause an infinite loop.
+  if (isa<ConstantSDNode>(TrueVal) && isa<ConstantSDNode>(FalseVal))
+    return SDValue();
+
   return DAG.getNode(ISD::SELECT, SDLoc(N), VT, CCOp, TrueVal, FalseVal);
 }
 
