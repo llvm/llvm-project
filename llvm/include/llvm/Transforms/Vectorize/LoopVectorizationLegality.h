@@ -26,9 +26,11 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONLEGALITY_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -632,15 +634,26 @@ private:
   /// for it.
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
+  struct SafeAccessInfo {
+    // Fixed and scalable sizes need separate maxima: neither a larger fixed
+    // size nor a smaller scalable size necessarily covers the other.
+    TypeSize MaxFixedSize = TypeSize::getFixed(0);
+    TypeSize MaxScalableSize = TypeSize::getScalable(0);
+    Align Alignment = Align(1);
+  };
+
+  /// Maps a pointer to maximum access sizes and alignment known to be safe.
+  using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
+
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
-  /// \p SafePtrs is a list of addresses that are known to be legal and we know
-  /// that we can read from them without segfault.
+  /// \p SafeAccesses records pointers that can be accessed unconditionally,
+  /// together with the access sizes and alignments justified for each pointer.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized
   /// or dropped if the instruction is a conditional assume intrinsic.
   bool
-  blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+  blockCanBePredicated(BasicBlock *BB, SafeAccessesTy &SafeAccesses,
                        SmallPtrSetImpl<const Instruction *> &MaskedOp) const;
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.
