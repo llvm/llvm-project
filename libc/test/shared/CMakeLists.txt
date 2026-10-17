@@ -468,6 +468,7 @@ else()
       libc.src.__support.math.setpayloadsigl
       libc.src.__support.math.sqrtf16
       libc.src.__support.math.sin
+      libc.src.__support.math.sinbf16
       libc.src.__support.math.sincos
       libc.src.__support.math.sincosf
       libc.src.__support.math.sinf
