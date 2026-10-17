@@ -1,0 +1,35 @@
+/*===---- meta - header for reflection metafunctions -----------------------===
+ *
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ *===-----------------------------------------------------------------------===
+ */
+
+#ifndef __CLANG_META
+#define __CLANG_META
+
+#if !defined(__cplusplus)
+#error "meta header is only available in C++ mode"
+#endif
+
+#if !defined(__cpp_impl_reflection)
+#error "meta header is only available when -freflection is enabled"
+#endif
+
+#define __cpp_lib_reflection 202506L
+
+namespace std {
+namespace meta {
+
+using info = decltype(^^int);
+
+consteval bool is_type(info __r) {
+    return __builtin_meta_is_type(__r);
+}
+
+} // namespace meta
+} // namespace std
+
+#endif // __CLANG_META
