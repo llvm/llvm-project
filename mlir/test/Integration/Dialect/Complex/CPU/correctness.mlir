@@ -54,6 +54,16 @@ func.func @exp(%arg: complex<f32>) -> complex<f32> {
   func.return %exp : complex<f32>
 }
 
+func.func @sin(%arg: complex<f32>) -> complex<f32> {
+  %sin = complex.sin %arg : complex<f32>
+  func.return %sin : complex<f32>
+}
+
+func.func @cos(%arg: complex<f32>) -> complex<f32> {
+  %cos = complex.cos %arg : complex<f32>
+  func.return %cos : complex<f32>
+}
+
 // %input contains pairs of lhs, rhs, i.e. [lhs_0, rhs_0, lhs_1, rhs_1,...]
 func.func @test_binary(%input: tensor<?xcomplex<f32>>,
                        %func: (complex<f32>, complex<f32>) -> complex<f32>) {
@@ -388,6 +398,50 @@ func.func @entry() {
   %exp_func = func.constant @exp : (complex<f32>) -> complex<f32>
   call @test_unary(%exp_test_cast, %exp_func)
     : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
+
+  // complex.sin and complex.cos tests. For x = +-0 and y = +-inf, computing
+  // exp(y) * sin(x) directly gives inf * 0 = NaN instead of a signed zero.
+  %trig_test = arith.constant dense<[
+    (1.0, 2.0),
+    // (0, inf)
+    (0.0, 0x7F800000),
+    // (-0, inf)
+    (0x80000000, 0x7F800000),
+    // (0, -inf)
+    (0.0, 0xFF800000),
+    // (0, nan)
+    (0.0, 0x7FC00000)
+  ]> : tensor<5xcomplex<f32>>
+  %trig_test_cast = tensor.cast %trig_test
+    :  tensor<5xcomplex<f32>> to tensor<?xcomplex<f32>>
+
+  %sin_func = func.constant @sin : (complex<f32>) -> complex<f32>
+  call @test_unary(%trig_test_cast, %sin_func)
+    : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
+  // CHECK-NEXT:  3.1657
+  // CHECK-NEXT:  1.9596
+  // CHECK-NEXT:  {{^}}0{{$}}
+  // CHECK-NEXT:  inf
+  // CHECK-NEXT:  {{^}}-0{{$}}
+  // CHECK-NEXT:  inf
+  // CHECK-NEXT:  {{^}}0{{$}}
+  // CHECK-NEXT:  -inf
+  // CHECK-NEXT:  {{^}}0{{$}}
+  // CHECK-NEXT:  nan
+
+  %cos_func = func.constant @cos : (complex<f32>) -> complex<f32>
+  call @test_unary(%trig_test_cast, %cos_func)
+    : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
+  // CHECK-NEXT:  2.0327
+  // CHECK-NEXT:  -3.0519
+  // CHECK-NEXT:  inf
+  // CHECK-NEXT:  {{^}}-0{{$}}
+  // CHECK-NEXT:  inf
+  // CHECK-NEXT:  {{^}}0{{$}}
+  // CHECK-NEXT:  inf
+  // CHECK-NEXT:  {{^}}0{{$}}
+  // CHECK-NEXT:  nan
+  // CHECK-NEXT:  {{^}}0{{$}}
 
   func.return
 }

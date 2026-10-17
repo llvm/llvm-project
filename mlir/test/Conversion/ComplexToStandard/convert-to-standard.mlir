@@ -69,7 +69,13 @@ func.func @complex_cos(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[EXP_SUM:.*]] = arith.addf %[[HALF_REXP]], %[[HALF_EXP]]
 // CHECK-DAG: %[[RESULT_REAL:.*]] = arith.mulf %[[EXP_SUM]], %[[COS]]
 // CHECK-DAG: %[[EXP_DIFF:.*]] = arith.subf %[[HALF_REXP]], %[[HALF_EXP]]
-// CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_DIFF]], %[[SIN]]
+// CHECK-DAG: %[[RESULT_IMAG_PRODUCT:.*]] = arith.mulf %[[EXP_DIFF]], %[[SIN]]
+// CHECK-DAG: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG: %[[SIN_IS_ZERO:.*]] = arith.cmpf oeq, %[[SIN]], %[[ZERO]]
+// CHECK-DAG: %[[COEFF_SIGN:.*]] = math.copysign %[[ONE]], %[[EXP_DIFF]]
+// CHECK-DAG: %[[SIGNED_ZERO:.*]] = arith.mulf %[[COEFF_SIGN]], %[[SIN]]
+// CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.select %[[SIN_IS_ZERO]], %[[SIGNED_ZERO]], %[[RESULT_IMAG_PRODUCT]]
 // CHECK-DAG: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK:     return %[[RESULT]]
 
@@ -416,7 +422,13 @@ func.func @complex_sin(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[SIN:.*]] = math.sin %[[REAL]] : f32
 // CHECK-DAG: %[[COS:.*]] = math.cos %[[REAL]] : f32
 // CHECK-DAG: %[[EXP_SUM:.*]] = arith.addf %[[HALF_EXP]], %[[HALF_REXP]]
-// CHECK-DAG: %[[RESULT_REAL:.*]] = arith.mulf %[[EXP_SUM]], %[[SIN]]
+// CHECK-DAG: %[[RESULT_REAL_PRODUCT:.*]] = arith.mulf %[[EXP_SUM]], %[[SIN]]
+// CHECK-DAG: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG: %[[SIN_IS_ZERO:.*]] = arith.cmpf oeq, %[[SIN]], %[[ZERO]]
+// CHECK-DAG: %[[COEFF_SIGN:.*]] = math.copysign %[[ONE]], %[[EXP_SUM]]
+// CHECK-DAG: %[[SIGNED_ZERO:.*]] = arith.mulf %[[COEFF_SIGN]], %[[SIN]]
+// CHECK-DAG: %[[RESULT_REAL:.*]] = arith.select %[[SIN_IS_ZERO]], %[[SIGNED_ZERO]], %[[RESULT_REAL_PRODUCT]]
 // CHECK-DAG: %[[EXP_DIFF:.*]] = arith.subf %[[HALF_EXP]], %[[HALF_REXP]]
 // CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_DIFF]], %[[COS]]
 // CHECK-DAG: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
@@ -1367,7 +1379,13 @@ func.func @complex_cos_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[EXP_SUM:.*]] = arith.addf %[[HALF_REXP]], %[[HALF_EXP]] fastmath<nnan,contract>
 // CHECK-DAG: %[[RESULT_REAL:.*]] = arith.mulf %[[EXP_SUM]], %[[COS]] fastmath<nnan,contract>
 // CHECK-DAG: %[[EXP_DIFF:.*]] = arith.subf %[[HALF_REXP]], %[[HALF_EXP]] fastmath<nnan,contract>
-// CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_DIFF]], %[[SIN]] fastmath<nnan,contract>
+// CHECK-DAG: %[[RESULT_IMAG_PRODUCT:.*]] = arith.mulf %[[EXP_DIFF]], %[[SIN]] fastmath<nnan,contract>
+// CHECK-DAG: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG: %[[SIN_IS_ZERO:.*]] = arith.cmpf oeq, %[[SIN]], %[[ZERO]] fastmath<nnan,contract>
+// CHECK-DAG: %[[COEFF_SIGN:.*]] = math.copysign %[[ONE]], %[[EXP_DIFF]] fastmath<nnan,contract>
+// CHECK-DAG: %[[SIGNED_ZERO:.*]] = arith.mulf %[[COEFF_SIGN]], %[[SIN]] fastmath<nnan,contract>
+// CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.select %[[SIN_IS_ZERO]], %[[SIGNED_ZERO]], %[[RESULT_IMAG_PRODUCT]]
 // CHECK-DAG: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK:     return %[[RESULT]]
 
@@ -1388,11 +1406,41 @@ func.func @complex_sin_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK-DAG: %[[SIN:.*]] = math.sin %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[COS:.*]] = math.cos %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[EXP_SUM:.*]] = arith.addf %[[HALF_EXP]], %[[HALF_REXP]] fastmath<nnan,contract>
-// CHECK-DAG: %[[RESULT_REAL:.*]] = arith.mulf %[[EXP_SUM]], %[[SIN]] fastmath<nnan,contract>
+// CHECK-DAG: %[[RESULT_REAL_PRODUCT:.*]] = arith.mulf %[[EXP_SUM]], %[[SIN]] fastmath<nnan,contract>
+// CHECK-DAG: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG: %[[SIN_IS_ZERO:.*]] = arith.cmpf oeq, %[[SIN]], %[[ZERO]] fastmath<nnan,contract>
+// CHECK-DAG: %[[COEFF_SIGN:.*]] = math.copysign %[[ONE]], %[[EXP_SUM]] fastmath<nnan,contract>
+// CHECK-DAG: %[[SIGNED_ZERO:.*]] = arith.mulf %[[COEFF_SIGN]], %[[SIN]] fastmath<nnan,contract>
+// CHECK-DAG: %[[RESULT_REAL:.*]] = arith.select %[[SIN_IS_ZERO]], %[[SIGNED_ZERO]], %[[RESULT_REAL_PRODUCT]]
 // CHECK-DAG: %[[EXP_DIFF:.*]] = arith.subf %[[HALF_EXP]], %[[HALF_REXP]] fastmath<nnan,contract>
 // CHECK-DAG: %[[RESULT_IMAG:.*]] = arith.mulf %[[EXP_DIFF]], %[[COS]] fastmath<nnan,contract>
 // CHECK-DAG: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK:     return %[[RESULT]]
+
+// -----
+
+// CHECK-LABEL: func @complex_sin_ninf
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_sin_ninf(%arg: complex<f32>) -> complex<f32> {
+  %sin = complex.sin %arg fastmath<ninf> : complex<f32>
+  return %sin : complex<f32>
+}
+// CHECK-NOT: arith.select
+// CHECK: %[[RESULT:.*]] = complex.create
+// CHECK: return %[[RESULT]] : complex<f32>
+
+// -----
+
+// CHECK-LABEL: func @complex_cos_ninf
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_cos_ninf(%arg: complex<f32>) -> complex<f32> {
+  %cos = complex.cos %arg fastmath<ninf> : complex<f32>
+  return %cos : complex<f32>
+}
+// CHECK-NOT: arith.select
+// CHECK: %[[RESULT:.*]] = complex.create
+// CHECK: return %[[RESULT]] : complex<f32>
 
 // -----
 

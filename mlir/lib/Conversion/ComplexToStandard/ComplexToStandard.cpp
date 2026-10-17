@@ -236,6 +236,29 @@ struct TrigonometricOpConversion : public OpConversionPattern<TrigonometricOp> {
   combine(Location loc, Value scaledExp, Value reciprocalExp, Value sin,
           Value cos, ConversionPatternRewriter &rewriter,
           arith::FastMathFlagsAttr fmf) const = 0;
+
+  // Returns coeff * sin. When x is +-0 and y is +-inf, this is inf * 0 = NaN,
+  // but C99 Annex G gives sin(+0 + I*inf) = +0 + inf*I and
+  // cos(+0 + I*inf) = inf - 0*I, so use a zero with the sign of the product.
+  static Value mulSin(Location loc, Value coeff, Value sin,
+                      ConversionPatternRewriter &rewriter,
+                      arith::FastMathFlagsAttr fmf) {
+    Value product = arith::MulFOp::create(rewriter, loc, coeff, sin, fmf);
+    if (arith::bitEnumContainsAll(fmf.getValue(), arith::FastMathFlags::ninf))
+      return product;
+    Type elementType = sin.getType();
+    Value zero = arith::ConstantOp::create(
+        rewriter, loc, elementType, rewriter.getFloatAttr(elementType, 0.0));
+    Value one = arith::ConstantOp::create(
+        rewriter, loc, elementType, rewriter.getFloatAttr(elementType, 1.0));
+    Value sinIsZero = arith::CmpFOp::create(
+        rewriter, loc, arith::CmpFPredicate::OEQ, sin, zero, fmf.getValue());
+    Value coeffSign = math::CopySignOp::create(rewriter, loc, one, coeff, fmf);
+    Value signedZero =
+        arith::MulFOp::create(rewriter, loc, coeffSign, sin, fmf);
+    return arith::SelectOp::create(rewriter, loc, sinIsZero, signedZero,
+                                   product);
+  }
 };
 
 struct CosOpConversion : public TrigonometricOpConversion<complex::CosOp> {
@@ -259,7 +282,7 @@ struct CosOpConversion : public TrigonometricOpConversion<complex::CosOp> {
     Value resultReal = arith::MulFOp::create(rewriter, loc, sum, cos, fmf);
     Value diff =
         arith::SubFOp::create(rewriter, loc, reciprocalExp, scaledExp, fmf);
-    Value resultImag = arith::MulFOp::create(rewriter, loc, diff, sin, fmf);
+    Value resultImag = mulSin(loc, diff, sin, rewriter, fmf);
     return {resultReal, resultImag};
   }
 };
@@ -623,7 +646,7 @@ struct SinOpConversion : public TrigonometricOpConversion<complex::SinOp> {
     //   Im(sin(x + iy)) = (0.5*t - 0.5/t) * cos x
     Value sum =
         arith::AddFOp::create(rewriter, loc, scaledExp, reciprocalExp, fmf);
-    Value resultReal = arith::MulFOp::create(rewriter, loc, sum, sin, fmf);
+    Value resultReal = mulSin(loc, sum, sin, rewriter, fmf);
     Value diff =
         arith::SubFOp::create(rewriter, loc, scaledExp, reciprocalExp, fmf);
     Value resultImag = arith::MulFOp::create(rewriter, loc, diff, cos, fmf);
