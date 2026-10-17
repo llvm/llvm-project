@@ -921,6 +921,25 @@ set(avr_SOURCES
   avr/udivmodqi4.S
   ${GENERIC_SOURCES}
 )
+# avr-gcc calls these with conventions of its own, which the C versions cannot
+# follow: it expects most of them to change fewer registers than C code may, it
+# passes the 64-bit shifts an 8-bit count in R16, and it expects __cmpdi2 to
+# return its result in the status flags. Leave them to libgcc. Clang expands
+# these operations inline, except that Clang 16 and earlier call the 64-bit
+# shifts, which libgcc's versions also suit.
+list(REMOVE_ITEM avr_SOURCES
+  ashldi3.c
+  ashrdi3.c
+  bswapsi2.c
+  clzsi2.c
+  cmpdi2.c
+  ctzsi2.c
+  ffssi2.c
+  lshrdi3.c
+  negdi2.c
+  paritysi2.c
+  popcountsi2.c
+)
 
 # hexagon arch
 set(hexagon_SOURCES
