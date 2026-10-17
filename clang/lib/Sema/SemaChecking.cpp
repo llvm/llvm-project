@@ -17120,6 +17120,17 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
   }
 }
 
+/// Return true if record layout leaves \p FD with less alignment than its
+/// type requires, as packing or a typedef with a lowered alignment does.
+static bool isFieldUnderaligned(const ASTContext &Ctx, const FieldDecl *FD) {
+  CharUnits TypeAlignment =
+      Ctx.getTypeAlignInChars(FD->getType().getCanonicalType());
+  CharUnits RecordAlignment =
+      Ctx.getTypeAlignInChars(Ctx.getCanonicalTagType(FD->getParent()));
+  CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FD));
+  return RecordAlignment < TypeAlignment || !Offset.isMultipleOf(TypeAlignment);
+}
+
 void Sema::RefersToMemberWithReducedAlignment(
     Expr *E,
     llvm::function_ref<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)>
@@ -17136,7 +17147,6 @@ void Sema::RefersToMemberWithReducedAlignment(
   // will keep FieldDecl's like [d, c, b].
   SmallVector<FieldDecl *, 4> ReverseMemberChain;
   const MemberExpr *TopME = nullptr;
-  bool AnyIsPacked = false;
   do {
     QualType BaseType = ME->getBase()->getType();
     if (BaseType->isDependentType())
@@ -17144,7 +17154,8 @@ void Sema::RefersToMemberWithReducedAlignment(
     if (ME->isArrow())
       BaseType = BaseType->getPointeeType();
     auto *RD = BaseType->castAsRecordDecl();
-    if (RD->isInvalidDecl())
+    // A class still being defined has no layout to consult.
+    if (RD->isInvalidDecl() || !RD->isCompleteDefinition())
       return;
 
     ValueDecl *MD = ME->getMemberDecl();
@@ -17153,18 +17164,12 @@ void Sema::RefersToMemberWithReducedAlignment(
     if (!FD || FD->isInvalidDecl())
       return;
 
-    AnyIsPacked =
-        AnyIsPacked || (RD->hasAttr<PackedAttr>() || MD->hasAttr<PackedAttr>());
     ReverseMemberChain.push_back(FD);
 
     TopME = ME;
     ME = dyn_cast<MemberExpr>(ME->getBase()->IgnoreParens());
   } while (ME);
   assert(TopME && "We did not compute a topmost MemberExpr!");
-
-  // Not the scope of this diagnostic.
-  if (!AnyIsPacked)
-    return;
 
   const Expr *TopBase = TopME->getBase()->IgnoreParenImpCasts();
   const auto *DRE = dyn_cast<DeclRefExpr>(TopBase);
@@ -17179,6 +17184,12 @@ void Sema::RefersToMemberWithReducedAlignment(
 
   // No need to do anything else with this case.
   if (ExpectedAlignment.isOne())
+    return;
+
+  // Not the scope of this diagnostic.
+  if (llvm::none_of(ReverseMemberChain, [&](const FieldDecl *FD) {
+        return isFieldUnderaligned(Context, FD);
+      }))
     return;
 
   // Synthesize offset of the whole access.
@@ -17210,21 +17221,24 @@ void Sema::RefersToMemberWithReducedAlignment(
     // type) but some packed attribute in that chain has reduced the alignment.
     // It may happen that another packed structure increases it again. But if
     // we are here such increase has not been enough. So pointing the first
-    // FieldDecl that either is packed or else its RecordDecl is,
-    // seems reasonable.
+    // FieldDecl whose alignment was reduced seems reasonable.
     FieldDecl *FD = nullptr;
-    CharUnits Alignment;
+    // An outer link may reduce the alignment further than the culprit did.
+    CharUnits Alignment = ExpectedAlignment;
     for (FieldDecl *FDI : ReverseMemberChain) {
-      if (FDI->hasAttr<PackedAttr>() ||
-          FDI->getParent()->hasAttr<PackedAttr>()) {
-        FD = FDI;
-        Alignment = std::min(Context.getTypeAlignInChars(FD->getType()),
-                             Context.getTypeAlignInChars(
-                                 Context.getCanonicalTagType(FD->getParent())));
-        break;
+      CharUnits FieldAlignment =
+          Context.getTypeAlignInChars(FDI->getType().getCanonicalType());
+      if (isFieldUnderaligned(Context, FDI)) {
+        if (!FD)
+          FD = FDI;
+        FieldAlignment =
+            std::min(Context.getTypeAlignInChars(FDI->getType()),
+                     Context.getTypeAlignInChars(
+                         Context.getCanonicalTagType(FDI->getParent())));
       }
+      Alignment = std::min(Alignment, FieldAlignment);
     }
-    assert(FD && "We did not find a packed FieldDecl!");
+    assert(FD && "We did not find a FieldDecl with reduced alignment!");
     Action(E, FD->getParent(), FD, Alignment);
   }
 }

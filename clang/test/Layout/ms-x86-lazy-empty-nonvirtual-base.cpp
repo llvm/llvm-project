@@ -26,6 +26,33 @@ struct B5X { B5X() { printf("B5 = %p\n", this); } };
 struct B6X { B6X() { printf("B6 = %p\n", this); } };
 struct B8X { short a; B8X() : a(0x000000B8) { printf("B8 = %p\n", this); } };
 
+// F is laid out where it is defined, since its constructor takes the address
+// of a member.
+// CHECK-LABEL:   0 | struct F{{$}}
+// CHECK-NEXT:    0 |   struct B1 (base) (empty)
+// CHECK-NEXT:    2 |   struct B6 (base) (empty)
+// CHECK-NEXT:    3 |   struct B4 (base) (empty)
+// CHECK-NEXT:    3 |   struct B8 (base)
+// CHECK-NEXT:    3 |     char[5] c
+// CHECK-NEXT:   12 |   struct B5 (base) (empty)
+// CHECK-NEXT:    8 |   (F vbtable pointer)
+// CHECK-NEXT:   12 |   int a
+// CHECK-NEXT:   16 |   struct B0 (virtual base) (empty)
+// CHECK-NEXT:      | [sizeof=16, align=4
+// CHECK-NEXT:      |  nvsize=16, nvalign=4]
+// CHECK-X64-LABEL:   0 | struct F{{$}}
+// CHECK-X64-NEXT:    0 |   struct B1 (base) (empty)
+// CHECK-X64-NEXT:    2 |   struct B6 (base) (empty)
+// CHECK-X64-NEXT:    3 |   struct B4 (base) (empty)
+// CHECK-X64-NEXT:    3 |   struct B8 (base)
+// CHECK-X64-NEXT:    3 |     char[5] c
+// CHECK-X64-NEXT:   16 |   struct B5 (base) (empty)
+// CHECK-X64-NEXT:    8 |   (F vbtable pointer)
+// CHECK-X64-NEXT:   16 |   int a
+// CHECK-X64-NEXT:   24 |   struct B0 (virtual base) (empty)
+// CHECK-X64-NEXT:      | [sizeof=24, align=8
+// CHECK-X64-NEXT:      |  nvsize=24, nvalign=8]
+
 struct AA : B8, B1, virtual B0 {
 	int a;
 	AA() : a(0x000000AA) { printf("AA = %p\n", this); }
@@ -501,31 +528,6 @@ struct F : B1, B6, B4, B8, B5, virtual B0 {
 	int a;
 	F() : a(0x0000000F) { printf("&a = %p\n", &a); printf("F = %p\n", this); }
 };
-
-// CHECK-LABEL:   0 | struct F{{$}}
-// CHECK-NEXT:    0 |   struct B1 (base) (empty)
-// CHECK-NEXT:    2 |   struct B6 (base) (empty)
-// CHECK-NEXT:    3 |   struct B4 (base) (empty)
-// CHECK-NEXT:    3 |   struct B8 (base)
-// CHECK-NEXT:    3 |     char[5] c
-// CHECK-NEXT:   12 |   struct B5 (base) (empty)
-// CHECK-NEXT:    8 |   (F vbtable pointer)
-// CHECK-NEXT:   12 |   int a
-// CHECK-NEXT:   16 |   struct B0 (virtual base) (empty)
-// CHECK-NEXT:      | [sizeof=16, align=4
-// CHECK-NEXT:      |  nvsize=16, nvalign=4]
-// CHECK-X64-LABEL:   0 | struct F{{$}}
-// CHECK-X64-NEXT:    0 |   struct B1 (base) (empty)
-// CHECK-X64-NEXT:    2 |   struct B6 (base) (empty)
-// CHECK-X64-NEXT:    3 |   struct B4 (base) (empty)
-// CHECK-X64-NEXT:    3 |   struct B8 (base)
-// CHECK-X64-NEXT:    3 |     char[5] c
-// CHECK-X64-NEXT:   16 |   struct B5 (base) (empty)
-// CHECK-X64-NEXT:    8 |   (F vbtable pointer)
-// CHECK-X64-NEXT:   16 |   int a
-// CHECK-X64-NEXT:   24 |   struct B0 (virtual base) (empty)
-// CHECK-X64-NEXT:      | [sizeof=24, align=8
-// CHECK-X64-NEXT:      |  nvsize=24, nvalign=8]
 
 struct G : B8, B1, virtual B0 {
 	int a;
