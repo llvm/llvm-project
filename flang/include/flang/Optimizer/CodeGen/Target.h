@@ -123,6 +123,14 @@ public:
   virtual Marshalling complexArgumentType(mlir::Location loc,
                                           mlir::Type eleTy) const = 0;
 
+  /// Account for preceding arguments when the ABI depends on the available
+  /// argument registers.
+  virtual Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy,
+                      const Marshalling &previousArguments) const {
+    return complexArgumentType(loc, eleTy);
+  }
+
   /// Type representation of a `complex<eleTy>` type return value. Such a return
   /// value may need to be converted to a hidden reference argument.
   virtual Marshalling complexReturnType(mlir::Location loc,
