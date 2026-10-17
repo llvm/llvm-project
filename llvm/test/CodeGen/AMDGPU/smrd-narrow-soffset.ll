@@ -15,9 +15,7 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(4) %p, i32 %n, i32 %amt,
 ; GFX9-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX9-SDAG-NEXT:    s_and_b32 s2, s3, 3
 ; GFX9-SDAG-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX9-SDAG-NEXT:    s_load_dword s0, s[0:1], s2 offset:0x0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[6:7]
@@ -36,10 +34,9 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(4) %p, i32 %n, i32 %amt,
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_and_b32 s6, s2, 0xff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s2, s3, 3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_lshl_b64 s[2:3], s[6:7], s2
-; GFX1250-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
-; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[0:1], 0x0 nv
+; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[0:1], s2 offset:0x0 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
@@ -55,9 +52,7 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(4) %p, i32 %n, i32 %amt,
 ; GFX9-GISEL-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX9-GISEL-NEXT:    s_and_b32 s2, s3, 3
 ; GFX9-GISEL-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, s3
-; GFX9-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX9-GISEL-NEXT:    s_load_dword s0, s[0:1], s2 offset:0x0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    global_store_dword v1, v0, s[6:7]
@@ -77,11 +72,9 @@ define amdgpu_kernel void @variable_shift(ptr addrspace(4) %p, i32 %n, i32 %amt,
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_and_b32 s6, s2, 0xff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s2, s3, 3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_lshl_b64 s[2:3], s[6:7], s2
-; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s0, s2
-; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
-; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[0:1], 0x0 nv
+; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[0:1], s2 offset:0x0 nv
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[4:5]
@@ -108,9 +101,7 @@ define amdgpu_kernel void @variable_shift_plus_imm(ptr addrspace(4) %p, i32 %n, 
 ; GFX9-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX9-SDAG-NEXT:    s_and_b32 s2, s3, 3
 ; GFX9-SDAG-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x10
+; GFX9-SDAG-NEXT:    s_load_dword s0, s[0:1], s2 offset:0x10
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[6:7]
@@ -129,10 +120,9 @@ define amdgpu_kernel void @variable_shift_plus_imm(ptr addrspace(4) %p, i32 %n, 
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_and_b32 s6, s2, 0xff
 ; GFX1250-SDAG-NEXT:    s_and_b32 s2, s3, 3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_lshl_b64 s[2:3], s[6:7], s2
-; GFX1250-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
-; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[0:1], 0x10 nv
+; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[0:1], s2 offset:0x10 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
@@ -148,9 +138,7 @@ define amdgpu_kernel void @variable_shift_plus_imm(ptr addrspace(4) %p, i32 %n, 
 ; GFX9-GISEL-NEXT:    s_and_b32 s4, s2, 0xff
 ; GFX9-GISEL-NEXT:    s_and_b32 s2, s3, 3
 ; GFX9-GISEL-NEXT:    s_lshl_b64 s[2:3], s[4:5], s2
-; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s2
-; GFX9-GISEL-NEXT:    s_addc_u32 s1, s1, s3
-; GFX9-GISEL-NEXT:    s_load_dword s0, s[0:1], 0x10
+; GFX9-GISEL-NEXT:    s_load_dword s0, s[0:1], s2 offset:0x10
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-GISEL-NEXT:    global_store_dword v1, v0, s[6:7]
@@ -170,11 +158,9 @@ define amdgpu_kernel void @variable_shift_plus_imm(ptr addrspace(4) %p, i32 %n, 
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_and_b32 s6, s2, 0xff
 ; GFX1250-GISEL-NEXT:    s_and_b32 s2, s3, 3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_lshl_b64 s[2:3], s[6:7], s2
-; GFX1250-GISEL-NEXT:    s_add_co_u32 s0, s0, s2
-; GFX1250-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, s3
-; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[0:1], 0x10 nv
+; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[0:1], s2 offset:0x10 nv
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[4:5]
@@ -207,9 +193,7 @@ define amdgpu_kernel void @zext_across_block(ptr addrspace(4) %p, i32 %n, ptr ad
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %load
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s4
-; GFX9-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-SDAG-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX9-SDAG-NEXT:    s_load_dword s0, s[0:1], s4 offset:0x0
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[2:3]
@@ -235,8 +219,7 @@ define amdgpu_kernel void @zext_across_block(ptr addrspace(4) %p, i32 %n, ptr ad
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %load
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[6:7]
-; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[0:1], 0x0 nv
+; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[0:1], s6 offset:0x0 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v0, v1, s[2:3]
