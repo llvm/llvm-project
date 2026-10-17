@@ -705,6 +705,18 @@ std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
   for (LanguageType lang_type : lang_types) {
     Module::LookupInfo info(name, lookup_name_override, name_type_mask,
                             lang_type);
+    // The language of a lookup only matters for matching names that aren't
+    // full names, so a lookup of full names that only differs from an earlier
+    // one in its language would find the same functions again.
+    if (info.m_name_type_mask & eFunctionNameTypeFull &&
+        llvm::any_of(infos, [&info](const LookupInfo &other) {
+          return other.m_name == info.m_name &&
+                 other.m_lookup_name == info.m_lookup_name &&
+                 other.m_name_type_mask == info.m_name_type_mask &&
+                 other.m_match_name_after_lookup ==
+                     info.m_match_name_after_lookup;
+        }))
+      continue;
     infos.push_back(info);
   }
   return infos;
