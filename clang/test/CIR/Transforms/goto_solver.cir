@@ -123,10 +123,10 @@ cir.func @e() {
 cir.global internal @f.s = #cir.const_record<{#cir.block_addr_diff<@f, "b", "c"> : !s64i, #cir.block_addr_info<@f, "a"> : !cir.ptr<!void>}> : !rec_S
 
 cir.func @f() {
-  %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
   %g = cir.get_global @f.s : !cir.ptr<!rec_S>
-  %1 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-  cir.indirect_goto %1 : !cir.ptr<!void>
+  %m = cir.get_member %g[1] {name = "target"} : !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!void>>
+  %t = cir.load align(8) %m : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  cir.indirect_goto %t : !cir.ptr<!void>
 ^bb1:
   cir.label "a"
   cir.return
