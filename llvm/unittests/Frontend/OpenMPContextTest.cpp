@@ -385,7 +385,7 @@ TEST_F(OpenMPContextTest, ScoringMatchAnyWithoutMatchingConstructs) {
 TEST_F(OpenMPContextTest, ScoringInvalidProperty) {
   OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
   VariantMatchInfo Unknown;
-  Unknown.addTrait(TraitProperty::invalid, "bogus_vendor");
+  Unknown.addUnknownTrait(TraitSelector::implementation_vendor);
   EXPECT_FALSE(isVariantApplicableInContext(Unknown, Context));
   Unknown.addTrait(TraitProperty::implementation_extension_match_none, "");
   EXPECT_TRUE(isVariantApplicableInContext(Unknown, Context));
@@ -400,6 +400,35 @@ TEST_F(OpenMPContextTest, ScoringInvalidProperty) {
   APInt Score(64, 1);
   Candidates[1].addTrait(TraitProperty::user_condition_true, "", &Score);
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // A selector with only unknown properties keeps its score: 1 + 2 beats 1 + 1.
+  APInt UnknownScore(64, 2);
+  Candidates[0] = VariantMatchInfo();
+  Candidates[0].addUnknownTrait(TraitSelector::implementation_vendor,
+                                &UnknownScore);
+  Candidates[0].addTrait(TraitProperty::implementation_extension_match_none,
+                         "");
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringUnknownDeviceProperties) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  // With one enclosing construct, kind is worth 2 and arch 4, matched or not.
+  for (auto [Selector, Weight] : {std::pair(TraitSelector::device_kind, 2u),
+                                  std::pair(TraitSelector::device_arch, 4u)}) {
+    SCOPED_TRACE(unsigned(Selector));
+    VariantMatchInfo Unknown, Scored;
+    Unknown.addUnknownTrait(Selector);
+    Unknown.addTrait(TraitProperty::implementation_extension_match_none, "");
+    APInt Score(64, Weight - 1);
+    Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+    SmallVector<VariantMatchInfo, 2> Candidates{Scored, Unknown};
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    Score = APInt(64, Weight);
+    Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Score);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
 }
 
 TEST_F(OpenMPContextTest, ScoringUserScoreOncePerSelector) {
@@ -415,6 +444,14 @@ TEST_F(OpenMPContextTest, ScoringUserScoreOncePerSelector) {
 
   // The vendor score counts once: 1 + 10 loses to 1 + 11.
   SmallVector<VariantMatchInfo, 2> Candidates{TwoVendors, Scored};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // The same holds when one of the vendors is unknown.
+  VariantMatchInfo Mixed;
+  Mixed.addTrait(TraitProperty::implementation_vendor_llvm, "", &VendorScore);
+  Mixed.addUnknownTrait(TraitSelector::implementation_vendor, &VendorScore);
+  Mixed.addTrait(TraitProperty::implementation_extension_match_any, "");
+  Candidates[0] = Mixed;
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
 }
 

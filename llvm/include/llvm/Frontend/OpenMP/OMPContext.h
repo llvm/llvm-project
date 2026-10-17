@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 class Triple;
@@ -122,6 +123,11 @@ LLVM_ABI bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
 /// scored (via the ScoresMap). In addition, the required consturct nesting is
 /// decribed as well.
 struct VariantMatchInfo {
+  struct UnknownTrait {
+    TraitSelector Selector;
+    std::optional<APInt> Score;
+  };
+
   /// Add the trait \p Property to the required trait set. \p RawString is the
   /// string we parsed and derived \p Property from. If \p Score is not null, it
   /// recorded as well. If \p Property is in the `construct` set it is recorded
@@ -152,10 +158,19 @@ struct VariantMatchInfo {
       ConstructTraits.push_back(Property);
   }
 
+  /// Add an unknown property of \p Selector. It never matches, but its
+  /// selector is scored like a known property's.
+  void addUnknownTrait(TraitSelector Selector, APInt *Score = nullptr) {
+    UnknownTraits.push_back(
+        {Selector, Score ? std::optional<APInt>(*Score) : std::nullopt});
+    RequiredTraits.set(unsigned(TraitProperty::invalid));
+  }
+
   BitVector RequiredTraits = BitVector(unsigned(TraitProperty::Last) + 1);
   SmallVector<StringRef, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
+  SmallVector<UnknownTrait, 2> UnknownTraits;
 };
 
 /// The context for a source location is made up of active property traits,
