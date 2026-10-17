@@ -835,7 +835,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     // instruction in the block.
     auto *TI = BBToCheck.getTerminator();
     bool isUnreachable = isa<UnreachableInst>(TI);
-    return !isUnreachable || &*BBToCheck.getFirstNonPHIOrPseudoProbe() != TI;
+    return !isUnreachable || &*BBToCheck.getFirstNonPHIIt() != TI;
   };
 
   SmallVector<int, 4> ExitCaseIndices;

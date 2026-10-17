@@ -640,8 +640,12 @@ class CLASS_RINT_DESC_BASE<string instr_asm, RegisterOperand FGROpnd> {
   list<dag> Pattern = [];
 }
 
-class RINT_S_DESC : CLASS_RINT_DESC_BASE<"rint.s", FGR32Opnd>;
-class RINT_D_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd>;
+class RINT_S_DESC : CLASS_RINT_DESC_BASE<"rint.s", FGR32Opnd> {
+  let Pattern = [(set FGR32Opnd:$fd, (any_frint FGR32Opnd:$fs))];
+}
+class RINT_D_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd> {
+  let Pattern = [(set FGR64Opnd:$fd, (any_frint FGR64Opnd:$fs))];
+}
 class CLASS_S_DESC : CLASS_RINT_DESC_BASE<"class.s", FGR32Opnd>;
 class CLASS_D_DESC : CLASS_RINT_DESC_BASE<"class.d", FGR64Opnd>;
 
