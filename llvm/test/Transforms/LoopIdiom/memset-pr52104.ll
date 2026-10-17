@@ -11,7 +11,7 @@ define void @f(ptr nocapture nonnull align 4 dereferenceable(20) %0, i32 %1) loc
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i2 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP9]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 range(i64 0, 17) [[TMP9]], i1 false)
 ; CHECK-NEXT:    br label [[TMP10:%.*]]
 ; CHECK:       10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ [[TMP15:%.*]], [[TMP10]] ], [ [[TMP1]], [[TMP2:%.*]] ]
