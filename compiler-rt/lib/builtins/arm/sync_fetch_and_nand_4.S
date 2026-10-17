@@ -13,7 +13,9 @@
 
 #include "sync-ops.h"
 
-#define nand_4(rD, rN, rM)  bic rD, rN, rM
+#define nand_4(rD, rN, rM) \
+    and rD, rN, rM ; \
+    mvn rD, rD
 
 SYNC_OP_4(nand_4)
 
