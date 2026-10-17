@@ -2522,7 +2522,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
 
 bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
   const Instruction *TI = BB->getTerminator();
-  if (!TI || TI->getNumSuccessors() < 2)
+  if (TI->getNumSuccessors() < 2)
     return false;
 
   return hasValidBranchWeightMD(*TI);
