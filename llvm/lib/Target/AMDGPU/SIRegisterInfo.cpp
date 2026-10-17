@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "amdgpu-si-register-info"
@@ -4330,8 +4331,276 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return false;
   }
   default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    break;
+  }
+
+  bool BaseImplRetVal =
+      TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+
+  // Append v_wmma_* bank-conflict avoidance candidates (gfx11/gfx12). This only
+  // augments the candidate order for VirtReg and never changes BaseImplRetVal.
+  if (ST.hasVGPRBankConflict())
+    addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM, Matrix);
+
+  return BaseImplRetVal;
+}
+
+static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
+                                   SmallVector<Register, 3> &Siblings,
+                                   const SIInstrInfo *TII,
+                                   const SIRegisterInfo *TRI,
+                                   const MachineRegisterInfo &MRI) {
+  // The consecutive-allocation VGPR bank collision only happens when each
+  // matrix operand is a multiple of 4 VGPRs (128 bits) wide; with narrower
+  // operands the start registers already fall on different banks. Restrict the
+  // hint to WMMAs whose matrix source operands are a multiple of 128 bits.
+  Register Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
+  Register Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
+  Register Vdst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
+  if (!TRI->isVGPR(MRI, Src0) || !TRI->isVGPR(MRI, Src1))
+    return;
+
+  auto SaveSiblings = [&](SmallVector<Register, 3> Regs) {
+    if (!is_contained(Regs, VirtReg))
+      return;
+    for (Register Reg : Regs) {
+      if (Reg != VirtReg && !is_contained(Siblings, Reg))
+        Siblings.push_back(Reg);
+    }
+  };
+
+  // Src2 == Dst => 2-cycle penalty for bank conflicts among src0, src1, src2.
+  // Src2 != Dst => 1-cycle penalty for a bank conflict between src0 and src1.
+  const MachineOperand *MOSrc2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+  if (MOSrc2 && MOSrc2->isReg() && MOSrc2->getReg().isVirtual() &&
+      MOSrc2->getReg() == Vdst) {
+    SaveSiblings({Src0, Src1, Vdst});
+    return;
+  }
+
+  SaveSiblings({Src0, Src1});
+}
+
+static std::pair<unsigned, unsigned>
+getVGPROccupancyCutoffs(const MachineFunction &MF, const GCNSubtarget &ST,
+                        unsigned MaxVGPRsForCurrentOccupancy) {
+  const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
+      (ST.getMaxNumVGPRs(MFI->getOccupancy(), MFI->getDynamicVGPRBlockSize()) *
+       80) /
+      100;
+  unsigned MaxVGPRsCutOffForCurrentOccupancy =
+      (MaxVGPRsForCurrentOccupancy * 95) / 100;
+  return {MaxVGPRsCutOffForRecordedMaxOccupancy,
+          MaxVGPRsCutOffForCurrentOccupancy};
+}
+
+static unsigned getNumAllocatedVectorRegs(ArrayRef<MCPhysReg> Order,
+                                          const MachineRegisterInfo &MRI,
+                                          const SIRegisterInfo &TRI,
+                                          const LiveRegMatrix &Matrix) {
+  unsigned NumRegs = 0;
+  for (MCPhysReg Reg : Order) {
+    if (MRI.isAllocatable(Reg) &&
+        (Matrix.isPhysRegUsed(Reg) ||
+         MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)))
+      NumRegs = std::max(NumRegs, TRI.getHWRegIndex(Reg) + 1);
+  }
+  return NumRegs;
+}
+
+static unsigned getWMMABankSize(const MachineFunction &MF,
+                                const GCNSubtarget &ST,
+                                const SIRegisterInfo &TRI,
+                                const LiveRegMatrix *Matrix) {
+  const auto *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (std::optional<unsigned> BankSize = FuncInfo->getWMMABankSize())
+    return *BankSize;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned MaxWidth = 0;
+  bool PadWidths = false;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (!SIInstrInfo::isWMMA(MI))
+        continue;
+      for (AMDGPU::OpName OpName :
+           {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2,
+            AMDGPU::OpName::vdst}) {
+        const MachineOperand *Operand = TII->getNamedOperand(MI, OpName);
+        if (Operand && Operand->isReg() && TRI.isVGPR(MRI, Operand->getReg())) {
+          unsigned Width = TRI.getRegSizeInBits(Operand->getReg(), MRI) / 32;
+          if (!Width || Width == MaxWidth)
+            continue;
+          if (MaxWidth) {
+            if (!isPowerOf2_32(Width)) {
+              Width = PowerOf2Ceil(Width);
+              PadWidths = true;
+            }
+            if (!isPowerOf2_32(MaxWidth)) {
+              MaxWidth = PowerOf2Ceil(MaxWidth);
+              PadWidths = true;
+            }
+          }
+          MaxWidth = std::max(MaxWidth, Width);
+        }
+      }
+    }
+  }
+
+  unsigned MaxVGPR = 0;
+  if (MaxWidth >= 4) {
+    for (MCPhysReg PhysReg : AMDGPU::VGPR_32RegClass)
+      if (MRI.isAllocatable(PhysReg))
+        MaxVGPR = std::max(MaxVGPR, TRI.getHWRegIndex(PhysReg) + 1);
+
+    if (unsigned Peak = FuncInfo->getPeakVGPRPressure()) {
+      unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
+          ST, FuncInfo->getDynamicVGPRBlockSize());
+      unsigned Want = alignTo(Peak, std::max(Gran, 1u));
+      if (unsigned Budget = ST.getMaxNumVGPRs(MF))
+        Want = std::min(Want, Budget);
+      MaxVGPR = std::min(MaxVGPR, Want);
+    } else {
+      if (!Matrix)
+        return 0;
+
+      unsigned NumVGPRs = getNumAllocatedVectorRegs(
+          AMDGPU::VGPR_32RegClass.getRegisters(), MRI, TRI, *Matrix);
+      unsigned NumAGPRs = getNumAllocatedVectorRegs(
+          AMDGPU::AGPR_32RegClass.getRegisters(), MRI, TRI, *Matrix);
+      unsigned NumAllocatedVGPRs =
+          AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
+      unsigned DynamicVGPRBlockSize = FuncInfo->getDynamicVGPRBlockSize();
+      unsigned CurrentOccupancy =
+          ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
+      auto [RecordedCutoff, CurrentCutoff] = getVGPROccupancyCutoffs(
+          MF, ST, ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize));
+      // Anchor the cached layout to occupancy headroom when no scheduler
+      // pressure is available, rather than spreading hints over the register
+      // file.
+      MaxVGPR = std::min({MaxVGPR, RecordedCutoff, CurrentCutoff});
+      LLVM_DEBUG(dbgs() << "WMMA bank hints: " << MF.getName()
+                        << ", no peak, recorded cutoff = " << RecordedCutoff
+                        << ", current cutoff = " << CurrentCutoff
+                        << ", VGPR budget = " << MaxVGPR << '\n');
+    }
+  }
+
+  unsigned BankSize = 0;
+  if (MaxWidth >= 4 && MaxVGPR >= 4 * MaxWidth + 3)
+    BankSize = ((MaxVGPR - 3) / (4 * MaxWidth)) * MaxWidth;
+  FuncInfo->setWMMABankLayout(BankSize, PadWidths);
+  return BankSize;
+}
+
+// Avoid VGPR bank conflicts in v_wmma_* on gfx11/gfx12.
+//
+// For example: v_wmma_f32_16x16x16_f16 v[1:8], v[9:16], v[17:24], v[1:8]
+// The source operands all start in bank 1:
+// 1 % 4 = 9 % 4 = 17 % 4 = 1.
+//
+// This function adds hints from non-conflicting banks to help avoid
+// VGPR bank conflicts.
+//
+// Bank conflicts may still occur due to pre-allocation and register pressure.
+void SIRegisterInfo::addWMMABankConflictHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  if (!VRM || !isVGPR(MRI, VirtReg))
+    return;
+
+  // Collect the other registers in WMMA instructions that may have bank
+  // conflicts with VirtReg.
+  SmallVector<Register, 3> Siblings;
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
+    if (!SIInstrInfo::isWMMA(MI))
+      continue;
+    recordWMMABankSiblings(VirtReg, MI, Siblings, TII, this, MRI);
+  }
+
+  if (Siblings.empty())
+    return;
+
+  // Banks already taken by allocated siblings.
+  unsigned UsedBankMask = 0;
+  for (Register Sibling : Siblings) {
+    if (Sibling.isVirtual()) {
+      if (!VRM->hasPhys(Sibling))
+        continue;
+      Sibling = VRM->getPhys(Sibling);
+    }
+    if (Sibling.isPhysical() && isVGPR(MRI, Sibling))
+      UsedBankMask |= 1u << (getHWRegIndex(Sibling) % 4);
+  }
+
+  unsigned W = getRegSizeInBits(VirtReg, MRI) / 32;
+  if (W && (W % 4) != 0)
+    return;
+
+  unsigned BankSize = getWMMABankSize(MF, ST, *this, Matrix);
+  if (!BankSize)
+    return;
+  if (MF.getInfo<SIMachineFunctionInfo>()->shouldPadWMMABankHints())
+    W = PowerOf2Ceil(W);
+
+  // Build a hardware-index -> physreg map.
+  // Order is not guaranteed to be sorted (non-kernel functions reorder their
+  // callee-saved VGPRs), so we look candidates up by index instead of trusting
+  // Order's sequence or its last element.
+  DenseMap<unsigned, MCPhysReg> IdxToReg;
+  for (MCPhysReg PhysReg : Order) {
+    unsigned Idx = getHWRegIndex(PhysReg);
+    IdxToReg[Idx] = PhysReg;
+  }
+
+  // Precompute once per function:
+  BitVector CalleeSavedUnits(getNumRegUnits());
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
+    for (MCRegUnit U : regunits(*CSR))
+      CalleeSavedUnits.set(static_cast<unsigned>(U));
+  // Then for a candidate physreg P (the tuple at Start):
+  auto isCalleeSaved = [&](MCRegister P) {
+    return any_of(regunits(P), [&](MCRegUnit U) {
+      return CalleeSavedUnits.test(static_cast<unsigned>(U));
+    });
+  };
+
+  // Separate registers into blocks, each containing N allocatable register
+  // tuples. Assume VirtReg spans 4 VGPRs and N = 2:
+  //
+  // Block_1: v[0:3], v[4:7];
+  // Block_2: v[9:12], v[13:16];
+  // Block_3: v[18:21], v[22:25];
+  // Block_4: v[27:30], v[31:34];
+  //
+  // All register tuples in Block_i start in bank (i - 1).
+  // This leaves only three unused VGPRs ("holes"): v8, v17, and v26.
+  // In contrast, adding candidates in register-number order can result in:
+  //
+  // 1. src0 = v[0:3], src1 = v[5:8], src2 = v[10:13] for the first WMMA
+  // 2. src0 = v[14:17], src1 = v[19:22], src2 = v[24:27] for the second WMMA
+  //
+  // This leaves holes at v4, v9, v18, and v23 and can increase VGPR usage.
+  //
+  // Add candidates from non-conflicting blocks in round-robin order to avoid
+  // exhausting a single block first.
+  // If the non-conflicting blocks are 2, 3, and 4, the hint order is:
+  // {v[9:12], v[18:21], v[27:30], v[13:16], v[22:25], v[31:34]}.
+  unsigned N = BankSize / W;
+  for (unsigned n = 0; n < N; n++) {
+    for (unsigned Bank = 0; Bank < 4; Bank++) {
+      unsigned Start = n * W + Bank * (BankSize + 1);
+      if (((UsedBankMask >> (Start % 4)) & 1) != 0)
+        continue;
+      auto RIt = IdxToReg.find(Start);
+      if (RIt != IdxToReg.end() && !isCalleeSaved(RIt->second))
+        Hints.insert(RIt->second);
+    }
   }
 }
 
@@ -4362,11 +4631,9 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   // recorded max occupancy. For current occupancy, the 95% cutoff margin is
   // used to not apply anti-hints close to the limit of the current occupancy
   // budget.
-  unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
-      (ST.getMaxNumVGPRs(RecordedMaxOccupancy, DynamicVGPRBlockSize) * 80) /
-      100;
-  unsigned MaxVGPRsCutOffForCurrentOccupancy =
-      (MaxVGPRsForCurrentOccupancy * 95) / 100;
+  auto [MaxVGPRsCutOffForRecordedMaxOccupancy,
+        MaxVGPRsCutOffForCurrentOccupancy] =
+      getVGPROccupancyCutoffs(MF, ST, MaxVGPRsForCurrentOccupancy);
 
   if (NumAllocatedVGPRs >= MaxVGPRsCutOffForRecordedMaxOccupancy) {
     LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
@@ -4424,22 +4691,12 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   assert(hasVectorRegisters(MRI.getRegClass(VirtReg)) &&
          "SGPR anti-hints are not handled");
-  unsigned NumVGPRs = 0;
-  unsigned NumAGPRs = 0;
-
   assert(Matrix && "LiveRegMatrix required to compute occupancy");
   assert(RegClassInfo && "RegClassInfo required to compute occupancy");
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass)) {
-    if (Matrix->isPhysRegUsed(Reg) ||
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
-      NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
-  }
-
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass)) {
-    if (Matrix->isPhysRegUsed(Reg) ||
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
-      NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
-  }
+  unsigned NumVGPRs = getNumAllocatedVectorRegs(
+      RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass), MRI, *this, *Matrix);
+  unsigned NumAGPRs = getNumAllocatedVectorRegs(
+      RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass), MRI, *this, *Matrix);
 
   unsigned NumAllocatedVGPRs =
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
