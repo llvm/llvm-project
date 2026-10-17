@@ -156,6 +156,8 @@ defm : BoolField<"x86-speculative-load-hardening", "false",
 // models.
 defm : BoolField<"x86-early-ifcvt", "false",
   "Enable early if-conversion on X86">;
+defm : BoolField<"x86-enable-ccmp", "true",
+  "Enable CCMP formation on X86">;
 
 // X86SuppressAPXForReloc.cpp
 defm : BoolField<"x86-enable-apx-for-relocation", "false",
