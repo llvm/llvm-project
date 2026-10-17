@@ -45,6 +45,9 @@ OpFoldResults::OpFoldResults(OpFoldResult replacement) {
     replacements.push_back(replacement);
 }
 
+OpFoldResults::OpFoldResults(std::initializer_list<OpFoldResult> list)
+    : OpFoldResults(ArrayRef<OpFoldResult>(list)) {}
+
 OpFoldResults OpFoldResults::fromLegacy(LogicalResult status,
                                         ArrayRef<OpFoldResult> results) {
   if (failed(status))

@@ -1768,8 +1768,7 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::llvm::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
-        SmallVectorImpl<OpFoldResult> &results) {
+    ::mlir::OpFoldResults $cppClass::fold(FoldAdaptor adaptor) {
       return success();
     }
   }];
@@ -1821,9 +1820,7 @@ def TestLegacyFoldTrait : NativeOpTrait<"TestLegacyFoldTrait"> {
 def TestFoldDispatchOp : TEST_Op<"fold_dispatch", [TestLegacyFoldTrait]> {
   let arguments = (ins Variadic<AnyType>);
   let results = (outs Variadic<AnyType>);
-  let extraClassDeclaration = [{
-    ::mlir::OpFoldResults fold(FoldAdaptor adaptor);
-  }];
+  let hasFolder = 1;
 }
 
 def TestResultsFoldTrait : NativeOpTrait<"TestResultsFoldTrait"> {

@@ -37,6 +37,15 @@ func.func @remove_op_with_variadic_results_and_folder(%arg0 : i32, %arg1 : i32) 
   return %0, %1 : i32, i32
 }
 
+// Without operands, the fold replaces no result, so it fails.
+// CHECK-LABEL: func @keep_op_with_variadic_results_and_folder_no_operands
+func.func @keep_op_with_variadic_results_and_folder_no_operands() {
+  // CHECK-NEXT: "test.op_with_variadic_results_and_folder"() : () -> ()
+  // CHECK-NEXT: return
+  "test.op_with_variadic_results_and_folder"() : () -> ()
+  return
+}
+
 // CHECK-LABEL: func @test_commutative_multi
 // CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32, %[[ARG_1:[a-z0-9]*]]: i32)
 func.func @test_commutative_multi(%arg0: i32, %arg1: i32) -> (i32, i32) {
