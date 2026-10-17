@@ -1709,6 +1709,35 @@ bool BinaryFunction::scanExternalRefs() {
         continue;
     }
 
+    if (BC.isRISCV()) {
+      // RISC-V instruction relocations cannot be rewritten in retained code.
+      // Entry patches are not a safe fallback: they clobber t0, which can be
+      // live at the target (including as the link register of jal t0).
+      // Keep referenced functions in place and continue scanning, including
+      // references in call and address-materialization pairs.
+      for (const MCOperand &Op : MCPlus::primeOperands(Instruction)) {
+        if (!Op.isExpr())
+          continue;
+        const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Op.getExpr());
+        if (ignoreReference(Symbol))
+          continue;
+        if (BinaryFunction *Target = BC.getFunctionForSymbol(Symbol);
+            Target && !BC.forceSymbolRelocations(Symbol->getName()))
+          InvalidTargets.insert(Target);
+        else {
+          // Symbols such as _end can move independently of functions. Neither
+          // pinning a function nor patching its entry fixes these references.
+          BC.errs() << "BOLT-ERROR: cannot update RISC-V instruction reference "
+                       "to "
+                    << Symbol->getName() << " at address 0x"
+                    << Twine::utohexstr(AbsoluteInstrAddr)
+                    << " in ignored function " << *this << '\n';
+          exit(1);
+        }
+      }
+      continue;
+    }
+
     // For AArch64, we need to undo relaxation done by the linker if the target
     // of the instruction is a function that we plan to move.
     //
