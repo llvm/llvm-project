@@ -31,11 +31,12 @@ public:
   public:
     virtual ~Callback() = default;
     virtual void processInstructionRange(uint64_t Start, uint64_t End) = 0;
+    virtual void processDataAddress(uint64_t Address) = 0;
   };
 
   LLVM_ABI static Expected<std::unique_ptr<ETMDecoder>>
   create(const object::Binary &Binary, const Triple &TargetTriple,
-         uint8_t TraceID = 0x10);
+         uint8_t ETMTraceID = 0x01, uint8_t ITMTraceID = 0x11);
 
   virtual Error processTrace(ArrayRef<uint8_t> TraceData,
                              Callback &TraceCallback) = 0;
