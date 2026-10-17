@@ -4095,12 +4095,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::readsteadycounter);
     return RValue::get(Builder.CreateCall(F));
   }
-  case Builtin::BI__builtin___clear_cache: {
-    Value *Begin = EmitScalarExpr(E->getArg(0));
-    Value *End = EmitScalarExpr(E->getArg(1));
-    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
-    return RValue::get(Builder.CreateCall(F, {Begin, End}));
-  }
+  case Builtin::BI__builtin___clear_cache:
+    return RValue::get(EmitClearCache(E));
   case Builtin::BI__builtin_trap:
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
@@ -7060,4 +7056,12 @@ RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
   }
   assert(Result->getType() == Args.SrcType);
   return RValue::get(Result);
+}
+
+Value *CodeGenFunction::EmitClearCache(const CallExpr *E) {
+  Value *Begin = EmitScalarExpr(E->getArg(0));
+  Value *End = EmitScalarExpr(E->getArg(1));
+  // Sema gives each argument its own address space; the intrinsic needs one.
+  End = Builder.CreateAddrSpaceCast(End, Begin->getType());
+  return Builder.CreateBinaryIntrinsic(Intrinsic::clear_cache, Begin, End);
 }
