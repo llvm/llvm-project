@@ -17,3 +17,9 @@ const MCExpr *SystemZELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
   return MCSymbolRefExpr::create(Sym, SystemZ::S_DTPOFF, getContext());
 }
+
+const MCExpr *SystemZGOFFTargetObjectFile::getDwarfSymbolReference(
+    const MCSymbol *Label, const TargetMachine &TM, MCContext &Ctx) const {
+  return MCSpecifierExpr::create(MCSymbolRefExpr::create(Label, Ctx),
+                                 SystemZ::S_QCon, Ctx);
+}

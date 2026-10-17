@@ -61,7 +61,7 @@ LLVMInitializeSystemZTarget() {
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSzOS())
-    return std::make_unique<TargetLoweringObjectFileGOFF>();
+    return std::make_unique<SystemZGOFFTargetObjectFile>();
 
   // Note: Some times run with -triple s390x-unknown.
   // In this case, default to ELF unless z/OS specifically provided.

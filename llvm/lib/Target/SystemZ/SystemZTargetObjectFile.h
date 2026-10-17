@@ -22,6 +22,16 @@ public:
   const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
 };
 
+/// This implementation is used for SystemZ GOFF targets.
+class SystemZGOFFTargetObjectFile : public TargetLoweringObjectFileGOFF {
+public:
+  SystemZGOFFTargetObjectFile() = default;
+
+  const MCExpr *getDwarfSymbolReference(const MCSymbol *Label,
+                                        const TargetMachine &TM,
+                                        MCContext &Ctx) const override;
+};
+
 } // end namespace llvm
 
 #endif
