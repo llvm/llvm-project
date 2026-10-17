@@ -306,6 +306,13 @@ private:
 struct TestDialectFoldInterface : public DialectFoldInterface {
   using DialectFoldInterface::DialectFoldInterface;
 
+  /// The fallback fold of the fold tests.
+  LogicalResult fold(Operation *op, ArrayRef<Attribute> operands,
+                     SmallVectorImpl<OpFoldResult> &results) const final {
+    return getConfiguredLegacyFoldResults(op, operands, "legacy_dialect_fold",
+                                          results);
+  }
+
   /// Registered hook to check if the given region, which is attached to an
   /// operation that is *not* isolated from above, should be used when
   /// materializing constants.

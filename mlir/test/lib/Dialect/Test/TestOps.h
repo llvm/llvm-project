@@ -246,6 +246,27 @@ llvm::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
 void writeToMlirBytecode(mlir::DialectBytecodeWriter &writer,
                          llvm::ArrayRef<int64_t> prop);
 
+//===----------------------------------------------------------------------===//
+// Configurable folds
+//===----------------------------------------------------------------------===//
+
+// The fold tests configure each fold with a dictionary attribute of the op:
+//  - `replace = [...]` holds one replacement per result. A `#test.fold_ref`
+//    names a part of the op: `<keep>` keeps the result, `<result I>` and
+//    `<operand I>` are result or operand I, and `<operand_attr I>` is the
+//    constant value of operand I. Any other attribute replaces the result
+//    with that attribute.
+//  - `in_place` makes the fold also change the op in place, once: the fold
+//    drops the key.
+// Without the attribute, the fold fails.
+
+/// Fill `results` with the legacy fold result that the dictionary attribute
+/// `name` of `op` configures. The legacy form cannot report replacements and
+/// an in-place change together, so the configuration must not combine
+/// `replace` and `in_place`.
+llvm::LogicalResult getConfiguredLegacyFoldResults(
+    mlir::Operation *op, llvm::ArrayRef<mlir::Attribute> operands,
+    llvm::StringRef name, llvm::SmallVectorImpl<mlir::OpFoldResult> &results);
 } // namespace test
 
 #define GET_OP_CLASSES

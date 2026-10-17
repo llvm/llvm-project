@@ -527,6 +527,17 @@ def TestMemRefLayoutAttr : Test_Attr<"TestMemRefLayout",
   let assemblyFormat = "`<` $dummy `>`";
 }
 
+// A replacement in the fold configuration of the fold tests that names a part
+// of the folded op; see the configurable folds in TestOps.h. `<keep>` has no
+// index, and the other kinds need one.
+def TestFoldRefAttr : Test_Attr<"TestFoldRef"> {
+  let mnemonic = "fold_ref";
+  let parameters = (ins "FoldRefKind":$kind,
+                        OptionalParameter<"std::optional<unsigned>">:$index);
+  let assemblyFormat = "`<` $kind ($index^)? `>`";
+  let genVerifyDecl = 1;
+}
+
 // Test attribute that implements SymbolUserAttrInterface.
 def TestSymbolRefAttr : Test_Attr<"TestSymbolRef",
     [DeclareAttrInterfaceMethods<SymbolUserAttrInterface>]> {

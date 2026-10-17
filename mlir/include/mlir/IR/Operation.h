@@ -771,11 +771,29 @@ public:
   /// - the elements in "operands" will correspond directly to the operands of
   /// the operation, but may be null if non-constant.
   ///
+  /// The result may replace some, all, or none of the results of this
+  /// operation, and may also record that this operation was modified in place.
+  /// The result is normalized: it has either no replacement or one replacement
+  /// per result, and a null replacement means "keep the result". See
+  /// `OperationName::foldHook` for the contract.
+  NormalizedOpFoldResults fold(ArrayRef<Attribute> operands);
+
+  /// Attempt to fold this operation. Same as above, but computes the constant
+  /// operand values.
+  NormalizedOpFoldResults fold();
+
+  /// Attempt to fold this operation with the specified constant operand values
+  /// - the elements in "operands" will correspond directly to the operands of
+  /// the operation, but may be null if non-constant.
+  ///
   /// If folding was successful, this function returns "success".
   /// * If this operation was modified in-place (but not folded away),
   ///   `results` is empty.
   /// * Otherwise, `results` is filled with the folded results.
   /// If folding was unsuccessful, this function returns "failure".
+  /// If the fold replaces only some results, those replacements are dropped:
+  /// this function returns "success" with an empty `results` if this operation
+  /// was modified in place, and "failure" otherwise.
   LogicalResult fold(ArrayRef<Attribute> operands,
                      SmallVectorImpl<OpFoldResult> &results);
 
@@ -786,6 +804,9 @@ public:
   ///   `results` is empty.
   /// * Otherwise, `results` is filled with the folded results.
   /// If folding was unsuccessful, this function returns "failure".
+  /// If the fold replaces only some results, those replacements are dropped:
+  /// this function returns "success" with an empty `results` if this operation
+  /// was modified in place, and "failure" otherwise.
   LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
 
   /// Returns true if `InterfaceT` has been promised by the dialect or

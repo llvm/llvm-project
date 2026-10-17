@@ -285,6 +285,19 @@ void DynamicAttr::print(AsmPrinter &printer) {
 // Dynamic operation
 //===----------------------------------------------------------------------===//
 
+/// Wrap a legacy fold hook into a fold hook that returns normalized results.
+static OperationName::FoldHookFn
+adaptLegacyFoldHookFn(DynamicOpDefinition::LegacyFoldHookFn &&foldHookFn) {
+  return [foldHookFn = std::move(foldHookFn)](
+             Operation *op,
+             ArrayRef<Attribute> operands) -> NormalizedOpFoldResults {
+    SmallVector<OpFoldResult> results;
+    LogicalResult status = foldHookFn(op, operands, results);
+    return NormalizedOpFoldResults(op,
+                                   OpFoldResults::fromLegacy(status, results));
+  };
+}
+
 DynamicOpDefinition::DynamicOpDefinition(
     StringRef name, ExtensibleDialect *dialect,
     OperationName::VerifyInvariantsFn &&verifyFn,
@@ -327,17 +340,17 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
                                   std::move(printFn));
 }
 
+/// The fold hook of an op that does not fold.
+static NormalizedOpFoldResults noFold(Operation *, ArrayRef<Attribute>) {
+  return {};
+}
+
 std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
     StringRef name, ExtensibleDialect *dialect,
     OperationName::VerifyInvariantsFn &&verifyFn,
     OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
     OperationName::ParseAssemblyFn &&parseFn,
     OperationName::PrintAssemblyFn &&printFn) {
-  auto foldHookFn = [](Operation *op, ArrayRef<Attribute> operands,
-                       SmallVectorImpl<OpFoldResult> &results) {
-    return failure();
-  };
-
   auto getCanonicalizationPatternsFn = [](RewritePatternSet &, MLIRContext *) {
   };
 
@@ -345,7 +358,7 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
 
   return DynamicOpDefinition::get(name, dialect, std::move(verifyFn),
                                   std::move(verifyRegionFn), std::move(parseFn),
-                                  std::move(printFn), std::move(foldHookFn),
+                                  std::move(printFn), noFold,
                                   std::move(getCanonicalizationPatternsFn),
                                   std::move(populateDefaultAttrsFn));
 }
@@ -365,6 +378,28 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
       std::move(getCanonicalizationPatternsFn),
       std::move(populateDefaultAttrsFn)));
 }
+
+std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
+    StringRef name, ExtensibleDialect *dialect,
+    OperationName::VerifyInvariantsFn &&verifyFn,
+    OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
+    OperationName::ParseAssemblyFn &&parseFn,
+    OperationName::PrintAssemblyFn &&printFn, LegacyFoldHookFn &&foldHookFn,
+    GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+    OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn) {
+  return DynamicOpDefinition::get(name, dialect, std::move(verifyFn),
+                                  std::move(verifyRegionFn), std::move(parseFn),
+                                  std::move(printFn),
+                                  adaptLegacyFoldHookFn(std::move(foldHookFn)),
+                                  std::move(getCanonicalizationPatternsFn),
+                                  std::move(populateDefaultAttrsFn));
+}
+
+void DynamicOpDefinition::setFoldHookFn(LegacyFoldHookFn &&foldHook) {
+  foldHookFn = adaptLegacyFoldHookFn(std::move(foldHook));
+}
+
+void DynamicOpDefinition::setFoldHookFn(std::nullptr_t) { foldHookFn = noFold; }
 
 //===----------------------------------------------------------------------===//
 // Extensible dialect
