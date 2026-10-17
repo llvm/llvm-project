@@ -360,6 +360,14 @@ protected:
   // in case it is not defined in the specified section.
   SmallVector<uint32_t> getSymbolIndexesForFunctionAddress(
       uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec);
+  // On ARM, bit 0 of the address of a Thumb function is set to mark it as
+  // Thumb code. The bit is not part of the address, so clear it from a function
+  // address before looking it up or printing it.
+  uint64_t clearThumbBit(uint64_t Address) const {
+    if (Obj.getHeader().e_machine == ELF::EM_ARM)
+      return Address & ~uint64_t(1);
+    return Address;
+  }
   bool printFunctionStackSize(uint64_t SymValue,
                               std::optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
@@ -7235,6 +7243,7 @@ template <class ELFT>
 bool ELFDumper<ELFT>::printFunctionStackSize(
     uint64_t SymValue, std::optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
+  SymValue = clearThumbBit(SymValue);
   SmallVector<uint32_t> FuncSymIndexes =
       this->getSymbolIndexesForFunctionAddress(SymValue, FunctionSec);
   if (FuncSymIndexes.empty())
@@ -8435,10 +8444,7 @@ SmallVector<std::string> LLVMELFDumper<ELFT>::getCallGraphTargetNames(
   uint64_t Addr = Resolve(R.Type, R.Offset, Sym.st_value,
                           R.Addend ? 0 : Func.FieldValue, R.Addend.value_or(0));
   // Truncate the result to the width of an address field.
-  Addr = static_cast<typename ELFT::uint>(Addr);
-  // Clear the Thumb bit, as for Address.
-  if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
-    Addr &= ~1;
+  Addr = this->clearThumbBit(static_cast<typename ELFT::uint>(Addr));
 
   SmallVector<std::string> Names;
   for (uint32_t Index :
@@ -8559,12 +8565,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       }
       // Without a relocation, the function is identified by the value stored
       // in the address field.
-      uint64_t FuncEntryPC = Func.FieldValue;
-      // In ARM thumb mode the LSB of the function pointer is set to 1. Since
-      // this detail is unnecessary in call graph reconstruction, we are
-      // clearing this bit to facilitate tooling.
-      if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
-        FuncEntryPC &= ~1;
+      uint64_t FuncEntryPC = this->clearThumbBit(Func.FieldValue);
       // In a relocatable object file that value is not a final address, so
       // there are no symbol names to look up for it.
       if (!IsRelocatable) {

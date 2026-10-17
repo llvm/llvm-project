@@ -939,3 +939,117 @@ Symbols:
     Value:   0x0
     Type:    STT_FUNC
     Binding: STB_GLOBAL
+
+## Check that on ARM the Thumb bit is cleared from function addresses, so that
+## Thumb functions are found.
+
+# RUN: yaml2obj --docnum=15 %s -o %t20
+# RUN: llvm-readelf --stack-sizes %t20 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t20 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-LLVM --implicit-check-not=warning:
+
+# THUMB-GNU:      Size     Functions
+# THUMB-GNU-NEXT:   16     foo
+
+# THUMB-LLVM:      StackSizes [
+# THUMB-LLVM-NEXT:   Entry {
+# THUMB-LLVM-NEXT:     Functions: [foo]
+# THUMB-LLVM-NEXT:     Size: 0x10
+# THUMB-LLVM-NEXT:   }
+# THUMB-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      ## The address of the Thumb function foo, with the Thumb bit set.
+      - Address: 0x1001
+        Size:    0x10
+    Link:    .text
+Symbols:
+  - Name:    foo
+    Section: .text
+    Value:   0x1001
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that on ARM the Thumb bit is also cleared from the address that a
+## relocation resolves to, so that Thumb functions are found in relocatable
+## object files too.
+
+# RUN: yaml2obj --docnum=16 %s -o %t21
+# RUN: llvm-readelf --stack-sizes %t21 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-REL-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t21 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=THUMB-REL-LLVM --implicit-check-not=warning:
+
+# THUMB-REL-GNU:      Size     Functions
+# THUMB-REL-GNU-NEXT:   16     foo
+# THUMB-REL-GNU-NEXT:   32     bar
+
+# THUMB-REL-LLVM:      StackSizes [
+# THUMB-REL-LLVM-NEXT:   Entry {
+# THUMB-REL-LLVM-NEXT:     Functions: [foo]
+# THUMB-REL-LLVM-NEXT:     Size: 0x10
+# THUMB-REL-LLVM-NEXT:   }
+# THUMB-REL-LLVM-NEXT:   Entry {
+# THUMB-REL-LLVM-NEXT:     Functions: [bar]
+# THUMB-REL-LLVM-NEXT:     Size: 0x20
+# THUMB-REL-LLVM-NEXT:   }
+# THUMB-REL-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    32
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Link:    .text
+    Entries:
+      ## The implicit addend of the relocation against foo.
+      - Address: 0x0
+        Size:    0x10
+      ## The implicit addend of the relocation against the section symbol: the
+      ## offset of bar, with the Thumb bit set.
+      - Address: 0x11
+        Size:    0x20
+  - Name:    .rel.stack_sizes
+    Type:    SHT_REL
+    Info:    .stack_sizes
+    Relocations:
+      - Offset: 0x0
+        Symbol: foo
+        Type:   R_ARM_ABS32
+      - Offset: 0x5
+        Symbol: 1 ## The STT_SECTION symbol of .text
+        Type:   R_ARM_ABS32
+Symbols:
+  - Type:    STT_SECTION
+    Section: .text
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x1
+  - Name:    bar
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x11
