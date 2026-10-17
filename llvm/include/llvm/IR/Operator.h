@@ -475,7 +475,7 @@ public:
       });
   }
 
-  /// Compute the maximum alignment that this GEP is garranteed to preserve.
+  /// Compute the maximum alignment that this GEP is guaranteed to preserve.
   LLVM_ABI Align getMaxPreservedAlignment(const DataLayout &DL) const;
 
   /// Accumulate the constant address offset of this GEP if possible.

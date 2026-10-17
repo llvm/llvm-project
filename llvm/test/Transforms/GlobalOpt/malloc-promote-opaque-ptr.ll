@@ -8,11 +8,11 @@
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 ;.
-; CHECK: @[[G1_BODY_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global i64 undef
-; CHECK: @[[G2_BODY_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global i32 undef
-; CHECK: @[[G2_BODY_1:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global i32 undef
-; CHECK: @[[G2_BODY_2:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global i32 undef
-; CHECK: @[[G3_BODY:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [8 x i8] undef
+; CHECK: @g1.body.0 = internal unnamed_addr global i64 undef, align 8
+; CHECK: @g2.body.0 = internal unnamed_addr global i32 undef, align 4
+; CHECK: @g2.body.1 = internal unnamed_addr global i32 undef, align 4
+; CHECK: @g2.body.2 = internal unnamed_addr global i32 undef, align 4
+; CHECK: @g3.body = internal unnamed_addr global [8 x i8] undef, align 4
 ;.
 define void @test_store(i64 %a, i32 %b) {
 ; CHECK-LABEL: @test_store(
