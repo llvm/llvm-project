@@ -433,12 +433,12 @@ define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:3]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[8:11], 0 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_store_dword a1, off, s[8:11], 0 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a2, off, s[8:11], 0 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    buffer_store_dword a3, off, s[8:11], 0 offset:12 ; 4-byte Folded Spill
-; GFX90A-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dwordx4 a[0:3], v0, s[2:3]
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 1.0

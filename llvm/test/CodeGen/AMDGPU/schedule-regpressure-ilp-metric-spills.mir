@@ -14,12 +14,7 @@
 # GCN: S_ENDPGM
 
 # GCN-GCNTRACKER-LABEL: name: no_sched_metric_due_to_spills
-# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
-# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
-# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
-# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
-# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
-# GCN-GCNTRACKER: SI_SPILL_V32_SAVE
+# GCN-GCNTRACKER-NOT: SI_SPILL_
 # GCN-GCNTRACKER: S_ENDPGM
 
 # When using the GCN Trackers, the scheduler is able to acieve desired occupancy without running high-RP-reschedule stage. However, the RP is still high,

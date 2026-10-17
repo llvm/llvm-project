@@ -698,22 +698,42 @@ void GCNDownwardRPTrackerBase::retireVirtReg(Register Reg, SlotIndex SI) {
   }
 }
 
-void GCNDownwardRPTrackerBase::retireDeadOperands(const MachineInstr &MI,
-                                                  SlotIndex SI) {
+void GCNDownwardRPTrackerBase::retireDyingUses(const MachineInstr &MI) {
   assert(MRI && "call reset first");
 
-  // Retire lanes of register operands that are dead at SI.
+  // Mirror ECDefPressure handling from GCNUpwardRPTracker::recede().
+  GCNRegPressure ECDefPressure;
+  for (const MachineOperand &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isVirtual() && MO.isEarlyClobber())
+      ECDefPressure.inc(Reg, LaneBitmask::getNone(), getDefRegMask(MO, *MRI),
+                        *MRI);
+  }
+
+  MaxPressure = max(MaxPressure, CurPressure + ECDefPressure);
+
+  if (MI.isPHI())
+    return;
+
+  SlotIndex SI = LIS.getInstructionIndex(MI).getDeadSlot();
+  assert(SI.isValid());
   SmallSet<Register, 8> SeenRegs;
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      continue;
-    if (MO.isUse() && MI.getOpcode() == AMDGPU::PHI)
-      break;
-    if (MO.isUse() && !MO.readsReg())
-      continue;
-    if (!SeenRegs.insert(MO.getReg()).second)
-      continue;
-    retireVirtReg(MO.getReg(), SI);
+  for (const MachineOperand &MO : MI.all_uses()) {
+    Register Reg = MO.getReg();
+    if (MO.readsReg() && Reg.isVirtual() && SeenRegs.insert(Reg).second)
+      retireVirtReg(Reg, SI);
+  }
+}
+
+void GCNDownwardRPTrackerBase::retireDeadDefs(const MachineInstr &MI,
+                                              SlotIndex SI) {
+  assert(MRI && "call reset first");
+
+  SmallSet<Register, 8> SeenRegs;
+  for (const MachineOperand &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isVirtual() && SeenRegs.insert(Reg).second)
+      retireVirtReg(Reg, SI);
   }
 
   MaxPressure = max(MaxPressure, CurPressure);
@@ -744,14 +764,16 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
                      ? LIS.getInstructionIndex(*LastTrackedMI).getDeadSlot()
                      : LIS.getInstructionIndex(*NextMI).getBaseIndex();
   assert(SI.isValid());
-  GCNDownwardRPTrackerBase::retireDeadOperands(*LastTrackedMI, SI);
+  GCNDownwardRPTrackerBase::retireDeadDefs(*LastTrackedMI, SI);
   LastTrackedMI = nullptr;
   return NextMI == MBBEnd;
 }
 
-void GCNDownwardRPTracker::advanceToNext() {
+void GCNDownwardRPTracker::advanceToNext(bool RetireDeadUses) {
   LastTrackedMI = NextMI++;
   NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
+  if (RetireDeadUses)
+    GCNDownwardRPTrackerBase::retireDyingUses(*LastTrackedMI);
   GCNDownwardRPTrackerBase::addDefs(*LastTrackedMI);
 }
 
@@ -780,8 +802,9 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
 }
 
 void GCNManualDownwardRPTracker::advance(const MachineInstr &MI) {
+  GCNDownwardRPTrackerBase::retireDyingUses(MI);
   GCNDownwardRPTrackerBase::addDefs(MI);
-  GCNDownwardRPTrackerBase::retireDeadOperands(
+  GCNDownwardRPTrackerBase::retireDeadDefs(
       MI, LIS.getInstructionIndex(MI).getDeadSlot());
 
   // Speculative queries (bumpDownwardPressure) must know the last scheduled
