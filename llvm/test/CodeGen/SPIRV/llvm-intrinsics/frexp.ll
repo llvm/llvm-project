@@ -187,3 +187,15 @@ define void @frexp_f64(ptr %out, double %x) {
   store i32 %exp, ptr %exp.ptr
   ret void
 }
+
+; The exponent result is never extracted, so its register has no SPIR-V type.
+; CHECK: %[[#x_var5:]] = OpFunctionParameter %[[#vec4_float_type]]
+; CHECK: %[[#var11:]] = OpVariable %[[#fn_ptr_type_vec4_i32]] Function
+; CHECK: %[[#extinst11:]] = OpExtInst %[[#vec4_float_type]] %[[#extinst_id]] frexp %[[#x_var5]] %[[#var11]]
+; CHECK-NOT: OpLoad %[[#vec4_int_type]] %[[#var11]]
+; CHECK: OpReturnValue %[[#extinst11]]
+define <4 x float> @frexp_exp_not_extracted(<4 x float> %x) {
+  %ret = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %x)
+  %mantissa = extractvalue { <4 x float>, <4 x i32> } %ret, 0
+  ret <4 x float> %mantissa
+}

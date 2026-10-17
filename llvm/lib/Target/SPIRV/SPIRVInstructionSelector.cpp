@@ -1625,15 +1625,25 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
       continue;
 
     MachineIRBuilder MIRBuilder(I);
-    SPIRVTypeInst PointeeTy = GR.getSPIRVTypeForVReg(I.getOperand(1).getReg());
+    Register ExpResReg = I.getOperand(1).getReg();
+    SPIRVTypeInst PointeeTy = GR.getSPIRVTypeForVReg(ExpResReg);
+    if (!PointeeTy) {
+      // An unused exponent result may have no SPIR-V type assigned. Both
+      // extended instruction sets require a 32-bit integer exponent with the
+      // same number of components as the input.
+      PointeeTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+      unsigned NumComponents =
+          GR.getScalarOrVectorComponentCount(I.getOperand(2).getReg());
+      if (NumComponents > 1)
+        PointeeTy =
+            GR.getOrCreateSPIRVVectorType(PointeeTy, NumComponents, I, TII);
+    }
     const SPIRVTypeInst PointerType = GR.getOrCreateSPIRVPointerType(
         PointeeTy, MIRBuilder, SPIRV::StorageClass::Function);
     Register PointerVReg =
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
     auto It = getOpVariableMBBIt(*I.getMF());
-    // An untyped pointer result type is only legal on OpUntypedVariableKHR,
-    // but not on OpVariable.
     const bool IsUntyped =
         PointerType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
     auto VarMIB =
@@ -1644,7 +1654,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
             .addUse(GR.getSPIRVTypeID(PointerType))
             .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
     if (IsUntyped)
-      VarMIB.addUse(GR.getSPIRVTypeID(PointeeTy)); // Data Type
+      VarMIB.addUse(GR.getSPIRVTypeID(PointeeTy));
     VarMIB.constrainAllUses(TII, TRI, RBI);
 
     SPIRVTypeInst MantissaTy = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
@@ -1657,7 +1667,6 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
 
-    Register ExpResReg = I.getOperand(1).getReg();
     if (!MRI->use_nodbg_empty(ExpResReg))
       BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
           .addDef(ExpResReg)
@@ -1666,7 +1675,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
           .constrainAllUses(TII, TRI, RBI);
     return true;
   }
-  return false;
+  llvm_unreachable("no extended instruction set available for frexp");
 }
 
 bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,

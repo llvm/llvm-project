@@ -212,6 +212,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::abs:
   case Intrinsic::atan2:
   case Intrinsic::copysign:
+  case Intrinsic::frexp:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::exp:
@@ -1104,6 +1105,49 @@ static Value *expandCopySignIntrinsic(CallInst *Orig) {
   return Builder.CreateBitCast(CombinedInt, Ty);
 }
 
+// Expand llvm.frexp for 32-bit floats by splitting the IEEE bit pattern. The
+// mantissa keeps the sign of X and has its exponent field set to that of 0.5,
+// so it lies in [0.5, 1). Zeros, denormals, infinities and NaNs return X as the
+// mantissa with an exponent of 0.
+static Value *expandFrexpIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getArgOperand(0);
+  Type *Ty = X->getType();
+  auto *RetTy = cast<StructType>(Orig->getType());
+  Type *ExpTy = RetTy->getElementType(1);
+
+  if (!Ty->getScalarType()->isFloatTy())
+    reportFatalUsageError("frexp is only supported for 32-bit floats in DXIL");
+
+  IRBuilder<> Builder(Orig);
+  Type *IntTy = Ty->getWithNewType(Builder.getInt32Ty());
+
+  // `ConstantInt::get` broadcasts to a splat when `IntTy` is a vector.
+  Constant *ExpMask = ConstantInt::get(IntTy, 0x7f800000);
+  Constant *MantSignMask = ConstantInt::get(IntTy, 0x807fffff);
+  Constant *HalfExpBits = ConstantInt::get(IntTy, 0x3f000000);
+  Constant *ExpShift = ConstantInt::get(IntTy, 23);
+  Constant *ExpBias = ConstantInt::get(IntTy, 126);
+  Constant *Zero = ConstantInt::get(IntTy, 0);
+
+  Value *Bits = Builder.CreateBitCast(X, IntTy);
+  Value *ExpBits = Builder.CreateAnd(Bits, ExpMask);
+  Value *IsSpecial = Builder.CreateOr(Builder.CreateICmpEQ(ExpBits, Zero),
+                                      Builder.CreateICmpEQ(ExpBits, ExpMask));
+
+  Value *Mant =
+      Builder.CreateOr(Builder.CreateAnd(Bits, MantSignMask), HalfExpBits);
+  Mant = Builder.CreateSelect(IsSpecial, X, Builder.CreateBitCast(Mant, Ty));
+
+  Value *Exp =
+      Builder.CreateSub(Builder.CreateLShr(ExpBits, ExpShift), ExpBias);
+  Exp = Builder.CreateSelect(IsSpecial, Zero, Exp);
+  Exp = Builder.CreateSExtOrTrunc(Exp, ExpTy);
+
+  Value *Agg = PoisonValue::get(RetTy);
+  Agg = Builder.CreateInsertValue(Agg, Mant, 0);
+  return Builder.CreateInsertValue(Agg, Exp, 1);
+}
+
 // Expand llvm.matrix.multiply by extracting row/column vectors and computing
 // dot products.
 // Result[r,c] = dot(row_r(LHS), col_c(RHS))
@@ -1309,6 +1353,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
+    break;
+  case Intrinsic::frexp:
+    Result = expandFrexpIntrinsic(Orig);
     break;
   case Intrinsic::is_fpclass:
     Result = expandIsFPClass(Orig);
