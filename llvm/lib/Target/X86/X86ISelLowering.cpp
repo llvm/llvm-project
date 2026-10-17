@@ -35876,8 +35876,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     EVT SrcVT = Src.getValueType();
 
-    // f16 fits in i64, so the generic expansion needs no libcall.
-    if (VT == MVT::i128 && Subtarget.isTargetWin64() && SrcVT == MVT::f16)
+    // The generic expansion converts f16 without a libcall. This must come
+    // before the soft f16 handling below, which extends to f32.
+    if (VT == MVT::i128 && SrcVT == MVT::f16)
       return;
 
     SDValue Res;
