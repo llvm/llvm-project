@@ -4042,9 +4042,6 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
   return foldChainableCast(*this, adaptor);
 }
 
-/// Computes the primitive bit size of an LLVM-compatible scalar or vector
-/// type, following \c llvm::Type::getPrimitiveSizeInBits. Returns failure if
-/// the type has no primitive bit size or the size overflows.
 static FailureOr<llvm::TypeSize> getBitcastSizeInBits(Type type) {
   if (type.isIntOrFloat())
     return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
