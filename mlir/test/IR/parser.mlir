@@ -127,6 +127,18 @@ func.func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "specia
 // CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]*}}, {memSpace = "special", subIndex = 3 : i64}>)
 func.func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
 
+// CHECK: func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.unknown_attr>)
+func.func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.unknown_attr>)
+
+// CHECK: func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map{{[0-9]*}}, #unknown_dialect.unknown_attr>)
+func.func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map3, #unknown_dialect.unknown_attr>)
+
+// CHECK: func private @memrefs_nomap_typespace(memref<5x6x7xf32, i8>)
+func.func private @memrefs_nomap_typespace(memref<5x6x7xf32, i8>)
+
+// CHECK: func private @memrefs_map_typespace(memref<5x6x7xf32, #map{{[0-9]*}}, i8>)
+func.func private @memrefs_map_typespace(memref<5x6x7xf32, #map3, i8>)
+
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
 func.func private @complex_types(complex<i1>) -> complex<f32>
 

@@ -10,4 +10,4 @@
 
 #include "src/math/issignalingf.h"
 
-LIST_ISSIGNALING_TESTS(float, LIBC_NAMESPACE::issignalingf)
+LIST_ISSIGNALING_TESTS(Issignalingf, float, LIBC_NAMESPACE::issignalingf)

@@ -5,6 +5,7 @@
 // RUN: %libomptarget-run-generic | %fcheck-generic
 
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 #include <stdio.h>
 

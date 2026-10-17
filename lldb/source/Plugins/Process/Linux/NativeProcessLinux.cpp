@@ -767,7 +767,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
                "received error while checking for watchpoint hits, pid = "
                "{0}, error = {1}",
                thread.GetID(), error);
-    if (wp_index != LLDB_INVALID_INDEX32) {
+    if (error.Success() && wp_index != LLDB_INVALID_INDEX32) {
       MonitorWatchpoint(thread, wp_index);
       break;
     }
@@ -780,7 +780,7 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
       LLDB_LOG(log, "received error while checking for hardware "
                     "breakpoint hits, pid = {0}, error = {1}",
                thread.GetID(), error);
-    if (bp_index != LLDB_INVALID_INDEX32) {
+    if (error.Success() && bp_index != LLDB_INVALID_INDEX32) {
       MonitorBreakpoint(thread);
       break;
     }

@@ -9,6 +9,7 @@ add_libc_test(
     libc.src.__support.printf_core.core_structs
     libc.src.__support.CPP.string_view
     libc.src.__support.arg_list
+    libc.src.__support.macros.properties.types
     libc.test.UnitTest.PrintfMatcher
 )
 

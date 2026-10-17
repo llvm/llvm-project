@@ -67,18 +67,18 @@
 
 func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %0 = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "alloc", uniq_name = "_QFtestEalloc"}
-  %1:2 = hlfir.declare %0 {test.ptr="alloc", fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
-  %2:2 = hlfir.declare %arg0 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %0 uniq_name("_QFtestEalloc") fortran_attrs<allocatable> {test.ptr = "alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %2:2 = hlfir.declare %arg0 uniq_name("_QFtestEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %3 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p0", uniq_name = "_QFtestEp0"}
-  %4:2 = hlfir.declare %3 {test.ptr="p0", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %4:2 = hlfir.declare %3 uniq_name("_QFtestEp0") fortran_attrs<pointer> {test.ptr = "p0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %5 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p1", uniq_name = "_QFtestEp1"}
-  %6:2 = hlfir.declare %5 {test.ptr="p1", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %6:2 = hlfir.declare %5 uniq_name("_QFtestEp1") fortran_attrs<pointer> {test.ptr = "p1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %7 = fir.alloca f32 {bindc_name = "t", fir.target, uniq_name = "_QFtestEt"}
-  %8:2 = hlfir.declare %7 {test.ptr="t", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %8:2 = hlfir.declare %7 uniq_name("_QFtestEt") fortran_attrs<target> {test.ptr = "t"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %9 = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "t_alloc", fir.target, uniq_name = "_QFtestEt_alloc"}
-  %10:2 = hlfir.declare %9 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFtestEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %10:2 = hlfir.declare %9 uniq_name("_QFtestEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
   %11 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QFtestEv"}
-  %12:2 = hlfir.declare %11 {test.ptr="v", uniq_name = "_QFtestEv"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %12:2 = hlfir.declare %11 uniq_name("_QFtestEv") {test.ptr = "v"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %13 = fir.load %2#0 : !fir.ref<i32>
   %14 = fir.convert %13 : (i32) -> i64
   %15 = fir.convert %14 : (i64) -> index
@@ -87,7 +87,7 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %17 = arith.select %16, %15, %c0 : index
   %18 = fir.alloca !fir.array<?xf32>, %17 {bindc_name = "arr", uniq_name = "_QFtestEarr"}
   %19 = fir.shape %17 : (index) -> !fir.shape<1>
-  %20:2 = hlfir.declare %18(%19) {uniq_name = "_QFtestEarr"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %20:2 = hlfir.declare %18(%19) uniq_name("_QFtestEarr") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   %21 = fir.load %2#0 : !fir.ref<i32>
   %22 = fir.convert %21 : (i32) -> i64
   %23 = fir.convert %22 : (i64) -> index
@@ -96,7 +96,7 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %25 = arith.select %24, %23, %c0_0 : index
   %26 = fir.alloca !fir.array<?xf32>, %25 {bindc_name = "t_arr", fir.target, uniq_name = "_QFtestEt_arr"}
   %27 = fir.shape %25 : (index) -> !fir.shape<1>
-  %28:2 = hlfir.declare %26(%27) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt_arr"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %28:2 = hlfir.declare %26(%27) uniq_name("_QFtestEt_arr") fortran_attrs<target> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   %29 = fir.load %4#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %30 = fir.box_addr %29 {test.ptr="p0.tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %31 = fir.load %6#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -114,18 +114,18 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
 
 func.func @_QPtest.fir(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %0 = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "alloc", uniq_name = "_QFtestEalloc"}
-  %1 = fir.declare %0 {test.ptr = "alloc.fir", fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %2 = fir.declare %arg0 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("_QFtestEalloc") fortran_attrs<allocatable> {test.ptr = "alloc.fir"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %2 = fir.declare %arg0 uniq_name("_QFtestEn") : (!fir.ref<i32>) -> !fir.ref<i32>
   %3 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p0", uniq_name = "_QFtestEp0"}
-  %4 = fir.declare %3 {test.ptr = "p0.fir", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %4 = fir.declare %3 uniq_name("_QFtestEp0") fortran_attrs<pointer> {test.ptr = "p0.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %5 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p1", uniq_name = "_QFtestEp1"}
-  %6 = fir.declare %5 {test.ptr = "p1.fir", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %6 = fir.declare %5 uniq_name("_QFtestEp1") fortran_attrs<pointer> {test.ptr = "p1.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %7 = fir.alloca f32 {bindc_name = "t", fir.target, uniq_name = "_QFtestEt"}
-  %8 = fir.declare %7 {test.ptr = "t.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %8 = fir.declare %7 uniq_name("_QFtestEt") fortran_attrs<target> {test.ptr = "t.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %9 = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "t_alloc", fir.target, uniq_name = "_QFtestEt_alloc"}
-  %10 = fir.declare %9 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFtestEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %10 = fir.declare %9 uniq_name("_QFtestEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %11 = fir.alloca f32 {bindc_name = "v", uniq_name = "_QFtestEv"}
-  %12 = fir.declare %11 {test.ptr = "v.fir", uniq_name = "_QFtestEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %12 = fir.declare %11 uniq_name("_QFtestEv") {test.ptr = "v.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %13 = fir.load %2 : !fir.ref<i32>
   %14 = fir.convert %13 : (i32) -> i64
   %15 = fir.convert %14 : (i64) -> index
@@ -134,7 +134,7 @@ func.func @_QPtest.fir(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %17 = arith.select %16, %15, %c0 : index
   %18 = fir.alloca !fir.array<?xf32>, %17 {bindc_name = "arr", uniq_name = "_QFtestEarr"}
   %19 = fir.shape %17 : (index) -> !fir.shape<1>
-  %20 = fir.declare %18(%19) {uniq_name = "_QFtestEarr"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+  %20 = fir.declare %18(%19) uniq_name("_QFtestEarr") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
   %21 = fir.embox %20(%19) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   %22 = fir.load %2 : !fir.ref<i32>
   %23 = fir.convert %22 : (i32) -> i64
@@ -144,7 +144,7 @@ func.func @_QPtest.fir(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %26 = arith.select %25, %24, %c0_0 : index
   %27 = fir.alloca !fir.array<?xf32>, %26 {bindc_name = "t_arr", fir.target, uniq_name = "_QFtestEt_arr"}
   %28 = fir.shape %26 : (index) -> !fir.shape<1>
-  %29 = fir.declare %27(%28) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt_arr"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
+  %29 = fir.declare %27(%28) uniq_name("_QFtestEt_arr") fortran_attrs<target> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
   %30 = fir.embox %29(%28) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   %31 = fir.load %4 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %32 = fir.box_addr %31 {test.ptr = "p0.tgt.fir"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
@@ -224,15 +224,15 @@ func.func @_QPtest.fir(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
 
 func.func @_QPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "arr"}, %arg2: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "t_arr", fir.target}, %arg3: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "alloc"}, %arg4: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "t_alloc", fir.target}, %arg5: !fir.ref<f32> {fir.bindc_name = "t", fir.target}, %arg6: !fir.ref<f32> {fir.bindc_name = "v"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg3 dummy_scope %0 {test.ptr="alloc", fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
-  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg3 dummy_scope %0 uniq_name("_QFtestEalloc") fortran_attrs<allocatable> {test.ptr = "alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEarr") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %3 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p0", uniq_name = "_QFtestEp0"}
-  %4:2 = hlfir.declare %3 {test.ptr="p0", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
-  %5:2 = hlfir.declare %arg0 dummy_scope %0 {test.ptr="p1", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
-  %6:2 = hlfir.declare %arg5 dummy_scope %0 {test.ptr="t", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
-  %7:2 = hlfir.declare %arg4 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFtestEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
-  %8:2 = hlfir.declare %arg2 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt_arr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-  %9:2 = hlfir.declare %arg6 dummy_scope %0 {test.ptr="v", uniq_name = "_QFtestEv"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %4:2 = hlfir.declare %3 uniq_name("_QFtestEp0") fortran_attrs<pointer> {test.ptr = "p0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %5:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEp1") fortran_attrs<pointer> {test.ptr = "p1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %6:2 = hlfir.declare %arg5 dummy_scope %0 uniq_name("_QFtestEt") fortran_attrs<target> {test.ptr = "t"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %7:2 = hlfir.declare %arg4 dummy_scope %0 uniq_name("_QFtestEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %8:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEt_arr") fortran_attrs<target> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %9:2 = hlfir.declare %arg6 dummy_scope %0 uniq_name("_QFtestEv") {test.ptr = "v"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %10 = fir.load %4#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %11 = fir.box_addr %10 {test.ptr="p0.tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %12 = fir.load %5#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -250,17 +250,17 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p
 
 func.func @_QPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "arr"}, %arg2: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "t_arr", fir.target}, %arg3: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "alloc"}, %arg4: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "t_alloc", fir.target}, %arg5: !fir.ref<f32> {fir.bindc_name = "t", fir.target}, %arg6: !fir.ref<f32> {fir.bindc_name = "v"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg3 dummy_scope %0 {test.ptr = "alloc.fir", fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %2 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.declare %arg3 dummy_scope %0 uniq_name("_QFtestEalloc") fortran_attrs<allocatable> {test.ptr = "alloc.fir"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %2 = fir.declare %arg1 dummy_scope %0 uniq_name("_QFtestEarr") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %3 = fir.rebox %2 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
   %4 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p0", uniq_name = "_QFtestEp0"}
-  %5 = fir.declare %4 {test.ptr = "p0.fir", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %6 = fir.declare %arg0 dummy_scope %0 {test.ptr = "p1.fir", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %7 = fir.declare %arg5 dummy_scope %0 {test.ptr = "t.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %8 = fir.declare %arg4 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QFtestEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<f32>>>
-  %9 = fir.declare %arg2 dummy_scope %0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEt_arr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %5 = fir.declare %4 uniq_name("_QFtestEp0") fortran_attrs<pointer> {test.ptr = "p0.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %6 = fir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEp1") fortran_attrs<pointer> {test.ptr = "p1.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %7 = fir.declare %arg5 dummy_scope %0 uniq_name("_QFtestEt") fortran_attrs<target> {test.ptr = "t.fir"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %8 = fir.declare %arg4 dummy_scope %0 uniq_name("_QFtestEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %9 = fir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEt_arr") fortran_attrs<target> : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %10 = fir.rebox %9 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
-  %11 = fir.declare %arg6 dummy_scope %0 {test.ptr = "v.fir", uniq_name = "_QFtestEv"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %11 = fir.declare %arg6 dummy_scope %0 uniq_name("_QFtestEv") {test.ptr = "v.fir"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %12 = fir.load %5 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %13 = fir.box_addr %12 {test.ptr = "p0.tgt.fir"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %14 = fir.load %6 : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -341,25 +341,25 @@ func.func @_QPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name 
 
 func.func @_QMmPtest() {
   %0 = fir.address_of(@_QMmEalloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %1:2 = hlfir.declare %0 {test.ptr="alloc", fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %1:2 = hlfir.declare %0 uniq_name("_QMmEalloc") fortran_attrs<allocatable> {test.ptr = "alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
   %2 = fir.address_of(@_QMmEarr) : !fir.ref<!fir.array<2xf32>>
   %c2 = arith.constant 2 : index
   %3 = fir.shape %c2 : (index) -> !fir.shape<1>
-  %4:2 = hlfir.declare %2(%3) {uniq_name = "_QMmEarr"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
+  %4:2 = hlfir.declare %2(%3) uniq_name("_QMmEarr") : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
   %5 = fir.address_of(@_QMmEp1) : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %6:2 = hlfir.declare %5 {test.ptr="p1", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %6:2 = hlfir.declare %5 uniq_name("_QMmEp1") fortran_attrs<pointer> {test.ptr = "p1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %7 = fir.address_of(@_QMmEt) : !fir.ref<f32>
-  %8:2 = hlfir.declare %7 {test.ptr="t", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEt"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %8:2 = hlfir.declare %7 uniq_name("_QMmEt") fortran_attrs<target> {test.ptr = "t"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %9 = fir.address_of(@_QMmEt_alloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %10:2 = hlfir.declare %9 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %10:2 = hlfir.declare %9 uniq_name("_QMmEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
   %11 = fir.address_of(@_QMmEt_arr) : !fir.ref<!fir.array<2xf32>>
   %c2_0 = arith.constant 2 : index
   %12 = fir.shape %c2_0 : (index) -> !fir.shape<1>
-  %13:2 = hlfir.declare %11(%12) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEt_arr"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
+  %13:2 = hlfir.declare %11(%12) uniq_name("_QMmEt_arr") fortran_attrs<target> : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>)
   %14 = fir.address_of(@_QMmEv) : !fir.ref<f32>
-  %15:2 = hlfir.declare %14 {test.ptr="v", uniq_name = "_QMmEv"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %15:2 = hlfir.declare %14 uniq_name("_QMmEv") {test.ptr = "v"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %16 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p0", uniq_name = "_QMmFtestEp0"}
-  %17:2 = hlfir.declare %16 {test.ptr="p0", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
+  %17:2 = hlfir.declare %16 uniq_name("_QMmFtestEp0") fortran_attrs<pointer> {test.ptr = "p0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %18 = fir.load %17#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %19 = fir.box_addr %18 {test.ptr="p0.tgt"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %20 = fir.load %6#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
@@ -377,25 +377,25 @@ func.func @_QMmPtest() {
 
 func.func @_QMmPtest.fir() {
   %0 = fir.address_of(@_QMmEalloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %1 = fir.declare %0 {test.ptr = "alloc.fir", fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %1 = fir.declare %0 uniq_name("_QMmEalloc") fortran_attrs<allocatable> {test.ptr = "alloc.fir"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %2 = fir.address_of(@_QMmEarr) : !fir.ref<!fir.array<2xf32>>
   %c2 = arith.constant 2 : index
   %3 = fir.shape %c2 : (index) -> !fir.shape<1>
-  %4 = fir.declare %2(%3) {uniq_name = "_QMmEarr"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf32>>
+  %4 = fir.declare %2(%3) uniq_name("_QMmEarr") : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf32>>
   %5 = fir.address_of(@_QMmEp1) : !fir.ref<!fir.box<!fir.ptr<f32>>>
-  %6 = fir.declare %5 {test.ptr = "p1.fir", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %6 = fir.declare %5 uniq_name("_QMmEp1") fortran_attrs<pointer> {test.ptr = "p1.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %7 = fir.address_of(@_QMmEt) : !fir.ref<f32>
-  %8 = fir.declare %7 {test.ptr = "t.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEt"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %8 = fir.declare %7 uniq_name("_QMmEt") fortran_attrs<target> {test.ptr = "t.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %9 = fir.address_of(@_QMmEt_alloc) : !fir.ref<!fir.box<!fir.heap<f32>>>
-  %10 = fir.declare %9 {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmEt_alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %10 = fir.declare %9 uniq_name("_QMmEt_alloc") fortran_attrs<allocatable, target> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   %11 = fir.address_of(@_QMmEt_arr) : !fir.ref<!fir.array<2xf32>>
   %c2_0 = arith.constant 2 : index
   %12 = fir.shape %c2_0 : (index) -> !fir.shape<1>
-  %13 = fir.declare %11(%12) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEt_arr"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf32>>
+  %13 = fir.declare %11(%12) uniq_name("_QMmEt_arr") fortran_attrs<target> : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<2xf32>>
   %14 = fir.address_of(@_QMmEv) : !fir.ref<f32>
-  %15 = fir.declare %14 {test.ptr = "v.fir", uniq_name = "_QMmEv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %15 = fir.declare %14 uniq_name("_QMmEv") {test.ptr = "v.fir"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %16 = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "p0", uniq_name = "_QMmFtestEp0"}
-  %17 = fir.declare %16 {test.ptr = "p0.fir", fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %17 = fir.declare %16 uniq_name("_QMmFtestEp0") fortran_attrs<pointer> {test.ptr = "p0.fir"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
   %18 = fir.load %17 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %19 = fir.box_addr %18 {test.ptr = "p0.tgt.fir"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   %20 = fir.load %6 : !fir.ref<!fir.box<!fir.ptr<f32>>>

@@ -2123,3 +2123,118 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwi
   %res = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>)
   ret <32 x i8> %res
 }
+
+define void @PR232596(ptr %p0, ptr %p1) {
+; AVX1-LABEL: PR232596:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4096,16384,262144,1048576]
+; AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX1-NEXT:    movl $1, 16(%rsi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR232596:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX2-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX2-NEXT:    movl $1, 16(%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: PR232596:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512F-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512F-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512F-NEXT:    movl $1, 16(%rsi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR232596:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpslld $1, (%rdi), %xmm0
+; AVX512VL-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512VL-NEXT:    movl $1, 16(%rsi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: PR232596:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512BW-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512BW-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512BW-NEXT:    movl $1, 16(%rsi)
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: PR232596:
+; AVX512VBMI2:       # %bb.0:
+; AVX512VBMI2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512VBMI2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX512VBMI2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VBMI2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [20,18,14,12,0,0,0,0]
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm2 = [4294967294,2147483648,1890529855,0,1,u,u,u]
+; AVX512VBMI2-NEXT:    vpshrdvd %zmm1, %zmm0, %zmm2
+; AVX512VBMI2-NEXT:    vextracti128 $1, %ymm2, %xmm0
+; AVX512VBMI2-NEXT:    vmovd %xmm0, 16(%rsi)
+; AVX512VBMI2-NEXT:    vmovdqu %xmm2, (%rsi)
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: PR232596:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vpslld $1, (%rdi), %xmm0
+; AVX512VLBW-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX512VLBW-NEXT:    movl $1, 16(%rsi)
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: PR232596:
+; AVX512VLVBMI2:       # %bb.0:
+; AVX512VLVBMI2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512VLVBMI2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX512VLVBMI2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VLVBMI2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4294967294,2147483648,1890529855,0,1,u,u,u]
+; AVX512VLVBMI2-NEXT:    vpshrdvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512VLVBMI2-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512VLVBMI2-NEXT:    vmovd %xmm0, 16(%rsi)
+; AVX512VLVBMI2-NEXT:    vmovdqu %xmm1, (%rsi)
+; AVX512VLVBMI2-NEXT:    vzeroupper
+; AVX512VLVBMI2-NEXT:    retq
+;
+; XOPAVX1-LABEL: PR232596:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; XOPAVX1-NEXT:    vpshld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vmovdqu %xmm0, (%rsi)
+; XOPAVX1-NEXT:    movl $1, 16(%rsi)
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: PR232596:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; XOPAVX2-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX2-NEXT:    vmovdqu %xmm0, (%rsi)
+; XOPAVX2-NEXT:    movl $1, 16(%rsi)
+; XOPAVX2-NEXT:    vzeroupper
+; XOPAVX2-NEXT:    retq
+  %a = load <5 x i32>, ptr %p0, align 1
+  %v0 = call <5 x i32> @llvm.fshr.v5i32(<5 x i32> %a, <5 x i32> <i32 -2, i32 -2147483648, i32 1890529855, i32 0, i32 1>, <5 x i32> <i32 20, i32 18, i32 14, i32 12, i32 0>)
+  store <5 x i32> %v0, ptr %p1, align 1
+  ret void
+}

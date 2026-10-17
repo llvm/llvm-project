@@ -93,8 +93,8 @@
     eEncodingUint, eFormatHex,                                                 \
     {dwarf_mm##i##_i386, dwarf_mm##i##_i386, LLDB_INVALID_REGNUM,              \
      LLDB_INVALID_REGNUM, lldb_mm##i##_i386 },                                 \
-    RegisterContextPOSIX_x86::g_contained_##streg##_32,                        \
-    RegisterContextPOSIX_x86::g_invalidate_##streg##_32,                       \
+    x86_register_info::g_contained_##streg##_32,                               \
+    x86_register_info::g_invalidate_##streg##_32,                              \
     nullptr,                                                                   \
   }
 
@@ -156,8 +156,8 @@
                    {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                  \
                     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                  \
                     lldb_##reg16##_i386 },                                     \
-                    RegisterContextPOSIX_x86::g_contained_##reg32,             \
-                    RegisterContextPOSIX_x86::g_invalidate_##reg32,            \
+                    x86_register_info::g_contained_##reg32,                    \
+                    x86_register_info::g_invalidate_##reg32,                   \
                     nullptr,                                                   \
   }
 
@@ -168,8 +168,8 @@
                    {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                  \
                     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                  \
                     lldb_##reg8##_i386 },                                      \
-                    RegisterContextPOSIX_x86::g_contained_##reg32,             \
-                    RegisterContextPOSIX_x86::g_invalidate_##reg32,            \
+                    x86_register_info::g_contained_##reg32,                    \
+                    x86_register_info::g_invalidate_##reg32,                   \
                     nullptr,                                                   \
   }
 
@@ -180,8 +180,8 @@
                    {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                  \
                     LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,                  \
                     lldb_##reg8##_i386 },                                      \
-                    RegisterContextPOSIX_x86::g_contained_##reg32,             \
-                    RegisterContextPOSIX_x86::g_invalidate_##reg32,            \
+                    x86_register_info::g_contained_##reg32,                    \
+                    x86_register_info::g_invalidate_##reg32,                   \
                     nullptr,                                                   \
   }
 

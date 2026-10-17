@@ -10,7 +10,7 @@ define void @foo(i32 %0, x86_fp80 %1, i32 %2) nounwind {
 ; MSVC-NEXT:    pushl %ebp
 ; MSVC-NEXT:    movl %esp, %ebp
 ; MSVC-NEXT:    andl $-16, %esp
-; MSVC-NEXT:    subl $32, %esp
+; MSVC-NEXT:    subl $16, %esp
 ; MSVC-NEXT:    fldt 24(%ebp)
 ; MSVC-NEXT:    fstpt (%esp)
 ; MSVC-NEXT:    leal 8(%ebp), %eax
@@ -34,7 +34,7 @@ define void @foo(i32 %0, x86_fp80 %1, i32 %2) nounwind {
 ; MINGW-NEXT:    pushl %ebp
 ; MINGW-NEXT:    movl %esp, %ebp
 ; MINGW-NEXT:    andl $-16, %esp
-; MINGW-NEXT:    subl $32, %esp
+; MINGW-NEXT:    subl $16, %esp
 ; MINGW-NEXT:    fldt 12(%ebp)
 ; MINGW-NEXT:    fstpt (%esp)
 ; MINGW-NEXT:    leal 8(%ebp), %eax

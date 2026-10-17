@@ -9,9 +9,10 @@
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
@@ -23,11 +24,15 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
@@ -36,8 +41,9 @@
 
 using namespace llvm;
 
-static void diagnoseNonUniqueResourceAccess(Instruction *I,
-                                            ArrayRef<IntrinsicInst *> Handles) {
+[[noreturn]] static void
+diagnoseNonUniqueResourceAccess(Instruction *I,
+                                ArrayRef<IntrinsicInst *> Handles) {
   LLVMContext &Context = I->getContext();
   std::string InstStr;
   raw_string_ostream InstOS(InstStr);
@@ -52,8 +58,9 @@ static void diagnoseNonUniqueResourceAccess(Instruction *I,
     Context.diagnose(DiagnosticInfoGeneric(
         "Uses resource handle:" + Twine(HandleStr), DS_Note));
   }
-  Context.diagnose(DiagnosticInfoGeneric(
-      "Resource access is not guaranteed to map to a unique global resource"));
+  report_fatal_error(
+      "Resource access is not guaranteed to map to a unique global resource",
+      /*gen_crash_diag=*/false);
 }
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
@@ -330,27 +337,20 @@ getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
   llvm_unreachable("Unhandled atomicrmw operation");
 }
 
-static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
-                              dxil::ResourceTypeInfo &RTI) {
-  std::optional<dxil::AtomicBinOpCode> BinOpCode =
-      getAtomicBinOpCode(AI->getOperation());
-  if (!BinOpCode) {
-    reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
-    return;
-  }
-
-  const DataLayout &DL = AI->getDataLayout();
-  IRBuilder<> Builder(AI);
+// Compute the (coord0, coord1) pair for a buffer resource atomic operation.
+// Non-struct buffers (RawBuffer or TypedBuffer) fold the byte offset into the
+// index and leave coord1 poison. Only StructuredBuffer atomics use both a
+// struct index and a byte offset.
+static std::pair<Value *, Value *>
+getAtomicResourceCoords(IntrinsicInst *II, Value *PointerOperand,
+                        dxil::ResourceTypeInfo &RTI, IRBuilder<> &Builder,
+                        const DataLayout &DL) {
   Value *Index = II->getOperand(1);
 
   // The offset for the rawbuffer load/store/atomic ops is always in bytes.
   uint64_t AccessSize = 1;
-  Value *Offset =
-      traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
+  Value *Offset = traverseGEPOffsets(DL, Builder, PointerOperand, AccessSize);
 
-  // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
-  // into the index and mark the coord1 arg as poison — only StructuredBuffer
-  // atomics use both a struct index and a byte offset.
   if (!RTI.isStruct()) {
     auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
     if (!ConstantOffset || !ConstantOffset->isZero())
@@ -358,16 +358,159 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
     Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
   }
 
-  Value *BinOp = Builder.getInt32(static_cast<uint32_t>(*BinOpCode));
+  return {Index, Offset};
+}
+
+// The coordinates of a texture access are a scalar or a vector with one element
+// per texture dimension, including the array slice if there is one. These map
+// directly onto the coordinate operands of the atomic ops.
+static SmallVector<Value *, 3> getTextureAtomicCoords(IntrinsicInst *II,
+                                                      IRBuilder<> &Builder) {
+  Value *Coords = II->getOperand(1);
+  SmallVector<Value *, 3> CoordArgs;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Coords->getType())) {
+    assert(VecTy->getNumElements() <= 3 && "Too many texture coordinates");
+    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I)
+      CoordArgs.push_back(Builder.CreateExtractElement(Coords, I));
+  } else {
+    CoordArgs.push_back(Coords);
+  }
+  return CoordArgs;
+}
+
+static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
+                            Value *Handle, ArrayRef<Value *> Coords) {
+  assert(!Coords.empty() && Coords.size() <= 3 &&
+         "Atomic operations take between one and three coordinates");
+
+  std::optional<dxil::AtomicBinOpCode> BinOpCode =
+      getAtomicBinOpCode(AI->getOperation());
+  if (!BinOpCode) {
+    reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
+    return;
+  }
+
+  // DXIL has no floating-point atomic op. A float exchange only moves the bit
+  // pattern, so cast the value to an integer of the same width, exchange, and
+  // cast the result back. This matches what DXC emits.
+  Value *Val = AI->getValOperand();
+  Type *ValTy = Val->getType();
+  Type *OpTy = ValTy;
+  if (ValTy->isFloatingPointTy()) {
+    OpTy = Builder.getIntNTy(ValTy->getPrimitiveSizeInBits());
+    Val = Builder.CreateBitCast(Val, OpTy);
+  }
+
+  SmallVector<Value *, 6> Args{
+      Handle, Builder.getInt32(static_cast<uint32_t>(*BinOpCode))};
+  append_range(Args, Coords);
+  Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
+  Args.push_back(Val);
 
   // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
   // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
   // its `createTmpHandleCast` bookkeeping.
-  Value *Result = Builder.CreateIntrinsic(
-      AI->getType(), Intrinsic::dx_resource_atomic_binop,
-      {II->getOperand(0), BinOp, Index, Offset, AI->getValOperand()});
+  Value *Result =
+      Builder.CreateIntrinsic(OpTy, Intrinsic::dx_resource_atomic_binop, Args);
+
+  if (OpTy != ValTy)
+    Result = Builder.CreateBitCast(Result, ValTy);
 
   AI->replaceAllUsesWith(Result);
+}
+
+static void createBufferAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                                    dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
+
+  emitAtomicBinOp(Builder, AI, II->getOperand(0), {Index, Offset});
+}
+
+static void createTextureAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                                     dxil::ResourceTypeInfo &RTI) {
+  // A texture atomic operates on a whole texel, so a multi-component texel has
+  // no single addressable component. A scalar float texel is allowed, because
+  // emitAtomicBinOp exchanges its bit pattern as an integer.
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
+    reportFatalUsageError("DXIL atomicrmw requires a texture resource with a "
+                          "scalar element type");
+    return;
+  }
+
+  IRBuilder<> Builder(AI);
+
+  emitAtomicBinOp(Builder, AI, II->getOperand(0),
+                  getTextureAtomicCoords(II, Builder));
+}
+
+static void emitAtomicCompareExchange(IRBuilder<> &Builder,
+                                      AtomicCmpXchgInst *AI, Value *Handle,
+                                      ArrayRef<Value *> Coords) {
+  assert(!Coords.empty() && Coords.size() <= 3 &&
+         "Atomic operations take between one and three coordinates");
+
+  Value *Compare = AI->getCompareOperand();
+  Value *NewValue = AI->getNewValOperand();
+
+  SmallVector<Value *, 6> Args{Handle};
+  append_range(Args, Coords);
+  Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
+  Args.push_back(Compare);
+  Args.push_back(NewValue);
+
+  Value *Original = Builder.CreateIntrinsic(
+      NewValue->getType(), Intrinsic::dx_resource_atomic_compare_exchange,
+      Args);
+
+  // `cmpxchg` yields a { original, success } pair, but the DXIL op returns
+  // only the original value. DXIL has no way to express the success flag, and
+  // no HLSL builtin reads it, so replace the users of the pair directly
+  // instead of building it again. No pass after this one removes dead code.
+  SmallVector<ExtractValueInst *> Extracts;
+  for (User *U : AI->users()) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV || EV->getIndices()[0] != 0)
+      reportFatalUsageError("DXIL cmpxchg provides only the original value");
+    Extracts.push_back(EV);
+  }
+
+  for (ExtractValueInst *EV : Extracts) {
+    EV->replaceAllUsesWith(Original);
+    EV->eraseFromParent();
+  }
+}
+
+static void createBufferAtomicCompareExchange(IntrinsicInst *II,
+                                              AtomicCmpXchgInst *AI,
+                                              dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
+
+  emitAtomicCompareExchange(Builder, AI, II->getOperand(0), {Index, Offset});
+}
+
+// `cmpxchg` operands are always integers, so unlike atomicrmw there is no
+// float element type to convert here. The element type must be scalar.
+static void createTextureAtomicCompareExchange(IntrinsicInst *II,
+                                               AtomicCmpXchgInst *AI,
+                                               dxil::ResourceTypeInfo &RTI) {
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
+    reportFatalUsageError("DXIL cmpxchg requires a texture resource with a "
+                          "scalar element type");
+    return;
+  }
+
+  IRBuilder<> Builder(AI);
+
+  emitAtomicCompareExchange(Builder, AI, II->getOperand(0),
+                            getTextureAtomicCoords(II, Builder));
 }
 
 static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
@@ -376,20 +519,21 @@ static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   case dxil::ResourceKind::TypedBuffer:
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createAtomicBinOp(II, AI, RTI);
+    return createBufferAtomicBinOp(II, AI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
-  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture3D:
-  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::Texture1DArray:
   case dxil::ResourceKind::Texture2DArray:
+    return createTextureAtomicBinOp(II, AI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
     reportFatalUsageError(
-        "DXIL atomicrmw not implemented for texture resources");
+        "DXIL atomicrmw not implemented for this texture resource kind");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
@@ -401,6 +545,43 @@ static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   case dxil::ResourceKind::Invalid:
   case dxil::ResourceKind::NumEntries:
     llvm_unreachable("Invalid resource kind for atomicrmw");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static void createAtomicCompareExchangeIntrinsic(IntrinsicInst *II,
+                                                 AtomicCmpXchgInst *AI,
+                                                 dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createBufferAtomicCompareExchange(II, AI, RTI);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+    return createTextureAtomicCompareExchange(II, AI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+    reportFatalUsageError(
+        "DXIL cmpxchg not implemented for this texture resource kind");
+    return;
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::TBuffer:
+    reportFatalUsageError(
+        "DXIL cmpxchg not implemented for this resource type");
+    return;
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for cmpxchg");
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -571,6 +752,104 @@ struct CBufferRowIntrin {
 };
 } // namespace
 
+static Value *loadCBufferRowIntoWindow(IRBuilder<> &Builder,
+                                       const CBufferRowIntrin &Intrin,
+                                       Value *Handle, Value *FirstRow,
+                                       Value *Window, unsigned RowNumber,
+                                       StringRef Name) {
+  Value *RowIndex =
+      RowNumber == 0 ? FirstRow
+                     : Builder.CreateAdd(FirstRow, Builder.getInt32(RowNumber));
+  Value *RowLoad = Builder.CreateIntrinsic(
+      Intrin.RetTy, Intrin.IID, {Handle, RowIndex}, nullptr, Name + ".load");
+  for (unsigned J = 0; J != Intrin.NumElts; ++J) {
+    Value *Element = Builder.CreateExtractValue(RowLoad, {J});
+    Window = Builder.CreateInsertElement(
+        Window, Element, Builder.getInt32(RowNumber * Intrin.NumElts + J));
+  }
+  return Window;
+}
+
+static Value *createDynamicCBufferLoad(IntrinsicInst *II, LoadInst *LI,
+                                       const CBufferRowIntrin &Intrin,
+                                       Value *BaseRow, Value *ByteOffset,
+                                       const KnownBits &WithinRow) {
+  IRBuilder<> Builder(LI);
+  Type *Ty = LI->getType();
+  auto *VT = dyn_cast<FixedVectorType>(Ty);
+  unsigned NumElements = VT ? VT->getNumElements() : 1;
+  StringRef Name = LI->getName();
+  Value *Handle = II->getOperand(0);
+  Value *RowSize = Builder.getInt32(hlsl::CBufferRowSizeInBytes);
+  Value *FirstRow =
+      Builder.CreateAdd(BaseRow, Builder.CreateUDiv(ByteOffset, RowSize));
+  Value *Component = Builder.CreateUDiv(Builder.CreateURem(ByteOffset, RowSize),
+                                        Builder.getInt32(Intrin.EltSize));
+  unsigned MinComponent =
+      WithinRow.getMinValue().getZExtValue() / Intrin.EltSize;
+  unsigned MaxComponent =
+      WithinRow.getMaxValue().getZExtValue() / Intrin.EltSize;
+  unsigned MinRows = 1 + (MinComponent + NumElements - 1) / Intrin.NumElts;
+  unsigned MaxRows = 1 + (MaxComponent + NumElements - 1) / Intrin.NumElts;
+  auto *WindowTy =
+      FixedVectorType::get(Ty->getScalarType(), MaxRows * Intrin.NumElts);
+  Value *Window = PoisonValue::get(WindowTy);
+  for (unsigned I = 0; I != MinRows; ++I)
+    Window = loadCBufferRowIntoWindow(Builder, Intrin, Handle, FirstRow, Window,
+                                      I, Name);
+
+  // The unknown starting component can require at most one extra row.
+  // Load it only when needed, rather than accessing beyond the load.
+  if (MaxRows != MinRows) {
+    BasicBlock *Head = LI->getParent();
+    Value *LastComponent =
+        Builder.CreateAdd(Component, Builder.getInt32(NumElements - 1));
+    Value *CrossesRow = Builder.CreateICmpUGE(
+        LastComponent, Builder.getInt32(MinRows * Intrin.NumElts));
+    Instruction *ThenTerm = SplitBlockAndInsertIfThen(CrossesRow, LI, false);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Head->getTerminator(),
+                                                DEBUG_TYPE);
+    Builder.SetInsertPoint(ThenTerm);
+    Value *NextWindow = loadCBufferRowIntoWindow(
+        Builder, Intrin, Handle, FirstRow, Window, MinRows, Name);
+    Builder.SetInsertPoint(LI);
+    auto *Rows = Builder.CreatePHI(WindowTy, 2, Name + ".rows");
+    Rows->addIncoming(Window, Head);
+    Rows->addIncoming(NextWindow, ThenTerm->getParent());
+    Window = Rows;
+  }
+
+  Value *Result = PoisonValue::get(Ty);
+  for (unsigned I = 0; I != NumElements; ++I) {
+    Value *Index =
+        I == 0 ? Component : Builder.CreateAdd(Component, Builder.getInt32(I));
+    Value *Element =
+        Builder.CreateExtractElement(Window, Index, Name + ".extract");
+    Result =
+        VT ? Builder.CreateInsertElement(Result, Element, Builder.getInt32(I))
+           : Element;
+  }
+  return Result;
+}
+
+static KnownBits computeCBufferOffsetKnownBits(Value *Offset,
+                                               const DataLayout &DL,
+                                               const Instruction *CxtI) {
+  KnownBits Known = computeKnownBits(Offset, DL, nullptr, CxtI);
+  auto *Phi = dyn_cast<PHINode>(Offset);
+  if (!Phi || Phi->getNumIncomingValues() == 0)
+    return Known;
+
+  // PHI queries limit recursion into each input, which can hide row alignment.
+  KnownBits IncomingKnown(Known.getBitWidth());
+  IncomingKnown.setAllConflict();
+  for (unsigned I = 0; I != Phi->getNumIncomingValues(); ++I)
+    IncomingKnown = IncomingKnown.intersectWith(
+        computeKnownBits(Phi->getIncomingValue(I), DL, nullptr,
+                         Phi->getIncomingBlock(I)->getTerminator()));
+  return Known.unionWith(IncomingKnown);
+}
+
 static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
                               dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
@@ -620,14 +899,48 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
     } else {
       assert(LastGEP->getNumIndices() == 1 &&
              "Last GEP of cbuffer access is not array or struct access");
-      // We assume a non-constant access will be row-aligned. This is safe
-      // because arrays and structs are always row aligned, and accesses to
-      // vector elements will show up as a load of the vector followed by an
-      // extractelement.
-      CurrentRow = cast<ConstantInt>(CurrentRow)->isZero()
-                       ? *LastGEP->idx_begin()
-                       : Builder.CreateAdd(CurrentRow, *LastGEP->idx_begin());
-      CurrentIndex = 0;
+      // Aggregate strides are row-aligned, but merged byte offsets can select
+      // different components within a row.
+      Value *RowIndex = Builder.CreateSExtOrTrunc(*LastGEP->idx_begin(),
+                                                  Builder.getInt32Ty());
+      uint64_t IndexScale =
+          DL.getTypeAllocSize(LastGEP->getSourceElementType());
+      if (IndexScale < hlsl::CBufferRowSizeInBytes) {
+        assert(hlsl::CBufferRowSizeInBytes % IndexScale == 0 &&
+               "CBuffer GEP index is not row aligned");
+        Value *ByteOffset =
+            IndexScale == 1
+                ? RowIndex
+                : Builder.CreateMul(RowIndex, Builder.getInt32(IndexScale));
+        uint64_t BaseWithinRow = GlobalOffsetVal % hlsl::CBufferRowSizeInBytes;
+        if (BaseWithinRow != 0)
+          ByteOffset =
+              Builder.CreateAdd(ByteOffset, Builder.getInt32(BaseWithinRow));
+        Value *RowSize = Builder.getInt32(hlsl::CBufferRowSizeInBytes);
+        KnownBits WithinRow =
+            computeCBufferOffsetKnownBits(ByteOffset, DL, LI) &
+            KnownBits::makeConstant(APInt(32, hlsl::CBufferRowSizeInBytes - 1));
+        if (!WithinRow.isConstant()) {
+          LI->replaceAllUsesWith(createDynamicCBufferLoad(
+              II, LI, Intrin, CurrentRow, ByteOffset, WithinRow));
+          return;
+        }
+        RowIndex = Builder.CreateUDiv(ByteOffset, RowSize, "",
+                                      WithinRow.getConstant().isZero());
+        CurrentIndex = WithinRow.getConstant().getZExtValue() / Intrin.EltSize;
+      } else if (IndexScale > hlsl::CBufferRowSizeInBytes) {
+        assert(IndexScale % hlsl::CBufferRowSizeInBytes == 0 &&
+               "CBuffer GEP index is not row aligned");
+        RowIndex = Builder.CreateMul(
+            RowIndex,
+            ConstantInt::get(Builder.getInt32Ty(),
+                             IndexScale / hlsl::CBufferRowSizeInBytes));
+      }
+      if (auto *BaseRow = dyn_cast<ConstantInt>(CurrentRow);
+          BaseRow && BaseRow->isZero())
+        CurrentRow = RowIndex;
+      else
+        CurrentRow = Builder.CreateAdd(CurrentRow, RowIndex);
     }
   }
 
@@ -713,15 +1026,30 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
+static Instruction *getHandleOperand(Instruction *AI) {
   if (auto *LI = dyn_cast<LoadInst>(AI))
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
     return dyn_cast<Instruction>(SI->getPointerOperand());
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
     return dyn_cast<Instruction>(RMWI->getPointerOperand());
+  if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(AI))
+    return dyn_cast<Instruction>(CXI->getPointerOperand());
+  if (auto *II = dyn_cast<IntrinsicInst>(AI))
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_updatecounter)
+      return dyn_cast<Instruction>(II->getArgOperand(0));
 
   return nullptr;
+}
+
+static Instruction *getHandleRoot(Instruction *I) {
+  while (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *PointerI = dyn_cast<Instruction>(GEP->getPointerOperand());
+    if (!PointerI)
+      break;
+    I = PointerI;
+  }
+  return I;
 }
 
 static const std::array<Intrinsic::ID, 2> HandleIntrins = {
@@ -732,7 +1060,7 @@ static const std::array<Intrinsic::ID, 2> HandleIntrins = {
 static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
   SmallVector<Value *> Worklist = {Ptr};
   SmallVector<IntrinsicInst *> Handles;
-  SmallSet<Value *, 4> VisitedPhis;
+  SmallPtrSet<Value *, 4> VisitedPhis;
 
   while (!Worklist.empty()) {
     Value *X = Worklist.pop_back_val();
@@ -746,13 +1074,16 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
       VisitedPhis.insert(Phi);
-    } else if (auto *Select = dyn_cast<SelectInst>(X))
-      for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
-        Worklist.push_back(V);
-    else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
+    } else if (auto *Select = dyn_cast<SelectInst>(X)) {
+      Worklist.push_back(Select->getTrueValue());
+      Worklist.push_back(Select->getFalseValue());
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(X)) {
+      Worklist.push_back(GEP->getPointerOperand());
+    } else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
       Intrinsic::ID IID = II->getIntrinsicID();
 
-      if (IID == Intrinsic::dx_resource_getpointer)
+      if (IID == Intrinsic::dx_resource_getpointer ||
+          IID == Intrinsic::dx_resource_getbasepointer)
         Worklist.push_back(II->getArgOperand(/*Handle=*/0));
 
       if (llvm::is_contained(HandleIntrins, IID))
@@ -784,42 +1115,107 @@ namespace {
 struct AccessIndices {
   Value *GetPtrIdx;
   Value *HandleIdx;
+  Value *OffsetIdx;
 
   bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
   bool hasHandleIdx() { return HandleIdx != nullptr; }
+  bool hasOffsetIdx() { return OffsetIdx != nullptr; }
 };
+
+/// AccessIndices cached per phi. The values may be placeholder phis that are
+/// later folded away (via replaceAllUsesWith) and freed, so track them with
+/// value handles rather than raw pointers.
+struct TrackedAccessIndices {
+  WeakTrackingVH GetPtrIdx;
+  WeakTrackingVH HandleIdx;
+  WeakTrackingVH OffsetIdx;
+
+  TrackedAccessIndices() = default;
+  TrackedAccessIndices(const AccessIndices &AI)
+      : GetPtrIdx(AI.GetPtrIdx), HandleIdx(AI.HandleIdx),
+        OffsetIdx(AI.OffsetIdx) {}
+  operator AccessIndices() const { return {GetPtrIdx, HandleIdx, OffsetIdx}; }
+};
+
+using PhiAccessIndicesMap = SmallDenseMap<PHINode *, TrackedAccessIndices>;
 } // namespace
+
+// Compute the total byte offset described by a GEP as a single i32 value,
+// handling both constant and variable indices.
+static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
+                                  IRBuilder<> &Builder) {
+  const DataLayout &DL = GEP->getDataLayout();
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
+  APInt ConstantOffset(BitWidth, 0);
+  bool Success =
+      GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset);
+  assert(Success && "Unhandled GEP structure for resource access");
+  (void)Success;
+
+  Type *I32 = Builder.getInt32Ty();
+  Value *Offset = ConstantInt::get(I32, ConstantOffset.getSExtValue());
+  for (auto &[V, Scale] : VariableOffsets) {
+    Value *Index = Builder.CreateSExtOrTrunc(V, I32);
+    if (!Scale.isOne())
+      Index =
+          Builder.CreateMul(Index, ConstantInt::get(I32, Scale.getSExtValue()));
+    Offset = Builder.CreateAdd(Offset, Index);
+  }
+  return Offset;
+}
 
 // getAccessIndices traverses up the control flow that a ptr came from and
 // propagates back the indicies used to access the resource (AccessIndices):
 //
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
+//  - OffsetIdx is the accumulated byte offset of any GEPs in the ptr chain
 static AccessIndices
 getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
-                 SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
+                 PhiAccessIndicesMap &VisitedPhis) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
-      return {nullptr, II->getArgOperand(/*Index=*/3)};
+      return {nullptr, II->getArgOperand(/*Index=*/3), nullptr};
     }
 
-    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    if (IID == Intrinsic::dx_resource_getpointer ||
+        IID == Intrinsic::dx_resource_getbasepointer) {
       auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
       auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
       assert(!AccessIdx.hasGetPtrIdx() &&
              "Encountered multiple dx.resource.getpointers in ptr chain?");
-      AccessIdx.GetPtrIdx = II->getArgOperand(1);
+      IRBuilder<> Builder(II);
+      AccessIdx.GetPtrIdx = ConstantInt::get(Builder.getInt32Ty(), 0);
+      if (IID == Intrinsic::dx_resource_getpointer)
+        AccessIdx.GetPtrIdx = II->getArgOperand(1);
 
       DeadInsts.insert(II);
       return AccessIdx;
     }
   }
 
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *V = dyn_cast<Instruction>(GEP->getPointerOperand());
+    auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
+
+    IRBuilder<> Builder(GEP);
+    Value *GEPOffset = accumulateGEPOffset(GEP, Builder);
+    AccessIdx.OffsetIdx =
+        AccessIdx.hasOffsetIdx()
+            ? Builder.CreateAdd(AccessIdx.OffsetIdx, GEPOffset)
+            : GEPOffset;
+
+    DeadInsts.insert(GEP);
+    return AccessIdx;
+  }
+
   if (auto *Phi = dyn_cast<PHINode>(I)) {
     // If we're already building indices for this phi, return a ref to the phi
     if (auto It = VisitedPhis.find(Phi); It != VisitedPhis.end())
-      return {nullptr, It->second};
+      return It->second;
 
     unsigned NumEdges = Phi->getNumIncomingValues();
     assert(NumEdges != 0 && "Malformed Phi Node");
@@ -829,12 +1225,19 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
     std::unique_ptr<PHINode> HandlePhi(
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
+    std::unique_ptr<PHINode> OffsetPhi(
+        PHINode::Create(Builder.getInt32Ty(), NumEdges));
+    bool HasOffset = false;
 
-    // Register a ref to this phi for a recursive phi. This is safe to add to
-    // the map even if we end up deleting newly created phi below since we can't
-    // possibly have a constant value if we recursed.
+    // Register a ref to this phi for a recursive phi. If a placeholder phi
+    // below folds to a single value, replaceAllUsesWith updates any cached
+    // entries that captured it.
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = HandlePhi.get();
+      VisitedPhis[Phi] = AccessIndices{/*GetPtrIdx=*/nullptr, HandlePhi.get(),
+                                       /*OffsetIdx=*/nullptr};
+    else if (Phi->getType()->isPointerTy())
+      VisitedPhis[Phi] =
+          AccessIndices{GetPtrPhi.get(), HandlePhi.get(), OffsetPhi.get()};
 
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
@@ -843,28 +1246,50 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       if (AccessIdx.hasGetPtrIdx())
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
       HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
+      if (AccessIdx.hasOffsetIdx()) {
+        OffsetPhi->addIncoming(AccessIdx.OffsetIdx, BB);
+        HasOffset = true;
+      } else {
+        OffsetPhi->addIncoming(ConstantInt::get(Builder.getInt32Ty(), 0), BB);
+      }
     }
 
     Value *GetPtrIdx;
-    if (GetPtrPhi->getNumIncomingValues() == 0)
+    if (GetPtrPhi->getNumIncomingValues() == 0) {
       GetPtrIdx = nullptr;
-    else if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue())
+    } else if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue()) {
       GetPtrIdx = ConstantGetPtr;
-    else {
+      GetPtrPhi->replaceAllUsesWith(GetPtrIdx);
+    } else {
       GetPtrIdx = GetPtrPhi.release();
       Builder.Insert(GetPtrIdx);
     }
 
     Value *HandleIdx;
-    if (Value *ConstantHandle = HandlePhi->hasConstantValue())
+    if (Value *ConstantHandle = HandlePhi->hasConstantValue()) {
       HandleIdx = ConstantHandle;
-    else {
+      HandlePhi->replaceAllUsesWith(HandleIdx);
+    } else {
       HandleIdx = HandlePhi.release();
       Builder.Insert(HandleIdx);
     }
 
+    Value *OffsetIdx = nullptr;
+    if (HasOffset) {
+      if (Value *ConstantIdx = OffsetPhi->hasConstantValue()) {
+        OffsetIdx = ConstantIdx;
+        OffsetPhi->replaceAllUsesWith(OffsetIdx);
+      } else {
+        OffsetIdx = OffsetPhi.release();
+        Builder.Insert(OffsetIdx);
+      }
+    }
+
+    // Replace the placeholder entry with the final indices.
+    AccessIndices Result = {GetPtrIdx, HandleIdx, OffsetIdx};
+    VisitedPhis[Phi] = Result;
     DeadInsts.insert(Phi);
-    return {GetPtrIdx, HandleIdx};
+    return Result;
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
@@ -876,17 +1301,29 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 
     IRBuilder<> Builder(Select);
     Value *GetPtrSelect = nullptr;
+    Value *OffsetSelect = nullptr;
 
     if (TrueAccessIdx.hasGetPtrIdx() && FalseAccessIdx.hasGetPtrIdx())
       GetPtrSelect =
           Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.GetPtrIdx,
-                               FalseAccessIdx.GetPtrIdx);
+                               FalseAccessIdx.GetPtrIdx, "", Select);
 
     auto *HandleSelect =
         Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
-                             FalseAccessIdx.HandleIdx);
+                             FalseAccessIdx.HandleIdx, "", Select);
+
+    if (TrueAccessIdx.hasOffsetIdx() || FalseAccessIdx.hasOffsetIdx()) {
+      Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
+      Value *TrueOffset =
+          TrueAccessIdx.hasOffsetIdx() ? TrueAccessIdx.OffsetIdx : Zero;
+      Value *FalseOffset =
+          FalseAccessIdx.hasOffsetIdx() ? FalseAccessIdx.OffsetIdx : Zero;
+      OffsetSelect = Builder.CreateSelect(Select->getCondition(), TrueOffset,
+                                          FalseOffset, "", Select);
+    }
+
     DeadInsts.insert(Select);
-    return {GetPtrSelect, HandleSelect};
+    return {GetPtrSelect, HandleSelect, OffsetSelect};
   }
 
   llvm_unreachable("collectUsedHandles should assure this does not occur");
@@ -895,10 +1332,11 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts,
-                         SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
+                         PhiAccessIndicesMap &VisitedPhis) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts, VisitedPhis);
-  assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
-         "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
+  assert(AccessIdx.hasHandleIdx() &&
+         "Couldn't retrieve handle index. This is guaranteed by "
+         "getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
   if (isa<PHINode>(Ptr))
@@ -907,11 +1345,26 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);
 
-  auto *GetPtr =
-      Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
-                              {Handle, AccessIdx.GetPtrIdx});
+  if (Ptr->getType()->isPointerTy()) {
+    assert(AccessIdx.hasGetPtrIdx() &&
+           "Couldn't retrieve getpointer index. This is guaranteed by "
+           "getAccessIndices");
+    auto *GetPtr = Builder.CreateIntrinsic(Ptr->getType(),
+                                           Intrinsic::dx_resource_getpointer,
+                                           {Handle, AccessIdx.GetPtrIdx});
 
-  Ptr->replaceAllUsesWith(GetPtr);
+    // Reapply any byte offset that came from GEPs in the original ptr chain so
+    // that later access lowering still sees it.
+    Value *Result = GetPtr;
+    if (AccessIdx.hasOffsetIdx())
+      Result = Builder.CreatePtrAdd(GetPtr, AccessIdx.OffsetIdx);
+    Ptr->replaceAllUsesWith(Result);
+  } else {
+    assert(Ptr->getType()->isTargetExtTy() && !AccessIdx.hasGetPtrIdx() &&
+           "Unexpected resource access operand type");
+    Ptr->replaceAllUsesWith(Handle);
+  }
+
   DeadInsts.insert(Ptr);
 }
 
@@ -927,12 +1380,12 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
   SmallSetVector<Instruction *, 16> DeadInsts;
-  SmallDenseMap<PHINode *, PHINode *> VisitedPhis;
+  PhiAccessIndicesMap VisitedPhis;
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
-      if (auto *PtrOp = getStoreLoadPointerOperand(&I)) {
-        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
+      if (auto *HandleOp = getHandleOperand(&I)) {
+        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(HandleOp);
         unsigned NumHandles = Handles.size();
         if (NumHandles <= 1)
           continue; // Legal, no-replacement required
@@ -943,12 +1396,11 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           SameGlobalBinding &=
               (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
 
-        if (!SameGlobalBinding) {
+        if (!SameGlobalBinding)
           diagnoseNonUniqueResourceAccess(&I, Handles);
-          continue;
-        }
 
-        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts, VisitedPhis);
+        replaceHandleWithIndices(getHandleRoot(HandleOp), Handles[0], DeadInsts,
+                                 VisitedPhis);
       }
     }
   }
@@ -1001,6 +1453,9 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
     } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
       createAtomicBinOpIntrinsic(II, AI, RTI);
       DeadInsts.push_back(AI);
+    } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(U)) {
+      createAtomicCompareExchangeIntrinsic(II, CXI, RTI);
+      DeadInsts.push_back(CXI);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }
@@ -1046,7 +1501,6 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserve<DXILResourceTypeAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
 
@@ -1066,7 +1520,6 @@ public:
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 };
 char DXILResourceAccessLegacy::ID = 0;

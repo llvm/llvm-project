@@ -41,7 +41,6 @@
 ; CHECK-NEXT:       Local Stack Slot Allocation
 ; CHECK-NEXT:       LoongArch Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved

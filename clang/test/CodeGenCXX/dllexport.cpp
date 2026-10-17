@@ -616,7 +616,7 @@ void W::foo() {}
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0W@@QAE@ABU0@@Z"
 // vftable:
 // M32-DAG: [[W_VTABLE:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4W@@6B@", ptr @"?foo@W@@UAEXXZ"] }, comdat($"??_7W@@6B@")
-// M32-DAG: @"??_7W@@6B@" = dllexport alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[W_VTABLE]], i32 0, i32 0, i32 1)
+// M32-DAG: @"??_7W@@6B@" = dllexport alias ptr, getelementptr inbounds (i8, ptr [[W_VTABLE]], i32 4)
 // G32-DAG: @_ZTV1W = dso_local dllexport constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1W, ptr @_ZN1W3fooEv] }
 // C32-DAG: @_ZTV1W = dso_local dllexport constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1W, ptr @_ZN1W3fooEv] }
 

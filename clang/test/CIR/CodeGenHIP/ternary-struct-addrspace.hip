@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o - | FileCheck %s
 
 // Verify that a ternary expression returning a struct parameter from a
 // __device__ function produces a well-typed cir.ternary: both branch yields
@@ -16,7 +16,7 @@ __attribute__((device)) S choose(const S x) {
 
 
 // CHECK: %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!rec_S, target_address_space(5)>
-// CHECK: %[[Y:.*]] = cir.alloca "y" {{.*}} : !cir.ptr<!rec_S, target_address_space(5)> loc(#loc18)
+// CHECK: %[[Y:.*]] = cir.alloca "y" {{.*}} : !cir.ptr<!rec_S, target_address_space(5)>
 
 // CHECK: %[[Y_CAST:.*]] = cir.cast address_space %[[Y]] : !cir.ptr<!rec_S, target_address_space(5)> -> !cir.ptr<!rec_S>
 // CHECK: %[[X_CAST:.*]] = cir.cast address_space %[[X]] : !cir.ptr<!rec_S, target_address_space(5)> -> !cir.ptr<!rec_S>

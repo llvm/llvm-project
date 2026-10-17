@@ -1668,5 +1668,16 @@ TEST(WalkAST, ObjCStringLiteral) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, GH218829) {
+  testWalk("struct $explicit^S1 {};",
+           R"cpp(
+struct S2 {
+  template <typename T> void f(this const S2 &);
+};
+void h(S2 s) { s.f<^S1>(); }
+)cpp",
+           {"-std=c++23"});
+}
+
 } // namespace
 } // namespace clang::include_cleaner

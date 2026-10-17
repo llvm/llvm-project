@@ -249,9 +249,9 @@ func.func @complex_expm1(%arg: complex<f32>) -> complex<f32> {
 // CHECK:  %[[VAL_6:.*]] = arith.addf %[[EXPM1]], %[[C1_F32]] fastmath<nnan,contract> : f32
 // CHECK:  %[[VAL_7:.*]] = math.sin %[[IMAG]] fastmath<nnan,contract> : f32
 // CHECK:  %[[VAL_8:.*]] = arith.constant -5.000000e-01 : f32
-// CHECK:  %[[VAL_9:.*]] = arith.constant -1.000000e+00 : f32
+// CHECK:  %[[VAL_9:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:  %[[VAL_10:.*]] = math.cos %[[IMAG]] fastmath<nnan,contract> : f32
-// CHECK:  %[[VAL_11:.*]] = arith.addf %[[VAL_10]], %[[VAL_9]] fastmath<nnan,contract> : f32
+// CHECK:  %[[VAL_11:.*]] = arith.subf %[[VAL_10]], %[[VAL_9]] fastmath<nnan,contract> : f32
 // CHECK:  %[[VAL_12:.*]] = arith.mulf %[[IMAG]], %[[IMAG]] fastmath<nnan,contract> : f32
 // CHECK:  %[[VAL_13:.*]] = arith.mulf %[[VAL_12]], %[[VAL_12]] fastmath<nnan,contract> : f32
 // CHECK-DAG:  %[[COEF0:.*]] = arith.constant 4.73775072E-14 : f32
@@ -484,17 +484,16 @@ func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK: %[[IMAG:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[V0:.*]] = complex.im %[[ARG]] : complex<f32>
-// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
-// CHECK: %[[REAL:.*]] = arith.mulf %[[V0]], %[[NEG_ONE]] : f32
+// CHECK: %[[REAL:.*]] = arith.negf %[[V0]] : f32
 // CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] : f32
-// CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] : f32
+// CHECK: %[[NEG_TWO_REAL:.*]] = arith.negf %[[TWO_REAL]] : f32
 // CHECK: %[[EXP_TWO_REAL_M1:.*]] = math.expm1 %[[TWO_REAL]] : f32
 // CHECK: %[[EXP_NEG_TWO_REAL_M1:.*]] = math.expm1 %[[NEG_TWO_REAL]] : f32
 // CHECK: %[[REAL_NUM:.*]] = arith.subf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] : f32
 // CHECK: %[[EXP_PRODUCT:.*]] = arith.mulf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] : f32
-// CHECK: %[[EXP_SUM_M2:.*]] = arith.mulf %[[NEG_ONE]], %[[EXP_PRODUCT]] : f32
+// CHECK: %[[EXP_SUM_M2:.*]] = arith.negf %[[EXP_PRODUCT]] : f32
 // CHECK: %[[COS:.*]] = math.cos %[[IMAG]] : f32
 // CHECK: %[[COS_SQ:.*]] = arith.mulf %[[COS]], %[[COS]] : f32
 // CHECK: %[[FOUR_COS_SQ:.*]] = arith.mulf %[[COS_SQ]], %[[FOUR]] : f32
@@ -503,6 +502,7 @@ func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG_NUM:.*]] = arith.mulf %[[FOUR]], %[[MUL]] : f32
 // CHECK: %[[DENOM:.*]] = arith.addf %[[EXP_SUM_M2]], %[[FOUR_COS_SQ]] : f32
 // CHECK: %[[IS_INF:.*]] = arith.cmpf oeq, %[[EXP_SUM_M2]], %[[INF]] : f32
+// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[LIMIT:.*]] = math.copysign %[[NEG_ONE]], %[[REAL]] : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.divf %[[REAL_NUM]], %[[DENOM]] : f32
 // CHECK: %[[RESULT_REAL2:.*]] = arith.select %[[IS_INF]], %[[LIMIT]], %[[RESULT_REAL]] : f32
@@ -520,7 +520,7 @@ func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG_IS_NAN2:.*]] = arith.ori %[[IMAG_ZERO]], %[[AND]] : i1
 // CHECK: %[[RESULT_REAL3:.*]] = arith.select %[[REAL_IS_NAN]], %[[NAN]], %[[RESULT_REAL2]] : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.select %[[IMAG_IS_NAN2]], %[[ZERO]], %[[RESULT_IMAG]] : f32
-// CHECK: %[[RESULT_IMAG:.*]] = arith.mulf %[[RESULT_REAL3]], %[[NEG_ONE]]
+// CHECK: %[[RESULT_IMAG:.*]] = arith.negf %[[RESULT_REAL3]]
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
@@ -534,16 +534,15 @@ func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
 }
 // CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
-// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] : f32
-// CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] : f32
+// CHECK: %[[NEG_TWO_REAL:.*]] = arith.negf %[[TWO_REAL]] : f32
 // CHECK: %[[EXP_TWO_REAL_M1:.*]] = math.expm1 %[[TWO_REAL]] : f32
 // CHECK: %[[EXP_NEG_TWO_REAL_M1:.*]] = math.expm1 %[[NEG_TWO_REAL]] : f32
 // CHECK: %[[REAL_NUM:.*]] = arith.subf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] : f32
 // CHECK: %[[EXP_PRODUCT:.*]] = arith.mulf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] : f32
-// CHECK: %[[EXP_SUM_M2:.*]] = arith.mulf %[[NEG_ONE]], %[[EXP_PRODUCT]] : f32
+// CHECK: %[[EXP_SUM_M2:.*]] = arith.negf %[[EXP_PRODUCT]] : f32
 // CHECK: %[[COS:.*]] = math.cos %[[IMAG]] : f32
 // CHECK: %[[COS_SQ:.*]] = arith.mulf %[[COS]], %[[COS]] : f32
 // CHECK: %[[FOUR_COS_SQ:.*]] = arith.mulf %[[COS_SQ]], %[[FOUR]] : f32
@@ -552,6 +551,7 @@ func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG_NUM:.*]] = arith.mulf %[[FOUR]], %[[MUL]] : f32
 // CHECK: %[[DENOM:.*]] = arith.addf %[[EXP_SUM_M2]], %[[FOUR_COS_SQ]] : f32
 // CHECK: %[[IS_INF:.*]] = arith.cmpf oeq, %[[EXP_SUM_M2]], %[[INF]] : f32
+// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[LIMIT:.*]] = math.copysign %[[NEG_ONE]], %[[REAL]] : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.divf %[[REAL_NUM]], %[[DENOM]] : f32
 // CHECK: %[[RESULT_REAL2:.*]] = arith.select %[[IS_INF]], %[[LIMIT]], %[[RESULT_REAL]] : f32
@@ -1440,17 +1440,16 @@ func.func @complex_tan_with_fmf(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK: %[[IMAG:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[V0:.*]] = complex.im %[[ARG]] : complex<f32>
-// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
-// CHECK: %[[REAL:.*]] = arith.mulf %[[V0]], %cst fastmath<nnan,contract> : f32
+// CHECK: %[[REAL:.*]] = arith.negf %[[V0]] fastmath<nnan,contract> : f32
 // CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] fastmath<nnan,contract> : f32
-// CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_TWO_REAL:.*]] = arith.negf %[[TWO_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[EXP_TWO_REAL_M1:.*]] = math.expm1 %[[TWO_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[EXP_NEG_TWO_REAL_M1:.*]] = math.expm1 %[[NEG_TWO_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[REAL_NUM:.*]] = arith.subf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] fastmath<nnan,contract> : f32
 // CHECK: %[[EXP_PRODUCT:.*]] = arith.mulf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] fastmath<nnan,contract> : f32
-// CHECK: %[[EXP_SUM_M2:.*]] = arith.mulf %[[NEG_ONE]], %[[EXP_PRODUCT]] fastmath<nnan,contract> : f32
+// CHECK: %[[EXP_SUM_M2:.*]] = arith.negf %[[EXP_PRODUCT]] fastmath<nnan,contract> : f32
 // CHECK: %[[COS:.*]] = math.cos %[[IMAG]] fastmath<nnan,contract> : f32
 // CHECK: %[[COS_SQ:.*]] = arith.mulf %[[COS]], %[[COS]] fastmath<nnan,contract> : f32
 // CHECK: %[[FOUR_COS_SQ:.*]] = arith.mulf %[[COS_SQ]], %[[FOUR]] fastmath<nnan,contract> : f32
@@ -1459,6 +1458,7 @@ func.func @complex_tan_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG_NUM:.*]] = arith.mulf %[[FOUR]], %[[MUL]] fastmath<nnan,contract> : f32
 // CHECK: %[[DENOM:.*]] = arith.addf %[[EXP_SUM_M2]], %[[FOUR_COS_SQ]] fastmath<nnan,contract> : f32
 // CHECK: %[[IS_INF:.*]] = arith.cmpf oeq, %[[EXP_SUM_M2]], %[[INF]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[LIMIT:.*]] = math.copysign %[[NEG_ONE]], %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.divf %[[REAL_NUM]], %[[DENOM]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_REAL2:.*]] = arith.select %[[IS_INF]], %[[LIMIT]], %[[RESULT_REAL]] : f32
@@ -1476,7 +1476,7 @@ func.func @complex_tan_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG_IS_NAN2:.*]] = arith.ori %[[IMAG_ZERO]], %[[AND]] : i1
 // CHECK: %[[RESULT_REAL3:.*]] = arith.select %[[REAL_IS_NAN]], %[[NAN]], %[[RESULT_REAL2]] : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.select %[[IMAG_IS_NAN2]], %[[ZERO]], %[[RESULT_IMAG]] : f32
-// CHECK: %[[RESULT_IMAG:.*]] = arith.mulf %[[RESULT_REAL3]], %[[NEG_ONE]] fastmath<nnan,contract> : f32
+// CHECK: %[[RESULT_IMAG:.*]] = arith.negf %[[RESULT_REAL3]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
@@ -1491,16 +1491,15 @@ func.func @complex_tanh_with_fmf(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
-// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] fastmath<nnan,contract> : f32
-// CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_TWO_REAL:.*]] = arith.negf %[[TWO_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[EXP_TWO_REAL_M1:.*]] = math.expm1 %[[TWO_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[EXP_NEG_TWO_REAL_M1:.*]] = math.expm1 %[[NEG_TWO_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[REAL_NUM:.*]] = arith.subf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] fastmath<nnan,contract> : f32
 // CHECK: %[[EXP_PRODUCT:.*]] = arith.mulf %[[EXP_TWO_REAL_M1]], %[[EXP_NEG_TWO_REAL_M1]] fastmath<nnan,contract> : f32
-// CHECK: %[[EXP_SUM_M2:.*]] = arith.mulf %[[NEG_ONE]], %[[EXP_PRODUCT]] fastmath<nnan,contract> : f32
+// CHECK: %[[EXP_SUM_M2:.*]] = arith.negf %[[EXP_PRODUCT]] fastmath<nnan,contract> : f32
 // CHECK: %[[COS:.*]] = math.cos %[[IMAG]] fastmath<nnan,contract> : f32
 // CHECK: %[[COS_SQ:.*]] = arith.mulf %[[COS]], %[[COS]] fastmath<nnan,contract> : f32
 // CHECK: %[[FOUR_COS_SQ:.*]] = arith.mulf %[[COS_SQ]], %[[FOUR]] fastmath<nnan,contract> : f32
@@ -1509,6 +1508,7 @@ func.func @complex_tanh_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG_NUM:.*]] = arith.mulf %[[FOUR]], %[[MUL]] fastmath<nnan,contract> : f32
 // CHECK: %[[DENOM:.*]] = arith.addf %[[EXP_SUM_M2]], %[[FOUR_COS_SQ]] fastmath<nnan,contract> : f32
 // CHECK: %[[IS_INF:.*]] = arith.cmpf oeq, %[[EXP_SUM_M2]], %[[INF]] fastmath<nnan,contract> : f32
+// CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[LIMIT:.*]] = math.copysign %[[NEG_ONE]], %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_REAL:.*]] = arith.divf %[[REAL_NUM]], %[[DENOM]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_REAL2:.*]] = arith.select %[[IS_INF]], %[[LIMIT]], %[[RESULT_REAL]] : f32

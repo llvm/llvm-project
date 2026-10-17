@@ -283,7 +283,7 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("--disable-nxcompat");
 
   bool NeedsSanitizerDeps =
-      tools::addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+      tools::addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = tools::addXRayRuntime(ToolChain, Args, CmdArgs);
   tools::addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   tools::AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -377,9 +377,8 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostartfiles)) {
       if (!Args.hasArg(options::OPT_mdll, options::OPT_shared)) {
-        std::string O = ToolChain.GetFilePath("default-manifest.o");
-        if (O != "default-manifest.o")
-          CmdArgs.push_back(Args.MakeArgString(std::move(O)));
+        if (auto O = ToolChain.GetFilePathIfExists("default-manifest.o"))
+          CmdArgs.push_back(Args.MakeArgString(std::move(*O)));
       }
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
     }

@@ -36,7 +36,7 @@ define double @ret_trig_preop__fmul__not_inf(double nofpclass(inf) %not.inf, dou
 }
 
 define double @ret_not_nan__fmul__trig_preop(double nofpclass(nan) %not.nan, double %x, i32 %n) {
-; CHECK-LABEL: define double @ret_not_nan__fmul__trig_preop(
+; CHECK-LABEL: define nofpclass(snan) double @ret_not_nan__fmul__trig_preop(
 ; CHECK-SAME: double nofpclass(nan) [[NOT_NAN:%.*]], double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TRIG_PREOP:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[NOT_NAN]], [[TRIG_PREOP]]
@@ -48,7 +48,7 @@ define double @ret_not_nan__fmul__trig_preop(double nofpclass(nan) %not.nan, dou
 }
 
 define double @ret_trig_preop__fmul__not_nan(double nofpclass(nan) %not.nan, double %x, i32 %n) {
-; CHECK-LABEL: define double @ret_trig_preop__fmul__not_nan(
+; CHECK-LABEL: define nofpclass(snan) double @ret_trig_preop__fmul__not_nan(
 ; CHECK-SAME: double nofpclass(nan) [[NOT_NAN:%.*]], double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TRIG_PREOP:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TRIG_PREOP]], [[NOT_NAN]]

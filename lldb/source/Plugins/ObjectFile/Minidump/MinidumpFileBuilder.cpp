@@ -227,7 +227,7 @@ Status MinidumpFileBuilder::AddSystemInfo() {
 Status WriteString(const std::string &to_write,
                    lldb_private::DataBufferHeap *buffer) {
   Status error;
-  // let the StringRef eat also null termination char
+  // let the StringRef eat also the null terminator
   llvm::StringRef to_write_ref(to_write.c_str(), to_write.size() + 1);
   llvm::SmallVector<llvm::UTF16, 128> to_write_utf16;
 
@@ -239,8 +239,8 @@ Status WriteString(const std::string &to_write,
     return error;
   }
 
-  // size of the UTF16 string should be written without the null termination
-  // character that is stored in 2 bytes
+  // size of the UTF16 string should be written without the null terminator
+  // that is stored in 2 bytes
   llvm::support::ulittle32_t to_write_size(to_write_utf16.size_in_bytes() - 2);
 
   buffer->AppendData(&to_write_size, sizeof(llvm::support::ulittle32_t));
@@ -554,7 +554,7 @@ class ArchThreadContexts {
   union {
     lldb_private::minidump::MinidumpContext_x86_64 x86_64;
     lldb_private::minidump::RegisterContextMinidump_ARM64::Context arm64;
-  };
+  } context;
 
 public:
   ArchThreadContexts(llvm::Triple::ArchType arch) : m_arch(arch) {}
@@ -562,10 +562,10 @@ public:
   bool prepareRegisterContext(RegisterContext *reg_ctx) {
     switch (m_arch) {
     case llvm::Triple::ArchType::x86_64:
-      x86_64 = GetThreadContext_x86_64(reg_ctx);
+      context.x86_64 = GetThreadContext_x86_64(reg_ctx);
       return true;
     case llvm::Triple::ArchType::aarch64:
-      arm64 = GetThreadContext_ARM64(reg_ctx);
+      context.arm64 = GetThreadContext_ARM64(reg_ctx);
       return true;
     default:
       break;
@@ -573,14 +573,14 @@ public:
     return false;
   }
 
-  const void *data() const { return &x86_64; }
+  const void *data() const { return &context; }
 
   size_t size() const {
     switch (m_arch) {
     case llvm::Triple::ArchType::x86_64:
-      return sizeof(x86_64);
+      return sizeof(context.x86_64);
     case llvm::Triple::ArchType::aarch64:
-      return sizeof(arm64);
+      return sizeof(context.arm64);
     default:
       break;
     }

@@ -91,12 +91,12 @@ public:
   }
 };
 
-#define LIST_FMAXIMUM_NUM_TESTS(T, func)                                       \
-  using LlvmLibcFMaximumNumTest = FMaximumNumTest<T>;                          \
-  TEST_F(LlvmLibcFMaximumNumTest, NaN) { testNaN(&func); }                     \
-  TEST_F(LlvmLibcFMaximumNumTest, InfArg) { testInfArg(&func); }               \
-  TEST_F(LlvmLibcFMaximumNumTest, NegInfArg) { testNegInfArg(&func); }         \
-  TEST_F(LlvmLibcFMaximumNumTest, BothZero) { testBothZero(&func); }           \
-  TEST_F(LlvmLibcFMaximumNumTest, Range) { testRange(&func); }
+#define LIST_FMAXIMUM_NUM_TESTS(Name, T, func)                                 \
+  using LlvmLibc##Name##Test = FMaximumNumTest<T>;                             \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUMNUMTEST_H

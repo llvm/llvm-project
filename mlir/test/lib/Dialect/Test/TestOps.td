@@ -24,6 +24,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Dialect/DLTI/DLTIOpInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -2366,6 +2367,11 @@ def BlackHoleOp : TEST_Op<"blackhole">,
 //===----------------------------------------------------------------------===//
 
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
+def TestSegmentedReturnOp : TEST_Op<"segmented_return", [
+    Pure, ReturnLike, Terminator, AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$first, Variadic<AnyType>:$second);
+}
+
 def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
   let builders = [OpBuilder<(ins),
@@ -2381,7 +2387,7 @@ def TestCrashingReturnOp : TEST_Op<"crashing_return", [
        ["getMutableSuccessorOperands"]>,
     Terminator]> {
   let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
-  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let assemblyFormat = "($args^ `:` type($args))? prop-dict attr-dict";
   let hasVerifier = 1;
 }
 def TestCastOp : TEST_Op<"cast">,
@@ -2728,12 +2734,12 @@ def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
     Example:
 
     ```mlir
-    %0 = test.value_with_bounds { min = 4 : index, max = 5 : index}
+    %0 = test.value_with_bounds <min = 4, max = 5>
     ```
   }];
   let arguments = (ins IndexAttr:$min, IndexAttr:$max);
   let results = (outs Index:$result);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 
@@ -2796,6 +2802,49 @@ def CompareOp : TEST_Op<"compare"> {
 //===----------------------------------------------------------------------===//
 // Test RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
+
+def SegmentedRegionBranchOp : TEST_Op<"segmented_region_branch", [
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Select one of two regions and pass the corresponding operand segment to
+    its block arguments. Each region can branch to either region or exit.
+    The control operands are not successor operands.
+  }];
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+  let regions = (region SizedRegion<1>:$firstRegion,
+                        SizedRegion<1>:$secondRegion);
+  let hasCanonicalizer = 1;
+}
+
+def SegmentedRegionBranchTerminatorOp
+    : TEST_Op<"segmented_region_branch_terminator", [
+        AttrSizedOperandSegments, Terminator,
+        HasParent<"SegmentedRegionBranchOp">,
+        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+            ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+}
+
+def IsolatedRegionBranchOp : TEST_Op<"isolated_region_branch", [
+    IsolatedFromAbove, RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
+}
+
+def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [
+    Pure, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+}
 
 def RegionIfYieldOp : TEST_Op<"region_if_yield",
       [NoMemoryEffect, ReturnLike, Terminator]> {
@@ -3119,10 +3168,13 @@ def MakeTupleOp: TEST_Op<"make_tuple"> {
 //===----------------------------------------------------------------------===//
 
 def OpWithDataLayoutOp : TEST_Op<"op_with_data_layout",
-                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout, DataLayoutOpInterface]> {
+                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout,
+                                  DataLayoutOpInterface,
+                                  DLTIQueryOpInterface]> {
   let summary =
       "An op that uses DataLayout implementation from the Target dialect";
   let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let arguments = (ins OptionalAttr<DLTIQueryAttr>:$dlti);
 }
 
 def DataLayoutQueryOp : TEST_Op<"data_layout_query"> {
@@ -3374,12 +3426,12 @@ def TestNVVMRequiresSMArchOrFamilyCondOp :
 
 def TestDefaultStrAttrNoValueOp : TEST_Op<"no_str_value"> {
   let arguments = (ins DefaultValuedAttr<StrAttr, "">:$value);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
   let arguments = (ins DefaultValuedStrAttr<StrAttr, "">:$value);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
@@ -3415,7 +3467,7 @@ def : Pat<(TestVariadicRewriteSrcOp $arg, $brg, $crg),
 def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$value_with_default,
                    I32:$operand);
-  let assemblyFormat = "attr-dict $operand";
+  let assemblyFormat = "prop-dict attr-dict $operand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3506,7 +3558,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
     Example:
 
     ```mlir
-    %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
+    %0 = test.with_bounds <umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index> : index
     ```
   }];
 
@@ -3516,7 +3568,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
                        APIntAttr:$smax);
   let results = (outs InferIntRangeType:$fakeVal);
 
-  let assemblyFormat = "attr-dict `:` type($fakeVal)";
+  let assemblyFormat = "prop-dict attr-dict `:` type($fakeVal)";
 }
 
 def TestWithoutBoundsOp : TEST_Op<"without_bounds",
@@ -3567,7 +3619,7 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
     Example:
 
     ```mlir
-    CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+    CHECK: test.reflect_bounds <umin = 0 : index, umax = 7 : index, smin = 0 : index, smax = 7 : index>
     %1 = test.reflect_bounds %0 : index
     ```
   }];
@@ -3579,7 +3631,7 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
                        OptionalAttr<APIntAttr>:$smax);
   let results = (outs InferIntRangeType:$result);
 
-  let assemblyFormat = "attr-dict $value `:` type($result)";
+  let assemblyFormat = "prop-dict attr-dict $value `:` type($result)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4382,7 +4434,7 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     Variadic<AnyType>:$results
   );
   let assemblyFormat =
-    "$callee `(` $callee_operands `)` `,` $address attr-dict "
+    "$callee `(` $callee_operands `)` `,` $address prop-dict attr-dict "
     "`:` functional-type(operands, results)";
 }
 
@@ -4400,7 +4452,7 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
   );
   let assemblyFormat =
     "$callee `(` $forwarded_operands `)` `,` $non_forwarded_device_operand "
-    "attr-dict `:` functional-type(operands, results)";
+    "prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 // A call-like operation whose first result is produced by the operation itself
@@ -4420,7 +4472,7 @@ def TestCallAndProduceOp : TEST_Op<"call_and_produce",
     Variadic<AnyType>:$forwarded
   );
   let assemblyFormat =
-    "$callee `(` $forwarded_operands `)` attr-dict "
+    "$callee `(` $forwarded_operands `)` prop-dict attr-dict "
     "`:` functional-type(operands, results)";
 }
 
@@ -4433,7 +4485,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
   );
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-    "$address attr-dict-with-keyword regions `:` type($address)";
+    "$address prop-dict attr-dict-with-keyword regions `:` type($address)";
 }
 
 def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
@@ -4445,7 +4497,7 @@ def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
   );
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-    "$address attr-dict-with-keyword regions `:` type($address)";
+    "$address prop-dict attr-dict-with-keyword regions `:` type($address)";
 }
 
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",

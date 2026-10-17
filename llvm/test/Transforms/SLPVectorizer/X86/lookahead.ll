@@ -402,8 +402,8 @@ define void @ChecksExtractScores(ptr %storeArray, ptr %array, ptr %vecPtr1, ptr 
 ; AVX-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[ARRAY:%.*]], i64 1
 ; AVX-NEXT:    [[LOADVEC:%.*]] = load <2 x double>, ptr [[VECPTR1:%.*]], align 4
 ; AVX-NEXT:    [[LOADVEC2:%.*]] = load <2 x double>, ptr [[VECPTR2:%.*]], align 4
-; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[LOADA0:%.*]] = load double, ptr [[ARRAY]], align 4
+; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[LOADA0]], i64 0
 ; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; AVX-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[LOADVEC]], [[TMP2]]
@@ -552,8 +552,8 @@ define void @ChecksExtractScores_different_vectors(ptr %storeArray, ptr %array, 
 ; AVX-NEXT:    [[LOADVEC3:%.*]] = load <2 x double>, ptr [[VECPTR3:%.*]], align 4
 ; AVX-NEXT:    [[LOADVEC4:%.*]] = load <2 x double>, ptr [[VECPTR4:%.*]], align 4
 ; AVX-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAY:%.*]], align 4
-; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[LOADA0:%.*]] = load double, ptr [[ARRAY1]], align 4
+; AVX-NEXT:    [[LOADA1:%.*]] = load double, ptr [[IDX1]], align 4
 ; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[LOADVEC2]], <2 x double> [[LOADVEC3]], <2 x i32> <i32 0, i32 3>
 ; AVX-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[LOADA0]], i64 0
 ; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <2 x i32> zeroinitializer
@@ -605,10 +605,10 @@ define double @splat_loads(ptr %array1, ptr %array2, ptr %ptrA, ptr %ptrB) {
 ; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
 ; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
 ; SSE-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP5]], [[TMP6]]
-; SSE-NEXT:    [[ADD3:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
-; SSE-NEXT:    [[ADD2:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
-; SSE-NEXT:    [[ADD4:%.*]] = fadd double [[ADD3]], [[ADD2]]
-; SSE-NEXT:    ret double [[ADD4]]
+; SSE-NEXT:    [[ADD4:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
+; SSE-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
+; SSE-NEXT:    [[ADD5:%.*]] = fadd double [[ADD4]], [[TMP8]]
+; SSE-NEXT:    ret double [[ADD5]]
 ;
 ; AVX-LABEL: @splat_loads(
 ; AVX-NEXT:  entry:
@@ -662,9 +662,7 @@ define double @splat_loads_with_internal_uses(ptr %array1, ptr %array2, ptr %ptr
 ; SSE-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
 ; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; SSE-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
-; SSE-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
-; SSE-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
-; SSE-NEXT:    [[RES:%.*]] = fadd double [[TMP8]], [[TMP9]]
+; SSE-NEXT:    [[RES:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP7]])
 ; SSE-NEXT:    ret double [[RES]]
 ;
 ; AVX-LABEL: @splat_loads_with_internal_uses(
