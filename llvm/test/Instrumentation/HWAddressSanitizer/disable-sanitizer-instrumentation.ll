@@ -5,13 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @noinstr_dsi(ptr %a) disable_sanitizer_instrumentation sanitize_hwaddress {
 ; CHECK-LABEL: define i32 @noinstr_dsi(
-; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    call void @__hwasan_load4(i64 [[TMP1]])
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    call void @__hwasan_store4(i64 [[TMP2]])
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;

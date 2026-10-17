@@ -4,11 +4,7 @@
 define i32 @noinstr_dsi(ptr %a) disable_sanitizer_instrumentation sanitize_type {
 ; CHECK-LABEL: define i32 @noinstr_dsi(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 4
-; CHECK-NEXT:    [[SHADOW_BASE:%.*]] = load i64, ptr @__tysan_shadow_memory_address, align 4
-; CHECK-NEXT:    call void @__tysan_instrument_with_shadow_update(ptr [[A]], ptr null, i1 true, i64 4, i32 1)
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    call void @__tysan_instrument_with_shadow_update(ptr [[A]], ptr null, i1 true, i64 4, i32 2)
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;

@@ -5,25 +5,7 @@ define double @noinstr_dsi(ptr %a) disable_sanitizer_instrumentation sanitize_nu
 ; CHECK-LABEL: define double @noinstr_dsi(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[V:%.*]] = load double, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__nsan_get_shadow_ptr_for_double_load(ptr [[A]], i64 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB5:.*]], label %[[BB3:.*]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = load fp128, ptr [[TMP1]], align 1
-; CHECK-NEXT:    br label %[[BB7:.*]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = fpext double [[V]] to fp128
-; CHECK-NEXT:    br label %[[BB7]]
-; CHECK:       [[BB7]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi fp128 [ [[TMP4]], %[[BB3]] ], [ [[TMP6]], %[[BB5]] ]
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[V]], 1.000000e+00
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fp128 [[TMP8]], 1.000000e+00
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP9]], i32 1, i64 0)
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = fpext double [[R]] to fp128
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP11]], fp128 [[TMP12]], fp128 [[TMP9]]
-; CHECK-NEXT:    store i64 ptrtoint (ptr @noinstr_dsi to i64), ptr @__nsan_shadow_ret_tag, align 4
-; CHECK-NEXT:    store fp128 [[TMP13]], ptr @__nsan_shadow_ret_ptr, align 16
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %v = load double, ptr %a, align 8

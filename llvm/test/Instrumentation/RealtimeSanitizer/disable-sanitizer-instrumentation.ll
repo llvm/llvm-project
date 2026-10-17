@@ -4,10 +4,8 @@
 define i32 @noinstr_dsi(ptr %a) disable_sanitizer_instrumentation sanitize_realtime {
 ; CHECK-LABEL: define i32 @noinstr_dsi(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @__rtsan_realtime_enter()
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
-; CHECK-NEXT:    call void @__rtsan_realtime_exit()
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %v = load i32, ptr %a, align 4
