@@ -1182,6 +1182,12 @@ public:
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
 
+  /// Check if the floating-point type is supported in the current language
+  /// mode and target. If \p DiagnoseTarget is true, diagnose offload code
+  /// according to whether its enclosing function is emitted.
+  bool checkFloatingPointTypeSupport(QualType Ty, SourceLocation Loc,
+                                     bool DiagnoseTarget = false);
+
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.
   /// If isLvalue, the result of the cast is an lvalue.
