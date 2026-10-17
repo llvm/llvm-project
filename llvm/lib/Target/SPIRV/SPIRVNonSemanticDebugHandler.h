@@ -70,23 +70,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   SmallVector<CompileUnitInfo> CompileUnits;
   int64_t DwarfVersion = 0;
 
-  // DI types partitioned from DebugInfoFinder.types() in beginModule()
-  // (basics, pointers, vectors, subroutine types NSDI v1 may emit).
-  SmallVector<const DIBasicType *> BasicTypes;
-  SmallVector<const DIDerivedType *> PointerTypes;
-  SmallVector<const DISubroutineType *> SubroutineTypes;
-  // DICompositeType nodes with DW_TAG_array_type and DINode::FlagVector,
-  // partitioned from DebugInfoFinder.types() in beginModule().
-  SmallVector<const DICompositeType *> VectorTypes;
-  // DICompositeType nodes with DW_TAG_array_type that are not vectors,
-  // partitioned in beginModule().
-  SmallVector<const DICompositeType *> ArrayTypes;
-  // DICompositeType nodes with DW_TAG_structure_type, DW_TAG_class_type, or
-  // DW_TAG_union_type, partitioned in beginModule() for DebugTypeComposite.
-  SmallVector<const DICompositeType *> CompositeTypes;
-  // DIDerivedType nodes with DW_TAG_typedef, partitioned in beginModule() for
-  // DebugTypedef emission.
-  SmallVector<const DIDerivedType *> TypedefTypes;
+  SmallVector<const DIType *, 8> DebugTypes;
 
   // NonSemantic debug instruction result id per emitted scope.
   DenseMap<const DIScope *, MCRegister> DebugScopeRegs;
