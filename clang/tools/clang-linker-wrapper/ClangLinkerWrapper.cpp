@@ -451,7 +451,8 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
   llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   SmallVector<StringRef> Targets = {
-      Saver.save("-targets=host-" + HostTriple.normalize())};
+      Saver.save("-targets=host-" +
+                 HostTriple.normalize(Triple::CanonicalForm::FOUR_IDENT))};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
         clang::normalizeForBundler(Triple(TripleRef), Arch);
