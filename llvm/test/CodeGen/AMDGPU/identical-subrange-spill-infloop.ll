@@ -43,9 +43,9 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x130
 ; CHECK-NEXT:    ; implicit-def: $vgpr7 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    s_load_dwordx16 s[52:67], s[68:69], 0x2f0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s70, s68
 ; CHECK-NEXT:    v_writelane_b32 v7, s8, 0
 ; CHECK-NEXT:    v_writelane_b32 v7, s9, 1
@@ -94,25 +94,49 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v7, s48, 44
 ; CHECK-NEXT:    v_writelane_b32 v7, s49, 45
 ; CHECK-NEXT:    v_writelane_b32 v7, s50, 46
-; CHECK-NEXT:    v_writelane_b32 v7, s51, 47
-; CHECK-NEXT:    v_readlane_b32 s52, v7, 0
 ; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[68:69], 0x1f0
 ; CHECK-NEXT:    s_mov_b32 s69, s68
 ; CHECK-NEXT:    s_mov_b32 s71, s68
-; CHECK-NEXT:    v_mov_b32_e32 v3, v2
-; CHECK-NEXT:    v_readlane_b32 s53, v7, 1
-; CHECK-NEXT:    v_readlane_b32 s54, v7, 2
-; CHECK-NEXT:    v_readlane_b32 s55, v7, 3
-; CHECK-NEXT:    v_readlane_b32 s56, v7, 4
-; CHECK-NEXT:    v_readlane_b32 s57, v7, 5
-; CHECK-NEXT:    v_readlane_b32 s58, v7, 6
-; CHECK-NEXT:    v_readlane_b32 s59, v7, 7
+; CHECK-NEXT:    v_writelane_b32 v7, s51, 47
 ; CHECK-NEXT:    image_sample_lz v1, v[1:2], s[44:51], s[68:71] dmask:0x1
+; CHECK-NEXT:    v_readlane_b32 s36, v7, 0
+; CHECK-NEXT:    v_readlane_b32 s37, v7, 1
+; CHECK-NEXT:    v_readlane_b32 s38, v7, 2
+; CHECK-NEXT:    v_readlane_b32 s39, v7, 3
+; CHECK-NEXT:    v_readlane_b32 s40, v7, 4
+; CHECK-NEXT:    v_readlane_b32 s41, v7, 5
+; CHECK-NEXT:    v_readlane_b32 s42, v7, 6
+; CHECK-NEXT:    v_readlane_b32 s43, v7, 7
+; CHECK-NEXT:    v_readlane_b32 s44, v7, 8
+; CHECK-NEXT:    v_readlane_b32 s45, v7, 9
+; CHECK-NEXT:    v_readlane_b32 s46, v7, 10
+; CHECK-NEXT:    v_readlane_b32 s47, v7, 11
+; CHECK-NEXT:    v_readlane_b32 s48, v7, 12
+; CHECK-NEXT:    v_readlane_b32 s49, v7, 13
+; CHECK-NEXT:    v_readlane_b32 s50, v7, 14
+; CHECK-NEXT:    v_readlane_b32 s51, v7, 15
+; CHECK-NEXT:    v_readlane_b32 s36, v7, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
+; CHECK-NEXT:    v_readlane_b32 s37, v7, 1
+; CHECK-NEXT:    v_readlane_b32 s38, v7, 2
+; CHECK-NEXT:    v_readlane_b32 s39, v7, 3
+; CHECK-NEXT:    v_readlane_b32 s40, v7, 4
+; CHECK-NEXT:    v_readlane_b32 s41, v7, 5
+; CHECK-NEXT:    v_readlane_b32 s42, v7, 6
+; CHECK-NEXT:    v_readlane_b32 s43, v7, 7
+; CHECK-NEXT:    v_readlane_b32 s44, v7, 8
+; CHECK-NEXT:    v_readlane_b32 s45, v7, 9
+; CHECK-NEXT:    v_readlane_b32 s46, v7, 10
+; CHECK-NEXT:    v_readlane_b32 s47, v7, 11
+; CHECK-NEXT:    v_readlane_b32 s48, v7, 12
+; CHECK-NEXT:    image_sample_lz v4, v[2:3], s[36:43], s[68:71] dmask:0x1
+; CHECK-NEXT:    v_readlane_b32 s49, v7, 13
+; CHECK-NEXT:    v_readlane_b32 s50, v7, 14
+; CHECK-NEXT:    v_readlane_b32 s51, v7, 15
 ; CHECK-NEXT:    v_readlane_b32 s36, v7, 16
 ; CHECK-NEXT:    v_and_b32_e32 v5, 1, v0
 ; CHECK-NEXT:    v_readlane_b32 s37, v7, 17
 ; CHECK-NEXT:    v_readlane_b32 s38, v7, 18
-; CHECK-NEXT:    image_sample_lz v4, v[2:3], s[52:59], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s39, v7, 19
 ; CHECK-NEXT:    v_readlane_b32 s40, v7, 20
 ; CHECK-NEXT:    v_readlane_b32 s41, v7, 21
@@ -127,14 +151,6 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s50, v7, 30
 ; CHECK-NEXT:    v_readlane_b32 s51, v7, 31
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], 1, v5
-; CHECK-NEXT:    v_readlane_b32 s60, v7, 8
-; CHECK-NEXT:    v_readlane_b32 s61, v7, 9
-; CHECK-NEXT:    v_readlane_b32 s62, v7, 10
-; CHECK-NEXT:    v_readlane_b32 s63, v7, 11
-; CHECK-NEXT:    v_readlane_b32 s64, v7, 12
-; CHECK-NEXT:    v_readlane_b32 s65, v7, 13
-; CHECK-NEXT:    v_readlane_b32 s66, v7, 14
-; CHECK-NEXT:    v_readlane_b32 s67, v7, 15
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mul_f32_e32 v0, v4, v1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
