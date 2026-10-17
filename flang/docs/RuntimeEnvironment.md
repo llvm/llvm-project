@@ -117,6 +117,17 @@ restore the unconditional whole-object copy-out. Note that this restores
 stores of unmodified data as well (including into read-only storage), so it
 is an escape hatch and A/B-comparison aid, not a safer mode.
 
+## `FLANG_RT_MAX_SUBRECORD_LENGTH`
+
+Set to an integer value to limit the number of payload bytes that the runtime
+places in one subrecord of an unformatted sequential record
+A record longer than this limit is written as a chain of subrecords whose
+4-byte length markers are negative when another subrecord follows, which is
+the layout that gfortran uses.
+The default, which also applies when the value is not a positive integer no
+greater than 2147483639, is the largest length that a signed 32-bit marker
+can describe; records shorter than that keep a single header and footer.
+
 ## `FORT_CHECK_POINTER_DEALLOCATION`
 
 Fortran requires that a pointer that appears in a `DEALLOCATE` statement
