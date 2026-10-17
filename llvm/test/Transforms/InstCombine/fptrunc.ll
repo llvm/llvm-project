@@ -430,3 +430,52 @@ define half @fdiv_narrow_ninf_on_both(half %x, half %y) {
   %r = fptrunc ninf float %m to half
   ret half %r
 }
+
+; frem can be evaluated in the narrower source type, but when the source and
+; destination types have the same width and different formats (bfloat vs half),
+; there is no fpext or fptrunc between them, so the fold must not fire.
+
+define half @frem_bfloat_to_half(bfloat %x, bfloat %y) {
+; CHECK-LABEL: @frem_bfloat_to_half(
+; CHECK-NEXT:    [[XF:%.*]] = fpext bfloat [[X:%.*]] to float
+; CHECK-NEXT:    [[YF:%.*]] = fpext bfloat [[Y:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = frem float [[XF]], [[YF]]
+; CHECK-NEXT:    [[T:%.*]] = fptrunc float [[R]] to half
+; CHECK-NEXT:    ret half [[T]]
+;
+  %xf = fpext bfloat %x to float
+  %yf = fpext bfloat %y to float
+  %r = frem float %xf, %yf
+  %t = fptrunc float %r to half
+  ret half %t
+}
+
+define bfloat @frem_half_to_bfloat(half %x, half %y) {
+; CHECK-LABEL: @frem_half_to_bfloat(
+; CHECK-NEXT:    [[XF:%.*]] = fpext half [[X:%.*]] to float
+; CHECK-NEXT:    [[YF:%.*]] = fpext half [[Y:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = frem float [[XF]], [[YF]]
+; CHECK-NEXT:    [[T:%.*]] = fptrunc float [[R]] to bfloat
+; CHECK-NEXT:    ret bfloat [[T]]
+;
+  %xf = fpext half %x to float
+  %yf = fpext half %y to float
+  %r = frem float %xf, %yf
+  %t = fptrunc float %r to bfloat
+  ret bfloat %t
+}
+
+; Control: a real narrowing still happens (half -> float evaluation, then fpext).
+
+define float @frem_half_to_float_still_folds(half %x, half %y) {
+; CHECK-LABEL: @frem_half_to_float_still_folds(
+; CHECK-NEXT:    [[TMP1:%.*]] = frem half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = fpext half [[TMP1]] to float
+; CHECK-NEXT:    ret float [[T]]
+;
+  %xf = fpext half %x to double
+  %yf = fpext half %y to double
+  %r = frem double %xf, %yf
+  %t = fptrunc double %r to float
+  ret float %t
+}
