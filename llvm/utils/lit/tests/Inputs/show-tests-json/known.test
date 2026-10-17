@@ -1,0 +1,8 @@
+# REQUIRES: z && (a && z), feature={{[a-z]+}} || b
+# REQUIRES: !disabled && \
+# REQUIRES: preexisting
+# UNSUPPORTED: unsupported-{{[a-z]+}} && !enabled
+# XFAIL: *, bug || failure
+# END.
+# REQUIRES: ignored-after-end
+# RUN: exit 99

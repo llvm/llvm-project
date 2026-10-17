@@ -112,6 +112,14 @@ Enable -v, but for all tests not just failed tests.
 Write test results to the provided path.
 :::
 
+:::{option} --show-tests-json
+List all discovered tests as JSON and exit without running tests.
+Group tests by suite, with relative logical paths and normalized requirements.
+`requires` is `{}` for no requirements, `null` for unknown metadata,
+or a feature-expression string or logical-expression object otherwise.
+Suite configuration still runs.
+:::
+
 :::{option} --no-progress-bar
 Do not use curses based progress bar.
 :::

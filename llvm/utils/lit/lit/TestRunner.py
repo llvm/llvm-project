@@ -1990,6 +1990,8 @@ class IntegratedTestKeywordParser:
         """A parser for BOOLEAN_EXPR type keywords"""
         parts = [s.strip() for s in line.split(",") if s.strip() != ""]
         if output and output[-1][-1] == "\\":
+            if not parts:
+                raise ValueError("Empty continuation in boolean expression")
             output[-1] = output[-1][:-1] + parts[0]
             del parts[0]
         if output is None:
