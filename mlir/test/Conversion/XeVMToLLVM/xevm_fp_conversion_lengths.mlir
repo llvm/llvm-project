@@ -63,8 +63,7 @@ llvm.func @extf_bf8_to_bf16_v4(%src: vector<4xi8>) -> vector<4xbf16> {
 
 // -----
 
-// f16 to E4M3 away from length 16. Note IGC spells E4M3 `e4m3` in the
-// conversion builtins, not `hf8`.
+// f16 to E4M3 away from length 16.
 // CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE4M3EXTDv4_Dh(vector<4xf16>) -> vector<4xi8>
 // CHECK-LABEL: llvm.func @truncf_f16_to_hf8_v4
 // CHECK-SAME: %[[ARG0:.*]]: vector<4xf16>
@@ -90,10 +89,8 @@ llvm.func @extf_hf8_to_f16_v8(%src: vector<8xi8>) -> vector<8xf16> {
 
 // -----
 
-// `src_etype` is authoritative, and the verifier only constrains the operand's
-// bitwidth, so a bf16 vector can arrive under `src_etype = f16`. The operand is
-// reinterpreted as what the selected wrapper takes rather than reaching the
-// mangler as a bf16 type, which it has no code for.
+// The verifier only constrains the operand's bitwidth, so a bf16 vector can
+// arrive under `src_etype = f16`. It is reinterpreted as what the wrapper takes.
 // CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertFP16ToE5M2EXTDv2_Dh(vector<2xf16>) -> vector<2xi8>
 // CHECK-LABEL: llvm.func @truncf_etype_f16_operand_bf16
 // CHECK-SAME: %[[ARG0:.*]]: vector<2xbf16>
@@ -107,8 +104,8 @@ llvm.func @truncf_etype_f16_operand_bf16(%src: vector<2xbf16>) -> vector<2xi8> {
 
 // -----
 
-// The only odd length for an fp8 conversion, where one value per byte means the
-// source and the destination have the same length.
+// The only odd length an fp8 conversion has: one value per byte, so the source
+// and the destination are the same length.
 // CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertE5M2ToBF16EXTDv3_c(vector<3xi8>) -> vector<3xi16>
 // CHECK-LABEL: llvm.func @extf_bf8_to_bf16_v3
 // CHECK-SAME: %[[ARG0:.*]]: vector<3xi8>
@@ -122,8 +119,7 @@ llvm.func @extf_bf8_to_bf16_v3(%src: vector<3xi8>) -> vector<3xbf16> {
 
 // -----
 
-// bf16 to E5M2 away from length 16. The bf16 wrapper takes the bits as shortN,
-// so the only preprocessing is the bitcast.
+// bf16 to E5M2 away from length 16.
 // CHECK: llvm.func spir_funccc @_Z36__builtin_spirv_ConvertBF16ToE5M2EXTDv4_s(vector<4xi16>) -> vector<4xi8>
 // CHECK-LABEL: llvm.func @truncf_bf16_to_bf8_v4
 // CHECK-SAME: %[[ARG0:.*]]: vector<4xbf16>

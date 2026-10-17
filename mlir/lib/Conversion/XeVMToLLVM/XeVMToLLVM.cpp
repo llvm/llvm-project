@@ -1350,40 +1350,23 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
       return success();
     }
 
-    // Handle the case where dst type is fp8.
+    // Handle the case where dst type is fp8, via the SPV_INTEL_fp_conversions
+    // wrappers in IGC's BiFModule:
+    //   charN __builtin_spirv_Convert{FP16,BF16}To{E5M2,E4M3}EXT(halfN/shortN)
     //
-    // The conversions come from the SPV_INTEL_fp_conversions half of the IGC
-    // BiFModule, which overloads one wrapper per vector length:
-    //   charN __builtin_spirv_ConvertFP16ToE5M2EXT(halfN)
-    //   charN __builtin_spirv_ConvertFP16ToE4M3EXT(halfN)
-    //   charN __builtin_spirv_ConvertBF16ToE5M2EXT(shortN)
-    //   charN __builtin_spirv_ConvertBF16ToE4M3EXT(shortN)
+    // These replace the __builtin_IB_* names used before, two of which did not
+    // exist: IGC spells E4M3 as `e4m3` in the conversion builtins, not `hf8`.
+    // createDeviceFunctionCall emits names unmangled, so the missing symbol
+    // linked silently and the call returned undef. The wrappers are
+    // `overloadable`, so mangle() takes the length from the argument type and a
+    // mismatch fails to link instead. The bf16 forms take the bits as shortN
+    // and route through f32 and f16 internally, replacing the explicit
+    // bftof/convert_half round trip.
     //
-    // These wrap the __builtin_IB_* builtins this used to name directly. Two
-    // of those names do not exist: IGC spells E4M3 as `e4m3` in the conversion
-    // builtins, not `hf8`, so `__builtin_IB_hftohf8_N` was never defined -
-    // even though the scaled DPAS builtin does use `hf8`
-    // (bdpas_f_f_hf8_hf8_8_8), which is correct and unchanged here. Because
-    // createDeviceFunctionCall emits these names unmangled, the nonexistent
-    // symbol linked silently and the call returned undef.
-    //
-    // The wrappers are declared `overloadable`, so the existing mangle() helper
-    // derives the vector length from the argument type instead of pasting a
-    // suffix onto the name, and a name or signature mismatch fails to link
-    // rather than binding to nothing. As the note above these patterns says,
-    // they are the experimental SPIR-V extension implementation rather than an
-    // official OpenCL API, so the TODO to move once one exists still stands.
-    //
-    // A bf16 source takes the bf16 form, which accepts the bits as shortN and
-    // routes through f32 and f16 internally. That retires the explicit
-    // __builtin_IB_bftof plus convert_half round trip, so each bf16 conversion
-    // is one call rather than three.
-    //
-    // `src_etype` is what says how to read the source, and the verifier only
-    // constrains the operand's bitwidth, so f16 and bf16 are interchangeable to
-    // it and either may arrive under either attribute. Coerce the operand to
-    // what the selected wrapper takes, which also keeps bf16 out of the
-    // mangling, where there is no code for it.
+    // `src_etype` says how to read the source and the verifier only checks its
+    // bitwidth, so either element type may arrive under either attribute.
+    // Coerce to what the wrapper takes, which also keeps bf16 away from
+    // mangle(), which has no code for it.
     bool srcIsBF16 = srcEtype == TruncfSrcElemTypes::BF16;
     Type argElemTy = srcIsBF16 ? cast<Type>(rewriter.getI16Type())
                                : cast<Type>(rewriter.getF16Type());
@@ -1508,20 +1491,12 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
       return rewriter.notifyMatchFailure(
           op, "fp8 src and dst must have the same number of elements");
 
-    // Mangled SPV_INTEL_fp_conversions wrappers, for the reasons given in the
-    // truncf lowering above:
-    //   halfN  __builtin_spirv_ConvertE5M2ToFP16EXT(charN)
-    //   halfN  __builtin_spirv_ConvertE4M3ToFP16EXT(charN)
-    //   shortN __builtin_spirv_ConvertE5M2ToBF16EXT(charN)
-    //   shortN __builtin_spirv_ConvertE4M3ToBF16EXT(charN)
+    // The matching wrappers, for the reasons given in the truncf lowering:
+    //   halfN/shortN __builtin_spirv_Convert{E5M2,E4M3}To{FP16,BF16}EXT(charN)
     //
-    // As on the truncf side, `__builtin_IB_hf8tohf_N` never existed - IGC
-    // defines `__builtin_IB_e4m3tohf_N` - so the f8 -> f16 call linked to
-    // nothing and returned undef.
-    //
-    // A bf16 destination takes the bf16 form, which returns the bits as shortN,
-    // retiring the convert_float plus __builtin_IB_ftobf round trip: one call
-    // instead of three.
+    // `__builtin_IB_hf8tohf_N`, used before, never existed either. A bf16
+    // destination returns the bits as shortN, replacing the
+    // convert_float/ftobf round trip.
     bool dstIsBF16 = dstEtype == ExtfDstElemTypes::BF16;
     StringRef convertName;
     if (srcEtype == ExtfSrcElemTypes::BF8) { // Float8E5M2Type
@@ -1540,9 +1515,8 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
                        rewriter, mangle(convertName, argTypes), resTy, argTypes,
                        args, {}, funcAttrs, op.getOperation())
                        ->getResult(0);
-    // The bf16 wrapper returns the bf16 bits as i16. As on the truncf side,
-    // `dst_etype` may disagree with the result's element type, so cast to what
-    // the op actually produces rather than to what the attribute implies.
+    // The bf16 wrapper returns the bits as i16, and `dst_etype` may disagree
+    // with the result's element type, so cast to what the op produces.
     rewriter.replaceOp(op, castIfNeeded(rewriter, loc, vecDstTy, result));
     return success();
   }
