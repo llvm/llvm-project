@@ -1447,7 +1447,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      return LHS->isIdenticalTo(RHS);
+      return LHS->isIdenticalToWhenDefined(RHS);
     }
 
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
