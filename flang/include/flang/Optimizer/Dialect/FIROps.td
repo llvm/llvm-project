@@ -3088,6 +3088,7 @@ def fir_UseStmtOp
     - The module being used (via module_name string)
     - Symbol references to symbols imported via the ONLY clause (if present)
     - Symbol renames (local_name and symbol reference)
+    - Descriptions of imported COMMON block members
 
     Examples:
     ```
@@ -3108,28 +3109,23 @@ def fir_UseStmtOp
 
   let arguments = (ins StrAttr:$module_name,
       OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
-      DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
+      OptionalAttr<ArrayAttr>:$common_block_members);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
-    (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
+    (`common_block_members` `[` $common_block_members^ `]`)?
     attr-dict
   }];
 
   let extraClassDeclaration = [{
-    /// Returns true if this is a USE with ONLY clause
+    /// Returns true if this is a USE with ONLY clause. The only_symbols list
+    /// is present, possibly empty, whenever there is an ONLY clause.
     bool hasOnlyClause() { return getOnlySymbols().has_value(); }
 
     /// Returns true if this has any renames
     bool hasRenames() { return getRenames().has_value(); }
-
-    /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
-
-    /// Returns true if this USE statement has both ONLY clause and renames
-    bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
   }];
 }
 
@@ -3145,9 +3141,11 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
     Records the Fortran `USE` statements that appear in a module's specification
     part for debug metadata.
 
-    The region holds one `fir.use_stmt` per `USE`, in program order. This
-    operation has no runtime effect. It is emitted only when full debug
-    information is requested.
+    The region holds one `fir.use_stmt` per `USE`, in program order. The
+    operation also records the module's own COMMON block members so they remain
+    visible through host association without requiring fir.declare operations in
+    every module procedure. This operation has no runtime effect. It is emitted
+    only when full debug information is requested.
 
     A submodule is not a first class entity in FIR, and its name is not
     qualified, so its ancestry is recorded here. `ancestor_module` names the
@@ -3159,11 +3157,13 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
 
   let arguments = (ins StrAttr:$module_name,
                        OptionalAttr<StrAttr>:$ancestor_module,
-                       OptionalAttr<StrAttr>:$parent_module);
+                       OptionalAttr<StrAttr>:$parent_module,
+                       OptionalAttr<ArrayAttr>:$common_block_members);
   let regions = (region SizedRegion<1>:$uses);
 
   let assemblyFormat = [{
     $module_name (`in` $ancestor_module^)? (`parent` $parent_module^)?
+    (`common_block_members` `[` $common_block_members^ `]`)?
     attr-dict-with-keyword $uses
   }];
 }
