@@ -17,44 +17,40 @@ define void @forces(ptr noalias %out, ptr noalias %p, double %gm, ptr noalias %p
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[FZ:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[FZ_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FY:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[FY_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FZ1:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[FZ_NEXT1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP13:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds nuw [24 x i8], ptr [[POS]], i64 [[I]]
 ; CHECK-NEXT:    [[MP:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[MASS]], i64 [[I]]
 ; CHECK-NEXT:    [[M:%.*]] = load double, ptr [[MP]], align 8
 ; CHECK-NEXT:    [[Q_Z:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 16
 ; CHECK-NEXT:    [[QZ:%.*]] = load double, ptr [[Q_Z]], align 8
 ; CHECK-NEXT:    [[DZ:%.*]] = fsub double [[PZ]], [[QZ]]
+; CHECK-NEXT:    [[DZ2:%.*]] = fmul double [[DZ]], [[DZ]]
+; CHECK-NEXT:    [[GMM:%.*]] = fmul double [[GM]], [[M]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[Q]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[DXY:%.*]] = fadd double [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[DZ2:%.*]] = fmul double [[DZ]], [[DZ]]
 ; CHECK-NEXT:    [[D:%.*]] = fadd double [[DXY]], [[DZ2]]
-; CHECK-NEXT:    [[GMM:%.*]] = fmul double [[GM]], [[M]]
 ; CHECK-NEXT:    [[F:%.*]] = fdiv double [[GMM]], [[D]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TZ:%.*]] = fmul double [[TMP8]], [[F]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[F]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[D]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = fdiv <2 x double> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TZ:%.*]] = fmul double [[DZ]], [[F]]
 ; CHECK-NEXT:    [[AZ:%.*]] = fdiv double [[TZ]], [[D]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TY:%.*]] = fmul double [[TMP7]], [[F]]
-; CHECK-NEXT:    [[AY:%.*]] = fdiv double [[TY]], [[D]]
-; CHECK-NEXT:    [[TZ1:%.*]] = fmul double [[DZ]], [[F]]
-; CHECK-NEXT:    [[AZ1:%.*]] = fdiv double [[TZ1]], [[D]]
+; CHECK-NEXT:    [[TMP13]] = fadd <2 x double> [[TMP1]], [[TMP12]]
 ; CHECK-NEXT:    [[FZ_NEXT]] = fadd double [[FZ]], [[AZ]]
-; CHECK-NEXT:    [[FY_NEXT]] = fadd double [[FY]], [[AY]]
-; CHECK-NEXT:    [[FZ_NEXT1]] = fadd double [[FZ1]], [[AZ1]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store double [[FZ_NEXT]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[OUT_Y:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 8
-; CHECK-NEXT:    store double [[FY_NEXT]], ptr [[OUT_Y]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    [[OUT_Z:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 16
-; CHECK-NEXT:    store double [[FZ_NEXT1]], ptr [[OUT_Z]], align 8
+; CHECK-NEXT:    store double [[FZ_NEXT]], ptr [[OUT_Z]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
