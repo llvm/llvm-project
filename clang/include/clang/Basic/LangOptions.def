@@ -158,6 +158,7 @@ LANGOPT(Modules           , 1, 0, NotCompatible, "modules semantics")
 LANGOPT(ClangModules      , 1, 0, Compatible, "Clang header modules")
 LANGOPT(CPlusPlusModules  , 1, 0, Compatible, "C++ modules syntax")
 LANGOPT(SkipODRCheckInGMF , 1, 0, NotCompatible, "Skip ODR checks for decls in the global module fragment")
+LANGOPT(ModulesUniqueGMFInternalLinkage, 1, 1, NotCompatible, "Use unique internal linkage for functions in global module fragments")
 LANGOPT(BuiltinHeadersInSystemModules, 1, 0, NotCompatible, "builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers")
 ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None, Benign,
              "compiling a module interface")
