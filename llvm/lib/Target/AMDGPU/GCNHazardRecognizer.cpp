@@ -2174,7 +2174,7 @@ bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
     return false;
 
   auto IsHazardFn = [TRI](const MachineInstr &I) {
-    if (SIInstrInfo::isVALU(I, /*AllowLDSDMA=*/true))
+    if (I.isMetaInstruction() || SIInstrInfo::isVALU(I, /*AllowLDSDMA=*/true))
       return false;
     return I.readsRegister(AMDGPU::EXEC, TRI);
   };
