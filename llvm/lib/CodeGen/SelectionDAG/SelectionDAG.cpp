@@ -8944,14 +8944,20 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
 
     // EXTRACT_VECTOR_ELT of a constant-index EXTRACT_SUBVECTOR of
-    // CONCAT_VECTORS is the shape of a BUILD_VECTOR that was split into chunks.
+    // CONCAT_VECTORS of BUILD_VECTORs is the shape of a BUILD_VECTOR that was
+    // split into chunks; extract the element from the chunk.
     if (N2C && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         N1.getOperand(0).getOpcode() == ISD::CONCAT_VECTORS &&
         N1.getOperand(0).getValueType().isFixedLengthVector() &&
-        isa<ConstantSDNode>(N1.getOperand(1)))
-      return getExtractVectorElt(DL, VT, N1.getOperand(0),
-                                 N1.getConstantOperandVal(1) +
-                                     N2C->getZExtValue());
+        isa<ConstantSDNode>(N1.getOperand(1))) {
+      SDValue Concat = N1.getOperand(0);
+      uint64_t Idx = N1.getConstantOperandVal(1) + N2C->getZExtValue();
+      unsigned Factor =
+          Concat.getOperand(0).getValueType().getVectorNumElements();
+      SDValue Chunk = Concat.getOperand(Idx / Factor);
+      if (Chunk.getOpcode() == ISD::BUILD_VECTOR || Chunk.isUndef())
+        return getExtractVectorElt(DL, VT, Chunk, Idx % Factor);
+    }
 
     // EXTRACT_VECTOR_ELT of BUILD_VECTOR or SPLAT_VECTOR is often formed while
     // lowering is expanding large vector constants.
