@@ -1026,9 +1026,15 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     return;
   }
   case APValue::Struct: {
+    const auto *RD = Ty->castAsRecordDecl();
+    // Every value of an empty class is the same value, so the nested braces of
+    // its (empty) bases carry no information.
+    if (const auto *CD = dyn_cast<CXXRecordDecl>(RD); CD && CD->isEmpty()) {
+      Out << "{}";
+      return;
+    }
     Out << '{';
     llvm::ListSeparator Comma;
-    const auto *RD = Ty->castAsRecordDecl();
     if (unsigned N = getStructNumBases()) {
       const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
       CXXRecordDecl::base_class_const_iterator BI = CD->bases_begin();
