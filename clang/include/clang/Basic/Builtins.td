@@ -5957,6 +5957,12 @@ def HLSLBufferUpdateCounter : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "uint32_t(__hlsl_resource_t, int)";
 }
 
+def HLSLFrexp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_frexp"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_splitdouble"];
   let Attributes = [NoThrow, Const];
