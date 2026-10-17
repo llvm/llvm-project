@@ -6,26 +6,10 @@
 ; Ordinary LLVM AND with SVE NOT.
 
 define <vscale x 4 x i32> @and_not_ptrue_all(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive) {
-; SVE-LABEL: and_not_ptrue_all:
-; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    not z1.s, p0/m, z1.s
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: and_not_ptrue_all:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    ptrue p0.s
-; SVE2P2-NEXT:    not z1.s, p0/z, z1.s
-; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: and_not_ptrue_all:
-; SME:       // %bb.0:
-; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    not z1.s, p0/m, z1.s
-; SME-NEXT:    and z0.d, z0.d, z1.d
-; SME-NEXT:    ret
+; CHECK-LABEL: and_not_ptrue_all:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %and = and <vscale x 4 x i32> %a, %not
@@ -33,49 +17,20 @@ define <vscale x 4 x i32> @and_not_ptrue_all(<vscale x 4 x i32> %a, <vscale x 4 
 }
 
 define <vscale x 4 x i32> @and_not_commuted(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; SVE-LABEL: and_not_commuted:
-; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    not z1.s, p0/m, z1.s
-; SVE-NEXT:    and z0.d, z1.d, z0.d
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: and_not_commuted:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    ptrue p0.s
-; SVE2P2-NEXT:    not z1.s, p0/z, z1.s
-; SVE2P2-NEXT:    and z0.d, z1.d, z0.d
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: and_not_commuted:
-; SME:       // %bb.0:
-; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    not z1.s, p0/m, z1.s
-; SME-NEXT:    and z0.d, z1.d, z0.d
-; SME-NEXT:    ret
+; CHECK-LABEL: and_not_commuted:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b)
   %and = and <vscale x 4 x i32> %not, %a
   ret <vscale x 4 x i32> %and
 }
 
 define <vscale x 4 x i32> @and_not_poison_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %pg) {
-; SVE-LABEL: and_not_poison_i32:
-; SVE:       // %bb.0:
-; SVE-NEXT:    not z1.s, p0/m, z1.s
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: and_not_poison_i32:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    not z1.s, p0/z, z1.s
-; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: and_not_poison_i32:
-; SME:       // %bb.0:
-; SME-NEXT:    not z1.s, p0/m, z1.s
-; SME-NEXT:    and z0.d, z0.d, z1.d
-; SME-NEXT:    ret
+; CHECK-LABEL: and_not_poison_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %and = and <vscale x 4 x i32> %a, %not
   ret <vscale x 4 x i32> %and
@@ -85,26 +40,10 @@ define <vscale x 4 x i32> @and_not_poison_i32(<vscale x 4 x i32> %a, <vscale x 4
 ; irrelevant to AND_U. An all-active NOT can also fold with any AND predicate.
 
 define <vscale x 4 x i32> @and_not_all_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; SVE-LABEL: and_not_all_i32:
-; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    not z1.s, p0/m, z1.s
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: and_not_all_i32:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    ptrue p0.s
-; SVE2P2-NEXT:    not z1.s, p0/z, z1.s
-; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: and_not_all_i32:
-; SME:       // %bb.0:
-; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    not z1.s, p0/m, z1.s
-; SME-NEXT:    and z0.d, z0.d, z1.d
-; SME-NEXT:    ret
+; CHECK-LABEL: and_not_all_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
   ret <vscale x 4 x i32> %and
@@ -113,8 +52,7 @@ define <vscale x 4 x i32> @and_not_all_i32(<vscale x 4 x i32> %a, <vscale x 4 x 
 define <vscale x 4 x i32> @matching_defined(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: matching_defined:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    not z2.s, p0/m, z1.s
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
@@ -124,8 +62,7 @@ define <vscale x 4 x i32> @matching_defined(<vscale x 4 x i32> %a, <vscale x 4 x
 define <vscale x 4 x i32> @matching_commuted(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: matching_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    not z2.s, p0/m, z1.s
-; CHECK-NEXT:    and z0.d, z2.d, z0.d
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %not, <vscale x 4 x i32> %a)
@@ -133,26 +70,10 @@ define <vscale x 4 x i32> @matching_commuted(<vscale x 4 x i32> %a, <vscale x 4 
 }
 
 define <vscale x 4 x i32> @all_not_partial_and(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg) {
-; SVE-LABEL: all_not_partial_and:
-; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    not z1.s, p0/m, z1.s
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2P2-LABEL: all_not_partial_and:
-; SVE2P2:       // %bb.0:
-; SVE2P2-NEXT:    ptrue p0.s
-; SVE2P2-NEXT:    not z1.s, p0/z, z1.s
-; SVE2P2-NEXT:    and z0.d, z0.d, z1.d
-; SVE2P2-NEXT:    ret
-;
-; SME-LABEL: all_not_partial_and:
-; SME:       // %bb.0:
-; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    not z1.s, p0/m, z1.s
-; SME-NEXT:    and z0.d, z0.d, z1.d
-; SME-NEXT:    ret
+; CHECK-LABEL: all_not_partial_and:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
   %not = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b)
   %and = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %not)
   ret <vscale x 4 x i32> %and
