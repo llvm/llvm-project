@@ -28,12 +28,19 @@ void combined_target_parallel_for() {
 // __kmpc_fork_call, whose body statically schedules the omp.wsloop via
 // __kmpc_for_static_init_4/_4u.
 //
+// This is a target SPMD construct, so the host's kernel-launch arguments
+// carry the host_eval'd trip count (10) in the Tripcount field; OGCG below
+// leaves that field 0, since it doesn't forward a host-computed trip count.
 // LLVM-LABEL: define {{.*}} void @target_parallel_for(
+// LLVM:         %[[TRIPCOUNT_GEP:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %kernel_args, i32 0, i32 8
+// LLVM:         store i64 10, ptr %[[TRIPCOUNT_GEP]], align 8
 // LLVM:         call i32 @__tgt_target_kernel(
 // LLVM:       omp_offload.failed:
 // LLVM:         call void @__omp_offloading_{{.*}}_target_parallel_for_l{{.*}}(
 
 // LLVM-LABEL: define {{.*}} void @combined_target_parallel_for(
+// LLVM:         %[[TRIPCOUNT_GEP:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %kernel_args, i32 0, i32 8
+// LLVM:         store i64 10, ptr %[[TRIPCOUNT_GEP]], align 8
 // LLVM:         call i32 @__tgt_target_kernel(
 // LLVM:       omp_offload.failed:
 // LLVM:         call void @__omp_offloading_{{.*}}_combined_target_parallel_for_l{{.*}}(
@@ -57,6 +64,8 @@ void combined_target_parallel_for() {
 // LLVM:         call void @during(i32
 
 // OGCG-LABEL: define {{.*}} void @target_parallel_for(
+// OGCG:         %[[TRIPCOUNT_GEP:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %kernel_args, i32 0, i32 8
+// OGCG:         store i64 0, ptr %[[TRIPCOUNT_GEP]], align 8
 // OGCG:         call i32 @__tgt_target_kernel(
 // OGCG:       omp_offload.failed:
 // OGCG:         call void @__omp_offloading_{{.*}}_target_parallel_for_l{{.*}}(
@@ -70,6 +79,8 @@ void combined_target_parallel_for() {
 // OGCG:         call void @__kmpc_for_static_fini(
 
 // OGCG-LABEL: define {{.*}} void @combined_target_parallel_for(
+// OGCG:         %[[TRIPCOUNT_GEP:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %kernel_args, i32 0, i32 8
+// OGCG:         store i64 0, ptr %[[TRIPCOUNT_GEP]], align 8
 // OGCG:         call i32 @__tgt_target_kernel(
 // OGCG:       omp_offload.failed:
 // OGCG:         call void @__omp_offloading_{{.*}}_combined_target_parallel_for_l{{.*}}(
