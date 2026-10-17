@@ -307,21 +307,24 @@ bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
   return computeKnownBits(V, SQ, Depth).isNonNegative();
 }
 
-bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
+bool llvm::isKnownPositive(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
     return CI->getValue().isStrictlyPositive();
 
   // If `isKnownNonNegative` ever becomes more sophisticated, make sure to keep
   // this updated.
-  KnownBits Known = computeKnownBits(V, SQ, Depth);
+  KnownBits Known = Depth == 0 ? V.getKnownBits(SQ)
+                               : computeKnownBits(V.getValue(), SQ, Depth);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
+         (Known.isNonZero() || isKnownNonZero(V.getValue(), SQ, Depth));
 }
 
-bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNegative();
+bool llvm::isKnownNegative(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (Depth == 0)
+    return V.getKnownBits(SQ).isNegative();
+  return computeKnownBits(V.getValue(), SQ, Depth).isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
