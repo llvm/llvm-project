@@ -34,6 +34,8 @@ defm : BoolField<"hints-allow-reordering", "true",
   "Allow enabling loop hints to reorder FP operations during vectorization">;
 defm : BoolField<"lv-strided-pointer-ivs", "false",
   "Enable recognition of non-constant strided pointer induction variables">;
+defm : BoolField<"lv-compressing-patterns", "true",
+  "Enable recognition of compressing patterns">;
 defm : EnumField<"scalable-vectorization", "LoopVectorizeHints::ScalableForceKind", "LoopVectorizeHints::SK_Unspecified", "off,preferred,on,always",
   ["LoopVectorizeHints::SK_FixedWidthOnly", "LoopVectorizeHints::SK_PreferScalable", "LoopVectorizeHints::SK_PreferScalable", "LoopVectorizeHints::SK_AlwaysScalable"],
   "Control whether the compiler can use scalable vectors to vectorize a loop">;

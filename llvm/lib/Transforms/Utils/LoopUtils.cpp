@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -30,6 +31,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -2489,4 +2491,82 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
   }
 
   return {};
+}
+
+bool llvm::collectCompressedPtrs(
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
+    const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
+  assert(L.isInnermost() && "Expected innermost loop!");
+  const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
+  ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
+
+  auto GetCompressedPtrSCEV = [&](Value *Ptr,
+                                  Type *AccessTy) -> const SCEVAddRecExpr * {
+    using namespace SCEVPatternMatch;
+    // TODO: Take into account the non-wrap flags of the MD when rewriting the
+    // SCEV expressions for pointers. This should allow folding away zext/sext
+    // operations.
+    const SCEV *PtrSCEV =
+        SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
+    if (!match(PtrSCEV,
+               m_scev_AffineAddRec(m_SCEV(), m_SCEV(), m_SpecificLoop(&L))))
+      return nullptr;
+
+    // Check if pointer step equals access size.
+    const SCEVAddRecExpr *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
+    SCEVUse Step = PtrAddRec->getStepRecurrence(SE);
+    if (Step != SE.getSizeOfExpr(Step->getType(), AccessTy))
+      return nullptr;
+
+    return PtrAddRec;
+  };
+
+  SmallSetVector<Use *, 16> Worklist;
+  Worklist.insert_range(make_pointer_range(CondID.getHeaderPHI()->uses()));
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Use *U = Worklist[I];
+
+    auto *UserI = cast<Instruction>(U->getUser());
+    // Disallow out of loop users. TODO: This could be relaxed if the loop
+    // vectorizer could handle liveout users of the conditional induction.
+    if (!L.contains(UserI))
+      return false;
+
+    // Always allow uses by the backedge update.
+    if (UserI == CondID.getBackedgePHI())
+      continue;
+
+    Value *CurrentVal = U->get();
+    if (isa<LoadInst, StoreInst>(UserI)) {
+      // Disallow any store that uses the monotonic value as the stored value.
+      auto *SI = dyn_cast<StoreInst>(UserI);
+      if (SI && SI->getValueOperand() == CurrentVal)
+        return false;
+
+      Value *Ptr = getLoadStorePointerOperand(UserI);
+      const SCEVAddRecExpr *PtrAddRec =
+          GetCompressedPtrSCEV(Ptr, getLoadStoreType(UserI));
+      if (!PtrAddRec)
+        return false;
+      CompressedPtrs.insert({Ptr, PtrAddRec});
+      continue;
+    }
+
+    auto LoopVariantOp = [&](Value *V, bool /*AllowRepeats*/) -> Value * {
+      return L.isLoopInvariant(V) ? nullptr : V;
+    };
+
+    // Non-memory users may use any opcode (select/and/or/etc.), but they must
+    // only have CurrentVal as their only loop-varying input. That prevents
+    // mixing in a second loop-varying term. GetCompressedPtrSCEV rewrites the
+    // full leaf pointer SCEV and rejects it unless the entire address still
+    // simplifies to the required affine AddRec.
+    if (UserI->use_empty() ||
+        find_singleton<Value>(UserI->operands(), LoopVariantOp) != CurrentVal)
+      return false;
+
+    Worklist.insert_range(make_pointer_range(UserI->uses()));
+  }
+
+  return true;
 }
