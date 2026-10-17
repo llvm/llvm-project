@@ -485,6 +485,10 @@ public:
 
   CompilerType GetDirectNestedTypeWithName(llvm::StringRef name) const;
 
+  /// See TypeSystem::GetPropertyBackingStorageName.
+  llvm::StringRef
+  GetPropertyBackingStorageName(llvm::StringRef property_name) const;
+
   /// Return the number of template arguments the type has.
   /// If expand_pack is true, then variadic argument packs are automatically
   /// expanded to their supplied arguments. If it is false an argument pack
