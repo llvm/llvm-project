@@ -1,0 +1,59 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// Checks that CallConvLowering under target=amdgpu classifies a function by
+// its calling convention. Default functions get extension and Ignore rewrites
+// applied to definitions and call sites. Kernels go to the kernel classifier.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+
+!rec_E0 = !cir.struct<"E0" {}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i1, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Signed sub-register integer is sign-extended.
+  cir.func @take_s8(%arg0: !s8i) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.signext})
+
+  // Call site picks up the same extension attribute on the operand.
+  cir.func @call_s8(%arg0: !s8i) {
+    cir.call @take_s8(%arg0) : (!s8i) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.signext}) -> ()
+
+  // A zero-field record classifies as Ignore: the empty argument is dropped
+  // and the real argument shifts down to the first slot.
+  cir.func @take_empty(%arg0: !rec_E0, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty(%arg0: !s32i) -> !s32i
+  // CHECK-NEXT: cir.return %arg0 : !s32i
+
+  // A kernel scalar argument stays Direct: the AMDGPU_KERNEL convention is
+  // routed to the kernel classifier and the signature is unchanged.
+  cir.func @kernel_scalar(%arg0: !s32i) cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_scalar(%arg0: !s32i){{.*}}cc(amdgpu_kernel)
+
+  // Without HIP in the module's lang options, a kernel pointer stays generic.
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_ptr(%arg0: !cir.ptr<!s32i>){{.*}}cc(amdgpu_kernel)
+}
