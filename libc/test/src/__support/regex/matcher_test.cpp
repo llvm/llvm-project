@@ -17,6 +17,7 @@
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
 #include "src/__support/regex/regex_matcher.h"
+#include "src/__support/regex/regex_parser.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::ErrorOr;
@@ -28,25 +29,7 @@ using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprPool;
 using LIBC_NAMESPACE::regex::match;
 using LIBC_NAMESPACE::regex::MatchResult;
-
-namespace {
-
-ErrorOr<ExprId> make_literal_string(ExprPool &pool, string_view str) {
-  ErrorOr<ExprId> cur = pool.empty_str();
-  if (!cur.has_value())
-    return cur;
-  for (char c : str) {
-    ErrorOr<ExprId> lit = pool.make_lit(c);
-    if (!lit.has_value())
-      return lit;
-    cur = pool.make_concat(*cur, *lit);
-    if (!cur.has_value())
-      return cur;
-  }
-  return cur;
-}
-
-} // namespace
+using LIBC_NAMESPACE::regex::parse_ere;
 
 TEST(LlvmLibcRegexMatcherTest, DerivativeBaseCases) {
   ExprPool pool;
@@ -90,7 +73,7 @@ TEST(LlvmLibcRegexMatcherTest, DerivativeConcatAndAltRules) {
 
 TEST(LlvmLibcRegexMatcherTest, MatchSubstringAndMemoization) {
   ExprPool pool;
-  ErrorOr<ExprId> hello = make_literal_string(pool, "hello");
+  ErrorOr<ExprId> hello = parse_ere("hello", REG_EXTENDED, pool);
   ASSERT_TRUE(hello.has_value());
   EXPECT_EQ(pool.size(), size_t(10));
   EXPECT_LE(pool.allocated_bytes(), size_t(1024));
@@ -111,13 +94,44 @@ TEST(LlvmLibcRegexMatcherTest, MatchSubstringAndMemoization) {
 
 TEST(LlvmLibcRegexMatcherTest, OverlappingPrefixMatch) {
   ExprPool pool;
-  ErrorOr<ExprId> pat = make_literal_string(pool, "ababac");
+  ErrorOr<ExprId> pat = parse_ere("ababac", REG_EXTENDED, pool);
   ASSERT_TRUE(pat.has_value());
 
   // At index 4 ('a'), the partial match "ababa" fails on 'b' at index 5 while
   // a second partial match started at index 2 ("aba") advances to "ababac".
   EXPECT_EQ(match(pool, *pat, "abababac"), MatchResult::Match);
   EXPECT_EQ(match(pool, *pat, "abababab"), MatchResult::NoMatch);
+}
+
+TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
+  ExprPool pool;
+  ErrorOr<ExprId> escaped_dot = parse_ere(R"(a\.b)", REG_EXTENDED, pool);
+  ErrorOr<ExprId> escaped_star = parse_ere(R"(a\*b)", REG_EXTENDED, pool);
+  ErrorOr<ExprId> escaped_slash = parse_ere(R"(a\\b)", REG_EXTENDED, pool);
+  ASSERT_TRUE(escaped_dot.has_value());
+  ASSERT_TRUE(escaped_star.has_value());
+  ASSERT_TRUE(escaped_slash.has_value());
+
+  EXPECT_EQ(match(pool, *escaped_dot, "a.b"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *escaped_dot, "axb"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *escaped_star, "a*b"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *escaped_slash, R"(a\b)"), MatchResult::Match);
+
+  ErrorOr<ExprId> trailing_escape = parse_ere(R"(abc\)", REG_EXTENDED, pool);
+  ASSERT_FALSE(trailing_escape.has_value());
+  EXPECT_EQ(trailing_escape.error(), REG_EESCAPE);
+
+  const string_view bad_patterns[] = {
+      ".",     "^",     "$",     "*",     "+",     "?",     "(",
+      ")",     "[",     "{",     "|",     R"(\1)", R"(\2)", R"(\3)",
+      R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)", R"(\9)", R"(\b)",
+      R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')",
+      R"(\w)", R"(\W)", R"(\s)", R"(\S)", R"(\d)", R"(\D)"};
+  for (string_view bad : bad_patterns) {
+    ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_BADPAT);
+  }
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
