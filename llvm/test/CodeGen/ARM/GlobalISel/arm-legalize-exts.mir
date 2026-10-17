@@ -30,11 +30,11 @@ body:             |
     liveins: $r0
 
     %0(p0) = COPY $r0
-    %1(s16) = G_LOAD %0 :: (load (s16))
-    %2(s32) = G_ZEXT %1
+    %1(i16) = G_LOAD %0 :: (load (i16))
+    %2(i32) = G_ZEXT %1
     ; G_ZEXT with s16 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s32) = G_ZEXT {{%[0-9]+}}
-    $r0 = COPY %2(s32)
+    ; CHECK: {{%[0-9]+}}:_(i32) = G_ZEXT {{%[0-9]+}}
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -54,11 +54,11 @@ body:             |
     liveins: $r0
 
     %0(p0) = COPY $r0
-    %1(s8) = G_LOAD %0(p0) :: (load (s8))
-    %2(s32) = G_SEXT %1
+    %1(i8) = G_LOAD %0(p0) :: (load (i8))
+    %2(i32) = G_SEXT %1
     ; G_SEXT with s8 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s32) = G_SEXT {{%[0-9]+}}
-    $r0 = COPY %2(s32)
+    ; CHECK: {{%[0-9]+}}:_(i32) = G_SEXT {{%[0-9]+}}
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -78,13 +78,13 @@ body:             |
     liveins: $r0
 
     %0(p0) = COPY $r0
-    %1(s32) = G_LOAD %0(p0) :: (load (s32))
-    %2(s32) = G_SEXT_INREG %1, 8
+    %1(i32) = G_LOAD %0(p0) :: (load (i32))
+    %2(i32) = G_SEXT_INREG %1, 8
     ; G_SEXT_INREG should be lowered to a shift pair
-    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[T2:%[0-9]+]]:_(s32) = G_SHL {{%[0-9]+}}, [[T1]]
-    ; CHECK: {{%[0-9]+}}:_(s32) = G_ASHR [[T2]], [[T1]]
-    $r0 = COPY %2(s32)
+    ; CHECK: [[T1:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+    ; CHECK: [[T2:%[0-9]+]]:_(i32) = G_SHL {{%[0-9]+}}, [[T1]]
+    ; CHECK: {{%[0-9]+}}:_(i32) = G_ASHR [[T2]], [[T1]]
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -104,11 +104,11 @@ body:             |
     liveins: $r0
 
     %0(p0) = COPY $r0
-    %1(s1) = G_LOAD %0(p0) :: (load (s1))
-    %2(s32) = G_ANYEXT %1
+    %1(i1) = G_LOAD %0(p0) :: (load (i1))
+    %2(i32) = G_ANYEXT %1
     ; G_ANYEXT with s1 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s32) = G_ANYEXT {{%[0-9]+}}
-    $r0 = COPY %2(s32)
+    ; CHECK: {{%[0-9]+}}:_(i32) = G_ANYEXT {{%[0-9]+}}
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -128,11 +128,11 @@ body:             |
     liveins: $r0
 
     %0(p0) = COPY $r0
-    %1(s8) = G_LOAD %0(p0) :: (load (s8))
-    %2(s16) = G_ZEXT %1
+    %1(i8) = G_LOAD %0(p0) :: (load (i8))
+    %2(i16) = G_ZEXT %1
     ; G_ZEXT from s8 to s16 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s16) = G_ZEXT {{%[0-9]+}}(s8)
-    G_STORE %2(s16), %0(p0) :: (store (s16))
+    ; CHECK: {{%[0-9]+}}:_(i16) = G_ZEXT {{%[0-9]+}}(i8)
+    G_STORE %2(i16), %0(p0) :: (store (i16))
     BX_RET 14, $noreg
 ...
 ---
@@ -148,13 +148,13 @@ body:             |
     liveins: $r0, $r1
 
     %0:_(p0) = COPY $r0
-    %1:_(s32) = COPY $r1
-    %2:_(s32) = G_CONSTANT i32 0
-    %3:_(s1) = G_ICMP intpred(eq), %1, %2
-    %4:_(s16) = G_SEXT %3(s1)
+    %1:_(i32) = COPY $r1
+    %2:_(i32) = G_CONSTANT i32 0
+    %3:_(i1) = G_ICMP intpred(eq), %1, %2
+    %4:_(i16) = G_SEXT %3(i1)
     ; G_SEXT from s1 to s16 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s16) = G_SEXT {{%[0-9]+}}(s1)
-    G_STORE %4(s16), %0(p0) :: (store (s16))
+    ; CHECK: {{%[0-9]+}}:_(i16) = G_SEXT {{%[0-9]+}}(i1)
+    G_STORE %4(i16), %0(p0) :: (store (i16))
     BX_RET 14, $noreg
 ...
 ---
@@ -170,13 +170,13 @@ body:             |
     liveins: $r0, $r1
 
     %0:_(p0) = COPY $r0
-    %1:_(s32) = COPY $r1
-    %2:_(s32) = G_CONSTANT i32 0
-    %3:_(s1) = G_ICMP intpred(eq), %1, %2
-    %4:_(s8) = G_ANYEXT %3
+    %1:_(i32) = COPY $r1
+    %2:_(i32) = G_CONSTANT i32 0
+    %3:_(i1) = G_ICMP intpred(eq), %1, %2
+    %4:_(i8) = G_ANYEXT %3
     ; G_ANYEXT from s1 to s8 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s8) = G_ANYEXT {{%[0-9]+}}(s1)
-    G_STORE %4(s8), %0(p0) :: (store (s8))
+    ; CHECK: {{%[0-9]+}}:_(i8) = G_ANYEXT {{%[0-9]+}}(i1)
+    G_STORE %4(i8), %0(p0) :: (store (i8))
     BX_RET 14, $noreg
 ...
 ---
@@ -199,21 +199,21 @@ body:             |
     liveins: $r0
 
     %0(p0) = COPY $r0
-    %1(s8) = G_LOAD %0(p0) :: (load (s8))
-    ; CHECK: [[V8:%[0-9]+]]:_(s8) = G_LOAD
+    %1(i8) = G_LOAD %0(p0) :: (load (i8))
+    ; CHECK: [[V8:%[0-9]+]]:_(i8) = G_LOAD
 
-    %2(s16) = G_ZEXT %1
-    %3(s16) = G_SEXT %1
+    %2(i16) = G_ZEXT %1
+    %3(i16) = G_SEXT %1
 
-    %4(s16) = G_OR %2, %3
+    %4(i16) = G_OR %2, %3
     ; G_OR is going to widen to 32 bits and the extensions/truncs should combine
     ; with the already existing ones
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[V8]](s8)
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[V8]](s8)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SEXT]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[V8]](i8)
+    ; CHECK: [[SEXT:%[0-9]+]]:_(i32) = G_SEXT [[V8]](i8)
+    ; CHECK: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SEXT]]
     ; CHECK: $r0 = COPY [[OR]]
 
-    %5(s32) = G_SEXT %4(s16)
+    %5(i32) = G_SEXT %4(i16)
     $r0 = COPY %5
 
     BX_RET 14, $noreg, implicit $r0
