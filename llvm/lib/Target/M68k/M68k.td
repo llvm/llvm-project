@@ -65,6 +65,9 @@ foreach i = {0-7} in
       SubtargetFeature<"reserve-d"#i, "UserReservedRegister[M68k::D"#i#"]",
                        "true", "Reserve D"#i#" register">;
 
+def FeatureXGOT
+    : SubtargetFeature<"xgot", "UseXGOT", "true", "Assume 32-bit GOT">;
+
 //===----------------------------------------------------------------------===//
 // M68k processors supported.
 //===----------------------------------------------------------------------===//
