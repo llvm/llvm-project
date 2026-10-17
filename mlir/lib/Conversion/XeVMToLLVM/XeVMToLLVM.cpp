@@ -1351,62 +1351,62 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
     }
 
     // Handle the case where dst type is fp8.
-    // The fp8 conversions come as one builtin per vector length, so the length
-    // is simply appended to the builtin name.
-    std::string lenSuffix = std::to_string(numElements);
-    // BF16 type needs some preprocessing before conversion,
-    // First extended to F32 and then truncated to F16.
-    if (srcEtype == TruncfSrcElemTypes::BF16) {
-      // Step 1: Extend to F32
-      // Use floatN __builtin_IB_bftof_N(shortN)
-      src = LLVM::BitcastOp::create(
-          rewriter, op.getLoc(),
-          VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
-      std::string fnName = "__builtin_IB_bftof_" + lenSuffix;
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
-      src = createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args,
-                                     {}, funcAttrs, op.getOperation())
-                ->getResult(0);
-      // Step 2: Truncf to F16
-      // Use halfN convert_halfN(floatN)
-      std::string truncFnName = "convert_half" + lenSuffix;
-      SmallVector<Type> truncArgTypes{src.getType()};
-      SmallVector<Value> truncArgs{src};
-      truncFnName = mangle(truncFnName, truncArgTypes);
-      resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
-      src =
-          createDeviceFunctionCall(rewriter, truncFnName, resTy, truncArgTypes,
-                                   truncArgs, {}, funcAttrs, op.getOperation())
-              ->getResult(0);
-    }
+    //
+    // The conversions come from the SPV_INTEL_fp_conversions half of the IGC
+    // BiFModule, which overloads one wrapper per vector length:
+    //   charN __builtin_spirv_ConvertFP16ToE5M2EXT(halfN)
+    //   charN __builtin_spirv_ConvertFP16ToE4M3EXT(halfN)
+    //   charN __builtin_spirv_ConvertBF16ToE5M2EXT(shortN)
+    //   charN __builtin_spirv_ConvertBF16ToE4M3EXT(shortN)
+    //
+    // These wrap the __builtin_IB_* builtins this used to name directly. Two
+    // of those names do not exist: IGC spells E4M3 as `e4m3` in the conversion
+    // builtins, not `hf8`, so `__builtin_IB_hftohf8_N` was never defined -
+    // even though the scaled DPAS builtin does use `hf8`
+    // (bdpas_f_f_hf8_hf8_8_8), which is correct and unchanged here. Because
+    // createDeviceFunctionCall emits these names unmangled, the nonexistent
+    // symbol linked silently and the call returned undef.
+    //
+    // The wrappers are declared `overloadable`, so the existing mangle() helper
+    // derives the vector length from the argument type instead of pasting a
+    // suffix onto the name, and a name or signature mismatch fails to link
+    // rather than binding to nothing. As the note above these patterns says,
+    // they are the experimental SPIR-V extension implementation rather than an
+    // official OpenCL API, so the TODO to move once one exists still stands.
+    //
+    // A bf16 source takes the bf16 form, which accepts the bits as shortN and
+    // routes through f32 and f16 internally. That retires the explicit
+    // __builtin_IB_bftof plus convert_half round trip, so each bf16 conversion
+    // is one call rather than three.
+    //
+    // `src_etype` is what says how to read the source, and the verifier only
+    // constrains the operand's bitwidth, so f16 and bf16 are interchangeable to
+    // it and either may arrive under either attribute. Coerce the operand to
+    // what the selected wrapper takes, which also keeps bf16 out of the
+    // mangling, where there is no code for it.
+    bool srcIsBF16 = srcEtype == TruncfSrcElemTypes::BF16;
+    Type argElemTy = srcIsBF16 ? cast<Type>(rewriter.getI16Type())
+                               : cast<Type>(rewriter.getF16Type());
+    src = castIfNeeded(rewriter, loc,
+                       VectorType::get(vecSrcTy.getShape(), argElemTy), src);
+    StringRef convertName;
     if (dstEtype == TruncfDstElemTypes::BF8) { // Float8E5M2Type
-      // Use charN __builtin_IB_hftobf8_N(halfN)
-      std::string fnName = "__builtin_IB_hftobf8_" + lenSuffix;
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Value result =
-          createDeviceFunctionCall(rewriter, fnName, dstTy, argTypes, args, {},
-                                   funcAttrs, op.getOperation())
-              ->getResult(0);
-
-      rewriter.replaceOp(op, result);
+      convertName = srcIsBF16 ? "__builtin_spirv_ConvertBF16ToE5M2EXT"
+                              : "__builtin_spirv_ConvertFP16ToE5M2EXT";
     } else if (dstEtype == TruncfDstElemTypes::F8) { // Float8E4M3FNType
-      // Use charN __builtin_IB_hftohf8_N(halfN)
-      std::string fnName = "__builtin_IB_hftohf8_" + lenSuffix;
-      SmallVector<Type> argTypes{src.getType()};
-      SmallVector<Value> args{src};
-      Value result =
-          createDeviceFunctionCall(rewriter, fnName, dstTy, argTypes, args, {},
-                                   funcAttrs, op.getOperation())
-              ->getResult(0);
-
-      rewriter.replaceOp(op, result);
+      convertName = srcIsBF16 ? "__builtin_spirv_ConvertBF16ToE4M3EXT"
+                              : "__builtin_spirv_ConvertFP16ToE4M3EXT";
     } else {
       return rewriter.notifyMatchFailure(
           op, "Unsupported src, dst element type pair.");
     }
+    SmallVector<Type> argTypes{src.getType()};
+    SmallVector<Value> args{src};
+    Value result = createDeviceFunctionCall(
+                       rewriter, mangle(convertName, argTypes), dstTy, argTypes,
+                       args, {}, funcAttrs, op.getOperation())
+                       ->getResult(0);
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -1507,55 +1507,43 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
     if (!vecSrcTy || vecSrcTy.getNumElements() != numElements)
       return rewriter.notifyMatchFailure(
           op, "fp8 src and dst must have the same number of elements");
-    std::string lenSuffix = std::to_string(numElements);
 
-    // Step 1: Extend fp8 (bf8/hf8) to F16.
-    //   bf8 -> half: halfN __builtin_IB_bf8tohf_N(charN)
-    //   hf8 -> half: halfN __builtin_IB_hf8tohf_N(charN)
-    std::string fnName = (srcEtype == ExtfSrcElemTypes::BF8)
-                             ? "__builtin_IB_bf8tohf_"
-                             : "__builtin_IB_hf8tohf_";
-    fnName += lenSuffix;
-    Type f16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+    // Mangled SPV_INTEL_fp_conversions wrappers, for the reasons given in the
+    // truncf lowering above:
+    //   halfN  __builtin_spirv_ConvertE5M2ToFP16EXT(charN)
+    //   halfN  __builtin_spirv_ConvertE4M3ToFP16EXT(charN)
+    //   shortN __builtin_spirv_ConvertE5M2ToBF16EXT(charN)
+    //   shortN __builtin_spirv_ConvertE4M3ToBF16EXT(charN)
+    //
+    // As on the truncf side, `__builtin_IB_hf8tohf_N` never existed - IGC
+    // defines `__builtin_IB_e4m3tohf_N` - so the f8 -> f16 call linked to
+    // nothing and returned undef.
+    //
+    // A bf16 destination takes the bf16 form, which returns the bits as shortN,
+    // retiring the convert_float plus __builtin_IB_ftobf round trip: one call
+    // instead of three.
+    bool dstIsBF16 = dstEtype == ExtfDstElemTypes::BF16;
+    StringRef convertName;
+    if (srcEtype == ExtfSrcElemTypes::BF8) { // Float8E5M2Type
+      convertName = dstIsBF16 ? "__builtin_spirv_ConvertE5M2ToBF16EXT"
+                              : "__builtin_spirv_ConvertE5M2ToFP16EXT";
+    } else { // Float8E4M3FNType
+      convertName = dstIsBF16 ? "__builtin_spirv_ConvertE4M3ToBF16EXT"
+                              : "__builtin_spirv_ConvertE4M3ToFP16EXT";
+    }
+    Type resElemTy = dstIsBF16 ? cast<Type>(rewriter.getI16Type())
+                               : cast<Type>(rewriter.getF16Type());
+    Type resTy = VectorType::get(vecSrcTy.getShape(), resElemTy);
     SmallVector<Type> argTypes{src.getType()};
     SmallVector<Value> args{src};
-    Value result =
-        createDeviceFunctionCall(rewriter, fnName, f16Ty, argTypes, args, {},
-                                 funcAttrs, op.getOperation())
-            ->getResult(0);
-
-    // When the destination is F16, we are done.
-    if (dstEtype == ExtfDstElemTypes::F16) {
-      rewriter.replaceOp(op, result);
-      return success();
-    }
-
-    // BF16 destination needs some postprocessing.
-    // First extend F16 to F32 and then truncate to BF16.
-    // Step 2: Extend to F32.
-    // Use floatN convert_floatN(halfN)
-    std::string convFnName = "convert_float" + lenSuffix;
-    SmallVector<Type> convArgTypes{result.getType()};
-    SmallVector<Value> convArgs{result};
-    convFnName = mangle(convFnName, convArgTypes);
-    Type f32Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
-    result =
-        createDeviceFunctionCall(rewriter, convFnName, f32Ty, convArgTypes,
-                                 convArgs, {}, funcAttrs, op.getOperation())
-            ->getResult(0);
-    // Step 3: Truncate F32 to BF16.
-    // Use shortN __builtin_IB_ftobf_N(floatN)
-    std::string ftobfFnName = "__builtin_IB_ftobf_" + lenSuffix;
-    SmallVector<Type> ftobfArgTypes{result.getType()};
-    SmallVector<Value> ftobfArgs{result};
-    Type i16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type());
-    result =
-        createDeviceFunctionCall(rewriter, ftobfFnName, i16Ty, ftobfArgTypes,
-                                 ftobfArgs, {}, funcAttrs, op.getOperation())
-            ->getResult(0);
-    // The builtin returns the bf16 bits as i16, bitcast to the bf16 dst type.
-    result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
-    rewriter.replaceOp(op, result);
+    Value result = createDeviceFunctionCall(
+                       rewriter, mangle(convertName, argTypes), resTy, argTypes,
+                       args, {}, funcAttrs, op.getOperation())
+                       ->getResult(0);
+    // The bf16 wrapper returns the bf16 bits as i16. As on the truncf side,
+    // `dst_etype` may disagree with the result's element type, so cast to what
+    // the op actually produces rather than to what the attribute implies.
+    rewriter.replaceOp(op, castIfNeeded(rewriter, loc, vecDstTy, result));
     return success();
   }
 };
