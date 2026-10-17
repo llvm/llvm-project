@@ -62,8 +62,8 @@ body:             |
     %1:intregs = PHI %4, %bb.0, %5, %bb.1
     %2:intregs = PHI %5, %bb.0, %4, %bb.1
     %8:intregs = L2_loadri_io %1, 0 :: (load (s32) from %ir.ptr.load)
-    %10:intregs = F2_sfadd killed %8, %9, implicit $usr
-    S2_storeri_io %2, 0, killed %10 :: (store (s32) into %ir.ptr.store)
+    %10:intregs = F2_sfadd %8, %9, implicit $usr
+    S2_storeri_io %2, 0, %10 :: (store (s32) into %ir.ptr.store)
     ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
     J2_jump %bb.2, implicit-def dead $pc
   

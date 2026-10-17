@@ -145,17 +145,17 @@ body:             |
     %9:intregs = PHI %22, %bb.1, %10, %bb.3
     %23:intregs, %15:intregs = L2_loadri_pi %4, 4 :: (load (s32) from %ir.lsr.iv35, !tbaa !5)
     %24:intregs = nsw M2_mpyi %8, %23
-    S2_storeri_io %5, -4, killed %24 :: (store (s32) into %ir.cgep38, !tbaa !5)
+    S2_storeri_io %5, -4, %24 :: (store (s32) into %ir.cgep38, !tbaa !5)
     %25:intregs = nsw M2_mpyi %7, %23
-    S2_storeri_io %6, -4, killed %25 :: (store (s32) into %ir.cgep39, !tbaa !5)
+    S2_storeri_io %6, -4, %25 :: (store (s32) into %ir.cgep39, !tbaa !5)
     L4_add_memopw_io %26, 0, %9 :: (volatile store (s32) into @x, !tbaa !5), (volatile dereferenceable load (s32) from @x, !tbaa !5)
     %10:intregs = nuw nsw A2_addi %9, 1
     %27:intregs = L2_loadri_io %5, 0 :: (load (s32) from %ir.lsr.iv31, !tbaa !5)
-    %11:intregs = nsw M2_mpyi killed %27, %9
+    %11:intregs = nsw M2_mpyi %27, %9
     S2_storeri_io %5, 0, %11 :: (store (s32) into %ir.lsr.iv31, !tbaa !5)
     L4_add_memopw_io %26, 0, %9 :: (volatile store (s32) into @x, !tbaa !5), (volatile dereferenceable load (s32) from @x, !tbaa !5)
     %28:intregs = L2_loadri_io %6, 0 :: (load (s32) from %ir.lsr.iv, !tbaa !5)
-    %12:intregs = nsw M2_mpyi killed %28, %9
+    %12:intregs = nsw M2_mpyi %28, %9
     S2_storeri_io %6, 0, %12 :: (store (s32) into %ir.lsr.iv, !tbaa !5)
     %13:intregs = A2_addi %6, 4
     %14:intregs = A2_addi %5, 4
