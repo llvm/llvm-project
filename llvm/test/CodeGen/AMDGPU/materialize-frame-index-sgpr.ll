@@ -1625,8 +1625,8 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX12-NEXT:    v_writelane_b32 v22, s55, 14
 ; GFX12-NEXT:    v_writelane_b32 v22, s30, 15
 ; GFX12-NEXT:    v_writelane_b32 v22, s31, 16
-; GFX12-NEXT:    s_add_co_i32 s58, s32, 0x4200
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s32
+; GFX12-NEXT:    s_add_co_i32 s58, s32, 0x4200
 ; GFX12-NEXT:    s_and_b32 s0, 0, exec_lo
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use alloca0 v0

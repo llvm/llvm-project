@@ -92,14 +92,14 @@ bb11:                                             ; preds = %bb9
 define amdgpu_kernel void @partially_undef_copy() #0 {
 ; CHECK-LABEL: partially_undef_copy:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s3, 0xf000
-; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 5
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 6
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b32 s3, 0xf000
+; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART

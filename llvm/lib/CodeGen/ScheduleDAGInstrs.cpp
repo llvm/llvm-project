@@ -247,6 +247,8 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   const MCInstrDesc &DefMIDesc = SU->getInstr()->getDesc();
   bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
                             !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
+  bool IsInlineAsmDef = SU->getInstr()->isInlineAsm() &&
+                        SU->getInstr()->findInlineAsmFlagIdx(OperIdx) >= 0;
   for (MCRegUnit Unit : TRI->regunits(Reg)) {
     for (RegUnit2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end();
          ++I) {
@@ -259,6 +261,7 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       MachineInstr *UseInstr = nullptr;
       int UseOpIdx = I->OpIdx;
       bool ImplicitPseudoUse = false;
+      bool IsInlineAsmUse = false;
       SDep Dep;
       if (UseOpIdx < 0) {
         Dep = SDep(SU, SDep::Artificial);
@@ -270,12 +273,18 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
         UseInstr = UseSU->getInstr();
         Register UseReg = UseInstr->getOperand(UseOpIdx).getReg();
         const MCInstrDesc &UseMIDesc = UseInstr->getDesc();
+        // Recognize asm inputs by their operand groups, excluding trailing
+        // register bookkeeping operands.
+        IsInlineAsmUse = UseInstr->isInlineAsm() &&
+                         UseInstr->findInlineAsmFlagIdx(UseOpIdx) >= 0;
         ImplicitPseudoUse = UseOpIdx >= ((int)UseMIDesc.getNumOperands()) &&
-                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg);
+                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg) &&
+                            !IsInlineAsmUse;
 
         Dep = SDep(SU, SDep::Data, UseReg);
       }
-      if (!ImplicitPseudoDef && !ImplicitPseudoUse) {
+      if ((!ImplicitPseudoDef && !ImplicitPseudoUse) ||
+          (IsInlineAsmDef && IsInlineAsmUse)) {
         Dep.setLatency(SchedModel.computeOperandLatency(SU->getInstr(), OperIdx,
                                                         UseInstr, UseOpIdx));
       } else {

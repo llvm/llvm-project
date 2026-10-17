@@ -42,13 +42,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ; GFX803-GISEL-NEXT:    s_mov_b32 s3, 40
 ; GFX803-GISEL-NEXT:    s_mov_b32 s2, 30
 ; GFX803-GISEL-NEXT:    s_mov_b32 s1, 20
-; GFX803-GISEL-NEXT:    s_mov_b32 s0, 10
 ; GFX803-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
+; GFX803-GISEL-NEXT:    s_mov_b32 s0, 10
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v2, s4
@@ -268,13 +268,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX803-GISEL-NEXT:    s_mov_b32 s1, 0
 ; GFX803-GISEL-NEXT:    s_mov_b32 s0, 1.0
 ; GFX803-GISEL-NEXT:    s_mov_b32 s2, s1
-; GFX803-GISEL-NEXT:    s_mov_b32 s3, s1
 ; GFX803-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
+; GFX803-GISEL-NEXT:    s_mov_b32 s3, s1
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v2, s4

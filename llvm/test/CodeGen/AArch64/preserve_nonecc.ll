@@ -38,6 +38,11 @@ entry:
 ;ALL:       stp d12, d11
 ;ALL:       stp d14, d13
 ;ALL:       stp d16, d15
+;ALL:       ldp x9, x8
+;ALL:       ldp x11, x10
+;ALL:       ldp x13, x12
+;ALL:       ldp x15, x14
+;ALL:       ldp x17, x16
 ;ALL:       ldp x20, x19
 ;ALL:       ldp x22, x21
 ;ALL:       ldp x24, x23
@@ -48,11 +53,6 @@ entry:
 ;ALL:       ldp d12, d11
 ;ALL:       ldp d14, d13
 ;ALL:       ldp d16, d15
-;ALL:       ldp x9, x8
-;ALL:       ldp x11, x10
-;ALL:       ldp x13, x12
-;ALL:       ldp x15, x14
-;ALL:       ldp x17, x16
 ;ALL:       InlineAsm Start
   %a0 = call i64 asm sideeffect "", "={x8}"() nounwind
   %a1 = call i64 asm sideeffect "", "={x9}"() nounwind

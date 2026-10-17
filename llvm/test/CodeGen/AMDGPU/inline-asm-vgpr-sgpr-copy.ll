@@ -10,11 +10,11 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    scratch_load_dwordx4 v[4:7], v0, off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], exec
+; CHECK-NEXT:    v_mov_b32_e32 v8, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    s_mov_b64 s[4:5], exec
-; CHECK-NEXT:    v_mov_b32_e32 v8, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
