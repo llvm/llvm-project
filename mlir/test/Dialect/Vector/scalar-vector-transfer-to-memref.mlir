@@ -30,6 +30,36 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
 
 // -----
 
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_read_1d_with_mask(
+//       CHECK:   %[[r:.*]] = vector.transfer_read
+//       CHECK:   vector.extract %[[r]]
+//   CHECK-NOT:   memref.load
+func.func @negative_transfer_read_1d_with_mask(%m: memref<?x?x?xf32>, %idx: index, %idx2: index, %mask: vector<5xi1>) -> f32 {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst, %mask {in_bounds = [true]} : memref<?x?x?xf32>, vector<5xf32>
+  %1 = vector.extract %0[%idx2] : f32 from vector<5xf32>
+  return %1 : f32
+}
+
+// -----
+
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_read_1d_masked(
+//       CHECK:   %[[r:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//       CHECK:   vector.extract %[[r]]
+//   CHECK-NOT:   memref.load
+func.func @negative_transfer_read_1d_masked(%m: memref<?x?x?xf32>, %idx: index, %idx2: index, %mask: vector<5xi1>) -> f32 {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.mask %mask { vector.transfer_read %m[%idx, %idx, %idx], %cst {in_bounds = [true]} : memref<?x?x?xf32>, vector<5xf32> } : vector<5xi1> -> vector<5xf32>
+  %1 = vector.extract %0[%idx2] : f32 from vector<5xf32>
+  return %1 : f32
+}
+
+// -----
+
 // CHECK-LABEL: func @tensor_transfer_read_0d(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?x?xf32>, %[[idx:.*]]: index
 //       CHECK:   %[[r:.*]] = tensor.extract %[[t]][%[[idx]], %[[idx]], %[[idx]]]
@@ -60,6 +90,32 @@ func.func @transfer_write_0d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
 func.func @transfer_write_1d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
   %0 = vector.broadcast %f : f32 to vector<1xf32>
   vector.transfer_write %0, %m[%idx, %idx, %idx] : vector<1xf32>, memref<?x?x?xf32>
+  return
+}
+
+// -----
+
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_write_1d_with_mask(
+//       CHECK:   vector.transfer_write
+//   CHECK-NOT:   memref.store
+func.func @negative_transfer_write_1d_with_mask(%m: memref<?x?x?xf32>, %idx: index, %f: f32, %mask: vector<1xi1>) {
+  %0 = vector.broadcast %f : f32 to vector<1xf32>
+  vector.transfer_write %0, %m[%idx, %idx, %idx], %mask : vector<1xf32>, memref<?x?x?xf32>
+  return
+}
+
+// -----
+
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_write_1d_masked(
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_write
+//   CHECK-NOT:   memref.store
+func.func @negative_transfer_write_1d_masked(%m: memref<?x?x?xf32>, %idx: index, %f: f32, %mask: vector<1xi1>) {
+  %0 = vector.broadcast %f : f32 to vector<1xf32>
+  vector.mask %mask { vector.transfer_write %0, %m[%idx, %idx, %idx] : vector<1xf32>, memref<?x?x?xf32> } : vector<1xi1>
   return
 }
 
@@ -176,52 +232,5 @@ func.func @transfer_read_2d_extract_dynamic(%m: memref<?x?xf32>, %row_idx: index
   %cst = arith.constant 0.0 : f32
   %vec = vector.transfer_read %m[%row_idx, %col_idx], %cst {in_bounds = [true, true]} : memref<?x?xf32>, vector<10x5xf32>
   %elem = vector.extract %vec[%row_offset, %col_offset] : f32 from vector<10x5xf32>
-  return %elem : f32
-}
-
-// -----
-
-// A region-masked transfer cannot be scalarized because the rewrite would
-// create multiple operations inside the vector.mask region.
-
-// CHECK-LABEL: func.func @region_masked_transfer_write
-//       CHECK:   vector.mask %{{.+}} { vector.transfer_write
-//       CHECK:   return
-
-// MULTIUSE-LABEL: func.func @region_masked_transfer_write
-//       MULTIUSE:   vector.mask %{{.+}} { vector.transfer_write
-//       MULTIUSE:   return
-func.func @region_masked_transfer_write(
-    %mem: memref<1x1xf32>, %value: vector<1x1xf32>,
-    %mask: vector<1x1xi1>) {
-  %c0 = arith.constant 0 : index
-  vector.mask %mask {
-    vector.transfer_write %value, %mem[%c0, %c0] {in_bounds = [true, true]} :
-      vector<1x1xf32>, memref<1x1xf32>
-  } : vector<1x1xi1>
-  return
-}
-
-// -----
-
-// A region-masked read is not scalarized: the vector.extract source is the
-// vector.mask result, not the transfer_read.
-
-// CHECK-LABEL: func.func @region_masked_transfer_read
-//       CHECK:   %[[READ:.+]] = vector.mask %{{.+}} { vector.transfer_read
-//       CHECK:   vector.extract %[[READ]][0, 1]
-
-// MULTIUSE-LABEL: func.func @region_masked_transfer_read
-//       MULTIUSE:   %[[READ:.+]] = vector.mask %{{.+}} { vector.transfer_read
-//       MULTIUSE:   vector.extract %[[READ]][0, 1]
-func.func @region_masked_transfer_read(
-    %mem: memref<2x2xf32>, %mask: vector<2x2xi1>) -> f32 {
-  %c0 = arith.constant 0 : index
-  %cst = arith.constant 0.0 : f32
-  %read = vector.mask %mask {
-    vector.transfer_read %mem[%c0, %c0], %cst {in_bounds = [true, true]} :
-      memref<2x2xf32>, vector<2x2xf32>
-  } : vector<2x2xi1> -> vector<2x2xf32>
-  %elem = vector.extract %read[0, 1] : f32 from vector<2x2xf32>
   return %elem : f32
 }
