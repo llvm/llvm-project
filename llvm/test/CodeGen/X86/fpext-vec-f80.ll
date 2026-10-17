@@ -2,8 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+f16c | FileCheck %s --check-prefixes=AVX,F16C
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bf16,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BF16
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16 | FileCheck %s --check-prefixes=AVX,AVX512,AVX512FP16
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X86
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512FP16
+; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefixes=X86,X86-X87
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X86,X86-SSE2
 
 ; GH228648
 
@@ -52,29 +53,77 @@ define <4 x x86_fp80> @fpext_v4bf16_v4f80(<4 x bfloat> %v) nounwind {
 ; AVX-NEXT:    fstpt 10(%rdi)
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: fpext_v4bf16_v4f80:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movd %xmm1, (%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds (%esp)
-; X86-NEXT:    fstpt (%eax)
-; X86-NEXT:    fstpt 30(%eax)
-; X86-NEXT:    fstpt 20(%eax)
-; X86-NEXT:    fstpt 10(%eax)
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    retl $4
+; X86-X87-LABEL: fpext_v4bf16_v4f80:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $20, %esp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %ebp
+; X86-X87-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %esi
+; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpt 30(%edi)
+; X86-X87-NEXT:    fstpt 20(%edi)
+; X86-X87-NEXT:    fstpt 10(%edi)
+; X86-X87-NEXT:    fstpt (%edi)
+; X86-X87-NEXT:    movl %edi, %eax
+; X86-X87-NEXT:    addl $20, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v4bf16_v4f80:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movd %xmm1, (%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds (%esp)
+; X86-SSE2-NEXT:    fstpt (%eax)
+; X86-SSE2-NEXT:    fstpt 30(%eax)
+; X86-SSE2-NEXT:    fstpt 20(%eax)
+; X86-SSE2-NEXT:    fstpt 10(%eax)
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    retl $4
   %r = fpext <4 x bfloat> %v to <4 x x86_fp80>
   ret <4 x x86_fp80> %r
 }
@@ -104,19 +153,41 @@ define <2 x x86_fp80> @fpext_v2bf16_v2f80(<2 x bfloat> %v) nounwind {
 ; AVX-NEXT:    fxch %st(1)
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: fpext_v2bf16_v2f80:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    movd %xmm1, (%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    flds (%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    retl
+; X86-X87-LABEL: fpext_v2bf16_v2f80:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $12, %esp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %esi
+; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    addl $12, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    retl
+;
+; X86-SSE2-LABEL: fpext_v2bf16_v2f80:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    subl $8, %esp
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    movd %xmm1, (%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds (%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    fxch %st(1)
+; X86-SSE2-NEXT:    addl $8, %esp
+; X86-SSE2-NEXT:    retl
   %r = fpext <2 x bfloat> %v to <2 x x86_fp80>
   ret <2 x x86_fp80> %r
 }
@@ -244,67 +315,155 @@ define <8 x x86_fp80> @fpext_v8bf16_v8f80(<8 x bfloat> %v) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
-; X86-LABEL: fpext_v8bf16_v8f80:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $44, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    pxor %xmm2, %xmm2
-; X86-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,1,1]
-; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
-; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[3,3,3,3]
-; X86-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
-; X86-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
-; X86-NEXT:    movd %xmm1, (%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds (%esp)
-; X86-NEXT:    fstpt 40(%eax)
-; X86-NEXT:    fstpt (%eax)
-; X86-NEXT:    fstpt 70(%eax)
-; X86-NEXT:    fstpt 60(%eax)
-; X86-NEXT:    fstpt 50(%eax)
-; X86-NEXT:    fstpt 30(%eax)
-; X86-NEXT:    fstpt 20(%eax)
-; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstpt 10(%eax)
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    retl $4
+; X86-X87-LABEL: fpext_v8bf16_v8f80:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $60, %esp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %edi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %esi
+; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpt 70(%ebp)
+; X86-X87-NEXT:    fstpt 60(%ebp)
+; X86-X87-NEXT:    fstpt 50(%ebp)
+; X86-X87-NEXT:    fstpt 40(%ebp)
+; X86-X87-NEXT:    fstpt 30(%ebp)
+; X86-X87-NEXT:    fstpt 20(%ebp)
+; X86-X87-NEXT:    fstpt 10(%ebp)
+; X86-X87-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-X87-NEXT:    fstpt (%ebp)
+; X86-X87-NEXT:    movl %ebp, %eax
+; X86-X87-NEXT:    addl $60, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v8bf16_v8f80:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    subl $44, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[2,3,2,3]
+; X86-SSE2-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[3,3,3,3]
+; X86-SSE2-NEXT:    movd %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movd %xmm1, (%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds (%esp)
+; X86-SSE2-NEXT:    fstpt 40(%eax)
+; X86-SSE2-NEXT:    fstpt (%eax)
+; X86-SSE2-NEXT:    fstpt 70(%eax)
+; X86-SSE2-NEXT:    fstpt 60(%eax)
+; X86-SSE2-NEXT:    fstpt 50(%eax)
+; X86-SSE2-NEXT:    fstpt 30(%eax)
+; X86-SSE2-NEXT:    fstpt 20(%eax)
+; X86-SSE2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-SSE2-NEXT:    fstpt 10(%eax)
+; X86-SSE2-NEXT:    addl $44, %esp
+; X86-SSE2-NEXT:    retl $4
   %r = fpext <8 x bfloat> %v to <8 x x86_fp80>
   ret <8 x x86_fp80> %r
 }
 
-define <4 x x86_fp80> @fpext_v4f16_v4f80(<4 x half> %v) nounwind {
+define <4 x x86_fp80> @fpext_v4f16_v4f80(ptr %p) nounwind {
 ; SSE2-LABEL: fpext_v4f16_v4f80:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    subq $64, %rsp
 ; SSE2-NEXT:    movq %rdi, %rbx
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrlq $48, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    pinsrw $0, 6(%rsi), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    pinsrw $0, 4(%rsi), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    pinsrw $0, 2(%rsi), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    pinsrw $0, (%rsi), %xmm0
 ; SSE2-NEXT:    callq __extendhfxf2@PLT
 ; SSE2-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
@@ -331,28 +490,29 @@ define <4 x x86_fp80> @fpext_v4f16_v4f80(<4 x half> %v) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    subq $64, %rsp
-; F16C-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    callq __extendhfxf2@PLT
-; F16C-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
-; F16C-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; F16C-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; F16C-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; F16C-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; F16C-NEXT:    callq __extendhfxf2@PLT
 ; F16C-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
-; F16C-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
+; F16C-NEXT:    vpermilps $245, (%rsp), %xmm0 # 16-byte Folded Reload
 ; F16C-NEXT:    # xmm0 = mem[1,1,3,3]
 ; F16C-NEXT:    callq __extendhfxf2@PLT
 ; F16C-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
 ; F16C-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; F16C-NEXT:    vpsrlq $48, %xmm0, %xmm0
 ; F16C-NEXT:    callq __extendhfxf2@PLT
+; F16C-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
+; F16C-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; F16C-NEXT:    callq __extendhfxf2@PLT
+; F16C-NEXT:    fstpt (%rbx)
+; F16C-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; F16C-NEXT:    fstpt 30(%rbx)
 ; F16C-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; F16C-NEXT:    fstpt 20(%rbx)
 ; F16C-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; F16C-NEXT:    fstpt 10(%rbx)
-; F16C-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
-; F16C-NEXT:    fstpt (%rbx)
 ; F16C-NEXT:    movq %rbx, %rax
 ; F16C-NEXT:    addq $64, %rsp
 ; F16C-NEXT:    popq %rbx
@@ -362,26 +522,28 @@ define <4 x x86_fp80> @fpext_v4f16_v4f80(<4 x half> %v) nounwind {
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    pushq %rbx
 ; AVX512BF16-NEXT:    subq $64, %rsp
-; AVX512BF16-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX512BF16-NEXT:    movq %rdi, %rbx
+; AVX512BF16-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512BF16-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512BF16-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    callq __extendhfxf2@PLT
 ; AVX512BF16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
-; AVX512BF16-NEXT:    vpsrld $16, (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX512BF16-NEXT:    callq __extendhfxf2@PLT
-; AVX512BF16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
-; AVX512BF16-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
+; AVX512BF16-NEXT:    vpermilps $245, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX512BF16-NEXT:    # xmm0 = mem[1,1,3,3]
 ; AVX512BF16-NEXT:    callq __extendhfxf2@PLT
 ; AVX512BF16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
 ; AVX512BF16-NEXT:    vpsrlq $48, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX512BF16-NEXT:    callq __extendhfxf2@PLT
+; AVX512BF16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
+; AVX512BF16-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; AVX512BF16-NEXT:    callq __extendhfxf2@PLT
+; AVX512BF16-NEXT:    fstpt (%rbx)
+; AVX512BF16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; AVX512BF16-NEXT:    fstpt 30(%rbx)
 ; AVX512BF16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; AVX512BF16-NEXT:    fstpt 20(%rbx)
 ; AVX512BF16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; AVX512BF16-NEXT:    fstpt 10(%rbx)
-; AVX512BF16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
-; AVX512BF16-NEXT:    fstpt (%rbx)
 ; AVX512BF16-NEXT:    movq %rbx, %rax
 ; AVX512BF16-NEXT:    addq $64, %rsp
 ; AVX512BF16-NEXT:    popq %rbx
@@ -391,11 +553,9 @@ define <4 x x86_fp80> @fpext_v4f16_v4f80(<4 x half> %v) nounwind {
 ; AVX512FP16:       # %bb.0:
 ; AVX512FP16-NEXT:    pushq %rbx
 ; AVX512FP16-NEXT:    subq $64, %rsp
-; AVX512FP16-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX512FP16-NEXT:    movq %rdi, %rbx
-; AVX512FP16-NEXT:    callq __extendhfxf2@PLT
-; AVX512FP16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
-; AVX512FP16-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512FP16-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX512FP16-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX512FP16-NEXT:    callq __extendhfxf2@PLT
 ; AVX512FP16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
@@ -403,63 +563,109 @@ define <4 x x86_fp80> @fpext_v4f16_v4f80(<4 x half> %v) nounwind {
 ; AVX512FP16-NEXT:    # xmm0 = mem[1,1,3,3]
 ; AVX512FP16-NEXT:    callq __extendhfxf2@PLT
 ; AVX512FP16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
-; AVX512FP16-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; AVX512FP16-NEXT:    vpsrlq $48, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpsrlq $48, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX512FP16-NEXT:    callq __extendhfxf2@PLT
+; AVX512FP16-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
+; AVX512FP16-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; AVX512FP16-NEXT:    callq __extendhfxf2@PLT
+; AVX512FP16-NEXT:    fstpt (%rbx)
+; AVX512FP16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; AVX512FP16-NEXT:    fstpt 30(%rbx)
 ; AVX512FP16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; AVX512FP16-NEXT:    fstpt 20(%rbx)
 ; AVX512FP16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; AVX512FP16-NEXT:    fstpt 10(%rbx)
-; AVX512FP16-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
-; AVX512FP16-NEXT:    fstpt (%rbx)
 ; AVX512FP16-NEXT:    movq %rbx, %rax
 ; AVX512FP16-NEXT:    addq $64, %rsp
 ; AVX512FP16-NEXT:    popq %rbx
 ; AVX512FP16-NEXT:    retq
 ;
-; X86-LABEL: fpext_v4f16_v4f80:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrlq $48, %xmm1
-; X86-NEXT:    movdqu %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; X86-NEXT:    movups %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    psrld $16, %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfxf2
-; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfxf2
-; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfxf2
-; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfxf2
-; X86-NEXT:    fstpt (%esi)
-; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstpt 30(%esi)
-; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstpt 20(%esi)
-; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstpt 10(%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $64, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl $4
+; X86-X87-LABEL: fpext_v4f16_v4f80:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $36, %esp
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movzwl 6(%eax), %edi
+; X86-X87-NEXT:    movzwl (%eax), %ebx
+; X86-X87-NEXT:    movzwl 2(%eax), %ebp
+; X86-X87-NEXT:    movzwl 4(%eax), %eax
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstpt (%esp) # 10-byte Folded Spill
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstpt 30(%esi)
+; X86-X87-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-X87-NEXT:    fstpt 20(%esi)
+; X86-X87-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-X87-NEXT:    fstpt 10(%esi)
+; X86-X87-NEXT:    fldt (%esp) # 10-byte Folded Reload
+; X86-X87-NEXT:    fstpt (%esi)
+; X86-X87-NEXT:    movl %esi, %eax
+; X86-X87-NEXT:    addl $36, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v4f16_v4f80:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    subl $48, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    pinsrw $0, 6(%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    pinsrw $0, 4(%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    pinsrw $0, 2(%eax), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, (%eax), %xmm1
+; X86-SSE2-NEXT:    pextrw $0, %xmm1, %eax
+; X86-SSE2-NEXT:    movw %ax, (%esp)
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %edi
+; X86-SSE2-NEXT:    calll __extendhfxf2
+; X86-SSE2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-SSE2-NEXT:    movw %di, (%esp)
+; X86-SSE2-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %edi
+; X86-SSE2-NEXT:    calll __extendhfxf2
+; X86-SSE2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-SSE2-NEXT:    movw %di, (%esp)
+; X86-SSE2-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %edi
+; X86-SSE2-NEXT:    calll __extendhfxf2
+; X86-SSE2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-SSE2-NEXT:    movw %di, (%esp)
+; X86-SSE2-NEXT:    calll __extendhfxf2
+; X86-SSE2-NEXT:    fstpt 30(%esi)
+; X86-SSE2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-SSE2-NEXT:    fstpt 20(%esi)
+; X86-SSE2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-SSE2-NEXT:    fstpt 10(%esi)
+; X86-SSE2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-SSE2-NEXT:    fstpt (%esi)
+; X86-SSE2-NEXT:    movl %esi, %eax
+; X86-SSE2-NEXT:    addl $48, %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    popl %edi
+; X86-SSE2-NEXT:    retl $4
+  %v = load <4 x half>, ptr %p
   %r = fpext <4 x half> %v to <4 x x86_fp80>
   ret <4 x x86_fp80> %r
 }
@@ -531,56 +737,170 @@ define <4 x fp128> @fpext_v4bf16_v4f128(<4 x bfloat> %v) nounwind {
 ; AVX-NEXT:    popq %rbx
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: fpext_v4bf16_v4f128:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $96, %esp
-; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendsftf2
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    pshufd $255, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; X86-NEXT:    # xmm0 = mem[3,3,3,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendsftf2
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    pshufd $85, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; X86-NEXT:    # xmm0 = mem[1,1,1,1]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendsftf2
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendsftf2
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
-; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3
-; X86-NEXT:    movaps %xmm3, (%esi)
-; X86-NEXT:    movaps %xmm2, 48(%esi)
-; X86-NEXT:    movaps %xmm1, 32(%esi)
-; X86-NEXT:    movaps %xmm0, 16(%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    leal -4(%ebp), %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl $4
+; X86-X87-LABEL: fpext_v4bf16_v4f128:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    movl %esp, %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    andl $-16, %esp
+; X86-X87-NEXT:    addl $-128, %esp
+; X86-X87-NEXT:    flds 24(%ebp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds 12(%ebp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds 20(%ebp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %edi
+; X86-X87-NEXT:    flds 16(%ebp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    movl 8(%ebp), %esi
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    movl %ecx, (%esp)
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, (%esp)
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, (%esp)
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, (%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    calll __extendsftf2
+; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-X87-NEXT:    movl %ebx, 60(%esi)
+; X86-X87-NEXT:    movl %eax, 56(%esi)
+; X86-X87-NEXT:    movl %ecx, 52(%esi)
+; X86-X87-NEXT:    movl %edx, 48(%esi)
+; X86-X87-NEXT:    movl %edi, 44(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 40(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 36(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 32(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 28(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 24(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 20(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 16(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 12(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 8(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, 4(%esi)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    movl %eax, (%esi)
+; X86-X87-NEXT:    movl %esi, %eax
+; X86-X87-NEXT:    leal -12(%ebp), %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v4bf16_v4f128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $96, %esp
+; X86-SSE2-NEXT:    movl 8(%ebp), %esi
+; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl %eax, (%esp)
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    calll __extendsftf2
+; X86-SSE2-NEXT:    subl $4, %esp
+; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl %eax, (%esp)
+; X86-SSE2-NEXT:    pshufd $255, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm0 = mem[3,3,3,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    calll __extendsftf2
+; X86-SSE2-NEXT:    subl $4, %esp
+; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl %eax, (%esp)
+; X86-SSE2-NEXT:    pshufd $85, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm0 = mem[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    calll __extendsftf2
+; X86-SSE2-NEXT:    subl $4, %esp
+; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl %eax, (%esp)
+; X86-SSE2-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    calll __extendsftf2
+; X86-SSE2-NEXT:    subl $4, %esp
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3
+; X86-SSE2-NEXT:    movaps %xmm3, (%esi)
+; X86-SSE2-NEXT:    movaps %xmm2, 48(%esi)
+; X86-SSE2-NEXT:    movaps %xmm1, 32(%esi)
+; X86-SSE2-NEXT:    movaps %xmm0, 16(%esi)
+; X86-SSE2-NEXT:    movl %esi, %eax
+; X86-SSE2-NEXT:    leal -4(%ebp), %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    retl $4
   %r = fpext <4 x bfloat> %v to <4 x fp128>
   ret <4 x fp128> %r
 }
@@ -632,30 +952,83 @@ define <4 x x86_fp80> @strict_fpext_v4bf16_v4f80(<4 x bfloat> %v) nounwind stric
 ; AVX-NEXT:    wait
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: strict_fpext_v4bf16_v4f80:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    movd %xmm1, (%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
-; X86-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    flds (%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpt 30(%eax)
-; X86-NEXT:    fstpt 20(%eax)
-; X86-NEXT:    fstpt 10(%eax)
-; X86-NEXT:    fstpt (%eax)
-; X86-NEXT:    wait
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    retl $4
+; X86-X87-LABEL: strict_fpext_v4bf16_v4f80:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $20, %esp
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %edi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %ebp
+; X86-X87-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpt 30(%esi)
+; X86-X87-NEXT:    fstpt 20(%esi)
+; X86-X87-NEXT:    fstpt 10(%esi)
+; X86-X87-NEXT:    fstpt (%esi)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    movl %esi, %eax
+; X86-X87-NEXT:    addl $20, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: strict_fpext_v4bf16_v4f80:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    movd %xmm1, (%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; X86-SSE2-NEXT:    movd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds (%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    fstpt 30(%eax)
+; X86-SSE2-NEXT:    fstpt 20(%eax)
+; X86-SSE2-NEXT:    fstpt 10(%eax)
+; X86-SSE2-NEXT:    fstpt (%eax)
+; X86-SSE2-NEXT:    wait
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    retl $4
   %r = call <4 x x86_fp80> @llvm.experimental.constrained.fpext.v4f80.v4bf16(<4 x bfloat> %v, metadata !"fpexcept.strict")
   ret <4 x x86_fp80> %r
 }
@@ -674,12 +1047,56 @@ define <4 x float> @strict_fpext_v4bf16_v4f32(<4 x bfloat> %v) nounwind strictfp
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: strict_fpext_v4bf16_v4f32:
-; X86:       # %bb.0:
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    movdqa %xmm1, %xmm0
-; X86-NEXT:    retl
+; X86-X87-LABEL: strict_fpext_v4bf16_v4f32:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %edi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    wait
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    shll $16, %ebp
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movl %edi, 12(%esi)
+; X86-X87-NEXT:    movl %ebx, 8(%esi)
+; X86-X87-NEXT:    movl %ebp, 4(%esi)
+; X86-X87-NEXT:    movl %eax, (%esi)
+; X86-X87-NEXT:    movl %esi, %eax
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: strict_fpext_v4bf16_v4f32:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    retl
   %r = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4bf16(<4 x bfloat> %v, metadata !"fpexcept.strict")
   ret <4 x float> %r
 }
@@ -698,12 +1115,52 @@ define <4 x float> @fpext_v4bf16_v4f32(<4 x bfloat> %v) nounwind {
 ; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX-NEXT:    retq
 ;
-; X86-LABEL: fpext_v4bf16_v4f32:
-; X86:       # %bb.0:
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    movdqa %xmm1, %xmm0
-; X86-NEXT:    retl
+; X86-X87-LABEL: fpext_v4bf16_v4f32:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %edi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    shll $16, %esi
+; X86-X87-NEXT:    movl %esi, 12(%ebp)
+; X86-X87-NEXT:    movl %edi, 8(%ebp)
+; X86-X87-NEXT:    movl %ebx, 4(%ebp)
+; X86-X87-NEXT:    movl %eax, (%ebp)
+; X86-X87-NEXT:    movl %ebp, %eax
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v4bf16_v4f32:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    retl
   %r = fpext <4 x bfloat> %v to <4 x float>
   ret <4 x float> %r
 }
@@ -741,36 +1198,125 @@ define <8 x double> @fpext_v8bf16_v8f64(<8 x bfloat> %v) nounwind {
 ; AVX512-NEXT:    vcvtps2pd %ymm0, %zmm0
 ; AVX512-NEXT:    retq
 ;
-; X86-LABEL: fpext_v8bf16_v8f64:
-; X86:       # %bb.0:
-; X86-NEXT:    pxor %xmm3, %xmm3
-; X86-NEXT:    pxor %xmm1, %xmm1
-; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    cvtps2pd %xmm1, %xmm4
-; X86-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; X86-NEXT:    cvtps2pd %xmm3, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X86-NEXT:    cvtps2pd %xmm0, %xmm1
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
-; X86-NEXT:    cvtps2pd %xmm0, %xmm3
-; X86-NEXT:    movaps %xmm4, %xmm0
-; X86-NEXT:    retl
+; X86-X87-LABEL: fpext_v8bf16_v8f64:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $56, %esp
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %edi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    movl %eax, %esi
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstps (%esp)
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-X87-NEXT:    calll __truncsfbf2
+; X86-X87-NEXT:    # kill: def $ax killed $ax def $eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %esi
+; X86-X87-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %ebx
+; X86-X87-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    shll $16, %edi
+; X86-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpl 56(%ebp)
+; X86-X87-NEXT:    fstpl 48(%ebp)
+; X86-X87-NEXT:    fstpl 40(%ebp)
+; X86-X87-NEXT:    fstpl 32(%ebp)
+; X86-X87-NEXT:    fstpl 24(%ebp)
+; X86-X87-NEXT:    fstpl 16(%ebp)
+; X86-X87-NEXT:    fstpl 8(%ebp)
+; X86-X87-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-X87-NEXT:    fstpl (%ebp)
+; X86-X87-NEXT:    movl %ebp, %eax
+; X86-X87-NEXT:    addl $56, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v8bf16_v8f64:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pxor %xmm3, %xmm3
+; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SSE2-NEXT:    cvtps2pd %xmm1, %xmm4
+; X86-SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; X86-SSE2-NEXT:    cvtps2pd %xmm3, %xmm2
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; X86-SSE2-NEXT:    cvtps2pd %xmm0, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
+; X86-SSE2-NEXT:    cvtps2pd %xmm0, %xmm3
+; X86-SSE2-NEXT:    movaps %xmm4, %xmm0
+; X86-SSE2-NEXT:    retl
   %r = fpext <8 x bfloat> %v to <8 x double>
   ret <8 x double> %r
 }
 
-define <4 x float> @fpext_v4f16_v4f32(<4 x half> %v) nounwind {
+define <4 x float> @fpext_v4f16_v4f32(ptr %p) nounwind {
 ; SSE2-LABEL: fpext_v4f16_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $72, %rsp
+; SSE2-NEXT:    pinsrw $0, (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; SSE2-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    psrlq $48, %xmm0
+; SSE2-NEXT:    pinsrw $0, 2(%rdi), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    pinsrw $0, 4(%rdi), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; SSE2-NEXT:    pinsrw $0, 6(%rdi), %xmm0
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
 ; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
@@ -783,82 +1329,117 @@ define <4 x float> @fpext_v4f16_v4f32(<4 x half> %v) nounwind {
 ; SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
-; SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
-; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE2-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; SSE2-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; SSE2-NEXT:    addq $72, %rsp
 ; SSE2-NEXT:    retq
 ;
 ; F16C-LABEL: fpext_v4f16_v4f32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fpext_v4f16_v4f32:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512BF16-NEXT:    vcvtph2ps (%rdi), %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: fpext_v4f16_v4f32:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm1
-; AVX512FP16-NEXT:    vpsrld $16, %xmm0, %xmm2
-; AVX512FP16-NEXT:    vcvtsh2ss %xmm2, %xmm2, %xmm2
-; AVX512FP16-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
-; AVX512FP16-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512FP16-NEXT:    vcvtsh2ss %xmm2, %xmm2, %xmm2
-; AVX512FP16-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; AVX512FP16-NEXT:    vpsrlq $48, %xmm0, %xmm0
-; AVX512FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
-; AVX512FP16-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; AVX512FP16-NEXT:    vcvtph2psx (%rdi), %xmm0
 ; AVX512FP16-NEXT:    retq
 ;
-; X86-LABEL: fpext_v4f16_v4f32:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $80, %esp
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrld $16, %xmm1
-; X86-NEXT:    movdqu %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrlq $48, %xmm1
-; X86-NEXT:    movdqu %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; X86-NEXT:    movups %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X86-NEXT:    addl $80, %esp
-; X86-NEXT:    retl
+; X86-X87-LABEL: fpext_v4f16_v4f32:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $12, %esp
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    movzwl 6(%eax), %edi
+; X86-X87-NEXT:    movzwl 4(%eax), %ebx
+; X86-X87-NEXT:    movzwl 2(%eax), %ebp
+; X86-X87-NEXT:    movzwl (%eax), %eax
+; X86-X87-NEXT:    pushl %eax
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstps (%esp) # 4-byte Folded Spill
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    calll __extendhfsf2
+; X86-X87-NEXT:    addl $4, %esp
+; X86-X87-NEXT:    fstps 12(%esi)
+; X86-X87-NEXT:    flds (%esp) # 4-byte Folded Reload
+; X86-X87-NEXT:    fstps 8(%esi)
+; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    fstps 4(%esi)
+; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    fstps (%esi)
+; X86-X87-NEXT:    movl %esi, %eax
+; X86-X87-NEXT:    addl $12, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: fpext_v4f16_v4f32:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    subl $64, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    pinsrw $0, (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    pinsrw $0, 6(%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    pinsrw $0, 4(%eax), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, 2(%eax), %xmm1
+; X86-SSE2-NEXT:    pextrw $0, %xmm1, %eax
+; X86-SSE2-NEXT:    movw %ax, (%esp)
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %esi
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-SSE2-NEXT:    movw %si, (%esp)
+; X86-SSE2-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %esi
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; X86-SSE2-NEXT:    movw %si, (%esp)
+; X86-SSE2-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %esi
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    movw %si, (%esp)
+; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    calll __extendhfsf2
+; X86-SSE2-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X86-SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE2-NEXT:    addl $64, %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    retl
+  %v = load <4 x half>, ptr %p
   %r = fpext <4 x half> %v to <4 x float>
   ret <4 x float> %r
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; X86: {{.*}}
