@@ -77,6 +77,25 @@ inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_field_origin_escape, D->getBeginLoc());
 }
 
+/// Returns true if the annotation suggestion \p DiagID should be emitted at
+/// \p Loc.
+/// Unlike other warnings, the suggestions are not enabled by -Weverything
+/// alone; they have to be requested explicitly.
+/// Users sometimes enable -Weverything and would otherwise get flooded by the
+/// results of the lifetime-safety suggestions.
+/// FIXME: Ideally this should be handled in a more generic way.
+inline bool isSuggestionEnabled(DiagnosticsEngine &Diags, unsigned DiagID,
+                                SourceLocation Loc) {
+  if (Diags.isIgnored(DiagID, Loc))
+    return false;
+  if (!Diags.getEnableAllWarnings())
+    return true;
+  for (const auto &[ID, Mapping] : Diags.getDiagnosticMappings())
+    if (ID == DiagID)
+      return Mapping.isUser();
+  return false;
+}
+
 inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
@@ -87,7 +106,7 @@ inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion};
   for (unsigned DiagID : DiagIDs)
-    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+    if (isSuggestionEnabled(Diags, DiagID, D->getBeginLoc()))
       return true;
   return false;
 }
@@ -349,6 +368,8 @@ public:
                    : diag::warn_lifetime_safety_intra_tu_param_suggestion;
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
+    if (!isSuggestionEnabled(S.getDiagnostics(), DiagID, InsertionPoint))
+      return;
 
     S.Diag(InsertionPoint, DiagID)
         << ParmToAnnotate->getSourceRange()
@@ -455,6 +476,8 @@ public:
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(MD);
+    if (!isSuggestionEnabled(S.getDiagnostics(), DiagID, InsertionPoint))
+      return;
 
     S.Diag(InsertionPoint, DiagID)
         << MD->getNameInfo().getSourceRange()
