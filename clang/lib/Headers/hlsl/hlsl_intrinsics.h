@@ -221,6 +221,37 @@ firstbithigh(vector<T, N> X) {
 }
 
 //===----------------------------------------------------------------------===//
+// frexp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T frexp(T X, out T Exp)
+/// \brief Returns the mantissa and exponent of the specified floating-point
+/// value.
+/// \param X The specified floating-point value.
+/// \param Exp The returned exponent of \a X.
+///
+/// The mantissa has the same sign as \a X and an absolute value in [0.5, 1),
+/// such that X = mantissa * 2^Exp. If \a X is 0, both the mantissa and the
+/// exponent are 0.
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frexp)
+float frexp(float, out float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frexp)
+float2 frexp(float2, out float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frexp)
+float3 frexp(float3, out float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frexp)
+float4 frexp(float4, out float4);
+template <int N>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frexp)
+vector<__detail::enable_if_t<(N > 4), float>, N> frexp(
+    vector<__detail::enable_if_t<(N > 4), float>, N>,
+    out __detail::type_identity_t<vector<float, N>>);
+template <int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frexp)
+matrix<float, R, C> frexp(matrix<float, R, C>,
+                          out __detail::type_identity_t<matrix<float, R, C>>);
+
+//===----------------------------------------------------------------------===//
 // mul builtins
 //===----------------------------------------------------------------------===//
 

@@ -119,6 +119,32 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInstr;
 }
 
+static Value *handleHlslFrexp(const CallExpr *E, CodeGenFunction *CGF) {
+  Value *X = CGF->EmitScalarExpr(E->getArg(0));
+
+  // Calls through the frexp overloads wrap the exponent in an HLSLOutArgExpr;
+  // direct calls to the builtin pass a plain lvalue.
+  CallArgList Args;
+  LValue ExpLValue;
+  if (const auto *OutArg = dyn_cast<HLSLOutArgExpr>(E->getArg(1)))
+    ExpLValue = CGF->EmitHLSLOutArgExpr(OutArg, Args, OutArg->getType());
+  else
+    ExpLValue = CGF->EmitLValue(E->getArg(1));
+
+  // llvm.frexp returns {mantissa, integer exponent}; HLSL wants the exponent
+  // as a float of the same shape as X.
+  llvm::Type *ExpIntTy = X->getType()->getWithNewType(CGF->Int32Ty);
+  Value *Frexp = CGF->Builder.CreateIntrinsic(
+      Intrinsic::frexp, {X->getType(), ExpIntTy}, {X}, nullptr, "hlsl.frexp");
+  Value *Mantissa = CGF->Builder.CreateExtractValue(Frexp, 0);
+  Value *Exp = CGF->Builder.CreateSIToFP(
+      CGF->Builder.CreateExtractValue(Frexp, 1), X->getType());
+
+  CGF->EmitStoreThroughLValue(RValue::get(Exp), ExpLValue);
+  CGF->EmitWritebacks(Args);
+  return Mantissa;
+}
+
 static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *Op0 = CGF->EmitScalarExpr(E->getArg(0));
   const auto *OutArg1 = dyn_cast<HLSLOutArgExpr>(E->getArg(1));
@@ -1780,6 +1806,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getBufferUpdateCounterIntrinsic(),
         ArrayRef<Value *>{ResHandle, OffsetI8}, nullptr);
   }
+  case Builtin::BI__builtin_hlsl_elementwise_frexp:
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "frexp operands types mismatch");
+    return handleHlslFrexp(E, this);
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
 
     assert((E->getArg(0)->getType()->hasFloatingRepresentation() &&
