@@ -1363,3 +1363,28 @@ void bar() {
   __builtin_dump_struct(&g_c, F, s);
 }
 }  // namespace GH192846
+
+namespace GH219272 {
+consteval int f() { return 1; }
+struct S { consteval S(int (&p)()) { p(); } };
+struct M { consteval int m(int (&p)()) const { return p(); } };
+constexpr M gm{};
+int gi; // expected-note {{declared here}}
+struct Bad { consteval Bad(int *p) : v(*p) {} int v; }; // expected-note {{read of non-const variable 'gi' is not allowed in a constant expression}}
+
+// The instantiation reuses the immediate invocations of the template; the
+// references to consteval functions inside them are not stray references.
+template <typename T> void reused(T) {
+  (void)S{f};
+  gm.m(f);
+  int x = gm.m(f);
+}
+template void reused<int>(int);
+
+// A reused invocation that failed is diagnosed once, in the template.
+template <typename T> void failed(T) {
+  (void)Bad{&gi}; // expected-error {{call to consteval function 'GH219272::Bad::Bad' is not a constant expression}} \
+                  // expected-note {{in call to 'Bad(&gi)'}}
+}
+template void failed<int>(int);
+}
