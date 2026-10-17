@@ -12,15 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/math/logf.h"
 #include "src/mathvec/logf.h"
 #include "test/UnitTest/SIMDMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/mathvec/UnitTestWrappers.h"
-
-#include "hdr/stdint_proxy.h"
+#undef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#include "src/math/logf.h"
 
 using LlvmLibcVecLogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
