@@ -6746,7 +6746,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG, Subtarget.is64Bit()))
       return V;
-    return SDValue();
+
+    // As a last resort, widen the elements so the shuffle can be matched on a
+    // wider type, e.g. v4i16 <0,1,6,7> -> v2i32 <0,3>.
+    return tryWidenMaskForShuffle(Op, DAG);
   }
 
   if (VT.getVectorElementType() == MVT::i1) {
