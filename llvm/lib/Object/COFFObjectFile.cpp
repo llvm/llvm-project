@@ -2371,6 +2371,22 @@ ResourceSectionRef::getTableEntry(const coff_resource_dir_table &Table,
 }
 
 Error ResourceSectionRef::load(const COFFObjectFile *O) {
+  // In images, the resource directory is located by the resource table data
+  // directory entry. Offsets within the directory are relative to that entry,
+  // rather than to the section containing it.
+  const data_directory *Dir = O->getDataDirectory(COFF::RESOURCE_TABLE);
+  if (Dir && Dir->RelativeVirtualAddress != 0 && Dir->Size != 0) {
+    for (const SectionRef &S : O->sections()) {
+      const coff_section *Sec = O->getCOFFSection(S);
+      if (Dir->RelativeVirtualAddress >= Sec->VirtualAddress &&
+          uint64_t(Dir->RelativeVirtualAddress) <
+              uint64_t(Sec->VirtualAddress) + O->getSectionSize(Sec))
+        return load(O, S, Dir->RelativeVirtualAddress - Sec->VirtualAddress);
+    }
+    return createStringError(object_error::parse_failed,
+                             "resource directory not found in any section");
+  }
+
   for (const SectionRef &S : O->sections()) {
     Expected<StringRef> Name = S.getName();
     if (!Name)
@@ -2384,14 +2400,25 @@ Error ResourceSectionRef::load(const COFFObjectFile *O) {
 }
 
 Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S) {
+  return load(O, S, 0);
+}
+
+Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S,
+                               uint32_t Offset) {
   Obj = O;
   Section = S;
   Expected<StringRef> Contents = Section.getContents();
   if (!Contents)
     return Contents.takeError();
-  BBS = BinaryByteStream(*Contents, llvm::endianness::little);
+  if (Offset >= Contents->size())
+    return createStringError(object_error::parse_failed,
+                             "resource directory extends past end of section");
+  SectionOffset = Offset;
+  BBS =
+      BinaryByteStream(Contents->drop_front(Offset), llvm::endianness::little);
   const coff_section *COFFSect = Obj->getCOFFSection(Section);
   ArrayRef<coff_relocation> OrigRelocs = Obj->getRelocations(COFFSect);
+  Relocs.clear();
   Relocs.reserve(OrigRelocs.size());
   for (const coff_relocation &R : OrigRelocs)
     Relocs.push_back(&R);
@@ -2410,8 +2437,8 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
   // the coff_resource_data_entry struct).
   const uint8_t *EntryPtr = reinterpret_cast<const uint8_t *>(&Entry);
   ptrdiff_t EntryOffset = EntryPtr - BBS.data().data();
-  coff_relocation RelocTarget{ulittle32_t(EntryOffset), ulittle32_t(0),
-                              ulittle16_t(0)};
+  coff_relocation RelocTarget{ulittle32_t(SectionOffset + EntryOffset),
+                              ulittle32_t(0), ulittle16_t(0)};
   auto RelocsForOffset =
       std::equal_range(Relocs.begin(), Relocs.end(), &RelocTarget,
                        [](const coff_relocation *A, const coff_relocation *B) {

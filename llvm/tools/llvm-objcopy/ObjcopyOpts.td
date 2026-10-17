@@ -134,6 +134,18 @@ defm subsystem
          "Set the PE subsystem, and optionally subsystem version">,
       MetaVarName<"name[:version]">, Group<grp_coff>;
 
+defm dump_resource
+    : Eq<"dump-resource",
+         "Dump the contents of the resource with the given type, name and "
+         "(optionally) language IDs into <file>">,
+      MetaVarName<"type/name[/language]=file">, Group<grp_coff>;
+
+defm update_resource
+    : Eq<"update-resource",
+         "Add the resource with the given type, name and (optionally) language "
+         "IDs with the contents of <file>, or replace it">,
+      MetaVarName<"type/name[/language]=file">, Group<grp_coff>;
+
 def extract_dwo
     : Flag<["--"], "extract-dwo">,
       HelpText<
