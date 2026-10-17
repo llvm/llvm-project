@@ -330,6 +330,8 @@ gentbl_cc_library(
             "-gen-attrdef-decls",
             "-attrdefs-dialect=transform",
         ],
+        "lib/Dialect/Transform/TestTransformDialectExtensionEnums.cpp.inc": ["-gen-enum-defs"],
+        "lib/Dialect/Transform/TestTransformDialectExtensionEnums.h.inc": ["-gen-enum-decls"],
         "lib/Dialect/Transform/TestTransformDialectExtensionTypes.cpp.inc": [
             "-gen-typedef-defs",
             "-typedefs-dialect=transform",
