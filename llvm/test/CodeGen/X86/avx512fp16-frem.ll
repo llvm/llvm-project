@@ -4,6 +4,25 @@
 define half @frem(half %x, half %y) nounwind {
 ; CHECK-LABEL: frem:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtsh2sd %xmm1, %xmm1, %xmm2
+; CHECK-NEXT:    vcvtsh2sd %xmm0, %xmm0, %xmm3
+; CHECK-NEXT:    vdivsd %xmm2, %xmm3, %xmm4
+; CHECK-NEXT:    vroundsd $11, %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm4 = -(xmm2 * xmm4) + xmm3
+; CHECK-NEXT:    vcvtsd2sh %xmm4, %xmm4, %xmm2
+; CHECK-NEXT:    vfpclasssh $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vfpclasssh $24, %xmm1, %k1 {%k1} # k1 {%k1} = isPositiveInfinity(xmm1) | isNegativeInfinity(xmm1)
+; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %r = frem half %x, %y
+  ret half %r
+}
+
+define <2 x half> @frem_vec2(<2 x half> %x, <2 x half> %y) nounwind {
+; CHECK-LABEL: frem_vec2:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
 ; CHECK-NEXT:    knotb %k0, %k1
 ; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
@@ -17,116 +36,6 @@ define half @frem(half %x, half %y) nounwind {
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %r = frem half %x, %y
-  ret half %r
-}
-
-define <2 x half> @frem_vec2(<2 x half> %x, <2 x half> %y) nounwind {
-; CHECK-LABEL: frem_vec2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3) | isSignalingNaN(xmm3)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm2
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm4
-; CHECK-NEXT:    vdivpd %zmm2, %zmm4, %zmm5
-; CHECK-NEXT:    vrndscalepd $11, %zmm5, %zmm5
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm5 = -(zmm2 * zmm5) + zmm4
-; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm2
-; CHECK-NEXT:    vmovdqu16 %xmm3, %xmm2 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm4 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm4 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm1
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm1, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm1 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm1
-; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
   %r = frem <2 x half> %x, %y
   ret <2 x half> %r
 }
@@ -134,107 +43,17 @@ define <2 x half> @frem_vec2(<2 x half> %x, <2 x half> %y) nounwind {
 define <4 x half> @frem_vec4(<4 x half> %x, <4 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3) | isSignalingNaN(xmm3)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm2
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm4
-; CHECK-NEXT:    vdivpd %zmm2, %zmm4, %zmm5
-; CHECK-NEXT:    vrndscalepd $11, %zmm5, %zmm5
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm5 = -(zmm2 * zmm5) + zmm4
-; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm2
-; CHECK-NEXT:    vmovdqu16 %xmm3, %xmm2 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm4 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm4 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
 ; CHECK-NEXT:    knotb %k0, %k1
 ; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
 ; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm1
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm1, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm1 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm1
+; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm2
+; CHECK-NEXT:    vdivpd %zmm1, %zmm2, %zmm3
+; CHECK-NEXT:    vrndscalepd $11, %zmm3, %zmm3
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm3 = -(zmm1 * zmm3) + zmm2
+; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm1
 ; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %r = frem <4 x half> %x, %y
@@ -244,107 +63,17 @@ define <4 x half> @frem_vec4(<4 x half> %x, <4 x half> %y) nounwind {
 define <8 x half> @frem_vec8(<8 x half> %x, <8 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm3, %k0 # k0 = isQuietNaN(xmm3) | isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3) | isSignalingNaN(xmm3)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm2
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm4
-; CHECK-NEXT:    vdivpd %zmm2, %zmm4, %zmm5
-; CHECK-NEXT:    vrndscalepd $11, %zmm5, %zmm5
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm5 = -(zmm2 * zmm5) + zmm4
-; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm2
-; CHECK-NEXT:    vmovdqu16 %xmm3, %xmm2 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm4
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm3 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm4 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm4 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
 ; CHECK-NEXT:    knotb %k0, %k1
 ; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
 ; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm1
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
-; CHECK-NEXT:    vdivpd %zmm1, %zmm5, %zmm6
-; CHECK-NEXT:    vrndscalepd $11, %zmm6, %zmm6
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm6 = -(zmm1 * zmm6) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm6, %xmm1
+; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm2
+; CHECK-NEXT:    vdivpd %zmm1, %zmm2, %zmm3
+; CHECK-NEXT:    vrndscalepd $11, %zmm3, %zmm3
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm3 = -(zmm1 * zmm3) + zmm2
+; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm1
 ; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %r = frem <8 x half> %x, %y
@@ -354,218 +83,26 @@ define <8 x half> @frem_vec8(<8 x half> %x, <8 x half> %y) nounwind {
 define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k0 # k0 = isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4)
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm5, %k1 # k1 = isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm6, %k1 # k1 = isQuietNaN(xmm6) | isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6) | isSignalingNaN(xmm6)
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm7, %k2 # k2 = isQuietNaN(xmm7) | isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7) | isSignalingNaN(xmm7)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm8
-; CHECK-NEXT:    vrndscalepd $11, %zmm8, %zmm8
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm8 = -(zmm4 * zmm8) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm8, %xmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm6
-; CHECK-NEXT:    vdivpd %zmm5, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm5 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm5
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm4
-; CHECK-NEXT:    vpsrldq {{.*#+}} ymm5 = ymm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm0[30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vmovdqu16 %ymm5, %ymm4 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm5 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm5, %k0 # k0 = isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5)
-; CHECK-NEXT:    vshufps {{.*#+}} xmm6 = xmm2[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k1 # k1 = isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm7, %k1 # k1 = isQuietNaN(xmm7) | isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7) | isSignalingNaN(xmm7)
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm3[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm8, %k2 # k2 = isQuietNaN(xmm8) | isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8) | isSignalingNaN(xmm8)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vdivpd %zmm5, %zmm7, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm5 * zmm9) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm5
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm7
-; CHECK-NEXT:    vdivpd %zmm6, %zmm7, %zmm8
-; CHECK-NEXT:    vrndscalepd $11, %zmm8, %zmm8
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm8 = -(zmm6 * zmm8) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm8, %xmm6
-; CHECK-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm5
-; CHECK-NEXT:    vshufps {{.*#+}} ymm6 = ymm0[3,3,3,3,7,7,7,7]
-; CHECK-NEXT:    vmovdqu16 %ymm6, %ymm5 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm4 = ymm5[0],ymm4[0],ymm5[1],ymm4[1],ymm5[2],ymm4[2],ymm5[3],ymm4[3],ymm5[8],ymm4[8],ymm5[9],ymm4[9],ymm5[10],ymm4[10],ymm5[11],ymm4[11]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm5, %k0 # k0 = isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k1 # k1 = isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm7, %k1 # k1 = isQuietNaN(xmm7) | isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7) | isSignalingNaN(xmm7)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm8 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm8, %k2 # k2 = isQuietNaN(xmm8) | isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8) | isSignalingNaN(xmm8)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vdivpd %zmm5, %zmm7, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm5 * zmm9) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm5
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm7
-; CHECK-NEXT:    vdivpd %zmm6, %zmm7, %zmm8
-; CHECK-NEXT:    vrndscalepd $11, %zmm8, %zmm8
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm8 = -(zmm6 * zmm8) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm8, %xmm6
-; CHECK-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm5
-; CHECK-NEXT:    vpsrldq {{.*#+}} ymm6 = ymm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,ymm0[26,27,28,29,30,31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vmovdqu16 %ymm6, %ymm5 {%k1}
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm1[1,0]
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k0 # k0 = isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6)
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm2[1,0]
-; CHECK-NEXT:    vfpclassph $24, %xmm7, %k1 # k1 = isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm0[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm8, %k1 # k1 = isQuietNaN(xmm8) | isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8) | isSignalingNaN(xmm8)
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm3[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm9, %k2 # k2 = isQuietNaN(xmm9) | isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9) | isSignalingNaN(xmm9)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm10
-; CHECK-NEXT:    vdivpd %zmm6, %zmm10, %zmm11
-; CHECK-NEXT:    vrndscalepd $11, %zmm11, %zmm11
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm11 = -(zmm6 * zmm11) + zmm10
-; CHECK-NEXT:    vcvtpd2ph %zmm11, %xmm6
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm10
-; CHECK-NEXT:    vdivpd %zmm7, %zmm10, %zmm11
-; CHECK-NEXT:    vrndscalepd $11, %zmm11, %zmm11
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm11 = -(zmm7 * zmm11) + zmm10
-; CHECK-NEXT:    vcvtpd2ph %zmm11, %xmm7
-; CHECK-NEXT:    vinserti128 $1, %xmm7, %ymm6, %ymm6
-; CHECK-NEXT:    vinsertf128 $1, %xmm9, %ymm8, %ymm7
-; CHECK-NEXT:    vmovdqu16 %ymm7, %ymm6 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm5 = ymm6[0],ymm5[0],ymm6[1],ymm5[1],ymm6[2],ymm5[2],ymm6[3],ymm5[3],ymm6[8],ymm5[8],ymm6[9],ymm5[9],ymm6[10],ymm5[10],ymm6[11],ymm5[11]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} ymm4 = ymm5[0],ymm4[0],ymm5[1],ymm4[1],ymm5[4],ymm4[4],ymm5[5],ymm4[5]
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm5
-; CHECK-NEXT:    vfpclassph $24, %xmm5, %k0 # k0 = isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5)
-; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm6
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k1 # k1 = isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm7
-; CHECK-NEXT:    vfpclassph $153, %xmm7, %k1 # k1 = isQuietNaN(xmm7) | isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7) | isSignalingNaN(xmm7)
-; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm8
-; CHECK-NEXT:    vfpclassph $153, %xmm8, %k2 # k2 = isQuietNaN(xmm8) | isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8) | isSignalingNaN(xmm8)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vdivpd %zmm5, %zmm7, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm5 * zmm9) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm5
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm7
-; CHECK-NEXT:    vdivpd %zmm6, %zmm7, %zmm8
-; CHECK-NEXT:    vrndscalepd $11, %zmm8, %zmm8
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm8 = -(zmm6 * zmm8) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm8, %xmm6
-; CHECK-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm5
-; CHECK-NEXT:    vpsrlq $48, %ymm0, %ymm6
-; CHECK-NEXT:    vmovdqu16 %ymm6, %ymm5 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k0 # k0 = isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6)
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm2[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm7, %k1 # k1 = isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm8 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm8, %k1 # k1 = isQuietNaN(xmm8) | isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8) | isSignalingNaN(xmm8)
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm9 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm9, %k2 # k2 = isQuietNaN(xmm9) | isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9) | isSignalingNaN(xmm9)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm8
-; CHECK-NEXT:    vdivpd %zmm6, %zmm8, %zmm10
-; CHECK-NEXT:    vrndscalepd $11, %zmm10, %zmm10
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm10 = -(zmm6 * zmm10) + zmm8
-; CHECK-NEXT:    vcvtpd2ph %zmm10, %xmm6
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm8
-; CHECK-NEXT:    vdivpd %zmm7, %zmm8, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm7 * zmm9) + zmm8
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm7
-; CHECK-NEXT:    vinserti128 $1, %xmm7, %ymm6, %ymm6
-; CHECK-NEXT:    vmovshdup {{.*#+}} ymm7 = ymm0[1,1,3,3,5,5,7,7]
-; CHECK-NEXT:    vmovdqu16 %ymm7, %ymm6 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm5 = ymm6[0],ymm5[0],ymm6[1],ymm5[1],ymm6[2],ymm5[2],ymm6[3],ymm5[3],ymm6[8],ymm5[8],ymm6[9],ymm5[9],ymm6[10],ymm5[10],ymm6[11],ymm5[11]
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k0 # k0 = isPositiveInfinity(xmm1) | isNegativeInfinity(xmm1)
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k1 # k1 = isPositiveInfinity(xmm2) | isNegativeInfinity(xmm2)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k1 # k1 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    vfpclassph $153, %xmm3, %k2 # k2 = isQuietNaN(xmm3) | isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3) | isSignalingNaN(xmm3)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm7
-; CHECK-NEXT:    vdivpd %zmm6, %zmm7, %zmm8
-; CHECK-NEXT:    vrndscalepd $11, %zmm8, %zmm8
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm8 = -(zmm6 * zmm8) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm8, %xmm6
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm7
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm8
-; CHECK-NEXT:    vdivpd %zmm7, %zmm8, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm7 * zmm9) + zmm8
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm7
-; CHECK-NEXT:    vinserti128 $1, %xmm7, %ymm6, %ymm6
-; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm6 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k0 # k0 = isPositiveInfinity(xmm1) | isNegativeInfinity(xmm1)
-; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k1 # k1 = isPositiveInfinity(xmm2) | isNegativeInfinity(xmm2)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm7
-; CHECK-NEXT:    vfpclassph $153, %xmm7, %k1 # k1 = isQuietNaN(xmm7) | isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7) | isSignalingNaN(xmm7)
-; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
-; CHECK-NEXT:    vfpclassph $153, %xmm3, %k2 # k2 = isQuietNaN(xmm3) | isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3) | isSignalingNaN(xmm3)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm1
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vdivpd %zmm1, %zmm7, %zmm8
-; CHECK-NEXT:    vrndscalepd $11, %zmm8, %zmm8
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm8 = -(zmm1 * zmm8) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm8, %xmm1
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm2
+; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm2
+; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm3
+; CHECK-NEXT:    vdivpd %zmm2, %zmm3, %zmm4
+; CHECK-NEXT:    vrndscalepd $11, %zmm4, %zmm4
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm4 = -(zmm2 * zmm4) + zmm3
+; CHECK-NEXT:    vcvtpd2ph %zmm4, %xmm2
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vdivpd %zmm2, %zmm3, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm2 * zmm7) + zmm3
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vpsrld $16, %ymm0, %ymm0
-; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm1 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm6[0],ymm1[0],ymm6[1],ymm1[1],ymm6[2],ymm1[2],ymm6[3],ymm1[3],ymm6[8],ymm1[8],ymm6[9],ymm1[9],ymm6[10],ymm1[10],ymm6[11],ymm1[11]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm5[0],ymm0[1],ymm5[1],ymm0[4],ymm5[4],ymm0[5],ymm5[5]
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
+; CHECK-NEXT:    vdivpd %zmm3, %zmm4, %zmm5
+; CHECK-NEXT:    vrndscalepd $11, %zmm5, %zmm5
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm5 = -(zmm3 * zmm5) + zmm4
+; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm3
+; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; CHECK-NEXT:    vfpclassph $153, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveInfinity(ymm0) | isNegativeInfinity(ymm0) | isSignalingNaN(ymm0)
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vfpclassph $24, %ymm1, %k1 {%k1}
+; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %r = frem <16 x half> %x, %y
   ret <16 x half> %r
@@ -574,427 +111,273 @@ define <16 x half> @frem_vec16(<16 x half> %x, <16 x half> %y) nounwind {
 define <32 x half> @frem_vec32(<32 x half> %x, <32 x half> %y) nounwind {
 ; CHECK-LABEL: frem_vec32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm2
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k0 # k0 = isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6)
-; CHECK-NEXT:    vextractf32x4 $3, %zmm1, %xmm3
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm3[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm7, %k1 # k1 = isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm4
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm8 = xmm4[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm8, %k1 # k1 = isQuietNaN(xmm8) | isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8) | isSignalingNaN(xmm8)
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm5
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm9 = xmm5[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm9, %k2 # k2 = isQuietNaN(xmm9) | isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9) | isSignalingNaN(xmm9)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm10
-; CHECK-NEXT:    vdivpd %zmm6, %zmm10, %zmm11
-; CHECK-NEXT:    vrndscalepd $11, %zmm11, %zmm11
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm11 = -(zmm6 * zmm11) + zmm10
-; CHECK-NEXT:    vcvtpd2ph %zmm11, %xmm6
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm10
-; CHECK-NEXT:    vdivpd %zmm7, %zmm10, %zmm11
-; CHECK-NEXT:    vrndscalepd $11, %zmm11, %zmm11
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm11 = -(zmm7 * zmm11) + zmm10
-; CHECK-NEXT:    vcvtpd2ph %zmm11, %xmm7
-; CHECK-NEXT:    vinserti128 $1, %xmm7, %ymm6, %ymm6
-; CHECK-NEXT:    vinsertf128 $1, %xmm9, %ymm8, %ymm7
-; CHECK-NEXT:    vmovdqu16 %ymm7, %ymm6 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm2[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm7, %k0 # k0 = isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7)
-; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm3[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm8, %k1 # k1 = isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vshufps {{.*#+}} xmm9 = xmm4[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm9, %k1 # k1 = isQuietNaN(xmm9) | isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9) | isSignalingNaN(xmm9)
-; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm5[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm10, %k2 # k2 = isQuietNaN(xmm10) | isPositiveInfinity(xmm10) | isNegativeInfinity(xmm10) | isSignalingNaN(xmm10)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm11
-; CHECK-NEXT:    vdivpd %zmm7, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm7 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm7
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm8
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm11
-; CHECK-NEXT:    vdivpd %zmm8, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm8 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm8
-; CHECK-NEXT:    vinserti128 $1, %xmm8, %ymm7, %ymm7
-; CHECK-NEXT:    vinsertf128 $1, %xmm10, %ymm9, %ymm8
-; CHECK-NEXT:    vmovdqu16 %ymm8, %ymm7 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm6 = ymm7[0],ymm6[0],ymm7[1],ymm6[1],ymm7[2],ymm6[2],ymm7[3],ymm6[3],ymm7[8],ymm6[8],ymm7[9],ymm6[9],ymm7[10],ymm6[10],ymm7[11],ymm6[11]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm7 = xmm2[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm7, %k0 # k0 = isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm8 = xmm3[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $24, %xmm8, %k1 # k1 = isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm9 = xmm4[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm9, %k1 # k1 = isQuietNaN(xmm9) | isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9) | isSignalingNaN(xmm9)
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm10 = xmm5[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm10, %k2 # k2 = isQuietNaN(xmm10) | isPositiveInfinity(xmm10) | isNegativeInfinity(xmm10) | isSignalingNaN(xmm10)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm7
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm11
-; CHECK-NEXT:    vdivpd %zmm7, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm7 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm7
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm8
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm11
-; CHECK-NEXT:    vdivpd %zmm8, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm8 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm8
-; CHECK-NEXT:    vinserti128 $1, %xmm8, %ymm7, %ymm7
-; CHECK-NEXT:    vinsertf128 $1, %xmm10, %ymm9, %ymm8
-; CHECK-NEXT:    vmovdqu16 %ymm8, %ymm7 {%k1}
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm2[1,0]
-; CHECK-NEXT:    vfpclassph $24, %xmm8, %k0 # k0 = isPositiveInfinity(xmm8) | isNegativeInfinity(xmm8)
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm3[1,0]
-; CHECK-NEXT:    vfpclassph $24, %xmm9, %k1 # k1 = isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm4[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm10, %k1 # k1 = isQuietNaN(xmm10) | isPositiveInfinity(xmm10) | isNegativeInfinity(xmm10) | isSignalingNaN(xmm10)
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm5[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm11, %k2 # k2 = isQuietNaN(xmm11) | isPositiveInfinity(xmm11) | isNegativeInfinity(xmm11) | isSignalingNaN(xmm11)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm8, %zmm8
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm12
-; CHECK-NEXT:    vdivpd %zmm8, %zmm12, %zmm13
-; CHECK-NEXT:    vrndscalepd $11, %zmm13, %zmm13
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm13 = -(zmm8 * zmm13) + zmm12
-; CHECK-NEXT:    vcvtpd2ph %zmm13, %xmm8
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm9
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm12
-; CHECK-NEXT:    vdivpd %zmm9, %zmm12, %zmm13
-; CHECK-NEXT:    vrndscalepd $11, %zmm13, %zmm13
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm13 = -(zmm9 * zmm13) + zmm12
-; CHECK-NEXT:    vcvtpd2ph %zmm13, %xmm9
-; CHECK-NEXT:    vinserti128 $1, %xmm9, %ymm8, %ymm8
-; CHECK-NEXT:    vinsertf128 $1, %xmm11, %ymm10, %ymm9
-; CHECK-NEXT:    vmovdqu16 %ymm9, %ymm8 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm7 = ymm8[0],ymm7[0],ymm8[1],ymm7[1],ymm8[2],ymm7[2],ymm8[3],ymm7[3],ymm8[8],ymm7[8],ymm8[9],ymm7[9],ymm8[10],ymm7[10],ymm8[11],ymm7[11]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} ymm8 = ymm7[0],ymm6[0],ymm7[1],ymm6[1],ymm7[4],ymm6[4],ymm7[5],ymm6[5]
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm6
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm9 = xmm6[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm7
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm10 = xmm7[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm10, %k0 # k0 = isQuietNaN(xmm10) | isPositiveInfinity(xmm10) | isNegativeInfinity(xmm10) | isSignalingNaN(xmm10)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm9, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm9
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm11
-; CHECK-NEXT:    vdivpd %zmm9, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm9 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm9
-; CHECK-NEXT:    vmovdqu16 %xmm10, %xmm9 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm6[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm11 = xmm7[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm11, %k0 # k0 = isQuietNaN(xmm11) | isPositiveInfinity(xmm11) | isNegativeInfinity(xmm11) | isSignalingNaN(xmm11)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm10, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm10
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm12
-; CHECK-NEXT:    vdivpd %zmm10, %zmm12, %zmm13
-; CHECK-NEXT:    vrndscalepd $11, %zmm13, %zmm13
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm13 = -(zmm10 * zmm13) + zmm12
-; CHECK-NEXT:    vcvtpd2ph %zmm13, %xmm10
-; CHECK-NEXT:    vmovdqu16 %xmm11, %xmm10 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1],xmm10[2],xmm9[2],xmm10[3],xmm9[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm10 = xmm6[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm11 = xmm7[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm11, %k0 # k0 = isQuietNaN(xmm11) | isPositiveInfinity(xmm11) | isNegativeInfinity(xmm11) | isSignalingNaN(xmm11)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm10, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm10
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm12
-; CHECK-NEXT:    vdivpd %zmm10, %zmm12, %zmm13
-; CHECK-NEXT:    vrndscalepd $11, %zmm13, %zmm13
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm13 = -(zmm10 * zmm13) + zmm12
-; CHECK-NEXT:    vcvtpd2ph %zmm13, %xmm10
-; CHECK-NEXT:    vmovdqu16 %xmm11, %xmm10 {%k1}
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm3
+; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm5
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm4
+; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm6
+; CHECK-NEXT:    vdivpd %zmm5, %zmm6, %zmm2
+; CHECK-NEXT:    vextractf32x4 $3, %zmm2, %xmm7
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm8
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm8[0],xmm7[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm2, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vroundsd $11, %xmm2, %xmm2, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm9[0],xmm2[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm2, %zmm7
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vxorpd %zmm2, %zmm7, %zmm7
+; CHECK-NEXT:    vextractf32x4 $3, %zmm7, %xmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm10
+; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm7, %xmm10
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm11
+; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm12
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm13 = xmm12[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm12 = (xmm10 * xmm12) + xmm11
+; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm10[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm11 = (xmm13 * xmm10) + xmm11
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm12[0],xmm11[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm10, %ymm8
+; CHECK-NEXT:    vextractf128 $1, %ymm7, %xmm10
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm11
+; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm12
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm13 = xmm12[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm12 = (xmm10 * xmm12) + xmm11
+; CHECK-NEXT:    vshufps {{.*#+}} xmm10 = xmm10[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm11 = (xmm13 * xmm10) + xmm11
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm12[0],xmm11[0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm6[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm7[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm12, %k0 # k0 = isQuietNaN(xmm12) | isPositiveInfinity(xmm12) | isNegativeInfinity(xmm12) | isSignalingNaN(xmm12)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm11, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm11
-; CHECK-NEXT:    vcvtph2pd %xmm12, %zmm13
-; CHECK-NEXT:    vdivpd %zmm11, %zmm13, %zmm14
-; CHECK-NEXT:    vrndscalepd $11, %zmm14, %zmm14
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm14 = -(zmm11 * zmm14) + zmm13
-; CHECK-NEXT:    vcvtpd2ph %zmm14, %xmm11
-; CHECK-NEXT:    vmovdqu16 %xmm12, %xmm11 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm10 = xmm11[0],xmm10[0],xmm11[1],xmm10[1],xmm11[2],xmm10[2],xmm11[3],xmm10[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm10 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm11 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm11, %k0 # k0 = isQuietNaN(xmm11) | isPositiveInfinity(xmm11) | isNegativeInfinity(xmm11) | isSignalingNaN(xmm11)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm10, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm10
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm12
-; CHECK-NEXT:    vdivpd %zmm10, %zmm12, %zmm13
-; CHECK-NEXT:    vrndscalepd $11, %zmm13, %zmm13
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm13 = -(zmm10 * zmm13) + zmm12
-; CHECK-NEXT:    vcvtpd2ph %zmm13, %xmm10
-; CHECK-NEXT:    vmovdqu16 %xmm11, %xmm10 {%k1}
-; CHECK-NEXT:    vshufps {{.*#+}} xmm11 = xmm1[3,3,3,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm12 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm12, %k0 # k0 = isQuietNaN(xmm12) | isPositiveInfinity(xmm12) | isNegativeInfinity(xmm12) | isSignalingNaN(xmm12)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm11, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm11
-; CHECK-NEXT:    vcvtph2pd %xmm12, %zmm13
-; CHECK-NEXT:    vdivpd %zmm11, %zmm13, %zmm14
-; CHECK-NEXT:    vrndscalepd $11, %zmm14, %zmm14
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm14 = -(zmm11 * zmm14) + zmm13
-; CHECK-NEXT:    vcvtpd2ph %zmm14, %xmm11
-; CHECK-NEXT:    vmovdqu16 %xmm12, %xmm11 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm10 = xmm11[0],xmm10[0],xmm11[1],xmm10[1],xmm11[2],xmm10[2],xmm11[3],xmm10[3]
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm11 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm12 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vfpclassph $153, %xmm12, %k0 # k0 = isQuietNaN(xmm12) | isPositiveInfinity(xmm12) | isNegativeInfinity(xmm12) | isSignalingNaN(xmm12)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm11, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm11
-; CHECK-NEXT:    vcvtph2pd %xmm12, %zmm13
-; CHECK-NEXT:    vdivpd %zmm11, %zmm13, %zmm14
-; CHECK-NEXT:    vrndscalepd $11, %zmm14, %zmm14
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm14 = -(zmm11 * zmm14) + zmm13
-; CHECK-NEXT:    vcvtpd2ph %zmm14, %xmm11
-; CHECK-NEXT:    vmovdqu16 %xmm12, %xmm11 {%k1}
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm1[1,0]
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm13 = xmm0[1,0]
-; CHECK-NEXT:    vfpclassph $153, %xmm13, %k0 # k0 = isQuietNaN(xmm13) | isPositiveInfinity(xmm13) | isNegativeInfinity(xmm13) | isSignalingNaN(xmm13)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm12, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm12, %zmm12
-; CHECK-NEXT:    vcvtph2pd %xmm13, %zmm14
-; CHECK-NEXT:    vdivpd %zmm12, %zmm14, %zmm15
-; CHECK-NEXT:    vrndscalepd $11, %zmm15, %zmm15
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm15 = -(zmm12 * zmm15) + zmm14
-; CHECK-NEXT:    vcvtpd2ph %zmm15, %xmm12
-; CHECK-NEXT:    vmovdqu16 %xmm13, %xmm12 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm11 = xmm12[0],xmm11[0],xmm12[1],xmm11[1],xmm12[2],xmm11[2],xmm12[3],xmm11[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm11[0],xmm10[0],xmm11[1],xmm10[1]
-; CHECK-NEXT:    vinserti128 $1, %xmm9, %ymm10, %ymm9
-; CHECK-NEXT:    vinserti64x4 $1, %ymm8, %zmm9, %zmm8
-; CHECK-NEXT:    vpsrlq $48, %xmm2, %xmm9
-; CHECK-NEXT:    vfpclassph $24, %xmm9, %k0 # k0 = isPositiveInfinity(xmm9) | isNegativeInfinity(xmm9)
-; CHECK-NEXT:    vpsrlq $48, %xmm3, %xmm10
-; CHECK-NEXT:    vfpclassph $24, %xmm10, %k1 # k1 = isPositiveInfinity(xmm10) | isNegativeInfinity(xmm10)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrlq $48, %xmm4, %xmm11
-; CHECK-NEXT:    vfpclassph $153, %xmm11, %k1 # k1 = isQuietNaN(xmm11) | isPositiveInfinity(xmm11) | isNegativeInfinity(xmm11) | isSignalingNaN(xmm11)
-; CHECK-NEXT:    vpsrlq $48, %xmm5, %xmm12
-; CHECK-NEXT:    vfpclassph $153, %xmm12, %k2 # k2 = isQuietNaN(xmm12) | isPositiveInfinity(xmm12) | isNegativeInfinity(xmm12) | isSignalingNaN(xmm12)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm9, %zmm9
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm13
-; CHECK-NEXT:    vdivpd %zmm9, %zmm13, %zmm14
-; CHECK-NEXT:    vrndscalepd $11, %zmm14, %zmm14
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm14 = -(zmm9 * zmm14) + zmm13
-; CHECK-NEXT:    vcvtpd2ph %zmm14, %xmm9
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm10
-; CHECK-NEXT:    vcvtph2pd %xmm12, %zmm13
-; CHECK-NEXT:    vdivpd %zmm10, %zmm13, %zmm14
-; CHECK-NEXT:    vrndscalepd $11, %zmm14, %zmm14
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm14 = -(zmm10 * zmm14) + zmm13
-; CHECK-NEXT:    vcvtpd2ph %zmm14, %xmm10
-; CHECK-NEXT:    vinserti128 $1, %xmm10, %ymm9, %ymm9
-; CHECK-NEXT:    vinserti128 $1, %xmm12, %ymm11, %ymm10
-; CHECK-NEXT:    vmovdqu16 %ymm10, %ymm9 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm10 = xmm2[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm10, %k0 # k0 = isPositiveInfinity(xmm10) | isNegativeInfinity(xmm10)
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm11 = xmm3[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $24, %xmm11, %k1 # k1 = isPositiveInfinity(xmm11) | isNegativeInfinity(xmm11)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm12 = xmm4[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm12, %k1 # k1 = isQuietNaN(xmm12) | isPositiveInfinity(xmm12) | isNegativeInfinity(xmm12) | isSignalingNaN(xmm12)
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm13 = xmm5[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm13, %k2 # k2 = isQuietNaN(xmm13) | isPositiveInfinity(xmm13) | isNegativeInfinity(xmm13) | isSignalingNaN(xmm13)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm10, %zmm10
-; CHECK-NEXT:    vcvtph2pd %xmm12, %zmm14
-; CHECK-NEXT:    vdivpd %zmm10, %zmm14, %zmm15
-; CHECK-NEXT:    vrndscalepd $11, %zmm15, %zmm15
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm15 = -(zmm10 * zmm15) + zmm14
-; CHECK-NEXT:    vcvtpd2ph %zmm15, %xmm10
-; CHECK-NEXT:    vcvtph2pd %xmm11, %zmm11
-; CHECK-NEXT:    vcvtph2pd %xmm13, %zmm14
-; CHECK-NEXT:    vdivpd %zmm11, %zmm14, %zmm15
-; CHECK-NEXT:    vrndscalepd $11, %zmm15, %zmm15
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm15 = -(zmm11 * zmm15) + zmm14
-; CHECK-NEXT:    vcvtpd2ph %zmm15, %xmm11
-; CHECK-NEXT:    vinserti128 $1, %xmm11, %ymm10, %ymm10
-; CHECK-NEXT:    vinsertf128 $1, %xmm13, %ymm12, %ymm11
-; CHECK-NEXT:    vmovdqu16 %ymm11, %ymm10 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm9 = ymm10[0],ymm9[0],ymm10[1],ymm9[1],ymm10[2],ymm9[2],ymm10[3],ymm9[3],ymm10[8],ymm9[8],ymm10[9],ymm9[9],ymm10[10],ymm9[10],ymm10[11],ymm9[11]
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k0 # k0 = isPositiveInfinity(xmm2) | isNegativeInfinity(xmm2)
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 # k1 = isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k1 # k1 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k2 # k2 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm10
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm11
-; CHECK-NEXT:    vdivpd %zmm10, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm10 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm10
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm11
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm12
-; CHECK-NEXT:    vdivpd %zmm11, %zmm12, %zmm13
-; CHECK-NEXT:    vrndscalepd $11, %zmm13, %zmm13
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm13 = -(zmm11 * zmm13) + zmm12
-; CHECK-NEXT:    vcvtpd2ph %zmm13, %xmm11
-; CHECK-NEXT:    vinserti128 $1, %xmm11, %ymm10, %ymm10
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm11
-; CHECK-NEXT:    vmovdqu16 %ymm11, %ymm10 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm2, %xmm2
-; CHECK-NEXT:    vfpclassph $24, %xmm2, %k0 # k0 = isPositiveInfinity(xmm2) | isNegativeInfinity(xmm2)
-; CHECK-NEXT:    vpsrld $16, %xmm3, %xmm3
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 # k1 = isPositiveInfinity(xmm3) | isNegativeInfinity(xmm3)
-; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
-; CHECK-NEXT:    vpsrld $16, %xmm4, %xmm4
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k1 # k1 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    vpsrld $16, %xmm5, %xmm5
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k2 # k2 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    kunpckbw %k1, %k2, %k1
-; CHECK-NEXT:    kandnw %k0, %k1, %k1
-; CHECK-NEXT:    vcvtph2pd %xmm2, %zmm2
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm11
-; CHECK-NEXT:    vdivpd %zmm2, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm2 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm2
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm5[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm12 = (xmm7 * xmm12) + xmm11
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm5 = -(xmm9 * xmm5) + xmm6
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm5 = xmm5[0],xmm12[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm10, %ymm5, %ymm5
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm8, %zmm5, %zmm5
+; CHECK-NEXT:    vcvtpd2ph %zmm5, %xmm5
+; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm3
 ; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm11
-; CHECK-NEXT:    vdivpd %zmm3, %zmm11, %zmm12
-; CHECK-NEXT:    vrndscalepd $11, %zmm12, %zmm12
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm12 = -(zmm3 * zmm12) + zmm11
-; CHECK-NEXT:    vcvtpd2ph %zmm12, %xmm3
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; CHECK-NEXT:    vinserti128 $1, %xmm5, %ymm4, %ymm3
-; CHECK-NEXT:    vmovdqu16 %ymm3, %ymm2 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm10[0],ymm2[0],ymm10[1],ymm2[1],ymm10[2],ymm2[2],ymm10[3],ymm2[3],ymm10[8],ymm2[8],ymm10[9],ymm2[9],ymm10[10],ymm2[10],ymm10[11],ymm2[11]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} ymm2 = ymm2[0],ymm9[0],ymm2[1],ymm9[1],ymm2[4],ymm9[4],ymm2[5],ymm9[5]
-; CHECK-NEXT:    vpsrlq $48, %xmm6, %xmm3
-; CHECK-NEXT:    vpsrlq $48, %xmm7, %xmm4
-; CHECK-NEXT:    vfpclassph $153, %xmm4, %k0 # k0 = isQuietNaN(xmm4) | isPositiveInfinity(xmm4) | isNegativeInfinity(xmm4) | isSignalingNaN(xmm4)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm3, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm3, %zmm3
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm5
-; CHECK-NEXT:    vdivpd %zmm3, %zmm5, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm3 * zmm9) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm3
-; CHECK-NEXT:    vmovdqu16 %xmm4, %xmm3 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm6[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm7[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
+; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm4
 ; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm9
-; CHECK-NEXT:    vdivpd %zmm4, %zmm9, %zmm10
-; CHECK-NEXT:    vrndscalepd $11, %zmm10, %zmm10
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm10 = -(zmm4 * zmm10) + zmm9
-; CHECK-NEXT:    vcvtpd2ph %zmm10, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; CHECK-NEXT:    vfpclassph $153, %xmm7, %k0 # k0 = isQuietNaN(xmm7) | isPositiveInfinity(xmm7) | isNegativeInfinity(xmm7) | isSignalingNaN(xmm7)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm6, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm7, %zmm5
-; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm4 * zmm9) + zmm5
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm7, %xmm4 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm6, %xmm5
-; CHECK-NEXT:    vpsrld $16, %xmm7, %xmm6
-; CHECK-NEXT:    vfpclassph $153, %xmm6, %k0 # k0 = isQuietNaN(xmm6) | isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6) | isSignalingNaN(xmm6)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm5, %k1 {%k1}
+; CHECK-NEXT:    vdivpd %zmm3, %zmm4, %zmm6
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm8
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm8[0],xmm7[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm6[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm6
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm9[0],xmm6[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm6, %ymm6
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm6, %zmm6
+; CHECK-NEXT:    vxorpd %zmm2, %zmm6, %zmm6
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
+; CHECK-NEXT:    vextractf32x4 $3, %zmm4, %xmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm3, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm10 = (xmm7 * xmm10) + xmm8
+; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm8 = (xmm11 * xmm7) + xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm10[0],xmm8[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
+; CHECK-NEXT:    vextractf32x4 $2, %zmm4, %xmm10
+; CHECK-NEXT:    vextractf32x4 $2, %zmm3, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
+; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm10
+; CHECK-NEXT:    vextractf128 $1, %ymm3, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm4[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm3[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm6 * xmm11) + xmm10
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm3 = -(xmm9 * xmm3) + xmm4
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm3[0],xmm11[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm3, %ymm3
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm3, %zmm3
+; CHECK-NEXT:    vcvtpd2ph %zmm3, %xmm3
+; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm5, %ymm3
+; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm4
+; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm5
+; CHECK-NEXT:    vdivpd %zmm4, %zmm5, %zmm6
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm8
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm8[0],xmm7[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm6 = xmm6[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm6, %xmm6, %xmm6
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm6 = xmm9[0],xmm6[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm6, %ymm6
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm6, %zmm6
+; CHECK-NEXT:    vxorpd %zmm2, %zmm6, %zmm6
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm7
+; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm4, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm10 = (xmm7 * xmm10) + xmm8
+; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm8 = (xmm11 * xmm7) + xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm10[0],xmm8[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm8
+; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm10
+; CHECK-NEXT:    vextractf32x4 $2, %zmm4, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
+; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm10
+; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm10
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm10[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm10 = (xmm12 * xmm8) + xmm10
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm10[0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm10 = xmm5[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm4[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm6 * xmm11) + xmm10
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm4 = -(xmm9 * xmm4) + xmm5
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm4 = xmm4[0],xmm11[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm4, %ymm4
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm4, %zmm4
+; CHECK-NEXT:    vcvtpd2ph %zmm4, %xmm4
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm7
-; CHECK-NEXT:    vdivpd %zmm5, %zmm7, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm5 * zmm9) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm5
-; CHECK-NEXT:    vmovdqu16 %xmm6, %xmm5 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; CHECK-NEXT:    vpsrlq $48, %xmm1, %xmm4
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm5
-; CHECK-NEXT:    vfpclassph $153, %xmm5, %k0 # k0 = isQuietNaN(xmm5) | isPositiveInfinity(xmm5) | isNegativeInfinity(xmm5) | isSignalingNaN(xmm5)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm4, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm4, %zmm4
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm6
-; CHECK-NEXT:    vdivpd %zmm4, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm4 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm4
-; CHECK-NEXT:    vmovdqu16 %xmm5, %xmm4 {%k1}
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vfpclassph $153, %xmm6, %k0 # k0 = isQuietNaN(xmm6) | isPositiveInfinity(xmm6) | isNegativeInfinity(xmm6) | isSignalingNaN(xmm6)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm5, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm5, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm7
-; CHECK-NEXT:    vdivpd %zmm5, %zmm7, %zmm9
-; CHECK-NEXT:    vrndscalepd $11, %zmm9, %zmm9
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm9 = -(zmm5 * zmm9) + zmm7
-; CHECK-NEXT:    vcvtpd2ph %zmm9, %xmm5
-; CHECK-NEXT:    vmovdqu16 %xmm6, %xmm5 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm5
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm6
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; CHECK-NEXT:    vcvtph2pd %xmm6, %zmm6
 ; CHECK-NEXT:    vdivpd %zmm5, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm5 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm5
-; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm5 {%k1}
-; CHECK-NEXT:    vpsrld $16, %xmm1, %xmm1
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm0
-; CHECK-NEXT:    vfpclassph $153, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotb %k0, %k1
-; CHECK-NEXT:    vfpclassph $24, %xmm1, %k1 {%k1}
-; CHECK-NEXT:    vcvtph2pd %xmm1, %zmm1
-; CHECK-NEXT:    vcvtph2pd %xmm0, %zmm6
-; CHECK-NEXT:    vdivpd %zmm1, %zmm6, %zmm7
-; CHECK-NEXT:    vrndscalepd $11, %zmm7, %zmm7
-; CHECK-NEXT:    vfnmadd213pd {{.*#+}} zmm7 = -(zmm1 * zmm7) + zmm6
-; CHECK-NEXT:    vcvtpd2ph %zmm7, %xmm1
-; CHECK-NEXT:    vmovdqu16 %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm5[0],xmm1[0],xmm5[1],xmm1[1],xmm5[2],xmm1[2],xmm5[3],xmm1[3]
-; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm0[0],zmm8[0],zmm0[2],zmm8[2],zmm0[4],zmm8[4],zmm0[6],zmm8[6]
+; CHECK-NEXT:    vextractf32x4 $3, %zmm7, %xmm8
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm8, %xmm8, %xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm7, %xmm9
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm10[0],xmm9[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm9, %ymm8
+; CHECK-NEXT:    vextractf128 $1, %ymm7, %xmm9
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm9, %xmm9, %xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm9 = xmm10[0],xmm9[0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm10
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm7 = xmm7[1,0]
+; CHECK-NEXT:    vroundsd $11, %xmm7, %xmm7, %xmm7
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm10[0],xmm7[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm9, %ymm7, %ymm7
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm8, %zmm7, %zmm7
+; CHECK-NEXT:    vxorpd %zmm2, %zmm7, %zmm2
+; CHECK-NEXT:    vextractf32x4 $3, %zmm2, %xmm7
+; CHECK-NEXT:    vextractf32x4 $3, %zmm6, %xmm8
+; CHECK-NEXT:    vextractf32x4 $3, %zmm5, %xmm9
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm9[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm9 = (xmm7 * xmm9) + xmm8
+; CHECK-NEXT:    vshufps {{.*#+}} xmm7 = xmm7[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm8 = xmm8[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm8 = (xmm11 * xmm7) + xmm8
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm9[0],xmm8[0]
+; CHECK-NEXT:    vextractf32x4 $2, %zmm2, %xmm8
+; CHECK-NEXT:    vextractf32x4 $2, %zmm6, %xmm9
+; CHECK-NEXT:    vextractf32x4 $2, %zmm5, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm9
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm9 = (xmm12 * xmm8) + xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm9[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm8, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm8
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm9
+; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm11
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm8 * xmm11) + xmm9
+; CHECK-NEXT:    vshufps {{.*#+}} xmm8 = xmm8[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm9[1,0]
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm9 = (xmm12 * xmm8) + xmm9
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm8 = xmm11[0],xmm9[0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm9 = xmm6[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm11 = xmm5[1,0]
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm11 = (xmm2 * xmm11) + xmm9
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm5 = -(xmm10 * xmm5) + xmm6
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm5[0],xmm11[0]
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm2
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm7, %zmm2, %zmm2
+; CHECK-NEXT:    vcvtpd2ph %zmm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
+; CHECK-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
+; CHECK-NEXT:    vfpclassph $153, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0) | isSignalingNaN(zmm0)
+; CHECK-NEXT:    knotd %k0, %k1
+; CHECK-NEXT:    vfpclassph $24, %zmm1, %k1 {%k1} # k1 {%k1} = isPositiveInfinity(zmm1) | isNegativeInfinity(zmm1)
+; CHECK-NEXT:    vmovdqu16 %zmm0, %zmm2 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %r = frem <32 x half> %x, %y
   ret <32 x half> %r
