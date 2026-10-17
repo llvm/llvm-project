@@ -390,13 +390,89 @@ computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
   return toHalfOpenFileRange(SM, LangOpts, EnclosingFunction->getSourceRange());
 }
 
+// Whether D would need to become a forwarded parameter of the extracted
+// function if referenced from inside the extraction zone: a parameter or
+// local variable of the enclosing function. A static/extern/thread-local
+// variable doesn't need forwarding -- it's already visible wherever the
+// extracted function ends up, same as a global.
+bool mustBeForwarded(const Decl *D) {
+  if (isa<ParmVarDecl>(D))
+    return true;
+  if (const auto *VD = dyn_cast<VarDecl>(D))
+    return VD->hasLocalStorage();
+  return false;
+}
+
+// Whether E, as an operand of a call being considered by isTrivialExtraction,
+// demonstrates no abstraction of its own: a bare (parenthesized/implicitly
+// cast) reference to a Decl that would need to become a parameter, forwarded
+// unchanged. Anything else -- a literal, a reference to an already-visible
+// global, or any non-bare expression -- means this operand alone justifies
+// offering the extraction (it hardcodes or computes something a plain
+// rename wouldn't), so it's not "bare forwarding".
+bool isBareForwardedOperand(const Expr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
+  return DRE && mustBeForwarded(DRE->getDecl());
+}
+
+// The operands of Call relevant to isTrivialExtraction: the receiver of
+// a method call, a non-method callee that isn't a plain reference to a
+// fixed function (e.g. a function-pointer variable instead), and every
+// explicit argument. An operator call's operands are already included in
+// its own arguments() (clang models e.g. `a + b` as `operator+(a, b)`),
+// so its callee -- always a reference to the operator function/overload
+// itself, never itself customizable -- is always excluded.
+llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
+  llvm::SmallVector<const Expr *, 4> Operands;
+  if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
+    Operands.push_back(MCE->getImplicitObjectArgument());
+  } else if (!isa<CXXOperatorCallExpr>(Call)) {
+    const Expr *Callee = Call->getCallee()->IgnoreParenImpCasts();
+    if (!(isa<DeclRefExpr>(Callee) &&
+          isa<FunctionDecl>(cast<DeclRefExpr>(Callee)->getDecl())))
+      Operands.push_back(Call->getCallee());
+  }
+  Operands.append(Call->arg_begin(), Call->arg_end());
+  return Operands;
+}
+
+// Whether extracting S on its own, as a single root statement, would add
+// no real abstraction over leaving it where it is:
+// - A value-less `return;` has nothing to abstract over at all.
+// - A call (to a function, method, or operator), or a return of one, is
+//   a pure 1:1 forwarding wrapper if every relevant operand (see
+//   relevantCallOperands) is already exactly the parameter value it
+//   would become, unchanged (or there are none). Extracting e.g.
+//   `foo();`, `foo(x)` (x a local), or `return foo(x);` this way would
+//   just rename the call; `foo(100)`, `foo(globalVar)`, or `foo(x + y)`
+//   would not, since each does something a plain rename wouldn't
+//   (hardcode a value/global, or compute one). For the return case, the
+//   returned value may need an implicit conversion to the enclosing
+//   function's own return type (e.g. foo returns int, the enclosing
+//   function long); IgnoreImplicit() looks through that -- the
+//   conversion doesn't change the verdict, since the extracted function
+//   would perform the exact same conversion internally.
+bool isTrivialExtraction(const Stmt *S) {
+  if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
+    if (!RS->getRetValue())
+      return true;
+    S = RS->getRetValue()->IgnoreImplicit();
+  }
+  const auto *Call = dyn_cast<CallExpr>(S);
+  return Call &&
+         llvm::all_of(relevantCallOperands(Call), isBareForwardedOperand);
+}
+
 // returns true if Child can be a single RootStmt being extracted from
 // EnclosingFunc.
 bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
   // Extracting the body of EnclosingFunc would remove it's definition.
   assert(EnclosingFunc->hasBody() &&
          "We should always be extracting from a function body.");
-  if (Child->ASTNode.get<Stmt>() == EnclosingFunc->getBody())
+  const Stmt *S = Child->ASTNode.get<Stmt>();
+  if (S == EnclosingFunc->getBody())
+    return false;
+  if (isTrivialExtraction(S))
     return false;
   return true;
 }
