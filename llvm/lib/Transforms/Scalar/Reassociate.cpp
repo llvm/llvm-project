@@ -986,7 +986,15 @@ static bool shouldConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
     return false;
   };
 
-  if (any_of(Or->operands(), isInteresting))
+  // Uses of an operand that only feed assumes don't make it less interesting.
+  if (any_of(Or->operands(), [](const Use &U) {
+        auto *BO = dyn_cast<BinaryOperator>(U.get());
+        return BO &&
+               is_contained({Instruction::Add, Instruction::Sub,
+                             Instruction::Mul, Instruction::Shl},
+                            BO->getOpcode()) &&
+               !hasNUsesOrMoreIgnoringAssumes(U, 2);
+      }))
     return true;
 
   Value *VB = Or->user_back();
