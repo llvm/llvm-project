@@ -35,10 +35,58 @@ using namespace llvm;
 
 static const unsigned MaxAggrCopySize = 128;
 
+// Copy a small memcpy or memmove whose source and destination are both 16 byte
+// aligned with <4 x i32> loads and stores, all loads before the stores. Left to
+// SelectionDAG, the copy is split into i64 accesses, the widest legal integer,
+// and each load waits on the previous store. Issuing every load first also
+// keeps memmove correct when the two ranges overlap.
+static bool expandAlignedSmallCopy(MemTransferInst *MT) {
+  auto *LenCI = dyn_cast<ConstantInt>(MT->getLength());
+  if (!LenCI || MT->isVolatile())
+    return false;
+  uint64_t Len = LenCI->getZExtValue();
+  if (Len < 16 || Len >= MaxAggrCopySize)
+    return false;
+  const Align VecAlign(16);
+  if (MT->getDestAlign().valueOrOne() < VecAlign ||
+      MT->getSourceAlign().valueOrOne() < VecAlign)
+    return false;
+  uint64_t NumVecs = Len / 16;
+  uint64_t Tail = Len % 16;
+  if (Tail && isa<MemMoveInst>(MT))
+    return false;
+
+  IRBuilder<> Builder(MT);
+  Type *VecTy = FixedVectorType::get(Builder.getInt32Ty(), 4);
+  Value *Src = MT->getRawSource();
+  Value *Dst = MT->getRawDest();
+  SmallVector<Value *, 8> Loads;
+  for (uint64_t I = 0; I < NumVecs; ++I) {
+    Value *Ptr = Builder.CreateConstInBoundsGEP1_64(Builder.getInt8Ty(), Src,
+                                                    I * 16);
+    Loads.push_back(Builder.CreateAlignedLoad(VecTy, Ptr, VecAlign));
+  }
+  for (uint64_t I = 0; I < NumVecs; ++I) {
+    Value *Ptr = Builder.CreateConstInBoundsGEP1_64(Builder.getInt8Ty(), Dst,
+                                                    I * 16);
+    Builder.CreateAlignedStore(Loads[I], Ptr, VecAlign);
+  }
+  if (Tail) {
+    uint64_t Off = NumVecs * 16;
+    Builder.CreateMemCpy(
+        Builder.CreateConstInBoundsGEP1_64(Builder.getInt8Ty(), Dst, Off),
+        VecAlign,
+        Builder.CreateConstInBoundsGEP1_64(Builder.getInt8Ty(), Src, Off),
+        VecAlign, Tail);
+  }
+  return true;
+}
+
 static bool lowerAggrCopies(Function &F, const TargetTransformInfo &TTI,
                             AAResults &AA) {
   SmallVector<LoadInst *, 4> AggrLoads;
   SmallVector<MemIntrinsic *, 4> MemCalls;
+  SmallVector<MemTransferInst *, 4> SmallCopies;
 
   const DataLayout &DL = F.getDataLayout();
   LLVMContext &Context = F.getParent()->getContext();
@@ -64,6 +112,8 @@ static bool lowerAggrCopies(Function &F, const TargetTransformInfo &TTI,
         if (ConstantInt *LenCI = dyn_cast<ConstantInt>(IntrCall->getLength())) {
           if (LenCI->getZExtValue() >= MaxAggrCopySize) {
             MemCalls.push_back(IntrCall);
+          } else if (auto *MT = dyn_cast<MemTransferInst>(IntrCall)) {
+            SmallCopies.push_back(MT);
           }
         } else {
           MemCalls.push_back(IntrCall);
@@ -72,8 +122,16 @@ static bool lowerAggrCopies(Function &F, const TargetTransformInfo &TTI,
     }
   }
 
+  bool Changed = false;
+  for (MemTransferInst *MT : SmallCopies) {
+    if (expandAlignedSmallCopy(MT)) {
+      MT->eraseFromParent();
+      Changed = true;
+    }
+  }
+
   if (AggrLoads.size() == 0 && MemCalls.size() == 0) {
-    return false;
+    return Changed;
   }
 
   //
