@@ -466,6 +466,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitMULHU(SDNode *N);
     SDValue visitMULHS(SDNode *N);
     SDValue visitAVG(SDNode *N);
+    SDValue visitAVGSUB(SDNode *N);
     SDValue visitABD(SDNode *N);
     SDValue visitSMUL_LOHI(SDNode *N);
     SDValue visitUMUL_LOHI(SDNode *N);
@@ -2017,6 +2018,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:           return visitAVG(N);
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:       return visitAVGSUB(N);
   case ISD::ABDS:
   case ISD::ABDU:               return visitABD(N);
   case ISD::SMUL_LOHI:          return visitSMUL_LOHI(N);
@@ -4401,7 +4404,11 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                                       m_SMin(m_Value(X), NegPat),
                                       m_UMin(m_Value(X), NegPat))))) {
       unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
-      if (hasOperation(NewOpc, VT))
+      // If the type is legal and the existing min/max isn't supported go ahead
+      // and do the conversion. The expansion of the new min/max will likely be
+      // similar to the old.
+      if (hasOperation(NewOpc, VT) ||
+          (isTypeLegal(VT) && !hasOperation(N1->getOpcode(), VT)))
         return DAG.getNode(NewOpc, DL, VT, X, S0);
     }
 
@@ -5852,6 +5859,34 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitAVGSUB(SDNode *N) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // fold (avgsub c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
+    return C;
+
+  if (VT.isVector())
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
+      return FoldedVOp;
+
+  // fold (avgsub x, x) --> 0
+  if (N0 == N1)
+    return DAG.getConstant(0, DL, VT);
+
+  // fold (avgsubfloors x, 0) -> x >> 1
+  // fold (avgsubflooru x, 0) -> x >>u 1
+  if (isNullOrNullSplat(N1))
+    return DAG.getNode(Opcode == ISD::AVGSUBFLOORS ? ISD::SRA : ISD::SRL, DL,
+                       VT, N0, DAG.getShiftAmountConstant(1, VT, DL));
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitAVG(SDNode *N) {
   unsigned Opcode = N->getOpcode();
   SDValue N0 = N->getOperand(0);
@@ -6391,6 +6426,11 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
     return SDValue();
 
   unsigned BW = (C1 + 1).exactLogBase2();
+  // When BW is 0, there is no equivalent i0 VT. And since an unsigned value is
+  // never < 0, the result is always 0.
+  if (BW == 0)
+    return DAG.getConstant(0, SDLoc(N0), N3.getValueType());
+
   EVT FPVT = N0.getOperand(0).getValueType();
   EVT NewVT = FPVT.changeElementType(*DAG.getContext(),
                                      EVT::getIntegerVT(*DAG.getContext(), BW));
@@ -12907,6 +12947,7 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
 }
 
 // Convert (sr[al] (add n[su]w x, y)) -> (avgfloor[su] x, y)
+// Convert (sr[al] (sub n[su]w x, y)) -> (avgsubfloor[su] x, y)
 SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   const unsigned Opcode = N->getOpcode();
   if (Opcode != ISD::SRA && Opcode != ISD::SRL)
@@ -12929,6 +12970,15 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
     unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
     if (hasOperation(FloorISD, VT))
       return DAG.getNode(FloorISD, DL, VT, {A, B});
+  }
+
+  // Match the subtract form, ensuring the sub doesn't wrap.
+  if (sd_match(N,
+               m_BinOp(Opcode, m_BinOp(ISD::SUB, m_Value(A), m_Value(B), Flags),
+                       m_One()))) {
+    unsigned SubISD = IsUnsigned ? ISD::AVGSUBFLOORU : ISD::AVGSUBFLOORS;
+    if (hasOperation(SubISD, VT))
+      return DAG.getNode(SubISD, DL, VT, {A, B});
   }
 
   return SDValue();
@@ -24903,14 +24953,26 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       Value.getValueType().isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
-    // Convert a truncating store of a extension into a standard store.
-    if ((Value.getOpcode() == ISD::ZERO_EXTEND ||
-         Value.getOpcode() == ISD::SIGN_EXTEND ||
-         Value.getOpcode() == ISD::ANY_EXTEND) &&
-        Value.getOperand(0).getValueType() == ST->getMemoryVT() &&
-        TLI.isOperationLegalOrCustom(ISD::STORE, ST->getMemoryVT()))
-      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                          ST->getMemOperand());
+    // Convert a truncating store of a extension into a standard store or a
+    // smaller truncating store.
+    if (Value.getOpcode() == ISD::ZERO_EXTEND ||
+        Value.getOpcode() == ISD::SIGN_EXTEND ||
+        Value.getOpcode() == ISD::ANY_EXTEND) {
+      SDValue PreExtendVal = Value.getOperand(0);
+      EVT PreExtendTy = PreExtendVal.getValueType();
+      EVT StoreMemTy = ST->getMemoryVT();
+
+      if (PreExtendTy == StoreMemTy &&
+          TLI.isOperationLegalOrCustom(ISD::STORE, StoreMemTy))
+        return DAG.getStore(Chain, SDLoc(N), PreExtendVal, Ptr,
+                            ST->getMemOperand());
+      if (PreExtendTy.getScalarSizeInBits() >
+              StoreMemTy.getScalarSizeInBits() &&
+          TLI.canCombineTruncStore(PreExtendTy, StoreMemTy, ST->getAlign(),
+                                   ST->getAddressSpace(), LegalOperations))
+        return DAG.getTruncStore(Chain, SDLoc(N), PreExtendVal, Ptr, StoreMemTy,
+                                 ST->getMemOperand());
+    }
 
     APInt TruncDemandedBits =
         APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),

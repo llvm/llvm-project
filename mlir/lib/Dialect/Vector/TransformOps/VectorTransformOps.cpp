@@ -210,6 +210,41 @@ void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
   vector::populateVectorFromElementsUnrollPatterns(patterns);
 }
 
+void transform::ApplyUnrollContractPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  int64_t m = getM();
+  int64_t n = getN();
+  int64_t k = getK();
+
+  auto nativeShapeFn =
+      [m, n, k](Operation *op) -> std::optional<SmallVector<int64_t>> {
+    return SmallVector<int64_t>({m, n, k});
+  };
+
+  auto constraint = [](Operation *op) {
+    auto contract = dyn_cast<vector::ContractionOp>(op);
+    if (!contract)
+      return failure();
+
+    auto iterators = contract.getIteratorTypesArray();
+    if (iterators.size() != 3 ||
+        iterators[0] != vector::IteratorType::parallel ||
+        iterators[1] != vector::IteratorType::parallel ||
+        iterators[2] != vector::IteratorType::reduction)
+      return failure();
+
+    auto type = dyn_cast<VectorType>(contract.getType());
+    if (!type || type.getRank() != 2)
+      return failure();
+    return success();
+  };
+
+  vector::populateVectorContractUnrollPatterns(
+      patterns, vector::UnrollVectorOptions()
+                    .setNativeShapeFn(nativeShapeFn)
+                    .setFilterConstraint(constraint));
+}
+
 void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorToElementsUnrollPatterns(patterns);

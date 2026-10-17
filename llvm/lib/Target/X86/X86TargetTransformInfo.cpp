@@ -71,6 +71,7 @@ using namespace llvm;
 
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?
+namespace {
 struct CostKindCosts {
   unsigned RecipThroughputCost = ~0U;
   unsigned LatencyCost = ~0U;
@@ -99,6 +100,7 @@ struct CostKindCosts {
     return Cost;
   }
 };
+} // namespace
 using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 using TypeConversionCostKindTblEntry = TypeConversionCostTblEntryT<CostKindCosts>;
 
