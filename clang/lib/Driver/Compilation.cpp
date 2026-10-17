@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Compilation.h"
+#include "ClangCLArgs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/CommonArgs.h"
@@ -73,9 +74,8 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
-      bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
       OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+          *TranslatedArgs, HostTC->getTriple(), AllocatedArgs);
     }
 
     DerivedArgList *NewDAL = nullptr;
@@ -89,6 +89,15 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
         NewDAL = OpenMPArgs;
       else
         delete OpenMPArgs;
+    }
+
+    if (NewDAL && TheDriver.IsCLMode()) {
+      // Forwarding can introduce clang-cl options after the shared
+      // translation. Keep synthesized arguments in the compilation-owned list.
+      auto *DAL = ClangCLArgs::translateArgs(
+          *NewDAL, DefaultToolChain.getTriple(), *TranslatedArgs);
+      delete NewDAL;
+      NewDAL = DAL;
     }
 
     if (!NewDAL) {
