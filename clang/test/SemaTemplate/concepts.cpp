@@ -2069,8 +2069,8 @@ template<auto V, representation_of<get_spec(V)>>
 struct quantity {};
 
 auto x = quantity<reference<char>{}, char>{};
-// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<char>{}, $1 = char]}}
-// expected-note@-5  {{because 'representation_of<char, get_spec(reference<char>{})>' evaluated to false}}
+// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = GH175831::CannotResolve0::reference<char>{}, $1 = char]}}
+// expected-note@-5  {{because 'representation_of<char, get_spec(GH175831::CannotResolve0::reference<char>{})>' evaluated to false}}
 // expected-note-re@-7  {{because 'decltype({{.*}})' (aka 'char') does not satisfy 'repr_impl'}}
 // expected-note@-10  {{because 'sizeof(char) > sizeof(char)' (1 > 1) evaluated to false}}
 
@@ -2091,7 +2091,7 @@ template<auto V, representation_of<get_spec(V)>>
 struct quantity {};
 
 auto x = quantity<reference<int>{}, int>{};
-// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<int>{}, $1 = int]}}
+// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = GH175831::CannotResolve1::reference<int>{}, $1 = int]}}
 // expected-note@-5 {{because 'representation_of<type-parameter-0-1, get_spec(V)>' evaluated to false}}
 // expected-note@-7 {{because 'decltype(V)' does not satisfy 'repr_impl'}}
 // expected-note@-7 {{because substituted constraint expression is ill-formed: non-type template argument is not a constant expression}}
