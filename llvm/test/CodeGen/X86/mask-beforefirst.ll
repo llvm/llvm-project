@@ -2,8 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64 -mcpu=x86-64 | FileCheck %s --check-prefixes=SSE2
 ; RUN: llc < %s -mtriple=x86_64 -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=SSE42
 ; RUN: llc < %s -mtriple=x86_64 -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX2
-; TODO: Fix crash on AVX512
-; llc < %s -mtriple=x86_64 -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64 -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512
 
 define <16 x i8> @v16i1(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE2-LABEL: v16i1:
@@ -85,6 +84,21 @@ define <16 x i8> @v16i1(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX2-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v16i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpgtb %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm2 {%k1} = [239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254]
+; AVX512-NEXT:    vpsrlw $8, %xmm2, %xmm3
+; AVX512-NEXT:    vpminub %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vphminposuw %xmm2, %xmm2
+; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    addb $17, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm2
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
+; AVX512-NEXT:    vpblendmb %xmm0, %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %m = icmp sgt <16 x i8> %a0, %a1
   %x = call <16 x i1> @llvm.mask.beforefirst(<16 x i1> %m)
   %r = select <16 x i1> %x, <16 x i8> %a0, <16 x i8> %a1
@@ -155,6 +169,21 @@ define <8 x i16> @v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX2-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v8i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm2 {%k1} = [247,248,249,250,251,252,253,254,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpsrlw $8, %xmm2, %xmm3
+; AVX512-NEXT:    vpminub %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vphminposuw %xmm2, %xmm2
+; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    addb $9, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm2
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
+; AVX512-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %m = icmp sgt <8 x i16> %a0, %a1
   %x = call <8 x i1> @llvm.mask.beforefirst(<8 x i1> %m)
   %r = select <8 x i1> %x, <8 x i16> %a0, <8 x i16> %a1
@@ -230,6 +259,21 @@ define <4 x i32> @v4i1(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v4i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm2 {%k1} = [251,252,253,254,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpsrlw $8, %xmm2, %xmm3
+; AVX512-NEXT:    vpminub %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vphminposuw %xmm2, %xmm2
+; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    addb $5, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm2
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
+; AVX512-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %m = icmp sgt <4 x i32> %a0, %a1
   %x = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> %m)
   %r = select <4 x i1> %x, <4 x i32> %a0, <4 x i32> %a1
@@ -309,6 +353,21 @@ define <2 x i64> @v2i1(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v2i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm2 {%k1} = [253,254,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpsrlw $8, %xmm2, %xmm3
+; AVX512-NEXT:    vpminub %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vphminposuw %xmm2, %xmm2
+; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    addb $3, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm2
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %k1
+; AVX512-NEXT:    vpblendmq %xmm0, %xmm1, %xmm0 {%k1}
+; AVX512-NEXT:    retq
   %m = icmp sgt <2 x i64> %a0, %a1
   %x = call <2 x i1> @llvm.mask.beforefirst(<2 x i1> %m)
   %r = select <2 x i1> %x, <2 x i64> %a0, <2 x i64> %a1
@@ -336,6 +395,14 @@ define <1 x i1> @v1i1(<1 x i1> %m) {
 ; AVX2-NEXT:    xorb $1, %al
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v1i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    kmovd %edi, %k0
+; AVX512-NEXT:    knotw %k0, %k0
+; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
   %x = call <1 x i1> @llvm.mask.beforefirst(<1 x i1> %m)
   ret <1 x i1> %x
 }
