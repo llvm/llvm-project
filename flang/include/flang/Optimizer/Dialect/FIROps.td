@@ -1323,6 +1323,29 @@ def fir_BoxAddrOp
   }];
 }
 
+def fir_BoxSetAddrOp : fir_Op<"box_set_addr",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "update the base address of a descriptor in memory";
+
+  let description = [{
+    Store the address `addr` into the base address field of the descriptor
+    held in memory at `box_ref`.  All other fields of the descriptor (type,
+    rank, attributes, bounds, strides, element size) are left unchanged.
+
+    ```
+      fir.box_set_addr %p to %desc : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+    ```
+  }];
+
+  let arguments = (ins AnyReferenceLike:$addr, AnyReferenceLike:$box_ref);
+
+  let assemblyFormat = [{
+    $addr `to` $box_ref attr-dict `:` type($addr) `,` type($box_ref)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoMemoryEffect]> {
   let summary = "return the LEN type parameter from a boxchar value";
 

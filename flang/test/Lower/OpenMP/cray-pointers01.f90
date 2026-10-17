@@ -22,9 +22,7 @@ contains
     ! CHECK: omp.parallel
     ! CHECK: %[[I_01:.*]] = fir.convert %[[IVAR_DECL]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
     ! CHECK: %[[I_02:.*]] = fir.load %[[I_01]] : !fir.ref<!fir.ptr<i64>>
-    ! CHECK: %[[I_03:.*]] = fir.convert %[[VAR_DECL]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<none>>
-    ! CHECK: %[[I_04:.*]] = fir.convert %[[I_02]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-    ! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[I_03]], %[[I_04]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+    ! CHECK: fir.box_set_addr %[[I_02]] to %[[VAR_DECL]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
     print *, var(1)
     !$omp end parallel
   end subroutine
@@ -46,12 +44,12 @@ program test_cray_pointers_01
     ! CHECK:   %[[IVAR_DECL_02:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_QFEivar") fortran_attrs<cray_pointer> : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
     ! CHECK:   hlfir.assign %{{.*}} to %[[IVAR_DECL_02]]#0 : i64, !fir.ref<i64>
     ivar = loc(pointee)
-    ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+    ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
     ! CHECK:   %[[CONST_2:.*]] = arith.constant 2 : i32
     ! CHECK:   {{.*}} = math.fpowi {{.*}}, %[[CONST_2]] fastmath<contract> : f64, i32
-    ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+    ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
     var(1) = var(1) ** 2
-    ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+    ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
     print *, var(1)
     ! CHECK:   omp.terminator
     ! CHECK: }

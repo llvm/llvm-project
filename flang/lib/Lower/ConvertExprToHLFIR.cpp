@@ -28,7 +28,6 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
-#include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
@@ -358,18 +357,16 @@ private:
         // we have a pointer-compatible value after loading
         // the Cray pointer value.
         mlir::Type refPtrType = builder.getRefType(
-            fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())));
+            fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())),
+            fir::isa_volatile_type(ptrAddr.getType()));
         mlir::Value cast = builder.createConvert(loc, refPtrType, ptrAddr);
         mlir::Value ptrVal = fir::LoadOp::create(builder, loc, cast);
 
         // Update the base_addr to the value of the Cray pointer.
-        // This is a hacky way to do the update, and it may harm
-        // performance around Cray pointer references.
-        // TODO: we should introduce an operation that updates
-        // just the base_addr of the given box. The CodeGen
-        // will just convert it into a single store.
-        fir::runtime::genPointerAssociateScalar(builder, loc, varDef->getBase(),
-                                                ptrVal);
+        // fir.box_set_addr is lowered to a single store into the
+        // descriptor, which LLVM can see through (and hoist out of loops
+        // when the Cray pointer does not change), unlike a runtime call.
+        fir::BoxSetAddrOp::create(builder, loc, ptrVal, varDef->getBase());
       }
       return *varDef;
     }
