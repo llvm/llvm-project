@@ -394,14 +394,14 @@ infrastructure are described first, followed by tool-specific sections.
     in reference non-type template parameter uses, `__builtin_dump_struct` calls,
     and OpenMP `linear` clauses.
 
-- Fixed {doc}`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
-  fixes when applying De Morgan's theorem to overloaded comparison operators.
-
 - Improved {doc}`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` by simplifying
-  redundant equality comparisons in logical conjunctions (such as `a && a != b`
-  to `a && !b`, and `a == b && !a` to `!b && !a`).
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check:
+
+  - Fixed producing invalid fixes when applying De Morgan's theorem to
+    overloaded comparison operators.
+
+  - Simplified redundant equality comparisons in logical conjunctions (such as
+    `a && a != b` to `a && !b`, and `a == b && !a` to `!b && !a`).
 
 - Improved {doc}`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the
