@@ -1741,6 +1741,120 @@ void memset29_plain_int_zero(void) {
   clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
 }
 
+// GH#219497: memset should zero the pointed-to object without affecting the
+// next object.
+struct gh219497_container {
+  int *head;
+};
+
+void memset_pointer_param(struct gh219497_container *c) {
+  int *tail = 0;
+  memset(c, 0, sizeof(*c));
+  clang_analyzer_eval(c->head == 0); // expected-warning{{TRUE}}
+  if (c->head)
+    *tail = 1;
+}
+
+void memset_next_object_unknown(struct gh219497_container *c) {
+  memset(c, 0, sizeof(*c));
+  clang_analyzer_eval(c[1].head == 0); // expected-warning{{UNKNOWN}}
+}
+
+void memset_nonzero_fill(struct gh219497_container *c) {
+  int *tail = 0;
+  memset(c, 1, sizeof(*c));
+  clang_analyzer_eval(c->head == 0); // expected-warning{{UNKNOWN}}
+  if (c->head)
+    *tail = 1; // expected-warning{{Dereference of null pointer (loaded from variable 'tail')}}
+}
+
+void memset_size_past_object(struct gh219497_container *c) {
+  int *tail = 0;
+  memset(c, 0, sizeof(*c) + 1);
+  clang_analyzer_eval(c->head == 0); // expected-warning{{UNKNOWN}}
+  if (c->head)
+    *tail = 1; // expected-warning{{Dereference of null pointer (loaded from variable 'tail')}}
+}
+
+struct gh219497_multi {
+  int *p;
+  int x;
+  int y;
+};
+
+void memset_multi_field(struct gh219497_multi *s) {
+  memset(s, 0, sizeof(*s));
+  clang_analyzer_eval(s->p == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(s->x == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(s->y == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(s[1].p == 0); // expected-warning{{UNKNOWN}}
+}
+
+struct gh219497_inner {
+  int *head;
+};
+
+struct gh219497_nested {
+  struct gh219497_inner in;
+  int tag;
+};
+
+void memset_nested(struct gh219497_nested *n) {
+  memset(n, 0, sizeof(*n));
+  clang_analyzer_eval(n->in.head == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(n->tag == 0);     // expected-warning{{TRUE}}
+}
+
+struct gh219497_array {
+  int xs[4];
+  int *head;
+};
+
+void memset_array_member(struct gh219497_array *a) {
+  memset(a, 0, sizeof(*a));
+  clang_analyzer_eval(a->xs[0] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(a->xs[3] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(a->head == 0);  // expected-warning{{TRUE}}
+}
+
+union gh219497_union {
+  int *p;
+  int n;
+};
+
+void memset_union(union gh219497_union *u) {
+  memset(u, 0, sizeof(*u));
+  clang_analyzer_eval(u->p == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(u->n == 0); // expected-warning{{TRUE}}
+}
+
+struct gh219497_bits {
+  unsigned a : 3;
+  unsigned b : 5;
+  int *head;
+};
+
+void memset_bitfields(struct gh219497_bits *b) {
+  memset(b, 0, sizeof(*b));
+  clang_analyzer_eval(b->a == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(b->b == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(b->head == 0); // expected-warning{{TRUE}}
+}
+
+struct gh219497_fam {
+  int *head;
+  int tail[];
+};
+
+void memset_flexible_array_member(struct gh219497_fam *c) {
+  int *p = 0;
+  memset(c, 0, sizeof(*c));
+  // sizeof does not include the flexible array.
+  clang_analyzer_eval(c->head == 0); // expected-warning{{UNKNOWN}}
+  if (c->head)
+    *p = 1; // expected-warning{{Dereference of null pointer (loaded from variable 'p')}}
+}
+
 void test_memset_chk(void) {
   int x;
   __builtin___memset_chk(&x, 0, sizeof(x), __builtin_object_size(&x, 0));

@@ -124,6 +124,14 @@ void memset1_inheritance() {
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{TRUE}}
 }
 
+// Classes with bases use the invalidation path because inherited fields are
+// loaded through CXXBaseObjectRegion.
+void memset1_inheritance_pointer_param(Derived *p) {
+  memset(p, 0, sizeof(*p));
+  clang_analyzer_eval(p->b_mem == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(p->d_mem == 0); // expected-warning{{UNKNOWN}}
+}
+
 void memset2_inheritance_field() {
   Derived d;
   // FIXME: OOB memset on a derived field with sizeof(Derived).
