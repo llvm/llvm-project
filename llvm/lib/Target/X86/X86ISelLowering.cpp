@@ -23305,33 +23305,33 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   SDLoc Dl(Op);
   assert(Op.getValueType() == MVT::f16 && "Unexpected type for FREM");
 
-  SDValue A = Op.getOperand(0);
-  SDValue B = Op.getOperand(1);
+  SDValue A =
+      DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, Op.getOperand(0));
+  SDValue B =
+      DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v8f16, Op.getOperand(1));
 
-  SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, a);
-  SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, b);
+  SDValue X = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::v8f64, A);
+  SDValue Y = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::v8f64, B);
+  SDValue Q = DAG.getNode(ISD::FTRUNC, Dl, MVT::v8f64,
+                          DAG.getNode(ISD::FDIV, Dl, MVT::v8f64, X, Y));
+  SDValue NegQ = DAG.getNode(ISD::FNEG, Dl, MVT::v8f64, Q);
+  SDValue Res = DAG.getNode(ISD::FMA, Dl, MVT::v8f64, NegQ, Y, X);
+  Res = DAG.getNode(ISD::FP_ROUND, Dl, MVT::v8f16, Res,
+                    DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
 
-  SDValue Res = DAG.getNode(ISD::FDIV, Dl, MVT::f64, X, Y);
-  Res = DAG.getNode(ISD::FTRUNC, Dl, MVT::f64, Res);
-  Res = DAG.getNode(ISD::FNEG, Dl, MVT::f64, Res);
-  Res = DAG.getNode(ISD::FMA, Dl, MVT::f64, Res, Y, X);
-  Res = DAG.getNode(ISD::FCOPYSIGN, Dl, MVT::f64, Res, X);
+  SDValue XNotFinite = DAG.getNode(X86ISD::VFPCLASS, Dl, MVT::v8i1, A,
+                                   DAG.getTargetConstant(0x99, Dl, MVT::i32));
+  SDValue XFinite = DAG.getNOT(Dl, XNotFinite, MVT::v8i1);
+  SDValue YIsInf = DAG.getNode(X86ISD::VFPCLASS, Dl, MVT::v8i1, B,
+                               DAG.getTargetConstant(0x18, Dl, MVT::i32));
 
-  EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
-      DAG.getDataLaYout(), *DAG.getContext(), MVT::f64);
-  SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, Y,
-                               DAG.getTargetConstant(fcInf, Dl, MVT::i32));
+  SDValue UseX = DAG.getNode(ISD::AND, Dl, MVT::v8i1, XFinite, YIsInf);
+  Res = DAG.getSelect(Dl, MVT::v8f16, UseX, A, Res);
 
-  SDValue XIsFinite =
-      DAG.getNode(ISD::IS_FPCLASS, Dl, CCVT, X,
-                  DAG.getTargetConstant(fcFinite, Dl, MVT::i32));
-
-  SDValue UseX = DAG.getNode(ISD::AND, Dl, CCVT, YIsInf, XIsFinite);
-  Res = DAG.getSelect(Dl, MVT::f64, UseX, X, Res);
-
-  return DAG.getNode(ISD::FP_ROUND, Dl, MVT::f16, Res,
-                     DAG.getIntPtrConstant(0, Dl, /*isTarget=*/true));
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, Dl, MVT::f16, Res,
+                     DAG.getVectorIdxConstant(0, Dl));
 }
+
 /// Helper for attempting to create a X86ISD::BT node.
 static SDValue getBT(SDValue Src, SDValue BitNo, const SDLoc &DL, SelectionDAG &DAG) {
   // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
@@ -34900,7 +34900,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
-  case ISD::FREM:               return LowerFREM(Op,DAG);
+  case ISD::FREM:               return LowerFREM(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
   case ISD::SETCC:
