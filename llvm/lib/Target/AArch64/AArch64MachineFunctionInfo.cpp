@@ -157,7 +157,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     ProbeSize = PS->getZExtValue();
   assert(int64_t(ProbeSize) > 0 && "Invalid stack probe size");
 
-  if (STI->isTargetWindows()) {
+  if (STI->isTargetWindowsOrUEFI()) {
     if (!F.hasFnAttribute("no-stack-arg-probe"))
       StackProbeSize = ProbeSize;
   } else {
