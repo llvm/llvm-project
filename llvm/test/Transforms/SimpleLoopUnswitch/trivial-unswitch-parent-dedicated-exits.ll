@@ -34,8 +34,10 @@ define void @partial_unswitch_exits_parent(ptr %p, i64 %n, i64 %m) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[TRAP]]:
-; CHECK-NEXT:    br label %[[TRAP_SPLIT]]
+; CHECK-NEXT:    br label %[[TRAP_SPLIT1:.*]]
 ; CHECK:       [[TRAP_SPLIT]]:
+; CHECK-NEXT:    br label %[[TRAP_SPLIT1]]
+; CHECK:       [[TRAP_SPLIT1]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
@@ -105,8 +107,10 @@ define void @full_unswitch_exits_parent(ptr %p, i64 %n, i64 %m) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[TRAP]]:
-; CHECK-NEXT:    br label %[[TRAP_SPLIT]]
+; CHECK-NEXT:    br label %[[TRAP_SPLIT1:.*]]
 ; CHECK:       [[TRAP_SPLIT]]:
+; CHECK-NEXT:    br label %[[TRAP_SPLIT1]]
+; CHECK:       [[TRAP_SPLIT1]]:
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
@@ -150,11 +154,13 @@ trap:
 define void @unswitch_invariant_out_of_parent(ptr %p, i64 %n, i64 %m, i1 noundef %stop) {
 ; CHECK-LABEL: define void @unswitch_invariant_out_of_parent(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i1 noundef [[STOP:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[STOP]], label %[[TRAP_SPLIT_LOOPEXIT:.*]], label %[[ENTRY_SPLIT:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[STOP]], label %[[TRAP_SPLIT:.*]], label %[[OUTER_HEADER_SPLIT:.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT:.*]]
 ; CHECK:       [[OUTER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
@@ -175,6 +181,8 @@ define void @unswitch_invariant_out_of_parent(ptr %p, i64 %n, i64 %m, i1 noundef
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[TRAP]]:
+; CHECK-NEXT:    br label %[[TRAP_SPLIT:.*]]
+; CHECK:       [[TRAP_SPLIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[TRAP_SPLIT]]
 ; CHECK:       [[TRAP_SPLIT]]:
 ; CHECK-NEXT:    call void @llvm.trap()
