@@ -1467,10 +1467,11 @@ public:
       char RawSDNodeBits[sizeof(uint16_t)];
       SDNodeBitfields SDNodeBits;
     };
-    memcpy(&RawSDNodeBits, &this->RawSDNodeBits, sizeof(this->RawSDNodeBits));
+    std::copy(std::begin(this->RawSDNodeBits), std::end(this->RawSDNodeBits),
+              std::begin(RawSDNodeBits));
     SDNodeBits.HasDebugValue = 0;
     SDNodeBits.IsDivergent = false;
-    memcpy(&Data, &RawSDNodeBits, sizeof(RawSDNodeBits));
+    Data = llvm::bit_cast<uint16_t>(RawSDNodeBits);
     return Data;
   }
 
