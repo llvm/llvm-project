@@ -8666,7 +8666,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // Try to lazily visit (or emit dummy pointers for) declarations
   // we haven't seen yet.
   const auto *VD = dyn_cast<VarDecl>(D);
-  if (!VD)
+  if (!VD || VD->isInvalidDecl())
     return this->emitError(E);
 
   // For C.
