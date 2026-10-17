@@ -16,6 +16,14 @@ def GPRRegBank : RegisterBank<"GPR", [G8RC, G8RC_NOX0]>;
 /// Floating point Registers
 def FPRRegBank : RegisterBank<"FPR", [VSSRC]>;
 /// Vector Registers
-def VECRegBank : RegisterBank<"VEC", [VSRC]>;
+def VECRegBank : RegisterBank<"VEC", [VSRC]> {
+  let IgnoredPartialMappings = [
+    PartialMapping<32>,
+    PartialMapping<64>
+  ];
+}
 /// Condition Registers
-def CRRegBank : RegisterBank<"CR", [CRRC]>;
+def CRRegBank : RegisterBank<"CR", [CRRC]> {
+  let IgnoredPartialMappings = [PartialMapping<32>];
+  let ExtraPartialMappings = [PartialMapping<4>];
+}

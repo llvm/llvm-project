@@ -122,7 +122,7 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned CmpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
 
     OperandsMapping = getOperandsMapping(
-        {getValueMapping(PMI_CR), nullptr,
+        {getValueMapping(PMI_CR4), nullptr,
          getValueMapping(CmpSize == 32 ? PMI_FPR32 : PMI_FPR64),
          getValueMapping(CmpSize == 32 ? PMI_FPR32 : PMI_FPR64)});
     break;
