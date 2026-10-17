@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Delay cuf.alloc of descriptor (box) types from function entry to just before
-// their first use, possibly in a later block that dominates every use. This
+// their first use, possibly in a later block that dominates every use. The
+// target block is never on a CFG cycle, so the alloc runs at most once. This
 // defers cudaMallocManaged calls so that users can call cudaSetDevice before
 // any CUDA context is created.
 //
@@ -48,7 +49,8 @@ static fir::CoordinateOp getHostAssocTupleSlot(fir::StoreOp storeOp,
 /// Find the point before which the cuf.alloc group should be placed: the
 /// earliest use in the block that dominates all uses, or that block's
 /// terminator if it holds no use itself. Uses in nested regions resolve to
-/// their enclosing top-level op.
+/// their enclosing top-level op. The block is never on a CFG cycle, since an
+/// alloc there would run on every trip.
 ///
 /// Host association stores go to \p hostAssocStores and sink with the group
 /// instead of constraining it; the tuple's readers constrain it instead.
@@ -106,6 +108,17 @@ findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
     common = domInfo.findNearestCommonDominator(common, use->getBlock());
     if (!common)
       return nullptr;
+  }
+
+  // A block on a CFG cycle (e.g. the header of a DO loop that lowered to
+  // branches because it contains a RETURN) executes once per trip, and the
+  // alloc would replace the descriptor each time. Climb the dominator tree to
+  // the nearest block that is not on a cycle. Reachability covers irreducible
+  // cycles too, and the entry block has no predecessors, so it always ends.
+  while (common->isReachable(common)) {
+    mlir::DominanceInfoNode *idom = domInfo.getNode(common)->getIDom();
+    assert(idom && "entry block cannot be on a cycle");
+    common = idom->getBlock();
   }
 
   mlir::Operation *earliest = nullptr;
