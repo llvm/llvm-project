@@ -288,6 +288,11 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   }
 
   if (attrName == getTripleAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError()
+             << "expects '" << getTripleAttrName() << "' attribute to be "
+             << "attached to '" << mlir::ModuleOp::getOperationName() << "'";
+
     auto tripleStr = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
     if (!tripleStr)
       return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
@@ -302,6 +307,11 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   }
 
   if (attrName == getOptInfoAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError()
+             << "expects '" << getOptInfoAttrName() << "' attribute to be "
+             << "attached to '" << mlir::ModuleOp::getOperationName() << "'";
+
     auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(attr.getValue());
     // Checks whether or not OptInfoAttr is even parseable; opt info range
     // sanity checks are done in OptInfoAttr::verify.
