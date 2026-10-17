@@ -63,6 +63,7 @@ public:
 
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
+  void handleExternalAttr(Decl *D, const ParsedAttr &AL);
 
   /// Issues a deferred diagnostic if use of the declaration designated
   /// by 'ND' is invalid in a device context.
