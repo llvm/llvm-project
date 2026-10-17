@@ -4338,8 +4338,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
     ID.ConstantStructElts = std::make_unique<Constant *[]>(Elts.size());
     ID.UIntVal = Elts.size();
-    memcpy(ID.ConstantStructElts.get(), Elts.data(),
-           Elts.size() * sizeof(Elts[0]));
+    llvm::copy(Elts, ID.ConstantStructElts.get());
     ID.Kind = ValID::t_ConstantStruct;
     return false;
   }
@@ -4359,8 +4358,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
     if (isPackedStruct) {
       ID.ConstantStructElts = std::make_unique<Constant *[]>(Elts.size());
-      memcpy(ID.ConstantStructElts.get(), Elts.data(),
-             Elts.size() * sizeof(Elts[0]));
+      llvm::copy(Elts, ID.ConstantStructElts.get());
       ID.UIntVal = Elts.size();
       ID.Kind = ValID::t_PackedConstantStruct;
       return false;
