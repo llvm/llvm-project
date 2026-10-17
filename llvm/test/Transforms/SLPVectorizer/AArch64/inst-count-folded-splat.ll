@@ -9,18 +9,16 @@ define double @horner_pair(double %x) {
 ; CHECK-LABEL: define double @horner_pair(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[X2:%.*]] = fmul double [[X]], [[X]]
-; CHECK-NEXT:    [[P0:%.*]] = fmul contract double [[X2]], f0x3F023DE10DFDF709
-; CHECK-NEXT:    [[P1:%.*]] = fadd contract double [[P0]], f0x3F49EFE07501B288
-; CHECK-NEXT:    [[P2:%.*]] = fmul contract double [[X2]], [[P1]]
-; CHECK-NEXT:    [[P3:%.*]] = fadd contract double [[P2]], f0xBFA48228B5688F3B
-; CHECK-NEXT:    [[P4:%.*]] = fmul contract double [[X2]], [[P3]]
-; CHECK-NEXT:    [[P5:%.*]] = fadd contract double [[P4]], f0x3FC9C1550E884455
-; CHECK-NEXT:    [[Q0:%.*]] = fmul contract double [[X2]], f0x3FB3B8C5B12E9282
-; CHECK-NEXT:    [[Q1:%.*]] = fadd contract double [[Q0]], f0xBFE6066C1B8D0159
-; CHECK-NEXT:    [[Q2:%.*]] = fmul contract double [[X2]], [[Q1]]
-; CHECK-NEXT:    [[Q3:%.*]] = fadd contract double [[Q2]], f0x40002AE59C598AC8
-; CHECK-NEXT:    [[Q4:%.*]] = fmul contract double [[X2]], [[Q3]]
-; CHECK-NEXT:    [[Q5:%.*]] = fadd contract double [[Q4]], 1.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[X2]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract <2 x double> [[TMP2]], <double f0x3F023DE10DFDF709, double f0x3FB3B8C5B12E9282>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract <2 x double> [[TMP3]], <double f0x3F49EFE07501B288, double f0xBFE6066C1B8D0159>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd contract <2 x double> [[TMP5]], <double f0xBFA48228B5688F3B, double f0x40002AE59C598AC8>
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract <2 x double> [[TMP2]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd contract <2 x double> [[TMP7]], <double f0x3FC9C1550E884455, double 1.000000e+00>
+; CHECK-NEXT:    [[P5:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
+; CHECK-NEXT:    [[Q5:%.*]] = extractelement <2 x double> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[R:%.*]] = fdiv double [[P5]], [[Q5]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -205,18 +203,16 @@ define half @horner_pair_half_fullfp16(half %x) #0 {
 ; CHECK-LABEL: define half @horner_pair_half_fullfp16(
 ; CHECK-SAME: half [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[X2:%.*]] = fmul half [[X]], [[X]]
-; CHECK-NEXT:    [[P0:%.*]] = fmul contract half [[X2]], 9.997550e-02
-; CHECK-NEXT:    [[P1:%.*]] = fadd contract half [[P0]], 1.999510e-01
-; CHECK-NEXT:    [[P2:%.*]] = fmul contract half [[X2]], [[P1]]
-; CHECK-NEXT:    [[P3:%.*]] = fadd contract half [[P2]], 3.999020e-01
-; CHECK-NEXT:    [[P4:%.*]] = fmul contract half [[X2]], [[P3]]
-; CHECK-NEXT:    [[P5:%.*]] = fadd contract half [[P4]], 7.998050e-01
-; CHECK-NEXT:    [[Q0:%.*]] = fmul contract half [[X2]], 7.501220e-02
-; CHECK-NEXT:    [[Q1:%.*]] = fadd contract half [[Q0]], 1.500240e-01
-; CHECK-NEXT:    [[Q2:%.*]] = fmul contract half [[X2]], [[Q1]]
-; CHECK-NEXT:    [[Q3:%.*]] = fadd contract half [[Q2]], 3.000490e-01
-; CHECK-NEXT:    [[Q4:%.*]] = fmul contract half [[X2]], [[Q3]]
-; CHECK-NEXT:    [[Q5:%.*]] = fadd contract half [[Q4]], 1.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[X2]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract <2 x half> [[TMP2]], <half 9.997550e-02, half 7.501220e-02>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract <2 x half> [[TMP3]], <half 1.999510e-01, half 1.500240e-01>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract <2 x half> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd contract <2 x half> [[TMP5]], <half 3.999020e-01, half 3.000490e-01>
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul contract <2 x half> [[TMP2]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd contract <2 x half> [[TMP7]], <half 7.998050e-01, half 1.000000e+00>
+; CHECK-NEXT:    [[P5:%.*]] = extractelement <2 x half> [[TMP8]], i64 0
+; CHECK-NEXT:    [[Q5:%.*]] = extractelement <2 x half> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[R:%.*]] = fdiv half [[P5]], [[Q5]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
