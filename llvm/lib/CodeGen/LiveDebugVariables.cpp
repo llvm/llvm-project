@@ -61,6 +61,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <utility>
 
 using namespace llvm;
@@ -477,6 +478,7 @@ public:
 
   /// Replace the stale indexes in locInts and trimmedDefs.
   void canonicalizeIndexes(const SlotIndexes &SI);
+  void shrinkRegister(Register Reg, const LiveInterval *LI);
 
   /// Rewrite virtual register locations according to the provided virtual
   /// register map. Record the stack slot offsets for the locations that
@@ -682,6 +684,7 @@ public:
 
   /// Replace every stale index held by this analysis.
   void canonicalizeIndexes(const SlotIndexes &SI);
+  void shrinkRegister(Register Reg);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
@@ -1502,6 +1505,80 @@ UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
   return DidChange;
 }
 
+void UserValue::shrinkRegister(Register Reg, const LiveInterval *LI) {
+  auto IsRegLocation = [&](unsigned LocNo) {
+    return LocNo != UndefLocNo && locations[LocNo].isReg() &&
+           locations[LocNo].getReg() == Reg;
+  };
+  bool Changed = false;
+  for (LocMap::iterator It = locInts.begin(); It.valid();) {
+    SlotIndex Start = It.start(), Stop = It.stop();
+    auto Seg = LI ? LI->find(Start) : LiveRange::const_iterator();
+    if (!llvm::any_of(It.value().loc_nos(), IsRegLocation) ||
+        (LI && Seg != LI->end() && Seg->start <= Start && Seg->end >= Stop)) {
+      ++It;
+      continue;
+    }
+
+    DbgVariableValue Value = It.value();
+    SmallVector<unsigned, 4> LocNos;
+    for (unsigned LocNo : Value.loc_nos())
+      LocNos.push_back(IsRegLocation(LocNo) ? UndefLocNo : LocNo);
+    DbgVariableValue Unavailable(LocNos, Value.getWasIndirect(),
+                                 Value.getWasList(), *Value.getExpression());
+
+    // Replace only affected intervals. All locations for Reg share these gaps,
+    // including multiple subregister operands in a DBG_VALUE_LIST.
+    It.erase();
+    if (LI) {
+      for (; Seg != LI->end() && Seg->start < Stop; ++Seg) {
+        if (Start < Seg->start) {
+          locInts.insert(Start, Seg->start, Unavailable);
+          Start = Seg->start;
+        }
+        SlotIndex End = std::min(Stop, Seg->end);
+        locInts.insert(Start, End, Value);
+        Start = End;
+      }
+    }
+    if (Start < Stop)
+      locInts.insert(Start, Stop, Unavailable);
+    // Insertion can invalidate the iterator or coalesce with its neighbors.
+    It.find(Stop);
+    Changed = true;
+  }
+
+  if (Changed)
+    for (unsigned I = locations.size(); I; --I)
+      if (IsRegLocation(I - 1))
+        removeLocationIfUnused(I - 1);
+}
+
+void LiveDebugVariables::LDVImpl::shrinkRegister(Register Reg) {
+  const LiveInterval *LI =
+      LIS->hasInterval(Reg) ? &LIS->getInterval(Reg) : nullptr;
+  for (UserValue *UV = lookupVirtReg(Reg); UV; UV = UV->getNext())
+    UV->shrinkRegister(Reg, LI);
+
+  auto It = RegToPHIIdx.find(Reg);
+  if (It == RegToPHIIdx.end())
+    return;
+  llvm::erase_if(It->second, [&](unsigned InstrID) {
+    auto PHIIt = PHIValToPos.find(InstrID);
+    if (LI && LI->liveAt(PHIIt->second.SI))
+      return false;
+    PHIValToPos.erase(PHIIt);
+    return true;
+  });
+  if (It->second.empty())
+    RegToPHIIdx.erase(It);
+}
+
+void LiveDebugVariables::shrinkRegister(Register Reg) {
+  if (PImpl)
+    PImpl->shrinkRegister(Reg);
+}
+
 void LiveDebugVariables::LDVImpl::splitPHIRegister(Register OldReg,
                                                    ArrayRef<Register> NewRegs) {
   auto RegIt = RegToPHIIdx.find(OldReg);
@@ -1517,22 +1594,22 @@ void LiveDebugVariables::LDVImpl::splitPHIRegister(Register OldReg,
     assert(OldReg == PHIIt->second.Reg);
 
     // Find the new register that covers this position.
+    Register NewPHIReg = OldReg;
     for (auto NewReg : NewRegs) {
       const LiveInterval &LI = LIS->getInterval(NewReg);
       auto LII = LI.find(Slot);
       if (LII != LI.end() && LII->start <= Slot) {
         // This new register covers this PHI position, record this for indexing.
-        NewRegIdxes.push_back(std::make_pair(NewReg, InstrID));
+        NewPHIReg = NewReg;
         // Record that this value lives in a different VReg now.
         PHIIt->second.Reg = NewReg;
         break;
       }
     }
 
-    // If we do not find a new register covering this PHI, then register
-    // allocation has dropped its location, for example because it's not live.
-    // The old VReg will not be mapped to a physreg, and the instruction
-    // number will have been optimized out.
+    // Keep indexing unmatched PHIs by OldReg for spill-slot rewriting or a
+    // later shrink/split of a surviving component.
+    NewRegIdxes.emplace_back(NewPHIReg, InstrID);
   }
 
   // Re-create register index using the new register numbers.
