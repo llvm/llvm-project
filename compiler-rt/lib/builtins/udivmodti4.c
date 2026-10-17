@@ -85,9 +85,9 @@ static inline du_int udiv128by64to64(du_int u1, du_int u0, du_int v,
                                      du_int *r) {
 #if defined(__x86_64__) && !defined(__arm64ec__)
   du_int result;
-  __asm__("divq %[v]"
+  __asm__("{divq %[v]|div %[v]}"
           : "=a"(result), "=d"(*r)
-          : [ v ] "r"(v), "a"(u0), "d"(u1));
+          : [v] "r"(v), "a"(u0), "d"(u1));
   return result;
 #else
   return udiv128by64to64default(u1, u0, v, r);
