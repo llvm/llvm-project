@@ -7336,10 +7336,7 @@ static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
 
-  if (ScalarTy->isHalfTy() && ST->hasBWI())
-    return true;
-
-  if (ScalarTy->isBFloatTy() && ST->hasBF16())
+  if ((ScalarTy->isHalfTy() || ScalarTy->isBFloatTy()) && ST->hasBWI())
     return true;
 
   if (!ScalarTy->isIntegerTy())
