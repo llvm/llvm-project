@@ -2561,10 +2561,9 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       //   The non-deduced contexts are:
       //   [...]
       //   - A pack-index-specifier or a pack-index-expression.
-      //
-      // A pack-index-specifier whose index and pack are fully substituted
-      // canonicalizes to its selected type, so this case is only reached for
-      // an unresolved one; nothing can be deduced from it.
+      assert(!P->getAs<PackIndexingType>()->hasSelectedType() &&
+             "a pack-index-specifier with a selected type canonicalizes to "
+             "the selected type and should not dispatch here");
       return TemplateDeductionResult::Success;
     }
 
