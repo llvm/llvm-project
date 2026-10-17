@@ -7100,12 +7100,16 @@ ScalarEvolution::getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
 
   // If Step can be both positive and negative, we need to find ranges for the
   // maximum absolute step values in both directions and union them.
-  auto [SR1, NSW1] = getRangeForAffineARHelper(
+  auto [SR, NSW] = getRangeForAffineARHelper(
       StepSRange.getSignedMin(), StartSRange, MaxBECount, /*Signed=*/true);
-  auto [SR2, NSW2] = getRangeForAffineARHelper(StepSRange.getSignedMax(),
-                                               StartSRange, MaxBECount,
-                                               /*Signed=*/true);
-  ConstantRange SR = SR1.unionWith(SR2);
+  // A singleton step has identical signed bounds, so the second computation
+  // would produce the same range and no-wrap result.
+  if (!StepSRange.isSingleElement()) {
+    auto [SRMax, NSWMax] = getRangeForAffineARHelper(
+        StepSRange.getSignedMax(), StartSRange, MaxBECount, /*Signed=*/true);
+    SR = SR.unionWith(SRMax);
+    NSW &= NSWMax;
+  }
 
   // Next, consider step unsigned.
   auto [UR, NUW] = getRangeForAffineARHelper(
@@ -7115,7 +7119,7 @@ ScalarEvolution::getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
   SCEVFlags Flags = SCEV::FlagNone;
   if (NUW)
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
-  if (NSW1 && NSW2)
+  if (NSW)
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
 
   // Finally, intersect signed and unsigned ranges.

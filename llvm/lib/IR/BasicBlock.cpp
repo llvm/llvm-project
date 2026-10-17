@@ -302,13 +302,12 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   return end();
 }
 
-BasicBlock::const_iterator
-BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrPseudoProbe() const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
 
-    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
+    if (isa<PHINode, PseudoProbeInst>(I))
       continue;
 
     BasicBlock::const_iterator It = I.getIterator();
@@ -320,8 +319,7 @@ BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
   return end();
 }
 
-BasicBlock::const_iterator
-BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrLifetime() const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
@@ -329,7 +327,7 @@ BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
     if (I.isLifetimeStartOrEnd())
       continue;
 
-    if (SkipPseudoOp && isa<PseudoProbeInst>(I))
+    if (isa<PHINode, PseudoProbeInst>(I) || I.isLifetimeStartOrEnd())
       continue;
 
     BasicBlock::const_iterator It = I.getIterator();
@@ -355,7 +353,7 @@ BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
   return InsertPt;
 }
 
-BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrAlloca() const {
   const_iterator InsertPt = getFirstNonPHIIt();
   if (InsertPt == end())
     return end();
@@ -486,10 +484,6 @@ bool BasicBlock::canSplitPredecessors() const {
 
 bool BasicBlock::isLegalToHoistInto() const {
   auto *Term = getTerminator();
-  // No terminator means the block is under construction.
-  if (!Term)
-    return true;
-
   // If the block has no successors, there can be no instructions to hoist.
   assert(Term->getNumSuccessors() > 0);
 
@@ -505,7 +499,7 @@ bool BasicBlock::isEntryBlock() const {
 }
 
 BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
-  assert(getTerminator() && "Can't use splitBasicBlock on degenerate BB!");
+  assert(hasTerminator() && "Can't use splitBasicBlock on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
 
@@ -535,7 +529,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
 }
 
 BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
-  assert(getTerminator() &&
+  assert(hasTerminator() &&
          "Can't use splitBasicBlockBefore on degenerate BB!");
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");

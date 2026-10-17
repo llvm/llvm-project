@@ -2337,11 +2337,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // equality or hashing.
     auto C = vputils::getOpcodeOrIntrinsicID(Def);
 
-    // The issue with InsertValue is that the index of the insert is not a
-    // proper operand in LLVM IR, and hence also not in VPlan. Allocas must not
-    // be merged, as each creates a distinct allocation.
-    if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::Alloca)))
+    // Allocas must not be merged, as each creates a distinct allocation.
+    if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
 
     // Widened loads (including the EVL variant) are handled, as cse() only
@@ -3142,11 +3139,10 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   VPValue *Uncountable = nullptr;
   VPValue *Countable = nullptr;
   VPValue *Cond = Term->getOperand(0);
-  if (!match(Cond, m_OneUse(m_CombineOr(
-                       m_c_LogicalOr(m_Uncountable(Uncountable),
-                                     m_Countable(Countable, PSE, L)),
-                       m_c_BinaryOr(m_Uncountable(Uncountable),
-                                    m_Countable(Countable, PSE, L))))))
+  if (!match(Cond, m_CombineOr(m_c_LogicalOr(m_Uncountable(Uncountable),
+                                             m_Countable(Countable, PSE, L)),
+                               m_c_BinaryOr(m_Uncountable(Uncountable),
+                                            m_Countable(Countable, PSE, L)))))
     return true;
 
   // If the conditions are combined with a logical or (select), then we'll
@@ -3191,9 +3187,6 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
     Countable = NewLatchBuilder.createFreeze(Countable);
   }
   Term->setOperand(0, Countable);
-
-  // Remove the combining or.
-  cast<VPInstruction>(Cond)->eraseFromParent();
 
   return true;
 }
@@ -3271,12 +3264,6 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
     // Any value defined outside the loop does not need to be copied.
     if (V->isDefinedOutsideLoopRegions())
       continue;
-
-    // FIXME: Remove the single user restriction; it's here because we're
-    //        starting with the simplest set of loops we can, and multiple
-    //        users means needing to add PHI nodes in the transform.
-    if (V->getNumUsers() > 1)
-      return nullptr;
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
@@ -3366,9 +3353,7 @@ static bool handleUncountableExitsWithSideEffects(
     OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
 
-  // Disconnect early exiting blocks from successors, remove branches. We
-  // currently don't support multiple uses for recipes involved in creating
-  // the uncountable exit condition.
+  // Disconnect early exiting blocks from successors, remove branches.
   for (auto &Exit : Exits) {
     if (Exit.EarlyExitingVPBB == LatchVPBB)
       continue;
