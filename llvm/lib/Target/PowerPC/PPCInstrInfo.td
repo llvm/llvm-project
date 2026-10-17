@@ -3752,6 +3752,7 @@ include "PPCInstrFutureMMA.td"
 include "PPCInstrFuture.td"
 include "PPCInstrMMA.td"
 include "PPCInstrDFP.td"
+include "PPCInstrPairedSingles.td"
 
 // Patterns for arithmetic i1 operations.
 def : Pat<(add i1:$a, i1:$b),
