@@ -49,9 +49,6 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 // get the declaration of mbstate_t too.
 #    if __has_include_next(<uchar.h>)
 #      include_next <uchar.h>
-#    else
-#      include <__mbstate_t.h>
-#      include <stddef.h>
 #    endif
 
 #  endif // _LIBCPP_CXX03_LANG

@@ -2508,10 +2508,6 @@ module std {
     header "__tree"
     export std.memory.unique_ptr
   }
-  module std_mbstate_t {
-    header "__std_mbstate_t.h"
-    export *
-  }
   module log_hardening_failure {
     header "__log_hardening_failure"
   }
@@ -2601,8 +2597,9 @@ module std_wctype_h {
   export *
 }
 
-// This header is used by other C compatibility headers so it needs to be in its own module.
+// This header provides std::mbstate_t as a standalone module so that other
+// C compatibility headers can import it without pulling in all of cwchar.
 module std_private_mbstate_t {
-  header "__mbstate_t.h"
+  header "__fwd/mbstate_t.h"
   export *
 }
