@@ -6,27 +6,9 @@
 define void @wide_before(ptr %dst, i64 %v) {
 ; X86-LABEL: wide_before:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movq %rsi, %rax
 ; X86-NEXT:    movq %rsi, 72(%rdi)
-; X86-NEXT:    movb %al, 63(%rdi)
-; X86-NEXT:    movb %ah, 62(%rdi)
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $16, %ecx
-; X86-NEXT:    movb %cl, 61(%rdi)
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $24, %ecx
-; X86-NEXT:    movb %cl, 60(%rdi)
-; X86-NEXT:    movq %rsi, %rcx
-; X86-NEXT:    shrq $32, %rcx
-; X86-NEXT:    movb %cl, 59(%rdi)
-; X86-NEXT:    movq %rsi, %rcx
-; X86-NEXT:    shrq $40, %rcx
-; X86-NEXT:    movb %cl, 58(%rdi)
-; X86-NEXT:    movq %rsi, %rcx
-; X86-NEXT:    shrq $48, %rcx
-; X86-NEXT:    movb %cl, 57(%rdi)
-; X86-NEXT:    shrq $56, %rax
-; X86-NEXT:    movb %al, 56(%rdi)
+; X86-NEXT:    bswapq %rsi
+; X86-NEXT:    movq %rsi, 56(%rdi)
 ; X86-NEXT:    retq
 entry:
   %wideptr = getelementptr inbounds i8, ptr %dst, i64 72
@@ -69,10 +51,9 @@ entry:
 define void @volatile_wide_before_overlap(ptr %dst, i16 %v, i32 %w) {
 ; X86-LABEL: volatile_wide_before_overlap:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    movl %edx, (%rdi)
-; X86-NEXT:    movb %al, 1(%rdi)
-; X86-NEXT:    movb %ah, (%rdi)
+; X86-NEXT:    rolw $8, %si
+; X86-NEXT:    movw %si, (%rdi)
 ; X86-NEXT:    retq
 entry:
   store volatile i32 %w, ptr %dst, align 1
@@ -91,8 +72,9 @@ define i32 @read_between_stores(ptr %dst, ptr %observe, i32 %v, i32 %w) {
 ; X86-LABEL: read_between_stores:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl %ecx, 2(%rdi)
-; X86-NEXT:    movb %dl, 3(%rdi)
-; X86-NEXT:    movb %dh, 2(%rdi)
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movw %ax, 2(%rdi)
 ; X86-NEXT:    movl (%rsi), %eax
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    shrl $16, %ecx
@@ -126,9 +108,8 @@ define void @halfwords_after_byte(ptr %dst, i64 %v, i8 %w) {
 ; X86-LABEL: halfwords_after_byte:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb %dl, 8(%rdi)
-; X86-NEXT:    movw %si, 2(%rdi)
-; X86-NEXT:    shrl $16, %esi
-; X86-NEXT:    movw %si, (%rdi)
+; X86-NEXT:    rorl $16, %esi
+; X86-NEXT:    movl %esi, (%rdi)
 ; X86-NEXT:    retq
 entry:
   %p8 = getelementptr inbounds i8, ptr %dst, i64 8
@@ -147,9 +128,8 @@ define void @words_after_halfword(ptr %dst, i64 %v, i16 %w) {
 ; X86-LABEL: words_after_halfword:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movw %dx, 8(%rdi)
-; X86-NEXT:    movl %esi, 4(%rdi)
-; X86-NEXT:    shrq $32, %rsi
-; X86-NEXT:    movl %esi, (%rdi)
+; X86-NEXT:    rorq $32, %rsi
+; X86-NEXT:    movq %rsi, (%rdi)
 ; X86-NEXT:    retq
 entry:
   %p8 = getelementptr inbounds i8, ptr %dst, i64 8
@@ -168,12 +148,12 @@ entry:
 define void @three_bytes_after_wide_store(ptr %dst, i32 %v, i64 %w) {
 ; X86-LABEL: three_bytes_after_wide_store:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    movq %rdx, 3(%rdi)
-; X86-NEXT:    movb %al, 2(%rdi)
-; X86-NEXT:    movb %ah, 1(%rdi)
-; X86-NEXT:    shrl $16, %eax
-; X86-NEXT:    movb %al, (%rdi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movw %ax, 1(%rdi)
+; X86-NEXT:    shrl $16, %esi
+; X86-NEXT:    movb %sil, (%rdi)
 ; X86-NEXT:    retq
 entry:
   %p3 = getelementptr inbounds i8, ptr %dst, i64 3
