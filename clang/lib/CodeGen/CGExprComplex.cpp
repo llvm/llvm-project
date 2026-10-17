@@ -618,6 +618,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:

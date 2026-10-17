@@ -648,6 +648,7 @@ public:
     case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
+    case CK_CoopMatrixCast:
     case CK_HLSLArrayRValue:
     case CK_HLSLVectorTruncation:
     case CK_HLSLMatrixTruncation:

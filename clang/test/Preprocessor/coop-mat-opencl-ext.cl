@@ -1,0 +1,52 @@
+// cl_khr_cooperative_matrix registration test.
+//
+// Test if extension macro is predefined when the extension is enabled
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
+// RUN:   -finclude-default-header -E -dM %s \
+// RUN:   | FileCheck %s --check-prefix=EXT
+
+// EXT: cl_khr_cooperative_matrix
+
+// Test if extension is NOT predefined when explicitly disabled
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown \
+// RUN:   -cl-std=CL2.0 -cl-ext=-cl_khr_cooperative_matrix \
+// RUN:   -finclude-default-header -E %s \
+// RUN:   | FileCheck %s --check-prefix=NOEXT
+
+// NOEXT-NOT: cl_khr_cooperative_matrix
+
+// Enum constants are visible when extension is enabled
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
+// RUN:   -finclude-default-header -fsyntax-only -verify %s
+
+// expected-no-diagnostics
+
+void test_enum_constants(void) {
+    // coop_matrix_use_t
+    coop_matrix_use_t u0 = CLK_COOPERATIVE_MATRIX_A;
+    coop_matrix_use_t u1 = CLK_COOPERATIVE_MATRIX_B;
+    coop_matrix_use_t u2 = CLK_COOPERATIVE_MATRIX_ACCUMULATOR;
+    (void)u0; (void)u1; (void)u2;
+
+    // coop_matrix_layout_t
+    coop_matrix_layout_t l0 = CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR;
+    coop_matrix_layout_t l1 = CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR;
+    (void)l0; (void)l1;
+
+    // coop_matrix_operands_t
+    coop_matrix_operands_t op = CLK_COOPERATIVE_MATRIX_OPERAND_NONE;
+    (void)op;
+}
+
+// Enum constant values match the spec
+void test_enum_values(void) {
+    _Static_assert(memory_scope_sub_group                    == 4, "scope subgroup");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_A                  == 0, "use A");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_B                  == 1, "use B");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_ACCUMULATOR        == 2, "use ACC");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR   == 0, "row major");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR== 1, "col major");
+    _Static_assert(CLK_COOPERATIVE_MATRIX_OPERAND_NONE       == 0, "operand none");
+}
