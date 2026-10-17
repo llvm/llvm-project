@@ -2240,7 +2240,8 @@ public:
   void emitDeleteCall(const FunctionDecl *deleteFD, mlir::Value ptr,
                       QualType deleteTy);
 
-  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s,
+                                 llvm::ArrayRef<const Attr *> attrs = {});
 
   mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
@@ -2302,7 +2303,8 @@ public:
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
 
-  mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &s,
+                                  llvm::ArrayRef<const Attr *> attrs = {});
 
   void emitForwardingCallToLambda(const CXXMethodDecl *lambdaCallOperator,
                                   CallArgList &callArgs);
@@ -2585,7 +2587,13 @@ public:
 
   void emitVariablyModifiedType(QualType ty);
 
-  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s,
+                                    llvm::ArrayRef<const Attr *> attrs = {});
+
+  /// Build the hints that get attached to a loop, or a null attribute
+  /// if there is nothing to say about it.
+  cir::LoopHintAttr getLoopHints(llvm::ArrayRef<const Attr *> attrs,
+                                 bool mustProgress);
 
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);

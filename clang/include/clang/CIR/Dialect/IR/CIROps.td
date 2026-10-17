@@ -2369,11 +2369,13 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
-    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)? attr-dict
+    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_hints` $loop_hints^)? attr-dict
   }];
 
   let description = [{
@@ -2449,8 +2451,11 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 }
 
 def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
+  let arguments = (ins OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$body, MinSizedRegion<1>:$cond);
-  let assemblyFormat = " $body `while` $cond attr-dict";
+  let assemblyFormat = [{
+    $body `while` $cond (`loop_hints` $loop_hints^)? attr-dict
+  }];
 
   let extraClassDeclaration = [{
     mlir::Region &getEntry() { return getBody(); }
@@ -2524,7 +2529,8 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind,
+                       OptionalAttr<CIR_LoopHintAttr>:$loop_hints);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
                         MinSizedRegion<1>:$step,
@@ -2534,6 +2540,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `body` $body
     `step` $step
     (`cleanup` enum($cleanupKind) $cleanup^)?
+    (`loop_hints` $loop_hints^)?
     attr-dict
   }];
 
