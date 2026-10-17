@@ -459,6 +459,18 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
   return Size == getContext().getTypeSize(Ty);
 }
 
+static bool shouldExtendReturnType(const ABIInfo &Info, QualType RetTy) {
+  // Bools need to be zero-extended to 8 bits for all ABIs.
+  if (RetTy->isBooleanType())
+    return true;
+
+  // Promotable integer types get extended only for Darwin.
+  if (!Info.getTarget().getTriple().isOSDarwin())
+    return false;
+
+  return Info.isPromotableIntegerTypeForABI(RetTy);
+}
+
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
@@ -565,8 +577,8 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
     if (EIT->getNumBits() > 64)
       return getIndirectReturnResult(RetTy, State);
 
-  return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
-                                               : ABIArgInfo::getDirect());
+  return shouldExtendReturnType(*this, RetTy) ? ABIArgInfo::getExtend(RetTy)
+                                              : ABIArgInfo::getDirect();
 }
 
 unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
@@ -2385,8 +2397,8 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     llvm::Type *IRTy = CGT.ConvertType(Ty);
-    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
-                                              : ABIArgInfo::getDirect(IRTy));
+    return shouldExtendReturnType(*this, Ty) ? ABIArgInfo::getExtend(Ty, IRTy)
+                                             : ABIArgInfo::getDirect(IRTy);
   }
 
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
@@ -2838,7 +2850,9 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
 
       if (RetTy->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(RetTy))
-        return ABIArgInfo::getExtend(RetTy);
+        return shouldExtendReturnType(*this, RetTy)
+                   ? ABIArgInfo::getExtend(RetTy)
+                   : ABIArgInfo::getDirect();
     }
 
     if (ResType->isIntegerTy(128)) {
