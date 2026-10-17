@@ -1,6 +1,7 @@
 ; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=generic -S < %s | FileCheck %s
 
-; Test that xor auxiliaries are not grouped into BinOp SelectLikes (#226417).
+; Test that i1-typed BinOps are not treated as select-likes (#226417);
+; in particular, `not`/shift operands must not be picked up as auxiliaries.
 
 define void @not_xor_add_not_selectlike(i32 %n, i1 %c, i1 %v, i32 %a, i32 %b) {
 ; CHECK-LABEL: @not_xor_add_not_selectlike(
