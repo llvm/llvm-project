@@ -2324,7 +2324,11 @@ module std {
 
       export std.format.formatter
     }
-    module layout                { header "__vector/layout.h" }
+    module layout                {
+      header "__vector/layout.h"
+      export memory.allocator_destructor
+      export memory.unique_ptr
+    }
     module pmr                   {
       header "__vector/pmr.h"
 
