@@ -35,6 +35,15 @@ public:
 };
 
 ModulePass *createBPFCheckAndAdjustIRLegacyPass();
+ModulePass *createBPFUnwindPreparePass();
+FunctionPass *createBPFUnwindLowerPass();
+
+/// Does \p F say in r3 whether it returns or unwinds? See BPFUnwind.cpp.
+/// Not being nounwind is the default in IR, so that alone is not enough:
+/// uwtable is how a frontend asks for unwinding through a function to work.
+inline bool bpfCanUnwind(const Function &F) {
+  return F.hasUWTable() && !F.doesNotThrow();
+}
 
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
