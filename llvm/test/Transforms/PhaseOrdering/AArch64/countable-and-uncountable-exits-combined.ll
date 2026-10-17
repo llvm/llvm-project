@@ -40,8 +40,7 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD_FR:%.*]] = freeze <vscale x 4 x i32> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD_FR]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> [[TMP3]], i1 false)
-; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP4]])
+; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = tail call <vscale x 4 x i1> @llvm.mask.beforefirst.nxv4i1(<vscale x 4 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [4 x i8], ptr @src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP5]], <vscale x 4 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 42)
@@ -53,6 +52,8 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = zext <vscale x 4 x i1> [[UNCOUNTABLE_EXIT_MASK]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 10000
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[FOR_BODY_PREHEADER]]
