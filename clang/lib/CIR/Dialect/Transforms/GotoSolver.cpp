@@ -121,8 +121,10 @@ void GotoSolverPass::runOnOperation() {
   // indirect branch's successors. A SetVector keeps the first occurrence
   // in order: a label named more than once is a successor only once.
   //
-  // process() collects cir.block_address ops; scan just globals and
-  // constants for the rest.
+  // process() collects cir.block_address ops in IR order; this scan covers
+  // only attribute-carried addresses (globals, constants) that no
+  // function-body walk sees. BlockAddressOp stays out so op labels keep
+  // their IR-order phase instead of sorting with the attributes.
   llvm::StringMap<llvm::SmallSetVector<StringRef, 4>> globalBlockAddrLabels;
   mlir::ModuleOp module = mlir::cast<mlir::ModuleOp>(getOperation());
   module.walk([&](mlir::Operation *op) {
