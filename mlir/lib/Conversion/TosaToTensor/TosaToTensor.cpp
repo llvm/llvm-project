@@ -355,15 +355,14 @@ public:
       paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
     }
 
-    // The TOSA specification requires a negative padding (-1 stands for an
-    // amount that is not known) to be diagnosed.
+    // The TOSA specification requires a negative padding to be diagnosed.
+    // We emit a runtime assertion, as this could be dead or unreachable code.
     if (llvm::any_of(paddingVals, [](int64_t val) { return val < 0; })) {
       Value fail =
           arith::ConstantOp::create(rewriter, loc, rewriter.getBoolAttr(false));
       cf::AssertOp::create(
           rewriter, loc, fail,
-          rewriter.getStringAttr("tosa.pad: padding must be non-negative, run "
-                                 "tosa-validate to diagnose it statically"));
+          rewriter.getStringAttr("tosa.pad: padding must be non-negative"));
     }
 
     ShapedType inputTy = cast<ShapedType>(input.getType());
