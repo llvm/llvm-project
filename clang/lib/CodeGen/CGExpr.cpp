@@ -5333,9 +5333,46 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
           getContext().getTypeSizeInChars(E->getType()).getQuantity();
     }
   } else {
-    // The base must be a pointer; emit it with an estimate of its alignment.
-    Address BaseAddr =
-        EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+    // Find the load of a 'counted_by' pointer field (e.g. 'p->buf' in
+    // 'p->buf[i]') whose count bounds this access.
+    const CastExpr *CountedByLoad = nullptr;
+    const MemberExpr *CountedByME = nullptr;
+    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
+      StructFieldAccess Visitor;
+      if (const auto *CE =
+              dyn_cast_if_present<CastExpr>(Visitor.Visit(E->getBase()));
+          CE && CE->getCastKind() == CK_LValueToRValue) {
+        const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
+        if (ME && ME->getMemberDecl()->getType()->isCountAttributedType()) {
+          CountedByLoad = CE;
+          CountedByME = ME;
+        }
+      }
+    }
+
+    // The bounds check locates the count relative to the pointer field's
+    // address. When the base is exactly the field load, emit the field's
+    // l-value once and load the pointer from it, so that the struct base
+    // (which may have side-effects, e.g. 'get()->buf[i]' or 'p++->buf[i]')
+    // isn't evaluated a second time for the check. This mirrors the default
+    // case of EmitPointerWithAlignment. The load goes through EmitLoadOfLValue,
+    // not EmitLoadOfScalar, so that a '__ptrauth'-qualified field is
+    // authenticated before it's used.
+    Address CountedByFieldAddr = Address::invalid();
+    Address BaseAddr = Address::invalid();
+    if (CountedByME && E->getBase()->IgnoreParens() == CountedByLoad) {
+      LValue FieldLV = EmitCheckedLValue(CountedByME, TCK_Load);
+      CountedByFieldAddr = FieldLV.getAddress();
+      BaseAddr = makeNaturalAddressForPointer(
+          EmitLoadOfLValue(FieldLV, CountedByME->getExprLoc()).getScalarVal(),
+          E->getBase()->getType()->getPointeeType(), CharUnits(),
+          /*ForPointeeType=*/true, &EltBaseInfo, &EltTBAAInfo);
+    } else {
+      // The base must be a pointer; emit it with an estimate of its alignment.
+      BaseAddr =
+          EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
+    }
+
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
     QualType ptrType = E->getBase()->getType();
     Addr = emitArraySubscriptGEP(*this, BaseAddr, Idx, E->getType(),
@@ -5343,16 +5380,16 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  SignedIndices, E->getExprLoc(), &ptrType,
                                  E->getBase());
 
-    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
-      StructFieldAccess Visitor;
-      const Expr *Base = Visitor.Visit(E->getBase());
-
-      if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
-          CE && CE->getCastKind() == CK_LValueToRValue)
-        EmitCountedByBoundsChecking(CE, ptrType, Address::invalid(),
-                                    E->getIdx()->getType(), Idx, Accessed,
-                                    /*FlexibleArray=*/false);
-    }
+    // Without the field's address (e.g. '((char *)p->buf)[i]'),
+    // EmitCountedByBoundsChecking re-emits the field's l-value. That only
+    // recomputes the field's address, so it's safe unless the struct base has
+    // side-effects. In that case skip the check rather than evaluating the
+    // base twice.
+    if (CountedByME && (CountedByFieldAddr.isValid() ||
+                        !CountedByME->getBase()->HasSideEffects(getContext())))
+      EmitCountedByBoundsChecking(CountedByLoad, ptrType, CountedByFieldAddr,
+                                  E->getIdx()->getType(), Idx, Accessed,
+                                  /*FlexibleArray=*/false);
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
