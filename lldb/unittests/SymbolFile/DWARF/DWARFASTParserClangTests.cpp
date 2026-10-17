@@ -2245,3 +2245,123 @@ TEST_F(DWARFASTParserClangTests, TestRustVariantMember) {
   // 29352461300415899028694309177919734273
   ASSERT_EQ(f_name, "$variant$29352461300415899028694309177919734273");
 }
+
+TEST_F(DWARFASTParserClangTests, TestAddressClassPointerParsing) {
+  // Tests that DW_TAG_pointer_type with a non-zero DW_AT_address_class
+  // qualifies the pointee type with the corresponding target address space,
+  // while DW_AT_address_class == 0 or omitted leaves the pointee in the
+  // default address space.
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x3
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_address_class
+              Form:            DW_FORM_data4
+        - Code:            0x4
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      AddrSize: 8
+      Entries:
+        # 0x0c: DW_TAG_compile_unit (DW_LANG_C_plus_plus = 0x0004)
+        - AbbrCode: 0x1
+          Values:
+            - Value: 0x04
+        # 0x0f: DW_TAG_base_type ('int', DW_ATE_signed = 0x05, size = 4)
+        - AbbrCode: 0x2
+          Values:
+            - CStr:  int
+            - Value: 0x05
+            - Value: 0x04
+        # DW_TAG_pointer_type -> 0x0f with DW_AT_address_class = 3
+        - AbbrCode: 0x3
+          Values:
+            - Value: 0x0f
+            - Value: 0x03
+        # DW_TAG_pointer_type -> 0x0f with DW_AT_address_class = 0
+        - AbbrCode: 0x3
+          Values:
+            - Value: 0x0f
+            - Value: 0x00
+        # DW_TAG_pointer_type -> 0x0f without DW_AT_address_class
+        - AbbrCode: 0x4
+          Values:
+            - Value: 0x0f
+        - AbbrCode: 0x0
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
+
+  DWARFDIE int_die = cu_die.GetFirstChild();
+  ASSERT_EQ(int_die.Tag(), DW_TAG_base_type);
+
+  DWARFDIE ptr_as3_die = int_die.GetSibling();
+  ASSERT_EQ(ptr_as3_die.Tag(), DW_TAG_pointer_type);
+
+  DWARFDIE ptr_as0_die = ptr_as3_die.GetSibling();
+  ASSERT_EQ(ptr_as0_die.Tag(), DW_TAG_pointer_type);
+
+  DWARFDIE ptr_no_as_die = ptr_as0_die.GetSibling();
+  ASSERT_EQ(ptr_no_as_die.Tag(), DW_TAG_pointer_type);
+
+  SymbolContext sc;
+  auto &parser = tester.GetParser();
+
+  lldb::TypeSP ptr_as3_type =
+      parser.ParseTypeFromDWARF(sc, ptr_as3_die, /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(ptr_as3_type, nullptr);
+  CompilerType ct_as3 = ptr_as3_type->GetForwardCompilerType();
+  ASSERT_TRUE(ct_as3.IsPointerType());
+  EXPECT_EQ(ct_as3.GetTargetAddressSpace(), std::nullopt);
+  EXPECT_EQ(ct_as3.GetPointeeType().GetTargetAddressSpace(),
+            std::optional<uint32_t>(3U));
+
+  lldb::TypeSP ptr_as0_type =
+      parser.ParseTypeFromDWARF(sc, ptr_as0_die, /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(ptr_as0_type, nullptr);
+  CompilerType ct_as0 = ptr_as0_type->GetForwardCompilerType();
+  ASSERT_TRUE(ct_as0.IsPointerType());
+  EXPECT_EQ(ct_as0.GetPointeeType().GetTargetAddressSpace(), std::nullopt);
+
+  lldb::TypeSP ptr_no_as_type =
+      parser.ParseTypeFromDWARF(sc, ptr_no_as_die, /*type_is_new_ptr=*/nullptr);
+  ASSERT_NE(ptr_no_as_type, nullptr);
+  CompilerType ct_no_as = ptr_no_as_type->GetForwardCompilerType();
+  ASSERT_TRUE(ct_no_as.IsPointerType());
+  EXPECT_EQ(ct_no_as.GetPointeeType().GetTargetAddressSpace(), std::nullopt);
+}

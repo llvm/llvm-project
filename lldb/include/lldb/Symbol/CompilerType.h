@@ -206,6 +206,9 @@ public:
 
   bool HasPointerAuthQualifier() const;
 
+  /// The target address space of this type, if it is not the default one.
+  std::optional<uint32_t> GetTargetAddressSpace() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 

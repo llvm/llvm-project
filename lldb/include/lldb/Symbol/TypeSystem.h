@@ -207,6 +207,13 @@ public:
     return false;
   }
 
+  /// Returns the target address space (the DWARF address class) of \p type,
+  /// or std::nullopt if it lives in the default address space.
+  virtual std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) {
+    return std::nullopt;
+  }
+
   virtual bool CanPassInRegisters(const CompilerType &type) = 0;
 
   // TypeSystems can support more than one language
