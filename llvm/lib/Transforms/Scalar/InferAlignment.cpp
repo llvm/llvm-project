@@ -117,11 +117,15 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
   bool Changed = false;
 
   DomConditionCache DC;
+  // Register all conditions before querying known bits, because function block
+  // order does not guarantee dominators precede their dominated blocks.
+  for (BasicBlock &BB : F)
+    if (auto *BI = dyn_cast<CondBrInst>(BB.getTerminator()))
+      DC.registerBranch(BI);
+
   // Enforce preferred type alignment if possible. We do this as a separate
   // pass first, because it may improve the alignments we infer below.
   for (BasicBlock &BB : F) {
-    if (auto *BI = dyn_cast<CondBrInst>(BB.getTerminator()))
-      DC.registerBranch(BI);
     for (Instruction &I : BB) {
       Changed |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
