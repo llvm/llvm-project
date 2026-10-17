@@ -731,3 +731,35 @@ func.func @no_fold_invalid_collapse() -> tensor<i64> {
     return %0 : tensor<i64>
 }
 
+// -----
+
+func.func @pad_negative_low(%arg0: tensor<10xf32>, %arg1: f32) -> tensor<8xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -2}}
+  %0 = tensor.pad %arg0 low[-2] high[0] {
+  ^bb0(%arg2: index):
+    tensor.yield %arg1 : f32
+  } : tensor<10xf32> to tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
+// -----
+
+func.func @pad_negative_high(%arg0: tensor<?x4xf32>, %arg1: f32) -> tensor<?x3xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -1}}
+  %0 = tensor.pad %arg0 low[0, 0] high[0, -1] {
+  ^bb0(%arg2: index, %arg3: index):
+    tensor.yield %arg1 : f32
+  } : tensor<?x4xf32> to tensor<?x3xf32>
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+func.func @pad_negative_dynamic_dim(%arg0: tensor<?xf32>, %arg1: f32) -> tensor<?xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -1}}
+  %0 = tensor.pad %arg0 low[-1] high[0] {
+  ^bb0(%arg2: index):
+    tensor.yield %arg1 : f32
+  } : tensor<?xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
