@@ -32,6 +32,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -47,6 +48,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -434,6 +436,22 @@ private:
   void dumpState() const;
 };
 
+// A preceding allocation stage may have stashed debug values. Restore them
+// before fast allocation invalidates the slot indexes, leaving unallocated
+// virtual register locations for the fast allocator to update itself.
+static void restoreDebugValues(MachineFunction &MF, LiveDebugVariables &LDV,
+                               VirtRegMap *VRM) {
+  if (VRM) {
+    LDV.emitDebugValues(VRM, true);
+    return;
+  }
+
+  // The previous stage's register map may already have been invalidated.
+  VirtRegMap UnassignedVRM;
+  UnassignedVRM.init(MF);
+  LDV.emitDebugValues(&UnassignedVRM, true);
+}
+
 class RegAllocFast : public MachineFunctionPass {
   RegAllocFastImpl Impl;
 
@@ -444,6 +462,10 @@ public:
       : MachineFunctionPass(ID), Impl(F, ClearVirtRegs_) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (auto *LDV = getAnalysisIfAvailable<LiveDebugVariablesWrapperLegacy>()) {
+      auto *VRM = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>();
+      restoreDebugValues(MF, LDV->getLDV(), VRM ? &VRM->getVRM() : nullptr);
+    }
     return Impl.runOnMachineFunction(MF);
   }
 
@@ -451,6 +473,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addUsedIfAvailable<LiveDebugVariablesWrapperLegacy>();
+    AU.addUsedIfAvailable<VirtRegMapWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -2140,14 +2164,19 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
 }
 
 PreservedAnalyses RegAllocFastPass::run(MachineFunction &MF,
-                                        MachineFunctionAnalysisManager &) {
+                                        MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
+  if (auto *LDV = MFAM.getCachedResult<LiveDebugVariablesAnalysis>(MF)) {
+    auto *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
+    restoreDebugValues(MF, *LDV, VRM);
+  }
   RegAllocFastImpl Impl(Opts.Filter, Opts.ClearVRegs);
   bool Changed = Impl.runOnMachineFunction(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.abandon<LiveDebugVariablesAnalysis>();
   return PA;
 }
 
