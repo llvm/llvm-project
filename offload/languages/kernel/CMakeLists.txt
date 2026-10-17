@@ -114,4 +114,5 @@ install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/UndefineLanguageNames.inc
         ${CMAKE_CURRENT_SOURCE_DIR}/include/LanguageLaunch.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Types.h
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload/kernel/)
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload/kernel/
+        COMPONENT offload)

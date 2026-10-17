@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/setpayloadsigbf16.h"
 
-LIST_SETPAYLOADSIG_TESTS(bfloat16, LIBC_NAMESPACE::setpayloadsigbf16)
+LIST_SETPAYLOADSIG_TESTS(Setpayloadsigbf16, bfloat16,
+                         LIBC_NAMESPACE::setpayloadsigbf16)

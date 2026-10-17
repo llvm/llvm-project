@@ -20,7 +20,7 @@ using namespace llvm::support::endian;
 
 auto G = std::make_unique<LinkGraph>(
     "foo", std::make_shared<orc::SymbolStringPool>(),
-    Triple("armv7-linux-gnueabi"), SubtargetFeatures(),
+    Triple("armv7-linux-gnueabi"), 4, SubtargetFeatures(),
     aarch32::getEdgeKindName);
 auto &Sec =
     G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
@@ -49,7 +49,7 @@ public:
   void SetUp() override {
     G = std::make_unique<LinkGraph>(
         "foo", std::make_shared<orc::SymbolStringPool>(),
-        Triple("armv7-linux-gnueabi"), SubtargetFeatures(),
+        Triple("armv7-linux-gnueabi"), 4, SubtargetFeatures(),
         aarch32::getEdgeKindName);
     S = &G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
   }

@@ -1,0 +1,35 @@
+# Round-trip a profile from a real program through the text format.
+#
+# Unlike roundtrip.test, this profile has an internal function, keyed as
+# "<file>;<name>", and indirect call targets, which are stored as hashes and
+# printed as names. Both depend on the name <-> GUID mapping.
+#
+# Inputs/guid-roundtrip.proftext was generated from Inputs/guid-roundtrip.c:
+#   clang -O2 -fprofile-generate=. -o guid-roundtrip Inputs/guid-roundtrip.c
+#   LLVM_PROFILE_FILE=guid.profraw ./guid-roundtrip
+#   llvm-profdata merge --text -o Inputs/guid-roundtrip.proftext guid.profraw
+
+# text -> indexed -> text
+RUN: llvm-profdata merge -o %t.0.profdata %S/Inputs/guid-roundtrip.proftext
+RUN: llvm-profdata merge --text -o %t.0.proftext %t.0.profdata
+RUN: diff -b %t.0.proftext %S/Inputs/guid-roundtrip.proftext
+
+# Do it again from the output, to check it's stable.
+RUN: llvm-profdata merge -o %t.1.profdata %t.0.proftext
+RUN: llvm-profdata merge --text -o %t.1.proftext %t.1.profdata
+RUN: diff -b %t.1.proftext %S/Inputs/guid-roundtrip.proftext
+
+RUN: FileCheck %s --input-file=%t.1.proftext
+
+# The internal function is keyed by its IRPGO name, "<file>;<name>". The hash
+# of that name is the function's GUID.
+CHECK: external_callee
+CHECK: guid-roundtrip.c;local_callee
+CHECK: main
+
+# Indirect call targets are printed as names, not hashes, so both must be in
+# the symbol table.
+CHECK:      # ValueKind = IPVK_IndirectCallTarget:
+CHECK:      guid-roundtrip.c;local_callee:100
+CHECK-NEXT: 1
+CHECK-NEXT: external_callee:10

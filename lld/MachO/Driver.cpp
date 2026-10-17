@@ -45,6 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -170,23 +171,10 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
                const SmallVector<StringRef, 2> &systemPaths) {
   std::vector<StringRef> paths;
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
-  for (StringRef path : args::getStrings(args, optionCode)) {
-    // NOTE: only absolute paths are re-rooted to syslibroot(s)
-    bool found = false;
-    if (path::is_absolute(path, path::Style::posix)) {
-      for (StringRef root : roots) {
-        SmallString<261> buffer(root);
-        path::append(buffer, path);
-        // Do not warn about paths that are computed via the syslib roots
-        if (fs::is_directory(buffer)) {
-          paths.push_back(saver().save(buffer.str()));
-          found = true;
-        }
-      }
-    }
-    if (!found && warnIfNotDirectory(optionLetter, path))
-      paths.push_back(path);
-  }
+  for (StringRef path : args::getStrings(args, optionCode))
+    for (StringRef searchPath : getRerootedSearchPaths(path, roots))
+      if (searchPath != path || warnIfNotDirectory(optionLetter, searchPath))
+        paths.push_back(searchPath);
 
   // `-Z` suppresses the standard "system" search paths.
   if (args.hasArg(OPT_Z))
@@ -1575,7 +1563,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize();
+  globalMergeRecord.finalize(cl::LibraryOptionsContext());
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
@@ -2505,6 +2493,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       StringRef sectName = arg->getValue(1);
       inputFiles.insert(make<OpaqueFile>(MemoryBufferRef(), segName, sectName));
     }
+
+    parseDeferredRelocations();
 
     gatherInputSections();
 

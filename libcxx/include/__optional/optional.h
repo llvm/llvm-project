@@ -692,8 +692,8 @@ public:
   using iterator       = __bounded_iter<__pointer>;
   using const_iterator = __bounded_iter<__const_pointer>;
 #    else
-  using iterator       = __capacity_aware_iterator<__pointer, optional<_Tp>, 1>;
-  using const_iterator = __capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>;
+  using iterator       = __capacity_aware_iterator<__pointer, 1>;
+  using const_iterator = __capacity_aware_iterator<__const_pointer, 1>;
 #    endif
 
   // [optional.iterators], iterator support
@@ -703,7 +703,7 @@ public:
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
 #    else
-    return std::__make_capacity_aware_iterator<__pointer, optional<_Tp>, 1>(__ptr);
+    return std::__make_capacity_aware_iterator<__pointer, 1>(__ptr);
 #    endif
   }
 
@@ -713,7 +713,7 @@ public:
 #    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
 #    else
-    return std::__make_capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>(__ptr);
+    return std::__make_capacity_aware_iterator<__const_pointer, 1>(__ptr);
 #    endif
   }
 

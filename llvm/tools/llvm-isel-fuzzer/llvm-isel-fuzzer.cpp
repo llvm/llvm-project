@@ -28,6 +28,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -47,6 +48,7 @@ static cl::opt<char>
 static cl::opt<std::string>
     TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
+static cl::LibraryOptionsContext LibraryOptions;
 static std::unique_ptr<TargetMachine> TM;
 static std::unique_ptr<IRMutator> Mutator;
 
@@ -92,7 +94,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   // Set up the module to build for our target.
   M->setTargetTriple(TM->getTargetTriple());
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   // Build up a PM to do instruction selection.
   legacy::PassManager PM;
@@ -143,7 +145,8 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
 
   Triple TT(Triple::normalize(TargetTriple));
 
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT, OLvl));
+  TM = ExitOnErr(
+      codegen::createTargetMachineForTriple(LibraryOptions, TT, OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

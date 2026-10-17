@@ -52,6 +52,7 @@ static void commonSectionMapping(IO &IO, WasmYAML::Section &Section) {
 static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
+  IO.mapOptional("TargetArch", Section.TargetArch, StringRef());
   IO.mapRequired("MemorySize", Section.MemorySize);
   IO.mapRequired("MemoryAlignment", Section.MemoryAlignment);
   IO.mapRequired("TableSize", Section.TableSize);
@@ -74,6 +75,7 @@ static void sectionMapping(IO &IO, WasmYAML::LinkingSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
   IO.mapRequired("Version", Section.Version);
+  IO.mapOptional("TargetArch", Section.TargetArch, StringRef());
   IO.mapOptional("SymbolTable", Section.SymbolTable);
   IO.mapOptional("SegmentInfo", Section.SegmentInfos);
   IO.mapOptional("InitFunctions", Section.InitFunctions);

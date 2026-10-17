@@ -375,11 +375,11 @@ private:
 // an empty '__main' function.
 static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
                                   const Triple &TargetTriple) {
-  IRBuilder<> Builder(Context);
-
   // Create a new module.
   std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
   M->setTargetTriple(TargetTriple);
+
+  IRBuilder<> Builder(*M);
 
   // Create an empty function named "__main".
   Type *ReturnTy;
@@ -970,6 +970,10 @@ static int runOrcJIT(const char *ProgName) {
       .addFeatures(codegen::getFeatureList())
       .setRelocationModel(codegen::getExplicitRelocModel())
       .setCodeModel(codegen::getExplicitCodeModel());
+
+  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS())
+    Builder.getJITTargetMachineBuilder()->getOptions().EmulatedTLS =
+        *EmulatedTLS;
 
   // Link process symbols unless NoProcessSymbols is set.
   Builder.setLinkProcessSymbolsByDefault(!NoProcessSymbols);

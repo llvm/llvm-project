@@ -143,15 +143,15 @@ Child::Child() {}
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [0] -> !cir.ptr<!rec_Mother>
+// CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Child> -> !cir.ptr<!rec_Mother>
 // CIR:   cir.call @_ZN6MotherC2Ev(%[[MOTHER_BASE]]) nothrow : (!cir.ptr<!rec_Mother> {{.*}}) -> ()
-// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_Child> -> !cir.ptr<!rec_Father>
 // CIR:   cir.call @_ZN6FatherC2Ev(%[[FATHER_BASE]]) nothrow : (!cir.ptr<!rec_Father> {{.*}}) -> ()
 // CIR:   %[[CHILD_VPTR:.*]] = cir.vtable.address_point(@_ZTV5Child, address_point = <index = 0, offset = 2>) : !cir.vptr
 // CIR:   %[[CHILD_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Child> -> !cir.ptr<!cir.vptr>
 // CIR:   cir.store{{.*}} %[[CHILD_VPTR]], %[[CHILD_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   %[[FATHER_IN_CHILD_VPTR:.*]] = cir.vtable.address_point(@_ZTV5Child, address_point = <index = 1, offset = 2>) : !cir.vptr
-// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_Child> -> !cir.ptr<!rec_Father>
 // CIR:   %[[FATHER_IN_CHILD_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[FATHER_BASE]] : !cir.ptr<!rec_Father> -> !cir.ptr<!cir.vptr>
 // CIR:   cir.store{{.*}} %[[FATHER_IN_CHILD_VPTR]], %[[FATHER_IN_CHILD_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   cir.return
@@ -177,7 +177,7 @@ Child::Child() {}
 // OGCG:   call void @_ZN6MotherC2Ev(ptr {{.*}} %[[THIS]])
 // OGCG:   %[[FATHER_BASE:.*]] = getelementptr{{.*}} i8, ptr %[[THIS]], i64 8
 // OGCG:   call void @_ZN6FatherC2Ev(ptr{{.*}} %[[FATHER_BASE]])
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV5Child, i64 16), ptr %[[THIS]]
 // OGCG:   %[[FATHER_BASE:.*]] = getelementptr{{.*}} i8, ptr %[[THIS]], i64 8
-// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV5Child, i32 0, i32 1, i32 2), ptr %[[FATHER_BASE]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV5Child, i64 48), ptr %[[FATHER_BASE]]
 // OGCG:   ret void

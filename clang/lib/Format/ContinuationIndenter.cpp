@@ -475,11 +475,6 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   const FormatToken &Current = *State.NextToken;
   const FormatToken &Previous = *Current.Previous;
   const auto &CurrentState = State.Stack.back();
-  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
-      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
-    auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
-    return LambdaBodyLength > getColumnLimit(State);
-  }
   if (Style.BraceWrapping.AfterRequiresExpression && Current.CanBreakBefore &&
       Current.is(TT_RequiresExpressionLBrace) &&
       getLengthToMatchingParen(Current, State.Stack) > getColumnLimit(State)) {
@@ -491,6 +486,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline &&
          Style.ColumnLimit > 0)))) {
     return true;
+  }
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
+      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
+    const auto LambdaBodyLength =
+        getLengthToMatchingParen(Current, State.Stack);
+    return LambdaBodyLength > getColumnLimit(State);
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
@@ -824,6 +825,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
     if (Prev->BlockParameterCount == 0)
       return false;
+
+    // A lambda brace that must break makes the single-line strategy impossible.
+    for (const auto *Tok = &Current; Tok && Tok != Prev->MatchingParen;
+         Tok = Tok->Next) {
+      if (Tok->is(TT_LambdaLBrace) && Tok->MustBreakBefore)
+        return false;
+    }
 
     // Multiple lambdas in the same function call.
     if (Prev->BlockParameterCount > 1)
@@ -1309,8 +1317,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !Current.MatchingParen->Children.empty()) {
       // lambdas and arrow functions are expressions, thus their r_brace is not
       // on its own line, and thus not covered by UnwrappedLineFormatter's logic
-      // about removing empty lines on closing blocks. Special case them here.
-      MaxEmptyLinesToKeep = 1;
+      // about removing empty lines on closing blocks. Special case them here
+      // with an exception if the KeepEmptyLines.AtEndOfBlock is used.
+      if (!Style.KeepEmptyLines.AtEndOfBlock)
+        MaxEmptyLinesToKeep = 1;
     }
     const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
@@ -1387,8 +1397,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
       PreviousNonComment->isNoneOf(
-          TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
-          TT_LeadingJavaAnnotation) &&
+          TT_BinaryOperator, TT_EnumEqual, TT_FunctionAnnotationRParen,
+          TT_JavaAnnotation, TT_LeadingJavaAnnotation) &&
       Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
       // We don't want to enforce line breaks for subsequent arguments just
       // because we have been forced to break before a lambda body.

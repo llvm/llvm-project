@@ -171,6 +171,8 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_PP_CXXStdModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
   case TY_LLVM_IR: case TY_LLVM_BC:
+  case TY_CIR:
+  case TY_CIRBC:
   case TY_API_INFO:
     return true;
   }
@@ -367,6 +369,8 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("CPP", TY_CXX)
       .Case("c++", TY_CXX)
       .Case("C++", TY_CXX)
+      .Case("cir", TY_CIR)
+      .Case("cirbc", TY_CIRBC)
       .Case("cui", TY_PP_CUDA)
       .Case("cxx", TY_CXX)
       .Case("CXX", TY_CXX)
@@ -429,9 +433,8 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(const clang::driver::Driver &Driver,
-                            llvm::opt::DerivedArgList &DAL,
-                            llvm::ArrayRef<InputTy> Inputs, ID Id) {
-  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL, Inputs));
+                            llvm::opt::DerivedArgList &DAL, ID Id) {
+  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL));
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {

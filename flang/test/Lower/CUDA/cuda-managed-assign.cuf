@@ -36,9 +36,9 @@ subroutine managed_array_assign()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_array_assign()
-! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_device>}
-! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>}
-! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<device_host>}
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} transfer_kind(device_device) hasManagedOrUnifedSymbols
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} transfer_kind(host_device) hasManagedOrUnifedSymbols
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} transfer_kind(device_host) hasManagedOrUnifedSymbols
 
 subroutine managed_array_assign_2d()
   integer(4), managed :: ma(4,16), mb(4,16)
@@ -48,8 +48,8 @@ subroutine managed_array_assign_2d()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_array_assign_2d()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
 
 ! A whole array component counts as a whole array when the component itself has
 ! the managed attribute.
@@ -62,7 +62,7 @@ subroutine managed_component_attr_assign()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_attr_assign()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 ! The attribute of a component describes the data the component designates, so it
 ! prevails over the attribute of the object the component is taken from. A device
@@ -84,10 +84,10 @@ subroutine device_component_of_managed(n, i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPdevice_component_of_managed
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
 
 ! The object's attribute still applies to a component that has none.
 subroutine host_component_of_managed(n, i)
@@ -113,8 +113,8 @@ subroutine managed_mixed_whole_section()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_mixed_whole_section()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 ! CHECK-NOT: cuf.data_transfer
 
 ! A whole managed array is copied from a constant, a host scalar, a host array or
@@ -129,9 +129,9 @@ subroutine managed_whole_from_host(hs)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_whole_from_host
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
 
 ! The host cannot access device memory directly, so an assignment between managed
 ! and device data is a copy in both directions, sections included.
@@ -150,11 +150,11 @@ subroutine managed_device_transfer(n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_device_transfer
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
 
 ! An allocatable left-hand side is assigned on the host so that it can be
 ! reallocated, but not when either side is device data: an assignment between
@@ -170,8 +170,8 @@ subroutine managed_device_alloc_transfer()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_device_alloc_transfer
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 ! Only the managed side has to be whole: a host section can be the target of a
 ! whole managed array copy.
@@ -185,7 +185,7 @@ subroutine host_section_from_managed(n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPhost_section_from_managed
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
 
 ! A managed function result is copied whatever the shape of the left-hand side.
 subroutine managed_func_result()
@@ -197,8 +197,8 @@ subroutine managed_func_result()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_func_result()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
 
 subroutine managed_func_result_section()
   use mfr
@@ -207,7 +207,7 @@ subroutine managed_func_result_section()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_func_result_section()
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_device)
 
 ! Pinned data is host memory, so a whole managed array and device data on the
 ! other side are copied.
@@ -223,9 +223,9 @@ subroutine pinned_transfer(n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPpinned_transfer
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
-! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(device_host)
+! CHECK: cuf.data_transfer {{.*}}transfer_kind(host_device)
 
 ! Assignments done on the host.
 

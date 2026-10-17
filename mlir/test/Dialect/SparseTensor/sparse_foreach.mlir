@@ -183,3 +183,20 @@ func.func @symbolic_crd_translate(%i: index, %j: index)
       as #Symbolic : index, index, index
   return %l0, %l1, %l2 : index, index, index
 }
+
+// -----
+
+// A plain dimension that follows a blocked one: the inferred lvlToDim must
+// return the dimensions in dimension order.
+#MixedBlock = #sparse_tensor.encoding<{
+  map = (i, j) -> (j : dense, i floordiv 2 : compressed, i mod 2 : singleton)
+}>
+
+// CHECK-LABEL: func.func @sparse_crd_translate_mixed_block(
+// CHECK-SAME:    %[[L0:.*]]: index, %[[L1:.*]]: index, %[[L2:.*]]: index)
+// CHECK:         %[[D0:.*]] = affine.apply {{.*}}[%[[L1]], %[[L2]]]
+// CHECK:         return %[[D0]], %[[L0]] : index, index
+func.func @sparse_crd_translate_mixed_block(%l0: index, %l1: index, %l2: index) -> (index, index) {
+  %d0, %d1 = sparse_tensor.crd_translate lvl_to_dim [%l0, %l1, %l2] as #MixedBlock : index, index
+  return %d0, %d1 : index, index
+}

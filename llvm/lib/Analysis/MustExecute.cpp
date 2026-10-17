@@ -150,8 +150,15 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
       return false;
   }
 
-  auto DL = ExitBlock->getModule()->getDataLayout();
-  auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
+  // The induction variable starts at the value coming into the header from
+  // outside the loop. A loop that is not in simplified form has no preheader,
+  // but the header can still have a single predecessor outside the loop.
+  BasicBlock *Predecessor = CurLoop->getLoopPredecessor();
+  if (!Predecessor)
+    return false;
+
+  auto DL = ExitBlock->getDataLayout();
+  auto *IVStart = LHS->getIncomingValueForBlock(Predecessor);
   auto *SimpleValOrNull = simplifyCmpInst(
       Pred, IVStart, RHS, {DL, /*TLI*/ nullptr, DT, /*AC*/ nullptr, BI});
   auto *SimpleCst = dyn_cast_or_null<Constant>(SimpleValOrNull);
@@ -287,7 +294,7 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
     return !HeaderMayThrow ||
-           &*Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
+           &*Inst.getParent()->getFirstNonPHIOrPseudoProbe() == &Inst;
 
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.

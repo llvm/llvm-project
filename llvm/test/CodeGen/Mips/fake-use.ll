@@ -3,7 +3,7 @@
 define void @fake_use(ptr %aaaa) {
 ; CHECK-LABEL: fake_use:
 ; CHECK:       # %bb.0:    # %entry
-; CHECK-NEXT:              # fake_use: $a0 
+; CHECK-NEXT:              # fake_use: $r4 
 ; CHECK-NEXT:    jr $ra 
 ; CHECK-NEXT:    nop
 entry:

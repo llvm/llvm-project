@@ -43,7 +43,8 @@ static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS);
+                             raw_ostream &OS,
+                             unsigned NumMissingTrailingParams = 0);
 
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
@@ -1338,13 +1339,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 /// \p IsVarArg. The overloaded types for the intrinsic are pushed to the
 /// \p OverloadTys vector.
 ///
+/// If \p NumMissingTrailingParams is non-zero, \p FTy may omit exactly that
+/// many trailing parameters. Omitted parameters must have concrete integer
+/// types and therefore cannot contribute an unresolved overload type.
+///
 /// If the type is not valid, returns false and prints an error message to
 /// \p OS.
 static bool isSignatureValid(FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS) {
+                             raw_ostream &OS,
+                             unsigned NumMissingTrailingParams) {
   SmallVector<DeferredIntrinsicMatchInfo, 2> DeferredChecks;
 
   assert(!Infos.empty() && "Table consistency error");
@@ -1357,9 +1363,10 @@ static bool isSignatureValid(FunctionType *FTy,
                          DeferredChecks, false, OS))
     return false;
 
-  if (FTy->getNumParams() != NumArgs) {
+  unsigned ProvidedArgs = FTy->getNumParams();
+  if (ProvidedArgs + NumMissingTrailingParams != NumArgs) {
     OS << "intrinsic has incorrect number of args. Expected " << NumArgs
-       << ", but got " << FTy->getNumParams();
+       << ", but got " << ProvidedArgs;
     return false;
   }
 
@@ -1377,6 +1384,18 @@ static bool isSignatureValid(FunctionType *FTy,
                            DeferredChecks, true, OS))
       return false;
   }
+
+  // Default arguments are materialized as ConstantInt values, requiring one
+  // concrete integer descriptor per omitted parameter.
+  if (NumMissingTrailingParams != 0 &&
+      (Infos.size() != NumMissingTrailingParams ||
+       llvm::any_of(Infos, [](Intrinsic::IITDescriptor D) {
+         return D.Kind != Intrinsic::IITDescriptor::Integer;
+       }))) {
+    OS << "cannot omit trailing parameters that are overloaded or non-integer";
+    return false;
+  }
+  Infos = Infos.drop_front(NumMissingTrailingParams);
 
   if (!Infos.empty()) {
     OS << "intrinsic has too few arguments!";
@@ -1404,13 +1423,22 @@ bool Intrinsic::hasStructReturnType(ID id) {
 bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
                                  SmallVectorImpl<Type *> &OverloadTys,
                                  raw_ostream &OS) {
+  return isSignatureValid(ID, FT, OverloadTys,
+                          /*NumMissingTrailingParams=*/0, OS);
+}
+
+bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+                                 SmallVectorImpl<Type *> &OverloadTys,
+                                 unsigned NumMissingTrailingParams,
+                                 raw_ostream &OS) {
   if (!ID)
     return false;
 
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
   auto [TableRef, NumArgs, IsVarArg] = getIntrinsicInfoTableEntries(ID, Table);
 
-  return ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, OS);
+  return ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, OS,
+                            NumMissingTrailingParams);
 }
 
 bool Intrinsic::isSignatureValid(Function *F,

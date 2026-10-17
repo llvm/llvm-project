@@ -3,7 +3,7 @@
 llvm.func @mbarrier_arrive_drop_generic(%barrier: !llvm.ptr, %count : i32) {
   // CHECK-LABEL: define void @mbarrier_arrive_drop_generic(ptr %0, i32 %1) {
   // CHECK-NEXT: %3 = addrspacecast ptr %0 to ptr addrspace(3)
-  // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %3, i32 1)
+  // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.drop.shared(ptr addrspace(3) %3)
   // CHECK-NEXT: %5 = addrspacecast ptr %0 to ptr addrspace(3)
   // CHECK-NEXT: %6 = call i64 @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %5, i32 %1)
   // CHECK-NEXT: %7 = addrspacecast ptr %0 to ptr addrspace(3)
@@ -34,7 +34,7 @@ llvm.func @mbarrier_arrive_drop_generic(%barrier: !llvm.ptr, %count : i32) {
 
 llvm.func @mbarrier_arrive_drop_shared(%barrier: !llvm.ptr<3>, %count : i32) {
   // CHECK-LABEL: define void @mbarrier_arrive_drop_shared(ptr addrspace(3) %0, i32 %1) {
-  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %0, i32 1)
+  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.drop.shared(ptr addrspace(3) %0)
   // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %0, i32 %1)
   // CHECK-NEXT: %5 = call i64 @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %0, i32 %1)
   // CHECK-NEXT: %6 = call i64 @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %0, i32 %1)
@@ -99,5 +99,18 @@ llvm.func @mbarrier_arrive_drop_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   // CHECK-NEXT: }
   %count = nvvm.read.ptx.sreg.ntid.x : i32
   %0 = nvvm.mbarrier.arrive_drop.nocomplete %barrier, %count : !llvm.ptr<3>, i32  -> i64
+  llvm.return
+}
+
+llvm.func @mbarrier_arrive_drop_ignore_retval(%barrier: !llvm.ptr<3>) {
+  // CHECK-LABEL: define void @mbarrier_arrive_drop_ignore_retval(ptr addrspace(3) %0) {
+  // CHECK-NEXT: %2 = call i64 @llvm.nvvm.mbarrier.arrive.drop.shared(ptr addrspace(3) %0)
+  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.drop.shared(ptr addrspace(3) %0)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  // Result silently discarded (backward compatible form)
+  nvvm.mbarrier.arrive_drop %barrier : !llvm.ptr<3>
+  // Result explicitly captured
+  %0 = nvvm.mbarrier.arrive_drop %barrier : !llvm.ptr<3> -> i64
   llvm.return
 }

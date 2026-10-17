@@ -9,11 +9,6 @@
 
 # OpenMP Declare Target
 
-```{contents}
----
-local:
----
-```
 
 ## Introduction to Declare Target
 
@@ -93,8 +88,11 @@ operations to access the appropriate interface functions, e.g.:
 
 ```C++
 auto declareTargetGlobal =
-llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(Op.getOperation());
-declareTargetGlobal.isDeclareTarget();
+    llvm::cast<mlir::omp::DeclareTargetInterface>(op.getOperation());
+auto declareTargetAttr = declareTargetGlobal.getDeclareTarget();
+if (declareTargetAttr) {
+    auto deviceType = declareTargetAttr.getDeviceType();
+}
 ```
 
 ## Declare Target Fortran OpenMP Lowering
