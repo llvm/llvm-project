@@ -341,3 +341,73 @@ define i16 @srl_freeze_load_i64_to_i16(ptr %p) {
   %trunc = trunc i64 %srl to i16
   ret i16 %trunc
 }
+
+; The narrowed load already exists. Replacing the load under the multi-use
+; freeze makes CSE merge the freeze, and then the AND being combined, into
+; existing nodes.
+define i8 @and_freeze_multi_use_load_cse(i8 %a, i1 %cond, ptr %p, ptr %q) {
+; CHECK-LABEL: and_freeze_multi_use_load_cse:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    tbz w1, #0, LBB28_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    tbnz w8, #0, LBB28_3
+; CHECK-NEXT:    b LBB28_4
+; CHECK-NEXT:  LBB28_2: ; %body
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldrb w8, [x2]
+; CHECK-NEXT:    and w10, w0, #0xff
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    strb w8, [sp, #15]
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    strb w8, [x3]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    csel x9, x2, x3, eq
+; CHECK-NEXT:    ldrh w9, [x9]
+; CHECK-NEXT:    cmp w9, #0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    cmp w8, w10
+; CHECK-NEXT:    cset w8, ne
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    tbz w8, #0, LBB28_4
+; CHECK-NEXT:  LBB28_3: ; %exit1
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:  LBB28_4: ; %common.ret
+; CHECK-NEXT:    ret
+entry:
+  %s = alloca i8, align 1
+  br i1 %cond, label %join, label %body
+
+body:
+  %l1 = load i8, ptr %p, align 1
+  store i8 %l1, ptr %s, align 1
+  %l2 = load i8, ptr %p, align 1
+  store i8 %l2, ptr %q, align 1
+  %c1 = icmp ne i8 %l1, 0
+  %z1 = zext i1 %c1 to i8
+  %c2 = icmp eq i8 %l2, %z1
+  %x = load i16, ptr %p, align 1
+  %y = load i16, ptr %q, align 1
+  %sel = select i1 %c2, i16 %x, i16 %y
+  %c3 = icmp ne i16 %sel, 0
+  %l3 = load i8, ptr %s, align 1
+  %m = and i8 %l3, 1
+  %c4 = icmp ne i8 %m, %a
+  br label %join
+
+join:
+  %p1 = phi i1 [ false, %entry ], [ %c3, %body ]
+  %p2 = phi i1 [ false, %entry ], [ %c4, %body ]
+  br i1 %p2, label %exit1, label %exit2
+
+exit1:
+  %d = zext i8 %a to i32
+  ret i8 0
+
+exit2:
+  %r = zext i1 %p1 to i8
+  ret i8 %r
+}
