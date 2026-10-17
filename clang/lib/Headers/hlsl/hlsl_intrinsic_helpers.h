@@ -104,6 +104,39 @@ template <typename T> constexpr T fmod_impl(T X, T Y) {
 #endif
 }
 
+// Returns the mantissa of X, which has the sign of X and an absolute value in
+// [0.5, 1), and writes the exponent to Exp such that X = Mant * 2^Exp. X can be
+// a scalar, vector or matrix of float.
+template <typename T> constexpr T frexp_impl(T X, out T Exp) {
+  auto Bits = bit_cast<uint>(X);
+  auto ExpBits = Bits & 0x7f800000u;
+  // Zeros, denormals, infinities and NaNs are returned as they are, with an
+  // exponent of 0. These are exactly the cases where the exponent field is 0 or
+  // all ones, so ExpBits - 1 is at least 0x7f7fffff, whether it wraps around or
+  // not. This avoids ||, which is not supported on vectors.
+  auto IsSpecial = (ExpBits - 1u) >= 0x7f7fffffu;
+  // Keep the sign and the fraction, and replace the exponent with the one for
+  // 0.5, which scales X into [0.5, 1).
+  auto MantBits = (Bits & 0x807fffffu) | 0x3f000000u;
+  T Mant = select(IsSpecial, X, bit_cast<float>(MantBits));
+  auto RawExp = (ExpBits >> 23u) - 126u;
+  Exp = select(IsSpecial, static_cast<T>(0),
+               static_cast<T>(bit_cast<int>(RawExp)));
+  return Mant;
+}
+
+// Matrices do not support the bitwise operators, so frexp_impl works on the
+// elements of the matrix as a vector.
+template <int R, int C>
+constexpr matrix<float, R, C> frexp_impl(matrix<float, R, C> X,
+                                         out matrix<float, R, C> Exp) {
+  vector<float, R * C> VecExp;
+  vector<float, R * C> VecMant =
+      frexp_impl(__builtin_bit_cast(vector<float, R * C>, X), VecExp);
+  Exp = __builtin_bit_cast(matrix<float, R, C>, VecExp);
+  return __builtin_bit_cast(matrix<float, R, C>, VecMant);
+}
+
 template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
 #if (__has_builtin(__builtin_spirv_smoothstep))
   return __builtin_spirv_smoothstep(Min, Max, X);
