@@ -48,6 +48,7 @@ LTOVisibility
 ReturnAddressAuthenticationHardening
 SafeStack
 ShadowCallStack
+SourceFortification
 StructureProtection
 SourceBasedCodeCoverage
 StandardCPlusPlusModules
