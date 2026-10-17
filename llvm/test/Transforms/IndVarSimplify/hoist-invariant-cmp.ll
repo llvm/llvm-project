@@ -5,10 +5,10 @@ define i64 @hoist_invariant_cmp(ptr %p, i64 %n, i64 %start) {
 ; CHECK-LABEL: define i64 @hoist_invariant_cmp(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
 ; CHECK-NEXT:    br i1 [[NEG]], label %[[EXIT_1:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IV]]
@@ -49,10 +49,10 @@ define i1 @cmp_used_outside_loop(ptr %p, i64 %n, i64 %start) {
 ; CHECK-LABEL: define i1 @cmp_used_outside_loop(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
 ; CHECK-NEXT:    br i1 [[NEG]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IV]]
@@ -90,13 +90,13 @@ define i8 @cmp_in_subloop(ptr %p, i64 %n, i64 %m, i64 %start) {
 ; CHECK-LABEL: define i8 @cmp_in_subloop(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i64 [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[START]], 0
 ; CHECK-NEXT:    br i1 [[NEG]], label %[[EXIT_1:.*]], label %[[INNER_LATCH]]
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[J]]
