@@ -296,12 +296,13 @@ populateTargetLoweringConversionTarget(mlir::ConversionTarget &target,
 
 void TargetLoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+
   std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
-  // If lower module is not available, skip the target lowering pass.
-  if (!lowerModule) {
-    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
-        << getName() << " pass";
-    return;
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
+    mod.emitError() << getArgument() << " requires a module with a supported '"
+                    << cir::CIRDialect::getTripleAttrName() << "' attribute";
+    return signalPassFailure();
   }
 
   const auto &targetInfo = lowerModule->getTargetLoweringInfo();
