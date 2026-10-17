@@ -128,6 +128,29 @@ SPIR-V Dialect op | LLVM Dialect op
 `spirv.UDiv`        | `llvm.udiv`
 `spirv.UMod`        | `llvm.urem`
 
+### Barrier ops
+
+#### `spirv.MemoryBarrier`
+
+`spirv.MemoryBarrier` is converted to `llvm.fence`. Only the ordering bits of
+the SPIR-V `MemorySemantics` operand are mapped:
+
+SPIR-V `MemorySemantics` ordering bit | `llvm.fence` ordering
+:-----------------------------------: | :-------------------:
+`Acquire`                             | `acquire`
+`Release`                             | `release`
+`AcquireRelease`                      | `acq_rel`
+`SequentiallyConsistent`              | `seq_cst`
+*(none — relaxed)*                    | *(erased)*
+
+Storage-class bits (`UniformMemory`, `WorkgroupMemory`, `CrossWorkgroupMemory`,
+...) have no LLVM counterpart and are ignored, as are `MakeAvailable` and
+`MakeVisible`, which are implied by LLVM's release/acquire semantics. A barrier
+with no ordering bit set orders nothing and is erased (LLVM has no `monotonic`
+fence). The `Memory` scope operand is not modelled because SPIR-V scopes have no
+portable LLVM `syncscope` strings, so the emitted `llvm.fence` uses the
+(conservative) system scope.
+
 ### Bitwise ops
 
 SPIR-V has a range of bit ops that are mapped to LLVM dialect ops, intrinsics or
@@ -638,7 +661,6 @@ As well as:
 *   spirv.GL.SAbs
 *   spirv.GL.Sinh
 *   spirv.GL.SSign
-*   spirv.MemoryBarrier
 *   spirv.mlir.referenceof
 *   spirv.SMod
 *   spirv.SpecConstant
