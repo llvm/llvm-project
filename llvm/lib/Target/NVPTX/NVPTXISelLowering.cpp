@@ -1148,6 +1148,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
                      Custom);
 
+  setOperationAction({ISD::ATOMIC_LOAD_FADD, ISD::ATOMIC_LOAD_FMIN,
+                      ISD::ATOMIC_LOAD_FMAX, ISD::ATOMIC_LOAD_FMINIMUMNUM,
+                      ISD::ATOMIC_LOAD_FMAXIMUMNUM},
+                     {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v2bf16,
+                      MVT::v4bf16, MVT::v8bf16, MVT::v2f32, MVT::v4f32},
+                     Custom);
+
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
@@ -3641,9 +3648,106 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   return NewSt;
 }
 
-SDValue
-NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+enum AtomVecOp : unsigned {
+  ATOM_VEC_FADD = 0,
+  ATOM_VEC_FMIN = 1,
+  ATOM_VEC_FMAX = 2,
+};
+
+// Replace a vector atomic with a target memory node that returns one value
+// per PTX register, followed by the chain. Half and bfloat values use packed
+// pairs when the instruction supports them.
+static void replaceVectorAtomicRMW(SDNode *N, SelectionDAG &DAG,
+                                   SmallVectorImpl<SDValue> &Results) {
+  auto *AN = cast<AtomicSDNode>(N);
+  EVT VecVT = AN->getValueType(0);
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned NumElts = VecVT.getVectorNumElements();
+  SDLoc DL(N);
+
+  bool IsAdd = N->getOpcode() == ISD::ATOMIC_LOAD_FADD;
+  // Packed scalar atomics only support add. Two-element min/max use v2.f16
+  // or v2.bf16; wider vectors use packed pairs for all supported operations.
+  bool Pack = EltVT != MVT::f32 && (IsAdd || NumElts > 2);
+  EVT RegVT = Pack ? EVT::getVectorVT(*DAG.getContext(), EltVT, 2) : EltVT;
+  unsigned NumRegs = Pack ? NumElts / 2 : NumElts;
+
+  unsigned NVPTXOpc;
+  switch (NumRegs) {
+  case 1:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V1;
+    break;
+  case 2:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V2;
+    break;
+  case 4:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V4;
+    break;
+  default:
+    llvm_unreachable("Unsupported vector width for atom");
+  }
+
+  unsigned OpCode;
+  switch (N->getOpcode()) {
+  case ISD::ATOMIC_LOAD_FADD:
+    OpCode = ATOM_VEC_FADD;
+    break;
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:
+    OpCode = ATOM_VEC_FMIN;
+    break;
+  case ISD::ATOMIC_LOAD_FMAX:
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+    OpCode = ATOM_VEC_FMAX;
+    break;
+  default:
+    llvm_unreachable("Unsupported atomic op for vector atom");
+  }
+
+  SmallVector<SDValue, 10> Ops;
+  Ops.push_back(AN->getChain());
+  Ops.push_back(AN->getBasePtr());
+  SDValue Val = AN->getVal();
+  for (unsigned I = 0; I < NumRegs; ++I) {
+    if (RegVT == VecVT)
+      Ops.push_back(Val);
+    else
+      Ops.push_back(DAG.getNode(
+          Pack ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL, RegVT,
+          Val, DAG.getVectorIdxConstant(Pack ? 2 * I : I, DL)));
+  }
+  Ops.push_back(DAG.getTargetConstant(OpCode, DL, MVT::i32));
+
+  SmallVector<EVT, 5> ResVTs(NumRegs, RegVT);
+  ResVTs.push_back(MVT::Other);
+
+  SDValue Result = DAG.getMemIntrinsicNode(NVPTXOpc, DL, DAG.getVTList(ResVTs),
+                                           Ops, VecVT, AN->getMemOperand());
+
+  SmallVector<SDValue, 8> Elts;
+  for (unsigned I = 0; I < NumRegs; ++I)
+    Elts.push_back(Result.getValue(I));
+
+  SDValue Vec = RegVT == VecVT ? Result
+                               : DAG.getNode(Pack ? ISD::CONCAT_VECTORS
+                                                  : ISD::BUILD_VECTOR,
+                                             DL, VecVT, Elts);
+  Results.push_back(Vec);
+  Results.push_back(Result.getValue(NumRegs));
+}
+
+SDValue NVPTXTargetLowering::LowerOperation(SDValue Op,
+                                            SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX:
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM: {
+    SmallVector<SDValue, 2> Results;
+    replaceVectorAtomicRMW(Op.getNode(), DAG, Results);
+    return DAG.getMergeValues(Results, SDLoc(Op));
+  }
   case ISD::RETURNADDR:
     return SDValue();
   case ISD::FRAMEADDR:
@@ -7934,13 +8038,22 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_SWAP:
     replaceAtomicSwap128(N, DAG, STI, Results);
     return;
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX:
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM: {
+    replaceVectorAtomicRMW(N, DAG, Results);
+    return;
+  }
   }
 }
 
 /// Returns how NVPTX should expand a scalar atomicrmw.
-static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
-    AtomicRMWInst::BinOp Op, Type *Ty, unsigned AddressSpace, const Function &F,
-    bool IgnoreDenormalMode, const NVPTXSubtarget &STI) {
+static TargetLoweringBase::AtomicExpansionKind
+getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
+                            unsigned AddressSpace, const Function &F,
+                            bool IgnoreFTZMismatch, const NVPTXSubtarget &STI) {
   using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
   assert(!Ty->isVectorTy() && "Expected a scalar atomicrmw type");
 
@@ -7959,12 +8072,6 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
     AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::FSub
                                             ? AtomicExpansionKind::Expand
                                             : AtomicExpansionKind::None;
-
-    // Both the -nvptx-allow-ftz-atomics option and per-instruction
-    // !atomic.ignore.denormal.mode say that denormal handling is insignificant
-    // here, so atom.add may be used even when its FTZ behavior disagrees with
-    // the function's.
-    const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
       const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
@@ -8072,25 +8179,101 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
   return AtomicExpansionKind::CmpXChg;
 }
 
+// Return the number of lanes in the widest native elementwise atomic for this
+// lane type/operation. Vector atomics require global memory; a generic pointer
+// can also refer to shared memory, where only the packed f16x2/bf16x2 adds are
+// available.
+static unsigned getWidestNativeAtomicRMWVectorWidth(
+    AtomicRMWInst::BinOp Op, Type *Ty, unsigned AddressSpace, const Function &F,
+    bool IgnoreFTZMismatch, const NVPTXSubtarget &STI) {
+  // PTX vector atom only supports floating-point add/min/max. sub is expanded
+  // to add.
+  bool IsAdd = Op == AtomicRMWInst::FAdd || Op == AtomicRMWInst::FSub;
+  if (!IsAdd && Op != AtomicRMWInst::FMin && Op != AtomicRMWInst::FMax &&
+      Op != AtomicRMWInst::FMinimumNum && Op != AtomicRMWInst::FMaximumNum)
+    return 0;
+
+  bool HasVector = AddressSpace == ADDRESS_SPACE_GLOBAL &&
+                   STI.hasFeature(NVPTX::SM90) && STI.hasFeature(NVPTX::PTX81);
+  if (Ty->isFloatTy()) {
+    bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
+               DenormalMode::PreserveSign;
+    return IsAdd && HasVector &&
+                   (FTZ || IgnoreFTZMismatch || STI.hasFeature(NVPTX::PTX94))
+               ? 4
+               : 0;
+  }
+
+  if (!Ty->isHalfTy() && !Ty->isBFloatTy())
+    return 0;
+
+  // Native f16/bf16 atomics always preserve denormals. If the function requires
+  // f16 flushing, use a CAS loop unless the mismatch is explicitly allowed.
+  if (Ty->isHalfTy()) {
+    bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Output ==
+               DenormalMode::PreserveSign;
+    if (FTZ && !IgnoreFTZMismatch)
+      return 0;
+  }
+
+  // Global vector atomics support up to eight f16/bf16 lanes.
+  if (HasVector)
+    return 8;
+
+  // Otherwise, only packed f16x2/bf16x2 add is available. These forms also
+  // support generic and shared addresses.
+  if (!IsAdd)
+    return 0;
+  if (AddressSpace != ADDRESS_SPACE_GENERIC &&
+      AddressSpace != ADDRESS_SPACE_GLOBAL &&
+      AddressSpace != ADDRESS_SPACE_SHARED)
+    return 0;
+
+  bool HasPackedAdd =
+      Ty->isHalfTy()
+          ? STI.hasFeature(NVPTX::SM60) && STI.hasFeature(NVPTX::PTX62)
+          : STI.hasFeature(NVPTX::SM90) && STI.hasFeature(NVPTX::PTX78);
+  return HasPackedAdd ? 2 : 0;
+}
+
 NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   const DataLayout &DL = AI->getDataLayout();
   AtomicRMWInst::BinOp Op = AI->getOperation();
-  const bool IgnoreDenormalMode =
+    // atom.add may be used even when its FTZ behavior disagrees with
+    // the functions'.
+  const bool IgnoreFTZMismatch =
+      AllowFTZAtomics ||
       AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
 
-  // TODO: once we support native elementwise vector atoms,
-  // return `AtomicExpansionKind::None` to preserve and lower them.
   if (AI->isElementwise()) {
     auto *VecTy = cast<FixedVectorType>(AI->getType());
     Type *Ty = VecTy->getElementType();
 
-    // Collapse <1 x T> elementwise RMWs to scalar RMWs
+    // Single-lane vectors have the scalar operation's expansion requirements.
+    // Native operations are scalarized by SelectionDAG type legalization.
     if (VecTy->getNumElements() == 1)
-      return AtomicExpansionKind::Expand;
+      return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
+                                         *AI->getFunction(), IgnoreFTZMismatch,
+                                         STI);
 
     uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+
+    unsigned NativeWidth = getWidestNativeAtomicRMWVectorWidth(
+        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(),
+        IgnoreFTZMismatch, STI);
+    if (NativeWidth) {
+      // Rewrite subtraction to addition in IR before preserving or splitting
+      // the native vector atomic.
+      if (Op == AtomicRMWInst::FSub)
+        return AtomicExpansionKind::Expand;
+      if (VecTy->getNumElements() <= NativeWidth && AI->getAlign() >= VecBytes)
+        return AtomicExpansionKind::None;
+      // Halving will find a native vector width or a scalar operation with
+      // sufficient alignment.
+      return AtomicExpansionKind::Expand;
+    }
 
     if (Op == AtomicRMWInst::BinOp::Xchg) {
       // Split exchanges that are too wide or insufficiently aligned until
@@ -8109,20 +8292,21 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     // If the scalar lane op is natively supported or expands to one, return
     // Expand so halving eventually bottoms out at the scalar base case. The
     // latter includes sub and fsub, which expand to add and fadd, respectively.
-    AtomicExpansionKind LaneExpansionKind = getScalarAtomicRMWExpansion(
-        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(),
-        IgnoreDenormalMode, STI);
+    AtomicExpansionKind LaneExpansionKind =
+        getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
+                                    *AI->getFunction(), IgnoreFTZMismatch, STI);
     if (LaneExpansionKind == AtomicExpansionKind::None ||
         LaneExpansionKind == AtomicExpansionKind::Expand)
       return AtomicExpansionKind::Expand;
 
-    // If the whole vector fits a single native cmpxchg, emit one wide
-    // cmpxchg loop at the current width.
-    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+    // If the whole vector fits a single native cmpxchg and has sufficient
+    // alignment, emit one wide cmpxchg loop at the current width.
+    if (VecBits <= getMaxAtomicSizeInBitsSupported() &&
+        AI->getAlign() >= VecBytes)
       return AtomicExpansionKind::CmpXChg;
 
-    // If the vector is too wide for a single native cmpxchg, halve further to
-    // emit multiple cmpxchg loops.
+    // Otherwise, halve until each piece is small enough and sufficiently
+    // aligned for a native cmpxchg.
     return AtomicExpansionKind::Expand;
   }
 
@@ -8130,48 +8314,55 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (Ty->isVectorTy())
     return AtomicExpansionKind::CmpXChg;
   return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
-                                     *AI->getFunction(), IgnoreDenormalMode,
+                                     *AI->getFunction(), IgnoreFTZMismatch,
                                      STI);
 }
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  // This function returns true iff AtomicExpandPass should enforce the
-  // instruction's ordering with fences instead of leaving that ordering on the
-  // atomic instruction itself. This covers CAS-loop emulation, seq_cst
-  // operations (which are not natively supported by the PTX `atom`
-  // instruction), and elementwise atomicrmw expansion.
-  //
-  // atomicrmw and cmpxchg instructions not efficiently supported by PTX
-  // are lowered to CAS emulation loops that preserve their memory order,
-  // syncscope, and volatile semantics. For PTX, it is more efficient to use
-  // atom.cas.relaxed.sco instructions within the loop, and fences before and
-  // after the loop to restore order.
-  //
-  // For ordered elementwise atomicrmw, if we expand elementwise, it is also
-  // more efficient to insert fences around the whole split sequence once and
-  // downgrade the ordering for the entire sequence, rather than having the
-  // stronger ordering on every expanded atomicrmw.
-  //
-  // On targets with memory-order qualifiers, atomic instructions efficiently
-  // supported by PTX are lowered to `atom.<op>.<sem>.<scope>` instructions with
-  // their corresponding memory order and scope. Since PTX does not support
-  // seq_cst, we emulate it by lowering to a fence.sc followed by an atom
-  // according to the PTX atomics ABI.
-  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
-  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
-    return (cast<IntegerType>(CI->getCompareOperand()->getType())
-                ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
-           !STI.hasMemoryOrdering() ||
-           CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
-  if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
+  // A true result lets AtomicExpand enforce the original ordering with fences
+  // and weaken the atomic itself. The pass only emits fences for ordered
+  // operations.
+  AtomicOrdering Ordering;
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    // Subword cmpxchg needs a CAS loop. Place fences outside the loop so its
+    // retries can use relaxed atomics.
+    if (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits())
+      return true;
+    Ordering = CI->getMergedOrdering();
+  } else if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
     AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
-    return Expansion == AtomicExpansionKind::CmpXChg ||
-           (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) ||
-           !STI.hasMemoryOrdering() ||
-           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+    // Enforce ordering around the entire RMW loop, leaving each CAS relaxed.
+    if (Expansion == AtomicExpansionKind::CmpXChg)
+      return true;
+
+    if (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) {
+      // AtomicExpand reprocesses subtraction after rewriting it to addition.
+      // Decide on fences then, so a native addition can retain the original
+      // ordering.
+      if (RI->getOperation() == AtomicRMWInst::Sub ||
+          RI->getOperation() == AtomicRMWInst::FSub)
+        return false;
+
+      // Splitting creates several atomics. Use one set of fences around the
+      // whole sequence instead of enforcing ordering on each piece.
+      return true;
+    }
+    Ordering = RI->getOrdering();
+  } else {
+    return false;
   }
-  return false;
+
+  // Older targets lack atomic memory-order qualifiers, so fences must enforce
+  // any ordering stronger than monotonic.
+  if (!STI.hasMemoryOrdering())
+    return true;
+
+  // Native atomics can carry acquire/release ordering, but PTX has no seq_cst
+  // qualifier. The PTX atomic ABI requires fence.sc followed by atom.acquire.
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  return Ordering == AtomicOrdering::SequentiallyConsistent;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
