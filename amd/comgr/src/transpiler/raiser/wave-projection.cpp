@@ -91,7 +91,7 @@ Value *WaveProjection::emitLaneIdx(IRBuilder<> &B) const {
   // at the top of the entry block or mem2reg/SROA may decline to promote them,
   // so insert at the first non-alloca instruction rather than the block start.
   BasicBlock &Entry = F->getEntryBlock();
-  IRBuilder<> EB(&Entry, Entry.getFirstNonPHIOrDbgOrAlloca());
+  IRBuilder<> EB(&Entry, Entry.getFirstNonPHIOrAlloca());
 
   Module *M = Entry.getModule();
   Type *I32Ty = EB.getInt32Ty();
@@ -122,7 +122,7 @@ Value *WaveProjection::emitTargetWorkitemId(IRBuilder<> &B,
                                           Intrinsic::amdgcn_workitem_id_z};
   static constexpr const char *Names[] = {"tid_x", "tid_y", "tid_z"};
   BasicBlock &Entry = F->getEntryBlock();
-  IRBuilder<> EB(&Entry, Entry.getFirstNonPHIOrDbgOrAlloca());
+  IRBuilder<> EB(&Entry, Entry.getFirstNonPHIOrAlloca());
   Function *Fn =
       Intrinsic::getOrInsertDeclaration(Entry.getModule(), Ids[Dimension]);
   return CachedWorkitemIds[Dimension] = EB.CreateCall(Fn, {}, Names[Dimension]);
