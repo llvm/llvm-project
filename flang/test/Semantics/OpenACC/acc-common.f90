@@ -39,3 +39,13 @@ program acc_decl_test
 !ERROR: Could not find COMMON block 'a_common_bad' used in OpenACC directive
 !$acc update device (/a_common_bad/)
 end program
+
+subroutine common_dsa_conflict()
+  integer :: a, b
+  common /dsa_common/ a, b
+
+  !ERROR: 'dsa_common' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc parallel private(/dsa_common/) firstprivate(/dsa_common/)
+  a = b
+  !$acc end parallel
+end subroutine
