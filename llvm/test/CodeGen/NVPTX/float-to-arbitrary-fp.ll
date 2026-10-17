@@ -1952,8 +1952,8 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-LABEL: to_f8e5m2_from_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<15>;
-; CHECK-NEXT:    .reg .b32 %r<8>;
-; CHECK-NEXT:    .reg .b64 %rd<60>;
+; CHECK-NEXT:    .reg .b32 %r<17>;
+; CHECK-NEXT:    .reg .b64 %rd<54>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [to_f8e5m2_from_f64_param_0];
@@ -2022,21 +2022,24 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    or.b64 %rd50, %rd49, %rd44;
 ; CHECK-NEXT:    setp.lt.s64 %p8, %rd47, 1;
 ; CHECK-NEXT:    selp.b64 %rd51, %rd35, %rd50, %p8;
+; CHECK-NEXT:    cvt.u32.u64 %r8, %rd51;
 ; CHECK-NEXT:    setp.gt.s64 %p9, %rd44, 3;
 ; CHECK-NEXT:    or.b64 %rd52, %rd33, 124;
-; CHECK-NEXT:    selp.b64 %rd53, %rd52, %rd51, %p9;
+; CHECK-NEXT:    cvt.u32.u64 %r9, %rd52;
+; CHECK-NEXT:    selp.b32 %r10, %r9, %r8, %p9;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd47, 30;
-; CHECK-NEXT:    selp.b64 %rd54, %rd53, %rd51, %p10;
+; CHECK-NEXT:    selp.b32 %r11, %r10, %r8, %p10;
 ; CHECK-NEXT:    setp.gt.s64 %p11, %rd47, 30;
-; CHECK-NEXT:    selp.b64 %rd55, %rd52, %rd54, %p11;
+; CHECK-NEXT:    selp.b32 %r12, %r9, %r11, %p11;
 ; CHECK-NEXT:    setp.eq.f64 %p12, %rd1, 0d0000000000000000;
-; CHECK-NEXT:    selp.b64 %rd56, %rd33, %rd55, %p12;
-; CHECK-NEXT:    abs.f64 %rd57, %rd1;
-; CHECK-NEXT:    setp.eq.f64 %p13, %rd57, 0d7FF0000000000000;
-; CHECK-NEXT:    selp.b64 %rd58, %rd52, %rd56, %p13;
+; CHECK-NEXT:    cvt.u32.u64 %r13, %rd33;
+; CHECK-NEXT:    selp.b32 %r14, %r13, %r12, %p12;
+; CHECK-NEXT:    abs.f64 %rd53, %rd1;
+; CHECK-NEXT:    setp.eq.f64 %p13, %rd53, 0d7FF0000000000000;
+; CHECK-NEXT:    selp.b32 %r15, %r9, %r14, %p13;
 ; CHECK-NEXT:    setp.nan.f64 %p14, %rd1, %rd1;
-; CHECK-NEXT:    selp.b64 %rd59, 126, %rd58, %p14;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %rd59;
+; CHECK-NEXT:    selp.b32 %r16, 126, %r15, %p14;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r16;
 ; CHECK-NEXT:    ret;
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret i8 %r
