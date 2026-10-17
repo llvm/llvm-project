@@ -1141,6 +1141,14 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   // Determine if we're within a context where we know that the lambda will
   // be dependent, because there are template parameters in scope.
+  //
+  // FIXME: A lambda in the noexcept specifier of an abbreviated function
+  // template (e.g. `auto&&`) is not marked dependent, even though it captures
+  // a dependent entity. Could this be because the implicit template parameter
+  // is not in scope while the specifier is parsed, leaving the lambda's
+  // dependency kind as LDK_Unknown? See:
+  // * https://github.com/llvm/llvm-project/issues/232874
+  // * https://github.com/llvm/llvm-project/issues/233102
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {

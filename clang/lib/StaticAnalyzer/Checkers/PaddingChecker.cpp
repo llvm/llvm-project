@@ -178,10 +178,11 @@ public:
       QualType Ty = FD->getType();
       if (Ty->isIncompleteArrayType())
         return true;
-      // Dependent field types have no known layout, so we can't compute the
-      // padding of the enclosing record. This can happen for lambda captures
-      // in a dependent context, e.g. an init-capture of a forwarding reference
-      // inside a noexcept specifier.
+      // Defensive backstop: a lambda closure type can be left non-dependent
+      // due to a bug in Sema (see SemaLambda.cpp), leaving a field of a bare
+      // dependent type whose layout cannot be computed. See:
+      // * https://github.com/llvm/llvm-project/issues/232874
+      // * https://github.com/llvm/llvm-project/issues/233102
       if (Ty->isDependentType())
         return true;
       return false;
