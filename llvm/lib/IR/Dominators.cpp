@@ -25,6 +25,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -64,7 +66,7 @@ template class LLVM_EXPORT_TEMPLATE
 template class LLVM_EXPORT_TEMPLATE
     llvm::DominatorTreeBase<BasicBlock, true>; // PostDomTreeBase
 
-template class llvm::cfg::Update<BasicBlock *>;
+template class LLVM_EXPORT_TEMPLATE llvm::cfg::Update<BasicBlock *>;
 
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
@@ -353,8 +355,9 @@ PreservedAnalyses DominatorTreePrinterPass::run(Function &F,
 PreservedAnalyses DominatorTreeVerifierPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  assert(DT.verify());
-  (void)DT;
+  if (!DT.verify())
+    reportFatalInternalError(createStringError(
+        "verify<domtree> detected an invalid dominator tree"));
   return PreservedAnalyses::all();
 }
 

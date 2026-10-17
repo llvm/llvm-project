@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=avx512bw,avx512vl -o - %s -stop-before livedebugvalues | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=avx512bw,avx512vl -o - %s -stop-before live-debug-values | FileCheck %s
 
 ;; Check we won't salvage debug info for vector type.
 ; CHECK-NOT: DBG_VALUE

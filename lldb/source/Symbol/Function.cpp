@@ -150,12 +150,23 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
   return GetLoadAddress(GetUnresolvedReturnPCAddress(), caller, target);
 }
 
-Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
+SymbolContext CallEdge::ResolveCallee(const Address &addr) {
+  SymbolContext sc;
+  addr.CalculateSymbolContext(&sc, eSymbolContextFunction);
+  if (!sc.function) {
+    LLDB_LOG(GetLog(LLDBLog::Step),
+             "CallEdge: Could not find complete function");
+    return SymbolContext();
+  }
+  return sc;
+}
+
+Address DirectCallEdge::ResolveCalleeAddress(ModuleList &images) const {
   if (!m_symbol_name)
-    return nullptr;
+    return Address();
 
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOG(log, "DirectCallEdge: Lazily parsing the call graph for {0}",
+  LLDB_LOG(log, "DirectCallEdge: Parsing the call graph for {0}",
            m_symbol_name);
 
   SymbolContextList sc_list;
@@ -165,22 +176,16 @@ Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
   if (num_matches == 0 || !sc_list[0].symbol) {
     LLDB_LOG(log, "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
              m_symbol_name);
-    return nullptr;
+    return Address();
   }
 
   Address callee_addr = sc_list[0].symbol->GetAddress();
   if (!callee_addr.IsValid()) {
     LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
-    return nullptr;
+    return Address();
   }
 
-  Function *f = callee_addr.CalculateSymbolContextFunction();
-  if (!f) {
-    LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
-    return nullptr;
-  }
-
-  return f;
+  return callee_addr;
 }
 
 DirectCallEdge::DirectCallEdge(const char *symbol_name,
@@ -191,10 +196,9 @@ DirectCallEdge::DirectCallEdge(const char *symbol_name,
                std::move(parameters)),
       m_symbol_name(symbol_name) {}
 
-Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
-  std::call_once(m_resolved_flag,
-                 [&] { m_callee_def = ResolveCallee(images); });
-  return m_callee_def;
+SymbolContext DirectCallEdge::GetCallee(ModuleList &images,
+                                        ExecutionContext &) {
+  return ResolveCallee(ResolveCalleeAddress(images));
 }
 
 IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
@@ -206,8 +210,8 @@ IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
                std::move(parameters)),
       call_target(std::move(call_target)) {}
 
-Function *IndirectCallEdge::GetCallee(ModuleList &images,
-                                      ExecutionContext &exe_ctx) {
+SymbolContext IndirectCallEdge::GetCallee(ModuleList &images,
+                                          ExecutionContext &exe_ctx) {
   Log *log = GetLog(LLDBLog::Step);
   Status error;
   llvm::Expected<Value> callee_addr_val = call_target.Evaluate(
@@ -217,14 +221,14 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   if (!callee_addr_val) {
     LLDB_LOG_ERROR(log, callee_addr_val.takeError(),
                    "IndirectCallEdge: Could not evaluate expression: {0}");
-    return nullptr;
+    return SymbolContext();
   }
 
   addr_t raw_addr =
       callee_addr_val->GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   if (raw_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "IndirectCallEdge: Could not extract address from scalar");
-    return nullptr;
+    return SymbolContext();
   }
 
   if (auto *process = exe_ctx.GetProcessPtr()) {
@@ -237,16 +241,10 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
   Address callee_addr;
   if (!exe_ctx.GetTargetPtr()->ResolveLoadAddress(raw_addr, callee_addr)) {
     LLDB_LOG(log, "IndirectCallEdge: Could not resolve callee's load address");
-    return nullptr;
+    return SymbolContext();
   }
 
-  Function *f = callee_addr.CalculateSymbolContextFunction();
-  if (!f) {
-    LLDB_LOG(log, "IndirectCallEdge: Could not find complete function");
-    return nullptr;
-  }
-
-  return f;
+  return ResolveCallee(callee_addr);
 }
 
 /// @}

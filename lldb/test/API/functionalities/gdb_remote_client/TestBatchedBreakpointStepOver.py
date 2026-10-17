@@ -59,6 +59,9 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
                     threadnum, threads_str, pcs_str
                 )
 
+            def cont(self):
+                return "W00"
+
             def setBreakpoint(self, packet):
                 return "OK"
 
@@ -160,7 +163,9 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
         self.assertTrue(bkpt.IsValid())
 
         # Continue, LLDB should step all threads over the breakpoint.
-        process.Continue()
+        self.assertSuccess(process.Continue())
+        self.assertState(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)
 
         # Collect packets from the log.
         received = self.server.responder.packetLog.get_received()

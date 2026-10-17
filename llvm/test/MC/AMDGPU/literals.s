@@ -237,8 +237,8 @@ v_cos_f16_e32 v5.l, lit(1.0)
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx600): v_cos_f16
 
-v_tanh_bf16 v5.l, 1.0
-// GFX1250: v_tanh_bf16_e32 v5.l, 1.0               ; encoding: [0xf2,0x94,0x0a,0x7e]
+v_tanh_bf16_e64 v5.l, 1.0 op_sel:[1,0]
+// GFX1250: v_tanh_bf16_e64 v5.l, 1.0 op_sel:[1,0]  ; encoding: [0x05,0x08,0xca,0xd5,0xf2,0x00,0x01,0x02]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx704): v_tanh_bf16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16
@@ -713,8 +713,8 @@ v_cos_f16_e32 v5.l, lit(1)
 // NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx600): v_cos_f16
 
-v_tanh_bf16 v5.l, 1
-// GFX1250: v_tanh_bf16_e32 v5.l, 1                 ; encoding: [0x81,0x94,0x0a,0x7e]
+v_tanh_bf16_e64 v5.l, 1 op_sel:[1,0]
+// GFX1250: v_tanh_bf16_e64 v5.l, 1 op_sel:[1,0]    ; encoding: [0x05,0x08,0xca,0xd5,0x81,0x00,0x01,0x02]
 // NOCI: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx704): v_tanh_bf16
 // NOGFX11: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx1100): v_tanh_bf16
 // NOGFX12: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx1200): v_tanh_bf16

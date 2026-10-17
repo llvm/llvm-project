@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopLoadElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -46,7 +47,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -64,16 +64,6 @@ using namespace llvm;
 
 #define LLE_OPTION "loop-load-elim"
 #define DEBUG_TYPE LLE_OPTION
-
-static cl::opt<unsigned> CheckPerElim(
-    "runtime-check-per-loop-load-elim", cl::Hidden,
-    cl::desc("Max number of memchecks allowed per eliminated load on average"),
-    cl::init(1));
-
-static cl::opt<unsigned> LoadElimSCEVCheckThreshold(
-    "loop-load-elimination-scev-check-threshold", cl::init(8), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed for Loop "
-             "Load Elimination"));
 
 STATISTIC(NumLoopLoadEliminted, "Number of loads eliminated by LLE");
 
@@ -190,10 +180,10 @@ public:
       return Candidates;
 
     // Find store->load dependences (consequently true dep).  Both lexically
-    // forward and backward dependences qualify.  Disqualify loads that have
-    // other unknown dependences.
+    // forward and backward dependences qualify.
+    // Disqualify loads that have other unsafe dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnsafeDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
@@ -203,9 +193,9 @@ public:
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
           Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDependence.insert(Source);
+          LoadsWithUnsafeDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDependence.insert(Destination);
+          LoadsWithUnsafeDependence.insert(Destination);
         continue;
       }
 
@@ -225,17 +215,21 @@ public:
         continue;
 
       // Only propagate if the stored values are bit/pointer castable.
-      if (!CastInst::isBitOrNoopPointerCastable(
-              getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getDataLayout()))
+      if (!CastInst::isBitOrNoopPointerCastable(getLoadStoreType(Store),
+                                                getLoadStoreType(Load),
+                                                Store->getDataLayout())) {
+        // This store may partially clobber the value from another forwarding
+        // candidate.
+        LoadsWithUnsafeDependence.insert(Load);
         continue;
+      }
 
       Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDependence.empty())
+    if (!LoadsWithUnsafeDependence.empty())
       Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDependence.count(C.Load);
+        return LoadsWithUnsafeDependence.count(C.Load);
       });
 
     return Candidates;
@@ -488,6 +482,7 @@ public:
   /// Top-level driver for each loop: find store->load forwarding
   /// candidates, add run-time checks and perform transformation.
   bool processLoop() {
+    const ScalarOptions &Opts = ScalarOptions::Global;
     LLVM_DEBUG(dbgs() << "\nIn \"" << L->getHeader()->getParent()->getName()
                       << "\" checking " << *L << "\n");
 
@@ -565,13 +560,14 @@ public:
     SmallVector<RuntimePointerCheck, 4> Checks = collectMemchecks(Candidates);
 
     // Too many checks are likely to outweigh the benefits of forwarding.
-    if (Checks.size() > Candidates.size() * CheckPerElim) {
+    if (Checks.size() >
+        Candidates.size() * Opts.runtime_check_per_loop_load_elim) {
       LLVM_DEBUG(dbgs() << "Too many run-time checks needed.\n");
       return false;
     }
 
     if (LAI.getPSE().getPredicate().getComplexity() >
-        LoadElimSCEVCheckThreshold) {
+        Opts.loop_load_elimination_scev_check_threshold) {
       LLVM_DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
     }

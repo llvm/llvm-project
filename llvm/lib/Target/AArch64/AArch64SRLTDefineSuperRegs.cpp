@@ -175,9 +175,9 @@ Register AArch64SRLTDefineSuperRegsImpl::getWidestSuperReg(
     return true;
   };
 
-  Register LargestSuperReg = AArch64::NoRegister;
+  Register LargestSuperReg;
   for (Register SR : TRI->superregs(R))
-    if (IsSuitableSuperReg(SR) && (LargestSuperReg == AArch64::NoRegister ||
+    if (IsSuitableSuperReg(SR) && (!LargestSuperReg.isValid() ||
                                    TRI->isSuperRegister(LargestSuperReg, SR)))
       LargestSuperReg = SR;
 
@@ -220,7 +220,7 @@ bool AArch64SRLTDefineSuperRegsImpl::run(MachineFunction &MF) {
       for (const MachineOperand &DefOp : MI.defs())
         if (Register R = getWidestSuperReg(DefOp.getReg(), RequiredBaseRegUnits,
                                            QHiRegUnits);
-            R != AArch64::NoRegister)
+            R.isValid())
           SuperRegs.insert(R);
 
       if (!SuperRegs.size())

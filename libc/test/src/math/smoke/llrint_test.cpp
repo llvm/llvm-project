@@ -10,5 +10,5 @@
 
 #include "src/math/llrint.h"
 
-LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(double, long long,
+LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Llrint, double, long long,
                                        LIBC_NAMESPACE::llrint)

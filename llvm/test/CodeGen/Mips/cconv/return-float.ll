@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=mips-linux-gnu -mattr=+soft-float -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32 %s
 ; RUN: llc -mtriple=mipsel-linux-gnu -mattr=+soft-float -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN-TODO: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 
 ; RUN: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s

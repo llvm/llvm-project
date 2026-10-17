@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that `_LIBCPP_ASSERT` and `_LIBCPP_ASSUME` are each a single expression.
+// Make sure that `_LIBCPP_ASSERT` is a single expression.
 // This is useful so we can use them  in places that require an expression, such as
 // in a constructor initializer list.
 
@@ -19,14 +19,7 @@ void f() {
   return _LIBCPP_ASSERT(true, "message");
 }
 
-void g() {
-  int i = (_LIBCPP_ASSUME(true), 3);
-  assert(i == 3);
-  return _LIBCPP_ASSUME(true);
-}
-
 int main(int, char**) {
   f();
-  g();
   return 0;
 }

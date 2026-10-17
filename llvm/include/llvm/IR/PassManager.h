@@ -44,6 +44,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
@@ -85,10 +86,10 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }
-
-  // TODO: remove once out of tree users are updated.
-  static bool isRequired() { return false; }
 };
+
+LLVM_ABI bool shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                 StringRef PassName);
 } // namespace detail
 
 class Function;
@@ -101,6 +102,11 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 template <typename DerivedT>
 struct RequiredPassInfoMixin : detail::PassInfoMixin<DerivedT> {
   static bool isRequired() { return true; }
+
+public:
+  bool shouldSkipOptimizationForOptBisect(IRUnitRef IR) {
+    return detail::shouldSkipOptimizationForOptBisect(IR, DerivedT::name());
+  }
 };
 
 /// A CRTP mix-in for passes that can be skipped.
@@ -379,11 +385,11 @@ public:
       return IMapI->second;
     }
 
-    Invalidator(SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated,
+    Invalidator(SmallDenseMap<AnalysisKey *, bool, 32> &IsResultInvalidated,
                 const AnalysisResultMapT &Results)
         : IsResultInvalidated(IsResultInvalidated), Results(Results) {}
 
-    SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated;
+    SmallDenseMap<AnalysisKey *, bool, 32> &IsResultInvalidated;
     const AnalysisResultMapT &Results;
   };
 
@@ -465,7 +471,7 @@ public:
   template <typename PassT>
   void verifyNotInvalidated(IRUnitT &IR, typename PassT::Result *Result) const {
     PreservedAnalyses PA = PreservedAnalyses::none();
-    SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
+    SmallDenseMap<AnalysisKey *, bool, 32> IsResultInvalidated;
     Invalidator Inv(IsResultInvalidated, AnalysisResults);
     assert(!Result->invalidate(IR, PA, Inv) &&
            "Cached result cannot be invalidated");

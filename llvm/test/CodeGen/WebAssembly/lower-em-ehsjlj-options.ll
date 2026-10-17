@@ -1,4 +1,4 @@
-; RUN: llc < %s -enable-emscripten-cxx-exceptions | FileCheck %s --check-prefix=EH
+; RUN: llc < %s -exception-model=emscripten | FileCheck %s --check-prefix=EH
 ; RUN: llc < %s -enable-emscripten-sjlj | FileCheck %s --check-prefix=SJLJ
 ; RUN: llc < %s | FileCheck %s --check-prefix=NONE
 

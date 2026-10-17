@@ -20,7 +20,7 @@ end subroutine target_firstprivate_scalar
 ! CHECK:         }
 
 ! CHECK-LABEL: func.func @_QPtarget_firstprivate_scalar()
-! CHECK:         %[[X_ALLOC:.*]] = fir.alloca i32 {bindc_name = "x", {{.*}}}
+! CHECK:         %[[X_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "x", {{.*}}}>
 ! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ALLOC]]
 
 ! CHECK:         omp.target {{.*}} private(

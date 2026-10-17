@@ -193,17 +193,16 @@ define void @fixed_known_tc(ptr noalias readonly %dst, ptr noalias readonly %src
 ; CHECK-UF1-NEXT:  entry:
 ; CHECK-UF1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-UF1:       vector.ph:
-; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 15)
 ; CHECK-UF1-NEXT:    br label [[VECTOR_BODY1:%.*]]
 ; CHECK-UF1:       vector.body:
 ; CHECK-UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY1]] ]
-; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_BODY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY1]] ]
+; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <4 x i1> [ splat (i1 true), [[VECTOR_BODY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY1]] ]
 ; CHECK-UF1-NEXT:    [[X:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-UF1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-UF1-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[ARRAYIDX]], <4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add i64 [[IV]], 4
+; CHECK-UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-UF1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX_NEXT]], i64 15)
 ; CHECK-UF1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-UF1-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true

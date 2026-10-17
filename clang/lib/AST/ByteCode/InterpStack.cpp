@@ -54,12 +54,8 @@ void InterpStack::clearTo(size_t NewSize) {
   assert(size() == NewSize);
 }
 
-void *InterpStack::peekData(size_t Size) const {
-  assert(Chunk && "Stack is empty!");
-
-  if (LLVM_LIKELY(Size <= Chunk->size()))
-    return reinterpret_cast<void *>(Chunk->start() + Chunk->Size - Size);
-
+// The "slow" part of peekData().
+void *InterpStack::peekDataSlow(size_t Size) const {
   StackChunk *Ptr = Chunk;
   while (Size > Ptr->size()) {
     Size -= Ptr->size();
@@ -70,16 +66,8 @@ void *InterpStack::peekData(size_t Size) const {
   return reinterpret_cast<void *>(Ptr->start() + Ptr->Size - Size);
 }
 
-void InterpStack::shrink(size_t Size) {
-  assert(Chunk && "Chunk is empty!");
-
-  // Likely case is that we simply remove something from the current chunk.
-  if (LLVM_LIKELY(Size <= Chunk->size())) {
-    Chunk->Size -= Size;
-    StackSize -= Size;
-    return;
-  }
-
+// The "slow" part of shrink().
+void InterpStack::shrinkSlow(size_t Size) {
   while (Size > Chunk->size()) {
     Size -= Chunk->size();
     if (Chunk->Next) {

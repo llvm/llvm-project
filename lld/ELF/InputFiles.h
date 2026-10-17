@@ -115,10 +115,6 @@ public:
   // Get filename to use for linker script processing.
   StringRef getNameForScript() const;
 
-  // Check if a non-common symbol should be extracted to override a common
-  // definition.
-  bool shouldExtractForCommon(StringRef name) const;
-
   // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
   // offsets in PLT call stubs.
   InputSection *ppc32Got2 = nullptr;

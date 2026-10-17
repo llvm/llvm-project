@@ -9,7 +9,7 @@ func.func @as_expr_class(%arg0 : !fir.class<!t>, %arg1: !fir.ref<!t>) {
    return
 }
 // CHECK-LABEL:   func.func @as_expr_class(
-// CHECK:           %[[VAL_6:.*]]:2 =  hlfir.declare %{{.*}} {uniq_name = ".tmp"} : (!fir.class<!fir.heap<!fir.type<t{i:i32}>>>) -> (!fir.class<!fir.type<t{i:i32}>>, !fir.class<!fir.type<t{i:i32}>>)
+// CHECK:           %[[VAL_6:.*]]:2 =  hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.class<!fir.heap<!fir.type<t{i:i32}>>>) -> (!fir.class<!fir.type<t{i:i32}>>, !fir.class<!fir.type<t{i:i32}>>)
 // CHECK:           %[[VAL_5:.*]] = arith.constant true
 // ... copy ...
 // CHECK:           %[[VAL_12:.*]] = fir.undefined tuple<!fir.class<!fir.type<t{i:i32}>>, i1>
@@ -25,7 +25,7 @@ func.func @as_expr_class_2(%arg0 : !fir.class<!fir.array<?x!t>>) {
    return
 }
 // CHECK-LABEL:   func.func @as_expr_class_2(
-// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<t{i:i32}>>>>) -> (!fir.class<!fir.array<?x!fir.type<t{i:i32}>>>, !fir.class<!fir.array<?x!fir.type<t{i:i32}>>>)
+// CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.class<!fir.heap<!fir.array<?x!fir.type<t{i:i32}>>>>) -> (!fir.class<!fir.array<?x!fir.type<t{i:i32}>>>, !fir.class<!fir.array<?x!fir.type<t{i:i32}>>>)
 // CHECK:           %[[VAL_9:.*]] = arith.constant true
 // ... copy ...
 // CHECK:           %[[VAL_16:.*]] = fir.undefined tuple<!fir.class<!fir.array<?x!fir.type<t{i:i32}>>>, i1>

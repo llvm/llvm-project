@@ -18,6 +18,8 @@
 
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -34,23 +36,12 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-ccmp"
-
-// Absolute maximum number of instructions allowed per speculated block.
-// This bypasses all other heuristics, so it should be set fairly high.
-static cl::opt<unsigned> BlockInstrLimit(
-    "aarch64-ccmp-limit", cl::init(30), cl::Hidden,
-    cl::desc("Maximum number of instructions per speculated block."));
-
-// Stress testing mode - disable heuristics.
-static cl::opt<bool> Stress("aarch64-stress-ccmp", cl::Hidden,
-                            cl::desc("Turn all knobs to 11"));
 
 STATISTIC(NumConsidered, "Number of ccmps considered");
 STATISTIC(NumPhiRejs, "Number of ccmps rejected (PHI)");
@@ -60,6 +51,8 @@ STATISTIC(NumHeadBranchRejs, "Number of ccmps rejected (Head branch)");
 STATISTIC(NumCmpBranchRejs, "Number of ccmps rejected (CmpBB branch)");
 STATISTIC(NumCmpTermRejs, "Number of ccmps rejected (CmpBB is cbz...)");
 STATISTIC(NumImmRangeRejs, "Number of ccmps rejected (Imm out of range)");
+STATISTIC(NumFoldedExtRejs,
+          "Number of ccmps rejected (Folded zero- or sign-extension)");
 STATISTIC(NumLiveDstRejs, "Number of ccmps rejected (Cmp dest live)");
 STATISTIC(NumMultNZCVUses, "Number of ccmps rejected (NZCV used)");
 STATISTIC(NumUnknNZCVDefs, "Number of ccmps rejected (NZCV def unknown)");
@@ -306,12 +299,20 @@ static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {
     CC = AArch64CC::NE;
     return true;
 
-  // For CB, cond is { -1, Opcode, CC, Op0, Op1, ... }
+  // For CB, cond is { -1, Opcode, CC, Op0, Op1 }
   case AArch64::CBWPri:
   case AArch64::CBXPri:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     assert(Cond.size() == 5 && "Unknown Cond array format");
+    // Pseudos using standard 4bit Arm condition codes.
+    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+    return true;
+
+  // For CBB and CBH, cond is { -1, Opcode, CC, Op0, Op1, Ext0, Ext1 }
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
+    assert(Cond.size() == 7 && "Unknown Cond array format");
     // Pseudos using standard 4bit Arm condition codes.
     CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
     return true;
@@ -337,7 +338,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     // CB encodes a uimm6, ccmp wants a uimm5 so we have to check if the
     // immediate fits.
     case AArch64::CBWPri:
-    case AArch64::CBXPri:
+    case AArch64::CBXPri: {
       assert(I->getOperand(2).isImm() && "Expected immediate operand");
       if (!isUInt<5>(I->getOperand(2).getImm())) {
         LLVM_DEBUG(dbgs() << "Immediate out of range for ccmp: " << *I);
@@ -345,6 +346,21 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
         return nullptr;
       }
       return &*I;
+    }
+    // Check if any of the operands would need zero- or sign-extension. If so,
+    // bail out
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt: {
+      assert(I->getOperand(4).isImm() && "Expected immediate operand");
+      assert(I->getOperand(5).isImm() && "Expected immediate operand");
+      if (I->getOperand(4).getImm() != AArch64_AM::InvalidShiftExtend ||
+          I->getOperand(5).getImm() != AArch64_AM::InvalidShiftExtend) {
+        LLVM_DEBUG(dbgs() << "Folded extend can't be folded into ccmp: " << *I);
+        ++NumFoldedExtRejs;
+        return nullptr;
+      }
+      return &*I;
+    }
     }
     ++NumCmpTermRejs;
     LLVM_DEBUG(dbgs() << "Flags not used by terminator: " << *I);
@@ -424,6 +440,8 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
     return false;
   }
 
+  const AArch64Options &CLOpts =
+      MF->getSubtarget<AArch64Subtarget>().getCLOpts();
   unsigned InstrCount = 0;
 
   // Check all instructions, except the terminators. It is assumed that
@@ -432,9 +450,9 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
     if (I.isDebugInstr())
       continue;
 
-    if (++InstrCount > BlockInstrLimit && !Stress) {
+    if (++InstrCount > CLOpts.ccmp_limit && !CLOpts.stress_ccmp) {
       LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
+                        << CLOpts.ccmp_limit << " instructions.\n");
       return false;
     }
 
@@ -698,6 +716,8 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
     FirstOp = 1;
     break;
   case AArch64::CBWPrr:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
     Opc = AArch64::CCMPWr;
     FirstOp = 1;
     break;
@@ -744,6 +764,8 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
       break;
     case AArch64::CBWPri:
     case AArch64::CBXPri:
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt:
     case AArch64::CBWPrr:
     case AArch64::CBXPrr:
       CC = static_cast<AArch64CC::CondCode>(CmpMI->getOperand(0).getImm());
@@ -780,6 +802,13 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
       // Therefore delta += 1
       delta = 1;
       break;
+    // The cbb / cbh case might need a zero- or sign-extension, costing another
+    // instruction
+    case AArch64::CBBAssertExt:
+    case AArch64::CBHAssertExt:
+      assert(HeadCond[5].isImm() && "Expected immediate operand");
+      delta = (HeadCond[5].getImm() != AArch64_AM::InvalidShiftExtend ? 2 : 1);
+      break;
     default:
       llvm_unreachable("Cannot convert Head branch");
     }
@@ -798,6 +827,8 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
   case AArch64::CBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     break;
@@ -814,7 +845,7 @@ class AArch64ConditionalComparesImpl {
   const MachineBranchProbabilityInfo *MBPI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
-  const TargetSubtargetInfo *STI;
+  const AArch64Subtarget *STI;
   // Does the proceeded function has Oz attribute.
   bool MinSize;
   MachineRegisterInfo *MRI;
@@ -918,7 +949,7 @@ void AArch64ConditionalComparesImpl::invalidateTraces() {
 ///
 bool AArch64ConditionalComparesImpl::shouldConvert() {
   // Stress testing mode disables all cost considerations.
-  if (Stress)
+  if (STI->getCLOpts().stress_ccmp)
     return true;
   if (!MinInstr)
     MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
@@ -998,7 +1029,7 @@ bool AArch64ConditionalComparesImpl::run(MachineFunction &MF) {
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  STI = &MF.getSubtarget();
+  STI = &MF.getSubtarget<AArch64Subtarget>();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();

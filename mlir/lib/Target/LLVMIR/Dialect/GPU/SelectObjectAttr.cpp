@@ -122,7 +122,7 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
       optLevel = optAttr.getValue();
   }
 
-  IRBuilder<> builder(module.getContext());
+  IRBuilder<> builder(module);
   auto *i32Ty = builder.getInt32Ty();
   auto *i64Ty = builder.getInt64Ty();
   auto *ptrTy = builder.getPtrTy(0);

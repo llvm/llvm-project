@@ -34,7 +34,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.6(0x3efbefbf), %bb.3(0x41041041)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-NEXT:   dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+  ; CHECK-NEXT:   $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
   ; CHECK-NEXT:   $rsi = COPY [[MOV32r0_1]]
   ; CHECK-NEXT:   CALL64r [[MOV32r0_]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp

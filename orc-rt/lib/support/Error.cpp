@@ -52,10 +52,7 @@ std::string ExceptionError::toString() const noexcept {
 
 extern "C" {
 
-orc_rt_Error_TypeId orc_rt_Error_getTypeId(orc_rt_ErrorRef Err) noexcept {
-  assert(Err && "Err must not be null");
-  return reinterpret_cast<ErrorInfoBase *>(Err)->dynamicClassID();
-}
+ORC_RT_C_RTTI_IMPL(StringError)
 
 void orc_rt_Error_consume(orc_rt_ErrorRef Err) noexcept {
   consumeError(unwrap(Err));
@@ -70,10 +67,6 @@ char *orc_rt_Error_toString(orc_rt_ErrorRef Err) noexcept {
 }
 
 void orc_rt_Error_freeErrorMessage(char *ErrMsg) noexcept { free(ErrMsg); }
-
-orc_rt_Error_TypeId orc_rt_StringError_getTypeId(void) noexcept {
-  return StringError::classID();
-}
 
 orc_rt_ErrorRef orc_rt_StringError_create(const char *ErrMsg) noexcept {
   return wrap(make_error<StringError>(ErrMsg));

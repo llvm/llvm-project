@@ -2592,21 +2592,22 @@ define i64 @stest_f64i64_mm(double %x) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #12
-; SOFT-NEXT:    sub sp, #12
+; SOFT-NEXT:    .pad #4
+; SOFT-NEXT:    sub sp, #4
 ; SOFT-NEXT:    bl __fixdfti
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    movs r0, #1
+; SOFT-NEXT:    movs r7, #1
 ; SOFT-NEXT:    movs r5, #0
 ; SOFT-NEXT:    ldr r6, .LCPI45_0
-; SOFT-NEXT:    adds r4, r7, #1
+; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
+; SOFT-NEXT:    adds r4, r0, #1
+; SOFT-NEXT:    mov r0, r6
 ; SOFT-NEXT:    mov r4, r1
 ; SOFT-NEXT:    sbcs r4, r6
 ; SOFT-NEXT:    mov r4, r2
 ; SOFT-NEXT:    sbcs r4, r5
 ; SOFT-NEXT:    mov r4, r3
 ; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r0
+; SOFT-NEXT:    mov r4, r7
 ; SOFT-NEXT:    blt .LBB45_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
 ; SOFT-NEXT:    mov r4, r5
@@ -2617,53 +2618,48 @@ define i64 @stest_f64i64_mm(double %x) {
 ; SOFT-NEXT:  @ %bb.3: @ %entry
 ; SOFT-NEXT:    beq .LBB45_13
 ; SOFT-NEXT:  .LBB45_4: @ %entry
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
 ; SOFT-NEXT:    beq .LBB45_14
 ; SOFT-NEXT:  .LBB45_5: @ %entry
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
 ; SOFT-NEXT:    bne .LBB45_7
 ; SOFT-NEXT:  .LBB45_6: @ %entry
-; SOFT-NEXT:    mov r7, r6
+; SOFT-NEXT:    str r6, [sp] @ 4-byte Spill
 ; SOFT-NEXT:  .LBB45_7: @ %entry
-; SOFT-NEXT:    lsls r3, r0, #31
-; SOFT-NEXT:    rsbs r4, r7, #0
-; SOFT-NEXT:    mov r4, r3
+; SOFT-NEXT:    lsls r0, r7, #31
+; SOFT-NEXT:    ldr r4, [sp] @ 4-byte Reload
+; SOFT-NEXT:    rsbs r4, r4, #0
+; SOFT-NEXT:    mov r4, r0
 ; SOFT-NEXT:    sbcs r4, r1
 ; SOFT-NEXT:    mov r4, r6
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r4, r2
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r6, r2
+; SOFT-NEXT:    sbcs r6, r3
 ; SOFT-NEXT:    bge .LBB45_15
 ; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    cmp r0, #0
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    beq .LBB45_16
 ; SOFT-NEXT:  .LBB45_9: @ %entry
 ; SOFT-NEXT:    bne .LBB45_11
 ; SOFT-NEXT:  .LBB45_10: @ %entry
-; SOFT-NEXT:    mov r1, r3
+; SOFT-NEXT:    mov r1, r0
 ; SOFT-NEXT:  .LBB45_11: @ %entry
-; SOFT-NEXT:    mov r0, r7
-; SOFT-NEXT:    add sp, #12
+; SOFT-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; SOFT-NEXT:    add sp, #4
 ; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:  .LBB45_12: @ %entry
 ; SOFT-NEXT:    mov r3, r4
 ; SOFT-NEXT:    bne .LBB45_4
 ; SOFT-NEXT:  .LBB45_13: @ %entry
 ; SOFT-NEXT:    mov r2, r4
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
 ; SOFT-NEXT:    bne .LBB45_5
 ; SOFT-NEXT:  .LBB45_14: @ %entry
-; SOFT-NEXT:    ldr r1, .LCPI45_0
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    mov r1, r0
 ; SOFT-NEXT:    beq .LBB45_6
 ; SOFT-NEXT:    b .LBB45_7
 ; SOFT-NEXT:  .LBB45_15: @ %entry
-; SOFT-NEXT:    mov r0, r5
-; SOFT-NEXT:    cmp r0, #0
+; SOFT-NEXT:    mov r7, r5
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    bne .LBB45_9
 ; SOFT-NEXT:  .LBB45_16: @ %entry
-; SOFT-NEXT:    mov r7, r0
+; SOFT-NEXT:    str r7, [sp] @ 4-byte Spill
 ; SOFT-NEXT:    beq .LBB45_10
 ; SOFT-NEXT:    b .LBB45_11
 ; SOFT-NEXT:    .p2align 2
@@ -2905,21 +2901,22 @@ define i64 @stest_f32i64_mm(float %x) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #12
-; SOFT-NEXT:    sub sp, #12
+; SOFT-NEXT:    .pad #4
+; SOFT-NEXT:    sub sp, #4
 ; SOFT-NEXT:    bl __fixsfti
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    movs r0, #1
+; SOFT-NEXT:    movs r7, #1
 ; SOFT-NEXT:    movs r5, #0
 ; SOFT-NEXT:    ldr r6, .LCPI48_0
-; SOFT-NEXT:    adds r4, r7, #1
+; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
+; SOFT-NEXT:    adds r4, r0, #1
+; SOFT-NEXT:    mov r0, r6
 ; SOFT-NEXT:    mov r4, r1
 ; SOFT-NEXT:    sbcs r4, r6
 ; SOFT-NEXT:    mov r4, r2
 ; SOFT-NEXT:    sbcs r4, r5
 ; SOFT-NEXT:    mov r4, r3
 ; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r0
+; SOFT-NEXT:    mov r4, r7
 ; SOFT-NEXT:    blt .LBB48_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
 ; SOFT-NEXT:    mov r4, r5
@@ -2930,53 +2927,48 @@ define i64 @stest_f32i64_mm(float %x) {
 ; SOFT-NEXT:  @ %bb.3: @ %entry
 ; SOFT-NEXT:    beq .LBB48_13
 ; SOFT-NEXT:  .LBB48_4: @ %entry
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
 ; SOFT-NEXT:    beq .LBB48_14
 ; SOFT-NEXT:  .LBB48_5: @ %entry
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
 ; SOFT-NEXT:    bne .LBB48_7
 ; SOFT-NEXT:  .LBB48_6: @ %entry
-; SOFT-NEXT:    mov r7, r6
+; SOFT-NEXT:    str r6, [sp] @ 4-byte Spill
 ; SOFT-NEXT:  .LBB48_7: @ %entry
-; SOFT-NEXT:    lsls r3, r0, #31
-; SOFT-NEXT:    rsbs r4, r7, #0
-; SOFT-NEXT:    mov r4, r3
+; SOFT-NEXT:    lsls r0, r7, #31
+; SOFT-NEXT:    ldr r4, [sp] @ 4-byte Reload
+; SOFT-NEXT:    rsbs r4, r4, #0
+; SOFT-NEXT:    mov r4, r0
 ; SOFT-NEXT:    sbcs r4, r1
 ; SOFT-NEXT:    mov r4, r6
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r4, r2
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r6, r2
+; SOFT-NEXT:    sbcs r6, r3
 ; SOFT-NEXT:    bge .LBB48_15
 ; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    cmp r0, #0
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    beq .LBB48_16
 ; SOFT-NEXT:  .LBB48_9: @ %entry
 ; SOFT-NEXT:    bne .LBB48_11
 ; SOFT-NEXT:  .LBB48_10: @ %entry
-; SOFT-NEXT:    mov r1, r3
+; SOFT-NEXT:    mov r1, r0
 ; SOFT-NEXT:  .LBB48_11: @ %entry
-; SOFT-NEXT:    mov r0, r7
-; SOFT-NEXT:    add sp, #12
+; SOFT-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; SOFT-NEXT:    add sp, #4
 ; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:  .LBB48_12: @ %entry
 ; SOFT-NEXT:    mov r3, r4
 ; SOFT-NEXT:    bne .LBB48_4
 ; SOFT-NEXT:  .LBB48_13: @ %entry
 ; SOFT-NEXT:    mov r2, r4
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
 ; SOFT-NEXT:    bne .LBB48_5
 ; SOFT-NEXT:  .LBB48_14: @ %entry
-; SOFT-NEXT:    ldr r1, .LCPI48_0
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    mov r1, r0
 ; SOFT-NEXT:    beq .LBB48_6
 ; SOFT-NEXT:    b .LBB48_7
 ; SOFT-NEXT:  .LBB48_15: @ %entry
-; SOFT-NEXT:    mov r0, r5
-; SOFT-NEXT:    cmp r0, #0
+; SOFT-NEXT:    mov r7, r5
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    bne .LBB48_9
 ; SOFT-NEXT:  .LBB48_16: @ %entry
-; SOFT-NEXT:    mov r7, r0
+; SOFT-NEXT:    str r7, [sp] @ 4-byte Spill
 ; SOFT-NEXT:    beq .LBB48_10
 ; SOFT-NEXT:    b .LBB48_11
 ; SOFT-NEXT:    .p2align 2
@@ -3218,23 +3210,24 @@ define i64 @stest_f16i64_mm(half %x) {
 ; SOFT:       @ %bb.0: @ %entry
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #12
-; SOFT-NEXT:    sub sp, #12
+; SOFT-NEXT:    .pad #4
+; SOFT-NEXT:    sub sp, #4
 ; SOFT-NEXT:    uxth r0, r0
 ; SOFT-NEXT:    bl __aeabi_h2f
 ; SOFT-NEXT:    bl __fixsfti
-; SOFT-NEXT:    mov r7, r0
-; SOFT-NEXT:    movs r0, #1
+; SOFT-NEXT:    movs r7, #1
 ; SOFT-NEXT:    movs r5, #0
 ; SOFT-NEXT:    ldr r6, .LCPI51_0
-; SOFT-NEXT:    adds r4, r7, #1
+; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
+; SOFT-NEXT:    adds r4, r0, #1
+; SOFT-NEXT:    mov r0, r6
 ; SOFT-NEXT:    mov r4, r1
 ; SOFT-NEXT:    sbcs r4, r6
 ; SOFT-NEXT:    mov r4, r2
 ; SOFT-NEXT:    sbcs r4, r5
 ; SOFT-NEXT:    mov r4, r3
 ; SOFT-NEXT:    sbcs r4, r5
-; SOFT-NEXT:    mov r4, r0
+; SOFT-NEXT:    mov r4, r7
 ; SOFT-NEXT:    blt .LBB51_2
 ; SOFT-NEXT:  @ %bb.1: @ %entry
 ; SOFT-NEXT:    mov r4, r5
@@ -3245,53 +3238,48 @@ define i64 @stest_f16i64_mm(half %x) {
 ; SOFT-NEXT:  @ %bb.3: @ %entry
 ; SOFT-NEXT:    beq .LBB51_13
 ; SOFT-NEXT:  .LBB51_4: @ %entry
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
 ; SOFT-NEXT:    beq .LBB51_14
 ; SOFT-NEXT:  .LBB51_5: @ %entry
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
 ; SOFT-NEXT:    bne .LBB51_7
 ; SOFT-NEXT:  .LBB51_6: @ %entry
-; SOFT-NEXT:    mov r7, r6
+; SOFT-NEXT:    str r6, [sp] @ 4-byte Spill
 ; SOFT-NEXT:  .LBB51_7: @ %entry
-; SOFT-NEXT:    lsls r3, r0, #31
-; SOFT-NEXT:    rsbs r4, r7, #0
-; SOFT-NEXT:    mov r4, r3
+; SOFT-NEXT:    lsls r0, r7, #31
+; SOFT-NEXT:    ldr r4, [sp] @ 4-byte Reload
+; SOFT-NEXT:    rsbs r4, r4, #0
+; SOFT-NEXT:    mov r4, r0
 ; SOFT-NEXT:    sbcs r4, r1
 ; SOFT-NEXT:    mov r4, r6
-; SOFT-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; SOFT-NEXT:    sbcs r4, r2
-; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; SOFT-NEXT:    sbcs r6, r2
+; SOFT-NEXT:    sbcs r6, r3
 ; SOFT-NEXT:    bge .LBB51_15
 ; SOFT-NEXT:  @ %bb.8: @ %entry
-; SOFT-NEXT:    cmp r0, #0
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    beq .LBB51_16
 ; SOFT-NEXT:  .LBB51_9: @ %entry
 ; SOFT-NEXT:    bne .LBB51_11
 ; SOFT-NEXT:  .LBB51_10: @ %entry
-; SOFT-NEXT:    mov r1, r3
+; SOFT-NEXT:    mov r1, r0
 ; SOFT-NEXT:  .LBB51_11: @ %entry
-; SOFT-NEXT:    mov r0, r7
-; SOFT-NEXT:    add sp, #12
+; SOFT-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; SOFT-NEXT:    add sp, #4
 ; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:  .LBB51_12: @ %entry
 ; SOFT-NEXT:    mov r3, r4
 ; SOFT-NEXT:    bne .LBB51_4
 ; SOFT-NEXT:  .LBB51_13: @ %entry
 ; SOFT-NEXT:    mov r2, r4
-; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
 ; SOFT-NEXT:    bne .LBB51_5
 ; SOFT-NEXT:  .LBB51_14: @ %entry
-; SOFT-NEXT:    ldr r1, .LCPI51_0
-; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    mov r1, r0
 ; SOFT-NEXT:    beq .LBB51_6
 ; SOFT-NEXT:    b .LBB51_7
 ; SOFT-NEXT:  .LBB51_15: @ %entry
-; SOFT-NEXT:    mov r0, r5
-; SOFT-NEXT:    cmp r0, #0
+; SOFT-NEXT:    mov r7, r5
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    bne .LBB51_9
 ; SOFT-NEXT:  .LBB51_16: @ %entry
-; SOFT-NEXT:    mov r7, r0
+; SOFT-NEXT:    str r7, [sp] @ 4-byte Spill
 ; SOFT-NEXT:    beq .LBB51_10
 ; SOFT-NEXT:    b .LBB51_11
 ; SOFT-NEXT:    .p2align 2

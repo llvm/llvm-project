@@ -15,5 +15,5 @@
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(float128, long,
+LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Lrintf128, float128, long,
                                        LIBC_NAMESPACE::lrintf128)

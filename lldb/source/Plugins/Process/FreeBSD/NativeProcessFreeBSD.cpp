@@ -1063,7 +1063,8 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 
-  std::error_code close_err = closeFile(pc.pc_fd);
+  llvm::sys::fs::file_t fd = pc.pc_fd;
+  std::error_code close_err = closeFile(fd);
   if (error.Fail())
     return error.ToError();
   if (close_err)

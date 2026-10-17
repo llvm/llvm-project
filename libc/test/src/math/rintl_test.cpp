@@ -10,4 +10,4 @@
 
 #include "src/math/rintl.h"
 
-LIST_RINT_TESTS(long double, LIBC_NAMESPACE::rintl)
+LIST_RINT_TESTS(Rintl, long double, LIBC_NAMESPACE::rintl)

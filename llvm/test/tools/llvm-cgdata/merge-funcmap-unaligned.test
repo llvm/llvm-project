@@ -1,0 +1,53 @@
+# UNSUPPORTED: system-windows
+
+# Merge object files whose cgdata (__llvm_merge) is not 4-byte aligned, as in
+# COFF object files or GNU archive members.
+
+RUN: split-file %s %t
+
+# Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw.cgtext -o %t/raw.cgdata
+RUN: echo -n "s/<RAW_BYTES>/" > %t/raw-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw.cgdata | tr -d ' \n\r\t' >> %t/raw-sed.txt
+RUN: echo "/g" >> %t/raw-sed.txt
+RUN: sed -f %t/raw-sed.txt %t/merge-template.yaml > %t/merge.yaml
+
+RUN: yaml2obj %t/merge.yaml -DOFFSET=0x41 -o %t/merge-1.o
+RUN: llvm-cgdata --merge --skip-trim %t/merge-1.o -o %t/merge-1.cgdata
+RUN: llvm-cgdata --show %t/merge-1.cgdata | FileCheck %s
+RUN: yaml2obj %t/merge.yaml -DOFFSET=0x42 -o %t/merge-2.o
+RUN: llvm-cgdata --merge --skip-trim %t/merge-2.o -o %t/merge-2.cgdata
+RUN: llvm-cgdata --show %t/merge-2.cgdata | FileCheck %s
+RUN: yaml2obj %t/merge.yaml -DOFFSET=0x43 -o %t/merge-3.o
+RUN: llvm-cgdata --merge --skip-trim %t/merge-3.o -o %t/merge-3.cgdata
+RUN: llvm-cgdata --show %t/merge-3.cgdata | FileCheck %s
+
+CHECK: Stable function map:
+CHECK-NEXT:  Unique hash Count: 1
+CHECK-NEXT:  Total function Count: 1
+CHECK-NEXT:  Mergeable function Count: 0
+
+;--- raw.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func1
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        3
+...
+
+;--- merge-template.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    __llvm_merge
+    Type:    SHT_PROGBITS
+    Offset:  [[OFFSET]]
+    Content: <RAW_BYTES>
