@@ -13648,9 +13648,14 @@ QualType Sema::GetSignedVectorType(QualType V) {
       return Context.getExtVectorType(Context.Int128Ty, VTy->getNumElements());
     if (TypeSize == Context.getTypeSize(Context.LongTy))
       return Context.getExtVectorType(Context.LongTy, VTy->getNumElements());
-    assert(TypeSize == Context.getTypeSize(Context.LongLongTy) &&
-           "Unhandled vector element size in vector compare");
-    return Context.getExtVectorType(Context.LongLongTy, VTy->getNumElements());
+    if (TypeSize == Context.getTypeSize(Context.LongLongTy))
+      return Context.getExtVectorType(Context.LongLongTy,
+                                      VTy->getNumElements());
+    if (const auto *BIT = VTy->getElementType()->getAs<BitIntType>())
+      return Context.getExtVectorType(
+          Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+          VTy->getNumElements());
+    llvm_unreachable("Unhandled vector element size in vector compare");
   }
 
   if (TypeSize == Context.getTypeSize(Context.Int128Ty))
@@ -13668,10 +13673,14 @@ QualType Sema::GetSignedVectorType(QualType V) {
   if (TypeSize == Context.getTypeSize(Context.ShortTy))
     return Context.getVectorType(Context.ShortTy, VTy->getNumElements(),
                                  VectorKind::Generic);
-  assert(TypeSize == Context.getTypeSize(Context.CharTy) &&
-         "Unhandled vector element size in vector compare");
-  return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
-                               VectorKind::Generic);
+  if (TypeSize == Context.getTypeSize(Context.CharTy))
+    return Context.getVectorType(Context.CharTy, VTy->getNumElements(),
+                                 VectorKind::Generic);
+  if (const auto *BIT = VTy->getElementType()->getAs<BitIntType>())
+    return Context.getVectorType(
+        Context.getBitIntType(/*IsUnsigned=*/false, BIT->getNumBits()),
+        VTy->getNumElements(), VectorKind::Generic);
+  llvm_unreachable("Unhandled vector element size in vector compare");
 }
 
 QualType Sema::GetSignedSizelessVectorType(QualType V) {
