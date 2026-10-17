@@ -93,62 +93,33 @@ entry:
 ;   *p2 = (a * b) * c;
 ;   return d * c;
 define <4 x float> @multiple_muls_shuffle_external(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr %p1, ptr %p2) {
-; CHECK-IAENABLED-LABEL: multiple_muls_shuffle_external:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov d4, v1.d[1]
-; CHECK-IAENABLED-NEXT:    mov d5, v0.d[1]
-; CHECK-IAENABLED-NEXT:    mov d16, v2.d[1]
-; CHECK-IAENABLED-NEXT:    movi v17.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    zip1 v6.2s, v1.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    zip2 v7.2s, v0.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip1 v0.2s, v0.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip2 v1.2s, v1.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    movi v5.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    fmul v4.2s, v6.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fmls v5.2s, v1.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fmla v4.2s, v0.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    zip1 v1.2s, v2.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    fmla v5.2s, v0.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    zip2 v6.2s, v2.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IAENABLED-NEXT:    fmul v18.2s, v1.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
-; CHECK-IAENABLED-NEXT:    str d5, [x0]
-; CHECK-IAENABLED-NEXT:    fmla v18.2s, v5.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmls v17.2s, v6.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
-; CHECK-IAENABLED-NEXT:    fmla v17.2s, v5.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    st2 { v17.2s, v18.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: multiple_muls_shuffle_external:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-IADISABLED-NEXT:    mov d5, v1.d[1]
-; CHECK-IADISABLED-NEXT:    mov d16, v2.d[1]
-; CHECK-IADISABLED-NEXT:    movi v17.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    zip2 v6.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip1 v7.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip1 v4.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip2 v0.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    movi v5.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    fmul v1.2s, v7.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fmls v5.2s, v0.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    zip1 v6.2s, v2.2s, v16.2s
-; CHECK-IADISABLED-NEXT:    zip2 v16.2s, v2.2s, v16.2s
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v4.2s, v0.2s
-; CHECK-IADISABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IADISABLED-NEXT:    fmla v5.2s, v4.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fmul v4.2s, v6.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmls v17.2s, v16.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
-; CHECK-IADISABLED-NEXT:    str d5, [x0]
-; CHECK-IADISABLED-NEXT:    fmla v4.2s, v5.2s, v16.2s
-; CHECK-IADISABLED-NEXT:    fmla v17.2s, v5.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v17.4s, v4.4s
-; CHECK-IADISABLED-NEXT:    str q1, [x1]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: multiple_muls_shuffle_external:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d4, v1.d[1]
+; CHECK-NEXT:    mov d5, v0.d[1]
+; CHECK-NEXT:    mov d16, v2.d[1]
+; CHECK-NEXT:    movi v17.2s, #128, lsl #24
+; CHECK-NEXT:    zip1 v6.2s, v1.2s, v4.2s
+; CHECK-NEXT:    zip2 v7.2s, v0.2s, v5.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v5.2s
+; CHECK-NEXT:    zip2 v1.2s, v1.2s, v4.2s
+; CHECK-NEXT:    movi v5.2s, #128, lsl #24
+; CHECK-NEXT:    fmul v4.2s, v6.2s, v7.2s
+; CHECK-NEXT:    fmls v5.2s, v1.2s, v7.2s
+; CHECK-NEXT:    fmla v4.2s, v0.2s, v1.2s
+; CHECK-NEXT:    zip1 v1.2s, v2.2s, v16.2s
+; CHECK-NEXT:    fmla v5.2s, v0.2s, v6.2s
+; CHECK-NEXT:    zip2 v6.2s, v2.2s, v16.2s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fmul v18.2s, v1.2s, v4.2s
+; CHECK-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
+; CHECK-NEXT:    str d5, [x0]
+; CHECK-NEXT:    fmla v18.2s, v5.2s, v6.2s
+; CHECK-NEXT:    fmls v17.2s, v6.2s, v4.2s
+; CHECK-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
+; CHECK-NEXT:    fmla v17.2s, v5.2s, v1.2s
+; CHECK-NEXT:    st2 { v17.2s, v18.2s }, [x1]
+; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
   %strided.vec88 = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
@@ -187,64 +158,31 @@ entry:
 ; Expected to transform partially (only d * c).
 ; Shows that ld2 is not generated for `c` although it used by both complex `d * c` and non-complex `(a * b) * c` instruction chains.
 define <4 x float> @multiple_muls_shuffle_external_with_loads(ptr %ptr_a, ptr %ptr_b, ptr %ptr_c, ptr %ptr_d, ptr %p1, ptr %p2) {
-; CHECK-IAENABLED-LABEL: multiple_muls_shuffle_external_with_loads:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    ld2 { v0.2s, v1.2s }, [x0]
-; CHECK-IAENABLED-NEXT:    movi v4.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    ld2 { v2.2s, v3.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    fmls v4.2s, v3.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fmul v6.2s, v2.2s, v1.2s
-; CHECK-IAENABLED-NEXT:    fmla v4.2s, v0.2s, v2.2s
-; CHECK-IAENABLED-NEXT:    fmla v6.2s, v0.2s, v3.2s
-; CHECK-IAENABLED-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    str d4, [x4]
-; CHECK-IAENABLED-NEXT:    ldr q5, [x2]
-; CHECK-IAENABLED-NEXT:    mov d7, v5.d[1]
-; CHECK-IAENABLED-NEXT:    zip1 v0.2s, v5.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    zip2 v3.2s, v5.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    fmul v2.2s, v0.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmla v2.2s, v4.2s, v3.2s
-; CHECK-IAENABLED-NEXT:    fmls v1.2s, v3.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    fmla v1.2s, v4.2s, v0.2s
-; CHECK-IAENABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IAENABLED-NEXT:    st2 { v1.2s, v2.2s }, [x5]
-; CHECK-IAENABLED-NEXT:    ldr q1, [x3]
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v5.4s, v1.4s, #0
-; CHECK-IAENABLED-NEXT:    fcmla v0.4s, v5.4s, v1.4s, #90
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: multiple_muls_shuffle_external_with_loads:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    ldr q0, [x0]
-; CHECK-IADISABLED-NEXT:    ldr q1, [x1]
-; CHECK-IADISABLED-NEXT:    movi v6.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    mov d2, v0.d[1]
-; CHECK-IADISABLED-NEXT:    mov d3, v1.d[1]
-; CHECK-IADISABLED-NEXT:    zip2 v4.2s, v0.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    zip2 v5.2s, v1.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    zip1 v0.2s, v0.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    zip1 v1.2s, v1.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    fmls v6.2s, v5.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fmla v6.2s, v0.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmul v1.2s, v1.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    str d6, [x4]
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v0.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    movi v0.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    ldr q2, [x2]
-; CHECK-IADISABLED-NEXT:    mov d3, v2.d[1]
-; CHECK-IADISABLED-NEXT:    zip1 v4.2s, v2.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    zip2 v3.2s, v2.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    fmul v5.2s, v4.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmls v0.2s, v3.2s, v1.2s
-; CHECK-IADISABLED-NEXT:    fmla v5.2s, v6.2s, v3.2s
-; CHECK-IADISABLED-NEXT:    fmla v0.2s, v6.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v0.4s, v5.4s
-; CHECK-IADISABLED-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-IADISABLED-NEXT:    str q1, [x5]
-; CHECK-IADISABLED-NEXT:    ldr q1, [x3]
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v2.4s, v1.4s, #0
-; CHECK-IADISABLED-NEXT:    fcmla v0.4s, v2.4s, v1.4s, #90
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: multiple_muls_shuffle_external_with_loads:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld2 { v0.2s, v1.2s }, [x0]
+; CHECK-NEXT:    movi v4.2s, #128, lsl #24
+; CHECK-NEXT:    ld2 { v2.2s, v3.2s }, [x1]
+; CHECK-NEXT:    fmls v4.2s, v3.2s, v1.2s
+; CHECK-NEXT:    fmul v6.2s, v2.2s, v1.2s
+; CHECK-NEXT:    fmla v4.2s, v0.2s, v2.2s
+; CHECK-NEXT:    fmla v6.2s, v0.2s, v3.2s
+; CHECK-NEXT:    movi v1.2s, #128, lsl #24
+; CHECK-NEXT:    str d4, [x4]
+; CHECK-NEXT:    ldr q5, [x2]
+; CHECK-NEXT:    mov d7, v5.d[1]
+; CHECK-NEXT:    zip1 v0.2s, v5.2s, v7.2s
+; CHECK-NEXT:    zip2 v3.2s, v5.2s, v7.2s
+; CHECK-NEXT:    fmul v2.2s, v0.2s, v6.2s
+; CHECK-NEXT:    fmla v2.2s, v4.2s, v3.2s
+; CHECK-NEXT:    fmls v1.2s, v3.2s, v6.2s
+; CHECK-NEXT:    fmla v1.2s, v4.2s, v0.2s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    st2 { v1.2s, v2.2s }, [x5]
+; CHECK-NEXT:    ldr q1, [x3]
+; CHECK-NEXT:    fcmla v0.4s, v5.4s, v1.4s, #0
+; CHECK-NEXT:    fcmla v0.4s, v5.4s, v1.4s, #90
+; CHECK-NEXT:    ret
 entry:
   %a = load <4 x float>, ptr %ptr_a
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -288,74 +226,39 @@ entry:
 ;   *p2 = (a * b) * (d * c);
 ;   return d * c;
 define <4 x float> @multiple_muls_mul_external(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr %p1, ptr %p2) {
-; CHECK-IAENABLED-LABEL: multiple_muls_mul_external:
-; CHECK-IAENABLED:       // %bb.0: // %entry
-; CHECK-IAENABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-IAENABLED-NEXT:    mov d5, v1.d[1]
-; CHECK-IAENABLED-NEXT:    mov d6, v2.d[1]
-; CHECK-IAENABLED-NEXT:    mov d7, v3.d[1]
-; CHECK-IAENABLED-NEXT:    movi v16.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    zip2 v17.2s, v0.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    zip2 v18.2s, v1.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip1 v19.2s, v2.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    zip2 v20.2s, v3.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    zip1 v0.2s, v0.2s, v4.2s
-; CHECK-IAENABLED-NEXT:    zip1 v1.2s, v1.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip2 v2.2s, v2.2s, v6.2s
-; CHECK-IAENABLED-NEXT:    movi v4.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    zip1 v3.2s, v3.2s, v7.2s
-; CHECK-IAENABLED-NEXT:    movi v6.2s, #128, lsl #24
-; CHECK-IAENABLED-NEXT:    fmls v16.2s, v17.2s, v18.2s
-; CHECK-IAENABLED-NEXT:    fmul v5.2s, v19.2s, v20.2s
-; CHECK-IAENABLED-NEXT:    fmls v4.2s, v2.2s, v20.2s
-; CHECK-IAENABLED-NEXT:    fmla v16.2s, v1.2s, v0.2s
-; CHECK-IAENABLED-NEXT:    fmul v0.2s, v0.2s, v18.2s
-; CHECK-IAENABLED-NEXT:    fmla v5.2s, v3.2s, v2.2s
-; CHECK-IAENABLED-NEXT:    fmla v4.2s, v3.2s, v19.2s
-; CHECK-IAENABLED-NEXT:    fmla v0.2s, v1.2s, v17.2s
-; CHECK-IAENABLED-NEXT:    str d16, [x0]
-; CHECK-IAENABLED-NEXT:    fmul v7.2s, v16.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    fmla v7.2s, v4.2s, v0.2s
-; CHECK-IAENABLED-NEXT:    fmls v6.2s, v0.2s, v5.2s
-; CHECK-IAENABLED-NEXT:    zip1 v0.4s, v4.4s, v5.4s
-; CHECK-IAENABLED-NEXT:    fmla v6.2s, v4.2s, v16.2s
-; CHECK-IAENABLED-NEXT:    st2 { v6.2s, v7.2s }, [x1]
-; CHECK-IAENABLED-NEXT:    ret
-;
-; CHECK-IADISABLED-LABEL: multiple_muls_mul_external:
-; CHECK-IADISABLED:       // %bb.0: // %entry
-; CHECK-IADISABLED-NEXT:    mov d4, v0.d[1]
-; CHECK-IADISABLED-NEXT:    mov d5, v1.d[1]
-; CHECK-IADISABLED-NEXT:    mov d6, v2.d[1]
-; CHECK-IADISABLED-NEXT:    mov d7, v3.d[1]
-; CHECK-IADISABLED-NEXT:    movi v16.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    zip1 v17.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip2 v0.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    zip2 v4.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip1 v18.2s, v2.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    zip2 v19.2s, v3.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    zip1 v1.2s, v1.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    zip2 v2.2s, v2.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    zip1 v3.2s, v3.2s, v7.2s
-; CHECK-IADISABLED-NEXT:    fmul v5.2s, v17.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    fmls v16.2s, v0.2s, v4.2s
-; CHECK-IADISABLED-NEXT:    movi v4.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    fmul v6.2s, v18.2s, v19.2s
-; CHECK-IADISABLED-NEXT:    fmla v5.2s, v1.2s, v0.2s
-; CHECK-IADISABLED-NEXT:    fmla v16.2s, v1.2s, v17.2s
-; CHECK-IADISABLED-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-IADISABLED-NEXT:    fmla v6.2s, v3.2s, v2.2s
-; CHECK-IADISABLED-NEXT:    fmls v4.2s, v2.2s, v19.2s
-; CHECK-IADISABLED-NEXT:    str d16, [x0]
-; CHECK-IADISABLED-NEXT:    fmla v4.2s, v3.2s, v18.2s
-; CHECK-IADISABLED-NEXT:    fmul v2.2s, v16.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fmls v1.2s, v5.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    fmla v2.2s, v4.2s, v5.2s
-; CHECK-IADISABLED-NEXT:    fmla v1.2s, v4.2s, v16.2s
-; CHECK-IADISABLED-NEXT:    zip1 v0.4s, v4.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v2.4s
-; CHECK-IADISABLED-NEXT:    str q1, [x1]
-; CHECK-IADISABLED-NEXT:    ret
+; CHECK-LABEL: multiple_muls_mul_external:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    mov d5, v1.d[1]
+; CHECK-NEXT:    mov d6, v2.d[1]
+; CHECK-NEXT:    mov d7, v3.d[1]
+; CHECK-NEXT:    movi v16.2s, #128, lsl #24
+; CHECK-NEXT:    zip2 v17.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip2 v18.2s, v1.2s, v5.2s
+; CHECK-NEXT:    zip1 v19.2s, v2.2s, v6.2s
+; CHECK-NEXT:    zip2 v20.2s, v3.2s, v7.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v4.2s
+; CHECK-NEXT:    zip1 v1.2s, v1.2s, v5.2s
+; CHECK-NEXT:    zip2 v2.2s, v2.2s, v6.2s
+; CHECK-NEXT:    movi v4.2s, #128, lsl #24
+; CHECK-NEXT:    zip1 v3.2s, v3.2s, v7.2s
+; CHECK-NEXT:    movi v6.2s, #128, lsl #24
+; CHECK-NEXT:    fmls v16.2s, v17.2s, v18.2s
+; CHECK-NEXT:    fmul v5.2s, v19.2s, v20.2s
+; CHECK-NEXT:    fmls v4.2s, v2.2s, v20.2s
+; CHECK-NEXT:    fmla v16.2s, v1.2s, v0.2s
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v18.2s
+; CHECK-NEXT:    fmla v5.2s, v3.2s, v2.2s
+; CHECK-NEXT:    fmla v4.2s, v3.2s, v19.2s
+; CHECK-NEXT:    fmla v0.2s, v1.2s, v17.2s
+; CHECK-NEXT:    str d16, [x0]
+; CHECK-NEXT:    fmul v7.2s, v16.2s, v5.2s
+; CHECK-NEXT:    fmla v7.2s, v4.2s, v0.2s
+; CHECK-NEXT:    fmls v6.2s, v0.2s, v5.2s
+; CHECK-NEXT:    zip1 v0.4s, v4.4s, v5.4s
+; CHECK-NEXT:    fmla v6.2s, v4.2s, v16.2s
+; CHECK-NEXT:    st2 { v6.2s, v7.2s }, [x1]
+; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
   %strided.vec126 = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
@@ -869,3 +772,6 @@ entry:
   store <4 x double> %interleaved.vec145, ptr %p2, align 8
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-IADISABLED: {{.*}}
+; CHECK-IAENABLED: {{.*}}

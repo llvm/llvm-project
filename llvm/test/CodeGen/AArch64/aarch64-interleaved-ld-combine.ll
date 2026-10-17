@@ -40,34 +40,13 @@ define void @aarch64_ilc_const(ptr %ptr) {
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_SHUFFLE3]], ptr [[GEP4]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_const:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    add x8, x0, #32
-; AS-IAENABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x8]
-; AS-IAENABLED-NEXT:    stp q0, q1, [x0, #32]
-; AS-IAENABLED-NEXT:    stp q2, q3, [x0, #64]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_const:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    ldp q1, q0, [x0, #64]
-; AS-IADISABLED-NEXT:    ldp q4, q3, [x0, #32]
-; AS-IADISABLED-NEXT:    zip1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    trn1 v17.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v5.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip1 v6.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    trn2 v16.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip2 v3.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    ext v7.16b, v1.16b, v2.16b, #8
-; AS-IADISABLED-NEXT:    uzp2 v1.4s, v5.4s, v4.4s
-; AS-IADISABLED-NEXT:    mov v16.d[1], v2.d[1]
-; AS-IADISABLED-NEXT:    mov v3.d[1], v17.d[1]
-; AS-IADISABLED-NEXT:    mov v6.d[1], v7.d[1]
-; AS-IADISABLED-NEXT:    mov v1.d[1], v0.d[1]
-; AS-IADISABLED-NEXT:    stp q6, q16, [x0, #32]
-; AS-IADISABLED-NEXT:    stp q3, q1, [x0, #64]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_const:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    add x8, x0, #32
+; AS-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x8]
+; AS-NEXT:    stp q0, q1, [x0, #32]
+; AS-NEXT:    stp q2, q3, [x0, #64]
+; AS-NEXT:    ret
 entry:
 
 ;;; Check LLVM transformation
@@ -138,57 +117,24 @@ define void @aarch64_ilc_idx(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_SHUFFLE3]], ptr [[GEP4]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_idx:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    lsl x8, x1, #2
-; AS-IAENABLED-NEXT:    add x9, x8, #64
-; AS-IAENABLED-NEXT:    add x11, x8, #96
-; AS-IAENABLED-NEXT:    and x9, x9, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    add x10, x0, x9
-; AS-IAENABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x10]
-; AS-IAENABLED-NEXT:    add x10, x8, #80
-; AS-IAENABLED-NEXT:    add x8, x8, #112
-; AS-IAENABLED-NEXT:    and x10, x10, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    str q0, [x0, x9]
-; AS-IAENABLED-NEXT:    and x9, x11, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    str q1, [x0, x10]
-; AS-IAENABLED-NEXT:    str q2, [x0, x9]
-; AS-IAENABLED-NEXT:    str q3, [x0, x8]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_idx:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    lsl x8, x1, #2
-; AS-IADISABLED-NEXT:    add x9, x8, #64
-; AS-IADISABLED-NEXT:    add x10, x8, #80
-; AS-IADISABLED-NEXT:    add x11, x8, #96
-; AS-IADISABLED-NEXT:    and x9, x9, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    add x8, x8, #112
-; AS-IADISABLED-NEXT:    and x10, x10, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    add x9, x0, x9
-; AS-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    ldp q1, q0, [x9, #32]
-; AS-IADISABLED-NEXT:    ldp q4, q3, [x9]
-; AS-IADISABLED-NEXT:    zip1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    trn1 v17.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v6.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip1 v5.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    trn2 v16.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip2 v3.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    ext v7.16b, v1.16b, v2.16b, #8
-; AS-IADISABLED-NEXT:    uzp2 v1.4s, v6.4s, v4.4s
-; AS-IADISABLED-NEXT:    mov v16.d[1], v2.d[1]
-; AS-IADISABLED-NEXT:    mov v3.d[1], v17.d[1]
-; AS-IADISABLED-NEXT:    mov v5.d[1], v7.d[1]
-; AS-IADISABLED-NEXT:    mov v1.d[1], v0.d[1]
-; AS-IADISABLED-NEXT:    str q5, [x9]
-; AS-IADISABLED-NEXT:    and x9, x11, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    str q16, [x0, x10]
-; AS-IADISABLED-NEXT:    str q3, [x0, x9]
-; AS-IADISABLED-NEXT:    str q1, [x0, x8]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_idx:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    lsl x8, x1, #2
+; AS-NEXT:    add x9, x8, #64
+; AS-NEXT:    add x11, x8, #96
+; AS-NEXT:    and x9, x9, #0xfffffffffffffff0
+; AS-NEXT:    add x10, x0, x9
+; AS-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x10]
+; AS-NEXT:    add x10, x8, #80
+; AS-NEXT:    add x8, x8, #112
+; AS-NEXT:    and x10, x10, #0xfffffffffffffff0
+; AS-NEXT:    and x8, x8, #0xfffffffffffffff0
+; AS-NEXT:    str q0, [x0, x9]
+; AS-NEXT:    and x9, x11, #0xfffffffffffffff0
+; AS-NEXT:    str q1, [x0, x10]
+; AS-NEXT:    str q2, [x0, x9]
+; AS-NEXT:    str q3, [x0, x8]
+; AS-NEXT:    ret
 entry:
 
 ;;; Check LLVM transformation
@@ -267,57 +213,24 @@ define void @aarch64_ilc_struct(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_SHUFFLE3]], ptr [[GEP4]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_struct:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    lsl x8, x1, #2
-; AS-IAENABLED-NEXT:    add x9, x0, #4
-; AS-IAENABLED-NEXT:    and x10, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    add x12, x8, #32
-; AS-IAENABLED-NEXT:    add x11, x9, x10
-; AS-IAENABLED-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x11]
-; AS-IAENABLED-NEXT:    add x11, x8, #16
-; AS-IAENABLED-NEXT:    add x8, x8, #48
-; AS-IAENABLED-NEXT:    and x11, x11, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    str q0, [x9, x10]
-; AS-IAENABLED-NEXT:    and x10, x12, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    str q1, [x9, x11]
-; AS-IAENABLED-NEXT:    str q2, [x9, x10]
-; AS-IAENABLED-NEXT:    str q3, [x9, x8]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_struct:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    lsl x8, x1, #2
-; AS-IADISABLED-NEXT:    add x9, x0, #4
-; AS-IADISABLED-NEXT:    and x10, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    add x11, x8, #16
-; AS-IADISABLED-NEXT:    add x12, x8, #32
-; AS-IADISABLED-NEXT:    add x10, x9, x10
-; AS-IADISABLED-NEXT:    add x8, x8, #48
-; AS-IADISABLED-NEXT:    and x11, x11, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    ldp q1, q0, [x10, #32]
-; AS-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    ldp q4, q3, [x10]
-; AS-IADISABLED-NEXT:    zip1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    trn1 v17.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    zip2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v6.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip1 v5.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    trn2 v16.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    zip2 v3.4s, v4.4s, v3.4s
-; AS-IADISABLED-NEXT:    ext v7.16b, v1.16b, v2.16b, #8
-; AS-IADISABLED-NEXT:    uzp2 v1.4s, v6.4s, v4.4s
-; AS-IADISABLED-NEXT:    mov v16.d[1], v2.d[1]
-; AS-IADISABLED-NEXT:    mov v3.d[1], v17.d[1]
-; AS-IADISABLED-NEXT:    mov v5.d[1], v7.d[1]
-; AS-IADISABLED-NEXT:    mov v1.d[1], v0.d[1]
-; AS-IADISABLED-NEXT:    str q5, [x10]
-; AS-IADISABLED-NEXT:    and x10, x12, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    str q16, [x9, x11]
-; AS-IADISABLED-NEXT:    str q3, [x9, x10]
-; AS-IADISABLED-NEXT:    str q1, [x9, x8]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_struct:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    lsl x8, x1, #2
+; AS-NEXT:    add x9, x0, #4
+; AS-NEXT:    and x10, x8, #0xfffffffffffffff0
+; AS-NEXT:    add x12, x8, #32
+; AS-NEXT:    add x11, x9, x10
+; AS-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x11]
+; AS-NEXT:    add x11, x8, #16
+; AS-NEXT:    add x8, x8, #48
+; AS-NEXT:    and x11, x11, #0xfffffffffffffff0
+; AS-NEXT:    and x8, x8, #0xfffffffffffffff0
+; AS-NEXT:    str q0, [x9, x10]
+; AS-NEXT:    and x10, x12, #0xfffffffffffffff0
+; AS-NEXT:    str q1, [x9, x11]
+; AS-NEXT:    str q2, [x9, x10]
+; AS-NEXT:    str q3, [x9, x8]
+; AS-NEXT:    ret
 entry:
 
 ;;; Check LLVM transformation
@@ -376,31 +289,17 @@ define void @aarch64_ilc_idx_ld2(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_SHUFFLE1]], ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_idx_ld2:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    lsl x8, x1, #2
-; AS-IAENABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    add x8, x8, #16
-; AS-IAENABLED-NEXT:    add x10, x0, x9
-; AS-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
-; AS-IAENABLED-NEXT:    str q0, [x0, x9]
-; AS-IAENABLED-NEXT:    str q1, [x0, x8]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_idx_ld2:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    lsl x8, x1, #2
-; AS-IADISABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    add x8, x8, #16
-; AS-IADISABLED-NEXT:    add x9, x0, x9
-; AS-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    ldp q1, q0, [x9]
-; AS-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    str q2, [x9]
-; AS-IADISABLED-NEXT:    str q0, [x0, x8]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_idx_ld2:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    lsl x8, x1, #2
+; AS-NEXT:    and x9, x8, #0xfffffffffffffff0
+; AS-NEXT:    add x8, x8, #16
+; AS-NEXT:    add x10, x0, x9
+; AS-NEXT:    and x8, x8, #0xfffffffffffffff0
+; AS-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
+; AS-NEXT:    str q0, [x0, x9]
+; AS-NEXT:    str q1, [x0, x8]
+; AS-NEXT:    ret
 entry:
 
 
@@ -451,46 +350,20 @@ define void @aarch64_ilc_idx_ld3(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_SHUFFLE2]], ptr [[GEP3]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_idx_ld3:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    lsl x8, x1, #2
-; AS-IAENABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    add x10, x0, x9
-; AS-IAENABLED-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x10]
-; AS-IAENABLED-NEXT:    add x10, x8, #16
-; AS-IAENABLED-NEXT:    add x8, x8, #32
-; AS-IAENABLED-NEXT:    and x10, x10, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    str q0, [x0, x9]
-; AS-IAENABLED-NEXT:    str q1, [x0, x10]
-; AS-IAENABLED-NEXT:    str q2, [x0, x8]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_idx_ld3:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    lsl x8, x1, #2
-; AS-IADISABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    add x10, x8, #16
-; AS-IADISABLED-NEXT:    add x8, x8, #32
-; AS-IADISABLED-NEXT:    add x9, x0, x9
-; AS-IADISABLED-NEXT:    and x10, x10, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    ldp q0, q2, [x9]
-; AS-IADISABLED-NEXT:    ldr q4, [x9, #32]
-; AS-IADISABLED-NEXT:    mov v1.16b, v0.16b
-; AS-IADISABLED-NEXT:    rev64 v3.4s, v2.4s
-; AS-IADISABLED-NEXT:    mov v1.s[1], v0.s[3]
-; AS-IADISABLED-NEXT:    mov v3.s[0], v0.s[1]
-; AS-IADISABLED-NEXT:    mov v1.s[2], v2.s[2]
-; AS-IADISABLED-NEXT:    mov v2.s[0], v0.s[2]
-; AS-IADISABLED-NEXT:    mov v3.s[3], v4.s[2]
-; AS-IADISABLED-NEXT:    mov v2.s[2], v4.s[0]
-; AS-IADISABLED-NEXT:    mov v1.s[3], v4.s[1]
-; AS-IADISABLED-NEXT:    mov v2.s[3], v4.s[3]
-; AS-IADISABLED-NEXT:    str q1, [x9]
-; AS-IADISABLED-NEXT:    str q3, [x0, x10]
-; AS-IADISABLED-NEXT:    str q2, [x0, x8]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_idx_ld3:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    lsl x8, x1, #2
+; AS-NEXT:    and x9, x8, #0xfffffffffffffff0
+; AS-NEXT:    add x10, x0, x9
+; AS-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x10]
+; AS-NEXT:    add x10, x8, #16
+; AS-NEXT:    add x8, x8, #32
+; AS-NEXT:    and x10, x10, #0xfffffffffffffff0
+; AS-NEXT:    and x8, x8, #0xfffffffffffffff0
+; AS-NEXT:    str q0, [x0, x9]
+; AS-NEXT:    str q1, [x0, x10]
+; AS-NEXT:    str q2, [x0, x8]
+; AS-NEXT:    ret
 entry:
 
 
@@ -1151,3 +1024,6 @@ entry:
   %s0 = extractvalue { <4 x float>, <4 x float> } %l0.deinterleave, 0
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AS-IADISABLED: {{.*}}
+; AS-IAENABLED: {{.*}}
