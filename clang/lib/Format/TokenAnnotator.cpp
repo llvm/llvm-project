@@ -5208,6 +5208,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   const bool IsVerilog = Style.isVerilog();
   assert(!IsVerilog || !IsCpp);
 
+  // Keep TableGen bit ranges such as {24-20} compact.
+  if (Style.isTableGen() && Left.is(tok::numeric_constant) &&
+      Right.is(tok::numeric_constant) && Right.TokenText.starts_with("-")) {
+    return false;
+  }
+
   // Never ever merge two words.
   if (Keywords.isWordLike(Right, IsVerilog) &&
       Keywords.isWordLike(Left, IsVerilog)) {
