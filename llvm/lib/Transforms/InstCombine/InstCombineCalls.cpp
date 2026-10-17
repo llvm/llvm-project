@@ -2903,6 +2903,47 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
 
+  case Intrinsic::sdiv_poison:
+  case Intrinsic::srem_poison:
+  case Intrinsic::udiv_poison:
+  case Intrinsic::urem_poison: {
+    // The intrinsics return poison where the corresponding instruction has
+    // undefined behavior: for a zero divisor and, for the signed forms, for
+    // the signed minimum divided by -1. Turn the call into the plain
+    // instruction when the operands rule those cases out, so that the rest
+    // of the optimizer sees an ordinary div/rem.
+    Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
+    // The plain instruction is also undefined for a poison divisor, for which
+    // the call only returns poison.
+    if (!isKnownNonZero(Op1, SQ.getWithInstruction(&CI)) ||
+        !isGuaranteedNotToBePoison(Op1, SQ.AC, &CI, SQ.DT))
+      break;
+
+    // The signed forms also return poison for the signed minimum divided by
+    // -1. A bit of the divisor known zero rules out -1. Otherwise the dividend
+    // must not be the signed minimum, which a sign bit known zero or a lower
+    // bit known one rules out, and must not be poison either, because the
+    // plain instruction is undefined for a poison dividend and a divisor of
+    // -1.
+    if ((IID == Intrinsic::sdiv_poison || IID == Intrinsic::srem_poison) &&
+        computeKnownBits(Op1, II).Zero.isZero()) {
+      KnownBits KnownDividend = computeKnownBits(Op0, II);
+      unsigned BitWidth = KnownDividend.getBitWidth();
+      if (!KnownDividend.isNonNegative() &&
+          !KnownDividend.One.intersects(~APInt::getSignMask(BitWidth)))
+        break;
+      if (!isGuaranteedNotToBePoison(Op0, SQ.AC, &CI, SQ.DT))
+        break;
+    }
+
+    Instruction::BinaryOps Opcode =
+        IID == Intrinsic::udiv_poison   ? Instruction::UDiv
+        : IID == Intrinsic::sdiv_poison ? Instruction::SDiv
+        : IID == Intrinsic::urem_poison ? Instruction::URem
+                                        : Instruction::SRem;
+    return BinaryOperator::Create(Opcode, Op0, Op1, II->getName());
+  }
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow: {
     if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
