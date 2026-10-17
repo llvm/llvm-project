@@ -3329,7 +3329,9 @@ bool TargetLowering::SimplifyDemandedBits(
   // If we know the value of all of the demanded bits, return this as a
   // constant.
   if (!isTargetCanonicalConstantNode(Op) &&
-      DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
+      DemandedBits.isSubsetOf(Known.Zero | Known.One) &&
+      (!VT.isVector() ||
+       VT.getVectorMinNumElements() <= SDNode::getMaxNumOperands())) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
     if (llvm::any_of(Op->ops(), [](SDValue V) {
           auto *C = dyn_cast<ConstantSDNode>(V);
@@ -12029,7 +12031,7 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
     LoadChains.push_back(ScalarLoad.getValue(1));
   }
 
-  SDValue NewChain = DAG.getTokenFactor(SL, LoadChains);
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoadChains);
   SDValue Value = DAG.getBuildVector(DstVT, SL, Vals);
 
   return std::make_pair(Value, NewChain);
@@ -12107,7 +12109,7 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
     Stores.push_back(Store);
   }
 
-  return DAG.getTokenFactor(SL, Stores);
+  return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, Stores);
 }
 
 std::pair<SDValue, SDValue>

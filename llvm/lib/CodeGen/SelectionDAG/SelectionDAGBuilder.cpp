@@ -1030,7 +1030,7 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
     //        = op c3, ..., f2
     Chain = Chains[NumRegs-1];
   else
-    Chain = DAG.getTokenFactor(dl, Chains);
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
 }
 
 void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,

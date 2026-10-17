@@ -2270,7 +2270,7 @@ SDValue DAGTypeLegalizer::UnrollVectorOp_StrictFP(SDNode *N, unsigned ResNE) {
     Scalars.push_back(DAG.getPOISON(EltVT));
 
   // Build a new factor node to connect the chain back together.
-  Chain = DAG.getTokenFactor(dl, Chains);
+  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
   ReplaceValueWith(SDValue(N, 1), Chain);
 
   // Create a new BUILD_VECTOR node
@@ -6017,7 +6017,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_StrictFP(SDNode *N) {
   if (Chains.size() == 1)
     NewChain = Chains[0];
   else
-    NewChain = DAG.getTokenFactor(dl, Chains);
+    NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return CollectOpsToWiden(DAG, TLI, ConcatOps, ConcatEnd, VT, MaxVT, WidenVT);
@@ -6253,7 +6253,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert_StrictFP(SDNode *N) {
     Ops[i] = DAG.getNode(Opcode, DL, EltVTs, NewOps);
     OpChains.push_back(Ops[i].getValue(1));
   }
-  SDValue NewChain = DAG.getTokenFactor(DL, OpChains);
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OpChains);
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(WidenVT, DL, Ops);
@@ -6916,7 +6916,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
     if (LdChain.size() == 1)
       NewChain = LdChain[0];
     else
-      NewChain = DAG.getTokenFactor(SDLoc(LD), LdChain);
+      NewChain = DAG.getNode(ISD::TokenFactor, SDLoc(LD), MVT::Other, LdChain);
 
     // Modified the chain - switch anything that used the old chain to use
     // the new one.
@@ -7846,7 +7846,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
                                DAG.getBoolConstant(false, dl, EltVT, VT));
   }
 
-  SDValue NewChain = DAG.getTokenFactor(dl, Chains);
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(WidenVT, dl, Scalars);
@@ -8208,7 +8208,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
       Ops[i] = DAG.getNode(Opcode, dl, { EltVT, MVT::Other }, NewOps);
       OpChains.push_back(Ops[i].getValue(1));
     }
-    SDValue NewChain = DAG.getTokenFactor(dl, OpChains);
+    SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OpChains);
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
     for (unsigned i = 0; i < NumElts; ++i) {
@@ -8546,7 +8546,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
     if (StChain.size() == 1)
       return StChain[0];
 
-    return DAG.getTokenFactor(SDLoc(ST), StChain);
+    return DAG.getNode(ISD::TokenFactor, SDLoc(ST), MVT::Other, StChain);
   }
 
   if (StVT.isVector()) {
@@ -8872,7 +8872,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_STRICT_FSETCC(SDNode *N) {
                                DAG.getBoolConstant(false, dl, EltVT, VT));
   }
 
-  SDValue NewChain = DAG.getTokenFactor(dl, Chains);
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(VT, dl, Scalars);

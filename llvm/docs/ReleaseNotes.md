@@ -392,8 +392,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
-  ([#214666](https://github.com/llvm/llvm-project/issues/214666)) when
-  compiling operations on fixed-length vectors with more than 65535 elements.
+  ([#214666](https://github.com/llvm/llvm-project/issues/214666)) in
+  SelectionDAG when compiling operations on fixed-length vectors with more than
+  65535 elements.
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose

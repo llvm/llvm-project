@@ -8527,8 +8527,8 @@ SDValue SelectionDAG::FoldConstantBuildVector(BuildVectorSDNode *BV,
     // same sizes.
     EVT IntEltVT = EVT::getIntegerVT(*getContext(), SrcEltVT.getSizeInBits());
     if (SDValue Tmp = FoldConstantBuildVector(BV, DL, IntEltVT))
-      return FoldConstantBuildVector(cast<BuildVectorSDNode>(Tmp), DL,
-                                     DstEltVT);
+      if (auto *TmpBV = dyn_cast<BuildVectorSDNode>(Tmp))
+        return FoldConstantBuildVector(TmpBV, DL, DstEltVT);
     return SDValue();
   }
 
@@ -8537,8 +8537,8 @@ SDValue SelectionDAG::FoldConstantBuildVector(BuildVectorSDNode *BV,
   if (DstEltVT.isFloatingPoint()) {
     EVT IntEltVT = EVT::getIntegerVT(*getContext(), DstEltVT.getSizeInBits());
     if (SDValue Tmp = FoldConstantBuildVector(BV, DL, IntEltVT))
-      return FoldConstantBuildVector(cast<BuildVectorSDNode>(Tmp), DL,
-                                     DstEltVT);
+      if (auto *TmpBV = dyn_cast<BuildVectorSDNode>(Tmp))
+        return FoldConstantBuildVector(TmpBV, DL, DstEltVT);
     return SDValue();
   }
 
@@ -8942,6 +8942,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                                  N1.getOperand(N2C->getZExtValue() / Factor),
                                  N2C->getZExtValue() % Factor);
     }
+
+    // EXTRACT_VECTOR_ELT of a constant-index EXTRACT_SUBVECTOR of
+    // CONCAT_VECTORS is the shape of a BUILD_VECTOR that was split into chunks.
+    if (N2C && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        N1.getOperand(0).getOpcode() == ISD::CONCAT_VECTORS &&
+        N1.getOperand(0).getValueType().isFixedLengthVector() &&
+        isa<ConstantSDNode>(N1.getOperand(1)))
+      return getExtractVectorElt(DL, VT, N1.getOperand(0),
+                                 N1.getConstantOperandVal(1) +
+                                     N2C->getZExtValue());
 
     // EXTRACT_VECTOR_ELT of BUILD_VECTOR or SPLAT_VECTOR is often formed while
     // lowering is expanding large vector constants.
@@ -12082,6 +12092,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return V;
     if (NumOps > SDNode::getMaxNumOperands())
       return concatOperandChunks(Opcode, DL, VT, Ops, *this);
+    break;
+  case ISD::TokenFactor:
+    if (NumOps > SDNode::getMaxNumOperands()) {
+      SmallVector<SDValue, 8> Vals(Ops);
+      return getTokenFactor(DL, Vals);
+    }
     break;
   case ISD::SELECT_CC:
     assert(NumOps == 5 && "SELECT_CC takes 5 operands!");
