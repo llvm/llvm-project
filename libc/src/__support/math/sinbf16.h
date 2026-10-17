@@ -17,6 +17,8 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
