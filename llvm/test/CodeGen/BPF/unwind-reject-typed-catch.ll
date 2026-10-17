@@ -6,9 +6,9 @@
 @_ZTIi = external constant ptr
 
 declare void @may_throw()
-declare i32 @rust_personality(i32, i64, ptr, ptr)
+declare i32 @rust_eh_personality(i32, i64, ptr, ptr)
 
-define void @typed_catch() personality ptr @rust_personality {
+define void @typed_catch() uwtable personality ptr @rust_eh_personality {
 entry:
   invoke void @may_throw()
           to label %ok unwind label %lpad
