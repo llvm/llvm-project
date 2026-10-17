@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: windows
-// FIXME: https://github.com/llvm/llvm-project/issues/214358
-// std::isnan, std::isinf, std::signbit are not constexpr on Windows
 
 // "support/constexpr_hash.h"
 

@@ -81,9 +81,12 @@ struct constexpr_hash<Key> {
       if (key == 0.0f)
         return 0;
       if constexpr (requires {
-                      std::isnan(key);
-                      std::isinf(key);
-                      std::signbit(key);
+                      requires([]() constexpr {
+                        (void)std::isnan(Key{});
+                        (void)std::isinf(Key{});
+                        (void)std::signbit(Key{});
+                        return true;
+                      })();
                     }) {
         if (std::isnan(key)) {
           return 0xc3a5c85c97cb3127ULL;
@@ -94,7 +97,7 @@ struct constexpr_hash<Key> {
       } else {
         // FIXME:
         // std::isnan, std::isinf, std::signbit is not constexpr on Windows
-        //  https://github.com/llvm/llvm-project/issues/105174
+        // https://github.com/llvm/llvm-project/issues/214358
 
         if (__builtin_isnan(key)) {
           return 0xc3a5c85c97cb3127ULL;
