@@ -136,10 +136,11 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     }
 
     // atomicrmw sub(ptr, C) -> atomicrmw add(ptr, -C)
-    const APInt *C;
-    if (Op == AtomicRMWInst::Sub && match(Val, m_APInt(C)) && !C->isZero()) {
+    Constant *C;
+    if (Op == AtomicRMWInst::Sub && match(Val, m_ImmConstant(C)) &&
+        !C->isNullValue()) {
       RMWI.setOperation(AtomicRMWInst::Add);
-      return replaceOperand(RMWI, 1, ConstantInt::get(RMWI.getType(), -*C));
+      return replaceOperand(RMWI, 1, ConstantExpr::getNeg(C));
     }
   }
 
