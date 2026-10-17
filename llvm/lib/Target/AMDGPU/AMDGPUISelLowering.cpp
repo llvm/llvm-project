@@ -4237,9 +4237,103 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
   return SDValue();
 }
 
+struct PackedF8Operands {
+  unsigned OldIdx;
+  unsigned SelectorIdx;
+};
+
+static bool isPackedF8Node(const SDNode *N, bool &IsIntrinsic) {
+  IsIntrinsic = N->getOpcode() == ISD::INTRINSIC_WO_CHAIN;
+  if (IsIntrinsic)
+    return AMDGPU::isPackedF8ConversionIntrinsic(N->getConstantOperandVal(0));
+
+  switch (N->getOpcode()) {
+  case AMDGPUISD::CVT_PK_FP8_F32:
+  case AMDGPUISD::CVT_PK_BF8_F32:
+  case AMDGPUISD::CVT_PK_FP8_F32_E5M3:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Layouts:
+//   intrinsic: intrinsic ID, src0, src1, old, selector
+//   AMDGPUISD: src0, src1, old, selector
+static std::optional<PackedF8Operands> getPackedF8Operands(const SDNode *N) {
+  bool IsIntrinsic;
+  if (!isPackedF8Node(N, IsIntrinsic))
+    return std::nullopt;
+
+  // The intrinsic form has its intrinsic ID before the source operands.
+  unsigned OldIdx = IsIntrinsic ? 3 : 2;
+  PackedF8Operands Operands{OldIdx, OldIdx + 1};
+  assert(N->getNumOperands() == Operands.SelectorIdx + 1 &&
+         "unexpected packed FP8 conversion operand layout");
+  assert(isa<ConstantSDNode>(N->getOperand(Operands.SelectorIdx)) &&
+         "packed FP8 conversion selector must be constant");
+  return Operands;
+}
+
+static APInt getPackedF8PreservedOldBits(const SDNode *N,
+                                         const PackedF8Operands &Operands) {
+  return AMDGPU::getPackedF8PreservedOldBits(
+      N->getConstantOperandVal(Operands.SelectorIdx));
+}
+
+static APInt getPackedF8UserDemandedBits(const SDUse &Use) {
+  const SDNode *User = Use.getUser();
+
+  std::optional<PackedF8Operands> Operands = getPackedF8Operands(User);
+  if (Operands && Use.getOperandNo() == Operands->OldIdx)
+    return getPackedF8PreservedOldBits(User, *Operands);
+
+  switch (User->getOpcode()) {
+  case ISD::TRUNCATE:
+    return APInt::getLowBitsSet(32, User->getValueType(0).getSizeInBits());
+  case ISD::AND:
+    if (auto *Mask =
+            dyn_cast<ConstantSDNode>(User->getOperand(1 - Use.getOperandNo())))
+      return Mask->getAPIntValue();
+    break;
+  default:
+    break;
+  }
+
+  return APInt::getAllOnes(32);
+}
+
+static SDValue
+performPackedF8ConversionCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  PackedF8Operands Operands = *getPackedF8Operands(N);
+  SDValue Old = N->getOperand(Operands.OldIdx);
+  APInt PreservedOldBits = getPackedF8PreservedOldBits(N, Operands);
+
+  if (Old.isUndef() || N->use_empty())
+    return SDValue();
+
+  // Every user must discard the half copied from Old before Old can be
+  // replaced. This preserves shared conversion results.
+  APInt UsersDemandedBits(32, 0);
+  for (const SDUse &Use : N->uses()) {
+    UsersDemandedBits |= getPackedF8UserDemandedBits(Use);
+    if (UsersDemandedBits.intersects(PreservedOldBits))
+      return SDValue();
+  }
+
+  SmallVector<SDValue, 5> Ops(N->op_values());
+  Ops[Operands.OldIdx] = DCI.DAG.getUNDEF(MVT::i32);
+  return DCI.DAG.getNode(N->getOpcode(), SDLoc(N), MVT::i32, Ops,
+                         N->getFlags());
+}
+
 SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   SDNode *N, DAGCombinerInfo &DCI) const {
   unsigned IID = N->getConstantOperandVal(0);
+  if (AMDGPU::isPackedF8ConversionIntrinsic(IID))
+    return performPackedF8ConversionCombine(N, DCI);
+
   switch (IID) {
   case Intrinsic::amdgcn_mul_i24:
   case Intrinsic::amdgcn_mul_u24:
@@ -5766,6 +5860,10 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performLoadCombine(N, DCI);
   case ISD::STORE:
     return performStoreCombine(N, DCI);
+  case AMDGPUISD::CVT_PK_FP8_F32:
+  case AMDGPUISD::CVT_PK_BF8_F32:
+  case AMDGPUISD::CVT_PK_FP8_F32_E5M3:
+    return performPackedF8ConversionCombine(N, DCI);
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_IFLAG:
     return performRcpCombine(N, DCI);
@@ -5812,6 +5910,21 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits,
     const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
     unsigned Depth) const {
+  if (std::optional<PackedF8Operands> Operands =
+          getPackedF8Operands(Op.getNode())) {
+    SDValue Old = Op.getOperand(Operands->OldIdx);
+    APInt PreservedOldBits =
+        getPackedF8PreservedOldBits(Op.getNode(), *Operands);
+    APInt OldDemandedBits = OriginalDemandedBits & PreservedOldBits;
+    if (OldDemandedBits.isZero() && !Old.isUndef()) {
+      SmallVector<SDValue, 5> Ops(Op->op_values());
+      Ops[Operands->OldIdx] = TLO.DAG.getUNDEF(MVT::i32);
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op),
+                                               MVT::i32, Ops, Op->getFlags()));
+    }
+    return false;
+  }
+
   switch (Op.getOpcode()) {
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op.getConstantOperandVal(0)) {
