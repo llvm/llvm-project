@@ -367,16 +367,14 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     if (!arith::bitEnumContainsAll(fmf, arith::FastMathFlags::ninf)) {
       Value absX = math::AbsFOp::create(b, x);
       Value absY = math::AbsFOp::create(b, y);
-      Value negInf = arith::ConstantOp::create(
-          b, ET, b.getFloatAttr(ET, APFloat::getInf(floatSemantics, true)));
       Value yIsNotFinite =
           arith::CmpFOp::create(b, arith::CmpFPredicate::UGE, absY, inf);
       Value xIsInf =
           arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absX, inf);
-      Value xIsNegInf =
-          arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, x, negInf);
+      Value xIsNeg =
+          arith::CmpFOp::create(b, arith::CmpFPredicate::OLT, x, zero);
       Value useExpX = arith::AndIOp::create(b, xIsInf, yIsNotFinite);
-      Value useZeroImag = arith::AndIOp::create(b, xIsNegInf, yIsNotFinite);
+      Value useZeroImag = arith::AndIOp::create(b, useExpX, xIsNeg);
       resultReal = arith::SelectOp::create(b, useExpX, exp, resultReal);
       resultImag = arith::SelectOp::create(b, useZeroImag, zero, resultImag);
     }
