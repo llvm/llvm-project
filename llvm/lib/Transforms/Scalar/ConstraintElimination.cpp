@@ -670,6 +670,8 @@ static bool mayLookThrough(Value *V) {
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
   case Instruction::ZExt:
   case Instruction::SExt:
   case Instruction::Trunc:
@@ -777,6 +779,25 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
     Decomposition Result(-1);
     if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
       return Result;
+    return V;
+  }
+
+  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI))))) {
+    bool IsAShr = cast<Operator>(V)->getOpcode() == Instruction::AShr;
+    if (!CI->uge(std::min(63u, CI->getBitWidth())) &&
+        (IsSigned == IsAShr || Info.isKnownNonNegative(Op0))) {
+      int64_t Factor = int64_t(1) << CI->getZExtValue();
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (Result.Offset % Factor == 0 &&
+          all_of(Result.Vars, [Factor](const DecompEntry &E) {
+            return E.Coefficient % Factor == 0;
+          })) {
+        Result.Offset /= Factor;
+        for (auto &E : Result.Vars)
+          E.Coefficient /= Factor;
+        return Result;
+      }
+    }
     return V;
   }
 
