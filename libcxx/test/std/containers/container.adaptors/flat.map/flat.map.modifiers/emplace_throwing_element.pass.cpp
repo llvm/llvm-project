@@ -18,6 +18,7 @@
 // Cpp17CopyInsertable.
 
 #include <cassert>
+#include <compare>
 #include <deque>
 #include <flat_map>
 #include <functional>
@@ -27,64 +28,76 @@
 #include "test_macros.h"
 #include "../helpers.h"
 
+enum class ThrowMode { Never, OnAssign, OnNthCopy };
+
+struct ThrowState {
+  ThrowMode mode         = ThrowMode::Never;
+  int copies_until_throw = 0; // Only used with ThrowMode::OnNthCopy.
+};
+
 struct ThrowingAssign {
-  static inline bool throw_on_assign = false;
+  static constexpr ThrowMode throw_mode = ThrowMode::OnAssign;
 
   int value;
+  ThrowState* state;
 
-  ThrowingAssign(int v) : value(v) {}
+  ThrowingAssign(int v, ThrowState& s) : value(v), state(&s) {}
   ThrowingAssign(const ThrowingAssign&)     = default;
   ThrowingAssign(ThrowingAssign&&) noexcept = default;
   ThrowingAssign& operator=(const ThrowingAssign& other) {
-    if (throw_on_assign)
+    if (state->mode == ThrowMode::OnAssign)
       throw 42;
     value = other.value;
     return *this;
   }
   ThrowingAssign& operator=(ThrowingAssign&& other) {
-    if (throw_on_assign)
+    if (state->mode == ThrowMode::OnAssign)
       throw 42;
     value = other.value;
     return *this;
   }
 
-  friend bool operator==(const ThrowingAssign&, const ThrowingAssign&)  = default;
-  friend auto operator<=>(const ThrowingAssign&, const ThrowingAssign&) = default;
+  friend bool operator==(const ThrowingAssign& x, const ThrowingAssign& y) { return x.value == y.value; }
+  friend auto operator<=>(const ThrowingAssign& x, const ThrowingAssign& y) { return x.value <=> y.value; }
 };
 
 struct ThrowingCopy {
-  static inline int copies_until_throw = -1; // -1: never throw
+  static constexpr ThrowMode throw_mode = ThrowMode::OnNthCopy;
 
   int value;
+  ThrowState* state;
 
-  ThrowingCopy(int v) : value(v) {}
-  ThrowingCopy(const ThrowingCopy& other) : value(other.value) {
-    if (copies_until_throw >= 0 && copies_until_throw-- == 0)
+  ThrowingCopy(int v, ThrowState& s) : value(v), state(&s) {}
+  ThrowingCopy(const ThrowingCopy& other) : value(other.value), state(other.state) {
+    if (state->mode == ThrowMode::OnNthCopy && state->copies_until_throw-- == 0)
       throw 42;
   }
   ThrowingCopy(ThrowingCopy&& other) : ThrowingCopy(other) {}
   ThrowingCopy& operator=(const ThrowingCopy&) noexcept = default;
   ThrowingCopy& operator=(ThrowingCopy&&) noexcept      = default;
 
-  friend bool operator==(const ThrowingCopy&, const ThrowingCopy&)  = default;
-  friend auto operator<=>(const ThrowingCopy&, const ThrowingCopy&) = default;
+  friend bool operator==(const ThrowingCopy& x, const ThrowingCopy& y) { return x.value == y.value; }
+  friend auto operator<=>(const ThrowingCopy& x, const ThrowingCopy& y) { return x.value <=> y.value; }
 };
 
-// n >= 0: assignments throw, and the n-th copy (counting from 0) throws. n < 0: nothing throws.
-void set_throwing(int n) {
-  ThrowingAssign::throw_on_assign  = n >= 0;
-  ThrowingCopy::copies_until_throw = n;
+template <class T>
+T make_element(int v, ThrowState& state) {
+  if constexpr (std::is_same_v<T, int>)
+    return v;
+  else
+    return T(v, state);
 }
 
 template <class Container>
-Container make_container(std::initializer_list<int> il) {
+Container make_container(std::initializer_list<int> il, ThrowState& state) {
+  using T = typename Container::value_type;
   Container c;
   for (int v : il)
-    c.emplace_back(v);
+    c.push_back(make_element<T>(v, state));
   if constexpr (requires { c.reserve(8); }) {
     // ThrowingAssign: spare capacity makes vector insert in place.
     // ThrowingCopy: no spare capacity makes vector reallocate.
-    if constexpr (std::is_same_v<typename Container::value_type, ThrowingCopy>)
+    if constexpr (std::is_same_v<T, ThrowingCopy>)
       c.shrink_to_fit();
     else
       c.reserve(8);
@@ -94,31 +107,46 @@ Container make_container(std::initializer_list<int> il) {
 
 template <class KeyContainer, class ValueContainer, class F>
 void test_one(F insert_function) {
-  using Key   = typename KeyContainer::value_type;
-  using Value = typename ValueContainer::value_type;
-  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+  using Key      = typename KeyContainer::value_type;
+  using Value    = typename ValueContainer::value_type;
+  using M        = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+  using Throwing = std::conditional_t<std::is_same_v<Key, int>, Value, Key>;
 
+  // For ThrowingCopy, throw on each of the first few copies in turn.
   for (int n = 0; n < 6; ++n) {
-    M m(std::sorted_unique, make_container<KeyContainer>({1, 3, 5}), make_container<ValueContainer>({10, 30, 50}));
-    set_throwing(n);
+    ThrowState state;
+    M m(std::sorted_unique,
+        make_container<KeyContainer>({1, 3, 5}, state),
+        make_container<ValueContainer>({10, 30, 50}, state));
+    Key key     = make_element<Key>(2, state);
+    Value value = make_element<Value>(20, state);
+
+    state.mode               = Throwing::throw_mode;
+    state.copies_until_throw = n;
     try {
-      insert_function(m);
+      insert_function(m, key, value);
     } catch (int) {
     }
-    set_throwing(-1);
+    state.mode = ThrowMode::Never;
     check_invariant(m);
   }
 }
 
 template <class KeyContainer, class ValueContainer>
 void test() {
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.emplace(2, 20); });
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.emplace_hint(m.begin() + 1, 2, 20); });
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.try_emplace(2, 20); });
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.try_emplace(m.begin() + 1, 2, 20); });
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.insert({2, 20}); });
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.insert(m.begin() + 1, {2, 20}); });
-  test_one<KeyContainer, ValueContainer>([](auto& m) { m.insert_or_assign(2, 20); });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) { m.emplace(k, v); });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) {
+    m.emplace_hint(m.begin() + 1, k, v);
+  });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) { m.try_emplace(k, v); });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) {
+    m.try_emplace(m.begin() + 1, k, v);
+  });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) { m.insert({k, v}); });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) {
+    m.insert(m.begin() + 1, {k, v});
+  });
+  test_one<KeyContainer, ValueContainer>([](auto& m, const auto& k, const auto& v) { m.insert_or_assign(k, v); });
 }
 
 int main(int, char**) {
