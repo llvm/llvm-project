@@ -54,6 +54,7 @@ struct TrackingOutputBufferDeleter {
 };
 
 TEST(MangledTest, ResultForValidName) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   ConstString MangledName("_ZN1a1b1cIiiiEEvm");
   Mangled TheMangled(MangledName);
   ConstString TheDemangled = TheMangled.GetDemangledName();
@@ -63,6 +64,7 @@ TEST(MangledTest, ResultForValidName) {
 }
 
 TEST(MangledTest, ResultForBlockInvocation) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   ConstString MangledName("___Z1fU13block_pointerFviE_block_invoke");
   Mangled TheMangled(MangledName);
   ConstString TheDemangled = TheMangled.GetDemangledName();
@@ -73,6 +75,7 @@ TEST(MangledTest, ResultForBlockInvocation) {
 }
 
 TEST(MangledTest, EmptyForInvalidName) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   ConstString MangledName("_ZN1a1b1cmxktpEEvm");
   Mangled TheMangled(MangledName);
   ConstString TheDemangled = TheMangled.GetDemangledName();
@@ -114,6 +117,46 @@ TEST(MangledTest, SameForInvalidDLangPrefixedName) {
   EXPECT_STREQ("_DDD", the_demangled.GetCString());
 }
 
+TEST(MangledTest, RegisterManglingScheme) {
+  Mangled::ManglingScheme scheme = Mangled::RegisterManglingScheme(
+      {"$test1_", "$test2_"}, eLanguageTypeAda83);
+  ASSERT_NE(scheme, Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test2_foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test3_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetLanguageForManglingScheme(scheme), eLanguageTypeAda83);
+  EXPECT_EQ(Mangled("$test1_foo").GetMangledName(), ConstString("$test1_foo"));
+
+  // Registering the scheme again, as a plugin that is initialized again would,
+  // returns the same scheme.
+  EXPECT_EQ(Mangled::RegisterManglingScheme({"$test1_", "$test2_"},
+                                            eLanguageTypeAda83),
+            scheme);
+
+  Mangled::UnregisterManglingScheme(scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled("$test1_foo").GetDemangledName(),
+            ConstString("$test1_foo"));
+}
+
+TEST(MangledTest, RegisterManglingSchemeWithMatcher) {
+  // Only the names that continue with a digit after the prefix are mangled.
+  Mangled::ManglingScheme scheme = Mangled::RegisterManglingScheme(
+      {"$test4_"}, eLanguageTypeAda83, [](llvm::StringRef name) {
+        return name.consume_front("$test4_") && !name.empty() &&
+               llvm::isDigit(name.front());
+      });
+  ASSERT_NE(scheme, Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_1foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_"),
+            Mangled::eManglingSchemeNone);
+  Mangled::UnregisterManglingScheme(scheme);
+}
+
 TEST(MangledTest, RecognizeSwiftMangledNames) {
   llvm::StringRef valid_swift_mangled_names[] = {
       "_TtC4main7MyClass",   // Mangled objc class name
@@ -153,7 +196,8 @@ TEST(MangledTest, BoolConversionOperator) {
 }
 
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
-  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab,
+                CPlusPlusLanguage>
       subsystems;
 
   auto ExpectedFile = TestFile::fromYaml(R"(
@@ -354,6 +398,7 @@ static bool NameInfoEquals(const DemangledNameInfo &lhs,
 }
 
 TEST(MangledTest, DemangledNameInfo_SetMangled) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled;
   EXPECT_EQ(mangled.ComputeDemangledInfo(), std::nullopt);
 
@@ -377,6 +422,7 @@ TEST(MangledTest, DemangledNameInfo_SetMangled) {
 }
 
 TEST(MangledTest, DemangledNameInfo_SetDemangled) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled("_Z3foov");
   ASSERT_TRUE(mangled);
 
@@ -392,6 +438,7 @@ TEST(MangledTest, DemangledNameInfo_SetDemangled) {
 }
 
 TEST(MangledTest, DemangledNameInfo_Clear) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled("_Z3foov");
   ASSERT_TRUE(mangled);
   EXPECT_NE(mangled.ComputeDemangledInfo(), std::nullopt);
@@ -402,6 +449,7 @@ TEST(MangledTest, DemangledNameInfo_Clear) {
 }
 
 TEST(MangledTest, DemangledNameInfo_SetValue) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled("_Z4funcv");
   ASSERT_TRUE(mangled);
 
@@ -440,6 +488,7 @@ static Mangled MakeUniqueFunctionName(unsigned i) {
 }
 
 TEST(MangledTest, DemangledNameInfoCache_Get) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   DemangledNameInfoCache cache;
 
   Mangled func("_Z4funcv");
@@ -470,6 +519,7 @@ TEST(MangledTest, DemangledNameInfoCache_Get) {
 }
 
 TEST(MangledTest, DemangledNameInfoCache_MaxEntries) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   DemangledNameInfoCache cache;
   cache.SetMaxEntries(4);
 
@@ -496,6 +546,7 @@ TEST(MangledTest, DemangledNameInfoCache_MaxEntries) {
 }
 
 TEST(MangledTest, DemangledNameInfoCache_SetMaxEntries) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   DemangledNameInfoCache cache;
   cache.SetMaxEntries(4);
 
