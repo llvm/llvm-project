@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only %s 2>&1 | FileCheck %s
-// CHECK: error: use of undeclared identifier 'foo'
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
-template <template <decltype(foo())> typename> struct S {};
+template <template <decltype(foo())> typename> struct S {}; // expected-error {{use of undeclared identifier 'foo'}}
 template <int &p> struct P;
 S<P> s;
