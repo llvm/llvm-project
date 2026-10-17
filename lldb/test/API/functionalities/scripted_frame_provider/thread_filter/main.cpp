@@ -1,5 +1,4 @@
 #include <atomic>
-#include <chrono>
 #include <thread>
 #include <vector>
 
@@ -12,16 +11,11 @@ void thread_work() {
   --g_barrier;
   while (g_barrier.load() > 0)
     ;
-#ifdef _WIN32
-  // Avoid a timeout on Windows.
-  // It seems the debugger needs some time
-  // to init the breakpoint for the thread.
-  // This test is flaky on Windows with 1 sec sleep.
-  // Moving the break comment below did not help.
-  std::this_thread::sleep_for(std::chrono::seconds(3));
-#endif
-  while (g_spin) // break in thread
-    std::this_thread::yield();
+  // Break in the loop body, which runs on every iteration. On the `while` line,
+  // the breakpoint can land on the jump into the loop, which each thread runs
+  // only once.
+  while (g_spin)
+    std::this_thread::yield(); // break in thread
 }
 
 int main() {
