@@ -31,6 +31,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
+class RuntimePointerChecking;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class VPRecipeBuilder;
@@ -41,7 +42,7 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void verifyIfRequested(VPlan &Plan);
 
 #ifndef NDEBUG
-  LLVM_ABI_FOR_TEST static bool isPrintingRequested();
+  LLVM_ABI_FOR_TEST static bool isPrintingRequested(const VPlan &Plan);
 
   /// Print \p Plan of \p Fn before or after the pass \p NumberedPassName if
   /// requested.
@@ -65,7 +66,7 @@ struct VPlanTransforms {
     unsigned Instance;
     std::string NumberedPassName;
 
-    if (isPrintingRequested()) {
+    if (isPrintingRequested(Plan)) {
       Instance = ++PassCounter[{Fn, PassName}];
 
       NumberedPassName = Instance == 1
@@ -213,10 +214,13 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
-  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  /// Generate the memory runtime checks of \p RtPtrChecking as recipes and
+  /// attach the check block to \p Plan. \p VF and \p UF are used to compute
+  /// the thresholds of difference checks.
   static void attachMemoryChecks(VPlan &Plan,
-                                 ArrayRef<RuntimePointerCheck> Checks,
-                                 ScalarEvolution &SE, DebugLoc DL,
+                                 const RuntimePointerChecking &RtPtrChecking,
+                                 ScalarEvolution &SE, ElementCount VF,
+                                 unsigned UF, DebugLoc DL,
                                  bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector

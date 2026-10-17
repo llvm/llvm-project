@@ -15,6 +15,7 @@
 #include "CXXABI.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -13509,6 +13510,44 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   return false;
 }
 
+template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
+  if (auto *A = D->getAttr<AttrT>())
+    return A->isImplicit();
+  return D->isImplicit();
+}
+
+bool ASTContext::shouldEmitCUDADecl(const ValueDecl *D) const {
+  assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
+  assert((isa<FunctionDecl>(D) || isa<VarDecl>(D)) &&
+         "Expected Variable or Function");
+
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    // We need to emit host-side 'shadows' for all global device-side variables
+    // because the CUDA runtime needs their size and host-side address in order
+    // to provide access to their device-side incarnations.
+    return !LangOpts.CUDAIsDevice || VD->hasAttr<CUDADeviceAttr>() ||
+           VD->hasAttr<CUDAConstantAttr>() || VD->hasAttr<CUDASharedAttr>() ||
+           VD->getType()->isCUDADeviceBuiltinSurfaceType() ||
+           VD->getType()->isCUDADeviceBuiltinTextureType();
+  }
+
+  const auto *FD = cast<FunctionDecl>(D);
+  // Device-only functions are the only things we skip on the host.
+  if (!LangOpts.CUDAIsDevice)
+    return FD->hasAttr<CUDAHostAttr>() || !FD->hasAttr<CUDADeviceAttr>();
+
+  // Non-constexpr non-lambda implicit host device functions are not emitted
+  // unless they are used on device side.
+  return (FD->hasAttr<CUDADeviceAttr>() &&
+          !(LangOpts.OffloadImplicitHostDeviceTemplates &&
+            hasImplicitAttr<CUDAHostAttr>(FD) &&
+            hasImplicitAttr<CUDADeviceAttr>(FD) && !FD->isConstexpr() &&
+            !isLambdaCallOperator(FD) &&
+            !CUDAImplicitHostDeviceFunUsedByDevice.count(FD))) ||
+         FD->hasAttr<CUDAGlobalAttr>() ||
+         (LangOpts.HIPStdPar && !FD->hasAttr<CUDAHostAttr>());
+}
+
 void ASTContext::forEachMultiversionedFunctionVersion(
     const FunctionDecl *FD,
     llvm::function_ref<void(FunctionDecl *)> Pred) const {
@@ -13858,6 +13897,9 @@ void ASTContext::setClassMaybeNeedsVectorDeletingDestructor(
 MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.
+  // Reopened namespaces share a mangling context so that declarations in
+  // different namespace blocks do not receive duplicate mangling numbers.
+  DC = DC->getPrimaryContext();
   std::unique_ptr<MangleNumberingContext> &MCtx = MangleNumberingContexts[DC];
   if (!MCtx)
     MCtx = createMangleNumberingContext();
