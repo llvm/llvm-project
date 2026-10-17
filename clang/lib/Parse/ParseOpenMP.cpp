@@ -2614,10 +2614,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
+    SmallVector<OMPTraitInfo *, 4> TraitInfos;
 
     // First iteration of parsing all clauses of metadirective.
-    // This iteration only parses and collects all context selector ignoring the
-    // associated directives.
+    // This iteration only parses and collects all context selectors ignoring
+    // the associated directives.
     TentativeParsingAction TPA(*this);
     ASTContext &ASTContext = Actions.getASTContext();
 
@@ -2693,8 +2694,10 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       TI.getAsVariantMatchInfo(ASTContext, VMI);
 
       VMIs.push_back(VMI);
+      TraitInfos.push_back(&TI);
     }
 
+    SourceLocation EndLoc = Tok.getLocation();
     TPA.Revert();
     // End of the first iteration. Parser is reset to the start of metadirective
 
@@ -2711,6 +2714,82 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     // A single match is returned for OpenMP 5.0
     int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
+
+    // Check if we have user conditions with non-constant expressions that
+    // require runtime selection.
+    bool HasUserCondition = llvm::any_of(VMIs, [](const VariantMatchInfo &VMI) {
+      return VMI.HasNonConstantUserCondition;
+    });
+
+    if (HasUserCondition && getLangOpts().OpenMPMetadirectiveRuntimeSelection) {
+      // OpenMP 5.2, 7.4: without an 'otherwise' clause the effect is as if one
+      // was specified without an associated directive variant. Only
+      // 'otherwise' (or the deprecated 'default') has no context selectors.
+      unsigned NumClauses = TraitInfos.size();
+      if (llvm::none_of(TraitInfos, [](const OMPTraitInfo *TI) {
+            return TI->Sets.empty();
+          }))
+        TraitInfos.push_back(&Actions.getASTContext().getNewOMPTraitInfo());
+
+      // Reuse the normal metadirective variant parse per clause so every
+      // variant is a complete directive node with its own body and its own
+      // data-sharing context. Diagnostics in the associated statement are
+      // reported once per variant.
+      SmallVector<Stmt *, 4> Variants;
+      bool HasError = false;
+      for (unsigned I : llvm::seq<unsigned>(TraitInfos.size())) {
+        // Re-parse from the first clause for every variant but the last.
+        std::optional<TentativeParsingAction> VariantTPA;
+        if (I + 1 < TraitInfos.size())
+          VariantTPA.emplace(*this);
+
+        for (unsigned J = 0, E = std::min(I, NumClauses); J != E; ++J) {
+          ConsumeToken();  // Clause name.
+          T.consumeOpen(); // '('
+          SkipUntil(tok::r_paren, StopBeforeMatch);
+          T.consumeClose(); // ')'
+        }
+
+        bool HasDirective = false;
+        if (I < NumClauses) {
+          OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
+          ConsumeToken();
+          T.consumeOpen();
+          if (CKind == OMPC_when) {
+            // The selectors were parsed into TraitInfos[I] by the first pass;
+            // skip them so their diagnostics are not repeated.
+            SkipUntil(tok::colon, StopBeforeMatch);
+            ConsumeToken(); // ':'
+          }
+          HasDirective = Tok.isNot(tok::r_paren);
+        }
+
+        StmtResult Variant;
+        if (HasDirective) {
+          Variant = ParseOpenMPDeclarativeOrExecutableDirective(
+              StmtCtx, /*ReadDirectiveWithinMetadirective=*/true);
+        } else {
+          // No directive variant: the variant is the plain associated
+          // statement.
+          while (Tok.isNot(tok::annot_pragma_openmp_end))
+            ConsumeAnyToken();
+          ConsumeAnnotationToken();
+          ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+          Variant = ParseStatement();
+        }
+
+        if (VariantTPA)
+          VariantTPA->Revert();
+        if (Variant.isInvalid())
+          HasError = true;
+        else
+          Variants.push_back(Variant.get());
+      }
+      if (HasError)
+        return StmtError();
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(Loc, EndLoc, TraitInfos,
+                                                       Variants);
+    }
 
     int Idx = 0;
     // In OpenMP 5.0 metadirective is either replaced by another directive or
