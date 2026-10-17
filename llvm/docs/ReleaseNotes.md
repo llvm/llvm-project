@@ -389,6 +389,10 @@ Makes programs 10x faster by doing Special New Thing.
   `dso_local` runtime preemption specifier on global values (global variables,
   functions and aliases).
 
+* Added `LLVMOrcThreadSafeContextWithContextDo()` to provide locked access to
+  the `LLVMContext` wrapped by an `LLVMOrcThreadSafeContextRef`. This replaces
+  the `LLVMOrcThreadSafeContextGetContext()` function removed in LLVM 21.
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
