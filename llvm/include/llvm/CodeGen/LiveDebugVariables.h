@@ -58,7 +58,10 @@ public:
   /// emitDebugValues - Emit new DBG_VALUE instructions reflecting the changes
   /// that happened during register allocation.
   /// @param VRM Rename virtual registers according to map.
-  LLVM_ABI void emitDebugValues(VirtRegMap *VRM);
+  /// @param PreserveUnassigned Keep unallocated virtual register locations for
+  /// a subsequent register allocator.
+  LLVM_ABI void emitDebugValues(VirtRegMap *VRM,
+                                bool PreserveUnassigned = false);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().
