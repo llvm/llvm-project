@@ -2600,6 +2600,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureXNACKOnOffModes,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2638,6 +2639,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureXNACKOnOffModes,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<

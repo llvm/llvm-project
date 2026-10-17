@@ -129,6 +129,22 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
   let usesCustomInserter = 1;
 }
 
+// VGPR bank hint pseudos carrying a target bank number in [0, 3]. These are
+// identity copies produced by lowering llvm.amdgcn.schedule.bank. A pre-RA pass
+// (AMDGPUScheduleBank) reads the bank operand, sets a register allocation hint
+// on the destination vreg, and replaces the pseudo with a COPY.
+let isAsCheapAsAMove = 1, isReMaterializable = 1, hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 0 in {
+  def V_SCHEDULE_BANK_B32  : VPseudoInstSI<(outs VGPR_32:$vdst),
+                                           (ins VGPR_32:$src, i32imm:$bank)>;
+  def V_SCHEDULE_BANK_B64  : VPseudoInstSI<(outs VReg_64:$vdst),
+                                           (ins VReg_64:$src, i32imm:$bank)>;
+  def V_SCHEDULE_BANK_B128 : VPseudoInstSI<(outs VReg_128:$vdst),
+                                           (ins VReg_128:$src, i32imm:$bank)>;
+  def V_SCHEDULE_BANK_B256 : VPseudoInstSI<(outs VReg_256:$vdst),
+                                           (ins VReg_256:$src, i32imm:$bank)>;
+}
+
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),

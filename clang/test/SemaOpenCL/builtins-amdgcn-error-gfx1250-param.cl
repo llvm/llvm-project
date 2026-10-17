@@ -216,3 +216,12 @@ void test_pk_add_min_max(global short2 *out, global ushort2 *uout, short2 a, sho
   *out = __builtin_amdgcn_pk_add_min_i16(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_pk_add_min_i16' must be a constant integer}}
   *uout = __builtin_amdgcn_pk_add_min_u16(ua, ub, uc, clamp); // expected-error {{'__builtin_amdgcn_pk_add_min_u16' must be a constant integer}}
 }
+
+void test_schedule_bank_non_const(int x, int b) {
+  __builtin_amdgcn_schedule_bank(x, b, false); // expected-error {{'__builtin_amdgcn_schedule_bank' must be a constant integer}}
+}
+
+void test_schedule_bank_out_of_range(int x) {
+  __builtin_amdgcn_schedule_bank(x, 4, false); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  __builtin_amdgcn_schedule_bank(x, -1, true); // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+}
