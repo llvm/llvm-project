@@ -329,6 +329,17 @@ bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
   return isAllocLikeFn(CB, TLI);
 }
 
+bool llvm::isAddressUnpredictableAlloc(const Value *V,
+                                       const TargetLibraryInfo *TLI) {
+  return getAllocationData(V, AnyAlloc, TLI).has_value() ||
+         checkFnAllocKind(V, AllocFnKind::AddressUnpredictable);
+}
+
+bool llvm::isDisjointAlloc(const Value *V, const TargetLibraryInfo *TLI) {
+  return getAllocationData(V, AnyAlloc, TLI).has_value() ||
+         checkFnAllocKind(V, AllocFnKind::AllocDisjoint);
+}
+
 Value *llvm::getAllocAlignment(const CallBase *V,
                                const TargetLibraryInfo *TLI) {
   const std::optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
@@ -549,6 +560,17 @@ Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
     return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);
 
   return nullptr;
+}
+
+bool llvm::isPoisonMemoryFree(const Value *V, const TargetLibraryInfo *TLI) {
+  if (const Function *Callee = getCalledFunction(V)) {
+    LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
+    if (TLIFn != NotLibFunc && TLI->has(TLIFn) &&
+        getFreeFunctionDataForFunction(Callee, TLIFn))
+      return true;
+  }
+
+  return checkFnAllocKind(V, AllocFnKind::PoisonsMemory);
 }
 
 //===----------------------------------------------------------------------===//

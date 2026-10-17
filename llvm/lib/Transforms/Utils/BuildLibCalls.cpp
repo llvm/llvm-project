@@ -320,6 +320,16 @@ static bool setAllocFamily(Function &F, StringRef Family) {
 static bool setAllocKind(Function &F, AllocFnKind K) {
   if (F.hasFnAttribute(Attribute::AllocKind))
     return false;
+#if 0
+  // All library allocators inferred here are top-level heap allocators: their
+  // addresses are unpredictable and disjoint from allocas/globals. Likewise,
+  // deallocator routines poison the freed memory.
+  // TODO: Should this be inferred per function?
+  if ((K & (AllocFnKind::Alloc | AllocFnKind::Realloc)) != AllocFnKind::Unknown)
+    K |= AllocFnKind::AddressUnpredictable | AllocFnKind::AllocDisjoint;
+  if ((K & AllocFnKind::Free) != AllocFnKind::Unknown)
+    K |= AllocFnKind::PoisonsMemory;
+#endif
   F.addFnAttr(
       Attribute::get(F.getContext(), Attribute::AllocKind, uint64_t(K)));
   return true;

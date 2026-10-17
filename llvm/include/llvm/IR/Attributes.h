@@ -60,7 +60,10 @@ enum class AllocFnKind : uint64_t {
   Zeroed = 1 << 4,        // Allocator function returns zeroed memory
   Aligned = 1 << 5,       // Allocator function aligns allocations per the
                           // `allocalign` argument
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Aligned)
+  AddressUnpredictable = 1 << 6, // Address of the allocation is unobservable
+  AllocDisjoint = 1 << 7, // Storage is disjoint from allocas, globals, et alia
+  PoisonsMemory = 1 << 8, // Free functions do poison the freed memory
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ PoisonsMemory)
 };
 
 class DeadOnReturnInfo {

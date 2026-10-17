@@ -80,6 +80,11 @@ LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 LLVM_ABI Value *getFreedOperand(const CallBase *CB,
                                 const TargetLibraryInfo *TLI);
 
+/// Return true if \p V is a call to a free function that discards the contents
+/// of the freed memory, so that stores prior to the call are dead (e.g., known
+/// free functions and those annotated as allockind("free,poisons_memory")).
+LLVM_ABI bool isPoisonMemoryFree(const Value *V, const TargetLibraryInfo *TLI);
+
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //
@@ -94,6 +99,19 @@ LLVM_ABI Value *getFreedOperand(const CallBase *CB,
 /// A language (e.g. C++) can allow removing allocations without allowing
 /// insertion or speculative execution of allocation routines.
 LLVM_ABI bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
+
+/// Return true if \p V is a call to an allocation function whose returned
+/// address is unpredictable to the caller, so that comparisons of the address
+/// with pointers not based on the allocation may be folded (e.g., known
+/// allocators and routines annotated as allockind("address_unpredictable")).
+LLVM_ABI bool isAddressUnpredictableAlloc(const Value *V,
+                                          const TargetLibraryInfo *TLI);
+
+/// Return true if \p V is a call to an allocation function whose returned
+/// allocation is known not to overlap allocas, globals, byval arguments or
+/// other allocations (e.g., known allocators and routines annotated as
+/// allockind("alloc_disjoint")).
+LLVM_ABI bool isDisjointAlloc(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Gets the alignment argument for an aligned_alloc-like function, using either
 /// built-in knowledge based on fuction names/signatures or allocalign
