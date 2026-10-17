@@ -1155,10 +1155,9 @@ public:
 
   /// Tests whether the target 64-bit PowerPC big endian ABI is ELFv2.
   bool isPPC64ELFv2ABI() const {
-    return (getArch() == Triple::ppc64 &&
-            ((getOS() == Triple::FreeBSD &&
-              (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
-             getOS() == Triple::OpenBSD || isMusl()));
+    return (
+        getArch() == Triple::ppc64 &&
+        (getOS() == Triple::FreeBSD || getOS() == Triple::OpenBSD || isMusl()));
   }
 
   /// Tests whether the target 32-bit PowerPC uses Secure PLT.
