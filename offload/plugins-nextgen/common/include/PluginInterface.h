@@ -355,6 +355,15 @@ public:
   }
 };
 
+/// Options for a host to device transfer, see GenericDeviceTy::dataSubmit.
+struct DataSubmitFlagsTy {
+  /// Allow the transfer to be issued as a direct write by the host, which can
+  /// land ahead of the operations pending on the queue; none of them may
+  /// access the destination.
+  uint64_t DirectWrite : 1;
+  uint64_t Unused : 63;
+};
+
 /// The subset of KernelArgsTy fields the plugin interface needs to launch a
 /// kernel, plus the resolved argument-pointer array. Unlike KernelArgsTy,
 /// this struct is populated by libomptarget on the stack for every launch,
@@ -980,11 +989,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                          void *&BaseDevAccessiblePtr,
                                          size_t &BaseSize) const = 0;
 
-  /// Submit data to the device (host to device transfer).
+  /// Submit data to the device (host to device transfer), as controlled by
+  /// \p Flags.
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
-                   __tgt_async_info *AsyncInfo);
+                   __tgt_async_info *AsyncInfo, DataSubmitFlagsTy Flags = {});
   virtual Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
-                               AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
+                               AsyncInfoWrapperTy &AsyncInfoWrapper,
+                               DataSubmitFlagsTy Flags) = 0;
 
   /// Retrieve data from the device (device to host transfer).
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size,
