@@ -37,7 +37,7 @@ void testArrayIndexTracking() {
   int arr[10];
 
   for (int i = 0; i < 3; ++i)
-    // expected-note@-1 3{{Loop condition is true.  Entering loop body}}
+    // expected-note@-1 3{{Loop condition is true. Entering loop body}}
     // expected-note@-2 {{Loop condition is false. Execution continues on line 43}}
     arr[i] = 0;
   int x = getInt();
@@ -69,7 +69,7 @@ void testArrayIndexTracking() {
   int arr[2][10];
 
   for (int i = 0; i < 3; ++i)
-    // expected-note@-1 3{{Loop condition is true.  Entering loop body}}
+    // expected-note@-1 3{{Loop condition is true. Entering loop body}}
     // expected-note@-2 {{Loop condition is false. Execution continues on line 75}}
     arr[1][i] = 0;
   int x = getInt();
