@@ -4197,10 +4197,6 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     if (Ex.isInvalid())
       return ExprError();
     Type = Ex.get()->getType();
-    if (!Converter.match(Type))
-      // FIXME: PerformContextualImplicitConversion should return ExprError
-      //        itself in this case.
-      return ExprError();
 
     QualType Pointee = Type->castAs<PointerType>()->getPointeeType();
     QualType PointeeElem = Context.getBaseElementType(Pointee);

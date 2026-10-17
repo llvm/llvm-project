@@ -24,7 +24,7 @@ int tmain(T argc, S **argv) {
 #pragma omp target update from(i) device (device_num: argc + z) // expected-error {{use of undeclared identifier 'device_num'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(i) device (argc), device (argc+1) // expected-error {{directive '#pragma omp target update' cannot contain more than one 'device' clause}}
 #pragma omp target update from(i) device (S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target update from(i) device (3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
+#pragma omp target update from(i) device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
 #pragma omp target update from(i) device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
 #pragma omp target update from(i) device (-2) // OK: omp_invalid_device
 #pragma omp target update from(i) device (-1) // OK: omp_initial_device
