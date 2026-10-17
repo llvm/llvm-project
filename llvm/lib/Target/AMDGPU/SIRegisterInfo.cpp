@@ -1144,7 +1144,22 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
 const TargetRegisterClass *
 SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
-  return RC == &AMDGPU::SCC_CLASSRegClass ? &AMDGPU::SReg_32RegClass : RC;
+  switch (RC->getID()) {
+  case AMDGPU::SCC_CLASSRegClassID:
+    return &AMDGPU::SReg_32RegClass;
+  case AMDGPU::APERTURE_ClassRegClassID: {
+    // Apertures have no readable high subregister. Use the full-width vector
+    // move's operand class when available, otherwise materialize into SGPRs.
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    if (ST.hasVMovB64Inst())
+      return TII->getRegClass(TII->get(AMDGPU::V_MOV_B64_e32), 1);
+    if (ST.hasPkMovB32())
+      return TII->getRegClass(TII->get(AMDGPU::V_PK_MOV_B32), 2);
+    return &AMDGPU::SReg_64RegClass;
+  }
+  default:
+    return RC;
+  }
 }
 
 static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,

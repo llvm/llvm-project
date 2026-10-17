@@ -1,0 +1,51 @@
+# RUN: llc -mtriple=amdgpu12.01 -run-pass=machine-cp %s -o - | FileCheck %s --check-prefixes=CHECK,KEEP_SGPR
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=machine-cp %s -o - | FileCheck %s --check-prefixes=CHECK,FORWARD_APERTURE
+# RUN: llc -mtriple=amdgpu12.01 -passes=machine-cp,post-ra-pseudos %s -o /dev/null
+# RUN: llc -mtriple=amdgpu9.42 -passes=machine-cp,post-ra-pseudos %s -o /dev/null
+
+# Aperture registers have no readable high subregister. Preserve the SGPR
+# intermediate unless the target can copy the whole aperture to a VGPR pair.
+---
+name: shared_base_to_vgpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: shared_base_to_vgpr
+    ; CHECK: bb.0:
+    ; KEEP_SGPR-NEXT: renamable $sgpr0_sgpr1 = COPY $src_shared_base
+    ; KEEP_SGPR-NEXT: renamable $vgpr0_vgpr1 = COPY renamable $sgpr0_sgpr1, implicit $exec
+    ; FORWARD_APERTURE-NEXT: renamable $vgpr0_vgpr1 = COPY $src_shared_base, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit $vgpr0_vgpr1
+    renamable $sgpr0_sgpr1 = COPY $src_shared_base
+    renamable $vgpr0_vgpr1 = COPY renamable $sgpr0_sgpr1, implicit $exec
+    S_NOP 0, implicit $vgpr0_vgpr1
+    S_ENDPGM 0
+...
+---
+name: shared_base_to_sgpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: shared_base_to_sgpr
+    ; CHECK: bb.0:
+    ; CHECK-NEXT: renamable $sgpr2_sgpr3 = COPY $src_shared_base
+    ; CHECK-NEXT: S_NOP 0, implicit $sgpr2_sgpr3
+    renamable $sgpr0_sgpr1 = COPY $src_shared_base
+    renamable $sgpr2_sgpr3 = COPY renamable $sgpr0_sgpr1
+    S_NOP 0, implicit $sgpr2_sgpr3
+    S_ENDPGM 0
+...
+---
+name: scalar_pair_to_vgpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr10_sgpr11
+    ; CHECK-LABEL: name: scalar_pair_to_vgpr
+    ; CHECK: renamable $vgpr0_vgpr1 = COPY $sgpr10_sgpr11, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit $vgpr0_vgpr1
+    renamable $sgpr0_sgpr1 = COPY $sgpr10_sgpr11
+    renamable $vgpr0_vgpr1 = COPY renamable $sgpr0_sgpr1, implicit $exec
+    S_NOP 0, implicit $vgpr0_vgpr1
+    S_ENDPGM 0
+...
