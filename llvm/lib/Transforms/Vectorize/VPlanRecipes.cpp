@@ -90,6 +90,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -135,6 +136,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
+  case VPActiveLaneMaskPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPCurrentIterationPHISC:
@@ -150,6 +152,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionEVLSC:
   case VPReductionSC:
   case VPVectorPointerSC:
+  case VPVectorEndPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:
@@ -1727,7 +1730,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
     return false;
   switch (getOpcode()) {
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
   case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
   case Instruction::InsertElement:
@@ -4261,7 +4263,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
   }
 

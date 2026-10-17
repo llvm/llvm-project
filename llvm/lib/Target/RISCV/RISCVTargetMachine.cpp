@@ -107,7 +107,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      CLOpts(RISCVOptions::Global), TLOF(createTLOF(TT)) {
+      CLOpts(cl::LibraryOptionsContext::get<RISCVOptions>(
+          Options.MCOptions.LibraryOptions)),
+      TLOF(createTLOF(TT)) {
   initAsmInfo();
 
   // RISC-V supports the MachineOutliner.

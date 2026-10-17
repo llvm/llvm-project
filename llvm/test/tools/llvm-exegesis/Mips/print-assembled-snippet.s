@@ -10,8 +10,8 @@
 # RUN:               --snippets-file=%s --mode=latency --repetition-mode=duplicate \
 # RUN: | FileCheck %s --check-prefix=CHECK-LINUX-64
 
-# LLVM-EXEGESIS-DEFREG A0 0
-# LLVM-EXEGESIS-DEFREG A1 0
+# LLVM-EXEGESIS-DEFREG R4 0
+# LLVM-EXEGESIS-DEFREG R5 0
 add $2, $5, $4
 
 # CHECK-LINUX: cpu_name:             generic

@@ -83,6 +83,9 @@ llvm::Error DeviceTy::init() {
     return createError(ErrorCode::BackendFailure,
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
+  IsHostDevice =
+      getInfo<ol_device_type_t>(DeviceInfo::TYPE) == OL_DEVICE_TYPE_HOST;
+
   size_t UidSize = 0;
   if (!olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_UID, &UidSize) &&
       UidSize > 0) {
@@ -258,7 +261,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
-                        AsyncInfo))
+                        AsyncInfo, /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                        /*Loc=*/nullptr, /*Name=*/"IndirectCallTable"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
   // The IndirectCallTable is on the stack, so we must synchronize to ensure
   // the data is copied before we return.
@@ -278,13 +282,14 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
     return createError(ErrorCode::InvalidBinary, "failed to load binary %p",
                        Img);
 
-  OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(
-      device_load, DeviceID, /*FileName=*/nullptr, /*FileOffset=*/0,
-      /*VmaInFile=*/nullptr,
-      reinterpret_cast<uintptr_t>(Img->ImageEnd) -
-          reinterpret_cast<uintptr_t>(Img->ImageStart),
-      const_cast<void *>(Img->ImageStart),
-      /*DeviceAddr=*/nullptr, /*ModuleId=*/0));
+  OMPT_IF_BUILT_AND_INITIALIZED({
+    auto &Image = *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
+        Binary.handle);
+    performOmptCallback(device_load, DeviceID, /*FileName=*/nullptr,
+                        /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+                        Image.getSize(), const_cast<void *>(Image.getStart()),
+                        /*DeviceAddr=*/nullptr, /*ModuleId=*/0);
+  });
 
   // This symbol is optional.
   void *DeviceEnvironmentPtr;
@@ -316,7 +321,9 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
 
   AsyncInfoTy AsyncInfo(*this);
   if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
-                 sizeof(DeviceEnvironment), AsyncInfo))
+                 sizeof(DeviceEnvironment), AsyncInfo, /*Entry=*/nullptr,
+                 /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                 /*Name=*/"DeviceEnvironment"))
     return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
   return Binary;
@@ -365,10 +372,11 @@ llvm::Error DeviceTy::freeCtxMem(void *Ptr) {
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
-                             MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+                             MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                             const ident_t *Loc, const char *Name) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/true,
-                              Entry, HDTTMapPtr);
+                              Entry, HDTTMapPtr, Loc, Name);
 
   /// RAII to establish tool anchors before and after data submit
   OMPT_IF_BUILT(
@@ -385,10 +393,11 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
                                HostDataToTargetTy *Entry,
-                               MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+                               MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                               const ident_t *Loc) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
-                              Entry, HDTTMapPtr);
+                              Entry, HDTTMapPtr, Loc);
 
   /// RAII to establish tool anchors before and after data retrieval
   OMPT_IF_BUILT(
@@ -570,14 +579,16 @@ static void freeAfterSynchronization(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
 }
 
 /// Return a device pointer to a new kernel launch environment, or null if
-/// this launch has no reserved dyn_ptr slot to store one in. \p NumBlocks0 is
-/// the number of blocks for this launch and is used to size the reduction
-/// buffer.
-static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
-    DeviceTy &Device, const KernelLaunchArgsTy &LaunchArgs,
-    const KernelLaunchInfoTy &KernelEnv,
-    const DynBlockMemConfTy &DynBlockMemConf, uint32_t DynCGroupMem,
-    void **DynPtrSlot, AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
+/// this launch has no reserved dyn_ptr slot to store one in. \p OmpABIVersion
+/// is the kernel-argument ABI version this launch was built against.
+/// \p NumBlocks0 is the number of blocks for this launch and is used to size
+/// the reduction buffer.
+static llvm::Expected<KernelLaunchEnvironmentTy *>
+getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
+                           const KernelLaunchInfoTy &KernelEnv,
+                           const DynBlockMemConfTy &DynBlockMemConf,
+                           uint32_t DynCGroupMem, void **DynPtrSlot,
+                           AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
   GenericDeviceTy &GenericDevice = Device.RTL->getDevice(Device.RTLDeviceID);
 
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
@@ -589,12 +600,12 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
     return nullptr;
 
   const bool NeedsReductionBuffer = KernelEnv.ReductionDataSize != 0;
-  if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
+  if (NeedsReductionBuffer && OmpABIVersion < OMP_KERNEL_ARG_VERSION)
     return createError(
         ErrorCode::InvalidBinary,
         "kernel was built against an older OpenMP kernel-launch-environment "
         "ABI (v%u); current runtime requires v%u for cross-team reductions",
-        LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
+        OmpABIVersion, OMP_KERNEL_ARG_VERSION);
   if (!NeedsReductionBuffer && !DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
@@ -771,22 +782,34 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
 
 /// Build the base KernelLaunchArgsTy for a launch from the public
 /// KernelArgsTy and the kernel's cached launch-geometry properties.
-static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs,
-                                          KernelReplayOutcomeTy *ReplayOutcome,
-                                          const KernelLaunchInfoTy &KernelEnv) {
+static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs) {
   KernelLaunchArgsTy LaunchArgs;
-  LaunchArgs.OmpABIVersion = KernelArgs.Version;
-  LaunchArgs.ReplayOutcome = ReplayOutcome;
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
-  // Save the requested value before computing the effective number of blocks so
-  // it can be used by record-replay mechanisms.
-  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
-  LaunchArgs.KernelLaunchInfo.MaxNumThreads = KernelEnv.MaxNumThreads;
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
   return LaunchArgs;
+}
+
+/// Build the record/replay view of a launch, once the effective geometry and
+/// dynamic block memory in \p LaunchArgs have been resolved.
+static KernelRecordArgsTy buildRecordArgs(
+    const KernelArgsTy &KernelArgs, const KernelLaunchArgsTy &LaunchArgs,
+    const KernelLaunchInfoTy &KernelEnv, KernelReplayOutcomeTy *ReplayOutcome) {
+  KernelRecordArgsTy RecordArgs;
+  RecordArgs.NumArgs = LaunchArgs.NumArgs;
+  RecordArgs.Args = LaunchArgs.Args;
+  RecordArgs.Tripcount = KernelArgs.Tripcount;
+  // The value requested by the program, before adjustEffectiveGeometry()
+  // computed the effective number of blocks.
+  RecordArgs.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
+  RecordArgs.MaxNumThreads = KernelEnv.MaxNumThreads;
+  llvm::copy(LaunchArgs.UserNumBlocks, RecordArgs.NumBlocks);
+  llvm::copy(LaunchArgs.UserThreadLimit, RecordArgs.NumThreads);
+  RecordArgs.DynCGroupMem = LaunchArgs.DynCGroupMem;
+  RecordArgs.ReplayOutcome = ReplayOutcome;
+  return RecordArgs;
 }
 
 /// Assert the launch geometry invariants expected by the plugin layer.
@@ -896,7 +919,8 @@ static void **resolveArgsAndDynPtrSlot(KernelArgsTy &KernelArgs,
 /// launch has a reserved dyn_ptr slot (\p DynPtrSlot), the device-side kernel
 /// launch environment.
 static llvm::Error
-prepareDynamicLaunchState(DeviceTy &Device, const KernelLaunchInfoTy &KernelEnv,
+prepareDynamicLaunchState(DeviceTy &Device, uint32_t OmpABIVersion,
+                          const KernelLaunchInfoTy &KernelEnv,
                           KernelLaunchArgsTy &LaunchArgs, uint32_t DynCGroupMem,
                           DynCGroupMemFallbackType DynCGroupMemFallback,
                           void **DynPtrSlot, AsyncInfoTy &AsyncInfo) {
@@ -914,8 +938,8 @@ prepareDynamicLaunchState(DeviceTy &Device, const KernelLaunchInfoTy &KernelEnv,
     freeAfterSynchronization(Device, AsyncInfo, DynBlockMemConf.FallbackPtr);
 
   auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      Device, LaunchArgs, KernelEnv, DynBlockMemConf, DynCGroupMem, DynPtrSlot,
-      AsyncInfo, LaunchArgs.UserNumBlocks[0]);
+      Device, OmpABIVersion, KernelEnv, DynBlockMemConf, DynCGroupMem,
+      DynPtrSlot, AsyncInfo, LaunchArgs.UserNumBlocks[0]);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
@@ -938,8 +962,15 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 
   GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
-  KernelLaunchArgsTy LaunchArgs =
-      buildLaunchArgs(KernelArgs, ReplayOutcome, KernelLaunchInfo);
+  KernelLaunchArgsTy LaunchArgs = buildLaunchArgs(KernelArgs);
+
+  // Host kernels are only supported for the latest ABI.
+  if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION && isHostDevice()) {
+    REPORT() << "Incompatible kernel argument version for kernel "
+             << reinterpret_cast<GenericKernelTy *>(TgtEntryPtr)->getName()
+             << " on host device";
+    return OFFLOAD_FAIL;
+  }
 
   checkLaunchInvariants(LaunchArgs, KernelArgs, KernelLaunchInfo);
   adjustEffectiveGeometry(GenericDevice, LaunchArgs, KernelArgs,
@@ -951,8 +982,9 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   auto DynCGroupMemFallback = static_cast<DynCGroupMemFallbackType>(
       KernelArgs.Flags.DynCGroupMemFallback);
   if (auto Err = prepareDynamicLaunchState(
-          *this, KernelLaunchInfo, LaunchArgs, KernelArgs.DynCGroupMem,
-          DynCGroupMemFallback, DynPtrSlot, AsyncInfo)) {
+          *this, KernelArgs.Version, KernelLaunchInfo, LaunchArgs,
+          KernelArgs.DynCGroupMem, DynCGroupMemFallback, DynPtrSlot,
+          AsyncInfo)) {
     REPORT() << "Failure to prepare launch state for kernel " << TgtEntryPtr
              << ": " << toString(std::move(Err));
     return OFFLOAD_FAIL;
@@ -967,7 +999,42 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        LaunchArgs.UserThreadLimit[0], LaunchArgs.UserThreadLimit[1],
        LaunchArgs.UserThreadLimit[2], KernelLaunchInfo.getExecutionModeName());
 
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
+  // Record the kernel prologue data before the launch.
+  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
+  RecordReplayTy::HandleTy RRHandle;
+  if (RecordReplay) {
+    // Record replay requires synchronization of any previous operation.
+    if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+
+    KernelRecordArgsTy RecordArgs = buildRecordArgs(
+        KernelArgs, LaunchArgs, KernelLaunchInfo, ReplayOutcome);
+    auto RRHandleOrErr = RecordReplay->recordPrologue(*Kernel, RecordArgs);
+    if (!RRHandleOrErr) {
+      REPORT() << "Failure to record prologue for kernel " << Kernel->getName()
+               << ": " << toString(RRHandleOrErr.takeError());
+      return OFFLOAD_FAIL;
+    }
+    RRHandle = *RRHandleOrErr;
+  }
+
+  if (RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo) !=
+      OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  // Record the epilogue data after kernel synchronization.
+  if (RecordReplay) {
+    if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+
+    if (auto Err = RecordReplay->recordEpilogue(*Kernel, RRHandle)) {
+      REPORT() << "Failure to record epilogue for kernel " << Kernel->getName()
+               << ": " << toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  return OFFLOAD_SUCCESS;
 }
 
 // Whether data can be copied to DstDevice directly
@@ -1066,5 +1133,11 @@ bool DeviceTy::useAutoZeroCopy() {
 }
 
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
-  return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
+  bool IsAccessible = false;
+  if (auto Res = olMemIsAccessible(/*Context=*/nullptr, DeviceHandle, Ptr, Size,
+                                   &IsAccessible)) {
+    REPORT() << "Failure to check pointer accessibility: " << Res->Details;
+    return false;
+  }
+  return IsAccessible;
 }
