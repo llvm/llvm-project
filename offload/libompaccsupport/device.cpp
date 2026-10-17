@@ -925,35 +925,22 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
 
 /// Build the base KernelLaunchArgsTy for a launch from the public
 /// KernelArgsTy and the kernel's cached launch-geometry properties.
-static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs) {
+static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs,
+                                          KernelReplayOutcomeTy *ReplayOutcome,
+                                          const KernelLaunchInfoTy &KernelEnv) {
   KernelLaunchArgsTy LaunchArgs;
+  LaunchArgs.ReplayOutcome = ReplayOutcome;
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
   // Downstream, the plugin gets the full launch info; see device.h.
+  LaunchArgs.KernelLaunchInfo = KernelEnv;
+  // Save the requested value before computing the effective number of blocks so
+  // it can be used by record-replay mechanisms.
+  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
   return LaunchArgs;
-}
-
-/// Build the record/replay view of a launch, once the effective geometry and
-/// dynamic block memory in \p LaunchArgs have been resolved.
-static KernelRecordArgsTy buildRecordArgs(
-    const KernelArgsTy &KernelArgs, const KernelLaunchArgsTy &LaunchArgs,
-    const KernelLaunchInfoTy &KernelEnv, KernelReplayOutcomeTy *ReplayOutcome) {
-  KernelRecordArgsTy RecordArgs;
-  RecordArgs.NumArgs = LaunchArgs.NumArgs;
-  RecordArgs.Args = LaunchArgs.Args;
-  RecordArgs.Tripcount = KernelArgs.Tripcount;
-  // The value requested by the program, before adjustEffectiveGeometry()
-  // computed the effective number of blocks.
-  RecordArgs.RequestedNumBlocks = KernelArgs.UserNumBlocks[0];
-  RecordArgs.MaxNumThreads = KernelEnv.MaxNumThreads;
-  llvm::copy(LaunchArgs.UserNumBlocks, RecordArgs.NumBlocks);
-  llvm::copy(LaunchArgs.UserThreadLimit, RecordArgs.NumThreads);
-  RecordArgs.DynCGroupMem = LaunchArgs.DynCGroupMem;
-  RecordArgs.ReplayOutcome = ReplayOutcome;
-  return RecordArgs;
 }
 
 /// Assert the launch geometry invariants expected by the plugin layer.
@@ -1120,7 +1107,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   auto *Kernel = reinterpret_cast<GenericKernelTy *>(TgtEntryPtr);
   KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
-  KernelLaunchArgsTy LaunchArgs = buildLaunchArgs(KernelArgs);
+  KernelLaunchArgsTy LaunchArgs =
+      buildLaunchArgs(KernelArgs, ReplayOutcome, KernelLaunchInfo);
 
   // Host kernels are only supported for the latest ABI.
   if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION && isHostDevice()) {
@@ -1156,42 +1144,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
        LaunchArgs.UserThreadLimit[0], LaunchArgs.UserThreadLimit[1],
        LaunchArgs.UserThreadLimit[2], KernelLaunchInfo.getExecutionModeName());
 
-  // Record the kernel prologue data before the launch.
-  RecordReplayTy *RecordReplay = GenericDevice.getRecordReplay();
-  RecordReplayTy::HandleTy RRHandle;
-  if (RecordReplay) {
-    // Record replay requires synchronization of any previous operation.
-    if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-
-    KernelRecordArgsTy RecordArgs = buildRecordArgs(
-        KernelArgs, LaunchArgs, KernelLaunchInfo, ReplayOutcome);
-    auto RRHandleOrErr = RecordReplay->recordPrologue(*Kernel, RecordArgs);
-    if (!RRHandleOrErr) {
-      REPORT() << "Failure to record prologue for kernel " << Kernel->getName()
-               << ": " << toString(RRHandleOrErr.takeError());
-      return OFFLOAD_FAIL;
-    }
-    RRHandle = *RRHandleOrErr;
-  }
-
-  if (RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo) !=
-      OFFLOAD_SUCCESS)
-    return OFFLOAD_FAIL;
-
-  // Record the epilogue data after kernel synchronization.
-  if (RecordReplay) {
-    if (synchronize(AsyncInfo) != OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-
-    if (auto Err = RecordReplay->recordEpilogue(*Kernel, RRHandle)) {
-      REPORT() << "Failure to record epilogue for kernel " << Kernel->getName()
-               << ": " << toString(std::move(Err));
-      return OFFLOAD_FAIL;
-    }
-  }
-
-  return OFFLOAD_SUCCESS;
+  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
 }
 
 // Whether data can be copied to DstDevice directly
