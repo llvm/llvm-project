@@ -266,6 +266,9 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if the descriptor is of a union.
   bool isUnion() const;
+  /// Checks if an object of this descriptor contains a pointer, possibly
+  /// nested in records or arrays.
+  bool containsPointer() const;
 
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;

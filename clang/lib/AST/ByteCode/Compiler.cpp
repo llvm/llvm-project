@@ -5645,13 +5645,8 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD) {
     return true;
 
   if (!R && Context::shouldBeGloballyIndexed(VD)) {
-    if (auto GlobalIndex = P.getGlobal(VD)) {
-      Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
-
-      GD.InitState = GlobalInitState::InitializerFailed;
-      GlobalBlock->invokeDtor();
-    }
+    if (auto GlobalIndex = P.getGlobal(VD))
+      P.markGlobalUninitialized(*GlobalIndex);
   }
 
   return R;
@@ -5711,11 +5706,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
     if (Context::shouldBeGloballyIndexed(VD)) {
       auto GlobalIndex = P.getGlobal(VD);
       assert(GlobalIndex);
-      Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      auto &GD = GlobalBlock->getBlockDesc<GlobalInlineDescriptor>();
-
-      GD.InitState = GlobalInitState::InitializerFailed;
-      GlobalBlock->invokeDtor();
+      P.markGlobalUninitialized(*GlobalIndex);
     }
     return false;
   }
