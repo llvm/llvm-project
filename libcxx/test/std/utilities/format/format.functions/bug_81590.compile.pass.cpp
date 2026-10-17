@@ -24,9 +24,12 @@ struct X : std::variant<X*> {
   constexpr const std::variant<X*>& decay() const noexcept { return *this; }
 };
 
+// P3391R2: the argument to storage calls need to be constexpr and they are
+// instantiated eagerly, so a deduced return type makes __formattable_with<X>
+// depend on itself.
 template <>
 struct std::formatter<X, char> : std::formatter<std::string, char> {
-  static constexpr auto format(const X& x, auto& ctx) {
+  static constexpr auto format(const X& x, auto& ctx) -> decltype(ctx.out()) {
     if (!x.p)
       return ctx.out();
     auto m = [&](const X* t) { return std::format_to(ctx.out(), "{}", *t); };
