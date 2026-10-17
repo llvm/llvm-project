@@ -1713,6 +1713,8 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
                                  llvm::opt::ArgList &args,
                                  clang::DiagnosticsEngine &diags) {
   bool success = true;
+  invoc.getLangOpts().OpenACCIsGPU =
+      args.hasArg(clang::options::OPT_fopenacc_gpu);
 
   success &= parseIntegerOverflowArgs(invoc, args, diags);
   success &= parseFloatingPointArgs(invoc, args, diags);

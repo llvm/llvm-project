@@ -1,0 +1,35 @@
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -emit-hlfir %s -o - | FileCheck %s -DTYPED=typed_buffer
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=managed -emit-hlfir %s -o - | FileCheck %s -DTYPED=typed_buffer
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=unified -emit-hlfir %s -o - | FileCheck %s -DTYPED=typed_buffer
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s -DTYPED=opaque_buffer
+
+! Opaque buffers remain eligible in a GPU body, but a typed DEVICE dummy
+! is preferred. This special case is handled before the four-row table.
+module opaque_candidates
+  interface opaque_only
+    module procedure opaque_buffer
+  end interface
+  interface opaque_or_device
+    module procedure opaque_buffer, typed_buffer
+  end interface
+contains
+  subroutine opaque_buffer(x)
+    type(*) :: x(*)
+  end subroutine
+  subroutine typed_buffer(x)
+    real(8), device :: x(*)
+  end subroutine
+end module
+
+subroutine opaque_actual
+  use opaque_candidates
+  real(8) :: x(2)
+  ! CHECK-LABEL: func.func @_QPopaque_actual
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMopaque_candidatesPopaque_buffer
+  ! CHECK: fir.call @_QMopaque_candidatesP[[TYPED]]
+  !$acc serial private(x)
+  call opaque_only(x)
+  call opaque_or_device(x)
+  !$acc end serial
+end subroutine

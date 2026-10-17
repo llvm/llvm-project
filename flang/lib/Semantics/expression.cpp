@@ -20,6 +20,7 @@
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openacc-cuda-matching.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -3003,7 +3004,7 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
-static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
+static constexpr int cudaInfMatchingValue{semantics::CUDAInfMatchingValue};
 
 struct CudaMatchingDistance {
   std::vector<int> perArg;
@@ -3063,7 +3064,7 @@ static int CompareCudaMatchingDistance(
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     semantics::SemanticsContext &context,
     const characteristics::DummyArgument &dummy,
-    const std::optional<ActualArgument> &actual) {
+    const std::optional<ActualArgument> &actual, bool inGPUComputeBody) {
   bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
   bool isCudaUnified{features.IsEnabled(common::LanguageFeature::CudaUnified)};
   CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
@@ -3073,10 +3074,14 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   // matching enabled by -gpu=mem:unified (any variable) or -gpu=mem:managed
   // (allocatable/pointer objects only).
   bool actualCanUseImplicitCudaMemoryMode{false};
+  bool actualIsVariable{false};
+  bool actualIsOpenACCMapped{false};
+  bool actualDataAttrIsImplicit{false};
+  bool actualIsAllocatableOrPointer{false};
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
       if (evaluate::IsVariable(*expr)) {
-        bool actualIsAllocatableOrPointer{false};
+        actualIsVariable = true;
         // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
         // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
         // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
@@ -3090,6 +3095,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
                   s.detailsIf<semantics::ObjectEntityDetails>()}) {
             if (auto cudaAttr{object->cudaDataAttr()}) {
               actualDataAttr = *cudaAttr;
+              actualDataAttrIsImplicit = object->cudaDataAttrIsImplicit();
             }
           }
         }
@@ -3106,6 +3112,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
               for (const Symbol &symbol : evaluate::GetSymbolVector(*expr)) {
                 if (semantics::IsOpenACCMapped(symbol, *scope)) {
                   actualDataAttr = common::CUDADataAttr::UseDevice;
+                  actualIsOpenACCMapped = true;
                   break;
                 }
               }
@@ -3129,15 +3136,61 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   }
 
   bool dummyIsCudaAddressSpaceAgnostic{false};
+  bool dummyIsValue{false};
   common::visit(common::visitors{
                     [&](const characteristics::DummyDataObject &object) {
                       dummyDataAttr = object.cudaDataAttr;
+                      dummyIsValue = object.attrs.test(
+                          characteristics::DummyDataObject::Attr::Value);
                       dummyIsCudaAddressSpaceAgnostic =
                           semantics::IsCUDAAddressSpaceAgnostic(object);
                     },
                     [&](const auto &) {},
                 },
       dummy.u);
+
+  if (inGPUComputeBody && actualIsVariable && !dummyIsValue &&
+      (!actualDataAttr || actualIsOpenACCMapped || actualDataAttrIsImplicit)) {
+    // A reference in an unconditional GPU compute body denotes its compute
+    // binding, including private objects. Do not change the symbol's CUDA
+    // attribute: the host references and VALUE inputs still use normal CUDA
+    // matching. Explicit CUDA attributes likewise retain their usual scores.
+    using semantics::CUDADummyCategory;
+    using semantics::CUDAMemoryMode;
+    using semantics::OpenACCActualStorage;
+    if (dummyIsCudaAddressSpaceAgnostic) {
+      // Opaque buffers accept the compute binding, but a typed specific
+      // remains a better match.
+      return 3;
+    }
+    CUDAMemoryMode mode{CUDAMemoryMode::Default};
+    if (isCudaUnified) {
+      mode = CUDAMemoryMode::Unified;
+    } else if (isCudaManaged) {
+      mode = CUDAMemoryMode::Managed;
+    }
+    CUDADummyCategory category{CUDADummyCategory::Host};
+    if (dummyDataAttr) {
+      switch (*dummyDataAttr) {
+      case common::CUDADataAttr::Device:
+        category = CUDADummyCategory::Device;
+        break;
+      case common::CUDADataAttr::Managed:
+        category = CUDADummyCategory::Managed;
+        break;
+      case common::CUDADataAttr::Unified:
+        category = CUDADummyCategory::Unified;
+        break;
+      default:
+        // Only the four dummy attributes in the GPU matching table apply.
+        return cudaInfMatchingValue;
+      }
+    }
+    return semantics::GetOpenACCGPUMatchingDistance(mode,
+        actualIsAllocatableOrPointer ? OpenACCActualStorage::Dynamic
+                                     : OpenACCActualStorage::Fixed,
+        category);
+  }
 
   if (actualDataAttr && dummyIsCudaAddressSpaceAgnostic) {
     // TYPE(*) assumed-size/rank dummies model opaque buffers, so they can
@@ -3224,8 +3277,8 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 
 static CudaMatchingDistance ComputeCudaMatchingDistance(
     semantics::SemanticsContext &context,
-    const characteristics::Procedure &procedure,
-    const ActualArguments &actuals) {
+    const characteristics::Procedure &procedure, const ActualArguments &actuals,
+    bool inGPUComputeBody) {
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
   CudaMatchingDistance distance;
@@ -3238,7 +3291,7 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
       continue;
     }
     int d{GetMatchingDistance(
-        context.languageFeatures(), context, dummy, actual)};
+        context.languageFeatures(), context, dummy, actual, inGPUComputeBody)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
       return distance;
@@ -3342,6 +3395,9 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
+    const semantics::Scope *gpuComputeScope{
+        semantics::FindOpenACCGPUComputeScope(
+            context_, GetContextualMessages().at())};
     std::optional<CudaMatchingDistance> crtMatchingDistance;
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
@@ -3364,11 +3420,17 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
         }
         tried.push_back(*specific);
         if (semantics::CheckInterfaceForGeneric(*procedure, localActuals,
-                context_, false /* no integer conversions */) &&
+                context_, false /* no integer conversions */,
+                gpuComputeScope) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{
-              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
+          CudaMatchingDistance d{ComputeCudaMatchingDistance(
+              context_, *procedure, localActuals, gpuComputeScope != nullptr)};
+          if (gpuComputeScope && d.isInfinite) {
+            // Interface checking admits GPU-body actuals before contextual
+            // scoring decides which CUDA memory attributes are compatible.
+            continue;
+          }
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
             if (crtMatchingDistance) {

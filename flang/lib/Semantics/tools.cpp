@@ -148,6 +148,35 @@ bool HasOpenACCRoutineDirective(const Scope *scope) {
   return false;
 }
 
+const Scope *FindOpenACCGPUComputeScope(
+    const SemanticsContext &context, parser::CharBlock at) {
+  if (!context.langOptions().OpenACCIsGPU || at.empty()) {
+    return nullptr;
+  }
+  const Scope *scope{context.FindScopeIfAny(at)};
+  bool inComputeBody{false};
+  for (const Scope *current{scope}; current && !current->IsTopLevel();
+      current = &current->parent()) {
+    // A routine can be specialized for both host and device after semantics.
+    if (HasOpenACCRoutineDirective(current)) {
+      return nullptr;
+    }
+    if (const auto &info{current->openACCComputeInfo()}) {
+      if (info->mayExecuteOnHost || info->body.empty() ||
+          !info->body.Contains(at)) {
+        return nullptr;
+      }
+      for (const auto &header : info->loopHeaders) {
+        if (header.Contains(at)) {
+          return nullptr;
+        }
+      }
+      inComputeBody = true;
+    }
+  }
+  return inComputeBody ? scope : nullptr;
+}
+
 // 7.5.2.4 "same derived type" test -- rely on IsTkCompatibleWith() and its
 // infrastructure to detect and handle comparisons on distinct (but "same")
 // sequence/bind(C) derived types

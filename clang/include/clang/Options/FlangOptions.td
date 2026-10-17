@@ -15,6 +15,10 @@ multiclass FlangIgnoredDiagOpt<string name> {
 }
 
 // Generic gfortran options.
+def fopenacc_gpu : Flag<["-"], "fopenacc-gpu">, Group<f_Group>,
+  Visibility<[FC1Option]>,
+  HelpText<"Resolve unconditional OpenACC compute bodies for GPU execution">;
+
 def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;
 def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group>;
 

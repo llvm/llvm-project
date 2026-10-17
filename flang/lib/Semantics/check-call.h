@@ -63,7 +63,7 @@ parser::Messages CheckExplicitInterface(
 // Checks actual arguments for the purpose of resolving a generic interface.
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,
     evaluate::ActualArguments &, SemanticsContext &,
-    bool allowActualArgumentConversions = false);
+    bool allowActualArgumentConversions = false, const Scope * = nullptr);
 
 // F2023 C1545: reports the cross-consequent-arg inconsistencies that a
 // conditional argument may not have in a reference to a generic procedure, and

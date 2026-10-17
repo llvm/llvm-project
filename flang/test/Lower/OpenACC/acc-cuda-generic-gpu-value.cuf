@@ -1,0 +1,32 @@
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -emit-hlfir %s -o - | FileCheck %s -DSELECTED=value_first
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=managed -emit-hlfir %s -o - | FileCheck %s -DSELECTED=value_first
+! RUN: bbc -fopenacc -fcuda -fopenacc-gpu -gpu=unified -emit-hlfir %s -o - | FileCheck %s -DSELECTED=reference_first
+
+! VALUE arguments retain ordinary matching. Applying the reference-argument
+! context score to the first VALUE dummy would incorrectly make reference_first
+! win in default memory mode, before considering its second argument.
+module gpu_value_candidates
+  interface choose
+    module procedure value_first, reference_first
+  end interface
+contains
+  subroutine value_first(x, y)
+    real(8), value :: x
+    real(8), device :: y
+  end subroutine
+  subroutine reference_first(x, y)
+    real(8), device :: x
+    real(8) :: y
+  end subroutine
+end module
+
+subroutine preserve_value_distance
+  use gpu_value_candidates
+  real(8) :: x, y
+  ! CHECK-LABEL: func.func @_QPpreserve_value_distance
+  ! CHECK: acc.serial
+  ! CHECK: fir.call @_QMgpu_value_candidatesP[[SELECTED]]
+  !$acc serial private(x, y)
+  call choose(x, y)
+  !$acc end serial
+end subroutine

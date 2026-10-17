@@ -51,6 +51,11 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+// Return the call-site scope only when its compute body is known to execute
+// exclusively on a GPU. Directive headers and host-specialized bodies do not
+// acquire this context.
+const Scope *FindOpenACCGPUComputeScope(
+    const SemanticsContext &, parser::CharBlock);
 bool IsOpenACCMapped(const Symbol &, const Scope &);
 bool HasOpenACCRoutineDirective(const Scope *);
 

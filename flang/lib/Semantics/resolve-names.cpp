@@ -1693,9 +1693,31 @@ void AccVisitor::AddAccSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
+static bool OpenACCComputeMayExecuteOnHost(
+    const parser::AccClauseList &clauses) {
+  for (const auto &clause : clauses.v) {
+    if (std::holds_alternative<parser::AccClause::If>(clause.u) ||
+        std::holds_alternative<parser::AccClause::Self>(clause.u)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
   if (NeedsScope(x)) {
     PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+    const auto &begin{std::get<parser::AccBeginBlockDirective>(x.t)};
+    const auto directive{std::get<parser::AccBlockDirective>(begin.t).v};
+    if (directive == llvm::acc::Directive::ACCD_parallel ||
+        directive == llvm::acc::Directive::ACCD_kernels ||
+        directive == llvm::acc::Directive::ACCD_serial) {
+      const auto &end{std::get<parser::AccEndBlockDirective>(x.t)};
+      const auto &clauses{std::get<parser::AccClauseList>(begin.t)};
+      currScope().set_openACCComputeInfo(
+          parser::CharBlock{begin.source.end(), end.source.begin()},
+          OpenACCComputeMayExecuteOnHost(clauses));
+    }
   }
   return true;
 }
@@ -1818,6 +1840,31 @@ void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
 bool AccVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   currScope().AddSourceRange(x.source);
+  const auto &begin{std::get<parser::AccBeginCombinedDirective>(x.t)};
+  const auto &clauses{std::get<parser::AccClauseList>(begin.t)};
+  parser::CharBlock body;
+  std::vector<parser::CharBlock> loopHeaders;
+  if (const auto &loop{std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+    // Keep the loop header outside the body-specific matching range.
+    body = parser::CharBlock{
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t)
+            .source.end(),
+        std::get<parser::Statement<parser::EndDoStmt>>(loop->t).source.begin()};
+    // A collapsed nest can evaluate more than the outer loop's bounds during
+    // setup. Conservatively retain ordinary matching in every nest header.
+    const parser::DoConstruct *nested{&*loop};
+    while (nested) {
+      loopHeaders.push_back(
+          std::get<parser::Statement<parser::NonLabelDoStmt>>(nested->t)
+              .source);
+      const auto &block{std::get<parser::Block>(nested->t)};
+      nested = block.empty()
+          ? nullptr
+          : parser::Unwrap<parser::DoConstruct>(block.front());
+    }
+  }
+  currScope().set_openACCComputeInfo(
+      body, OpenACCComputeMayExecuteOnHost(clauses), std::move(loopHeaders));
   return true;
 }
 

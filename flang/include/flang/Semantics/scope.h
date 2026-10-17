@@ -21,6 +21,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class raw_ostream;
@@ -279,6 +280,20 @@ public:
   const parser::CharBlock &sourceRange() const { return sourceRange_; }
   void AddSourceRange(parser::CharBlock);
 
+  struct OpenACCComputeInfo {
+    parser::CharBlock body;
+    bool mayExecuteOnHost;
+    std::vector<parser::CharBlock> loopHeaders;
+  };
+  const std::optional<OpenACCComputeInfo> &openACCComputeInfo() const {
+    return openACCComputeInfo_;
+  }
+  void set_openACCComputeInfo(parser::CharBlock body, bool mayExecuteOnHost,
+      std::vector<parser::CharBlock> loopHeaders = {}) {
+    openACCComputeInfo_ =
+        OpenACCComputeInfo{body, mayExecuteOnHost, std::move(loopHeaders)};
+  }
+
   // Record objects that have a device mapping in this OpenACC construct.
   // Unlike a CUDA data attribute, this does not change the storage denoted by
   // ordinary references to the object in the construct.
@@ -314,6 +329,7 @@ private:
   std::size_t size_{0}; // size in bytes
   std::optional<std::size_t> alignment_; // required alignment in bytes
   parser::CharBlock sourceRange_;
+  std::optional<OpenACCComputeInfo> openACCComputeInfo_;
   const parser::CookedSource *cookedSource_{nullptr};
   Symbol *const symbol_; // if not null, symbol_->scope() == this
   std::list<Scope> children_;

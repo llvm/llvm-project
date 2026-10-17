@@ -221,6 +221,11 @@ static llvm::cl::opt<bool> enableOpenACC("fopenacc",
                                          llvm::cl::desc("enable openacc"),
                                          llvm::cl::init(false));
 
+static llvm::cl::opt<bool> openACCIsGPU(
+    "fopenacc-gpu",
+    llvm::cl::desc("resolve unconditional OpenACC compute bodies for GPUs"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
     "fno-ppc-native-vector-element-order",
     llvm::cl::desc("no PowerPC native vector element order."),
@@ -720,6 +725,7 @@ int main(int argc, char **argv) {
       "__flang_patchlevel__"s, std::string{FLANG_VERSION_PATCHLEVEL_STRING});
 
   Fortran::common::LangOptions langOpts;
+  langOpts.OpenACCIsGPU = openACCIsGPU;
   langOpts.NoGPULib = setNoGPULib;
   langOpts.OpenMPVersion = setOpenMPVersion;
   langOpts.OpenMPIsTargetDevice = enableOpenMPDevice;
