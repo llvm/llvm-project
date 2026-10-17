@@ -561,9 +561,8 @@ lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
 
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
-  ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
+  ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator(LibraryOptions);
   CodeGen->setMllvmArgs(ThinLTOMllvmArgs);
-  CodeGen->setLibraryOptions(&LibraryOptions);
   CodeGen->setTargetOptions(
       codegen::InitTargetOptionsFromCodeGenFlags(Triple()));
   CodeGen->setFreestanding(EnableFreestanding);

@@ -665,10 +665,9 @@ public:
 
   ThinLTOProcessing(const cl::LibraryOptionsContext &LibraryOptions,
                     const TargetOptions &Options)
-      : LibraryOptions(LibraryOptions) {
+      : LibraryOptions(LibraryOptions), ThinGenerator(LibraryOptions) {
     ThinGenerator.setCodePICModel(codegen::getExplicitRelocModel());
     ThinGenerator.setTargetOptions(Options);
-    ThinGenerator.setLibraryOptions(&LibraryOptions);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
     ThinGenerator.setCacheEntryExpiration(ThinLTOCacheEntryExpiration);

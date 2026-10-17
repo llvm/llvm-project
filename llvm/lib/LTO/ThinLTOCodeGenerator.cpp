@@ -1008,8 +1008,7 @@ void ThinLTOCodeGenerator::run() {
     for (auto &Mod : Modules) {
       Pool.async([&](int count) {
         LLVMContext Context;
-        if (LibraryOptions)
-          Context.getLibraryOptions().assign(*LibraryOptions);
+        Context.getLibraryOptions().assign(LibraryOptions);
         Context.setDiscardValueNames(LTODiscardValueNames);
 
         // Parse module now
@@ -1184,8 +1183,7 @@ void ThinLTOCodeGenerator::run() {
         }
 
         LLVMContext Context;
-        if (LibraryOptions)
-          Context.getLibraryOptions().assign(*LibraryOptions);
+        Context.getLibraryOptions().assign(LibraryOptions);
         Context.setDiscardValueNames(LTODiscardValueNames);
         Context.enableDebugTypeODRUniquing();
         auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(

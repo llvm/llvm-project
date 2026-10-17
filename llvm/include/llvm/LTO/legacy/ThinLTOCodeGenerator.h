@@ -60,6 +60,11 @@ struct ThinLTOCodeGeneratorImpl::TargetMachineBuilder {
 /// codegenerator.
 class ThinLTOCodeGenerator {
 public:
+  /// run() assigns \p LibraryOptions, which must outlive the generator, to the
+  /// LLVMContexts it creates.
+  explicit ThinLTOCodeGenerator(const cl::LibraryOptionsContext &LibraryOptions)
+      : LibraryOptions(LibraryOptions) {}
+
   /// Add given module to the code generator.
   LLVM_ABI void addModule(StringRef Identifier, StringRef Data);
 
@@ -215,11 +220,6 @@ public:
     TMBuilder.Options = std::move(Options);
   }
 
-  /// The library options of the LLVMContexts that run() creates.
-  void setLibraryOptions(const cl::LibraryOptionsContext *LibraryOptions) {
-    this->LibraryOptions = LibraryOptions;
-  }
-
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.
   void setFreestanding(bool Enabled) { Freestanding = Enabled; }
@@ -319,7 +319,7 @@ public:
   /**@}*/
 
 private:
-  const cl::LibraryOptionsContext *LibraryOptions = nullptr;
+  const cl::LibraryOptionsContext &LibraryOptions;
 
   /// Helper factory to build a TargetMachine
   ThinLTOCodeGeneratorImpl::TargetMachineBuilder TMBuilder;
