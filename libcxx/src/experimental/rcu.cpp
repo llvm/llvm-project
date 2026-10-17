@@ -130,9 +130,11 @@ class rcu_domain_impl {
 
     // Wait for all threads to quiesce in the old phase
     grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
+    std::atomic_signal_fence(std::memory_order_seq_cst);
     while (any_reader_in_ongoing_grace_period(old_phase)) {
       grace_period_waiting_flag_.wait(true, std::memory_order_relaxed);
     }
+    std::atomic_signal_fence(std::memory_order_seq_cst);
     grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
 
     retired_queue_stage2_.splice_back(retired_queue_stage1_);
@@ -179,6 +181,7 @@ public:
     // Decrement the nest level.
     auto old_nested_level = current_thread_state.decrement_nest_level();
 
+    std::atomic_thread_fence(memory_order_seq_cst);
     if (old_nested_level == 1 && grace_period_waiting_flag_.load(memory_order_relaxed)) {
       // Transitioning to quiescent state, wake up waiters.
       grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
