@@ -1549,6 +1549,10 @@ bool TargetTransformInfo::preferSLPInstCountCheck() const {
   return TTIImpl->preferSLPInstCountCheck();
 }
 
+bool TargetTransformInfo::preferSLPOnceUsedSeeds() const {
+  return TTIImpl->preferSLPOnceUsedSeeds();
+}
+
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }

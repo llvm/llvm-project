@@ -352,6 +352,8 @@ bool GCNTTIImpl::preferSLPInstCountCheck() const {
   return !ST->hasGFX940Insts() && !ST->hasGFX950Insts();
 }
 
+bool GCNTTIImpl::preferSLPOnceUsedSeeds() const { return false; }
+
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                          unsigned ChainSizeInBytes,
                                          VectorType *VecTy) const {

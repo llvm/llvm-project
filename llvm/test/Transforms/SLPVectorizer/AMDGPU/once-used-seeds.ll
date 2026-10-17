@@ -5,15 +5,16 @@ define i32 @select_bit(ptr addrspace(1) %p, i32 %g, i32 %acc) {
 ; CHECK-LABEL: define i32 @select_bit(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[G:%.*]], i32 [[ACC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[G]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> zeroinitializer, <2 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 4
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = and i32 [[G]], 1
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[A0]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C0]], i32 0, i32 [[V0]]
+; CHECK-NEXT:    [[A1:%.*]] = and i32 [[G]], 2
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[A1]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C1]], i32 0, i32 [[V1]]
 ; CHECK-NEXT:    [[X0:%.*]] = xor i32 [[ACC]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[X1:%.*]] = xor i32 [[X0]], [[TMP7]]
 ; CHECK-NEXT:    ret i32 [[X1]]
 ;
