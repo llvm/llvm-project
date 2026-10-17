@@ -54,15 +54,15 @@ struct FILE_FS_DEVICE_INFORMATION {
 #  define FileFsDeviceInformation 4
 
 // https://learn.microsoft.com/en-us/windows/console/console-handles
-static bool __is_handle_terminal_win8_or_greater(HANDLE __handle) {
+static bool __is_handle_terminal_win8_or_greater(intptr_t __handle) {
   IO_STATUS_BLOCK __iosb;
   FILE_FS_DEVICE_INFORMATION __info;
-  const auto __status =
-      NtQueryVolumeInformationFile(__handle, &__iosb, &__info, sizeof(__info), FileFsDeviceInformation);
+  const auto __status = NtQueryVolumeInformationFile(
+      reinterpret_cast<void*>(__handle), &__iosb, &__info, sizeof(__info), FileFsDeviceInformation);
   return (__status >= 0) && (info.DeviceType == FILE_DEVICE_CONSOLE);
 }
 
-static bool __is_handle_terminal(HANDLE __handle) {
+static bool __is_handle_terminal(intptr_t __handle) {
   // Note the Standard does this in one call, but it's unclear whether
   // an invalid handle is allowed when calling GetConsoleMode.
   // https://learn.microsoft.com/en-us/windows/console/getconsolemode
