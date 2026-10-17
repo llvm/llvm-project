@@ -204,11 +204,26 @@ static cl::opt<bool>
     DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                            cl::desc("Print critical path length to stdout"));
 
+static cl::opt<TargetSubtargetInfo::AntiDepBreakMode> PostRAAntiDep(
+    "misched-postra-antidep", cl::Hidden,
+    cl::desc("Override the post-RA MISched anti-dependency break mode"),
+    cl::init(TargetSubtargetInfo::ANTIDEP_NONE),
+    cl::values(clEnumValN(TargetSubtargetInfo::ANTIDEP_NONE, "none",
+                          "No anti-dependency breaking"),
+               clEnumValN(TargetSubtargetInfo::ANTIDEP_CRITICAL, "critical",
+                          "Break critical-path anti-dependencies"),
+               clEnumValN(TargetSubtargetInfo::ANTIDEP_ALL, "all",
+                          "Break all anti-dependencies")));
+
 static cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
     cl::desc("Verify machine instrs before and after machine scheduling"));
 
 MISched::Direction llvm::getPreRADirection() { return PreRADirection; }
+TargetSubtargetInfo::AntiDepBreakMode
+llvm::getPostRAAntiDepBreakMode(TargetSubtargetInfo::AntiDepBreakMode Default) {
+  return PostRAAntiDep.getNumOccurrences() > 0 ? PostRAAntiDep : Default;
+}
 bool llvm::shouldVerifyScheduling() { return VerifyScheduling; }
 
 #ifndef NDEBUG
@@ -384,6 +399,7 @@ public:
   struct RequiredAnalyses {
     MachineLoopInfo &MLI;
     AAResults &AA;
+    RegisterClassInfo &RCI;
   };
   PostMachineSchedulerImpl() = default;
   // Migration only
@@ -525,6 +541,7 @@ void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -722,6 +739,7 @@ bool PostMachineSchedulerImpl::run(MachineFunction &Func,
   MLI = &Analyses.MLI;
   this->TM = &TM;
   AA = &Analyses.AA;
+  RegClassInfo = &Analyses.RCI;
 
   if (VerifyScheduling) {
     const char *PostMSchedBanner = "Before post machine scheduling.";
@@ -902,8 +920,9 @@ bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, AA});
+  return Impl.run(MF, TM, {MLI, AA, RCI});
 }
 
 PreservedAnalyses
@@ -921,9 +940,10 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
 
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, AA});
+  bool Changed = Impl->run(MF, *TM, {MLI, AA, RCI});
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1098,6 +1118,95 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 // virtual registers.
 // ===----------------------------------------------------------------------===/
 
+AntiDepState::AntiDepState(MachineSchedContext *C,
+                           TargetSubtargetInfo::AntiDepBreakMode AntiDepMode) {
+  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_NONE)
+    return;
+
+  assert(C->MF->getRegInfo().tracksLiveness() &&
+         "Live-ins must be accurate for anti-dependency breaking");
+  assert(C->RegClassInfo &&
+         "Register class info is required for anti-dependency breaking");
+  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_ALL) {
+    SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
+    C->MF->getSubtarget().getCriticalPathRCs(CriticalPathRCs);
+    Breaker.reset(createAggressiveAntiDepBreaker(*C->MF, *C->RegClassInfo,
+                                                 CriticalPathRCs));
+  } else {
+    assert(AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL);
+    Breaker.reset(createCriticalAntiDepBreaker(*C->MF, *C->RegClassInfo));
+  }
+}
+
+void AntiDepState::startBlock(MachineBasicBlock *MBB) {
+  if (!Breaker)
+    return;
+  Breaker->StartBlock(MBB);
+  ScanPos = MBB->end();
+  EndIndex = MBB->size();
+}
+
+void AntiDepState::finishBlock() {
+  if (!Breaker)
+    return;
+  Breaker->FinishBlock();
+}
+
+void AntiDepState::enterRegion(MachineBasicBlock *MBB,
+                               MachineBasicBlock::iterator End) {
+  if (!Breaker)
+    return;
+
+  unsigned Count =
+      std::distance(MBB->instr_begin(), ScanPos.getInstrIterator());
+  for (auto I = ScanPos; I != End;) {
+    MachineInstr &MI = *--I;
+    --Count;
+    if (!MI.isDebugOrPseudoInstr())
+      Breaker->Observe(MI, Count, EndIndex);
+    if (MI.isBundle())
+      Count -= MI.getBundleSize();
+  }
+  EndIndex = std::distance(MBB->instr_begin(), End.getInstrIterator());
+  RegionProcessed = false;
+}
+
+void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
+                              MachineBasicBlock::iterator End) {
+  if (!Breaker)
+    return;
+
+  ScanPos = Begin;
+  if (RegionProcessed)
+    return;
+
+  unsigned Count = EndIndex;
+  for (auto I = End; I != Begin;) {
+    MachineInstr &MI = *--I;
+    --Count;
+    if (!MI.isDebugOrPseudoInstr())
+      Breaker->Observe(MI, Count, EndIndex);
+    if (MI.isBundle())
+      Count -= MI.getBundleSize();
+  }
+}
+
+bool AntiDepState::breakAntiDependencies(
+    const std::vector<SUnit> &SUnits, MachineBasicBlock::iterator Begin,
+    MachineBasicBlock::iterator End,
+    AntiDepBreaker::DbgValueVector &DbgValues) {
+  if (!Breaker)
+    return false;
+  return Breaker->BreakAntiDependencies(SUnits, Begin, End, EndIndex,
+                                        DbgValues) != 0;
+}
+
+void AntiDepState::finishRegion() {
+  if (!Breaker)
+    return;
+  RegionProcessed = true;
+}
+
 // Provide a vtable anchor.
 ScheduleDAGMI::~ScheduleDAGMI() = default;
 
@@ -1174,10 +1283,12 @@ void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
 void ScheduleDAGMI::startBlock(MachineBasicBlock *bb) {
   ScheduleDAGInstrs::startBlock(bb);
   SchedImpl->enterMBB(bb);
+  AntiDep.startBlock(bb);
 }
 
 void ScheduleDAGMI::finishBlock() {
   SchedImpl->leaveMBB();
+  AntiDep.finishBlock();
   ScheduleDAGInstrs::finishBlock();
 }
 
@@ -1191,6 +1302,7 @@ void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
                                      unsigned regioninstrs)
 {
   ScheduleDAGInstrs::enterRegion(bb, begin, end, regioninstrs);
+  AntiDep.enterRegion(bb, end);
 
   SchedImpl->initPolicy(begin, end, regioninstrs);
 
@@ -1203,6 +1315,11 @@ void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
   else
     D = ScheduleDAGMI::DumpDirection::Bidirectional;
   setDumpDirection(D);
+}
+
+void ScheduleDAGMI::exitRegion() {
+  AntiDep.exitRegion(RegionBegin, RegionEnd);
+  ScheduleDAGInstrs::exitRegion();
 }
 
 /// This is normally called from the main scheduler loop but may also be invoked
@@ -1246,6 +1363,14 @@ void ScheduleDAGMI::schedule() {
 
   // Build the DAG.
   buildSchedGraph(AA);
+
+  if (AntiDep.breakAntiDependencies(SUnits, RegionBegin, RegionEnd,
+                                    DbgValues)) {
+    // Renaming invalidates register dependencies. Rebuild the base DAG before
+    // applying mutations below, as SchedulePostRATDList does. Updating the DAG
+    // in place would also need to account for edges removed by mutations.
+    buildSchedGraph(AA);
+  }
 
   postProcessDAG();
 
@@ -1312,6 +1437,8 @@ void ScheduleDAGMI::schedule() {
     dumpSchedule();
     dbgs() << '\n';
   });
+
+  AntiDep.finishRegion();
 }
 
 /// Apply each ScheduleDAGMutation step in order.
