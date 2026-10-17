@@ -6911,7 +6911,9 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
-      SetBindNameOn(symbol);
+      if (symbol.detailsIf<ProcEntityDetails>() || symbol.detailsIf<ObjectEntityDetails>() || symbol.detailsIf<EntityDetails>()) {
+        SetBindNameOn(symbol);
+      }
     }
     return symbol;
   }
