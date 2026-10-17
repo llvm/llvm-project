@@ -31,7 +31,7 @@ jobs:
             .github/workflows/
 
       - name: Check Permissions
-        uses: ./.github/workflows/require-team-membership
+        uses: $/.github/workflows/require-team-membership
         with:
           team-slug: llvm-committers
           LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
