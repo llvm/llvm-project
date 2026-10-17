@@ -247,13 +247,10 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
 
     // We overwrite the isa trait as it is actually up to the OMPContext hook to
     // check the raw string(s).
-    if (Property == TraitProperty::device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
-      });
-    if (Property == TraitProperty::target_device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](const auto &Trait) {
+        return Trait.Property != Property || Ctx.matchesISATrait(Trait.Name);
       });
 
     if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))
