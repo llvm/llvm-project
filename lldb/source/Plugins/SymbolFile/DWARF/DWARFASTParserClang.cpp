@@ -469,6 +469,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       decl.SetColumn(form_value.Unsigned());
       break;
 
+    case DW_AT_address_class:
+      address_class = form_value.Unsigned();
+      break;
+
     case DW_AT_declaration:
       is_forward_declaration = form_value.Boolean();
       break;
@@ -942,6 +946,25 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
             resolve_state = Type::ResolveState::Full;
           }
         }
+      }
+    }
+  }
+
+  // A pointer with DW_AT_address_class points into a target address space
+  // (e.g. a GPU, DSP, or accelerator memory). Record it as an address-space
+  // qualifier on the pointee so value objects can map the pointer to a process
+  // address.
+  if (!clang_type && tag == DW_TAG_pointer_type && attrs.address_class != 0 &&
+      attrs.type.IsValid()) {
+    if (Type *pointee_type =
+            dwarf->ResolveTypeUID(attrs.type.Reference(), true)) {
+      CompilerType pointee = m_ast.AddAddressSpaceModifier(
+          pointee_type->GetForwardCompilerType(), attrs.address_class);
+      if (pointee) {
+        clang_type = pointee.GetPointerType();
+        encoding_data_type = Type::eEncodingIsUID;
+        attrs.type.Clear();
+        resolve_state = Type::ResolveState::Full;
       }
     }
   }

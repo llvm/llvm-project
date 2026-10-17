@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -7255,4 +7256,48 @@ Process::GetAddressSpaceInfo(lldb::addr_space_t address_space_id) {
   return llvm::createStringError("invalid address space id %" PRIu64
                                  ", expected one of: %s",
                                  address_space_id, ids.c_str());
+}
+
+// Address class 0 (default / flat) has no aperture; 0 is the NULL pointer.
+static const AddressSpaceInfo *
+FindFlatAperture(const std::vector<AddressSpaceInfo> &address_spaces,
+                 uint32_t address_class) {
+  for (const AddressSpaceInfo &info : address_spaces) {
+    if (info.flat_base && info.pointer_unit != 0 &&
+        info.dwarf_address_class == address_class)
+      return &info;
+  }
+  return nullptr;
+}
+
+lldb::addr_t Process::PointerToLoadAddress(lldb::addr_t pointer,
+                                           uint32_t address_class) {
+  if (pointer == LLDB_INVALID_ADDRESS)
+    return pointer;
+  const AddressSpaceInfo *info =
+      FindFlatAperture(m_address_spaces, address_class);
+  if (!info)
+    return pointer;
+  // Bounds check against aperture size and overflow check.
+  if (info->flat_size != 0 &&
+      pointer > (info->flat_size - 1) / info->pointer_unit)
+    return LLDB_INVALID_ADDRESS;
+  if (pointer > std::numeric_limits<lldb::addr_t>::max() / info->pointer_unit)
+    return LLDB_INVALID_ADDRESS;
+  lldb::addr_t offset = pointer * info->pointer_unit;
+  if (std::numeric_limits<lldb::addr_t>::max() - *info->flat_base < offset)
+    return LLDB_INVALID_ADDRESS;
+  return *info->flat_base + offset;
+}
+
+lldb::addr_t Process::LoadAddressToPointer(lldb::addr_t address,
+                                           uint32_t address_class) {
+  if (address == LLDB_INVALID_ADDRESS)
+    return address;
+  const AddressSpaceInfo *info =
+      FindFlatAperture(m_address_spaces, address_class);
+  if (!info || address < *info->flat_base ||
+      (info->flat_size != 0 && address - *info->flat_base >= info->flat_size))
+    return address;
+  return (address - *info->flat_base) / info->pointer_unit;
 }
