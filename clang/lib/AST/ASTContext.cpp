@@ -1590,14 +1590,6 @@ void ASTContext::addExplicitInstantiationDecl(const NamedDecl *Spec,
       EID);
 }
 
-// FIXME: Remove ?
-MemberSpecializationInfo *
-ASTContext::getInstantiatedFromStaticDataMember(const VarDecl *Var) {
-  assert(Var->isStaticDataMember() && "Not a static data member");
-  return getTemplateOrSpecializationInfo(Var)
-      .dyn_cast<MemberSpecializationInfo *>();
-}
-
 ASTContext::TemplateOrSpecializationInfo
 ASTContext::getTemplateOrSpecializationInfo(const VarDecl *Var) {
   llvm::DenseMap<const VarDecl *, TemplateOrSpecializationInfo>::iterator Pos =
