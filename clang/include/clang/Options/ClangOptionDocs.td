@@ -18,14 +18,22 @@ def GlobalDocumentation {
 ## Introduction
 
 This page lists the command line arguments currently supported by the
-GCC-compatible `clang` and `clang++` drivers.
+GCC-compatible `clang` and `clang++` drivers, and by the cl.exe-compatible
+`clang-cl` driver. Options that only exist in `clang-cl` are listed under
+[clang-cl options](#clang-cl-options). `clang-cl` also accepts a subset of the
+other options on this page; run `clang-cl /?` for the exact list.
 
 }];
 
   string Program = "Clang";
   // Note: We *must* use DefaultVis and not ClangOption, since that's
   // the name of the actual TableGen record. The alias will not work.
-  list<string> VisibilityMask = ["DefaultVis"];
+  //
+  // The first entry is the visibility of the primary program being documented.
+  // Options that are only visible to a later entry (here, clang-cl) are
+  // documented in their own groups instead of being folded into the entries
+  // of the options they alias.
+  list<string> VisibilityMask = ["DefaultVis", "CLOption"];
   list<string> IgnoreFlags = ["HelpHidden", "Unsupported", "Ignored"];
 }
 
