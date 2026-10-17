@@ -97,8 +97,11 @@ def err_invalid_storage_class_in_func_decl : Error<
   "invalid storage class specifier in function declarator">;
 def err_expected_namespace_name : Error<"expected namespace name">;
 def err_default_special_members : Error<
-  "only special member functions %select{|and comparison operators }0"
-  "may be defaulted">;
+  "only special member functions"
+  "%enum_select<DefaultableFunctionKinds>{%SpecialMembers{}|"
+  "%Comparisons{ and comparison operators}|"
+  "%PostfixOperators{, comparison operators, and postfix increment and "
+  "decrement operators}}0 may be defaulted">;
 def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;

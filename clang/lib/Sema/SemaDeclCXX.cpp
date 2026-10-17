@@ -6944,6 +6944,9 @@ static void DefineDefaultedFunction(Sema &S, FunctionDecl *FD,
   FunctionDecl::DefaultedFunctionKind DFK = FD->getDefaultedFunctionKind();
   if (DFK.isComparison())
     return S.DefineDefaultedComparison(DefaultLoc, FD, DFK.asComparison());
+  if (DFK.isPostfixOperator())
+    return S.DefineDefaultedPostfixOperator(DefaultLoc, FD,
+                                            DFK.asPostfixOperator());
 
   switch (DFK.asSpecialMember()) {
   case CXXSpecialMemberKind::DefaultConstructor:
@@ -7821,6 +7824,11 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
                                         DefaultedComparisonKind DCK);
 
 static Sema::ImplicitExceptionSpecification
+ComputeDefaultedPostfixOperatorExceptionSpec(Sema &S, SourceLocation Loc,
+                                             FunctionDecl *FD,
+                                             PostfixOperatorKind Kind);
+
+static Sema::ImplicitExceptionSpecification
 computeImplicitExceptionSpec(Sema &S, SourceLocation Loc, FunctionDecl *FD) {
   auto DFK = FD->getDefaultedFunctionKind();
   if (DFK.isSpecialMember())
@@ -7829,6 +7837,9 @@ computeImplicitExceptionSpec(Sema &S, SourceLocation Loc, FunctionDecl *FD) {
   if (DFK.isComparison())
     return ComputeDefaultedComparisonExceptionSpec(S, Loc, FD,
                                                    DFK.asComparison());
+  if (DFK.isPostfixOperator())
+    return ComputeDefaultedPostfixOperatorExceptionSpec(
+        S, Loc, FD, DFK.asPostfixOperator());
 
   auto *CD = cast<CXXConstructorDecl>(FD);
   assert(CD->getInheritedConstructor() &&
@@ -7885,6 +7896,13 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
         UnusedPrivateFields.remove(Field);
       }
     }
+  }
+
+  if (DefKind.isPostfixOperator()) {
+    if (CheckExplicitlyDefaultedPostfixOperator(S, FD,
+                                                DefKind.asPostfixOperator()))
+      FD->setInvalidDecl();
+    return;
   }
 
   if (DefKind.isSpecialMember()
@@ -9394,65 +9412,79 @@ void Sema::DeclareImplicitEqualityComparison(CXXRecordDecl *RD,
   popCodeSynthesisContext();
 }
 
-void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
-                                     DefaultedComparisonKind DCK) {
+/// Define a defaulted function whose body is synthesized by \p BuildBody: a
+/// defaulted comparison operator function or a defaulted postfix increment or
+/// decrement operator function.
+static void defineDefaultedFunctionWithSynthesizedBody(
+    Sema &S, SourceLocation UseLoc, FunctionDecl *FD,
+    llvm::function_ref<StmtResult(SourceLocation BodyLoc)> BuildBody) {
   assert(FD->isDefaulted() && !FD->isDeleted() &&
          !FD->doesThisDeclarationHaveABody());
   if (FD->willHaveBody() || FD->isInvalidDecl())
     return;
 
-  SynthesizedFunctionScope Scope(*this, FD);
+  Sema::SynthesizedFunctionScope Scope(S, FD);
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(UseLoc);
 
-  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, FD);
+  DefaultedFunctionFPFeaturesRAII RestoreFP(S, FD);
 
   {
     // Build and set up the function body.
-    // The first parameter has type maybe-ref-to maybe-const T, use that to get
-    // the type of the class being compared.
-    auto PT = FD->getParamDecl(0)->getType();
-    CXXRecordDecl *RD = PT.getNonReferenceType()->getAsCXXRecordDecl();
     SourceLocation BodyLoc =
         FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-    StmtResult Body =
-        DefaultedComparisonSynthesizer(*this, RD, FD, DCK, BodyLoc).build();
+    StmtResult Body = BuildBody(BodyLoc);
     if (Body.isInvalid()) {
       FD->setInvalidDecl();
       return;
     }
     FD->setBody(Body.get());
-    FD->markUsed(Context);
+    FD->markUsed(S.Context);
   }
 
   // The exception specification is needed because we are defining the
   // function. Note that this will reuse the body we just built.
-  ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
+  S.ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
 
-  if (ASTMutationListener *L = getASTMutationListener())
+  if (ASTMutationListener *L = S.getASTMutationListener())
     L->CompletedImplicitDefinition(FD);
 }
 
+void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
+                                     DefaultedComparisonKind DCK) {
+  auto BuildBody = [&](SourceLocation BodyLoc) {
+    // The first parameter has type maybe-ref-to maybe-const T, use that to
+    // get the type of the class being compared.
+    auto PT = FD->getParamDecl(0)->getType();
+    CXXRecordDecl *RD = PT.getNonReferenceType()->getAsCXXRecordDecl();
+    return DefaultedComparisonSynthesizer(*this, RD, FD, DCK, BodyLoc).build();
+  };
+  defineDefaultedFunctionWithSynthesizedBody(*this, UseLoc, FD, BuildBody);
+}
+
+/// Compute the exception specification of a defaulted function whose body is
+/// synthesized by \p BuildBody: a defaulted comparison operator function or a
+/// defaulted postfix increment or decrement operator function.
 static Sema::ImplicitExceptionSpecification
-ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
-                                        FunctionDecl *FD,
-                                        DefaultedComparisonKind DCK) {
+computeExceptionSpecFromSynthesizedBody(
+    Sema &S, SourceLocation Loc, FunctionDecl *FD,
+    llvm::function_ref<StmtResult(SourceLocation BodyLoc)> BuildBody) {
   ComputingExceptionSpec CES(S, FD, Loc);
   Sema::ImplicitExceptionSpecification ExceptSpec(S);
 
   if (FD->isInvalidDecl())
     return ExceptSpec;
 
-  // The common case is that we just defined the comparison function. In that
-  // case, just look at whether the body can throw.
+  // The common case is that we just defined the function. In that case, just
+  // look at whether the body can throw.
   if (Stmt *FunctionBody = FD->getBody()) {
     ExceptSpec.CalledStmt(FunctionBody);
   } else {
     // Otherwise, build a body so we can check it. This should ideally only
     // happen when we're not actually marking the function referenced. (This is
     // only really important for efficiency: we don't want to build and throw
-    // away bodies for comparison functions more than we strictly need to.)
+    // away bodies for defaulted functions more than we strictly need to.)
 
     // Pretend to synthesize the function body in an unevaluated context.
     // Note that we can't actually just go ahead and define the function here:
@@ -9461,14 +9493,9 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
     EnterExpressionEvaluationContext Context(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
 
-    CXXRecordDecl *RD =
-        cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
-                                ? FD->getDeclContext()
-                                : FD->getLexicalDeclContext());
     SourceLocation BodyLoc =
         FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-    StmtResult Body =
-        DefaultedComparisonSynthesizer(S, RD, FD, DCK, BodyLoc).build();
+    StmtResult Body = BuildBody(BodyLoc);
     if (!Body.isInvalid())
       ExceptSpec.CalledStmt(Body.get());
 
@@ -9479,6 +9506,595 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
   }
 
   return ExceptSpec;
+}
+
+static Sema::ImplicitExceptionSpecification
+ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
+                                        FunctionDecl *FD,
+                                        DefaultedComparisonKind DCK) {
+  auto BuildBody = [&](SourceLocation BodyLoc) {
+    CXXRecordDecl *RD =
+        cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
+                                ? FD->getDeclContext()
+                                : FD->getLexicalDeclContext());
+    return DefaultedComparisonSynthesizer(S, RD, FD, DCK, BodyLoc).build();
+  };
+  return computeExceptionSpecFromSynthesizedBody(S, Loc, FD, BuildBody);
+}
+
+// C++2d [over.inc.default]: defaulted postfix increment and decrement operator
+// functions (P3668R4).
+
+namespace {
+/// Which diagnostics to produce while analyzing a defaulted postfix increment
+/// or decrement operator function.
+enum class PostfixOperatorDiagnoseKind {
+  NoDiagnostics,
+  ExplainDeleted,
+  ExplainConstexpr
+};
+
+/// Information about a defaulted postfix increment or decrement operator
+/// function, as determined by analyzeDefaultedPostfixOperator.
+struct DefaultedPostfixOperatorInfo {
+  /// Whether the function should be defined as deleted.
+  bool Deleted = false;
+  /// Whether every function invoked by the implicit definition is constexpr.
+  bool Constexpr = true;
+};
+} // namespace
+
+/// Get the type of the first parameter of a postfix increment or decrement
+/// operator function, where the implicit object parameter (if any) is
+/// considered to be the first parameter.
+static QualType getPostfixOperatorFirstParamType(const FunctionDecl *FD) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
+    return MD->getFunctionObjectParameterReferenceType();
+  return FD->getParamDecl(0)->getType();
+}
+
+/// Get the type C for which a well-formed defaulted postfix increment or
+/// decrement operator function is defaulted.
+static QualType getDefaultedPostfixOperatorType(const FunctionDecl *FD) {
+  return getPostfixOperatorFirstParamType(FD)
+      .getNonReferenceType()
+      .getUnqualifiedType();
+}
+
+/// Determine whether a defaulted postfix increment or decrement operator
+/// function for type \p C should be defined as deleted, as specified in C++2d
+/// [over.inc.default]p2, and whether every function it would invoke is
+/// constexpr.
+static DefaultedPostfixOperatorInfo
+analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
+                                PostfixOperatorKind Kind, QualType C,
+                                PostfixOperatorDiagnoseKind Diagnose) {
+  using DiagnoseKind = PostfixOperatorDiagnoseKind;
+  DefaultedPostfixOperatorInfo Info;
+  SourceLocation Loc = FD->getLocation();
+
+  // C++2d [over.inc.default]p1:
+  //   Name lookups and access checks in the implicit definition of a defaulted
+  //   postfix increment or decrement operator function are performed from a
+  //   context equivalent to its function-body.
+  Sema::ContextRAII SavedContext(S, FD);
+
+  // Let c be an lvalue of type C. c stands for the first parameter (or the
+  // implicit object), which is always an lvalue when named in the function
+  // body, even if it is declared as an rvalue reference.
+  OpaqueValueExpr Obj(Loc, C, VK_LValue);
+  Expr *Args[] = {&Obj};
+
+  auto Deleted = [&] {
+    Info.Deleted = true;
+    return Info;
+  };
+  auto InaccessibleDiag = [&](unsigned Step) {
+    return Diagnose == DiagnoseKind::ExplainDeleted
+               ? S.PDiag(diag::note_defaulted_postfix_operator_inaccessible)
+                     << FD << Step
+               : S.PDiag();
+  };
+  auto NoteCallsDeleted = [&](unsigned Step, FunctionDecl *Callee) {
+    if (Diagnose != DiagnoseKind::ExplainDeleted)
+      return;
+    S.Diag(Loc, diag::note_defaulted_postfix_operator_calls_deleted)
+        << FD << Step;
+    if (Callee)
+      S.NoteDeletedFunction(Callee);
+  };
+  auto CheckConstexpr = [&](const FunctionDecl *Callee, unsigned Step) {
+    if (Callee->isConstexpr())
+      return;
+    Info.Constexpr = false;
+    if (Diagnose == DiagnoseKind::ExplainConstexpr)
+      S.Diag(Callee->getLocation(),
+             diag::note_defaulted_postfix_operator_not_constexpr_here)
+          << Step;
+  };
+
+  // C++2d [over.inc.default]p2:
+  //   A defaulted postfix increment or decrement operator function for a type
+  //   C is defined as deleted if
+  CXXRecordDecl *RD = C->getAsCXXRecordDecl();
+  if (RD) {
+    //  -- C is a class type for which overload resolution, as applied to
+    //     direct-initialization of a variable of type C from an lvalue of
+    //     type C, does not result in a usable candidate,
+    InitializedEntity Entity = InitializedEntity::InitializeTemporary(C);
+    InitializationKind InitKind =
+        InitializationKind::CreateDirect(Loc, Loc, Loc);
+    InitializationSequence Seq(S, Entity, InitKind, Args);
+    if (Seq.Failed()) {
+      if (Diagnose == DiagnoseKind::ExplainDeleted) {
+        OverloadCandidateSet &Cands = Seq.getFailedCandidateSet();
+        OverloadingResult OR =
+            Seq.getFailureKind() ==
+                    InitializationSequence::FK_ConstructorOverloadFailed
+                ? Seq.getFailedOverloadResult()
+                : OR_No_Viable_Function;
+        OverloadCandidateSet::iterator Best;
+        switch (OR) {
+        case OR_Deleted:
+          NoteCallsDeleted(diag::DefaultedPostfixOperatorStep::Constructor,
+                           Cands.BestViableFunction(S, Loc, Best) == OR_Deleted
+                               ? Best->Function
+                               : nullptr);
+          break;
+        case OR_Ambiguous:
+          Cands.NoteCandidates(
+              PartialDiagnosticAt(
+                  Loc, S.PDiag(diag::note_defaulted_postfix_operator_ambiguous)
+                           << FD << /*copy construction*/ 0 << C),
+              S, OCD_AmbiguousCandidates, Args, /*Opc=*/"", Loc);
+          break;
+        case OR_No_Viable_Function:
+          Cands.NoteCandidates(
+              PartialDiagnosticAt(
+                  Loc, S.PDiag(diag::note_defaulted_postfix_operator_no_viable)
+                           << FD << /*copy construction*/ 0 << C),
+              S, OCD_AllCandidates, Args, /*Opc=*/"", Loc);
+          break;
+        case OR_Success:
+          llvm_unreachable("initialization sequence did not fail");
+        }
+      }
+      return Deleted();
+    }
+    for (const InitializationSequence::Step &Step : Seq.steps()) {
+      if (Step.Kind != InitializationSequence::SK_ConstructorInitialization)
+        continue;
+      if (!S.isMemberAccessibleForDeletion(
+              RD, Step.Function.FoundDecl, C, Loc,
+              InaccessibleDiag(
+                  diag::DefaultedPostfixOperatorStep::Constructor)))
+        return Deleted();
+      CheckConstexpr(Step.Function.Function,
+                     diag::DefaultedPostfixOperatorStep::Constructor);
+    }
+
+    //  -- C has a destructor that is deleted or inaccessible from the context
+    //     of the function-body, or
+    if (CXXDestructorDecl *Dtor = S.LookupDestructor(RD)) {
+      if (Dtor->isDeleted()) {
+        NoteCallsDeleted(diag::DefaultedPostfixOperatorStep::Destructor, Dtor);
+        return Deleted();
+      }
+      if (!S.isMemberAccessibleForDeletion(
+              RD, DeclAccessPair::make(Dtor, Dtor->getAccess()), C, Loc,
+              InaccessibleDiag(diag::DefaultedPostfixOperatorStep::Destructor)))
+        return Deleted();
+    }
+  }
+
+  //  -- for an lvalue c of type C, overload resolution as applied to ++c for a
+  //     postfix increment operator function or --c for a postfix decrement
+  //     operator function does not result in a usable candidate.
+  bool IsIncrement = Kind == PostfixOperatorKind::Increment;
+  unsigned PrefixStep =
+      IsIncrement ? diag::DefaultedPostfixOperatorStep::PrefixIncrement
+                  : diag::DefaultedPostfixOperatorStep::PrefixDecrement;
+  UnresolvedSet<16> Fns;
+  if (auto *DFI = FD->getDefaultedOrDeletedInfo())
+    Fns.assign(DFI->getUnqualifiedLookups().begin(),
+               DFI->getUnqualifiedLookups().end());
+  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Operator);
+  S.LookupOverloadedUnaryOp(
+      CandidateSet, IsIncrement ? OO_PlusPlus : OO_MinusMinus, Fns, Args);
+
+  OverloadCandidateSet::iterator Best;
+  switch (CandidateSet.BestViableFunction(S, Loc, Best)) {
+  case OR_Success:
+    if (FunctionDecl *Prefix = Best->Function) {
+      // Only a member of C can be inaccessible here; the non-member
+      // candidates were found by unqualified lookup and ADL.
+      if (RD && Best->FoundDecl.getDecl() &&
+          Best->FoundDecl.getDecl()->isCXXClassMember() &&
+          !S.isMemberAccessibleForDeletion(RD, Best->FoundDecl, C, Loc,
+                                           InaccessibleDiag(PrefixStep)))
+        return Deleted();
+      CheckConstexpr(Prefix, PrefixStep);
+    } else if (!Best->Conversions.empty() &&
+               Best->Conversions[0].isUserDefined()) {
+      // A built-in candidate, reached through a conversion function.
+      CheckConstexpr(Best->Conversions[0].UserDefined.ConversionFunction,
+                     diag::DefaultedPostfixOperatorStep::ConversionFunction);
+    }
+    break;
+
+  case OR_Ambiguous:
+    if (Diagnose == DiagnoseKind::ExplainDeleted)
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(
+              Loc, S.PDiag(diag::note_defaulted_postfix_operator_ambiguous)
+                       << FD << (int)Kind << C),
+          S, OCD_AmbiguousCandidates, Args, IsIncrement ? "++" : "--", Loc);
+    return Deleted();
+
+  case OR_Deleted:
+    NoteCallsDeleted(PrefixStep, Best->Function);
+    return Deleted();
+
+  case OR_No_Viable_Function:
+    // Don't list the non-viable candidates: like for any other unary operator,
+    // the candidate notes can't sensibly describe an arity mismatch for a
+    // member postfix operator (whose object argument is not a parameter).
+    if (Diagnose == DiagnoseKind::ExplainDeleted)
+      S.Diag(Loc, diag::note_defaulted_postfix_operator_no_viable)
+          << FD << (int)Kind << C;
+    return Deleted();
+  }
+
+  return Info;
+}
+
+/// Build the body of a defaulted postfix increment or decrement operator
+/// function. C++2d [over.inc.default]p3:
+///   The implicit definition of a defaulted postfix increment or decrement
+///   operator function F that is not defined as deleted for a type C is
+///   equivalent to:
+///     C tmp(c);
+///     ++c;      // or --c
+///     return tmp;
+///   where tmp is a variable defined for exposition only, and c is an lvalue
+///   that denotes *this if F is an implicit object member function, or the
+///   first parameter of F otherwise.
+static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
+                                                    PostfixOperatorKind Kind,
+                                                    SourceLocation Loc) {
+  Sema::CompoundScopeRAII CompoundScope(S);
+
+  // Build an expression denoting 'c'.
+  auto BuildObject = [&]() -> ExprResult {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && MD->isImplicitObjectMemberFunction()) {
+      ExprResult This = S.ActOnCXXThis(Loc);
+      if (This.isInvalid())
+        return ExprError();
+      return S.CreateBuiltinUnaryOp(Loc, UO_Deref, This.get());
+    }
+    ParmVarDecl *Param = FD->getParamDecl(0);
+    return S.BuildDeclarationNameExpr(
+        CXXScopeSpec(), DeclarationNameInfo(Param->getDeclName(), Loc), Param);
+  };
+
+  // C tmp(c);
+  ExprResult Init = BuildObject();
+  if (Init.isInvalid())
+    return StmtError();
+  QualType C = FD->getReturnType();
+  IdentifierInfo *TmpName = &S.Context.Idents.get("__tmp");
+  VarDecl *Tmp =
+      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, TmpName, C,
+                      S.Context.getTrivialTypeSourceInfo(C, Loc), SC_None);
+  Expr *InitArgs[] = {Init.get()};
+  S.AddInitializerToDecl(Tmp,
+                         ParenListExpr::Create(S.Context, Loc, InitArgs, Loc),
+                         /*DirectInit=*/true);
+  if (Tmp->isInvalidDecl())
+    return StmtError();
+  StmtResult TmpStmt = S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(Tmp), Loc, Loc);
+  if (TmpStmt.isInvalid())
+    return StmtError();
+
+  // ++c; or --c;
+  ExprResult Obj = BuildObject();
+  if (Obj.isInvalid())
+    return StmtError();
+  UnaryOperatorKind Opc =
+      Kind == PostfixOperatorKind::Increment ? UO_PreInc : UO_PreDec;
+  ExprResult Prefix;
+  if (Obj.get()->getType()->isOverloadableType()) {
+    UnresolvedSet<16> Fns;
+    if (auto *DFI = FD->getDefaultedOrDeletedInfo())
+      Fns.assign(DFI->getUnqualifiedLookups().begin(),
+                 DFI->getUnqualifiedLookups().end());
+    Prefix = S.CreateOverloadedUnaryOp(Loc, Opc, Fns, Obj.get(),
+                                       /*RequiresADL=*/true);
+  } else {
+    Prefix = S.CreateBuiltinUnaryOp(Loc, Opc, Obj.get());
+  }
+  if (Prefix.isInvalid())
+    return StmtError();
+  StmtResult PrefixStmt = S.ActOnExprStmt(Prefix, /*DiscardedValue=*/true);
+  if (PrefixStmt.isInvalid())
+    return StmtError();
+
+  // return tmp;
+  ExprResult TmpRef = S.BuildDeclarationNameExpr(
+      CXXScopeSpec(), DeclarationNameInfo(TmpName, Loc), Tmp);
+  if (TmpRef.isInvalid())
+    return StmtError();
+  StmtResult Return = S.BuildReturnStmt(Loc, TmpRef.get());
+  if (Return.isInvalid())
+    return StmtError();
+  // 'tmp' is the only variable returned by this function, so it qualifies for
+  // the named return value optimization.
+  if (cast<ReturnStmt>(Return.get())->getNRVOCandidate() == Tmp)
+    Tmp->setNRVOVariable(true);
+
+  Stmt *Stmts[] = {TmpStmt.get(), PrefixStmt.get(), Return.get()};
+  return S.ActOnCompoundStmt(Loc, Loc, Stmts, /*IsStmtExpr=*/false);
+}
+
+bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
+                                                   PostfixOperatorKind Kind) {
+  assert(Kind != PostfixOperatorKind::None &&
+         "not a defaulted postfix operator");
+  bool IsIncrement = Kind == PostfixOperatorKind::Increment;
+
+  // Perform the unqualified lookup of the prefix operator that the implicit
+  // definition needs. C++2d [over.inc.default]p1:
+  //   Name lookups and access checks in the implicit definition of a defaulted
+  //   postfix increment or decrement operator function are performed from a
+  //   context equivalent to its function-body.
+  // The lookup is performed from S, not from CurContext. S is either the body
+  // scope of an out-of-line definition, or the scope of the class in which the
+  // function is defaulted on its first declaration; for a lookup that ignores
+  // member functions, both are equivalent to the function-body.
+  if (S) {
+    assert((S->getEntity() == FD ||
+            S->getEntity() == FD->getLexicalDeclContext()) &&
+           "lookup scope is not equivalent to the function-body");
+    UnresolvedSet<16> Operators;
+    LookupOverloadedOperatorName(IsIncrement ? OO_PlusPlus : OO_MinusMinus, S,
+                                 Operators);
+    FD->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Context, Operators.pairs(), CurFPFeatureOverrides()));
+  }
+
+  // C++2d [over.inc.default]p1:
+  //   A defaulted postfix increment or decrement operator function for a type
+  //   C shall be a non-template function that
+  //    -- has a first parameter of type "reference to C" or a first parameter
+  //       of type "reference to volatile C", where the implicit object
+  //       parameter (if any) is considered to be the first parameter,
+  //    -- is defined as defaulted in C or in a context where C is complete,
+  //       and
+  //    -- has a declared return type of C.
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  ParmVarDecl *FirstParam = FD->getParamDecl(0);
+  QualType FirstParamType = getPostfixOperatorFirstParamType(FD);
+  QualType ReturnType = FD->getDeclaredReturnType();
+
+  // Diagnose an invalid first parameter. ExpectedC is the type that the
+  // parameter should be a reference to, if that type is known.
+  auto DiagnoseFirstParam = [&](QualType ExpectedC) {
+    if (MD && MD->isImplicitObjectMemberFunction()) {
+      // The implicit object parameter is always a reference to the enclosing
+      // class, so the only possible problem is a const qualifier.
+      Diag(MD->getLocation(), diag::err_defaulted_postfix_operator_const)
+          << (int)Kind;
+    } else if (ExpectedC.isNull()) {
+      Diag(FirstParam->getBeginLoc(),
+           diag::err_defaulted_postfix_operator_param_unknown)
+          << (int)Kind << FirstParamType << FirstParam->getSourceRange();
+    } else {
+      Diag(FirstParam->getBeginLoc(),
+           diag::err_defaulted_postfix_operator_param)
+          << (int)Kind << !MD << FirstParamType
+          << Context.getLValueReferenceType(ExpectedC)
+          << Context.getLValueReferenceType(ExpectedC.withVolatile())
+          << FirstParam->getSourceRange();
+    }
+    return true;
+  };
+
+  // Check the type of the first parameter and determine the type C from it.
+  // If the parameter type is dependent, C is not known until instantiation.
+  QualType C;
+  if (!FirstParamType->isDependentType()) {
+    QualType EnclosingClass =
+        MD ? Context.getCanonicalTagType(MD->getParent()) : QualType();
+
+    // The first parameter must be a reference to C.
+    if (!FirstParamType->isReferenceType())
+      return DiagnoseFirstParam(EnclosingClass);
+    QualType Referent = FirstParamType.getNonReferenceType();
+    C = Referent.getUnqualifiedType();
+
+    // For a member function, C is the enclosing class. For a non-member
+    // function, C must be a class or enumeration type.
+    if (MD) {
+      if (!Context.hasSameType(C, EnclosingClass))
+        return DiagnoseFirstParam(EnclosingClass);
+    } else if (!C->isRecordType() && !C->isEnumeralType()) {
+      return DiagnoseFirstParam(QualType());
+    }
+
+    // The referent may be volatile-qualified, but not const-qualified.
+    if (Referent.isConstQualified())
+      return DiagnoseFirstParam(C);
+  }
+
+  // A deduced return type is never permitted, so diagnose it even if C is not
+  // known yet. Allowing it would need P2952R2 (auto& operator=(X&&) = default),
+  // which is not part of the standard.
+  if (ReturnType->getContainedDeducedType()) {
+    Diag(FD->getLocation(),
+         diag::err_defaulted_postfix_operator_deduced_return_type)
+        << (int)Kind << FD->getReturnTypeSourceRange();
+    return true;
+  }
+
+  // If C is not known or the return type is dependent, defer the remaining
+  // checks until instantiation.
+  if (C.isNull() || ReturnType->isDependentType())
+    return false;
+
+  //    -- has a declared return type of C.
+  if (!Context.hasSameType(ReturnType, C)) {
+    Diag(FD->getLocation(), diag::err_defaulted_postfix_operator_return_type)
+        << (int)Kind << C << ReturnType << FD->getReturnTypeSourceRange();
+    return true;
+  }
+
+  // For a defaulted function in a dependent context, defer all remaining
+  // checks until instantiation.
+  if (FD->isDependentContext())
+    return false;
+
+  //    -- is defined as defaulted in C or in a context where C is complete
+  if (RequireCompleteType(FD->getLocation(), C,
+                          diag::err_defaulted_postfix_operator_incomplete,
+                          (int)Kind))
+    return true;
+
+  // Determine whether the function should be defined as deleted.
+  DefaultedPostfixOperatorInfo Info = analyzeDefaultedPostfixOperator(
+      *this, FD, Kind, C, PostfixOperatorDiagnoseKind::NoDiagnostics);
+
+  bool First = FD == FD->getFirstDecl();
+
+  if (!First) {
+    if (Info.Deleted) {
+      // C++11 [dcl.fct.def.default]p4:
+      //   [For a] user-provided explicitly-defaulted function [...] if such a
+      //   function is implicitly defined as deleted, the program is ill-formed.
+      //
+      // This is really just a consequence of the general rule that you can
+      // only delete a function on its first declaration.
+      Diag(FD->getLocation(),
+           diag::err_non_first_default_postfix_operator_deletes)
+          << (int)Kind;
+      analyzeDefaultedPostfixOperator(
+          *this, FD, Kind, C, PostfixOperatorDiagnoseKind::ExplainDeleted);
+      return true;
+    }
+    if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+      // C++2d [over.inc.default]p1:
+      //   A definition of a postfix increment or decrement operator as
+      //   defaulted that appears in a class shall be the first declaration of
+      //   that function.
+      Diag(FD->getLocation(),
+           diag::err_non_first_default_postfix_operator_in_class)
+          << (int)Kind;
+      Diag(FD->getCanonicalDecl()->getLocation(),
+           diag::note_previous_declaration);
+      return true;
+    }
+  }
+
+  // If we want to delete the function, then do so; there's nothing else to
+  // check in that case.
+  if (Info.Deleted) {
+    SetDeclDeleted(FD, FD->getLocation());
+    if (!inTemplateInstantiation() && !FD->isImplicit()) {
+      Diag(FD->getLocation(), diag::warn_defaulted_postfix_operator_deleted)
+          << (int)Kind;
+      analyzeDefaultedPostfixOperator(
+          *this, FD, Kind, C, PostfixOperatorDiagnoseKind::ExplainDeleted);
+      if (FD->getDefaultLoc().isValid())
+        Diag(FD->getDefaultLoc(), diag::note_replace_equals_default_to_delete)
+            << FixItHint::CreateReplacement(FD->getDefaultLoc(), "delete");
+    }
+    return false;
+  }
+
+  // C++2a [dcl.fct.def.default]p3 [P2002R0]:
+  //   An explicitly-defaulted function that is not defined as deleted may be
+  //   declared constexpr or consteval only if it is constexpr-compatible.
+  // By analogy with C++2a [class.compare.default]p3, we consider a defaulted
+  // postfix operator to be constexpr-compatible if its parameter and return
+  // types are literal types and no overload resolution performed when
+  // determining whether to delete it results in a non-constexpr function.
+  //
+  // C++23 [dcl.fct.def.default]p3 [P2448R2] removed this restriction: a
+  // defaulted function may always be declared constexpr.
+  if (FD->isConstexpr() && !getLangOpts().CPlusPlus23 &&
+      !FD->isTemplateInstantiation() &&
+      CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
+      CheckConstexprParameterTypes(*this, FD, CheckConstexprKind::Diagnose) &&
+      !Info.Constexpr) {
+    Diag(FD->getBeginLoc(),
+         diag::err_defaulted_postfix_operator_constexpr_mismatch)
+        << (int)Kind << FD->isConsteval();
+    analyzeDefaultedPostfixOperator(
+        *this, FD, Kind, C, PostfixOperatorDiagnoseKind::ExplainConstexpr);
+    return true;
+  }
+
+  if (First) {
+    // C++11 [dcl.fct.def.default]p5:
+    //   A function explicitly defaulted on its first declaration is implicitly
+    //   inline.
+    FD->setImplicitlyInline();
+
+    // C++2a [dcl.fct.def.default]p3 [P2002R0]:
+    //   If a constexpr-compatible function is explicitly defaulted on its
+    //   first declaration, it is implicitly considered to be constexpr.
+    // C++23 [dcl.fct.def.default]p3 [P2448R2]:
+    //   A function explicitly defaulted on its first declaration is [...]
+    //   implicitly constexpr if it is constexpr-suitable.
+    // A postfix operator function is always constexpr-suitable. The implicit
+    // definition declares a variable, so it can only be constexpr in C++14
+    // and later, and a virtual function can only be constexpr in C++20 and
+    // later.
+    if (!FD->isConstexpr() && getLangOpts().CPlusPlus14 &&
+        (getLangOpts().CPlusPlus20 || !MD || !MD->isVirtual()) &&
+        (getLangOpts().CPlusPlus23 ||
+         (Info.Constexpr &&
+          CheckConstexprReturnType(*this, FD, CheckConstexprKind::CheckValid) &&
+          CheckConstexprParameterTypes(*this, FD,
+                                       CheckConstexprKind::CheckValid))))
+      FD->setConstexprKind(ConstexprSpecKind::Constexpr);
+
+    // C++2d [except.spec]p10:
+    //   The exception specification for [...] a postfix increment or decrement
+    //   operator function without a noexcept-specifier that is defaulted on
+    //   its first declaration is potentially-throwing if and only if any
+    //   expression in the implicit definition is potentially-throwing.
+    if (FD->getExceptionSpecType() == EST_None) {
+      auto *FPT = FD->getType()->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      EPI.ExceptionSpec.Type = EST_Unevaluated;
+      EPI.ExceptionSpec.SourceDecl = FD;
+      FD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
+  }
+
+  return false;
+}
+
+void Sema::DefineDefaultedPostfixOperator(SourceLocation UseLoc,
+                                          FunctionDecl *FD,
+                                          PostfixOperatorKind Kind) {
+  defineDefaultedFunctionWithSynthesizedBody(
+      *this, UseLoc, FD, [&](SourceLocation BodyLoc) {
+        return buildDefaultedPostfixOperatorBody(*this, FD, Kind, BodyLoc);
+      });
+}
+
+static Sema::ImplicitExceptionSpecification
+ComputeDefaultedPostfixOperatorExceptionSpec(Sema &S, SourceLocation Loc,
+                                             FunctionDecl *FD,
+                                             PostfixOperatorKind Kind) {
+  return computeExceptionSpecFromSynthesizedBody(
+      S, Loc, FD, [&](SourceLocation BodyLoc) {
+        return buildDefaultedPostfixOperatorBody(S, FD, Kind, BodyLoc);
+      });
 }
 
 void Sema::CheckDelayedMemberExceptionSpecs() {
@@ -10160,6 +10776,10 @@ void Sema::DiagnoseDeletedDefaultedFunction(FunctionDecl *FD) {
   if (DFK.isSpecialMember()) {
     ShouldDeleteSpecialMember(cast<CXXMethodDecl>(FD), DFK.asSpecialMember(),
                               nullptr, /*Diagnose=*/true);
+  } else if (DFK.isPostfixOperator()) {
+    analyzeDefaultedPostfixOperator(
+        *this, FD, DFK.asPostfixOperator(), getDefaultedPostfixOperatorType(FD),
+        PostfixOperatorDiagnoseKind::ExplainDeleted);
   } else {
     DefaultedComparisonAnalyzer(
         *this, cast<CXXRecordDecl>(FD->getLexicalDeclContext()), FD,
@@ -18976,21 +19596,30 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
   Fn->setDeletedAsWritten(true, Message);
 }
 
-void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
+void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
   if (!Dcl || Dcl->isInvalidDecl())
     return;
+
+  // Which kinds of functions can be defaulted in the current language mode.
+  unsigned DefaultableKinds = diag::DefaultableFunctionKinds::SpecialMembers;
+  if (getLangOpts().CPlusPlus29)
+    DefaultableKinds = diag::DefaultableFunctionKinds::PostfixOperators;
+  else if (getLangOpts().CPlusPlus20)
+    DefaultableKinds = diag::DefaultableFunctionKinds::Comparisons;
 
   auto *FD = dyn_cast<FunctionDecl>(Dcl);
   if (!FD) {
     if (auto *FTD = dyn_cast<FunctionTemplateDecl>(Dcl)) {
-      if (FTD->getTemplatedDecl()->getDefaultedFunctionKind().isComparison()) {
-        Diag(DefaultLoc, diag::err_defaulted_comparison_template);
+      FunctionDecl::DefaultedFunctionKind DFK =
+          FTD->getTemplatedDecl()->getDefaultedFunctionKind();
+      if (DFK.isComparison() || DFK.isPostfixOperator()) {
+        Diag(DefaultLoc, diag::err_defaulted_operator_template)
+            << DFK.isPostfixOperator() << (int)DFK.asPostfixOperator();
         return;
       }
     }
 
-    Diag(DefaultLoc, diag::err_default_special_members)
-        << getLangOpts().CPlusPlus20;
+    Diag(DefaultLoc, diag::err_default_special_members) << DefaultableKinds;
     return;
   }
 
@@ -19003,8 +19632,12 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
       (!FD->isDependentContext() ||
        (!isa<CXXConstructorDecl>(FD) &&
         FD->getDeclName().getCXXOverloadedOperator() != OO_Equal))) {
-    Diag(DefaultLoc, diag::err_default_special_members)
-        << getLangOpts().CPlusPlus20;
+    OverloadedOperatorKind OO = FD->getDeclName().getCXXOverloadedOperator();
+    if (OO == OO_PlusPlus || OO == OO_MinusMinus)
+      Diag(DefaultLoc, diag::err_defaulted_prefix_operator)
+          << (OO == OO_MinusMinus);
+    else
+      Diag(DefaultLoc, diag::err_default_special_members) << DefaultableKinds;
     return;
   }
 
@@ -19014,6 +19647,10 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
       DefKind.asComparison() != DefaultedComparisonKind::ThreeWay) {
     DiagCompat(DefaultLoc, diag_compat::defaulted_comparison);
   }
+  // Defaulted postfix increment and decrement operators (P3668R4) are a C++2d
+  // feature that we support in all C++ language modes as an extension.
+  if (DefKind.isPostfixOperator() && !inTemplateInstantiation())
+    DiagCompat(DefaultLoc, diag_compat::defaulted_postfix_operator);
 
   FD->setDefaulted();
   FD->setExplicitlyDefaulted();
@@ -19028,8 +19665,8 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   // that we've marked it as defaulted.
   FD->setWillHaveBody(false);
 
-  if (DefKind.isComparison()) {
-    // If this comparison's defaulting occurs within the definition of its
+  if (DefKind.isComparison() || DefKind.isPostfixOperator()) {
+    // If this function's defaulting occurs within the definition of its
     // lexical class context, we have to do the checking when complete.
     if (auto const *RD = dyn_cast<CXXRecordDecl>(FD->getLexicalDeclContext()))
       if (!RD->isCompleteDefinition())
@@ -19064,6 +19701,13 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
       FD->setInvalidDecl();
     else
       DefineDefaultedComparison(DefaultLoc, FD, DefKind.asComparison());
+  } else if (DefKind.isPostfixOperator()) {
+    if (CheckExplicitlyDefaultedPostfixOperator(S, FD,
+                                                DefKind.asPostfixOperator()))
+      FD->setInvalidDecl();
+    else if (!FD->isDeleted())
+      DefineDefaultedPostfixOperator(DefaultLoc, FD,
+                                     DefKind.asPostfixOperator());
   } else {
     auto *MD = cast<CXXMethodDecl>(FD);
 
@@ -19095,13 +19739,13 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
 }
 
 void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
-                               StringLiteral *DeletedMessage) {
+                               StringLiteral *DeletedMessage, Scope *S) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
     SetDeclDeleted(D, Loc, DeletedMessage);
     break;
   case FnBodyKind::Default:
-    SetDeclDefaulted(D, Loc);
+    SetDeclDefaulted(D, Loc, S);
     break;
   case FnBodyKind::Other:
     llvm_unreachable(
