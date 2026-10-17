@@ -1029,6 +1029,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+  // Type legalization cannot expand the i128 pointer of a buffer resource
+  // prefetch; lowerPREFETCH drops the prefetch instead.
+  setOperationAction(ISD::PREFETCH, MVT::i128, Custom);
 
   if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
@@ -5017,20 +5020,14 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
-  if (Op->isDivergent() &&
-      (!Subtarget->hasVmemPrefInsts() || !Op.getConstantOperandVal(4)))
-    // Cannot do I$ prefetch with divergent pointer.
-    return SDValue();
-
   switch (cast<MemSDNode>(Op)->getAddressSpace()) {
   case AMDGPUAS::FLAT_ADDRESS:
   case AMDGPUAS::GLOBAL_ADDRESS:
   case AMDGPUAS::CONSTANT_ADDRESS:
-    break;
   case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
-    if (Subtarget->hasSafeSmemPrefetch())
-      break;
-    [[fallthrough]];
+    break;
+  case AMDGPUAS::BUFFER_RESOURCE:
+    return Op.getOperand(0);
   default:
     return SDValue();
   }
@@ -5039,7 +5036,16 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  return Op;
+  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
+  // a load does.
+  SDValue Ptr = Op.getOperand(1);
+  if (Ptr.getValueType() != MVT::i32)
+    return Op;
+  SmallVector<SDValue, 5> Ops(Op->ops());
+  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
+                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
+                                AMDGPUAS::CONSTANT_ADDRESS);
+  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
 }
 
 // Work around DAG legality rules only based on the result type.
