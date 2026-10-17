@@ -152,3 +152,21 @@ subroutine capture_with_convert_f64_to_i32()
   x = w * w
   !$acc end atomic
 end subroutine capture_with_convert_f64_to_i32
+
+subroutine atomic_derived_type()
+  type :: struct
+    integer :: m
+  end type
+  type(struct) :: x, v
+
+  !$acc atomic write
+  !ERROR: LHS of atomic write statement must be of intrinsic type
+  !ERROR: RHS of atomic write statement must be of intrinsic type
+  x = v
+
+  !$acc atomic update
+  !ERROR: LHS of atomic update statement must be of intrinsic type
+  !ERROR: RHS of atomic update statement must be of intrinsic type
+  !ERROR: Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor
+  x = v
+end subroutine atomic_derived_type
