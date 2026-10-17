@@ -11,63 +11,48 @@ define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
 ;
 ; NOBMI2-LABEL: pdep_i8:
 ; NOBMI2:       # %bb.0:
-; NOBMI2-NEXT:    movl %esi, %eax
-; NOBMI2-NEXT:    notb %al
-; NOBMI2-NEXT:    leal (,%rax,4), %ecx
-; NOBMI2-NEXT:    addb %al, %al
-; NOBMI2-NEXT:    xorb %al, %cl
-; NOBMI2-NEXT:    leal (,%rcx,4), %edx
-; NOBMI2-NEXT:    xorb %cl, %dl
+; NOBMI2-NEXT:    movl %esi, %ecx
+; NOBMI2-NEXT:    notb %cl
+; NOBMI2-NEXT:    leal (%rcx,%rcx), %eax
+; NOBMI2-NEXT:    xorb %cl, %al
+; NOBMI2-NEXT:    leal (,%rax,4), %edx
+; NOBMI2-NEXT:    xorb %al, %dl
+; NOBMI2-NEXT:    movl %edx, %eax
+; NOBMI2-NEXT:    shlb $4, %al
+; NOBMI2-NEXT:    xorb %dl, %al
+; NOBMI2-NEXT:    movl %eax, %edx
+; NOBMI2-NEXT:    notb %dl
+; NOBMI2-NEXT:    andb %cl, %dl
+; NOBMI2-NEXT:    movl %edx, %r8d
+; NOBMI2-NEXT:    shrb %r8b
+; NOBMI2-NEXT:    xorb %dl, %r8b
+; NOBMI2-NEXT:    leal (,%r8,4), %edx
+; NOBMI2-NEXT:    xorb %r8b, %dl
 ; NOBMI2-NEXT:    movl %edx, %ecx
 ; NOBMI2-NEXT:    shlb $4, %cl
 ; NOBMI2-NEXT:    xorb %dl, %cl
 ; NOBMI2-NEXT:    movl %ecx, %edx
 ; NOBMI2-NEXT:    notb %dl
-; NOBMI2-NEXT:    andb %al, %dl
-; NOBMI2-NEXT:    leal (%rdx,%rdx), %eax
-; NOBMI2-NEXT:    xorb %dl, %al
-; NOBMI2-NEXT:    leal (,%rax,4), %r8d
-; NOBMI2-NEXT:    xorb %al, %r8b
-; NOBMI2-NEXT:    movl %r8d, %eax
-; NOBMI2-NEXT:    shlb $4, %al
-; NOBMI2-NEXT:    xorb %r8b, %al
-; NOBMI2-NEXT:    movl %eax, %r8d
-; NOBMI2-NEXT:    notb %r8b
-; NOBMI2-NEXT:    andb %dl, %r8b
-; NOBMI2-NEXT:    leal (%r8,%r8), %edx
-; NOBMI2-NEXT:    xorb %r8b, %dl
-; NOBMI2-NEXT:    leal (,%rdx,4), %r8d
+; NOBMI2-NEXT:    andb %r8b, %dl
+; NOBMI2-NEXT:    movl %edx, %r8d
+; NOBMI2-NEXT:    shrb $2, %r8b
 ; NOBMI2-NEXT:    xorb %dl, %r8b
 ; NOBMI2-NEXT:    movl %r8d, %edx
 ; NOBMI2-NEXT:    shlb $4, %dl
 ; NOBMI2-NEXT:    xorb %r8b, %dl
-; NOBMI2-NEXT:    andb %sil, %cl
-; NOBMI2-NEXT:    movl %esi, %r8d
-; NOBMI2-NEXT:    xorb %cl, %r8b
-; NOBMI2-NEXT:    movl %ecx, %r9d
-; NOBMI2-NEXT:    shrb %r9b
-; NOBMI2-NEXT:    orb %r8b, %r9b
-; NOBMI2-NEXT:    andb %r9b, %al
-; NOBMI2-NEXT:    xorb %al, %r9b
-; NOBMI2-NEXT:    movl %eax, %r8d
-; NOBMI2-NEXT:    shrb $2, %r8b
-; NOBMI2-NEXT:    orb %r9b, %r8b
-; NOBMI2-NEXT:    movl %edi, %r9d
-; NOBMI2-NEXT:    shlb $4, %r9b
-; NOBMI2-NEXT:    xorb %dil, %r9b
-; NOBMI2-NEXT:    andb %r8b, %r9b
-; NOBMI2-NEXT:    andb %dl, %r9b
-; NOBMI2-NEXT:    xorb %dil, %r9b
-; NOBMI2-NEXT:    leal (,%r9,4), %edx
-; NOBMI2-NEXT:    xorb %r9b, %dl
-; NOBMI2-NEXT:    andb %al, %dl
-; NOBMI2-NEXT:    xorb %r9b, %dl
-; NOBMI2-NEXT:    leal (%rdx,%rdx), %eax
-; NOBMI2-NEXT:    xorb %dl, %al
+; NOBMI2-NEXT:    andb %dil, %dl
+; NOBMI2-NEXT:    xorb %dl, %dil
+; NOBMI2-NEXT:    shlb $4, %dl
+; NOBMI2-NEXT:    xorb %dil, %dl
+; NOBMI2-NEXT:    andb %dl, %cl
+; NOBMI2-NEXT:    xorb %cl, %dl
+; NOBMI2-NEXT:    shlb $2, %cl
+; NOBMI2-NEXT:    xorb %dl, %cl
 ; NOBMI2-NEXT:    andb %cl, %al
-; NOBMI2-NEXT:    xorb %dl, %al
+; NOBMI2-NEXT:    xorb %al, %cl
+; NOBMI2-NEXT:    addb %al, %al
+; NOBMI2-NEXT:    xorb %cl, %al
 ; NOBMI2-NEXT:    andb %sil, %al
-; NOBMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; NOBMI2-NEXT:    retq
   %res = call i8 @llvm.pdep.i8(i8 %val, i8 %mask)
   ret i8 %res
@@ -82,93 +67,81 @@ define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
 ;
 ; NOBMI2-LABEL: pdep_i16:
 ; NOBMI2:       # %bb.0:
-; NOBMI2-NEXT:    movl %esi, %eax
-; NOBMI2-NEXT:    notl %eax
-; NOBMI2-NEXT:    leal (,%rax,4), %ecx
+; NOBMI2-NEXT:    movzwl %di, %edx
+; NOBMI2-NEXT:    movl %esi, %ecx
+; NOBMI2-NEXT:    notl %ecx
+; NOBMI2-NEXT:    movl %ecx, %eax
+; NOBMI2-NEXT:    andl $32639, %eax # imm = 0x7F7F
 ; NOBMI2-NEXT:    addl %eax, %eax
-; NOBMI2-NEXT:    xorl %eax, %ecx
-; NOBMI2-NEXT:    leal (,%rcx,4), %edx
-; NOBMI2-NEXT:    xorl %ecx, %edx
-; NOBMI2-NEXT:    movl %edx, %r8d
-; NOBMI2-NEXT:    shll $4, %r8d
-; NOBMI2-NEXT:    xorl %edx, %r8d
-; NOBMI2-NEXT:    movl %r8d, %ecx
-; NOBMI2-NEXT:    shll $8, %ecx
-; NOBMI2-NEXT:    xorl %r8d, %ecx
-; NOBMI2-NEXT:    movl %ecx, %edx
-; NOBMI2-NEXT:    notl %edx
-; NOBMI2-NEXT:    andl %eax, %edx
-; NOBMI2-NEXT:    leal (%rdx,%rdx), %eax
-; NOBMI2-NEXT:    xorl %edx, %eax
-; NOBMI2-NEXT:    leal (,%rax,4), %r8d
+; NOBMI2-NEXT:    xorl %ecx, %eax
+; NOBMI2-NEXT:    movl %eax, %r8d
+; NOBMI2-NEXT:    andl $16191, %r8d # imm = 0x3F3F
+; NOBMI2-NEXT:    shll $2, %r8d
 ; NOBMI2-NEXT:    xorl %eax, %r8d
-; NOBMI2-NEXT:    movl %r8d, %r9d
-; NOBMI2-NEXT:    shll $4, %r9d
-; NOBMI2-NEXT:    xorl %r8d, %r9d
-; NOBMI2-NEXT:    movl %r9d, %eax
-; NOBMI2-NEXT:    shll $8, %eax
-; NOBMI2-NEXT:    xorl %r9d, %eax
+; NOBMI2-NEXT:    movl %r8d, %eax
+; NOBMI2-NEXT:    andl $3855, %eax # imm = 0xF0F
+; NOBMI2-NEXT:    shll $4, %eax
+; NOBMI2-NEXT:    xorl %r8d, %eax
 ; NOBMI2-NEXT:    movl %eax, %r8d
 ; NOBMI2-NEXT:    notl %r8d
-; NOBMI2-NEXT:    andl %edx, %r8d
-; NOBMI2-NEXT:    leal (%r8,%r8), %edx
-; NOBMI2-NEXT:    xorl %r8d, %edx
-; NOBMI2-NEXT:    leal (,%rdx,4), %r9d
-; NOBMI2-NEXT:    xorl %edx, %r9d
-; NOBMI2-NEXT:    movl %r9d, %r10d
-; NOBMI2-NEXT:    shll $4, %r10d
-; NOBMI2-NEXT:    xorl %r9d, %r10d
-; NOBMI2-NEXT:    movl %r10d, %edx
-; NOBMI2-NEXT:    shll $8, %edx
-; NOBMI2-NEXT:    xorl %r10d, %edx
-; NOBMI2-NEXT:    movl %edx, %r9d
-; NOBMI2-NEXT:    notl %r9d
-; NOBMI2-NEXT:    andl %r8d, %r9d
-; NOBMI2-NEXT:    leal (%r9,%r9), %r8d
-; NOBMI2-NEXT:    xorl %r9d, %r8d
-; NOBMI2-NEXT:    leal (,%r8,4), %r9d
-; NOBMI2-NEXT:    xorl %r8d, %r9d
-; NOBMI2-NEXT:    movl %r9d, %r10d
-; NOBMI2-NEXT:    shll $4, %r10d
-; NOBMI2-NEXT:    xorl %r9d, %r10d
-; NOBMI2-NEXT:    movl %r10d, %r8d
-; NOBMI2-NEXT:    shll $8, %r8d
-; NOBMI2-NEXT:    xorl %r10d, %r8d
-; NOBMI2-NEXT:    andl %esi, %ecx
-; NOBMI2-NEXT:    movl %esi, %r9d
+; NOBMI2-NEXT:    andl %ecx, %r8d
+; NOBMI2-NEXT:    movl %r8d, %ecx
+; NOBMI2-NEXT:    andl $65278, %ecx # imm = 0xFEFE
+; NOBMI2-NEXT:    shrl %ecx
+; NOBMI2-NEXT:    xorl %r8d, %ecx
+; NOBMI2-NEXT:    movl %ecx, %r9d
+; NOBMI2-NEXT:    andl $16191, %r9d # imm = 0x3F3F
+; NOBMI2-NEXT:    shll $2, %r9d
 ; NOBMI2-NEXT:    xorl %ecx, %r9d
-; NOBMI2-NEXT:    movzwl %cx, %r10d
-; NOBMI2-NEXT:    shrl %r10d
-; NOBMI2-NEXT:    orl %r9d, %r10d
-; NOBMI2-NEXT:    andl %r10d, %eax
-; NOBMI2-NEXT:    xorl %eax, %r10d
-; NOBMI2-NEXT:    movzwl %ax, %r9d
-; NOBMI2-NEXT:    shrl $2, %r9d
-; NOBMI2-NEXT:    orl %r10d, %r9d
-; NOBMI2-NEXT:    andl %r9d, %edx
-; NOBMI2-NEXT:    xorl %edx, %r9d
-; NOBMI2-NEXT:    movzwl %dx, %r10d
-; NOBMI2-NEXT:    shrl $4, %r10d
-; NOBMI2-NEXT:    orl %r9d, %r10d
-; NOBMI2-NEXT:    movl %edi, %r9d
-; NOBMI2-NEXT:    shll $8, %r9d
-; NOBMI2-NEXT:    xorl %edi, %r9d
-; NOBMI2-NEXT:    andl %r10d, %r9d
-; NOBMI2-NEXT:    andl %r8d, %r9d
-; NOBMI2-NEXT:    xorl %edi, %r9d
-; NOBMI2-NEXT:    movl %r9d, %edi
-; NOBMI2-NEXT:    shll $4, %edi
-; NOBMI2-NEXT:    xorl %r9d, %edi
-; NOBMI2-NEXT:    andl %edx, %edi
-; NOBMI2-NEXT:    xorl %r9d, %edi
-; NOBMI2-NEXT:    leal (,%rdi,4), %edx
-; NOBMI2-NEXT:    xorl %edi, %edx
-; NOBMI2-NEXT:    andl %eax, %edx
-; NOBMI2-NEXT:    xorl %edi, %edx
-; NOBMI2-NEXT:    leal (%rdx,%rdx), %eax
-; NOBMI2-NEXT:    xorl %edx, %eax
-; NOBMI2-NEXT:    andl %ecx, %eax
-; NOBMI2-NEXT:    xorl %edx, %eax
+; NOBMI2-NEXT:    movl %r9d, %r8d
+; NOBMI2-NEXT:    andl $3855, %r8d # imm = 0xF0F
+; NOBMI2-NEXT:    shll $4, %r8d
+; NOBMI2-NEXT:    xorl %r9d, %r8d
+; NOBMI2-NEXT:    movl %r8d, %r9d
+; NOBMI2-NEXT:    notl %r9d
+; NOBMI2-NEXT:    andl %ecx, %r9d
+; NOBMI2-NEXT:    movl %r9d, %ecx
+; NOBMI2-NEXT:    andl $64764, %ecx # imm = 0xFCFC
+; NOBMI2-NEXT:    shrl $2, %ecx
+; NOBMI2-NEXT:    xorl %r9d, %ecx
+; NOBMI2-NEXT:    movl %ecx, %r9d
+; NOBMI2-NEXT:    andl $3855, %r9d # imm = 0xF0F
+; NOBMI2-NEXT:    shll $4, %r9d
+; NOBMI2-NEXT:    xorl %ecx, %r9d
+; NOBMI2-NEXT:    movl %esi, %ecx
+; NOBMI2-NEXT:    shrl %ecx
+; NOBMI2-NEXT:    andl $21845, %ecx # imm = 0x5555
+; NOBMI2-NEXT:    movl %esi, %r10d
+; NOBMI2-NEXT:    subl %ecx, %r10d
+; NOBMI2-NEXT:    movl %r10d, %ecx
+; NOBMI2-NEXT:    andl $13107, %ecx # imm = 0x3333
+; NOBMI2-NEXT:    shrl $2, %r10d
+; NOBMI2-NEXT:    andl $13107, %r10d # imm = 0x3333
+; NOBMI2-NEXT:    addl %ecx, %r10d
+; NOBMI2-NEXT:    movl %r10d, %ecx
+; NOBMI2-NEXT:    shrl $4, %ecx
+; NOBMI2-NEXT:    addl %r10d, %ecx
+; NOBMI2-NEXT:    andb $15, %cl
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; NOBMI2-NEXT:    shrl %cl, %edx
+; NOBMI2-NEXT:    shll $8, %edx
+; NOBMI2-NEXT:    movzbl %dil, %ecx
+; NOBMI2-NEXT:    orl %edx, %ecx
+; NOBMI2-NEXT:    andl %ecx, %r9d
+; NOBMI2-NEXT:    xorl %r9d, %ecx
+; NOBMI2-NEXT:    andl $3855, %r9d # imm = 0xF0F
+; NOBMI2-NEXT:    shll $4, %r9d
+; NOBMI2-NEXT:    xorl %ecx, %r9d
+; NOBMI2-NEXT:    andl %r9d, %r8d
+; NOBMI2-NEXT:    xorl %r8d, %r9d
+; NOBMI2-NEXT:    andl $16191, %r8d # imm = 0x3F3F
+; NOBMI2-NEXT:    shll $2, %r8d
+; NOBMI2-NEXT:    xorl %r9d, %r8d
+; NOBMI2-NEXT:    andl %r8d, %eax
+; NOBMI2-NEXT:    xorl %eax, %r8d
+; NOBMI2-NEXT:    andl $32639, %eax # imm = 0x7F7F
+; NOBMI2-NEXT:    addl %eax, %eax
+; NOBMI2-NEXT:    xorl %r8d, %eax
 ; NOBMI2-NEXT:    andl %esi, %eax
 ; NOBMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NOBMI2-NEXT:    retq
@@ -184,131 +157,96 @@ define i32 @pdep_i32(i32 %val, i32 %mask) nounwind {
 ;
 ; NOBMI2-LABEL: pdep_i32:
 ; NOBMI2:       # %bb.0:
-; NOBMI2-NEXT:    movl %esi, %eax
-; NOBMI2-NEXT:    notl %eax
-; NOBMI2-NEXT:    leal (,%rax,4), %ecx
+; NOBMI2-NEXT:    movl %esi, %ecx
+; NOBMI2-NEXT:    notl %ecx
+; NOBMI2-NEXT:    movl %ecx, %eax
+; NOBMI2-NEXT:    andl $2139062143, %eax # imm = 0x7F7F7F7F
 ; NOBMI2-NEXT:    addl %eax, %eax
-; NOBMI2-NEXT:    xorl %eax, %ecx
-; NOBMI2-NEXT:    leal (,%rcx,4), %edx
-; NOBMI2-NEXT:    xorl %ecx, %edx
-; NOBMI2-NEXT:    movl %edx, %ecx
-; NOBMI2-NEXT:    shll $4, %ecx
-; NOBMI2-NEXT:    xorl %edx, %ecx
-; NOBMI2-NEXT:    movl %ecx, %edx
-; NOBMI2-NEXT:    shll $8, %edx
-; NOBMI2-NEXT:    xorl %ecx, %edx
-; NOBMI2-NEXT:    movl %edx, %ecx
-; NOBMI2-NEXT:    shll $16, %ecx
-; NOBMI2-NEXT:    xorl %edx, %ecx
-; NOBMI2-NEXT:    movl %ecx, %edx
-; NOBMI2-NEXT:    notl %edx
-; NOBMI2-NEXT:    andl %eax, %edx
-; NOBMI2-NEXT:    leal (%rdx,%rdx), %eax
-; NOBMI2-NEXT:    xorl %edx, %eax
-; NOBMI2-NEXT:    leal (,%rax,4), %r8d
-; NOBMI2-NEXT:    xorl %eax, %r8d
-; NOBMI2-NEXT:    movl %r8d, %eax
+; NOBMI2-NEXT:    xorl %ecx, %eax
+; NOBMI2-NEXT:    movl %eax, %edx
+; NOBMI2-NEXT:    andl $1061109567, %edx # imm = 0x3F3F3F3F
+; NOBMI2-NEXT:    shll $2, %edx
+; NOBMI2-NEXT:    xorl %eax, %edx
+; NOBMI2-NEXT:    movl %edx, %eax
+; NOBMI2-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
 ; NOBMI2-NEXT:    shll $4, %eax
-; NOBMI2-NEXT:    xorl %r8d, %eax
-; NOBMI2-NEXT:    movl %eax, %r8d
-; NOBMI2-NEXT:    shll $8, %r8d
-; NOBMI2-NEXT:    xorl %eax, %r8d
-; NOBMI2-NEXT:    movl %r8d, %eax
-; NOBMI2-NEXT:    shll $16, %eax
-; NOBMI2-NEXT:    xorl %r8d, %eax
-; NOBMI2-NEXT:    movl %eax, %r8d
-; NOBMI2-NEXT:    notl %r8d
-; NOBMI2-NEXT:    andl %edx, %r8d
-; NOBMI2-NEXT:    leal (%r8,%r8), %edx
-; NOBMI2-NEXT:    xorl %r8d, %edx
-; NOBMI2-NEXT:    leal (,%rdx,4), %r9d
-; NOBMI2-NEXT:    xorl %edx, %r9d
-; NOBMI2-NEXT:    movl %r9d, %edx
-; NOBMI2-NEXT:    shll $4, %edx
-; NOBMI2-NEXT:    xorl %r9d, %edx
-; NOBMI2-NEXT:    movl %edx, %r9d
-; NOBMI2-NEXT:    shll $8, %r9d
-; NOBMI2-NEXT:    xorl %edx, %r9d
-; NOBMI2-NEXT:    movl %r9d, %edx
-; NOBMI2-NEXT:    shll $16, %edx
-; NOBMI2-NEXT:    xorl %r9d, %edx
-; NOBMI2-NEXT:    movl %edx, %r9d
-; NOBMI2-NEXT:    notl %r9d
-; NOBMI2-NEXT:    andl %r8d, %r9d
-; NOBMI2-NEXT:    leal (%r9,%r9), %r8d
-; NOBMI2-NEXT:    xorl %r9d, %r8d
-; NOBMI2-NEXT:    leal (,%r8,4), %r10d
-; NOBMI2-NEXT:    xorl %r8d, %r10d
-; NOBMI2-NEXT:    movl %r10d, %r8d
+; NOBMI2-NEXT:    xorl %edx, %eax
+; NOBMI2-NEXT:    movl %eax, %edx
+; NOBMI2-NEXT:    notl %edx
+; NOBMI2-NEXT:    andl %ecx, %edx
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    andl $-16843010, %ecx # imm = 0xFEFEFEFE
+; NOBMI2-NEXT:    shrl %ecx
+; NOBMI2-NEXT:    xorl %edx, %ecx
+; NOBMI2-NEXT:    movl %ecx, %edx
+; NOBMI2-NEXT:    andl $1061109567, %edx # imm = 0x3F3F3F3F
+; NOBMI2-NEXT:    shll $2, %edx
+; NOBMI2-NEXT:    xorl %ecx, %edx
+; NOBMI2-NEXT:    movl %edx, %r8d
+; NOBMI2-NEXT:    andl $252645135, %r8d # imm = 0xF0F0F0F
 ; NOBMI2-NEXT:    shll $4, %r8d
-; NOBMI2-NEXT:    xorl %r10d, %r8d
-; NOBMI2-NEXT:    movl %r8d, %r10d
-; NOBMI2-NEXT:    shll $8, %r10d
-; NOBMI2-NEXT:    xorl %r8d, %r10d
-; NOBMI2-NEXT:    movl %r10d, %r8d
-; NOBMI2-NEXT:    shll $16, %r8d
-; NOBMI2-NEXT:    xorl %r10d, %r8d
-; NOBMI2-NEXT:    movl %r8d, %r10d
-; NOBMI2-NEXT:    notl %r10d
-; NOBMI2-NEXT:    andl %r9d, %r10d
-; NOBMI2-NEXT:    leal (%r10,%r10), %r9d
-; NOBMI2-NEXT:    xorl %r10d, %r9d
-; NOBMI2-NEXT:    leal (,%r9,4), %r10d
-; NOBMI2-NEXT:    xorl %r9d, %r10d
-; NOBMI2-NEXT:    movl %r10d, %r9d
+; NOBMI2-NEXT:    xorl %edx, %r8d
+; NOBMI2-NEXT:    movl %r8d, %edx
+; NOBMI2-NEXT:    notl %edx
+; NOBMI2-NEXT:    andl %ecx, %edx
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    andl $-50529028, %ecx # imm = 0xFCFCFCFC
+; NOBMI2-NEXT:    shrl $2, %ecx
+; NOBMI2-NEXT:    xorl %edx, %ecx
+; NOBMI2-NEXT:    movl %ecx, %r9d
+; NOBMI2-NEXT:    andl $252645135, %r9d # imm = 0xF0F0F0F
 ; NOBMI2-NEXT:    shll $4, %r9d
-; NOBMI2-NEXT:    xorl %r10d, %r9d
-; NOBMI2-NEXT:    movl %r9d, %r10d
-; NOBMI2-NEXT:    shll $8, %r10d
-; NOBMI2-NEXT:    xorl %r9d, %r10d
-; NOBMI2-NEXT:    movl %r10d, %r9d
-; NOBMI2-NEXT:    shll $16, %r9d
-; NOBMI2-NEXT:    xorl %r10d, %r9d
-; NOBMI2-NEXT:    andl %esi, %ecx
-; NOBMI2-NEXT:    movl %esi, %r10d
-; NOBMI2-NEXT:    xorl %ecx, %r10d
-; NOBMI2-NEXT:    movl %ecx, %r11d
-; NOBMI2-NEXT:    shrl %r11d
-; NOBMI2-NEXT:    orl %r10d, %r11d
-; NOBMI2-NEXT:    andl %r11d, %eax
-; NOBMI2-NEXT:    xorl %eax, %r11d
-; NOBMI2-NEXT:    movl %eax, %r10d
-; NOBMI2-NEXT:    shrl $2, %r10d
-; NOBMI2-NEXT:    orl %r11d, %r10d
-; NOBMI2-NEXT:    andl %r10d, %edx
-; NOBMI2-NEXT:    xorl %edx, %r10d
-; NOBMI2-NEXT:    movl %edx, %r11d
-; NOBMI2-NEXT:    shrl $4, %r11d
-; NOBMI2-NEXT:    orl %r10d, %r11d
-; NOBMI2-NEXT:    andl %r11d, %r8d
-; NOBMI2-NEXT:    xorl %r8d, %r11d
-; NOBMI2-NEXT:    movl %r8d, %r10d
-; NOBMI2-NEXT:    shrl $8, %r10d
-; NOBMI2-NEXT:    orl %r11d, %r10d
+; NOBMI2-NEXT:    xorl %ecx, %r9d
+; NOBMI2-NEXT:    movl %esi, %ecx
+; NOBMI2-NEXT:    shrl %ecx
+; NOBMI2-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
+; NOBMI2-NEXT:    movl %esi, %edx
+; NOBMI2-NEXT:    subl %ecx, %edx
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; NOBMI2-NEXT:    shrl $2, %edx
+; NOBMI2-NEXT:    andl $858993459, %edx # imm = 0x33333333
+; NOBMI2-NEXT:    addl %ecx, %edx
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl $4, %ecx
+; NOBMI2-NEXT:    addl %edx, %ecx
+; NOBMI2-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; NOBMI2-NEXT:    imull $16843009, %ecx, %edx # imm = 0x1010101
+; NOBMI2-NEXT:    movl %edi, %r10d
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl %cl, %r10d
+; NOBMI2-NEXT:    movzbl %r10b, %ecx
+; NOBMI2-NEXT:    shll $8, %ecx
+; NOBMI2-NEXT:    movzbl %dil, %r10d
+; NOBMI2-NEXT:    orl %ecx, %r10d
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl $8, %ecx
 ; NOBMI2-NEXT:    movl %edi, %r11d
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; NOBMI2-NEXT:    shrl %cl, %r11d
+; NOBMI2-NEXT:    movzbl %r11b, %r11d
 ; NOBMI2-NEXT:    shll $16, %r11d
-; NOBMI2-NEXT:    xorl %edi, %r11d
-; NOBMI2-NEXT:    andl %r10d, %r11d
-; NOBMI2-NEXT:    andl %r9d, %r11d
-; NOBMI2-NEXT:    xorl %edi, %r11d
-; NOBMI2-NEXT:    movl %r11d, %edi
-; NOBMI2-NEXT:    shll $8, %edi
-; NOBMI2-NEXT:    xorl %r11d, %edi
-; NOBMI2-NEXT:    andl %r8d, %edi
-; NOBMI2-NEXT:    xorl %r11d, %edi
-; NOBMI2-NEXT:    movl %edi, %r8d
-; NOBMI2-NEXT:    shll $4, %r8d
-; NOBMI2-NEXT:    xorl %edi, %r8d
-; NOBMI2-NEXT:    andl %edx, %r8d
-; NOBMI2-NEXT:    xorl %edi, %r8d
-; NOBMI2-NEXT:    leal (,%r8,4), %edx
-; NOBMI2-NEXT:    xorl %r8d, %edx
-; NOBMI2-NEXT:    andl %eax, %edx
-; NOBMI2-NEXT:    xorl %r8d, %edx
-; NOBMI2-NEXT:    leal (%rdx,%rdx), %eax
-; NOBMI2-NEXT:    xorl %edx, %eax
-; NOBMI2-NEXT:    andl %ecx, %eax
-; NOBMI2-NEXT:    xorl %edx, %eax
+; NOBMI2-NEXT:    orl %r10d, %r11d
+; NOBMI2-NEXT:    shrl $16, %edx
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl %cl, %edi
+; NOBMI2-NEXT:    shll $24, %edi
+; NOBMI2-NEXT:    orl %edi, %r11d
+; NOBMI2-NEXT:    andl %r11d, %r9d
+; NOBMI2-NEXT:    xorl %r9d, %r11d
+; NOBMI2-NEXT:    andl $252645135, %r9d # imm = 0xF0F0F0F
+; NOBMI2-NEXT:    shll $4, %r9d
+; NOBMI2-NEXT:    xorl %r11d, %r9d
+; NOBMI2-NEXT:    andl %r9d, %r8d
+; NOBMI2-NEXT:    xorl %r8d, %r9d
+; NOBMI2-NEXT:    andl $1061109567, %r8d # imm = 0x3F3F3F3F
+; NOBMI2-NEXT:    shll $2, %r8d
+; NOBMI2-NEXT:    xorl %r9d, %r8d
+; NOBMI2-NEXT:    andl %r8d, %eax
+; NOBMI2-NEXT:    xorl %eax, %r8d
+; NOBMI2-NEXT:    andl $2139062143, %eax # imm = 0x7F7F7F7F
+; NOBMI2-NEXT:    addl %eax, %eax
+; NOBMI2-NEXT:    xorl %r8d, %eax
 ; NOBMI2-NEXT:    andl %esi, %eax
 ; NOBMI2-NEXT:    retq
   %res = call i32 @llvm.pdep.i32(i32 %val, i32 %mask)
@@ -323,178 +261,140 @@ define i64 @pdep_i64(i64 %val, i64 %mask) nounwind {
 ;
 ; NOBMI2-LABEL: pdep_i64:
 ; NOBMI2:       # %bb.0:
+; NOBMI2-NEXT:    pushq %r15
+; NOBMI2-NEXT:    pushq %r14
 ; NOBMI2-NEXT:    pushq %rbx
-; NOBMI2-NEXT:    movq %rsi, %rax
-; NOBMI2-NEXT:    notq %rax
-; NOBMI2-NEXT:    leaq (,%rax,4), %rcx
+; NOBMI2-NEXT:    movq %rsi, %rcx
+; NOBMI2-NEXT:    notq %rcx
+; NOBMI2-NEXT:    movabsq $9187201950435737471, %r8 # imm = 0x7F7F7F7F7F7F7F7F
+; NOBMI2-NEXT:    movq %rcx, %rax
+; NOBMI2-NEXT:    andq %r8, %rax
 ; NOBMI2-NEXT:    addq %rax, %rax
-; NOBMI2-NEXT:    xorq %rax, %rcx
-; NOBMI2-NEXT:    leaq (,%rcx,4), %rdx
-; NOBMI2-NEXT:    xorq %rcx, %rdx
-; NOBMI2-NEXT:    movq %rdx, %rcx
-; NOBMI2-NEXT:    shlq $4, %rcx
+; NOBMI2-NEXT:    xorq %rcx, %rax
+; NOBMI2-NEXT:    movabsq $4557430888798830399, %r9 # imm = 0x3F3F3F3F3F3F3F3F
+; NOBMI2-NEXT:    movq %rax, %rdx
+; NOBMI2-NEXT:    andq %r9, %rdx
+; NOBMI2-NEXT:    shlq $2, %rdx
+; NOBMI2-NEXT:    xorq %rax, %rdx
+; NOBMI2-NEXT:    movabsq $1085102592571150095, %r10 # imm = 0xF0F0F0F0F0F0F0F
+; NOBMI2-NEXT:    movq %rdx, %rax
+; NOBMI2-NEXT:    andq %r10, %rax
+; NOBMI2-NEXT:    shlq $4, %rax
+; NOBMI2-NEXT:    xorq %rdx, %rax
+; NOBMI2-NEXT:    movq %rax, %rdx
+; NOBMI2-NEXT:    notq %rdx
+; NOBMI2-NEXT:    andq %rcx, %rdx
+; NOBMI2-NEXT:    movabsq $-72340172838076674, %rcx # imm = 0xFEFEFEFEFEFEFEFE
+; NOBMI2-NEXT:    andq %rdx, %rcx
+; NOBMI2-NEXT:    shrq %rcx
 ; NOBMI2-NEXT:    xorq %rdx, %rcx
 ; NOBMI2-NEXT:    movq %rcx, %rdx
-; NOBMI2-NEXT:    shlq $8, %rdx
+; NOBMI2-NEXT:    andq %r9, %rdx
+; NOBMI2-NEXT:    shlq $2, %rdx
 ; NOBMI2-NEXT:    xorq %rcx, %rdx
-; NOBMI2-NEXT:    movq %rdx, %r8
-; NOBMI2-NEXT:    shlq $16, %r8
-; NOBMI2-NEXT:    xorq %rdx, %r8
-; NOBMI2-NEXT:    movq %r8, %rcx
-; NOBMI2-NEXT:    shlq $32, %rcx
-; NOBMI2-NEXT:    xorq %r8, %rcx
-; NOBMI2-NEXT:    movq %rcx, %rdx
-; NOBMI2-NEXT:    notq %rdx
-; NOBMI2-NEXT:    andq %rax, %rdx
-; NOBMI2-NEXT:    leaq (%rdx,%rdx), %rax
-; NOBMI2-NEXT:    xorq %rdx, %rax
-; NOBMI2-NEXT:    leaq (,%rax,4), %r8
-; NOBMI2-NEXT:    xorq %rax, %r8
-; NOBMI2-NEXT:    movq %r8, %rax
-; NOBMI2-NEXT:    shlq $4, %rax
-; NOBMI2-NEXT:    xorq %r8, %rax
-; NOBMI2-NEXT:    movq %rax, %r8
-; NOBMI2-NEXT:    shlq $8, %r8
-; NOBMI2-NEXT:    xorq %rax, %r8
-; NOBMI2-NEXT:    movq %r8, %r9
-; NOBMI2-NEXT:    shlq $16, %r9
-; NOBMI2-NEXT:    xorq %r8, %r9
-; NOBMI2-NEXT:    movq %r9, %rax
-; NOBMI2-NEXT:    shlq $32, %rax
-; NOBMI2-NEXT:    xorq %r9, %rax
-; NOBMI2-NEXT:    movq %rax, %r8
-; NOBMI2-NEXT:    notq %r8
-; NOBMI2-NEXT:    andq %rdx, %r8
-; NOBMI2-NEXT:    leaq (%r8,%r8), %rdx
-; NOBMI2-NEXT:    xorq %r8, %rdx
-; NOBMI2-NEXT:    leaq (,%rdx,4), %r9
-; NOBMI2-NEXT:    xorq %rdx, %r9
-; NOBMI2-NEXT:    movq %r9, %rdx
-; NOBMI2-NEXT:    shlq $4, %rdx
-; NOBMI2-NEXT:    xorq %r9, %rdx
-; NOBMI2-NEXT:    movq %rdx, %r9
-; NOBMI2-NEXT:    shlq $8, %r9
-; NOBMI2-NEXT:    xorq %rdx, %r9
-; NOBMI2-NEXT:    movq %r9, %r10
-; NOBMI2-NEXT:    shlq $16, %r10
-; NOBMI2-NEXT:    xorq %r9, %r10
-; NOBMI2-NEXT:    movq %r10, %rdx
-; NOBMI2-NEXT:    shlq $32, %rdx
-; NOBMI2-NEXT:    xorq %r10, %rdx
-; NOBMI2-NEXT:    movq %rdx, %r9
-; NOBMI2-NEXT:    notq %r9
-; NOBMI2-NEXT:    andq %r8, %r9
-; NOBMI2-NEXT:    leaq (%r9,%r9), %r8
-; NOBMI2-NEXT:    xorq %r9, %r8
-; NOBMI2-NEXT:    leaq (,%r8,4), %r10
-; NOBMI2-NEXT:    xorq %r8, %r10
-; NOBMI2-NEXT:    movq %r10, %r8
-; NOBMI2-NEXT:    shlq $4, %r8
-; NOBMI2-NEXT:    xorq %r10, %r8
-; NOBMI2-NEXT:    movq %r8, %r10
-; NOBMI2-NEXT:    shlq $8, %r10
-; NOBMI2-NEXT:    xorq %r8, %r10
-; NOBMI2-NEXT:    movq %r10, %r11
-; NOBMI2-NEXT:    shlq $16, %r11
-; NOBMI2-NEXT:    xorq %r10, %r11
-; NOBMI2-NEXT:    movq %r11, %r8
-; NOBMI2-NEXT:    shlq $32, %r8
-; NOBMI2-NEXT:    xorq %r11, %r8
-; NOBMI2-NEXT:    movq %r8, %r10
-; NOBMI2-NEXT:    notq %r10
-; NOBMI2-NEXT:    andq %r9, %r10
-; NOBMI2-NEXT:    leaq (%r10,%r10), %r9
-; NOBMI2-NEXT:    xorq %r10, %r9
-; NOBMI2-NEXT:    leaq (,%r9,4), %r11
-; NOBMI2-NEXT:    xorq %r9, %r11
-; NOBMI2-NEXT:    movq %r11, %r9
-; NOBMI2-NEXT:    shlq $4, %r9
-; NOBMI2-NEXT:    xorq %r11, %r9
-; NOBMI2-NEXT:    movq %r9, %r11
-; NOBMI2-NEXT:    shlq $8, %r11
-; NOBMI2-NEXT:    xorq %r9, %r11
-; NOBMI2-NEXT:    movq %r11, %rbx
-; NOBMI2-NEXT:    shlq $16, %rbx
-; NOBMI2-NEXT:    xorq %r11, %rbx
-; NOBMI2-NEXT:    movq %rbx, %r9
-; NOBMI2-NEXT:    shlq $32, %r9
-; NOBMI2-NEXT:    xorq %rbx, %r9
-; NOBMI2-NEXT:    movq %r9, %r11
-; NOBMI2-NEXT:    notq %r11
+; NOBMI2-NEXT:    movq %rdx, %r11
 ; NOBMI2-NEXT:    andq %r10, %r11
-; NOBMI2-NEXT:    leaq (%r11,%r11), %r10
-; NOBMI2-NEXT:    xorq %r11, %r10
-; NOBMI2-NEXT:    leaq (,%r10,4), %r11
-; NOBMI2-NEXT:    xorq %r10, %r11
-; NOBMI2-NEXT:    movq %r11, %r10
-; NOBMI2-NEXT:    shlq $4, %r10
-; NOBMI2-NEXT:    xorq %r11, %r10
-; NOBMI2-NEXT:    movq %r10, %r11
-; NOBMI2-NEXT:    shlq $8, %r11
-; NOBMI2-NEXT:    xorq %r10, %r11
-; NOBMI2-NEXT:    movq %r11, %rbx
-; NOBMI2-NEXT:    shlq $16, %rbx
-; NOBMI2-NEXT:    xorq %r11, %rbx
-; NOBMI2-NEXT:    movq %rbx, %r10
-; NOBMI2-NEXT:    shlq $32, %r10
-; NOBMI2-NEXT:    xorq %rbx, %r10
-; NOBMI2-NEXT:    andq %rsi, %rcx
-; NOBMI2-NEXT:    movq %rsi, %r11
-; NOBMI2-NEXT:    xorq %rcx, %r11
-; NOBMI2-NEXT:    movq %rcx, %rbx
-; NOBMI2-NEXT:    shrq %rbx
-; NOBMI2-NEXT:    orq %r11, %rbx
-; NOBMI2-NEXT:    andq %rbx, %rax
-; NOBMI2-NEXT:    xorq %rax, %rbx
-; NOBMI2-NEXT:    movq %rax, %r11
-; NOBMI2-NEXT:    shrq $2, %r11
-; NOBMI2-NEXT:    orq %rbx, %r11
-; NOBMI2-NEXT:    andq %r11, %rdx
+; NOBMI2-NEXT:    shlq $4, %r11
 ; NOBMI2-NEXT:    xorq %rdx, %r11
-; NOBMI2-NEXT:    movq %rdx, %rbx
-; NOBMI2-NEXT:    shrq $4, %rbx
-; NOBMI2-NEXT:    orq %r11, %rbx
-; NOBMI2-NEXT:    andq %rbx, %r8
-; NOBMI2-NEXT:    xorq %r8, %rbx
-; NOBMI2-NEXT:    movq %r8, %r11
-; NOBMI2-NEXT:    shrq $8, %r11
-; NOBMI2-NEXT:    orq %rbx, %r11
-; NOBMI2-NEXT:    andq %r11, %r9
-; NOBMI2-NEXT:    xorq %r9, %r11
-; NOBMI2-NEXT:    movq %r9, %rbx
-; NOBMI2-NEXT:    shrq $16, %rbx
-; NOBMI2-NEXT:    orq %r11, %rbx
-; NOBMI2-NEXT:    movq %rdi, %r11
-; NOBMI2-NEXT:    shlq $32, %r11
-; NOBMI2-NEXT:    xorq %rdi, %r11
+; NOBMI2-NEXT:    movq %r11, %rdx
+; NOBMI2-NEXT:    notq %rdx
+; NOBMI2-NEXT:    andq %rcx, %rdx
+; NOBMI2-NEXT:    movabsq $-217020518514230020, %rcx # imm = 0xFCFCFCFCFCFCFCFC
+; NOBMI2-NEXT:    andq %rdx, %rcx
+; NOBMI2-NEXT:    shrq $2, %rcx
+; NOBMI2-NEXT:    xorq %rdx, %rcx
+; NOBMI2-NEXT:    movq %rcx, %rbx
+; NOBMI2-NEXT:    andq %r10, %rbx
+; NOBMI2-NEXT:    shlq $4, %rbx
+; NOBMI2-NEXT:    xorq %rcx, %rbx
+; NOBMI2-NEXT:    movq %rsi, %rcx
+; NOBMI2-NEXT:    shrq %rcx
+; NOBMI2-NEXT:    movabsq $6148914691236517205, %rdx # imm = 0x5555555555555555
+; NOBMI2-NEXT:    andq %rcx, %rdx
+; NOBMI2-NEXT:    movq %rsi, %rcx
+; NOBMI2-NEXT:    subq %rdx, %rcx
+; NOBMI2-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
+; NOBMI2-NEXT:    movq %rcx, %r14
+; NOBMI2-NEXT:    andq %rdx, %r14
+; NOBMI2-NEXT:    shrq $2, %rcx
+; NOBMI2-NEXT:    andq %rdx, %rcx
+; NOBMI2-NEXT:    addq %r14, %rcx
+; NOBMI2-NEXT:    movq %rcx, %r14
+; NOBMI2-NEXT:    shrq $4, %r14
+; NOBMI2-NEXT:    addq %rcx, %r14
+; NOBMI2-NEXT:    andq %r10, %r14
+; NOBMI2-NEXT:    movabsq $72340172838076673, %rdx # imm = 0x101010101010101
+; NOBMI2-NEXT:    imulq %r14, %rdx
+; NOBMI2-NEXT:    movq %rdi, %r14
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrq %cl, %r14
+; NOBMI2-NEXT:    movzbl %r14b, %ecx
+; NOBMI2-NEXT:    shll $8, %ecx
+; NOBMI2-NEXT:    movzbl %dil, %r14d
+; NOBMI2-NEXT:    orq %rcx, %r14
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl $8, %ecx
+; NOBMI2-NEXT:    movq %rdi, %r15
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; NOBMI2-NEXT:    shrq %cl, %r15
+; NOBMI2-NEXT:    movzbl %r15b, %r15d
+; NOBMI2-NEXT:    shll $16, %r15d
+; NOBMI2-NEXT:    orq %r14, %r15
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl $16, %ecx
+; NOBMI2-NEXT:    movq %rdi, %r14
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; NOBMI2-NEXT:    shrq %cl, %r14
+; NOBMI2-NEXT:    shll $24, %r14d
+; NOBMI2-NEXT:    orq %r15, %r14
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrl $24, %ecx
+; NOBMI2-NEXT:    movq %rdi, %r15
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; NOBMI2-NEXT:    shrq %cl, %r15
+; NOBMI2-NEXT:    movzbl %r15b, %r15d
+; NOBMI2-NEXT:    shlq $32, %r15
+; NOBMI2-NEXT:    orq %r14, %r15
+; NOBMI2-NEXT:    movq %rdx, %rcx
+; NOBMI2-NEXT:    shrq $32, %rcx
+; NOBMI2-NEXT:    movq %rdi, %r14
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; NOBMI2-NEXT:    shrq %cl, %r14
+; NOBMI2-NEXT:    movzbl %r14b, %r14d
+; NOBMI2-NEXT:    shlq $40, %r14
+; NOBMI2-NEXT:    orq %r15, %r14
+; NOBMI2-NEXT:    movq %rdx, %rcx
+; NOBMI2-NEXT:    shrq $40, %rcx
+; NOBMI2-NEXT:    movq %rdi, %r15
+; NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; NOBMI2-NEXT:    shrq %cl, %r15
+; NOBMI2-NEXT:    movzbl %r15b, %r15d
+; NOBMI2-NEXT:    shlq $48, %r15
+; NOBMI2-NEXT:    orq %r14, %r15
+; NOBMI2-NEXT:    shrq $48, %rdx
+; NOBMI2-NEXT:    movl %edx, %ecx
+; NOBMI2-NEXT:    shrq %cl, %rdi
+; NOBMI2-NEXT:    shlq $56, %rdi
+; NOBMI2-NEXT:    orq %rdi, %r15
+; NOBMI2-NEXT:    andq %r15, %rbx
+; NOBMI2-NEXT:    xorq %rbx, %r15
+; NOBMI2-NEXT:    andq %r10, %rbx
+; NOBMI2-NEXT:    shlq $4, %rbx
+; NOBMI2-NEXT:    xorq %r15, %rbx
 ; NOBMI2-NEXT:    andq %rbx, %r11
-; NOBMI2-NEXT:    andq %r10, %r11
-; NOBMI2-NEXT:    xorq %rdi, %r11
-; NOBMI2-NEXT:    movq %r11, %rdi
-; NOBMI2-NEXT:    shlq $16, %rdi
-; NOBMI2-NEXT:    xorq %r11, %rdi
-; NOBMI2-NEXT:    andq %r9, %rdi
-; NOBMI2-NEXT:    xorq %r11, %rdi
-; NOBMI2-NEXT:    movq %rdi, %r9
-; NOBMI2-NEXT:    shlq $8, %r9
-; NOBMI2-NEXT:    xorq %rdi, %r9
-; NOBMI2-NEXT:    andq %r8, %r9
-; NOBMI2-NEXT:    xorq %rdi, %r9
-; NOBMI2-NEXT:    movq %r9, %rdi
-; NOBMI2-NEXT:    shlq $4, %rdi
-; NOBMI2-NEXT:    xorq %r9, %rdi
-; NOBMI2-NEXT:    andq %rdx, %rdi
-; NOBMI2-NEXT:    xorq %r9, %rdi
-; NOBMI2-NEXT:    leaq (,%rdi,4), %rdx
-; NOBMI2-NEXT:    xorq %rdi, %rdx
-; NOBMI2-NEXT:    andq %rax, %rdx
-; NOBMI2-NEXT:    xorq %rdi, %rdx
-; NOBMI2-NEXT:    leaq (%rdx,%rdx), %rax
-; NOBMI2-NEXT:    xorq %rdx, %rax
-; NOBMI2-NEXT:    andq %rcx, %rax
-; NOBMI2-NEXT:    xorq %rdx, %rax
+; NOBMI2-NEXT:    xorq %r11, %rbx
+; NOBMI2-NEXT:    andq %r9, %r11
+; NOBMI2-NEXT:    shlq $2, %r11
+; NOBMI2-NEXT:    xorq %rbx, %r11
+; NOBMI2-NEXT:    andq %r11, %rax
+; NOBMI2-NEXT:    xorq %rax, %r11
+; NOBMI2-NEXT:    andq %r8, %rax
+; NOBMI2-NEXT:    addq %rax, %rax
+; NOBMI2-NEXT:    xorq %r11, %rax
 ; NOBMI2-NEXT:    andq %rsi, %rax
 ; NOBMI2-NEXT:    popq %rbx
+; NOBMI2-NEXT:    popq %r14
+; NOBMI2-NEXT:    popq %r15
 ; NOBMI2-NEXT:    retq
   %res = call i64 @llvm.pdep.i64(i64 %val, i64 %mask)
   ret i64 %res
