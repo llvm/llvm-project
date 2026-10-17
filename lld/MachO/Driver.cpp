@@ -45,7 +45,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -1125,7 +1124,7 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
@@ -1563,7 +1562,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize(cl::LibraryOptionsContext());
+  globalMergeRecord.finalize(config->libraryOptions);
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
