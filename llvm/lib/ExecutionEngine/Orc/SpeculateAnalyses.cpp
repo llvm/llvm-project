@@ -86,7 +86,7 @@ BlockFreqQuery::ResultTy BlockFreqQuery::operator()(Function &F) {
   DenseSet<StringRef> Calles;
   SmallVector<std::pair<const BasicBlock *, uint64_t>, 8> BBFreqs;
 
-  PassBuilder PB;
+  PassBuilder PB(F.getContext());
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
 
@@ -233,7 +233,7 @@ SequenceBBQuery::queryCFG(Function &F, const BlockListTy &CallerBlocks) {
   VisitedBlocksInfoTy VisitedBlocks;
   BackEdgesInfoTy BackEdgesInfo;
 
-  PassBuilder PB;
+  PassBuilder PB(F.getContext());
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
 

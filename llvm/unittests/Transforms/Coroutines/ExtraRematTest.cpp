@@ -27,10 +27,9 @@ struct ExtraRematTest : public testing::Test {
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  LLVMContext Context;
   std::unique_ptr<Module> M;
 
-  ExtraRematTest() {
+  ExtraRematTest() : PB(Ctx) {
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);
@@ -57,7 +56,7 @@ struct ExtraRematTest : public testing::Test {
 
   void ParseAssembly(const StringRef IR) {
     SMDiagnostic Error;
-    M = parseAssemblyString(IR, Error, Context);
+    M = parseAssemblyString(IR, Error, Ctx);
     std::string errMsg;
     raw_string_ostream os(errMsg);
     Error.print("", os);

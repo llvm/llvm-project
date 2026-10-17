@@ -185,8 +185,8 @@ extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
 bool llvm::isPGOInstrumentColdFunctionOnly(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<InstrumentationOptions>(LibraryOptions)
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<InstrumentationOptions>()
       .pgo_instrument_cold_function_only;
 }
 

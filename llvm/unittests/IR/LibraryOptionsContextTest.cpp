@@ -41,7 +41,7 @@ static std::string runInstCombine(LLVMContext &Ctx) {
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);

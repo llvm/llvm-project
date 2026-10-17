@@ -297,7 +297,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(Mod.getContext(), TM, Conf.PTO, PGOOpt, &PIC);
 
   RegisterPassPlugins(Conf, PB);
 

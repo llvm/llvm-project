@@ -106,6 +106,7 @@ public:
 struct PGOInstrumentationGenTest
     : public Test,
       WithParamInterface<std::tuple<StringRef, StringRef>> {
+  LLVMContext Context;
   ModulePassManager MPM;
   PassBuilder PB;
   MockModuleAnalysisHandle MMAHandle;
@@ -113,10 +114,9 @@ struct PGOInstrumentationGenTest
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  LLVMContext Context;
   std::unique_ptr<Module> M;
 
-  PGOInstrumentationGenTest() {
+  PGOInstrumentationGenTest() : PB(Context) {
     MAM.registerPass([&] { return MMAHandle.getAnalysis(); });
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);

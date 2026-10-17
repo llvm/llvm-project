@@ -68,7 +68,7 @@ protected:
     FunctionPassManager FPM;
     FPM.addPass(ReplaceWithVeclib());
     std::unique_ptr<Module> M = parseIR(Ctx, IR);
-    PassBuilder PB;
+    PassBuilder PB(Ctx);
     PB.registerFunctionAnalyses(FAM);
 
     // Enable debugging and capture std error

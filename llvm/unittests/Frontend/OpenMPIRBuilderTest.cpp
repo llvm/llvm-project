@@ -2000,7 +2000,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimd) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2044,7 +2044,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2100,7 +2100,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2137,7 +2137,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelenOrderConcurrent) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2175,7 +2175,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelen) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2212,7 +2212,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2260,7 +2260,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2310,7 +2310,7 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopFull) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2338,7 +2338,7 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopPartial) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
   UnrolledLoop->assertOK();
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
@@ -2371,7 +2371,7 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   FunctionAnalysisManager FAM;
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
