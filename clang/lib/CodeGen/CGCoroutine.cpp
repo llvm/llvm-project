@@ -555,52 +555,13 @@ namespace {
   };
 }
 
-// For WinEH exception representation backend needs to know what funclet coro.end
-// belongs to. That information is passed in a funclet bundle.
-static SmallVector<llvm::OperandBundleDef, 1>
-getBundlesForCoroEnd(CodeGenFunction &CGF) {
-  SmallVector<llvm::OperandBundleDef, 1> BundleList;
-
-  if (llvm::Instruction *EHPad = CGF.CurrentFuncletPad)
-    BundleList.emplace_back("funclet", EHPad);
-
-  return BundleList;
-}
-
-namespace {
-// We will insert coro.end to cut any of the destructors for objects that
-// do not need to be destroyed once the coroutine is resumed.
-// See llvm/docs/Coroutines.md for more details about coro.end.
-struct CallCoroEnd final : public EHScopeStack::Cleanup {
-  void Emit(CodeGenFunction &CGF, Flags flags) override {
-    auto &CGM = CGF.CGM;
-    auto *NullPtr = llvm::ConstantPointerNull::get(CGF.Int8PtrTy);
-    llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
-    // See if we have a funclet bundle to associate coro.end with. (WinEH)
-    auto Bundles = getBundlesForCoroEnd(CGF);
-    CGF.Builder.CreateCall(
-        CoroEndFn,
-        {NullPtr, CGF.Builder.getTrue(),
-         llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
-        Bundles);
-    if (Bundles.empty()) {
-      // Otherwise, (landingpad model), create a conditional branch that leads
-      // either to a cleanup block or a block with EH resume instruction.
-      auto *ResumeBB = CGF.getEHResumeBlock(/*isCleanup=*/true);
-      auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
-      auto *CoroIsInRampFn = CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
-      auto *CoroIsInRamp = CGF.Builder.CreateCall(CoroIsInRampFn);
-      CGF.Builder.CreateCondBr(CoroIsInRamp, CleanupContBB, ResumeBB);
-      CGF.EmitBlock(CleanupContBB);
-    }
-  }
-};
-}
-
 namespace {
 // Make sure to call coro.delete on scope exit.
 struct CallCoroDelete final : public EHScopeStack::Cleanup {
   Stmt *Deallocate;
+  // A branch to this block just before unwinding to caller
+  llvm::BasicBlock *CoroUnwind = nullptr;
+  llvm::CallInst *SuspendEH = nullptr;
 
   // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
 
@@ -609,7 +570,9 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   // contain any declarations. The SubStmtBuilder::makeNewAndDeleteExpr()
   // builds a single call to a deallocation function which is safe to emit
   // multiple times.
-  void Emit(CodeGenFunction &CGF, Flags) override {
+  void Emit(CodeGenFunction &CGF, Flags Kind) override {
+    if (Kind.isForEHCleanup())
+      EmitSuspendEH(CGF);
     // Remember the current point, as we are going to emit deallocation code
     // first to get to coro.free instruction that is an argument to a delete
     // call.
@@ -646,8 +609,58 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
 
     auto *CoroDeadFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_dead);
     CGF.Builder.CreateCall(CoroDeadFn, {CGF.CurCoro.Data->CoroBegin});
+
+    if (Kind.isForEHCleanup())
+      EmitCoroUnwind(CGF);
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
+  // [dcl.fct.def.coroutine]:
+  // a coroutine is suspended at a final suspend point if it is suspended
+  // 1. at a final await expression or
+  // 2. due to an exception exiting from unhandled_exception().
+  //
+  // We simulate a final suspend with normal suspend before setting coroutine
+  // as done.
+  void EmitSuspendEH(CodeGenFunction &CGF) {
+    auto &Builder = CGF.Builder;
+
+    auto *InRampFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
+    auto *InRamp = Builder.CreateCall(InRampFn);
+    auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
+    auto *EHSuspendBB = CGF.createBasicBlock("eh.suspend");
+    CGF.Builder.CreateCondBr(InRamp, CleanupContBB, EHSuspendBB);
+
+    CGF.EmitBlock(EHSuspendBB);
+    auto *CoroSuspend = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_suspend);
+    SuspendEH = Builder.CreateCall(
+        CoroSuspend, {llvm::ConstantTokenNone::get(Builder.getContext()),
+                      Builder.getInt1(false)});
+    CoroUnwind = CGF.createBasicBlock("coro.unwind");
+    auto *Destroy = Builder.CreateICmpEQ(SuspendEH, Builder.getInt8(1));
+    // coro.end(true) clears resume function,
+    // so we do not have to care about SuspendEH = 0
+    Builder.CreateCondBr(Destroy, CleanupContBB, CoroUnwind);
+
+    CGF.EmitBlock(CleanupContBB);
+  }
+
+  void EmitCoroUnwind(CodeGenFunction &CGF) {
+    auto &Builder = CGF.Builder;
+    auto *CoroEndFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_end);
+    auto *NullPtr = llvm::ConstantPointerNull::get(CGF.Int8PtrTy);
+    auto *TokenNone = llvm::ConstantTokenNone::get(CoroEndFn->getContext());
+    CGF.Builder.CreateCall(CoroEndFn,
+                           {NullPtr, CGF.Builder.getFalse(), TokenNone});
+    auto *EHContBB = CGF.createBasicBlock("coro.eh.cont");
+    Builder.CreateBr(EHContBB);
+
+    CGF.EmitBlock(CoroUnwind);
+    CGF.Builder.CreateCall(
+        CoroEndFn, {NullPtr, CGF.Builder.getTrue(), TokenNone});
+    Builder.CreateBr(EHContBB);
+
+    CGF.EmitBlock(EHContBB);
+  }
 };
 }
 
@@ -1022,8 +1035,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // Now we have the promise, initialize the GRO
     GroManager.EmitGroAlloca();
     GroManager.EmitGroInit();
-
-    EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
 
     CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(CleanupBB);
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Init;

@@ -65,13 +65,13 @@ private:
 };
 
 template <typename T>
-generator<T> seq() {
+generator<T> seq() noexcept {
   for (T i = {};; ++i)
     co_yield i;
 }
 
 template <typename T>
-generator<T> take_until(generator<T> &g, T limit) {
+generator<T> take_until(generator<T> &g, T limit) noexcept {
   for (auto &&v : g)
     if (v < limit)
       co_yield v;
@@ -80,13 +80,13 @@ generator<T> take_until(generator<T> &g, T limit) {
 }
 
 template <typename T>
-generator<T> multiply(generator<T> &g, T factor) {
+generator<T> multiply(generator<T> &g, T factor) noexcept {
   for (auto &&v : g)
     co_yield v *factor;
 }
 
 template <typename T>
-generator<T> add(generator<T> &g, T adder) {
+generator<T> add(generator<T> &g, T adder) noexcept {
   for (auto &&v : g)
     co_yield v + adder;
 }
