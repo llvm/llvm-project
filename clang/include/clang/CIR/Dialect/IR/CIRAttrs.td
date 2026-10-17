@@ -2500,10 +2500,10 @@ def CIR_LoweringLangOptionsAttr
 
     Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
     `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
-    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
+    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters),
     `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
-    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
-    `ClangABI` gains an enumerator every Clang release (see
+    `LangOptions::ClangABI` and `preserve_vec_3_type`; it is an `i32` rather than a 
+    CIR enum because `ClangABI` gains an enumerator every Clang release (see
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
     single toolchain.
 
@@ -2512,7 +2512,8 @@ def CIR_LoweringLangOptionsAttr
     module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
       cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
-      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+      openmp_is_target_device = false, preserve_vec_3_type = false, 
+      clang_abi_compat = 17>} { }
     ```
   }];
 
@@ -2526,13 +2527,14 @@ def CIR_LoweringLangOptionsAttr
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
+    "bool":$preserve_vec_3_type,
     "int32_t":$clang_abi_compat
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
-               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat) `>`
+               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device, 
+               $preserve_vec_3_type, $clang_abi_compat) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

@@ -24,6 +24,7 @@ int x;
 // PLAIN-SAME: gpu_rdc = false
 // PLAIN-SAME: openmp = false
 // PLAIN-SAME: openmp_is_target_device = false
+// PLAIN-SAME: preserve_vec_3_type = false
 // PLAIN-SAME: clang_abi_compat = {{[0-9]+}}>
 
 // -fexceptions -fcxx-exceptions flips exceptions. (OpenMP is exercised in the
