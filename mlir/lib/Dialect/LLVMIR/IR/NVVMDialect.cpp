@@ -7082,9 +7082,8 @@ static unsigned getNumSPRegisters(Type type) {
   return 1;
 }
 
-// Returns the {source, target} group sizes of the sparsity factor.
-static std::pair<unsigned, unsigned> getSPFactor(NVVM::SPFactor compFactor) {
-  switch (compFactor) {
+std::pair<unsigned, unsigned> SPDecompressOp::getCompFactorSizes() {
+  switch (getCompFactor()) {
   case NVVM::SPFactor::SP1TO2:
     return {1, 2};
   case NVVM::SPFactor::SP1TO4:
@@ -7108,7 +7107,7 @@ static std::pair<unsigned, unsigned> getSPFactor(NVVM::SPFactor compFactor) {
 }
 
 LogicalResult SPCompressOp::verify() {
-  unsigned repFactor = static_cast<unsigned>(getRepFactor());
+  unsigned repFactor = getRepFactor();
   unsigned indexSize = static_cast<unsigned>(getIndexSize());
   unsigned elemSize = static_cast<unsigned>(getElemSize());
 
@@ -7129,10 +7128,10 @@ LogicalResult SPCompressOp::verify() {
 }
 
 LogicalResult SPDecompressOp::verify() {
-  unsigned repFactor = static_cast<unsigned>(getRepFactor());
+  unsigned repFactor = getRepFactor();
   unsigned indexSize = static_cast<unsigned>(getIndexSize());
   unsigned elemSize = static_cast<unsigned>(getElemSize());
-  auto [numSrc, numTgt] = getSPFactor(getCompFactor());
+  auto [numSrc, numTgt] = getCompFactorSizes();
 
   unsigned dataBits = numTgt * elemSize * repFactor;
   if (dataBits < 32 || dataBits > 4096)
@@ -7161,57 +7160,6 @@ LogicalResult SPDecompressOp::verify() {
         "Operation attributes and provided input metadata size doesn't match");
 
   return success();
-}
-
-NVVM::IDArgPair
-SPCompressOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                                    llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::SPCompressOp>(op);
-  unsigned elemSize = static_cast<unsigned>(thisOp.getElemSize());
-  unsigned repFactor = static_cast<unsigned>(thisOp.getRepFactor());
-
-  // The intrinsic takes the dense data with one lane per element. The data
-  // occupies 2 * repFactor 32-bit registers.
-  llvm::Type *dataTy = llvm::FixedVectorType::get(builder.getIntNTy(elemSize),
-                                                  64 * repFactor / elemSize);
-  llvm::Value *data =
-      builder.CreateBitCast(mt.lookupValue(thisOp.getData()), dataTy);
-
-  llvm::SmallVector<llvm::Value *> args{
-      data,
-      mt.lookupValue(thisOp.getSpDesc()),
-      builder.getInt32(static_cast<unsigned>(thisOp.getIndexSize())),
-      // spcompress only supports the sp2to4 compression factor.
-      builder.getInt32(4),
-  };
-  return {llvm::Intrinsic::nvvm_spcompress, std::move(args)};
-}
-
-NVVM::IDArgPair SPDecompressOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::SPDecompressOp>(op);
-  auto [numSrc, numTgt] = getSPFactor(thisOp.getCompFactor());
-  unsigned elemSize = static_cast<unsigned>(thisOp.getElemSize());
-  unsigned repFactor = static_cast<unsigned>(thisOp.getRepFactor());
-
-  // The intrinsic takes the compressed data with one lane per element.
-  // Compressed data narrower than 32 bits is carried in the low bits of an i32.
-  llvm::Value *compressedData = mt.lookupValue(thisOp.getCompressedData());
-  unsigned compressedBits = numSrc * elemSize * repFactor;
-  if (compressedBits < 32)
-    compressedData =
-        builder.CreateTrunc(compressedData, builder.getIntNTy(compressedBits));
-  llvm::Type *compressedTy = llvm::FixedVectorType::get(
-      builder.getIntNTy(elemSize), numSrc * repFactor);
-  compressedData = builder.CreateBitCast(compressedData, compressedTy);
-
-  llvm::SmallVector<llvm::Value *> args{
-      mt.lookupValue(thisOp.getMetadata()),
-      compressedData,
-      builder.getInt32(static_cast<unsigned>(thisOp.getIndexSize())),
-      builder.getInt32(numTgt),
-  };
-  return {llvm::Intrinsic::nvvm_spdecompress, std::move(args)};
 }
 
 //===----------------------------------------------------------------------===//

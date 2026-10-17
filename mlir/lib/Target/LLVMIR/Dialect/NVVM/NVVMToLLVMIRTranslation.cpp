@@ -634,6 +634,88 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   }
 }
 
+// Returns the LLVM type the sp{de}compress intrinsics use for a register
+// bundle: i32 for a single register (including vector<1xi32>) and a vector of
+// i32 otherwise.
+static llvm::Type *getSPRegistersType(Type type, llvm::IRBuilderBase &builder) {
+  auto vecTy = dyn_cast<VectorType>(type);
+  if (!vecTy || vecTy.getNumElements() == 1)
+    return builder.getInt32Ty();
+  return llvm::FixedVectorType::get(builder.getInt32Ty(),
+                                    vecTy.getNumElements());
+}
+
+// Returns the register bundle `value` in the type the sp{de}compress
+// intrinsics expect.
+static llvm::Value *lookupSPRegisters(Value value, LLVM::ModuleTranslation &mt,
+                                      llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(mt.lookupValue(value),
+                               getSPRegistersType(value.getType(), builder));
+}
+
+void NVVM::SPCompressOp::lowerToLLVMIR(Operation &op,
+                                       LLVM::ModuleTranslation &mt,
+                                       llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SPCompressOp>(op);
+  unsigned elemSize = static_cast<unsigned>(thisOp.getElemSize());
+  unsigned numElems = thisOp.getRepFactor() * 32 / elemSize;
+  llvm::Type *elemTy = builder.getIntNTy(elemSize);
+
+  // The intrinsic works on vectors with one lane per element: the dense data
+  // occupies 2 * repFactor registers and the compressed data repFactor.
+  llvm::Value *data =
+      builder.CreateBitCast(mt.lookupValue(thisOp.getData()),
+                            llvm::FixedVectorType::get(elemTy, 2 * numElems));
+  llvm::Type *resultTy = llvm::StructType::get(
+      getSPRegistersType(thisOp.getMetadata().getType(), builder),
+      llvm::FixedVectorType::get(elemTy, numElems));
+
+  llvm::Value *result = createIntrinsicCall(
+      builder, llvm::Intrinsic::nvvm_spcompress, resultTy,
+      {data, mt.lookupValue(thisOp.getSpDesc()),
+       builder.getInt32(static_cast<unsigned>(thisOp.getIndexSize())),
+       // spcompress only supports the sp2to4 compression factor.
+       builder.getInt32(4)});
+
+  for (auto [idx, res] : llvm::enumerate(thisOp->getResults()))
+    mt.mapValue(res) = builder.CreateBitCast(
+        builder.CreateExtractValue(result, static_cast<unsigned>(idx)),
+        mt.convertType(res.getType()));
+}
+
+void NVVM::SPDecompressOp::lowerToLLVMIR(Operation &op,
+                                         LLVM::ModuleTranslation &mt,
+                                         llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SPDecompressOp>(op);
+  auto [numSrc, numTgt] = thisOp.getCompFactorSizes();
+  unsigned elemSize = static_cast<unsigned>(thisOp.getElemSize());
+  unsigned repFactor = thisOp.getRepFactor();
+  llvm::Type *elemTy = builder.getIntNTy(elemSize);
+
+  llvm::Value *metadata = lookupSPRegisters(thisOp.getMetadata(), mt, builder);
+
+  // The intrinsic works on vectors with one lane per element. Compressed data
+  // narrower than 32 bits is carried in the low bits of an i32.
+  llvm::Value *compressedData =
+      lookupSPRegisters(thisOp.getCompressedData(), mt, builder);
+  unsigned compressedBits = numSrc * elemSize * repFactor;
+  if (compressedBits < 32)
+    compressedData =
+        builder.CreateTrunc(compressedData, builder.getIntNTy(compressedBits));
+  compressedData = builder.CreateBitCast(
+      compressedData, llvm::FixedVectorType::get(elemTy, numSrc * repFactor));
+
+  llvm::Value *data = createIntrinsicCall(
+      builder, llvm::Intrinsic::nvvm_spdecompress,
+      llvm::FixedVectorType::get(elemTy, numTgt * repFactor),
+      {metadata, compressedData,
+       builder.getInt32(static_cast<unsigned>(thisOp.getIndexSize())),
+       builder.getInt32(numTgt)});
+
+  mt.mapValue(thisOp.getData()) =
+      builder.CreateBitCast(data, mt.convertType(thisOp.getData().getType()));
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.

@@ -10,7 +10,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_1(%metadata: i32, %compdata
   // CHECK-NEXT:    ret i32 %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x1
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 1
       : i32, i32 -> i32
   llvm.return %res : i32
 }
@@ -24,7 +24,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_2(%metadata: i32, %compdata
   // CHECK-NEXT:    ret <2 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x2
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 2
       : i32, i32 -> vector<2xi32>
   llvm.return %res : vector<2xi32>
 }
@@ -38,7 +38,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_4(%metadata: i32, %compdata
   // CHECK-NEXT:    ret <4 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x4
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 4
       : i32, vector<2xi32> -> vector<4xi32>
   llvm.return %res : vector<4xi32>
 }
@@ -52,7 +52,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_8(%metadata: i32, %compdata
   // CHECK-NEXT:    ret <8 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x8
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 8
       : i32, vector<4xi32> -> vector<8xi32>
   llvm.return %res : vector<8xi32>
 }
@@ -66,7 +66,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_16(%metadata: vector<2xi32>
   // CHECK-NEXT:    ret <16 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x16
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 16
       : vector<2xi32>, vector<8xi32> -> vector<16xi32>
   llvm.return %res : vector<16xi32>
 }
@@ -80,7 +80,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_32(%metadata: vector<4xi32>
   // CHECK-NEXT:    ret <32 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x32
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 32
       : vector<4xi32>, vector<16xi32> -> vector<32xi32>
   llvm.return %res : vector<32xi32>
 }
@@ -94,7 +94,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b2_rpf_64(%metadata: vector<8xi32>
   // CHECK-NEXT:    ret <64 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = x64
+      comp_factor = sp2to4 index_size = b2 elem_size = b8 rep_factor = 64
       : vector<8xi32>, vector<32xi32> -> vector<64xi32>
   llvm.return %res : vector<64xi32>
 }
@@ -109,7 +109,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_1(%metadata: i32, %compdata
   // CHECK-NEXT:    ret i32 %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x1
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 1
       : i32, i32 -> i32
   llvm.return %res : i32
 }
@@ -123,7 +123,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_2(%metadata: i32, %compdata
   // CHECK-NEXT:    ret <2 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x2
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 2
       : i32, i32 -> vector<2xi32>
   llvm.return %res : vector<2xi32>
 }
@@ -137,7 +137,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_4(%metadata: i32, %compdata
   // CHECK-NEXT:    ret <4 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x4
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 4
       : i32, vector<2xi32> -> vector<4xi32>
   llvm.return %res : vector<4xi32>
 }
@@ -151,7 +151,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_8(%metadata: vector<2xi32>,
   // CHECK-NEXT:    ret <8 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x8
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 8
       : vector<2xi32>, vector<4xi32> -> vector<8xi32>
   llvm.return %res : vector<8xi32>
 }
@@ -165,7 +165,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_16(%metadata: vector<4xi32>
   // CHECK-NEXT:    ret <16 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x16
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 16
       : vector<4xi32>, vector<8xi32> -> vector<16xi32>
   llvm.return %res : vector<16xi32>
 }
@@ -179,7 +179,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_32(%metadata: vector<8xi32>
   // CHECK-NEXT:    ret <32 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x32
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 32
       : vector<8xi32>, vector<16xi32> -> vector<32xi32>
   llvm.return %res : vector<32xi32>
 }
@@ -193,7 +193,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b8_idxsz_b4_rpf_64(%metadata: vector<16xi32
   // CHECK-NEXT:    ret <64 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = x64
+      comp_factor = sp2to4 index_size = b4 elem_size = b8 rep_factor = 64
       : vector<16xi32>, vector<32xi32> -> vector<64xi32>
   llvm.return %res : vector<64xi32>
 }
@@ -207,7 +207,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_1(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <2 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x1
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 1
       : i32, i32 -> vector<2xi32>
   llvm.return %res : vector<2xi32>
 }
@@ -221,7 +221,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_2(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <4 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x2
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 2
       : i32, vector<2xi32> -> vector<4xi32>
   llvm.return %res : vector<4xi32>
 }
@@ -235,7 +235,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_4(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <8 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x4
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 4
       : i32, vector<4xi32> -> vector<8xi32>
   llvm.return %res : vector<8xi32>
 }
@@ -249,7 +249,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_8(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <16 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x8
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 8
       : i32, vector<8xi32> -> vector<16xi32>
   llvm.return %res : vector<16xi32>
 }
@@ -263,7 +263,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_16(%metadata: vector<2xi32
   // CHECK-NEXT:    ret <32 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x16
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 16
       : vector<2xi32>, vector<16xi32> -> vector<32xi32>
   llvm.return %res : vector<32xi32>
 }
@@ -277,7 +277,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_32(%metadata: vector<4xi32
   // CHECK-NEXT:    ret <64 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x32
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 32
       : vector<4xi32>, vector<32xi32> -> vector<64xi32>
   llvm.return %res : vector<64xi32>
 }
@@ -291,7 +291,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b2_rpf_64(%metadata: vector<8xi32
   // CHECK-NEXT:    ret <128 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = x64
+      comp_factor = sp2to4 index_size = b2 elem_size = b16 rep_factor = 64
       : vector<8xi32>, vector<64xi32> -> vector<128xi32>
   llvm.return %res : vector<128xi32>
 }
@@ -305,7 +305,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_1(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <2 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x1
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 1
       : i32, i32 -> vector<2xi32>
   llvm.return %res : vector<2xi32>
 }
@@ -319,7 +319,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_2(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <4 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x2
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 2
       : i32, vector<2xi32> -> vector<4xi32>
   llvm.return %res : vector<4xi32>
 }
@@ -333,7 +333,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_4(%metadata: i32, %compdat
   // CHECK-NEXT:    ret <8 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x4
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 4
       : i32, vector<4xi32> -> vector<8xi32>
   llvm.return %res : vector<8xi32>
 }
@@ -347,7 +347,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_8(%metadata: vector<2xi32>
   // CHECK-NEXT:    ret <16 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x8
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 8
       : vector<2xi32>, vector<8xi32> -> vector<16xi32>
   llvm.return %res : vector<16xi32>
 }
@@ -361,7 +361,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_16(%metadata: vector<4xi32
   // CHECK-NEXT:    ret <32 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x16
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 16
       : vector<4xi32>, vector<16xi32> -> vector<32xi32>
   llvm.return %res : vector<32xi32>
 }
@@ -375,7 +375,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_32(%metadata: vector<8xi32
   // CHECK-NEXT:    ret <64 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x32
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 32
       : vector<8xi32>, vector<32xi32> -> vector<64xi32>
   llvm.return %res : vector<64xi32>
 }
@@ -389,7 +389,7 @@ llvm.func @spdecompress_sp2to4_elmsz_b16_idxsz_b4_rpf_64(%metadata: vector<16xi3
   // CHECK-NEXT:    ret <128 x i32> %[[DATA]]
   // CHECK-NEXT:  }
   %res = nvvm.spdecompress %metadata, %compdata
-      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = x64
+      comp_factor = sp2to4 index_size = b4 elem_size = b16 rep_factor = 64
       : vector<16xi32>, vector<64xi32> -> vector<128xi32>
   llvm.return %res : vector<128xi32>
 }
