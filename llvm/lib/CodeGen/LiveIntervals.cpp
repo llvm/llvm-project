@@ -180,6 +180,35 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   }
 }
 
+void LiveIntervals::appendReferencedIndexes(
+    SmallVectorImpl<SlotIndex> &Indexes) const {
+  llvm::append_range(Indexes, RegMaskSlots);
+
+  auto CollectRange = [&Indexes](const LiveRange &LR) {
+    for (const LiveRange::Segment &S : LR) {
+      Indexes.push_back(S.start);
+      Indexes.push_back(S.end);
+    }
+    for (const VNInfo *VNI : LR.valnos)
+      if (VNI && !VNI->isUnused())
+        Indexes.push_back(VNI->def);
+  };
+
+  for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (!hasInterval(Reg))
+      continue;
+    const LiveInterval &LI = getInterval(Reg);
+    CollectRange(LI);
+    for (const LiveInterval::SubRange &SR : LI.subranges())
+      CollectRange(SR);
+  }
+
+  for (const LiveRange *LR : RegUnitRanges)
+    if (LR)
+      CollectRange(*LR);
+}
+
 void LiveIntervals::print(raw_ostream &OS) const {
   OS << "********** INTERVALS **********\n";
 
