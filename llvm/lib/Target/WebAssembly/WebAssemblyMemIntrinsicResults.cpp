@@ -156,12 +156,6 @@ static bool replaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
 
     // Shrink FromReg's liveness.
     LIS.shrinkToUses(FromLI);
-
-    // If we replaced all dominated uses, FromReg is now killed at MI.
-    if (!FromLI->liveAt(FromIdx.getDeadSlot()))
-      MI.addRegisterKilled(FromReg, MBB.getParent()
-                                        ->getSubtarget<WebAssemblySubtarget>()
-                                        .getRegisterInfo());
   }
 
   return Changed;
