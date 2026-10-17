@@ -12,42 +12,39 @@ define void @spam(ptr %arg, ptr %arg1, ptr %arg2, i64 %arg3, i32 %arg4, i32 %arg
 ; NOSINK-NEXT:    sub a7, a7, a4
 ; NOSINK-NEXT:    mul t1, a7, t0
 ; NOSINK-NEXT:    mul t0, a4, t0
-; NOSINK-NEXT:    vsetvli t2, zero, e16, m2, ta, ma
-; NOSINK-NEXT:    vmv.v.x v8, t1
 ; NOSINK-NEXT:    mul a7, a7, a5
-; NOSINK-NEXT:    vmv.v.x v10, t0
 ; NOSINK-NEXT:    mul a4, a4, a5
-; NOSINK-NEXT:    vmv.v.x v12, a7
-; NOSINK-NEXT:    vmv.v.x v14, a4
+; NOSINK-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
+; NOSINK-NEXT:    vmv.v.x v8, t1
+; NOSINK-NEXT:    vmv.v.x v9, t0
+; NOSINK-NEXT:    vmv.v.x v10, a7
+; NOSINK-NEXT:    vmv.v.x v11, a4
 ; NOSINK-NEXT:    li a4, 32
 ; NOSINK-NEXT:  .LBB0_1: # %bb20
 ; NOSINK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NOSINK-NEXT:    sub a5, a3, a6
 ; NOSINK-NEXT:    add a7, a1, a6
-; NOSINK-NEXT:    vsetvli a5, a5, e16, m2, ta, ma
-; NOSINK-NEXT:    vle8.v v18, (a7)
-; NOSINK-NEXT:    addi a7, a6, 1
-; NOSINK-NEXT:    add t0, a1, a7
-; NOSINK-NEXT:    vzext.vf2 v16, v18
-; NOSINK-NEXT:    vle8.v v20, (t0)
-; NOSINK-NEXT:    vzext.vf2 v18, v20
-; NOSINK-NEXT:    add a7, a0, a7
-; NOSINK-NEXT:    vle8.v v22, (a7)
-; NOSINK-NEXT:    vzext.vf2 v20, v22
+; NOSINK-NEXT:    vsetvli a5, a5, e8, m1, ta, ma
+; NOSINK-NEXT:    vle8.v v16, (a7)
 ; NOSINK-NEXT:    add a7, a0, a6
-; NOSINK-NEXT:    vmul.vv v20, v14, v20
-; NOSINK-NEXT:    vle8.v v24, (a7)
-; NOSINK-NEXT:    vmul.vv v18, v10, v18
-; NOSINK-NEXT:    vzext.vf2 v22, v24
-; NOSINK-NEXT:    vmacc.vv v20, v12, v22
-; NOSINK-NEXT:    vmacc.vv v18, v8, v16
-; NOSINK-NEXT:    vadd.vv v16, v18, v20
-; NOSINK-NEXT:    vadd.vx v16, v16, a4
+; NOSINK-NEXT:    vle8.v v14, (a7)
+; NOSINK-NEXT:    addi a7, a6, 1
+; NOSINK-NEXT:    add t0, a0, a7
+; NOSINK-NEXT:    vwmulu.vv v12, v10, v14
+; NOSINK-NEXT:    vle8.v v17, (t0)
+; NOSINK-NEXT:    vwmulu.vv v14, v8, v16
+; NOSINK-NEXT:    add a7, a1, a7
+; NOSINK-NEXT:    vle8.v v16, (a7)
+; NOSINK-NEXT:    vwmaccu.vv v12, v11, v17
+; NOSINK-NEXT:    vwmaccu.vv v14, v9, v16
+; NOSINK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; NOSINK-NEXT:    vadd.vv v12, v14, v12
+; NOSINK-NEXT:    vadd.vx v12, v12, a4
 ; NOSINK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; NOSINK-NEXT:    vnsrl.wi v18, v16, 6
+; NOSINK-NEXT:    vnsrl.wi v14, v12, 6
 ; NOSINK-NEXT:    add a7, a2, a6
 ; NOSINK-NEXT:    add a6, a6, a5
-; NOSINK-NEXT:    vse8.v v18, (a7)
+; NOSINK-NEXT:    vse8.v v14, (a7)
 ; NOSINK-NEXT:    bne a6, a3, .LBB0_1
 ; NOSINK-NEXT:  # %bb.2: # %bb46
 ; NOSINK-NEXT:    ret
