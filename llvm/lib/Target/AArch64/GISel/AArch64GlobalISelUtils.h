@@ -28,6 +28,12 @@ namespace AArch64GISelUtils {
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
            const MachineRegisterInfo &MRI);
 
+/// \returns true if \p Reg is a valid immediate for a vector shift right of
+/// type \p Ty: a constant splat with 1 <= value <= element bits, stored in
+/// \p Cnt. Undef lanes (e.g. from widening odd-sized vectors) are allowed.
+bool isVShiftRImm(Register Reg, const MachineRegisterInfo &MRI, LLT Ty,
+                  int64_t &Cnt);
+
 /// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
 /// supported and beneficial to do so.
 ///

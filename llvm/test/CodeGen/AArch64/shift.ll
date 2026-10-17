@@ -465,6 +465,114 @@ define <2 x i64> @lshr_v2i64(<2 x i64> %0, <2 x i64> %1){
     ret <2 x i64> %3
 }
 
+; ===== Vector by Non-Splat Constant =====
+
+define <16 x i8> @ashr_v16i8_const(<16 x i8> %0){
+; CHECK-LABEL: ashr_v16i8_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI39_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI39_0]
+; CHECK-NEXT:    sshl v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+    %2 = ashr <16 x i8> %0, <i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6>
+    ret <16 x i8> %2
+}
+
+define <8 x i16> @ashr_v8i16_const(<8 x i16> %0){
+; CHECK-LABEL: ashr_v8i16_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI40_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI40_0]
+; CHECK-NEXT:    sshl v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+    %2 = ashr <8 x i16> %0, <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
+    ret <8 x i16> %2
+}
+
+define <4 x i32> @ashr_v4i32_const(<4 x i32> %0){
+; CHECK-LABEL: ashr_v4i32_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI41_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
+; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+    %2 = ashr <4 x i32> %0, <i32 1, i32 2, i32 3, i32 4>
+    ret <4 x i32> %2
+}
+
+define <2 x i64> @ashr_v2i64_const(<2 x i64> %0){
+; CHECK-LABEL: ashr_v2i64_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI42_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI42_0]
+; CHECK-NEXT:    sshl v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+    %2 = ashr <2 x i64> %0, <i64 1, i64 2>
+    ret <2 x i64> %2
+}
+
+define <16 x i8> @lshr_v16i8_const(<16 x i8> %0){
+; CHECK-LABEL: lshr_v16i8_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI43_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-NEXT:    ushl v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+    %2 = lshr <16 x i8> %0, <i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6, i8 7, i8 6>
+    ret <16 x i8> %2
+}
+
+define <8 x i16> @lshr_v8i16_const(<8 x i16> %0){
+; CHECK-LABEL: lshr_v8i16_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI44_0]
+; CHECK-NEXT:    ushl v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+    %2 = lshr <8 x i16> %0, <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
+    ret <8 x i16> %2
+}
+
+define <4 x i32> @lshr_v4i32_const(<4 x i32> %0){
+; CHECK-LABEL: lshr_v4i32_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI45_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
+; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+    %2 = lshr <4 x i32> %0, <i32 1, i32 2, i32 3, i32 4>
+    ret <4 x i32> %2
+}
+
+define <2 x i64> @lshr_v2i64_const(<2 x i64> %0){
+; CHECK-LABEL: lshr_v2i64_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI46_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI46_0]
+; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+    %2 = lshr <2 x i64> %0, <i64 1, i64 2>
+    ret <2 x i64> %2
+}
+
+define <4 x i32> @ashr_v4i32_const_var_elt(<4 x i32> %0, i32 %1){
+; CHECK-LABEL: ashr_v4i32_const_var_elt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    mov v1.s[1], w8
+; CHECK-NEXT:    mov w8, #3 // =0x3
+; CHECK-NEXT:    mov v1.s[2], w8
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    mov v1.s[3], w8
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+    %3 = insertelement <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i32 %1, i64 0
+    %4 = ashr <4 x i32> %0, %3
+    ret <4 x i32> %4
+}
+
 ; ===== Vector Larger/Smaller than Legal =====
 
 define <4 x i8> @shl_v4i8(<4 x i8> %0, <4 x i8> %1){
