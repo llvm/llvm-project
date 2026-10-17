@@ -32,7 +32,7 @@ define void @add_converted_to_sub_drops_nuw(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_converted_to_sub_drops_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], <i32 -5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], <i32 5, i32 -7>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
