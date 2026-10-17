@@ -159,7 +159,6 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 headers_not_available = list(map(Header, [
     "generator",
     "hazard_pointer",
-    "inplace_vector",
     "linalg",
     "rcu",
     "spanstream",
