@@ -256,7 +256,6 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
         }
 
         if (C->isOne()) {
-          std::swap(LHS, RHS);
           SHcc = SHCC::COND_Z;
           SHocc = SHCC::COND_F;
           break;
