@@ -2196,8 +2196,11 @@ public:
   /// Returns the values that ParseCommandLineOptions sets.
   virtual void *global() = 0;
 
-  /// Returns the default values allocated from \p Alloc.
-  virtual void *createDefault(BumpPtrAllocator &Alloc) const = 0;
+  /// Returns the default values.
+  virtual const void *getDefault() const = 0;
+
+  /// Returns a copy of \p Opts allocated from \p Alloc.
+  virtual void *copy(const void *Opts, BumpPtrAllocator &Alloc) const = 0;
 
   /// Restores the default values.
   virtual void reset() = 0;

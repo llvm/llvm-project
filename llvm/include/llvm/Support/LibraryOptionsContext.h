@@ -42,7 +42,7 @@ public:
 
   // T's values. T must have been registered when the context was created.
   template <typename T> const T &get() const {
-    const void *Opts = Values.lookup(&T::Global);
+    const void *Opts = Values.lookup(&T::Default);
     assert(Opts && "library options registered after the context's creation");
     return *static_cast<const T *>(Opts);
   }
@@ -55,7 +55,9 @@ public:
 private:
   void addDefaults();
 
-  DenseMap<const void *, void *> Values;
+  // Maps a library's defaults to its values, which are the defaults until an
+  // option of the library is parsed.
+  DenseMap<const void *, const void *> Values;
   SmallVector<const char *, 0> SavedArgs;
   BumpPtrAllocator Alloc;
 };

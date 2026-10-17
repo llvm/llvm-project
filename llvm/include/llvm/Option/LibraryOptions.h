@@ -126,11 +126,13 @@ public:
   template <typename T>
   explicit LibraryOptionsParser(std::in_place_type_t<T>)
       : LibraryOptions(T::PerContext), Table(T::optTable), Global(&T::Global),
+        Default(&T::Default),
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
           return static_cast<T *>(Opts)->apply(A, Alloc);
         }),
-        Create(
-            [](BumpPtrAllocator &Alloc) -> void * { return new (Alloc) T(); }),
+        Copy([](const void *Opts, BumpPtrAllocator &Alloc) -> void * {
+          return new (Alloc) T(*static_cast<const T *>(Opts));
+        }),
         Reset([] { T::Global = T(); }) {}
 
   void forEachOption(
@@ -138,16 +140,18 @@ public:
   Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
               BumpPtrAllocator &Alloc) override;
   void *global() override { return Global; }
-  void *createDefault(BumpPtrAllocator &Alloc) const override {
-    return Create(Alloc);
+  const void *getDefault() const override { return Default; }
+  void *copy(const void *Opts, BumpPtrAllocator &Alloc) const override {
+    return Copy(Opts, Alloc);
   }
   void reset() override { Reset(); }
 
 private:
   const OptTable &(*Table)();
   void *Global;
+  const void *Default;
   bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
-  void *(*Create)(BumpPtrAllocator &Alloc);
+  void *(*Copy)(const void *Opts, BumpPtrAllocator &Alloc);
   void (*Reset)();
 };
 
