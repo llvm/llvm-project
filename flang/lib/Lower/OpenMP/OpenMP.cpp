@@ -5309,6 +5309,30 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   return distributeOp;
 }
 
+/// Move `linear` privatizers to omp.wsloop, which holds the linear clause.
+static void moveLinearPrivatizers(
+    lower::AbstractConverter &converter, mlir::omp::PrivateClauseOps &simdOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &simdSyms,
+    mlir::omp::PrivateClauseOps &wsloopOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &wsloopSyms) {
+  mlir::ModuleOp module = converter.getFirOpBuilder().getModule();
+  for (size_t i = 0; i < simdSyms.size();) {
+    auto privatizer = module.lookupSymbol<mlir::omp::PrivateClauseOp>(
+        mlir::cast<mlir::SymbolRefAttr>(simdOps.privateSyms[i]));
+    if (privatizer.getDataSharingType() !=
+        mlir::omp::DataSharingClauseType::Linear) {
+      ++i;
+      continue;
+    }
+    wsloopOps.privateVars.push_back(simdOps.privateVars[i]);
+    wsloopOps.privateSyms.push_back(simdOps.privateSyms[i]);
+    wsloopSyms.push_back(simdSyms[i]);
+    simdOps.privateVars.erase(simdOps.privateVars.begin() + i);
+    simdOps.privateSyms.erase(simdOps.privateSyms.begin() + i);
+    simdSyms.erase(simdSyms.begin() + i);
+  }
+}
+
 static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -5387,6 +5411,12 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
                         iv);
 
+  llvm::SmallVector<const semantics::Symbol *> wsloopPrivSyms;
+  llvm::SmallVector<const semantics::Symbol *> simdPrivSyms(
+      simdItemDSP.getDelayedPrivSymbols());
+  moveLinearPrivatizers(converter, simdClauseOps, simdPrivSyms, wsloopClauseOps,
+                        wsloopPrivSyms);
+
   // Operation creation.
   ObjectEntryBlockArgs distributeArgs;
   // TODO: Add private syms and vars.
@@ -5395,7 +5425,8 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   distributeOp.setComposite(/*val=*/true);
 
   ObjectEntryBlockArgs wsloopArgs;
-  // TODO: Add private syms and vars.
+  wsloopArgs.priv.objects = makeObjects(wsloopPrivSyms);
+  wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.objects = wsloopReductionObjects;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
@@ -5403,7 +5434,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   ObjectEntryBlockArgs simdArgs;
-  simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
+  simdArgs.priv.objects = makeObjects(simdPrivSyms);
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
@@ -5554,9 +5585,16 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
                         iv);
 
+  llvm::SmallVector<const semantics::Symbol *> wsloopPrivSyms(
+      wsloopItemDSP.getDelayedPrivSymbols());
+  llvm::SmallVector<const semantics::Symbol *> simdPrivSyms(
+      simdItemDSP.getDelayedPrivSymbols());
+  moveLinearPrivatizers(converter, simdClauseOps, simdPrivSyms, wsloopClauseOps,
+                        wsloopPrivSyms);
+
   // Operation creation.
   ObjectEntryBlockArgs wsloopArgs;
-  wsloopArgs.priv.objects = makeObjects(wsloopItemDSP.getDelayedPrivSymbols());
+  wsloopArgs.priv.objects = makeObjects(wsloopPrivSyms);
   wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.objects = wsloopReductionObjects;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
@@ -5565,7 +5603,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   ObjectEntryBlockArgs simdArgs;
-  simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
+  simdArgs.priv.objects = makeObjects(simdPrivSyms);
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
