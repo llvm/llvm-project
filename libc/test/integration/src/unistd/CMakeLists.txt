@@ -1,6 +1,8 @@
 add_custom_target(unistd-integration-tests)
 add_dependencies(libc-integration-tests unistd-integration-tests)
 
+add_subdirectory(testdata)
+
 add_integration_test(
   getcwd_test
   SUITE
@@ -234,23 +236,16 @@ add_integration_test(
     execvp_test.cpp
   DEPENDS
     libc_execv_test_normal_exit
+    libc_execvp_test_normal_exit
     libc_exec_test_signal_exit
     libc.hdr.errno_macros
-    libc.hdr.fcntl_macros
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
-    libc.hdr.types.ssize_t
     libc.src.errno.errno
-    libc.src.fcntl.open
-    libc.src.stdlib.getenv
+    libc.src.stdlib.setenv
     libc.src.sys.wait.waitpid
-    libc.src.unistd.close
-    libc.src.unistd.environ
     libc.src.unistd.execvp
     libc.src.unistd.fork
-    libc.src.unistd.unlink
-    libc.src.unistd.write
   ENV
     EXECV_TEST=PASS
-    PATH=.
 )
