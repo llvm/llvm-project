@@ -49,7 +49,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -72,7 +72,7 @@ body:             |
 
     dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
     %4:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %4, %3, 0
+    STRWui %4, %3, 0
     B %bb.2
 
   bb.2:
@@ -105,7 +105,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -132,7 +132,7 @@ body:             |
     %3:gpr64common = COPY $x3
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %4:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %4, %3, 0
+    STRWui %4, %3, 0
     B %bb.1
 
   bb.1:
@@ -178,7 +178,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -186,7 +186,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr1]], [[COPY4]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -203,7 +203,7 @@ body:             |
     %4:gpr64common = COPY $x4
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %5, %3, 0
+    STRWui %5, %3, 0
     B %bb.1
 
   bb.1:
@@ -211,7 +211,7 @@ body:             |
 
     dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
     %6:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %6, %4, 0
+    STRWui %6, %4, 0
     B %bb.2
 
   bb.2:
@@ -242,7 +242,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -250,7 +250,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr1]], [[COPY4]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -270,7 +270,7 @@ body:             |
     %4:gpr64common = COPY $x4
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %5, %3, 0
+    STRWui %5, %3, 0
     B %bb.1
 
   bb.1:
@@ -278,7 +278,7 @@ body:             |
 
     dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
     %6:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %6, %4, 0
+    STRWui %6, %4, 0
     B %bb.2
 
   bb.2:
@@ -310,7 +310,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr64common = COPY $x5
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY3]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY4]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY4]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -318,7 +318,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY1]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY3]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY5]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr1]], [[COPY5]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -336,7 +336,7 @@ body:             |
     %5:gpr64common = COPY $x5
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %6:gpr32 = CSELWr %2, %3, 12, implicit $nzcv
-    STRWui killed %6, %4, 0
+    STRWui %6, %4, 0
     B %bb.1
 
   bb.1:
@@ -344,7 +344,7 @@ body:             |
 
     dead $wzr = SUBSWri %1, 10, 0, implicit-def $nzcv
     %7:gpr32 = CSELWr %2, %3, 12, implicit $nzcv
-    STRWui killed %7, %5, 0
+    STRWui %7, %5, 0
     B %bb.2
 
   bb.2:
@@ -387,7 +387,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSINCWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSINCWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -395,7 +395,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSINCWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   STRWui [[CSINCWr1]], [[COPY4]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -412,7 +412,7 @@ body:             |
     %4:gpr64common = COPY $x4
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %5:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
-    STRWui killed %5, %3, 0
+    STRWui %5, %3, 0
     B %bb.1
 
   bb.1:
@@ -420,7 +420,7 @@ body:             |
 
     dead $wzr = SUBSWri %0, 10, 0, implicit-def $nzcv
     %6:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
-    STRWui killed %6, %4, 0
+    STRWui %6, %4, 0
     B %bb.2
 
   bb.2:
@@ -452,7 +452,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -461,7 +461,7 @@ body:             |
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
   ; CHECK-NEXT:   [[CSELWr2:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr2]], [[COPY4]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr2]], [[COPY4]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -478,7 +478,7 @@ body:             |
     %4:gpr64common = COPY $x4
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %5, %3, 0
+    STRWui %5, %3, 0
     B %bb.1
 
   bb.1:
@@ -488,7 +488,7 @@ body:             |
     ; Two consumers of the same CMP: findSelectConsumer must reject bb.1.
     %6:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
     %7:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %7, %4, 0
+    STRWui %7, %4, 0
     B %bb.2
 
   bb.2:
@@ -521,7 +521,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 9, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr]], [[COPY3]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr]], [[COPY3]], 0
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -530,7 +530,7 @@ body:             |
   ; CHECK-NEXT:   dead $wzr = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[SUBS:%[0-9]+]]:gpr32common = SUBSWri [[COPY]], 5, 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-  ; CHECK-NEXT:   STRWui killed [[CSELWr1]], [[COPY4]], 0
+  ; CHECK-NEXT:   STRWui [[CSELWr1]], [[COPY4]], 0
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -547,7 +547,7 @@ body:             |
     %4:gpr64common = COPY $x4
     dead $wzr = SUBSWri %0, 9, 0, implicit-def $nzcv
     %5:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %5, %3, 0
+    STRWui %5, %3, 0
     B %bb.1
 
   bb.1:
@@ -558,7 +558,7 @@ body:             |
     ; CMP (canAdjustCmp rejects it). findSelectConsumer must reject this block.
     %6:gpr32common = SUBSWri %0, 5, 0, implicit-def $nzcv
     %7:gpr32 = CSELWr %1, %2, 12, implicit $nzcv
-    STRWui killed %7, %4, 0
+    STRWui %7, %4, 0
     B %bb.2
 
   bb.2:

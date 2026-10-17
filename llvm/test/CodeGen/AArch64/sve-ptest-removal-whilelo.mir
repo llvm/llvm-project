@@ -37,7 +37,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %2:ppr = PTRUE_B 31, implicit $vg
     %3:ppr = WHILELO_PWW_B %0, %1, implicit-def dead $nzcv
-    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    PTEST_PP %2, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -79,7 +79,7 @@ body:             |
     %0:gpr64 = COPY $x0
     %2:ppr = PTRUE_B 31, implicit $vg
     %3:ppr = WHILELO_PXX_B %0, %1, implicit-def dead $nzcv
-    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    PTEST_PP %2, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -381,7 +381,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[PTRUE_H:%[0-9]+]]:ppr = PTRUE_H 6, implicit $vg
     ; CHECK-NEXT: [[WHILELO_PWW_H:%[0-9]+]]:ppr = WHILELO_PWW_H [[COPY1]], [[COPY]], implicit-def dead $nzcv
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_H]], killed [[WHILELO_PWW_H]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_H]], [[WHILELO_PWW_H]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -390,7 +390,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %2:ppr = PTRUE_H 6, implicit $vg
     %3:ppr = WHILELO_PWW_H %0, %1, implicit-def dead $nzcv
-    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    PTEST_PP %2, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -428,7 +428,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 31, implicit $vg
     ; CHECK-NEXT: [[WHILELO_PWW_H:%[0-9]+]]:ppr = WHILELO_PWW_H [[COPY1]], [[COPY]], implicit-def dead $nzcv
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_B]], killed [[WHILELO_PWW_H]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_B]], [[WHILELO_PWW_H]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -437,7 +437,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %2:ppr = PTRUE_B 31, implicit $vg
     %3:ppr = WHILELO_PWW_H %0, %1, implicit-def dead $nzcv
-    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    PTEST_PP %2, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -475,7 +475,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[PTRUE_S:%[0-9]+]]:ppr = PTRUE_S 31, implicit $vg
     ; CHECK-NEXT: [[WHILELO_PWW_H:%[0-9]+]]:ppr = WHILELO_PWW_H [[COPY1]], [[COPY]], implicit-def dead $nzcv
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_S]], killed [[WHILELO_PWW_H]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_S]], [[WHILELO_PWW_H]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -484,7 +484,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %2:ppr = PTRUE_S 31, implicit $vg
     %3:ppr = WHILELO_PWW_H %0, %1, implicit-def dead $nzcv
-    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    PTEST_PP %2, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -522,7 +522,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[PTRUE_D:%[0-9]+]]:ppr = PTRUE_D 31, implicit $vg
     ; CHECK-NEXT: [[WHILELO_PWW_H:%[0-9]+]]:ppr = WHILELO_PWW_H [[COPY1]], [[COPY]], implicit-def dead $nzcv
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_D]], killed [[WHILELO_PWW_H]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_D]], [[WHILELO_PWW_H]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -531,7 +531,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %2:ppr = PTRUE_D 31, implicit $vg
     %3:ppr = WHILELO_PWW_H %0, %1, implicit-def dead $nzcv
-    PTEST_PP killed %2, killed %3, implicit-def $nzcv
+    PTEST_PP %2, %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
     %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     $w0 = COPY %5
@@ -581,7 +581,7 @@ body:             |
     %3:ppr2mul2 = WHILELO_2PXX_D %0, %1, implicit-def $nzcv
     %4:ppr = COPY %3.psub0
     %5:ppr = COPY %3.psub1
-    PTEST_PP_FIRST killed %2, killed %4, implicit-def $nzcv
+    PTEST_PP_FIRST %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
     %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
     $w0 = COPY %7
@@ -621,7 +621,7 @@ body:             |
     ; CHECK-NEXT: [[WHILELO_2PXX_D:%[0-9]+]]:ppr2mul2 = WHILELO_2PXX_D [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub1
-    ; CHECK-NEXT: PTEST_PP_FIRST killed [[PTRUE_D]], killed [[COPY3]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP_FIRST [[PTRUE_D]], [[COPY3]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -632,7 +632,7 @@ body:             |
     %3:ppr2mul2 = WHILELO_2PXX_D %0, %1, implicit-def $nzcv
     %4:ppr = COPY %3.psub0
     %5:ppr = COPY %3.psub1
-    PTEST_PP_FIRST killed %2, killed %5, implicit-def $nzcv
+    PTEST_PP_FIRST %2, %5, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
     %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
     $w0 = COPY %7
@@ -672,7 +672,7 @@ body:             |
     ; CHECK-NEXT: [[WHILELO_2PXX_D:%[0-9]+]]:ppr2mul2 = WHILELO_2PXX_D [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ppr = COPY [[WHILELO_2PXX_D]].psub1
-    ; CHECK-NEXT: PTEST_PP killed [[PTRUE_D]], killed [[COPY2]], implicit-def $nzcv
+    ; CHECK-NEXT: PTEST_PP [[PTRUE_D]], [[COPY2]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY4]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
@@ -683,7 +683,7 @@ body:             |
     %3:ppr2mul2 = WHILELO_2PXX_D %0, %1, implicit-def $nzcv
     %4:ppr = COPY %3.psub0
     %5:ppr = COPY %3.psub1
-    PTEST_PP killed %2, killed %4, implicit-def $nzcv
+    PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
     %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
     $w0 = COPY %7

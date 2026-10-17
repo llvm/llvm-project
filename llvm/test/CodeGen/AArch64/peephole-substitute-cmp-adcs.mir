@@ -42,7 +42,7 @@ body:             |
     %3:gpr64 = COPY $x3
     %4:gpr64 = ADDSXrr %0, %1, implicit-def $nzcv
     %5:gpr64common = ADCSXr %2, %3, implicit-def $nzcv, implicit $nzcv
-    dead %7:gpr64 = ADDSXri killed %5:gpr64common, 0, 0, implicit-def $nzcv
+    dead %7:gpr64 = ADDSXri %5:gpr64common, 0, 0, implicit-def $nzcv
     %6:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %6
     RET_ReallyLR implicit $w0
@@ -81,7 +81,7 @@ body:             |
     %3:gpr32 = COPY $w3
     %4:gpr32 = ADDSWrr %0, %1, implicit-def $nzcv
     %5:gpr32common = ADCSWr %2, %3, implicit-def $nzcv, implicit $nzcv
-    dead %7:gpr32 = ADDSWri killed %5:gpr32common, 0, 0, implicit-def $nzcv
+    dead %7:gpr32 = ADDSWri %5:gpr32common, 0, 0, implicit-def $nzcv
     %6:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %6
     RET_ReallyLR implicit $w0
@@ -120,7 +120,7 @@ body:             |
     %3:gpr64 = COPY $x3
     %4:gpr64 = SUBSXrr %0, %1, implicit-def $nzcv
     %5:gpr64common = SBCSXr %2, %3, implicit-def $nzcv, implicit $nzcv
-    dead %7:gpr64 = ADDSXri killed %5:gpr64common, 0, 0, implicit-def $nzcv
+    dead %7:gpr64 = ADDSXri %5:gpr64common, 0, 0, implicit-def $nzcv
     %6:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %6
     RET_ReallyLR implicit $w0
@@ -150,7 +150,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
     %2:gpr32common = ADDWrs %0, %1, 0
-    dead %4:gpr32 = ADDSWri killed %2:gpr32common, 0, 0, implicit-def $nzcv
+    dead %4:gpr32 = ADDSWri %2:gpr32common, 0, 0, implicit-def $nzcv
     %3:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %3
     RET_ReallyLR implicit $w0
@@ -180,7 +180,7 @@ body:             |
     %0:gpr64 = COPY $x0
     %1:gpr64 = COPY $x1
     %2:gpr64common = ADDXrs %0, %1, 0
-    dead %4:gpr64 = ADDSXri killed %2:gpr64common, 0, 0, implicit-def $nzcv
+    dead %4:gpr64 = ADDSXri %2:gpr64common, 0, 0, implicit-def $nzcv
     %3:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %3
     RET_ReallyLR implicit $w0
@@ -210,7 +210,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
     %2:gpr32common = SUBWrs %0, %1, 0
-    dead %4:gpr32 = SUBSWri killed %2:gpr32common, 0, 0, implicit-def $nzcv
+    dead %4:gpr32 = SUBSWri %2:gpr32common, 0, 0, implicit-def $nzcv
     %3:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %3
     RET_ReallyLR implicit $w0
@@ -240,7 +240,7 @@ body:             |
     %0:gpr64 = COPY $x0
     %1:gpr64 = COPY $x1
     %2:gpr64common = SUBXrs %0, %1, 0
-    dead %4:gpr64 = SUBSXri killed %2:gpr64common, 0, 0, implicit-def $nzcv
+    dead %4:gpr64 = SUBSXri %2:gpr64common, 0, 0, implicit-def $nzcv
     %3:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %3
     RET_ReallyLR implicit $w0
@@ -279,7 +279,7 @@ body:             |
     %3:gpr32 = COPY $w3
     %4:gpr32 = SUBSWrr %0, %1, implicit-def $nzcv
     %5:gpr32common = SBCSWr %2, %3, implicit-def $nzcv, implicit $nzcv
-    dead %7:gpr32 = ADDSWri killed %5:gpr32common, 0, 0, implicit-def $nzcv
+    dead %7:gpr32 = ADDSWri %5:gpr32common, 0, 0, implicit-def $nzcv
     %6:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     $w0 = COPY %6
     RET_ReallyLR implicit $w0

@@ -20,14 +20,14 @@ body:              |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY killed $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $xzr
-    ; CHECK-NEXT: [[STATEPOINT:%[0-9]+]]:gpr64sp = STATEPOINT 2882400000, 0, 1, killed [[COPY1]], undef $x0, 2, 125, 2, 4, 2, 0, 2, 2, killed [[STATEPOINT]](tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr :: (volatile load store (s32) on %stack.0)
-    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri killed [[STATEPOINT]], 16, 0
-    ; CHECK-NEXT: $x0 = COPY killed [[ADDXri]]
+    ; CHECK-NEXT: [[STATEPOINT:%[0-9]+]]:gpr64sp = STATEPOINT 2882400000, 0, 1, [[COPY1]], undef $x0, 2, 125, 2, 4, 2, 0, 2, 2, [[STATEPOINT]](tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr :: (volatile load store (s32) on %stack.0)
+    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[STATEPOINT]], 16, 0
+    ; CHECK-NEXT: $x0 = COPY [[ADDXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64all = COPY killed $x0
     %1:gpr32 = COPY $xzr
-    %2:gpr64sp = STATEPOINT 2882400000, 0, 1, killed %1, undef $x0, 2, 125, 2, 4, 2, 0, 2, 2, killed %0(tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr :: (volatile load store (s32) on %stack.0)
-    %3:gpr64sp = ADDXri killed %2, 16, 0
-    $x0 = COPY killed %3
+    %2:gpr64sp = STATEPOINT 2882400000, 0, 1, %1, undef $x0, 2, 125, 2, 4, 2, 0, 2, 2, %0(tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead $x0, implicit-def dead early-clobber $lr :: (volatile load store (s32) on %stack.0)
+    %3:gpr64sp = ADDXri %2, 16, 0
+    $x0 = COPY %3
     RET_ReallyLR implicit $x0
 ...

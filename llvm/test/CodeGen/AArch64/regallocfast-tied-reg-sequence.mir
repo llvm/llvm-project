@@ -24,7 +24,7 @@ body: |
     ; CHECK-NEXT: RET_ReallyLR
     %0:fpr64 = COPY $d0
     %2:dd = REG_SEQUENCE %0, %subreg.dsub0, undef %1:fpr64, %subreg.dsub1
-    ST1Twov1d killed %2, $x0
+    ST1Twov1d %2, $x0
     RET_ReallyLR
 ...
 ---
@@ -62,6 +62,6 @@ body: |
     ; CHECK-NEXT: ST1Twov1d killed renamable $d0_d1, killed $x0
     ; CHECK-NEXT: RET_ReallyLR
     %2:dd = REG_SEQUENCE undef %0:fpr64, %subreg.dsub0, undef %1:fpr64, %subreg.dsub1
-    ST1Twov1d killed %2, $x0
+    ST1Twov1d %2, $x0
     RET_ReallyLR
 ...

@@ -60,8 +60,8 @@ body:             |
   bb.1.for.body.preheader:
     %7:gpr32common = SUBWri %5, 1, 0
     %9:gpr64all = IMPLICIT_DEF
-    %8:gpr64 = SUBREG_TO_REG killed %7, %subreg.sub_32
-    %10:gpr64 = SBFMXri killed %8, 0, 31
+    %8:gpr64 = SUBREG_TO_REG %7, %subreg.sub_32
+    %10:gpr64 = SBFMXri %8, 0, 31
     %0:gpr64all = COPY %10
     %12:fpr32 = FMOVSi 112
   
@@ -70,12 +70,12 @@ body:             |
   
     %1:gpr64common = PHI %0, %bb.1, %2, %bb.2
     %11:fpr32 = LDRSroX %4, %1, 0, 1 :: (load (s32) from %ir.scevgep)
-    %13:fpr32 = nofpexcept FADDSrr killed %11, %12, implicit $fpcr
-    STRSroX killed %13, %3, %1, 0, 1 :: (store (s32) into %ir.scevgep11)
+    %13:fpr32 = nofpexcept FADDSrr %11, %12, implicit $fpcr
+    STRSroX %13, %3, %1, 0, 1 :: (store (s32) into %ir.scevgep11)
     %14:gpr64common = SUBXri %1, 1, 0
     %2:gpr64all = COPY %14
     %15:gpr32 = COPY %14.sub_32
-    CBNZW killed %15, %bb.2
+    CBNZW %15, %bb.2
     B %bb.3
   
   bb.3.for.end:

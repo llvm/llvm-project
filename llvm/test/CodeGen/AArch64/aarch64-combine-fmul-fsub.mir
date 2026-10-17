@@ -17,7 +17,7 @@ body:             |
     %1:fpr64 = COPY $d1
     %0:fpr64 = COPY $d0
     %3:fpr64 = contract FMULv2f32 %0, %1, implicit $fpcr
-    %4:fpr64 = contract FSUBv2f32 killed %3, %2, implicit $fpcr
+    %4:fpr64 = contract FSUBv2f32 %3, %2, implicit $fpcr
     $d0 = COPY %4
     RET_ReallyLR implicit $d0
 
@@ -43,14 +43,14 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = contract FMULv4f32 %0, %1, implicit $fpcr
-    %4:fpr128 = contract FSUBv4f32 killed %3, %2, implicit $fpcr
+    %4:fpr128 = contract FSUBv4f32 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_4s
 # UNPROFITABLE: [[R1:%[0-9]+]]:fpr128 = contract FMULv4f32 %0, %1, implicit $fpcr
-# UNPROFITABLE-NEXT: FSUBv4f32 killed [[R1]], %2, implicit $fpcr
+# UNPROFITABLE-NEXT: FSUBv4f32 [[R1]], %2, implicit $fpcr
 #
 # PROFITABLE-LABEL: name: f1_4s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = contract FNEGv4f32 %2
@@ -69,14 +69,14 @@ body:             |
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
     %3:fpr128 = contract FMULv2f64 %0, %1, implicit $fpcr
-    %4:fpr128 = contract FSUBv2f64 killed %3, %2, implicit $fpcr
+    %4:fpr128 = contract FSUBv2f64 %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_2d
 # UNPROFITABLE: %3:fpr128 = contract FMULv2f64 %0, %1, implicit $fpcr
-# UNPROFITABLE-NEXT: FSUBv2f64 killed %3, %2, implicit $fpcr
+# UNPROFITABLE-NEXT: FSUBv2f64 %3, %2, implicit $fpcr
 #
 # PROFITABLE-LABEL: name: f1_2d
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = contract FNEGv2f64 %2
@@ -99,7 +99,7 @@ body:             |
     %0:fpr64 = COPY $q0
     %4:fpr64 = contract FMULv2f32 %0, %1, implicit $fpcr
     %5:fpr64 = contract FMULv2f32 %2, %3, implicit $fpcr
-    %6:fpr64 = contract FSUBv2f32 killed %4, %5, implicit $fpcr
+    %6:fpr64 = contract FSUBv2f32 %4, %5, implicit $fpcr
     $q0 = COPY %6
     RET_ReallyLR implicit $q0
 
@@ -125,7 +125,7 @@ body:             |
     %0:fpr128 = COPY $q0
     %4:fpr128 = contract FMULv4f32 %0, %1, implicit $fpcr
     %5:fpr128 = contract FMULv4f32 %2, %3, implicit $fpcr
-    %6:fpr128 = contract FSUBv4f32 killed %4, %5, implicit $fpcr
+    %6:fpr128 = contract FSUBv4f32 %4, %5, implicit $fpcr
     $q0 = COPY %6
     RET_ReallyLR implicit $q0
 
@@ -151,7 +151,7 @@ body:             |
     %0:fpr128 = COPY $q0
     %4:fpr128 = contract FMULv2f64 %0, %1, implicit $fpcr
     %5:fpr128 = contract FMULv2f64 %2, %3, implicit $fpcr
-    %6:fpr128 = contract FSUBv2f64 killed %4, %5, implicit $fpcr
+    %6:fpr128 = contract FSUBv2f64 %4, %5, implicit $fpcr
     $q0 = COPY %6
     RET_ReallyLR implicit $q0
 

@@ -140,7 +140,7 @@ body:             |
     %22:gpr32common = ADDWri %19, 1, 0
     %23:gpr32sp = ADDWri %19, 2, 0
     %25:gpr32common = ADDWri %20, 1, 0
-    dead $wzr = SUBSWrr killed %25, %22, implicit-def $nzcv
+    dead $wzr = SUBSWrr %25, %22, implicit-def $nzcv
     Bcc 10, %bb.3, implicit $nzcv
     B %bb.2
   
@@ -161,7 +161,7 @@ body:             |
     %31:gpr32common = COPY %30.sub_32
     %32:gpr32 = SUBSWrr %29, %31, implicit-def $nzcv
     %33:gpr32 = COPY $wzr
-    %34:gpr32 = CSELWr %33, killed %32, 3, implicit $nzcv
+    %34:gpr32 = CSELWr %33, %32, 3, implicit $nzcv
     %4:ppr = WHILELO_PWW_S %33, %29, implicit-def dead $nzcv
     %5:zpr = INDEX_II_S 0, 1, implicit $vg
     %6:zpr = DUP_ZR_S %31
@@ -182,15 +182,15 @@ body:             |
     %11:zpr = PHI %5, %bb.3, %14, %bb.4
     %35:zpr = ADD_ZZZ_S %11, %7
     %36:gpr32 = COPY %35.ssub
-    %38:gpr64sp = ADDXrx %37, killed %36, 50
+    %38:gpr64sp = ADDXrx %37, %36, 50
     ST1W %35, %10, %38, %39 :: (store unknown-size into %ir.18, align 4)
     %40:zpr = ADD_ZZZ_S %11, %8
-    %42:zpr = MUL_ZPZZ_S_UNDEF %41, %35, killed %40
+    %42:zpr = MUL_ZPZZ_S_UNDEF %41, %35, %40
     %43:zpr = ASRD_ZPmI_S %41, %42, 1
     ST1W %43, %10, %38, %44 :: (store unknown-size into %ir.22, align 4)
     %46:zpr = LD1W %10, %38, %45 :: (load unknown-size from %ir.23, align 4)
-    %47:zpr = ADD_ZZZ_S killed %46, %43
-    ST1W killed %47, %10, %38, %45 :: (store unknown-size into %ir.23, align 4)
+    %47:zpr = ADD_ZZZ_S %46, %43
+    ST1W %47, %10, %38, %45 :: (store unknown-size into %ir.23, align 4)
     %50:gpr32 = ADDWrr %9, %31
     %12:gpr32all = COPY %50
     %13:ppr = WHILELO_PWW_S %9, %34, implicit-def $nzcv
@@ -211,11 +211,11 @@ body:             |
     STURWi %56, %58, -4 :: (store (s32) into %ir.31)
     %59:gpr32 = MADDWrrr %56, %15, $wzr
     %60:gpr32 = ADDWrs %59, %59, 95
-    %61:gpr32 = SBFMWri killed %60, 1, 31
+    %61:gpr32 = SBFMWri %60, 1, 31
     STRWui %61, %58, 255 :: (store (s32) into %ir.34)
     %62:gpr32 = LDRWui %58, 511 :: (load (s32) from %ir.35)
-    %63:gpr32 = ADDWrr killed %62, %61
-    STRWui killed %63, %58, 511 :: (store (s32) into %ir.35)
+    %63:gpr32 = ADDWrr %62, %61
+    STRWui %63, %58, 511 :: (store (s32) into %ir.35)
     %64:gpr32 = SUBSWri %16, 1, 0, implicit-def $nzcv
     %17:gpr32all = COPY %64
     %65:gpr32sp = ADDWri %15, 1, 0

@@ -49,15 +49,15 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
     ; CHECK-NEXT: [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY]], 1, 0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG killed [[SUBWri]], %subreg.sub_32
-    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = nuw nsw UBFMXri killed [[SUBREG_TO_REG]], 63, 31
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[SUBWri]], %subreg.sub_32
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = nuw nsw UBFMXri [[SUBREG_TO_REG]], 63, 31
     ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr32common = COPY $w0
     %1:gpr32common = SUBWri %0, 1, 0
     %3:gpr64all = IMPLICIT_DEF
-    %2:gpr64 = INSERT_SUBREG %3, killed %1, %subreg.sub_32
-    %4:gpr64 = nuw nsw UBFMXri killed %2, 63, 31
+    %2:gpr64 = INSERT_SUBREG %3, %1, %subreg.sub_32
+    %4:gpr64 = nuw nsw UBFMXri %2, 63, 31
     $x0 = COPY %4
     RET_ReallyLR implicit $x0
 
@@ -94,11 +94,11 @@ body:             |
     ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[COPY2]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY2]], %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128_lo = INSERT_SUBREG [[DEF1]], killed [[LDRDui]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128_lo = INSERT_SUBREG [[DEF1]], [[LDRDui]], %subreg.dsub
     ; CHECK-NEXT: [[MULv8i16_indexed:%[0-9]+]]:fpr128 = MULv8i16_indexed [[COPY1]], [[INSERT_SUBREG1]], 1
-    ; CHECK-NEXT: [[ORRv16i8_:%[0-9]+]]:fpr128 = ORRv16i8 killed [[MULv8i16_indexed]], [[INSERT_SUBREG1]]
+    ; CHECK-NEXT: [[ORRv16i8_:%[0-9]+]]:fpr128 = ORRv16i8 [[MULv8i16_indexed]], [[INSERT_SUBREG1]]
     ; CHECK-NEXT: $q0 = COPY [[ORRv16i8_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %1:gpr64common = COPY $x0
@@ -107,12 +107,12 @@ body:             |
     %3:fpr128 = MOVIv2d_ns 0
     %4:fpr64 = COPY %3.dsub
     %6:fpr128 = IMPLICIT_DEF
-    %5:fpr128 = INSERT_SUBREG %6, killed %4, %subreg.dsub
+    %5:fpr128 = INSERT_SUBREG %6, %4, %subreg.dsub
     %8:fpr128 = IMPLICIT_DEF
-    %7:fpr128 = INSERT_SUBREG %8, killed %2, %subreg.dsub
-    %9:fpr128_lo = INSvi64lane %7, 1, killed %5, 0
+    %7:fpr128 = INSERT_SUBREG %8, %2, %subreg.dsub
+    %9:fpr128_lo = INSvi64lane %7, 1, %5, 0
     %10:fpr128 = MULv8i16_indexed %0, %9, 1
-    %11:fpr128 = ORRv16i8 killed %10, %9
+    %11:fpr128 = ORRv16i8 %10, %9
     $q0 = COPY %11
     RET_ReallyLR implicit $q0
 
@@ -134,7 +134,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK-NEXT: [[FMOVXDr:%[0-9]+]]:fpr64 = FMOVXDr [[COPY1]]
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[FMOVXDr]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[FMOVXDr]], %subreg.dsub
     ; CHECK-NEXT: STURQi [[INSERT_SUBREG1]], [[COPY]], 8 :: (store (s128), align 8)
     ; CHECK-NEXT: [[MOVIv2d_ns1:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
@@ -149,9 +149,9 @@ body:             |
     %5:gpr64 = COPY $xzr
     %6:fpr64 = COPY %5
     %8:fpr128 = IMPLICIT_DEF
-    %7:fpr128 = INSERT_SUBREG %8, killed %6, %subreg.dsub
-    %9:fpr128 = INSvi64lane %7, 1, killed %3, 0
-    STURQi killed %9, %0, 8 :: (store (s128), align 8)
+    %7:fpr128 = INSERT_SUBREG %8, %6, %subreg.dsub
+    %9:fpr128 = INSvi64lane %7, 1, %3, 0
+    STURQi %9, %0, 8 :: (store (s128), align 8)
     %10:fpr128 = MOVIv2d_ns 0
     %13:fpr128 = IMPLICIT_DEF
     %12:fpr128 = INSERT_SUBREG %13, %10.dsub, %subreg.dsub
