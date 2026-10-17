@@ -9215,6 +9215,9 @@ static bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
       return CheckCached(Cache.CheapIntrinsics.contains(Key),
                          [&] { Cache.CheapIntrinsics.insert(Key); });
     }
+    // A call without the vector variants is never vectorized.
+    if (VFDatabase::getMappings(*CI).empty())
+      return false;
     const Function *Callee = CI->getCalledFunction();
     if (!Callee)
       return Analyze();
@@ -11817,7 +11820,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   // schedulable.
   BasicBlock *BB = S.getMainOp()->getParent();
 
-  if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+  if (BB->isEHPad() || isa<UnreachableInst>(BB->getTerminator()) ||
       !DT->isReachableFromEntry(BB)) {
     // Don't go into unreachable blocks. They may contain instructions with
     // dependency cycles which confuse the final scheduling.
@@ -18945,7 +18948,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (Budget > BudgetLimit)
         break;
       if (!isa<CatchSwitchInst>(BB->getTerminator()) &&
-          !CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrDbgOrAlloca(),
+          !CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrAlloca(),
                                           BB->getTerminator()))
         continue;
       Worklist.append(pred_begin(BB), pred_end(BB));
@@ -19121,8 +19124,8 @@ InstructionCost BoUpSLP::getSpillCost() {
       // Check for call instruction in between blocks.
       // 1. Check entry's block to the head.
       if (Entry->getOpcode() != Instruction::PHI &&
-          !CheckForNonVecCallsInSameBlock(
-              &*Parent->getFirstNonPHIOrDbgOrAlloca(), LastInst)) {
+          !CheckForNonVecCallsInSameBlock(&*Parent->getFirstNonPHIOrAlloca(),
+                                          LastInst)) {
         AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
@@ -20539,7 +20542,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       continue;
     BasicBlock *UserParent = cast<Instruction>(EU.User)->getParent();
     if (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
-        isa_and_present<UnreachableInst>(UserParent->getTerminator()))
+        isa<UnreachableInst>(UserParent->getTerminator()))
       continue;
     BasicBlock *UseBlock = nullptr;
     if (auto *PHI = dyn_cast<PHINode>(EU.User)) {
@@ -20596,7 +20599,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             EU.User ? cast<Instruction>(EU.User)->getParent() : nullptr;
         UserParent &&
         (!DT->isReachableFromEntry(UserParent) || UserParent->isEHPad() ||
-         isa_and_present<UnreachableInst>(UserParent->getTerminator())))
+         isa<UnreachableInst>(UserParent->getTerminator())))
       continue;
 
     // No extract cost for vector "scalar" if REVEC is disabled.
@@ -25872,8 +25875,6 @@ bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
 
 bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
   assert(BB && "Expected a block to version for runtime checks.");
-  if (!BB->getTerminator())
-    return false;
   // Versioning duplicates the block body, increasing code size on the guarded
   // path; do not version when the function is optimized for size (-Os/-Oz).
   if (F->hasOptSize())
@@ -25902,7 +25903,7 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
     return false;
   // Only static allocas at the start of the entry block can stay in the header
   // block, any other alloca would have to be duplicated with the body.
-  if (any_of(make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end()),
+  if (any_of(make_range(BB->getFirstNonPHIOrAlloca(), BB->end()),
              IsaPred<AllocaInst>))
     return false;
   return true;
@@ -26132,7 +26133,6 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   Function *Fn = BB->getParent();
   LLVMContext &Ctx = BB->getContext();
   Instruction *Term = BB->getTerminator();
-  assert(Term && "Versioned block must have a terminator");
 
   // Build the diamond:
   //   BB (header: PHIs + guard) -> {VecBB, ScalarBB} -> Tail (terminator).
@@ -26768,7 +26768,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                       IVec->getParent()->getLandingPadInst()->getIterator()));
                 else
                   Builder.SetInsertPoint(
-                      IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
+                      IVec->getParent()->getFirstNonPHIOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
                 Builder.SetInsertPoint(IVec->getNextNode());
               }
@@ -29650,8 +29650,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   // Scan the blocks in the function in post order.
   auto POT = post_order(&F.getEntryBlock());
   for (auto *BB : make_filter_range(POT, [](auto *BB) {
-         return !BB->isEHPad() &&
-                !isa_and_nonnull<UnreachableInst>(BB->getTerminator());
+         return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
        })) {
     // Skip scalar fallback blocks created by runtime alias check versioning:
     // they duplicate the original scalar code and must not be vectorized again.
@@ -29703,7 +29702,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     auto OnceUsedPOT = post_order(&F.getEntryBlock());
     for (auto *BB : make_filter_range(OnceUsedPOT, [&](auto *BB) {
            return !BB->isEHPad() &&
-                  !isa_and_nonnull<UnreachableInst>(BB->getTerminator()) &&
+                  !isa<UnreachableInst>(BB->getTerminator()) &&
                   !R.isScalarFallbackBlock(BB);
          })) {
       R.clearReductionData();
@@ -30895,6 +30894,13 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool Changed = false;
   bool CandidateFound = false;
   InstructionCost MinCost = R.getCostThreshold();
+  // The trees of the PHI nodes may walk the loop-carried chains, so the
+  // overlapping windows of a long list rebuild almost the same large trees.
+  // Limit total size to avoid compile time blow up.
+  const unsigned RejectedTreesBudget =
+      isa<PHINode>(I0) ? Opts->slp_phi_list_budget
+                       : std::numeric_limits<unsigned>::max();
+  unsigned RejectedTreesSize = 0;
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
@@ -30909,7 +30915,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     // The window revisiting the dependent seeds skipped by the last vectorized
     // window, 0 if there is none.
     unsigned RevisitI = 0;
-    for (unsigned I = NextInst; I < MaxInst; ++I) {
+    for (unsigned I = NextInst;
+         I < MaxInst && RejectedTreesSize <= RejectedTreesBudget; ++I) {
       // The skipped seeds are revisited, continue as if they were not skipped.
       if (RevisitI && I > RevisitI) {
         I = NextInst - 1;
@@ -30982,6 +30989,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       R.buildTree(Ops);
       if (R.isTreeTinyAndNotFullyVectorizable()) {
+        RejectedTreesSize += R.getTreeSize();
         R.analyzedBundle(Ops);
         if (StandaloneSeeds)
           I += ActualVF - 1;
@@ -31019,6 +31027,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         I = FirstSkipped.value_or(NextInst) - 1;
         Changed = true;
       } else {
+        RejectedTreesSize += R.getTreeSize();
         R.analyzedBundle(Ops);
         if (StandaloneSeeds)
           I += ActualVF - 1;
@@ -33617,6 +33626,10 @@ public:
     if (RK == ReductionOrdering::Ordered) {
       assert(NegatedReducedVals.empty() &&
              "Unexpected negated reduced values in the ordered reduction");
+      // Only the root is a dead end, the leaves may still be the roots of the
+      // other reductions.
+      if (!VectorizedTree)
+        V.analyzedReductionRoot(cast<Instruction>(ReductionRoot));
       return VectorizedTree;
     }
 
@@ -36842,17 +36855,6 @@ bool SLPVectorizerPass::vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
                                                                BoUpSLP &R) {
   if (!Opts->slp_vectorize_poor_throughput || Stores.empty())
     return false;
-  PoorThroughputOpCache PoorThroughputCache;
-  SmallVector<Instruction *> Candidates;
-  for (Instruction &I : *BB) {
-    if (R.isDeleted(&I) || isAssumeLikeIntrinsic(&I) ||
-        isa<PseudoProbeInst>(I) || R.isEphemeralValue(&I) ||
-        isNonVectorizableInst(*Opts, &I, TLI))
-      continue;
-    if (isPoorThroughputOp(*Opts, &I, *TTI, *TLI, PoorThroughputCache,
-                           R.getCostKind(), R.getMaxVecRegSize()))
-      Candidates.push_back(&I);
-  }
   auto HasLocalStoreUser = [&](Value *V) {
     return any_of(V->users(), [&](User *U) {
       auto *SI = dyn_cast<StoreInst>(U);
@@ -36860,6 +36862,26 @@ bool SLPVectorizerPass::vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
              SI->getValueOperand() == V;
     });
   };
+  auto IsCandidate = [&](Instruction &I, PoorThroughputOpCache &Cache) {
+    return !R.isDeleted(&I) && !isAssumeLikeIntrinsic(&I) &&
+           !isa<PseudoProbeInst>(I) && !R.isEphemeralValue(&I) &&
+           !isNonVectorizableInst(*Opts, &I, TLI) &&
+           isPoorThroughputOp(*Opts, &I, *TTI, *TLI, Cache, R.getCostKind(),
+                              R.getMaxVecRegSize());
+  };
+  // The groups without the stored scalars are rejected, so the block is
+  // skipped if no stored scalar is a candidate. The stored scalars are checked
+  // in the block order, a scalar rejected here is rejected by the full scan.
+  PoorThroughputOpCache StoredCache;
+  if (none_of(*BB, [&](Instruction &I) {
+        return HasLocalStoreUser(&I) && IsCandidate(I, StoredCache);
+      }))
+    return false;
+  PoorThroughputOpCache PoorThroughputCache;
+  SmallVector<Instruction *> Candidates;
+  for (Instruction &I : *BB)
+    if (IsCandidate(I, PoorThroughputCache))
+      Candidates.push_back(&I);
   return vectorizePoorThroughputSeeds(Candidates, R, [&](ArrayRef<Value *> VL) {
     // The scalars not stored locally must widen the stored scalars, left by
     // the store chains after the full vectors.

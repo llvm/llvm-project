@@ -38,6 +38,7 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 
 static lto::Config createConfig() {
   lto::Config c;
+  c.LibraryOptions = &config->libraryOptions;
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe ||
                           config->icfLevel == ICFLevel::safe_thunks;
