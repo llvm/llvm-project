@@ -493,8 +493,17 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
       // More than 1 variable index, use outer result.
       return Result;
     }
+    // Combining the offsets is only valid if their sum doesn't overflow in a
+    // signed sense: the GEPs' wrap flags only apply to their own additions, so
+    // the combined offset may have the wrong sign for decomposeGEP().
+    bool Overflow = false;
+    APInt CombinedOffset =
+        Result.ConstantOffset.sadd_ov(ConstantOffset2, Overflow);
+    if (Overflow)
+      return Result;
+
     Result.BasePtr = InnerGEP->getPointerOperand();
-    Result.ConstantOffset += ConstantOffset2;
+    Result.ConstantOffset = CombinedOffset;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
       Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
