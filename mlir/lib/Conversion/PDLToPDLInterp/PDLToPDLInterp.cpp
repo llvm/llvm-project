@@ -223,10 +223,11 @@ Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region,
   Value val = position ? getValueAt(currentBlock, position) : Value();
 
   // If this value corresponds to an operation, record that we are going to use
-  // its location as part of a fused location.
-  bool isOperationValue = val && isa<pdl::OperationType>(val.getType());
-  if (isOperationValue)
-    locOps.insert(val);
+  // its location as part of a fused location. If a node earlier in the match
+  // sequence already recorded it, that node is responsible for removing it.
+  bool addedLocOp = false;
+  if (val && isa<pdl::OperationType>(val.getType()))
+    addedLocOp = locOps.insert(val);
 
   // Dispatch to the correct method based on derived node type.
   TypeSwitch<MatcherNode *>(&node)
@@ -248,7 +249,7 @@ Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region,
   if (failureNode)
     failureBlockStack.pop_back();
 
-  if (isOperationValue)
+  if (addedLocOp)
     locOps.remove(val);
 
   return block;
