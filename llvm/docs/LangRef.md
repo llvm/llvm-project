@@ -8248,6 +8248,24 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
+When `llvm.loop.vectorize.enable` is present, the Loop Vectorizer is also
+permitted to apply floating-point transforms that may change the computed
+result by default (equivalent to the behaviour of
+`#pragma clang loop vectorize(enable)`). This default can be overridden
+per-loop using `llvm.loop.vectorize.fp_unsafe.enable` /
+`llvm.loop.vectorize.fp_unsafe.disable` (see below).
+
+#### '`llvm.loop.vectorize.fp_unsafe.enable`' and '`llvm.loop.vectorize.fp_unsafe.disable`' Metadata
+
+This metadata gives the Loop Vectorizer an explicit per-loop instruction about
+whether floating-point transforms that may change the computed result are
+permitted. Each node has a single operand containing the name string:
+
+```llvm
+!0 = !{!"llvm.loop.vectorize.fp_unsafe.enable"}   ; allowed
+!1 = !{!"llvm.loop.vectorize.fp_unsafe.disable"}  ; suppressed
+```
+
 #### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
