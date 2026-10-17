@@ -32,9 +32,9 @@ define void @remat_regcopy_avoids_spill(i32 %v0, i32 %v1, i32 %v2, i32 %v3, i32 
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, v0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GFX908-NEXT:    v_accvgpr_write_b32 a4, v2
+; GFX908-NEXT:    v_accvgpr_write_b32 a5, v3
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v7
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v8
-; GFX908-NEXT:    v_accvgpr_write_b32 a5, v3
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ;;#ASMEND
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, v4
