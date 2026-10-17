@@ -52,12 +52,18 @@ func.func @sparse_new_coo(%arg0: !llvm.ptr) -> tensor<?x?xf32, #COO> {
 // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
 // CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
 // CHECK-DAG:     %[[C20:.*]] = arith.constant 20 : index
-// CHECK:         %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[A]]
+// CHECK:         %[[COUNT:.*]] = scf.for {{.*}} iter_args({{.*}} = %[[C0]]) -> (index) {
+// CHECK:           %[[INNER:.*]] = scf.for {{.*}} iter_args(%[[ACC:.*]] = {{.*}}) -> (index) {
+// CHECK:             %[[NEXT:.*]] = arith.addi %[[ACC]], %[[C1]] : index
+// CHECK:             scf.yield %[[NEXT]] : index
+// CHECK:           }
+// CHECK:           scf.yield %[[INNER]] : index
+// CHECK:         }
 // CHECK:         %[[DS:.*]] = memref.alloca(%[[C2]]) : memref<?xindex>
 // CHECK:         memref.store %[[C10]], %[[DS]]{{\[}}%[[C0]]] : memref<?xindex>
 // CHECK:         memref.store %[[C20]], %[[DS]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK:         %[[W:.*]] = call @createSparseTensorWriter(%[[B]])
-// CHECK:         call @outSparseTensorWriterMetaData(%[[W]], %[[C2]], %[[NNZ]], %[[DS]])
+// CHECK:         call @outSparseTensorWriterMetaData(%[[W]], %[[C2]], %[[COUNT]], %[[DS]])
 // CHECK:         %[[V:.*]] = memref.alloca() : memref<f32>
 // CHECK:         scf.for  %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
 // CHECK:           scf.for  {{.*}} {
