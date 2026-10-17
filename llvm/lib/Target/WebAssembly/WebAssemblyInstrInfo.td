@@ -26,6 +26,10 @@ def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
     AssemblerPredicate<(all_of FeatureAtomics), "atomics">;
 
+def HasBranchHinting :
+    Predicate<"Subtarget->hasBranchHinting()">,
+    AssemblerPredicate<(all_of FeatureBranchHinting), "branch-hinting">;
+
 def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
