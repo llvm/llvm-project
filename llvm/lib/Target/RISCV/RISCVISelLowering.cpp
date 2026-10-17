@@ -16933,13 +16933,12 @@ static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
-// Zero-extend a 32-bit packed vector to the 64-bit packed type WideVT,
-// clearing the upper lanes.
+// Widen a 32-bit packed vector to the 64-bit packed type WideVT by
+// concatenating it with zeros, clearing the upper lanes.
 static SDValue widenPackedVectorWithZeros(SelectionDAG &DAG, const SDLoc &DL,
                                           SDValue V, MVT WideVT) {
-  SDValue Wide =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, DAG.getBitcast(MVT::i32, V));
-  return DAG.getBitcast(WideVT, Wide);
+  SDValue Zero = DAG.getConstant(0, DL, V.getValueType());
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, V, Zero);
 }
 
 void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,

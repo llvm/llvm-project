@@ -2937,7 +2937,7 @@ define i32 @test_predsum_i8x4_i32(<4 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i8x4_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsum.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsum.i32.v4i8(<4 x i8> %a, i32 %b)
@@ -2952,7 +2952,7 @@ define i32 @test_predsumu_u8x4_u32(<4 x i8> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsumu.bs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsumu.i32.v4i8(<4 x i8> %a, i32 %b)
@@ -2967,7 +2967,7 @@ define i32 @test_predsum_i16x2_i32(<2 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsum_i16x2_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsum.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsum.i32.v2i16(<2 x i16> %a, i32 %b)
@@ -2982,7 +2982,7 @@ define i32 @test_predsumu_u16x2_u32(<2 x i16> %a, i32 %b) {
 ;
 ; RV64-LABEL: test_predsumu_u16x2_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    predsumu.hs a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.predsumu.i32.v2i16(<2 x i16> %a, i32 %b)
@@ -3255,8 +3255,8 @@ define i32 @test_pabdsumu_u8x4_u32(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pabdsumu_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a1, a1
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a1, a1, zero
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    pabdsumu.b a0, a0, a1
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.pabdsumu.i32.v4i8(<4 x i8> %a, <4 x i8> %b)
@@ -3271,8 +3271,8 @@ define i32 @test_pabdsumau_u8x4_u32(i32 %rd, <4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pabdsumau_u8x4_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a2, a2
-; RV64-NEXT:    zext.w a1, a1
+; RV64-NEXT:    pack a2, a2, zero
+; RV64-NEXT:    pack a1, a1, zero
 ; RV64-NEXT:    pabdsumau.b a0, a1, a2
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.pabdsumau.i32.v4i8(i32 %rd, <4 x i8> %a, <4 x i8> %b)
