@@ -2755,12 +2755,16 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   // to what InstCombineCalls does, but here we are only lowering calls
   // to fortified library functions (e.g. __memcpy_chk) that have the default
   // "don't know" as the objectsize.  Anything else should be left alone.
-  FortifiedLibCallSimplifier Simplifier(TLInfo, true);
-  IRBuilder<> Builder(CI);
-  if (Value *V = Simplifier.optimizeCall(CI, Builder)) {
-    replaceAllUsesWith(CI, V, FreshBBs, IsHugeFunc);
-    CI->eraseFromParent();
-    return true;
+  // As in InstCombine, do not replace calls with musttail/notail constraints:
+  // the simplifier cannot preserve these constraints on the new call.
+  if (!CI->isMustTailCall() && !CI->isNoTailCall()) {
+    FortifiedLibCallSimplifier Simplifier(TLInfo, true);
+    IRBuilder<> Builder(CI);
+    if (Value *V = Simplifier.optimizeCall(CI, Builder)) {
+      replaceAllUsesWith(CI, V, FreshBBs, IsHugeFunc);
+      CI->eraseFromParent();
+      return true;
+    }
   }
 
   // SCCP may have propagated, among other things, C++ static variables across
