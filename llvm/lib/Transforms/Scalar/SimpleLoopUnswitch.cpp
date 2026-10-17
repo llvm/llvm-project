@@ -2120,7 +2120,7 @@ static void unswitchNontrivialInvariants(
     // Splice the terminator from the original loop and rewrite its
     // successors.
     TI.moveBefore(*SplitBB, SplitBB->end());
-    TI.dropLocation();
+    TI.dropSourcePosition();
 
     // First wire up the moved terminator to the preheaders.
     if (BI) {
