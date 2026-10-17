@@ -1530,7 +1530,7 @@ void Scop::addParams(const ParameterSetTy &NewParameters) {
     Parameter = extractConstantFactor(Parameter, *SE).second;
     Parameter = getRepresentingInvariantLoadSCEV(Parameter);
 
-    if (Parameters.insert(Parameter))
+    if (Parameters.insert(Parameter).second)
       createParameterId(Parameter);
   }
 }

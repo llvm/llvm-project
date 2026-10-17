@@ -199,7 +199,7 @@ static void collectFeatureClosure(const Record *GPU,
   while (!Worklist.empty()) {
     const Record *F = Worklist.back();
     Worklist.pop_back();
-    if (Closure.insert(F))
+    if (Closure.insert(F).second)
       append_range(Worklist, F->getValueAsListOfDefs("Implies"));
   }
 }

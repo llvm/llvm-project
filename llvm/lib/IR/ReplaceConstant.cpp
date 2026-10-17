@@ -72,7 +72,7 @@ bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
   SetVector<Constant *> ExpandableUsers;
   while (!Stack.empty()) {
     Constant *C = Stack.pop_back_val();
-    if (!ExpandableUsers.insert(C))
+    if (!ExpandableUsers.insert(C).second)
       continue;
 
     for (auto *Nested : C->users())

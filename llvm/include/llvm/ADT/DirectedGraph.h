@@ -112,7 +112,7 @@ public:
 
   /// Add the given edge \p E to this node, if it doesn't exist already. Returns
   /// true if the edge is added and false otherwise.
-  bool addEdge(EdgeType &E) { return Edges.insert(&E); }
+  bool addEdge(EdgeType &E) { return Edges.insert(&E).second; }
 
   /// Remove the given edge \p E from this node, if it exists.
   void removeEdge(EdgeType &E) { Edges.remove(&E); }

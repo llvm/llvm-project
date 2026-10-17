@@ -1336,7 +1336,7 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
                                                        MemoryBufferRef mb) {
   SetVector<StringRef, SmallVector<StringRef, 0>> names;
   for (StringRef s : args::getLines(mb))
-    if (!names.insert(s) && ctx.arg.warnSymbolOrdering)
+    if (!names.insert(s).second && ctx.arg.warnSymbolOrdering)
       Warn(ctx) << mb.getBufferIdentifier()
                 << ": duplicate ordered symbol: " << s;
 

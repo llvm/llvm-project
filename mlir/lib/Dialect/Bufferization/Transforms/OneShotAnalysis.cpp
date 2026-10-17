@@ -1404,7 +1404,7 @@ bottomUpFromTerminatorsHeuristic(Operation *op,
 
   // Find region terminators.
   op->walk<WalkOrder::PostOrder>([&](RegionBranchTerminatorOpInterface term) {
-    if (!traversedOps.insert(term))
+    if (!traversedOps.insert(term).second)
       return;
     // Follow the reverse SSA use-def chain from each yielded value as long as
     // we stay within the same region.
@@ -1420,7 +1420,7 @@ bottomUpFromTerminatorsHeuristic(Operation *op,
     while (!worklist.empty()) {
       OpResult opResult = worklist.pop_back_val();
       Operation *defOp = opResult.getDefiningOp();
-      if (!traversedOps.insert(defOp))
+      if (!traversedOps.insert(defOp).second)
         continue;
       if (!term->getParentRegion()->findAncestorOpInRegion(*defOp))
         continue;

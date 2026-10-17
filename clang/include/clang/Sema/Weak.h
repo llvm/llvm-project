@@ -31,8 +31,10 @@ public:
       : alias(Alias), loc(Loc) {}
   inline const IdentifierInfo *getAlias() const { return alias; }
   inline SourceLocation getLocation() const { return loc; }
-  bool operator==(WeakInfo RHS) const = delete;
-  bool operator!=(WeakInfo RHS) const = delete;
+  bool operator==(const WeakInfo &RHS) const {
+    return getAlias() == RHS.getAlias() && getLocation() == RHS.getLocation();
+  }
+  bool operator!=(const WeakInfo &RHS) const { return !(*this == RHS); }
 
   struct DenseMapInfoByAliasOnly
       : private llvm::DenseMapInfo<const IdentifierInfo *> {

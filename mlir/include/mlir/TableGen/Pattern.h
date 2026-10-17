@@ -60,6 +60,8 @@ class DagLeaf {
 public:
   explicit DagLeaf(const llvm::Init *def) : def(def) {}
 
+  bool operator==(const DagLeaf &other) const { return def == other.def; }
+
   // Returns true if this DAG leaf is not specified in the pattern. That is, it
   // places no further constraints/transforms and just carries over the original
   // value.
