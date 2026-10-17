@@ -14,10 +14,6 @@ debug/merge conflicts
 ASAN-DEBUG lib breaks
 "[clang][DebugInfo] Emit static local variables in their lexical block scope (#213153)" (#4465) (2 hours ago) <Scott Linder>
 ---
-comgr fails to build -lzma
-[Support][lldb] Port xz (lzma) decompression from LLDB into LLVM (#220092)
-[llvm-gsymutil] Read function symbols from .gnu_debugdata in gsymutil (#227159)
----
 breaks asan-debug build
 [DebugInfo] Support global addresses in variable locations  (#218722)" (#4800) (2 hours ago) <theRonShark>
 ---
