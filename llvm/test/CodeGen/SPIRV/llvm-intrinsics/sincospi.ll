@@ -6,6 +6,8 @@
 ; CHECK-DAG: %[[#Half:]] = OpTypeFloat 16
 ; CHECK-DAG: %[[#Float2:]] = OpTypeVector %[[#Float]] 2
 ; CHECK-DAG: %[[#Half3:]] = OpTypeVector %[[#Half]] 3
+; CHECK-DAG: OpDecorate %[[#SinF:]] FPFastMathMode NotNaN|NotInf
+; CHECK-DAG: OpDecorate %[[#CosF:]] FPFastMathMode NotNaN|NotInf
 
 ; CHECK: %[[#X:]] = OpFunctionParameter %[[#Float]]
 ; CHECK: %[[#Sin:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] sinpi %[[#X]]
@@ -49,4 +51,15 @@ define spir_func <3 x half> @test_sincospi_cos_only(<3 x half> %x) {
   %r = call { <3 x half>, <3 x half> } @llvm.sincospi.v3f16(<3 x half> %x)
   %cos = extractvalue { <3 x half>, <3 x half> } %r, 1
   ret <3 x half> %cos
+}
+
+; CHECK: %[[#Xf:]] = OpFunctionParameter %[[#Float]]
+; CHECK: %[[#SinF]] = OpExtInst %[[#Float]] %[[#ExtInstId]] sinpi %[[#Xf]]
+; CHECK: %[[#CosF]] = OpExtInst %[[#Float]] %[[#ExtInstId]] cospi %[[#Xf]]
+define spir_func float @test_sincospi_fmf(float %x) {
+  %r = call nnan ninf { float, float } @llvm.sincospi.f32(float %x)
+  %sin = extractvalue { float, float } %r, 0
+  %cos = extractvalue { float, float } %r, 1
+  %sum = fadd float %sin, %cos
+  ret float %sum
 }

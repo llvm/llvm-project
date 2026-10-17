@@ -1772,7 +1772,7 @@ bool SPIRVInstructionSelector::selectSincospi(Register ResVReg,
   for (auto [Res, Op] : {std::pair{ResVReg, CL::sinpi},
                          std::pair{I.getOperand(1).getReg(), CL::cospi}})
     if (!MRI->use_nodbg_empty(Res))
-      selectExtInst(Res, Ty, I, Op, /*setMIFlags=*/false, /*useMISrc=*/false,
+      selectExtInst(Res, Ty, I, Op, /*setMIFlags=*/true, /*useMISrc=*/false,
                     {Src});
   return true;
 }
