@@ -956,21 +956,21 @@ mlir::applyPatternsGreedily(Region &region,
 
 #ifdef EXPENSIVE_CHECKS
   OperationFingerPrint before(config.getScope()->getParentOp());
-  bool rewriteChanged = false;
-  if (!changed)
-    changed = &rewriteChanged;
 #endif // EXPENSIVE_CHECKS
+  bool rewriteChanged = false;
 
   // Start the pattern driver.
   RegionPatternRewriteDriver driver(region.getContext(), patterns, config,
                                     region);
-  LogicalResult converged = std::move(driver).simplify(changed);
+  LogicalResult converged = std::move(driver).simplify(&rewriteChanged);
 #ifdef EXPENSIVE_CHECKS
-  if (!*changed &&
-      before != OperationFingerPrint(config.getScope()->getParentOp()))
+  if (rewriteChanged !=
+      (before != OperationFingerPrint(config.getScope()->getParentOp())))
     llvm::report_fatal_error(
-        "greedy pattern rewriter changed IR but did not report a change");
+        "greedy pattern rewriter changed flag does not match the IR");
 #endif // EXPENSIVE_CHECKS
+  if (changed)
+    *changed = rewriteChanged;
   if (failed(converged))
     LDBG() << "The pattern rewrite did not converge after scanning "
            << config.getMaxIterations() << " times";
@@ -1101,23 +1101,24 @@ LogicalResult mlir::applyOpPatternsGreedily(
   std::optional<OperationFingerPrint> before;
   if (config.getScope())
     before.emplace(config.getScope()->getParentOp());
-  bool rewriteChanged = false;
-  if (!changed)
-    changed = &rewriteChanged;
 #endif // EXPENSIVE_CHECKS
+  bool rewriteChanged = false;
 
   // Start the pattern driver.
   llvm::SmallDenseSet<Operation *, 4> surviving;
   MultiOpPatternRewriteDriver driver(ops.front()->getContext(), patterns,
                                      config, ops,
                                      allErased ? &surviving : nullptr);
-  LogicalResult converged = std::move(driver).simplify(ops, changed);
+  LogicalResult converged = std::move(driver).simplify(ops, &rewriteChanged);
 #ifdef EXPENSIVE_CHECKS
-  if (!*changed && before &&
-      *before != OperationFingerPrint(config.getScope()->getParentOp()))
+  if (before &&
+      rewriteChanged !=
+          (*before != OperationFingerPrint(config.getScope()->getParentOp())))
     llvm::report_fatal_error(
-        "greedy pattern rewriter changed IR but did not report a change");
+        "greedy pattern rewriter changed flag does not match the IR");
 #endif // EXPENSIVE_CHECKS
+  if (changed)
+    *changed = rewriteChanged;
   if (allErased)
     *allErased = surviving.empty();
   if (failed(converged))
