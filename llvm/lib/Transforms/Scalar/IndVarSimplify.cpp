@@ -1196,10 +1196,6 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       continue;
 
-    // Skip debug or pseudo instructions.
-    if (I.isDebugOrPseudoInst())
-      continue;
-
     // Skip eh pad instructions.
     if (I.isEHPad())
       continue;

@@ -756,8 +756,6 @@ readMemprof(const InstrumentationOptions &Opts, Module &M, Function &F,
   // debug locations.
   for (auto &BB : F) {
     for (auto &I : BB) {
-      if (I.isDebugOrPseudoInst())
-        continue;
       // We are only interested in calls (allocation or interior call stack
       // context calls).
       auto *CI = dyn_cast<CallBase>(&I);

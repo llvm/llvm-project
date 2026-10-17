@@ -2076,11 +2076,6 @@ let True16Predicate = UseTrue16WithSramECC in {
   defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
   defm : FlatLoadPats_t16 <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
   defm : FlatLoadPats_t16 <FLAT_LOAD_USHORT, load_flat, i16>;
-  defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
-  defm : FlatLoadPats_t16 <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
-  foreach vt = Reg16Types.types in
-  defm : FlatLoadPats_t16 <FLAT_LOAD_USHORT, atomic_load_flat, vt>;
-  defm : FlatLoadPats_t16 <FLAT_LOAD_SBYTE, atomic_load_sext_8_flat, i16>;
 }
 
 let OtherPredicates = [D16PreservesUnusedBits, HasFlatAddressSpace], True16Predicate = UseRealTrue16Insts in {
@@ -2234,12 +2229,6 @@ defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SSHORT, atomic_load_sext_16_global, i32>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, load_global, i16>;
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_SBYTE, atomic_load_sext_8_global, i16>;
-foreach vt = Reg16Types.types in
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_global, vt>;
-defm : GlobalFLATLoadPats_t16 <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;
 }
 
 let OtherPredicates = [D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {

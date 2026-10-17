@@ -39,7 +39,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -416,32 +415,6 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
   ADCEChanged Changed;
   // Updates control and dataflow around dead blocks
   Changed.ChangedControlFlow = updateDeadRegions();
-
-  LLVM_DEBUG({
-    for (Instruction &I : instructions(F)) {
-      // Check if the instruction is alive.
-      if (isLive(&I))
-        continue;
-
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        // Check if the scope of this variable location is alive.
-        if (AliveScopes.count(DII->getDebugLoc()->getScope()))
-          continue;
-
-        // If intrinsic is pointing at a live SSA value, there may be an
-        // earlier optimization bug: if we know the location of the variable,
-        // why isn't the scope of the location alive?
-        for (Value *V : DII->location_ops()) {
-          if (Instruction *II = dyn_cast<Instruction>(V)) {
-            if (isLive(II)) {
-              dbgs() << "Dropping debug info for " << *DII << "\n";
-              break;
-            }
-          }
-        }
-      }
-    }
-  });
 
   // The inverse of the live set is the dead set.  These are those instructions
   // that have no side effects and do not influence the control flow or return

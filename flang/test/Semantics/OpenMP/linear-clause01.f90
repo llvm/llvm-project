@@ -40,7 +40,6 @@ end subroutine linear_clause_02
 ! Case 3
 subroutine linear_clause_03(arg)
     integer, intent(in) :: arg
-    !ERROR: The list item `arg` specified with the REF 'linear-modifier' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !ERROR: List item 'arg' present at multiple LINEAR clauses
     !ERROR: 'arg' appears in more than one data-sharing clause on the same OpenMP directive
     !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
@@ -68,3 +67,24 @@ subroutine linear_clause_04(x)
       end do
     !$omp end simd
 end subroutine linear_clause_04
+
+! Case 5
+subroutine linear_clause_05(x)
+    integer :: x(:)
+    !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
+    !$omp declare simd linear(x : ref)
+end subroutine linear_clause_05
+
+! Case 6
+subroutine linear_clause_06(x)
+    integer, allocatable :: x(:)
+    !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
+    !$omp declare simd linear(x : ref)
+end subroutine linear_clause_06
+
+! Case 7
+subroutine linear_clause_07(x)
+    type(*) :: x(:)
+    !ERROR: The list item `x` specified with the REF 'linear-modifier' must not be a polymorphic variable, an assumed-shape array, or a variable with the `ALLOCATABLE` attribute
+    !$omp declare simd linear(x : ref)
+end subroutine linear_clause_07
