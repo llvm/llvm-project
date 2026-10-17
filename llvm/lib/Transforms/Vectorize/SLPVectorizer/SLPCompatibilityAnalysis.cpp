@@ -43,6 +43,17 @@ bool isValidForAlternation(unsigned Opcode) {
   return !Instruction::isIntDivRem(Opcode);
 }
 
+bool BinOpSameOpcodeHelper::checkValidAltState() const {
+  auto IsValidForAlternation =
+      [](const BinOpSameOpcodeHelper::InterchangeableInfo &Op) -> bool {
+    if (Op.hasDefinedOpcode())
+      return slpvectorizer::isValidForAlternation(Op.getOpcode());
+    return slpvectorizer::isValidForAlternation(Op.I->getOpcode());
+  };
+  return !hasAltOp() ||
+         (IsValidForAlternation(MainOp) && IsValidForAlternation(AltOp));
+}
+
 std::pair<Constant *, unsigned>
 BinOpSameOpcodeHelper::isBinOpWithConstant(const Instruction *I) {
   [[maybe_unused]] unsigned Opcode = I->getOpcode();
@@ -97,6 +108,10 @@ unsigned BinOpSameOpcodeHelper::InterchangeableInfo::getOpcode() const {
     return Instruction::Or;
   if (Candidate & XorBIT)
     return Instruction::Xor;
+  if (Candidate & LShrBIT)
+    return Instruction::LShr;
+  if (Candidate & UDivBIT)
+    return Instruction::UDiv;
   llvm_unreachable("Cannot find interchangeable instruction.");
 }
 
@@ -125,9 +140,11 @@ bool BinOpSameOpcodeHelper::InterchangeableInfo::hasCandidateOpcode(
   case Instruction::FSub:
     return Candidate & FSubBIT;
   case Instruction::LShr:
+    return Candidate & LShrBIT;
+  case Instruction::UDiv:
+    return Candidate & UDivBIT;
   case Instruction::FMul:
   case Instruction::SDiv:
-  case Instruction::UDiv:
   case Instruction::FDiv:
   case Instruction::SRem:
   case Instruction::URem:
@@ -173,6 +190,13 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
                                              /*AllowRHSConstant=*/true);
       }
       break;
+    case Instruction::LShr:
+      assert(ToOpcode == Instruction::UDiv &&
+             "Only support LShr to UDiv conversions.");
+      RHS = ConstantInt::get(
+          RHSType,
+          APInt::getOneBitSet(FromCIValueBitWidth, FromCIValue.getZExtValue()));
+      break;
     case Instruction::Mul:
       assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
       if (ToOpcode == Instruction::Shl) {
@@ -183,6 +207,13 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
         RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
                                              /*AllowRHSConstant=*/true);
       }
+      break;
+    case Instruction::UDiv:
+      assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+      assert(ToOpcode == Instruction::LShr &&
+             "Only support UDiv to LShr conversion");
+      RHS = ConstantInt::get(
+          RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
       break;
     case Instruction::Add:
     case Instruction::Sub:
@@ -218,16 +249,9 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
   return SmallVector<Value *>({RHS, LHS});
 }
 
-bool BinOpSameOpcodeHelper::isValidForAlternation(const Instruction *I) const {
-  return slpvectorizer::isValidForAlternation(MainOp.I->getOpcode()) &&
-         slpvectorizer::isValidForAlternation(I->getOpcode());
-}
-
 bool BinOpSameOpcodeHelper::initializeAltOp(const Instruction *I) {
   if (AltOp.I)
     return true;
-  if (!isValidForAlternation(I))
-    return false;
   AltOp.I = I;
   return true;
 }
@@ -237,8 +261,8 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
          "BinOpSameOpcodeHelper only accepts BinaryOperator.");
   unsigned Opcode = I->getOpcode();
   MaskType OpcodeInMaskForm;
-  // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd and FSub over
-  // MainOp.
+  // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd, FSub, LShr, and UDiv
+  // over MainOp.
   switch (Opcode) {
   case Instruction::Shl:
     OpcodeInMaskForm = ShlBIT;
@@ -270,8 +294,16 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
   case Instruction::FSub:
     OpcodeInMaskForm = FSubBIT;
     break;
+  case Instruction::LShr:
+    OpcodeInMaskForm = LShrBIT;
+    break;
+  case Instruction::UDiv:
+    OpcodeInMaskForm = UDivBIT;
+    break;
   default:
-    return MainOp.equal(Opcode) || (initializeAltOp(I) && AltOp.equal(Opcode));
+    return (MainOp.equal(Opcode) ||
+            (initializeAltOp(I) && AltOp.equal(Opcode))) &&
+           checkValidAltState();
   }
   MaskType InterchangeableMask = OpcodeInMaskForm;
   auto [C, Pos] = isBinOpWithConstant(I);
@@ -286,13 +318,21 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
       if (CIValue.isOne())
         InterchangeableMask |= AddBIT;
       break;
+    case Instruction::LShr:
+      if (CIValue.ult(CIValue.getBitWidth()))
+        InterchangeableMask |= UDivBIT;
+      break;
     case Instruction::Mul:
       if (CIValue.isOne()) {
         InterchangeableMask = CanBeAll;
         break;
       }
       if (CIValue.isPowerOf2())
-        InterchangeableMask = MulBIT | ShlBIT;
+        InterchangeableMask |= ShlBIT;
+      break;
+    case Instruction::UDiv:
+      if (CIValue.isPowerOf2())
+        InterchangeableMask |= LShrBIT;
       break;
     case Instruction::Add:
     case Instruction::Sub:
@@ -321,9 +361,10 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
     // on the other side).
     InterchangeableMask = FSubBIT | FAddBIT;
   }
-  return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
-         (initializeAltOp(I) &&
-          AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
+  return (MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
+          (initializeAltOp(I) &&
+           AltOp.trySet(OpcodeInMaskForm, InterchangeableMask))) &&
+         checkValidAltState();
 }
 
 /// If the comparison (Pred, X, C) is a single-element or single-complement

@@ -54,9 +54,9 @@ class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static unsigned SupportedOp[] = {
-      Instruction::Add, Instruction::FAdd, Instruction::Sub,  Instruction::FSub,
-      Instruction::Mul, Instruction::Shl,  Instruction::AShr, Instruction::And,
-      Instruction::Or,  Instruction::Xor};
+      Instruction::Add,  Instruction::FAdd, Instruction::Sub, Instruction::FSub,
+      Instruction::Mul,  Instruction::UDiv, Instruction::Shl, Instruction::LShr,
+      Instruction::AShr, Instruction::And,  Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
@@ -70,22 +70,28 @@ class BinOpSameOpcodeHelper {
     XorBIT = 1 << 7,
     FAddBIT = 1 << 8,
     FSubBIT = 1 << 9,
-    MainOpBIT = 1 << 10,
+    LShrBIT = 1 << 10,
+    UDivBIT = 1 << 11,
+    MainOpBIT = 1 << 12,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
+  /// Return if the current possible MainOp/AltOp combination
+  /// is a valid combination.
+  bool checkValidAltState() const;
   /// Return a non-nullptr if either operand of I is a ConstantInt (for the
   /// integer opcodes) or a ConstantFP (for FAdd/FSub).
   /// The second return value represents the operand position. We check the
   /// right-hand side first (1). If the right hand side is not a constant and
-  /// the instruction is neither Sub, FSub, Shl, nor AShr, we then check the
-  /// left hand side (0).
+  /// the instruction is neither Sub, FSub, Shl, AShr, LShr, nor UDiv we then
+  /// check the left hand side (0).
   static std::pair<Constant *, unsigned>
   isBinOpWithConstant(const Instruction *I);
   struct InterchangeableInfo {
     const Instruction *I = nullptr;
     /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT;
+                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT | LShrBIT |
+                    UDivBIT;
     /// We cannot create an interchangeable instruction that does not exist in
     /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
     /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
