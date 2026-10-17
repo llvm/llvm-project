@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -1035,6 +1036,29 @@ public:
 
     rewriter.template replaceOpWithNewOp<LLVM::ICmpOp>(
         op, dstType, predicate, op.getOperand1(), op.getOperand2());
+    return success();
+  }
+};
+
+/// Converts SPIR-V floating-point classification ops (`spirv.IsInf`,
+/// `spirv.IsNan`, `spirv.IsFinite`, `spirv.IsNormal`) to
+/// `llvm.intr.is.fpclass` with the matching `llvm::FPClassTest` mask. The
+/// intrinsic tests the operand per component, like the SPIR-V ops, and yields
+/// `i1` or a vector of `i1`.
+template <typename SPIRVOp, llvm::FPClassTest classMask>
+class FPClassPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    rewriter.template replaceOpWithNewOp<LLVM::IsFPClass>(
+        op, dstType, adaptor.getOperand(), classMask);
     return success();
   }
 };
@@ -2396,6 +2420,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
+      FPClassPattern<spirv::IsInfOp, llvm::fcInf>,
+      FPClassPattern<spirv::IsNanOp, llvm::fcNan>,
+      FPClassPattern<spirv::IsFiniteOp, llvm::fcFinite>,
+      FPClassPattern<spirv::IsNormalOp, llvm::fcNormal>,
 
       // Memory ops
       AccessChainPattern, AddressOfPattern, LoadStorePattern<spirv::LoadOp>,
