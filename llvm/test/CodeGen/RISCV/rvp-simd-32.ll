@@ -3338,10 +3338,6 @@ define <4 x i8> @test_pnclipp_v4i8(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pnclipp_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.h a1, a1, a2
-; RV64-NEXT:    ppaire.h a0, a0, a3
 ; RV64-NEXT:    pack a0, a0, a1
 ; RV64-NEXT:    pnclipp.b a0, a0, a0
 ; RV64-NEXT:    ret
@@ -3357,10 +3353,6 @@ define <4 x i8> @test_pnclipup_v4i8(<2 x i16> %a, <2 x i16> %b) {
 ;
 ; RV64-LABEL: test_pnclipup_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a1, 16
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    ppaire.h a1, a1, a2
-; RV64-NEXT:    ppaire.h a0, a0, a3
 ; RV64-NEXT:    pack a0, a0, a1
 ; RV64-NEXT:    pnclipup.b a0, a0, a0
 ; RV64-NEXT:    ret

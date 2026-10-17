@@ -6426,6 +6426,11 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
     return SDValue();
 
   unsigned BW = (C1 + 1).exactLogBase2();
+  // When BW is 0, there is no equivalent i0 VT. And since an unsigned value is
+  // never < 0, the result is always 0.
+  if (BW == 0)
+    return DAG.getConstant(0, SDLoc(N0), N3.getValueType());
+
   EVT FPVT = N0.getOperand(0).getValueType();
   EVT NewVT = FPVT.changeElementType(*DAG.getContext(),
                                      EVT::getIntegerVT(*DAG.getContext(), BW));
