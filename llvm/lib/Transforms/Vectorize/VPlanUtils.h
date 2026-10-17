@@ -264,8 +264,8 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
-/// VPExpandSCEVRecipe to be expanded to IR later.
+/// VPInstructions and live-ins. Canonical IVs and non-affine SCEVAddRecExprs
+/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
