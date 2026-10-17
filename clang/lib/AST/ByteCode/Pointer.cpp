@@ -769,7 +769,7 @@ Lifetime PtrView::getLifetime() const {
   if (Base < sizeof(InlineDescriptor))
     return Lifetime::Started;
 
-  if (inArray() && !isArrayRoot()) {
+  if (getFieldDesc()->isPrimitiveArray() && !isArrayRoot()) {
     InitMapPtr &IM = getInitMap();
 
     if (!IM.hasInitMap()) {
