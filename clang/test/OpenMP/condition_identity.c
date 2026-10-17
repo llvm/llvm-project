@@ -5,9 +5,9 @@
 // permit the KIND(CPU) selector to win the subset tie-break.
 
 // CHECK-LABEL: define {{.*}} @distinct_constants(
-// CHECK-NOT: @__kmpc_taskwait
-// CHECK: call {{.*}} @__kmpc_taskyield
-// CHECK-NOT: @__kmpc_taskwait
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: call {{.*}} @__kmpc_omp_taskyield
+// CHECK-NOT: @__kmpc_omp_taskwait
 // CHECK: ret void
 void distinct_constants(void) {
 #pragma omp metadirective \
@@ -18,9 +18,9 @@ void distinct_constants(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @identical_constants(
-// CHECK-NOT: @__kmpc_taskyield
-// CHECK: call {{.*}} @__kmpc_taskwait
-// CHECK-NOT: @__kmpc_taskyield
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: call {{.*}} @__kmpc_omp_taskwait
+// CHECK-NOT: @__kmpc_omp_taskyield
 // CHECK: ret void
 void identical_constants(void) {
 #pragma omp metadirective \
@@ -31,9 +31,9 @@ void identical_constants(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @distinct_builtins(
-// CHECK-NOT: @__kmpc_taskwait
-// CHECK: call {{.*}} @__kmpc_taskyield
-// CHECK-NOT: @__kmpc_taskwait
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: call {{.*}} @__kmpc_omp_taskyield
+// CHECK-NOT: @__kmpc_omp_taskwait
 // CHECK: ret void
 void distinct_builtins(void) {
 #pragma omp metadirective \
@@ -44,9 +44,9 @@ void distinct_builtins(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @identical_builtins(
-// CHECK-NOT: @__kmpc_taskyield
-// CHECK: call {{.*}} @__kmpc_taskwait
-// CHECK-NOT: @__kmpc_taskyield
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: call {{.*}} @__kmpc_omp_taskwait
+// CHECK-NOT: @__kmpc_omp_taskyield
 // CHECK: ret void
 void identical_builtins(void) {
 #pragma omp metadirective \
@@ -57,9 +57,9 @@ void identical_builtins(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @distinct_compound_types(
-// CHECK-NOT: @__kmpc_taskwait
-// CHECK: call {{.*}} @__kmpc_taskyield
-// CHECK-NOT: @__kmpc_taskwait
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: call {{.*}} @__kmpc_omp_taskyield
+// CHECK-NOT: @__kmpc_omp_taskwait
 // CHECK: ret void
 void distinct_compound_types(void) {
 #pragma omp metadirective \
@@ -70,9 +70,9 @@ void distinct_compound_types(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @identical_compound_types(
-// CHECK-NOT: @__kmpc_taskyield
-// CHECK: call {{.*}} @__kmpc_taskwait
-// CHECK-NOT: @__kmpc_taskyield
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: call {{.*}} @__kmpc_omp_taskwait
+// CHECK-NOT: @__kmpc_omp_taskyield
 // CHECK: ret void
 void identical_compound_types(void) {
 #pragma omp metadirective \
@@ -83,9 +83,9 @@ void identical_compound_types(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @distinct_va_arg_types(
-// CHECK-NOT: @__kmpc_taskwait
-// CHECK: call {{.*}} @__kmpc_taskyield
-// CHECK-NOT: @__kmpc_taskwait
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: call {{.*}} @__kmpc_omp_taskyield
+// CHECK-NOT: @__kmpc_omp_taskwait
 // CHECK: ret void
 void distinct_va_arg_types(void) {
   __builtin_va_list ap;
@@ -98,9 +98,9 @@ void distinct_va_arg_types(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @identical_va_arg_types(
-// CHECK-NOT: @__kmpc_taskyield
-// CHECK: call {{.*}} @__kmpc_taskwait
-// CHECK-NOT: @__kmpc_taskyield
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: call {{.*}} @__kmpc_omp_taskwait
+// CHECK-NOT: @__kmpc_omp_taskyield
 // CHECK: ret void
 void identical_va_arg_types(void) {
   __builtin_va_list ap;
@@ -113,14 +113,55 @@ void identical_va_arg_types(void) {
 }
 
 // CHECK-LABEL: define {{.*}} @higher_score(
-// CHECK-NOT: @__kmpc_taskwait
-// CHECK: call {{.*}} @__kmpc_taskyield
-// CHECK-NOT: @__kmpc_taskwait
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: call {{.*}} @__kmpc_omp_taskyield
+// CHECK-NOT: @__kmpc_omp_taskwait
 // CHECK: ret void
 void higher_score(void) {
 #pragma omp metadirective \
     when(user={condition(1)}, \
          implementation={vendor(score(5): llvm)}: taskyield) \
     when(user={condition(1)}, device={kind(cpu)}, \
+         implementation={vendor(score(3): llvm)}: taskwait)
+}
+
+// CHECK-LABEL: define {{.*}} @distinct_array_bounds(
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: call {{.*}} @__kmpc_omp_taskyield
+// CHECK-NOT: @__kmpc_omp_taskwait
+// CHECK: ret void
+void distinct_array_bounds(void) {
+#pragma omp metadirective \
+    when(user={condition(sizeof(int[1+1]) > 0)}, \
+         implementation={vendor(score(4): llvm)}: taskyield) \
+    when(user={condition(sizeof(int[2]) > 0)}, device={kind(cpu)}, \
+         implementation={vendor(score(3): llvm)}: taskwait)
+}
+
+// CHECK-LABEL: define {{.*}} @identical_array_bounds(
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: call {{.*}} @__kmpc_omp_taskwait
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: ret void
+void identical_array_bounds(void) {
+#pragma omp metadirective \
+    when(user={condition(sizeof(int[1+1]) > 0)}, \
+         implementation={vendor(score(4): llvm)}: taskyield) \
+    when(user={condition(sizeof(int[1+1]) > 0)}, device={kind(cpu)}, \
+         implementation={vendor(score(3): llvm)}: taskwait)
+}
+
+typedef int Array[1+1];
+
+// CHECK-LABEL: define {{.*}} @equivalent_array_alias(
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: call {{.*}} @__kmpc_omp_taskwait
+// CHECK-NOT: @__kmpc_omp_taskyield
+// CHECK: ret void
+void equivalent_array_alias(void) {
+#pragma omp metadirective \
+    when(user={condition(sizeof(Array) > 0)}, \
+         implementation={vendor(score(4): llvm)}: taskyield) \
+    when(user={condition(sizeof(int[1+1]) > 0)}, device={kind(cpu)}, \
          implementation={vendor(score(3): llvm)}: taskwait)
 }

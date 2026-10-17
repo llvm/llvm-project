@@ -425,11 +425,19 @@ subroutine test_dynamic_user_match_any_static_score(flag)
 #endif
 end subroutine
 
-! The explicit directive variant wins this tie over the earlier implicit
-! nothing candidate.
+! The condition-free selector is a strict subset of the original selector
+! of the implicit NOTHING. Its barrier is therefore only a fallback when the
+! runtime condition is false, despite the explicit directive's tie precedence.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(
-! CHECK-NOT:     fir.if
-! CHECK:         omp.barrier
+! CHECK-SAME:    %[[ARG:[^,]*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG]]
+! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
+! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]]
+! CHECK:         fir.if %[[COND]] {
+! CHECK-NEXT:    } else {
+! CHECK-NEXT:      omp.barrier
+! CHECK-NEXT:    }
+! CHECK-NOT:     omp.barrier
 ! CHECK:         return
 subroutine test_dynamic_implicit_nothing_tie_break(flag)
   logical, intent(in) :: flag

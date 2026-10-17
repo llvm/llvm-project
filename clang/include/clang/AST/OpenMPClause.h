@@ -10077,8 +10077,10 @@ struct OMPTraitSelector {
 };
 
 /// Profile a source condition, retaining template bindings through
-/// substitution. The exact profile is local to the ASTContext and must not be
-/// serialized.
+/// substitution. Ignore outer parentheses and implicit expression wrappers,
+/// and desugar type aliases, but retain written array bounds, type qualifiers,
+/// and bindings nested in function types and qualified member references.
+/// The exact profile is local to the ASTContext and must not be serialized.
 void profileOpenMPCondition(const Expr *E, const ASTContext &Context,
                             llvm::FoldingSetNodeID &ID);
 

@@ -18,9 +18,11 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/ODRHash.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeLoc.h"
 #include "llvm/ADT/FoldingSet.h"
 using namespace clang;
 
@@ -31,6 +33,7 @@ namespace {
     bool Canonical;
     bool ProfileLambdaExpr;
     bool OpenMPCondition = false;
+    bool HasConditionTemplateBinding = false;
 
   public:
     StmtProfiler(llvm::FoldingSetNodeID &ID, bool Canonical,
@@ -60,6 +63,12 @@ namespace {
     /// Visit a type that is referenced within an expression or
     /// statement.
     virtual void VisitType(QualType T) = 0;
+
+    virtual void VisitTypeSourceInfo(const TypeSourceInfo *TSI) {
+      VisitType(TSI->getType());
+    }
+
+    virtual void VisitConditionQualifier(NestedNameSpecifierLoc) {}
 
     /// Visit a name that occurs within an expression or statement.
     virtual void VisitName(DeclarationName Name, bool TreatAsDecl = false) = 0;
@@ -105,6 +114,9 @@ namespace {
       ID.AddInteger(D ? D->getKind() : 0);
 
       if (OpenMPCondition && D) {
+        HasConditionTemplateBinding |= isa<NonTypeTemplateParmDecl>(D) ||
+                                       isa<TemplateTypeParmDecl>(D) ||
+                                       isa<TemplateTemplateParmDecl>(D);
         if (const auto *P = dyn_cast<ParmVarDecl>(D)) {
           ID.AddPointer(Decl::castFromDeclContext(P->getDeclContext())
                             ->getCanonicalDecl());
@@ -168,7 +180,30 @@ namespace {
       ID.AddPointer(D ? D->getCanonicalDecl() : nullptr);
     }
 
-    void VisitType(QualType T) override {
+    void VisitType(QualType T) override { VisitType(T, TypeLoc()); }
+
+    void VisitTypeSourceInfo(const TypeSourceInfo *TSI) override {
+      VisitType(TSI->getType(), TSI->getTypeLoc());
+    }
+
+    void VisitConditionQualifier(NestedNameSpecifierLoc Qualifier) override {
+      llvm::FoldingSetNodeID TypeID;
+      StmtProfilerWithPointers Profiler(TypeID, Context, /*Canonical=*/true,
+                                        /*ProfileLambdaExpr=*/true,
+                                        /*OpenMPCondition=*/true);
+      if (TypeLoc TL = Qualifier.getAsTypeLoc())
+        Profiler.VisitType(TL.getType(), TL);
+      // Ordinary qualification is already represented by the resolved
+      // declaration. A template binding can distinguish T::value from U::value
+      // even when both names resolve to the same member after substitution.
+      ID.AddBoolean(Profiler.HasConditionTemplateBinding);
+      if (Profiler.HasConditionTemplateBinding) {
+        HasConditionTemplateBinding = true;
+        ID.AddNodeID(TypeID);
+      }
+    }
+
+    void VisitType(QualType T, TypeLoc TL) {
       if (OpenMPCondition && !T.isNull()) {
         // Desugar aliases consistently, but keep the binding carried by a
         // substituted template parameter instead of its replacement value.
@@ -176,6 +211,7 @@ namespace {
           if (const auto *S = dyn_cast<TemplateSpecializationType>(T)) {
             if (!S->isTypeAlias()) {
               ID.AddInteger(Type::TemplateSpecialization);
+              ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
               VisitTemplateName(S->getTemplateName());
               ID.AddInteger(S->template_arguments().size());
               for (const auto &Argument : S->template_arguments())
@@ -185,6 +221,7 @@ namespace {
           }
           if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(T)) {
             if (!isa<TypeAliasTemplateDecl>(S->getAssociatedDecl())) {
+              HasConditionTemplateBinding = true;
               ID.AddInteger(Type::SubstTemplateTypeParm);
               ID.AddPointer(S->getAssociatedDecl()->getCanonicalDecl());
               ID.AddInteger(S->getIndex());
@@ -195,28 +232,96 @@ namespace {
           QualType Next = T.getSingleStepDesugaredType(Context);
           if (Next == T)
             break;
+          // Bounds of non-dependent constant arrays live in TypeLoc, not in
+          // the uniqued type. Follow typedefs to their written definitions so
+          // aliases use the same structural policy as directly written types.
+          if (const auto *Alias = dyn_cast<TypedefType>(T)) {
+            const auto *TSI = Alias->getDecl()->getTypeSourceInfo();
+            TL = TSI ? TSI->getTypeLoc() : TypeLoc();
+          } else if (TL) {
+            TL = TL.getNextTypeLoc();
+          }
           T = Next;
         }
         if (const auto *P = dyn_cast<PointerType>(T)) {
           ID.AddInteger(Type::Pointer);
           ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
-          VisitType(P->getPointeeType());
+          VisitType(P->getPointeeType(), TL ? TL.getNextTypeLoc() : TypeLoc());
           return;
         }
         if (const auto *R = dyn_cast<ReferenceType>(T)) {
           ID.AddInteger(R->getTypeClass());
-          VisitType(R->getPointeeType());
+          ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
+          VisitType(R->getPointeeType(), TL ? TL.getNextTypeLoc() : TypeLoc());
           return;
         }
         if (const auto *A = dyn_cast<ArrayType>(T)) {
           ID.AddInteger(A->getTypeClass());
-          VisitType(A->getElementType());
-          if (const auto *C = dyn_cast<ConstantArrayType>(A))
-            C->getSize().Profile(ID);
-          else if (const auto *V = dyn_cast<VariableArrayType>(A))
+          ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
+          ID.AddInteger(static_cast<unsigned>(A->getSizeModifier()));
+          ID.AddInteger(A->getIndexTypeCVRQualifiers());
+          auto ATL = TL ? TL.getAs<ArrayTypeLoc>() : ArrayTypeLoc();
+          VisitType(A->getElementType(), ATL ? ATL.getElementLoc() : TypeLoc());
+          const Expr *Bound = ATL ? ATL.getSizeExpr() : nullptr;
+          if (const auto *C = dyn_cast<ConstantArrayType>(A)) {
+            if (!Bound)
+              Bound = C->getSizeExpr();
+            ID.AddBoolean(Bound != nullptr);
+            if (Bound)
+              Visit(Bound);
+            else
+              C->getSize().Profile(ID);
+          } else if (const auto *V = dyn_cast<VariableArrayType>(A))
             Visit(V->getSizeExpr());
           else if (const auto *D = dyn_cast<DependentSizedArrayType>(A))
             Visit(D->getSizeExpr());
+          return;
+        }
+        if (const auto *F = dyn_cast<FunctionType>(T)) {
+          ID.AddInteger(F->getTypeClass());
+          ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
+          auto FTL = TL ? TL.getAs<FunctionTypeLoc>() : FunctionTypeLoc();
+          VisitType(F->getReturnType(), FTL ? FTL.getReturnLoc() : TypeLoc());
+          F->getExtInfo().Profile(ID);
+          if (const auto *Proto = dyn_cast<FunctionProtoType>(F)) {
+            ID.AddInteger(Proto->getNumParams());
+            for (unsigned I = 0; I < Proto->getNumParams(); ++I) {
+              const auto *Param = FTL ? FTL.getParam(I) : nullptr;
+              const auto *TSI = Param ? Param->getTypeSourceInfo() : nullptr;
+              if (TSI)
+                VisitTypeSourceInfo(TSI);
+              else
+                VisitType(Proto->getParamType(I));
+              ID.AddInteger(Proto->getExtParameterInfo(I).getOpaqueValue());
+            }
+            auto EPI = Proto->getExtProtoInfo();
+            ID.AddBoolean(EPI.Variadic);
+            ID.Add(EPI.TypeQuals);
+            ID.AddInteger(EPI.RefQualifier);
+            ID.AddInteger(EPI.ExceptionSpec.Type);
+            ID.AddInteger(EPI.ExceptionSpec.Exceptions.size());
+            for (QualType Exception : EPI.ExceptionSpec.Exceptions)
+              VisitType(Exception);
+            ID.AddBoolean(EPI.ExceptionSpec.NoexceptExpr != nullptr);
+            if (EPI.ExceptionSpec.NoexceptExpr)
+              Visit(EPI.ExceptionSpec.NoexceptExpr);
+            VisitDecl(EPI.ExceptionSpec.SourceDecl);
+            VisitDecl(EPI.ExceptionSpec.SourceTemplate);
+            EPI.ExtraAttributeInfo.Profile(ID);
+            ID.AddInteger(EPI.AArch64SMEAttributes);
+            ID.AddBoolean(EPI.CFIUncheckedCallee);
+            ID.AddInteger(EPI.FunctionEffects.size());
+            for (unsigned I = 0; I < EPI.FunctionEffects.size(); ++I) {
+              ID.AddInteger(EPI.FunctionEffects.effects()[I].toOpaqueInt32());
+              const Expr *Condition =
+                  EPI.FunctionEffects.conditions().empty()
+                      ? nullptr
+                      : EPI.FunctionEffects.conditions()[I].getCondition();
+              ID.AddBoolean(Condition != nullptr);
+              if (Condition)
+                Visit(Condition);
+            }
+          }
           return;
         }
       }
@@ -1523,6 +1628,8 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   if (!Canonical)
     VisitNestedNameSpecifier(S->getQualifier());
   VisitDecl(S->getDecl());
+  if (OpenMPCondition)
+    VisitConditionQualifier(S->getQualifierLoc());
   if (!Canonical) {
     ID.AddBoolean(S->hasExplicitTemplateArgs());
     if (S->hasExplicitTemplateArgs())
@@ -1533,7 +1640,7 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
 void StmtProfiler::VisitSYCLUniqueStableNameExpr(
     const SYCLUniqueStableNameExpr *S) {
   VisitExpr(S);
-  VisitType(S->getTypeSourceInfo()->getType());
+  VisitTypeSourceInfo(S->getTypeSourceInfo());
 }
 
 void StmtProfiler::VisitUnresolvedSYCLKernelCallStmt(
@@ -1643,7 +1750,7 @@ StmtProfiler::VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *S) {
   VisitExpr(S);
   ID.AddInteger(S->getKind());
   if (S->isArgumentType())
-    VisitType(S->getArgumentType());
+    VisitTypeSourceInfo(S->getArgumentTypeInfo());
 }
 
 void StmtProfiler::VisitArraySubscriptExpr(const ArraySubscriptExpr *S) {
@@ -1680,6 +1787,8 @@ void StmtProfiler::VisitCallExpr(const CallExpr *S) {
 void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
   VisitExpr(S);
   VisitDecl(S->getMemberDecl());
+  if (OpenMPCondition)
+    VisitConditionQualifier(S->getQualifierLoc());
   if (!Canonical)
     VisitNestedNameSpecifier(S->getQualifier());
   ID.AddBoolean(S->isArrow());
@@ -1688,7 +1797,7 @@ void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
 void StmtProfiler::VisitCompoundLiteralExpr(const CompoundLiteralExpr *S) {
   VisitExpr(S);
   if (OpenMPCondition)
-    VisitType(S->getType());
+    VisitTypeSourceInfo(S->getTypeSourceInfo());
   ID.AddBoolean(S->isFileScope());
 }
 
@@ -1703,7 +1812,7 @@ void StmtProfiler::VisitImplicitCastExpr(const ImplicitCastExpr *S) {
 
 void StmtProfiler::VisitExplicitCastExpr(const ExplicitCastExpr *S) {
   VisitCastExpr(S);
-  VisitType(S->getTypeAsWritten());
+  VisitTypeSourceInfo(S->getTypeInfoAsWritten());
 }
 
 void StmtProfiler::VisitCStyleCastExpr(const CStyleCastExpr *S) {
@@ -1745,7 +1854,7 @@ void StmtProfiler::VisitShuffleVectorExpr(const ShuffleVectorExpr *S) {
 void StmtProfiler::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
   VisitExpr(S);
   if (OpenMPCondition)
-    VisitType(S->getTypeSourceInfo()->getType());
+    VisitTypeSourceInfo(S->getTypeSourceInfo());
 }
 
 void StmtProfiler::VisitChooseExpr(const ChooseExpr *S) {
@@ -1759,7 +1868,7 @@ void StmtProfiler::VisitGNUNullExpr(const GNUNullExpr *S) {
 void StmtProfiler::VisitVAArgExpr(const VAArgExpr *S) {
   VisitExpr(S);
   if (OpenMPCondition)
-    VisitType(S->getWrittenTypeInfo()->getType());
+    VisitTypeSourceInfo(S->getWrittenTypeInfo());
 }
 
 void StmtProfiler::VisitInitListExpr(const InitListExpr *S) {
@@ -2367,8 +2476,12 @@ void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
 void
 StmtProfiler::VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *S) {
   VisitExpr(S);
-  if (OpenMPCondition)
-    VisitType(S->getType());
+  if (OpenMPCondition) {
+    if (const auto *TSI = S->getTypeSourceInfo())
+      VisitTypeSourceInfo(TSI);
+    else
+      VisitType(S->getType());
+  }
 }
 
 void StmtProfiler::VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
@@ -2430,13 +2543,18 @@ void StmtProfiler::VisitTypeTraitExpr(const TypeTraitExpr *S) {
   ID.AddInteger(S->getTrait());
   ID.AddInteger(S->getNumArgs());
   for (unsigned I = 0, N = S->getNumArgs(); I != N; ++I)
-    VisitType(S->getArg(I)->getType());
+    VisitTypeSourceInfo(S->getArg(I));
 }
 
 void StmtProfiler::VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *S) {
   VisitExpr(S);
   ID.AddInteger(S->getTrait());
-  VisitType(S->getQueriedType());
+  VisitTypeSourceInfo(S->getQueriedTypeSourceInfo());
+  if (OpenMPCondition) {
+    ID.AddBoolean(S->getDimensionExpression() != nullptr);
+    if (S->getDimensionExpression())
+      Visit(S->getDimensionExpression());
+  }
 }
 
 void StmtProfiler::VisitExpressionTraitExpr(const ExpressionTraitExpr *S) {
@@ -2544,6 +2662,7 @@ void StmtProfiler::VisitSubstNonTypeTemplateParmPackExpr(
 void StmtProfiler::VisitSubstNonTypeTemplateParmExpr(
     const SubstNonTypeTemplateParmExpr *E) {
   if (OpenMPCondition) {
+    HasConditionTemplateBinding = true;
     VisitStmtNoChildren(E);
     ID.AddPointer(E->getAssociatedDecl()->getCanonicalDecl());
     ID.AddInteger(E->getIndex());
@@ -3154,7 +3273,10 @@ void clang::profileOpenMPCondition(const Expr *E, const ASTContext &Context,
   StmtProfilerWithPointers Profiler(ID, Context, /*Canonical=*/true,
                                     /*ProfileLambdaExpr=*/true,
                                     /*OpenMPCondition=*/true);
-  Profiler.Visit(E->IgnoreParenImpCasts());
+  // IgnoreParenImpCasts also unwraps substituted template parameters. Their
+  // bindings are part of the source condition, even if the values are equal.
+  Profiler.Visit(
+      IgnoreExprNodes(E, IgnoreParensSingleStep, IgnoreImplicitSingleStep));
 }
 
 void Stmt::ProcessODRHash(llvm::FoldingSetNodeID &ID,

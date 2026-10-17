@@ -2542,10 +2542,35 @@ struct ConditionIdentity {
   }
   bool Pre(const parser::Name &name) {
     AddNode<parser::Name>();
-    if (name.symbol && !name.symbol->has<MiscDetails>())
-      id.AddPointer(&name.symbol->GetUltimate());
-    else
+    enum { Declaration, Intrinsic, ImpliedDoIndex, Placeholder };
+    if (!name.symbol || name.symbol->has<MiscDetails>()) {
+      id.AddInteger(Placeholder);
       id.AddString(name.source.ToString());
+    } else {
+      const Symbol &symbol{name.symbol->GetUltimate()};
+      if (symbol.attrs().test(Attr::INTRINSIC)) {
+        // Intrinsics have scope-local symbols. The resolved operation is
+        // recorded by ConditionOperations; its declaration site is immaterial.
+        id.AddInteger(Intrinsic);
+        id.AddString(symbol.name().ToString());
+      } else if (symbol.owner().kind() == Scope::Kind::ImpliedDos) {
+        // Each occurrence creates a fresh statement entity. Identify its
+        // binding by nesting and type, rather than the occurrence's address.
+        id.AddInteger(ImpliedDoIndex);
+        unsigned depth{0};
+        for (const Scope *scope{&symbol.owner()}; !scope->IsGlobal();
+            scope = &scope->parent())
+          depth += scope->kind() == Scope::Kind::ImpliedDos;
+        id.AddInteger(depth);
+        if (auto type{evaluate::DynamicType::From(symbol)}) {
+          id.AddInteger(static_cast<unsigned>(type->category()));
+          id.AddInteger(type->kind());
+        }
+      } else {
+        id.AddInteger(Declaration);
+        id.AddPointer(&symbol);
+      }
+    }
     return false;
   }
   bool Pre(const parser::Expr &expr) {

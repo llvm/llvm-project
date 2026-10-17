@@ -209,3 +209,32 @@ subroutine same_match_any(a, b)
   !$omp& extension(match_any)}: taskwait)
 end subroutine
 
+
+! CHECK-LABEL: func.func @_QPrenamed_implied_do(
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.taskwait
+! CHECK-NOT: omp.taskyield
+! CHECK: return
+subroutine renamed_implied_do()
+  integer(8) :: i, j
+  !$omp metadirective &
+  !$omp& when(user={condition(kind([(i, i=1,1)]) > 0)}, &
+  !$omp& implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp& when(user={condition(kind([(j, j=1,1)]) > 0)}, device={kind(cpu)}, &
+  !$omp& implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdifferent_implied_do_kind(
+! CHECK-NOT: omp.taskwait
+! CHECK: omp.taskyield
+! CHECK-NOT: omp.taskwait
+! CHECK: return
+subroutine different_implied_do_kind()
+  integer(4) :: i
+  integer(8) :: j
+  !$omp metadirective &
+  !$omp& when(user={condition(kind([(i, i=1,1)]) > 0)}, &
+  !$omp& implementation={vendor(score(4): llvm)}: taskyield) &
+  !$omp& when(user={condition(kind([(j, j=1,1)]) > 0)}, device={kind(cpu)}, &
+  !$omp& implementation={vendor(score(3): llvm)}: taskwait)
+end subroutine
