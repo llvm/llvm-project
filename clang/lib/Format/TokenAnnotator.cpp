@@ -412,6 +412,12 @@ private:
                OpeningParen.Previous->MatchingParen->isOneOf(
                    TT_ObjCBlockLParen, TT_FunctionTypeLParen)) {
       Contexts.back().IsExpression = false;
+    } else if (Contexts.size() > 1 &&
+               Contexts[Contexts.size() - 2].ContextType ==
+                   Context::TemplateArgument &&
+               OpeningParen.Previous &&
+               OpeningParen.Previous->isTypeOrIdentifier(LangOpts)) {
+      Contexts.back().IsExpression = false;
     } else if (!Line.MustBeDeclaration &&
                (!Line.InPPDirective || (Line.InMacroBody && !Scopes.empty()))) {
       bool IsForOrCatch =
