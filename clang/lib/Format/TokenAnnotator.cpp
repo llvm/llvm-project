@@ -3437,7 +3437,7 @@ private:
           Current->isOneOf(Keywords.kw_in, Keywords.kw_as)) {
         return prec::Relational;
       }
-      if (Current->isOneOf(TT_BinaryOperator, tok::comma))
+      if (Current->isOneOf(TT_BinaryOperator, TT_EnumEqual, tok::comma))
         return Current->getPrecedence();
       if (Current->isOneOf(tok::period, tok::arrow) &&
           Current->isNot(TT_TrailingReturnArrow)) {
