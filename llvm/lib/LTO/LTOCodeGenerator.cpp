@@ -128,6 +128,7 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
   Context.setDiscardValueNames(LTODiscardValueNames);
   Context.enableDebugTypeODRUniquing();
 
+  Config.LibraryOptions = &Context.getLibraryOptions();
   Config.CodeModel = std::nullopt;
   Config.StatsFile = LTOStatsFile;
   Config.RunCSIRInstr = LTORunCSIRInstr;
@@ -186,6 +187,7 @@ void LTOCodeGenerator::setDebugInfo(lto_debug_model Debug) {
 
 void LTOCodeGenerator::setOptLevel(unsigned Level) {
   Config.OptLevel = Level;
+  Config.PTO = PipelineTuningOptions(Config.LibraryOptions);
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
@@ -409,8 +411,10 @@ bool LTOCodeGenerator::determineTarget() {
 
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
+  TargetOptions Options = Config.Options;
+  Options.MCOptions.LibraryOptions = Config.LibraryOptions;
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Config.Options,
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Options,
       Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
@@ -675,17 +679,12 @@ void LTOCodeGenerator::setCodeGenDebugOptions(ArrayRef<StringRef> Options) {
 }
 
 void LTOCodeGenerator::parseCodeGenDebugOptions() {
-  if (!CodegenOptions.empty())
-    llvm::parseCommandLineOptions(CodegenOptions);
-}
-
-void llvm::parseCommandLineOptions(std::vector<std::string> &Options) {
-  if (!Options.empty()) {
+  if (!CodegenOptions.empty()) {
     // ParseCommandLineOptions() expects argv[0] to be program name.
     std::vector<const char *> CodegenArgv(1, "libLLVMLTO");
-    for (std::string &Arg : Options)
+    for (std::string &Arg : CodegenOptions)
       CodegenArgv.push_back(Arg.c_str());
-    cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+    cl::parseCommandLineOptions(Context.getLibraryOptions(), CodegenArgv);
   }
 }
 
