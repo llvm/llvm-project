@@ -5,8 +5,8 @@ typedef int v8i __attribute__((ext_vector_type(8)));
 typedef _Bool v8b __attribute__((ext_vector_type(8)));
 typedef int gv8i [[gnu::vector_size(sizeof(int) * 8)]];
 
-// CHECK-LABEL: define dso_local <8 x i32> @test_load(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-LABEL: define dso_local void @test_load(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -21,14 +21,17 @@ typedef int gv8i [[gnu::vector_size(sizeof(int) * 8)]];
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP2]], <8 x i1> [[TMP1]], <8 x i32> poison)
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_LOAD]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_LOAD]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i test_load(v8b m, int *p) {
   return __builtin_masked_load(m, p);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @test_load_passthru(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @test_load_passthru(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -47,14 +50,17 @@ v8i test_load(v8b m, int *p) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[T_ADDR]], align 32
 // CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP3]], <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_LOAD]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_LOAD]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i test_load_passthru(v8b m, int *p, v8i t) {
   return __builtin_masked_load(m, p, t);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @test_load_expand(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @test_load_expand(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[M_COERCE:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -73,14 +79,17 @@ v8i test_load_passthru(v8b m, int *p, v8i t) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[T_ADDR]], align 32
 // CHECK-NEXT:    [[MASKED_EXPAND_LOAD:%.*]] = call <8 x i32> @llvm.masked.expandload.v8i32.p0(ptr [[TMP3]], <8 x i1> [[TMP2]], <8 x i32> [[TMP4]])
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_EXPAND_LOAD]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_EXPAND_LOAD]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP5:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i test_load_expand(v8b m, int *p, v8i t) {
   return __builtin_masked_expand_load(m, p, t);
 }
 
 // CHECK-LABEL: define dso_local void @test_store(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -106,7 +115,7 @@ void test_store(v8b m, v8i v, int *p) {
 }
 
 // CHECK-LABEL: define dso_local void @gtest_store(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -132,7 +141,7 @@ void gtest_store(v8b m, gv8i v, int *p) {
 }
 
 // CHECK-LABEL: define dso_local void @test_compress_store(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -158,7 +167,7 @@ void test_compress_store(v8b m, v8i v, int *p) {
 }
 
 // CHECK-LABEL: define dso_local void @gtest_compress_store(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -183,8 +192,8 @@ void gtest_compress_store(v8b m, gv8i v, int *p) {
   __builtin_masked_compress_store(m, v, p);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @test_gather(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @test_gather(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -204,14 +213,17 @@ void gtest_compress_store(v8b m, gv8i v, int *p) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], <8 x i32> [[TMP3]]
 // CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP5]], <8 x i1> [[TMP2]], <8 x i32> poison)
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_GATHER]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_GATHER]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i test_gather(v8b mask, v8i idx, int *ptr) {
   return __builtin_masked_gather(mask, idx, ptr);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @gtest_gather(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @gtest_gather(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -231,14 +243,17 @@ v8i test_gather(v8b mask, v8i idx, int *ptr) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], <8 x i32> [[TMP3]]
 // CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP5]], <8 x i1> [[TMP2]], <8 x i32> poison)
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_GATHER]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_GATHER]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i gtest_gather(v8b mask, gv8i idx, int *ptr) {
   return __builtin_masked_gather(mask, idx, ptr);
 }
 
 // CHECK-LABEL: define dso_local void @test_scatter(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -269,7 +284,7 @@ void test_scatter(v8b mask, v8i val, v8i idx, int *ptr) {
 }
 
 // CHECK-LABEL: define dso_local void @gtest_scatter(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -299,8 +314,8 @@ void gtest_scatter(v8b mask, gv8i val, gv8i idx, int *ptr) {
   __builtin_masked_scatter(mask, val, idx, ptr);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @test_load_as(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @test_load_as(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[MASK_COERCE:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -315,14 +330,17 @@ void gtest_scatter(v8b mask, gv8i val, gv8i idx, int *ptr) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 [[LOAD_BITS2]] to <8 x i1>
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(42), ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p42(ptr addrspace(42) align 4 [[TMP2]], <8 x i1> [[TMP1]], <8 x i32> poison)
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_LOAD]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_LOAD]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i test_load_as(v8b mask, int __attribute__((address_space(42))) * ptr) {
   return __builtin_masked_load(mask, ptr);
 }
 
 // CHECK-LABEL: define dso_local void @test_store_as(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[P:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -348,7 +366,7 @@ void test_store_as(v8b m, v8i v, int __attribute__((address_space(42))) *p) {
 }
 
 // CHECK-LABEL: define dso_local void @gtest_store_as(
-// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[P:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[M_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i8, align 1
@@ -373,8 +391,8 @@ void gtest_store_as(v8b m, gv8i v, int __attribute__((address_space(42))) *p) {
   __builtin_masked_store(m, v, p);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @test_gather_as(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @test_gather_as(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -394,14 +412,17 @@ void gtest_store_as(v8b m, gv8i v, int __attribute__((address_space(42))) *p) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(42), ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr addrspace(42) [[TMP4]], <8 x i32> [[TMP3]]
 // CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p42(<8 x ptr addrspace(42)> align 4 [[TMP5]], <8 x i1> [[TMP2]], <8 x i32> poison)
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_GATHER]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_GATHER]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i test_gather_as(v8b mask, v8i idx, int __attribute__((address_space(42))) *ptr) {
   return __builtin_masked_gather(mask, idx, ptr);
 }
 
-// CHECK-LABEL: define dso_local <8 x i32> @gtest_gather_as(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @gtest_gather_as(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(<8 x i32>) align 32 [[AGG_RESULT:%.*]], i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -421,14 +442,17 @@ v8i test_gather_as(v8b mask, v8i idx, int __attribute__((address_space(42))) *pt
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(42), ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr addrspace(42) [[TMP4]], <8 x i32> [[TMP3]]
 // CHECK-NEXT:    [[MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p42(<8 x ptr addrspace(42)> align 4 [[TMP5]], <8 x i1> [[TMP2]], <8 x i32> poison)
-// CHECK-NEXT:    ret <8 x i32> [[MASKED_GATHER]]
+// CHECK-NEXT:    store <8 x i32> [[MASKED_GATHER]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i32>, ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[AGG_RESULT]], align 32
+// CHECK-NEXT:    ret void
 //
 v8i gtest_gather_as(v8b mask, gv8i idx, int __attribute__((address_space(42))) *ptr) {
   return __builtin_masked_gather(mask, idx, ptr);
 }
 
 // CHECK-LABEL: define dso_local void @test_scatter_as(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
@@ -459,7 +483,7 @@ void test_scatter_as(v8b mask, v8i val, v8i idx, int __attribute__((address_spac
 }
 
 // CHECK-LABEL: define dso_local void @gtest_scatter_as(
-// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: i8 noundef [[MASK_COERCE:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP0:%.*]], ptr noundef byval(<8 x i32>) align 32 [[TMP1:%.*]], ptr addrspace(42) noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[MASK_ADDR:%.*]] = alloca i8, align 1
