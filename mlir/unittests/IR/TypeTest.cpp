@@ -10,6 +10,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/APFloat.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -68,4 +70,22 @@ TEST(Type, Casting) {
   EXPECT_FALSE(static_cast<bool>(dyn_cast_if_present<IntegerType>(nullTy)));
 
   EXPECT_EQ(8u, cast<IntegerType>(intTy).getWidth());
+}
+
+TEST(Type, OCPInt8FixedPointSemantics) {
+  llvm::FixedPointSemantics semantics = OCPInt8Type::getFixedPointSemantics();
+  EXPECT_EQ(8u, semantics.getWidth());
+  EXPECT_EQ(6u, semantics.getScale());
+  EXPECT_TRUE(semantics.isSigned());
+  EXPECT_FALSE(semantics.isSaturated());
+  EXPECT_FALSE(semantics.hasUnsignedPadding());
+
+  auto asDouble = [&](uint8_t bits) {
+    return llvm::APFixedPoint(llvm::APInt(8, bits), semantics)
+        .convertToFloat(llvm::APFloat::IEEEdouble())
+        .convertToDouble();
+  };
+  EXPECT_DOUBLE_EQ(-2.0, asDouble(0x80));
+  EXPECT_DOUBLE_EQ(1.0 / 64.0, asDouble(0x01));
+  EXPECT_DOUBLE_EQ(127.0 / 64.0, asDouble(0x7f));
 }

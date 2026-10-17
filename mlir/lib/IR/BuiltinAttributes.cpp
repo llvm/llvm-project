@@ -1561,6 +1561,10 @@ Attribute SparseElementsAttr::getZeroAttr() const {
   if (llvm::isa<DenseStringElementsAttr>(getValues()))
     return StringAttr::get("", eltType);
 
+  // OCP INT8 elements use signless i8 attributes for their encoded bits.
+  if (llvm::isa<OCPInt8Type>(eltType))
+    return IntegerAttr::get(IntegerType::get(eltType.getContext(), 8), 0);
+
   // Otherwise, this is an integer.
   return IntegerAttr::get(eltType, 0);
 }

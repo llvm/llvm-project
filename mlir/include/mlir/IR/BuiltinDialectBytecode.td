@@ -318,6 +318,8 @@ def Float6E3M2FNType : EnableFloatPrintingJune2026<(type)>;
 
 def Float8E8M0FNUType : EnableFloatPrintingJune2026<(type)>;
 
+def OCPInt8Type : EnableFloatPrintingJune2026<(type)>;
+
 def ComplexType : DialectType<(type
   Type:$elementType
 )>;
@@ -469,7 +471,8 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     Float6E3M2FNType,
     Float8E8M0FNUType,
     TokenType,
-    GraphType
+    GraphType,
+    OCPInt8Type
   ];
 }
 
