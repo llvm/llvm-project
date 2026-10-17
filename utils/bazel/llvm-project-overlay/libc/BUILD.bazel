@@ -9630,9 +9630,9 @@ libc_support_library(
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
         ":__support_common",
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -9641,10 +9641,9 @@ libc_support_library(
     hdrs = ["src/__support/math/ilogbf128.h"],
     deps = [
         ":__support_common",
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":__support_macros_properties_types",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -10043,9 +10042,9 @@ libc_support_library(
     hdrs = ["src/__support/math/llogbf128.h"],
     deps = [
         ":__support_common",
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -10420,9 +10419,9 @@ libc_support_library(
     hdrs = ["src/__support/math/logbf128.h"],
     deps = [
         ":__support_common",
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -13894,6 +13893,8 @@ libc_math_function(
 libc_math_function(
     name = "frexpf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_frexpf128",
     ],
 )
@@ -14103,6 +14104,8 @@ libc_math_function(
 libc_math_function(
     name = "ilogbf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_ilogbf128",
     ],
 )
@@ -14195,6 +14198,8 @@ libc_math_function(
 libc_math_function(
     name = "llogbf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_llogbf128",
     ],
 )
@@ -14402,6 +14407,8 @@ libc_math_function(
 libc_math_function(
     name = "logbf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_logbf128",
     ],
 )

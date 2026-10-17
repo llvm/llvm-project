@@ -1154,6 +1154,9 @@ math_test(
 math_test(
     name = "frexpf128",
     hdrs = ["FrexpTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1324,6 +1327,9 @@ math_test(
 math_test(
     name = "ilogbf128",
     hdrs = ["ILogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1385,6 +1391,9 @@ math_test(
 math_test(
     name = "llogbf128",
     hdrs = ["ILogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1541,6 +1550,9 @@ math_test(
 math_test(
     name = "logbf128",
     hdrs = ["LogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
