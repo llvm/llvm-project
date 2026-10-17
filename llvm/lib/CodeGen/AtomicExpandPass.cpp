@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -2243,6 +2244,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   LLVMContext &Ctx = I->getContext();
   Module *M = I->getModule();
   const DataLayout &DL = M->getDataLayout();
+  const Triple &TT = M->getTargetTriple();
   IRBuilder<> Builder(I);
   IRBuilder<> AllocaBuilder(&I->getFunction()->getEntryBlock().front());
 
@@ -2388,17 +2390,25 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Args.push_back(AllocaResult);
   }
 
+  // The ordering arguments are C ints, which may need to be extended.
+  Attribute::AttrKind OrderingExt =
+      TargetLibraryInfo::getExtAttrForI32Param(TT, /*Signed=*/true);
+
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
+  Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
 
   // 'failure_order' argument, if present.
-  if (Ordering2Val)
+  if (Ordering2Val) {
     Args.push_back(Ordering2Val);
+    Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  }
 
   // Now, the return type.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
-    Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);
+    if (auto AK = TargetLibraryInfo::getExtAttrForBoolReturn(TT))
+      Attr = Attr.addRetAttribute(Ctx, AK);
   } else if (HasResult && UseSizedLibcall)
     ResultTy = SizedIntTy;
   else
