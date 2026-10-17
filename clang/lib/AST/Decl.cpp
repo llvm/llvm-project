@@ -2309,16 +2309,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isSingleLineLanguageLinkage(*this))
     return DeclarationOnly;
 
-  // C99 6.9.2p2:
-  //   A declaration of an object that has file scope without an initializer,
-  //   and without a storage class specifier or the scs 'static', constitutes
-  //   a tentative definition.
-  // No such thing in C++.
-  if (!C.getLangOpts().CPlusPlus && isFileVarDecl())
+  // C23 6.9.3p2:
+  //   A declaration of an identifier for an object that has file scope
+  //   without an initializer, and without the storage-class specifier extern
+  //   or thread_local, constitutes a tentative definition.
+  // In C23 and later, file-scope thread_local / _Thread_local / __thread
+  // declarations without initializers are full external definitions
+  // (C23 6.9.3p1). Pre-C23 standards allowed tentative TLS definitions, so we
+  // preserve that behavior in earlier language modes.
+  if (!C.getLangOpts().CPlusPlus && isFileVarDecl() &&
+      (getTLSKind() == TLS_None || !C.getLangOpts().C23))
     return TentativeDefinition;
 
-  // What's left is (in C, block-scope) declarations without initializers or
-  // external storage. These are definitions.
+  // What's left is (in C) block-scope declarations and, in C23, file-scope
+  // thread_local declarations without initializers or external storage. These
+  // are definitions.
   return Definition;
 }
 
@@ -2712,7 +2717,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
-      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      if (auto *VTD = dyn_cast<VarTemplateDecl *>(From)) {
         while (!VTD->isMemberSpecialization()) {
           auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
           if (!NewVTD)
@@ -2722,7 +2727,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
         return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
-              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
         while (!VTPSD->isMemberSpecialization()) {
           auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
           if (!NewVTPSD)
@@ -3868,6 +3873,11 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
 unsigned FunctionDecl::getNumParams() const {
   const auto *FPT = getType()->getAs<FunctionProtoType>();
   return FPT ? FPT->getNumParams() : 0;
+}
+
+unsigned FunctionDecl::getNumParamsIncludingThis() const {
+  const auto *MD = dyn_cast<CXXMethodDecl>(this);
+  return getNumParams() + (MD && MD->isImplicitObjectMemberFunction());
 }
 
 void FunctionDecl::setParams(ASTContext &C,

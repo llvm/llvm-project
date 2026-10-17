@@ -13,8 +13,8 @@ source_filename = "t5.cpp"
 
 ; CHECK:     %0:vr256 = VMOV
 ; CHECK:     %1:vr256 = VMOV
-; CHECK-DAG: FAKE_USE killed %1
-; CHECK-DAG: FAKE_USE killed %0
+; CHECK-DAG: FAKE_USE %1
+; CHECK-DAG: FAKE_USE %0
 ; CHECK:     RET
 define void @_Z5test0v() local_unnamed_addr #0 {
 entry:

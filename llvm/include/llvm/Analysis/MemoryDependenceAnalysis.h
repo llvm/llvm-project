@@ -270,7 +270,7 @@ public:
   /// The address is always null for a non-local 'call' dependence.
   ///
   /// If the result is a select dependency (\see MemDepResult::isSelect), the
-  /// returned SelectAddr instead carries the select condition and the two
+  /// returned SelectAddr instead carries the select instruction and the two
   /// translated addresses (true/false side).
   SelectAddr getAddress() const { return Address; }
 };

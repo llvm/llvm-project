@@ -140,9 +140,6 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   // Taking any locking in the fork context can lead to deadlocks.
   // If any locks are already taken, it's too late to do this check.
   CheckedMutex::CheckNoLocks();
-  // For the same reason check we didn't lock thread_registry yet.
-  if (SANITIZER_DEBUG)
-    ThreadRegistryLock l(&ctx->thread_registry);
   if (!flags()->report_bugs || thr->suppress_reports)
     return false;
   switch (typ) {
@@ -218,30 +215,16 @@ void ScopedReport::SymbolizeStackElems() {
   }
 
   // symbolize locations
-  for (usize i = 0, size = rep_->locs.Size(); i < size; i++) {
-    // added locations have a NULL placeholder - don't dereference them
-    if (ReportLocation *loc = rep_->locs[i])
-      loc->stack = SymbolizeStackId(loc->stack_id);
-  }
+  for (usize i = 0, size = rep_->locs.Size(); i < size; i++)
+    rep_->locs[i]->stack = SymbolizeStackId(rep_->locs[i]->stack_id);
 
   // symbolize any added locations
-  for (usize i = 0, size = rep_->added_location_addrs.Size(); i < size; i++) {
-    AddedLocationAddr *added_loc = &rep_->added_location_addrs[i];
-    if (ReportLocation *loc = SymbolizeData(added_loc->addr)) {
+  for (usize i = 0, size = rep_->loc_addrs.Size(); i < size; i++) {
+    if (ReportLocation* loc = SymbolizeData(rep_->loc_addrs[i])) {
       loc->suppressable = true;
-      rep_->locs[added_loc->locs_idx] = loc;
+      rep_->locs.PushBack(loc);
     }
   }
-
-  // Filter out any added location placeholders that could not be symbolized
-  usize j = 0;
-  for (usize i = 0, size = rep_->locs.Size(); i < size; i++) {
-    if (rep_->locs[i] != nullptr) {
-      rep_->locs[j] = rep_->locs[i];
-      j++;
-    }
-  }
-  rep_->locs.Resize(j);
 
   // symbolize threads
   for (usize i = 0, size = rep_->threads.Size(); i < size; i++) {
@@ -389,8 +372,7 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
     }
   }
 #endif
-  rep_->added_location_addrs.PushBack({addr, rep_->locs.Size()});
-  rep_->locs.PushBack(nullptr);
+  rep_->loc_addrs.PushBack(addr);
 }
 
 #if !SANITIZER_GO

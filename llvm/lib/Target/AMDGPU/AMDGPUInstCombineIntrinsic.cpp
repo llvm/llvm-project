@@ -340,7 +340,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         II.mutateType(HalfVecTy);
         II.setCalledFunction(HalfDecl);
 
-        IRBuilder<> Builder(II.getContext());
+        IRBuilder<> Builder(*M);
         for (auto &[Ext, Tr] : ExtractTruncPairs) {
           Value *Idx = Ext->getIndexOperand();
 
@@ -1751,7 +1751,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return nullptr;
 
     // TODO: Can raise lower bound by inspecting first argument.
-    ConstantRange MbcntRange(APInt(32, 0), APInt(32, 32 + 1));
+    // Wave64 mbcnt_lo adds at most 32. Otherwise these add at most 31.
+    unsigned MaxCount =
+        IID == Intrinsic::amdgcn_mbcnt_lo && ST->isWave64() ? 32 : 31;
+    ConstantRange MbcntRange(APInt(32, 0), APInt(32, MaxCount + 1));
     ConstantRange ComputedRange = AccRange.add(MbcntRange);
     if (ComputedRange.isFullSet())
       return nullptr;
@@ -2155,9 +2158,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceInstUsesWith(II, NewCall);
   }
   case Intrinsic::amdgcn_raw_buffer_store_format:
+  case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
+  case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
   case Intrinsic::amdgcn_raw_tbuffer_store:
+  case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
+  case Intrinsic::amdgcn_struct_ptr_tbuffer_store:
   case Intrinsic::amdgcn_image_store_1d:
   case Intrinsic::amdgcn_image_store_1darray:
   case Intrinsic::amdgcn_image_store_2d:
@@ -2505,7 +2512,7 @@ Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
   SmallVector<OperandBundleDef, 2> OpBundles;
   II.getOperandBundlesAsDefs(OpBundles);
 
-  Module *M = IC.Builder.GetInsertBlock()->getModule();
+  Module *M = IC.Builder.getModule();
   Function *Remangled =
       Intrinsic::getOrInsertDeclaration(M, II.getIntrinsicID(), {NewVT});
 

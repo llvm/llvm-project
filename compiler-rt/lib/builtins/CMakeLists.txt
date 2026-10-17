@@ -609,8 +609,8 @@ set(thumb1_base_SOURCES
   arm/udivsi3.S
   ${GENERIC_SOURCES}
 )
-set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
-set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c arm/aeabi_frsub.c PROVIDES subsf3 aeabi_frsub)
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c arm/aeabi_drsub.c PROVIDES subdf3 aeabi_drsub)
 set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
 set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
 set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
@@ -631,7 +631,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     ${thumb1_base_SOURCES}
   )
   set_special_properties(arm/thumb1/addsf3fast.S
-    SUPERSEDES addsf3.c subsf3.c PROVIDES addsf3 subsf3)
+    SUPERSEDES addsf3.c subsf3.c arm/aeabi_frsub.c PROVIDES addsf3 subsf3 aeabi_frsub)
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
   set_special_properties(arm/thumb1/cmpsf2.S
@@ -940,6 +940,14 @@ set(hexagon_SOURCES
   hexagon/udivsi3.S
   hexagon/umoddi3.S
   hexagon/umodsi3.S
+  hexagon/ieee_qfloat_conv_hf_to_b_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_b_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_h_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_h_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_ub_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_ub_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_uh_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_uh_rne.S
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
 )

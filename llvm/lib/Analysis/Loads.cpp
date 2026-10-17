@@ -356,7 +356,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                             : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
-  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+  auto LoopGuards = ScalarEvolution::LoopGuards::collectOnDemand(L, SE);
 
   auto &DL = L->getHeader()->getDataLayout();
   const auto &[AccessStart, AccessEnd] =
@@ -371,12 +371,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(PtrDiff))
     return false;
 
-  if (!LoopGuards)
-    LoopGuards.emplace(
-        ScalarEvolution::LoopGuards::collect(AddRec->getLoop(), SE));
-
   APInt MaxPtrDiff =
-      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, *LoopGuards));
+      SE.getUnsignedRangeMax(SE.applyLoopGuards(PtrDiff, LoopGuards));
 
   Value *Base = nullptr;
   APInt AccessSize;
@@ -434,8 +430,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                    SE.getNoopOrZeroExtend(DerefBytesSCEV, WiderTy);
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
-                   SE.applyLoopGuards(AccessSizeExt, *LoopGuards),
-                   SE.applyLoopGuards(DerefBytesExt, *LoopGuards));
+                   SE.applyLoopGuards(AccessSizeExt, LoopGuards),
+                   SE.applyLoopGuards(DerefBytesExt, LoopGuards));
              }) ||
          isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }
@@ -455,8 +451,9 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
                                        const APInt &Size,
-                                       const SimplifyQuery &SQ) {
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ)) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
+  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ, IgnoreFree)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
     if (!SQ.CtxI || !suppressSpeculativeLoadForSanitizers(*SQ.CtxI))
@@ -486,7 +483,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 
     // If we see a free or a call which may write to memory (i.e. which might do
     // a free) the pointer could be marked invalid.
-    if (isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
+    if (!IgnoreFree && isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
         !isa<LifetimeIntrinsic>(BBI))
       return false;
 
@@ -528,13 +525,14 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 }
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                       const SimplifyQuery &SQ) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
   TypeSize TySize = SQ.DL.getTypeStoreSize(Ty);
   if (TySize.isScalable())
     return false;
   APInt Size(SQ.DL.getIndexTypeSizeInBits(V->getType()),
              TySize.getFixedValue());
-  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ);
+  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ, IgnoreFree);
 }
 
 /// DefMaxInstsToScan - the default number of maximum instructions
@@ -722,10 +720,10 @@ Value *llvm::findAvailablePtrLoadStore(
   const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
-    // We must ignore debug info directives when counting (otherwise they
+    // We must ignore pseudo probes when counting (otherwise they
     // would affect codegen).
     Instruction *Inst = &*--ScanFrom;
-    if (Inst->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     // Restore ScanFrom to expected value in case next test succeeds
@@ -813,7 +811,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
-    if (Inst.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     if (MaxInstsToScan-- == 0)

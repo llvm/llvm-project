@@ -142,6 +142,8 @@ add_libc_test(
   SRCS
     clock_getres_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
     libc.src.time.clock_getres
 )
 

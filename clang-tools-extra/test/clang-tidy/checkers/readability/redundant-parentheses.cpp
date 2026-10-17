@@ -74,6 +74,20 @@ void ignoreStdMaxMin() {
   (std::min)(1,2);
 }
 
+int global = 0;
+template <int &R> int &referenceTemplateArgument() {
+  return R;
+}
+int &useReferenceTemplateArgument() {
+  return referenceTemplateArgument<global>();
+}
+
+extern "C" int printf(const char *, ...);
+struct Dumped { int x; };
+void dumpStruct(Dumped *d) {
+  __builtin_dump_struct(d, printf);
+}
+
 struct Foo
 {
   bool x;
