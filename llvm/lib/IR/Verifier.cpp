@@ -7477,6 +7477,24 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptoui_sat: {
+    Type *SrcTy = Call.getOperand(0)->getType();
+    Type *DestTy = Call.getType();
+
+    Check(SrcTy->isVectorTy() == DestTy->isVectorTy(),
+          "fptosi.sat/fptoui.sat argument and result types must both be either "
+          "vector or scalar types",
+          Call);
+    if (DestTy->isVectorTy()) {
+      auto SrcVecLen = cast<VectorType>(SrcTy)->getElementCount();
+      auto DestVecLen = cast<VectorType>(DestTy)->getElementCount();
+      Check(SrcVecLen == DestVecLen,
+            "return type and arguments must have the same number of elements",
+            Call);
+    }
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
