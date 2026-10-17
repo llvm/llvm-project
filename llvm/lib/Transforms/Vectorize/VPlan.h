@@ -1287,6 +1287,9 @@ public:
   /// for widened arguments passed to a masked variant.
   VPIRAttributes(const CallInst &CI, FunctionType *WideTy, bool IsMaskedCall);
 
+  /// Keep only the attributes valid for both this and \p Other.
+  void intersectAttrs(const VPIRAttributes &Other, LLVMContext &Ctx);
+
   /// Apply the stored attributes to the widened call \p WideCall.
   void applyAttrs(CallInst &WideCall) const {
     WideCall.setAttributes(CallAttrs);
