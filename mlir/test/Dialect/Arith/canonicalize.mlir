@@ -4019,6 +4019,18 @@ func.func @test7(%arg0: i32) -> i1 {
   // CHECK: arith.cmpi ugt, %[[arg0]], %[[c3]] : i32
 }
 
+// CHECK-LABEL: @test8(
+// CHECK: %[[true:.+]] = arith.constant true
+// CHECK: %[[false:.+]] = arith.constant false
+// CHECK: return %[[true]], %[[false]]
+func.func @test8(%arg0: i1) -> (i1, i1) {
+  %cst = arith.constant 0.000000e+00 : bf16
+  %1 = arith.sitofp %arg0 : i1 to bf16
+  %2 = arith.cmpf true, %1, %cst : bf16
+  %3 = arith.cmpf false, %1, %cst : bf16
+  return %2, %3 : i1, i1
+}
+
 // -----
 
 // CHECK-LABEL: @foldShl(
