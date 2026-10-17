@@ -12,6 +12,12 @@
 // XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
+// https://github.com/mstorsjo/llvm-mingw/issues/538
+// UNSUPPORTED: buildhost=mingw
+
+// https://github.com/llvm/llvm-project/issues/52942
+// UNSUPPORTED: tsan
+
 // template<class T, class D = default_delete<T>>
 //   void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
 
