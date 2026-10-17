@@ -1981,7 +1981,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_non_inlineable(<16 x
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_mov_b32 s0, 0x40400000
-; GISEL-NEXT:    v_mov_b32_e32 v42, 0x64
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_mov_b32 s1, s0
 ; GISEL-NEXT:    s_mov_b32 s2, s0
 ; GISEL-NEXT:    s_mov_b32 s3, s0
@@ -1993,9 +1993,10 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_non_inlineable(<16 x
 ; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[6:7]
 ; GISEL-NEXT:    v_mov_b64_e32 v[36:37], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[0:1]
-; GISEL-NEXT:    v_mov_b32_e32 v43, 0x65
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[34:41], v[0:15], v[16:31], v[34:41], v42, v43 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GISEL-NEXT:    s_movk_i32 s0, 0x65
+; GISEL-NEXT:    s_movk_i32 s1, 0x64
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[34:41], v[0:15], v[16:31], v[34:41], s1, s0 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[34:37], off
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[38:41], off offset:16
@@ -3360,7 +3361,7 @@ define amdgpu_ps void @test_wmma_scale_f32_32x16x128_f4_non_inlineable(<16 x i32
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_mov_b32 s0, 0x40400000
-; GISEL-NEXT:    v_mov_b32_e32 v42, 0x64
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_mov_b32 s1, s0
 ; GISEL-NEXT:    s_mov_b32 s2, s0
 ; GISEL-NEXT:    s_mov_b32 s3, s0
@@ -3384,9 +3385,10 @@ define amdgpu_ps void @test_wmma_scale_f32_32x16x128_f4_non_inlineable(<16 x i32
 ; GISEL-NEXT:    v_mov_b64_e32 v[30:31], s[4:5]
 ; GISEL-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
-; GISEL-NEXT:    v_mov_b32_e32 v43, 0x65
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale_f32_32x16x128_f4 v[26:41], v[0:15], v[16:23], v[26:41], v42, v43 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GISEL-NEXT:    s_movk_i32 s0, 0x65
+; GISEL-NEXT:    s_movk_i32 s1, 0x64
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    v_wmma_scale_f32_32x16x128_f4 v[26:41], v[0:15], v[16:23], v[26:41], s1, s0 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[26:29], off
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[30:33], off offset:16

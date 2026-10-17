@@ -1257,9 +1257,9 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_si_scale(<16 x i32> 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_mov_b32_e32 v42, 0x64
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GISEL-NEXT:    s_movk_i32 s1, 0x64
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
@@ -3153,9 +3153,9 @@ define amdgpu_ps void @test_wmma_scale_f32_32x16x128_f4_si_scale(<16 x i32> %A, 
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    v_mov_b32_e32 v42, 0x64
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39], s0, v42 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_reuse
+; GISEL-NEXT:    s_movk_i32 s1, 0x64
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    v_wmma_scale_f32_32x16x128_f4 v[24:39], v[0:15], v[16:23], v[24:39], s0, s1 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[28:31], off offset:16

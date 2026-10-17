@@ -91,17 +91,11 @@ define amdgpu_ps float @bitop3_b32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c)
 }
 
 define amdgpu_ps float @bitop3_b32_vvi(i32 %a, i32 %b) {
-; GFX950-SDAG-LABEL: bitop3_b32_vvi:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_movk_i32 s0, 0x3e8
-; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, s0 bitop3:0x13
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: bitop3_b32_vvi:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3e8
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x13
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: bitop3_b32_vvi:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_movk_i32 s0, 0x3e8
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, s0 bitop3:0x13
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: bitop3_b32_vvi:
 ; GFX1250:       ; %bb.0:
@@ -126,9 +120,9 @@ define amdgpu_ps float @bitop3_b32_vii(i32 %a) {
 ;
 ; GFX950-GISEL-LABEL: bitop3_b32_vii:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_movk_i32 s0, 0x3e8
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7d0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3e8
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x14
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, s0 bitop3:0x14
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-LABEL: bitop3_b32_vii:
@@ -170,10 +164,10 @@ define amdgpu_ps float @bitop3_b32_iii() {
 ;
 ; GFX950-GISEL-LABEL: bitop3_b32_iii:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_movk_i32 s0, 0x3e8
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, 0xbb8
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7d0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3e8
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x15
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, s0 bitop3:0x15
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-LABEL: bitop3_b32_iii:
@@ -338,17 +332,11 @@ define amdgpu_ps half @bitop3_b16_sss(i16 inreg %a, i16 inreg %b, i16 inreg %c) 
 }
 
 define amdgpu_ps half @bitop3_b16_vvi(i16 %a, i16 %b) {
-; GFX950-SDAG-LABEL: bitop3_b16_vvi:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_movk_i32 s0, 0x3e8
-; GFX950-SDAG-NEXT:    v_bitop3_b16 v0, v0, v1, s0 bitop3:0x13
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: bitop3_b16_vvi:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3e8
-; GFX950-GISEL-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:0x13
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: bitop3_b16_vvi:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_movk_i32 s0, 0x3e8
+; GFX950-NEXT:    v_bitop3_b16 v0, v0, v1, s0 bitop3:0x13
+; GFX950-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-TRUE16-LABEL: bitop3_b16_vvi:
 ; GFX1250-TRUE16:       ; %bb.0:
@@ -382,9 +370,9 @@ define amdgpu_ps half @bitop3_b16_vii(i16 %a) {
 ;
 ; GFX950-GISEL-LABEL: bitop3_b16_vii:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_movk_i32 s0, 0x3e8
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7d0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3e8
-; GFX950-GISEL-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:0x14
+; GFX950-GISEL-NEXT:    v_bitop3_b16 v0, v0, v1, s0 bitop3:0x14
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDG-TRUE16-LABEL: bitop3_b16_vii:
@@ -447,10 +435,10 @@ define amdgpu_ps half @bitop3_b16_iii() {
 ;
 ; GFX950-GISEL-LABEL: bitop3_b16_iii:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_movk_i32 s0, 0x3e8
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, 0xbb8
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7d0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0x3e8
-; GFX950-GISEL-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:0x15
+; GFX950-GISEL-NEXT:    v_bitop3_b16 v0, v0, v1, s0 bitop3:0x15
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDG-TRUE16-LABEL: bitop3_b16_iii:

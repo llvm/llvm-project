@@ -333,11 +333,11 @@ define i8 @test_vector_reduce_or_v4i8(<4 x i8> %v) {
 ; GFX9-GISEL-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v2, v1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff00
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, 0xff00
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, s0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff0000
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff000000
-; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, 0xff000000
+; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v1, s0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_or_v4i8:
@@ -523,11 +523,11 @@ define i8 @test_vector_reduce_or_v8i8(<8 x i8> %v) {
 ; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v5, v3
 ; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v2, v1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff00
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, 0xff00
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, s0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff0000
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff000000
-; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, 0xff000000
+; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v1, s0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_or_v8i8:
@@ -791,11 +791,11 @@ define i8 @test_vector_reduce_or_v16i8(<16 x i8> %v) {
 ; GFX9-GISEL-NEXT:    v_or3_b32 v1, v1, v5, v3
 ; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v2, v1
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff00
-; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, 0xff00
+; GFX9-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, s0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff0000
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xff000000
-; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, 0xff000000
+; GFX9-GISEL-NEXT:    v_or3_b32 v0, v0, v1, s0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_or_v16i8:

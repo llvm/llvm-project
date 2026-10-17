@@ -1546,6 +1546,19 @@ public:
   bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
+  /// Return true if \p Copy is a 32-bit copy of an SGPR holding \p Imm to a
+  /// VGPR, and every user of the copy is a VALU instruction that:
+  ///  - has no 32-bit encoding (which might be able to encode \p Imm),
+  ///  - can't encode \p Imm in the operand that reads the copy,
+  ///  - can read the SGPR in that operand instead, and
+  ///  - has room on the constant bus for the SGPR, counting other VGPR
+  ///    operands that are copies of SGPRs as if they had been folded.
+  /// In that case folding \p Imm into the copy would force it to be
+  /// materialized in a VGPR, whereas folding the SGPR into the users later
+  /// would not.
+  bool shouldFoldSGPRInsteadOfLiteral(const MachineInstr &Copy, int64_t Imm,
+                                      const MachineRegisterInfo &MRI) const;
+
   /// Check if \p MO (a register operand) is a legal register for the
   /// given operand description or operand index.
   /// The operand index version provide more legality checks

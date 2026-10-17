@@ -3956,6 +3956,10 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         return false;
     }
 
+    // Leave the copy so SIFoldOperands can fold the SGPR into the users.
+    if (shouldFoldSGPRInsteadOfLiteral(UseMI, Imm, *MRI))
+      return false;
+
     MachineFunction *MF = UseMI.getMF();
 
     unsigned NewOpc = AMDGPU::INSTRUCTION_LIST_END;
@@ -6888,6 +6892,79 @@ void SIInstrInfo::decomposePkFMAF32(MachineInstr &MI,
       .addImm(AMDGPU::sub1);
 
   MI.eraseFromParent();
+}
+
+bool SIInstrInfo::shouldFoldSGPRInsteadOfLiteral(
+    const MachineInstr &Copy, int64_t Imm,
+    const MachineRegisterInfo &MRI) const {
+  assert(Copy.isCopy());
+  Register DstReg = Copy.getOperand(0).getReg();
+  const MachineOperand &SrcOp = Copy.getOperand(1);
+  if (!DstReg.isVirtual() || !SrcOp.getReg().isVirtual() ||
+      SrcOp.getSubReg() != AMDGPU::NoSubRegister)
+    return false;
+
+  const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+  if (!RI.isVGPRClass(DstRC) || RI.getRegSizeInBits(*DstRC) != 32 ||
+      !RI.isSGPRReg(MRI, SrcOp.getReg()) || MRI.use_nodbg_empty(DstReg))
+    return false;
+
+  // Return true if \p User can read the copy's source in operand \p MO
+  // without exceeding the constant bus limit. This counts the operands that
+  // already use the constant bus, and also VGPR operands copied from other
+  // SGPRs, since SIFoldOperands is likely to fold those too. Choosing which of
+  // several such SGPRs should get the constant bus is a global problem, so
+  // conservatively assume that they all will.
+  auto HasConstantBusRoom = [&](const MachineInstr &User,
+                                const MachineOperand &MO) {
+    const MCInstrDesc &Desc = User.getDesc();
+    SmallDenseSet<RegSubRegPair> SGPRsUsed;
+    SGPRsUsed.insert(RegSubRegPair(SrcOp.getReg()));
+    bool UsesLiteral = false;
+    for (const MachineOperand &Op : User.operands()) {
+      if (&Op == &MO)
+        continue;
+      if (!Op.isReg()) {
+        unsigned OpNo = Op.getOperandNo();
+        if (AMDGPU::isSISrcOperand(Desc, OpNo) &&
+            !isInlineConstant(Op, Desc.operands()[OpNo]))
+          UsesLiteral = true;
+        continue;
+      }
+      if (!Op.isUse())
+        continue;
+      if (regUsesConstantBus(Op, MRI)) {
+        SGPRsUsed.insert(RegSubRegPair(Op.getReg(), Op.getSubReg()));
+        continue;
+      }
+      if (Op.isImplicit() || !Op.getReg().isVirtual() || Op.getSubReg())
+        continue;
+      const MachineInstr *Def = MRI.getVRegDef(Op.getReg());
+      if (!Def || !Def->isCopy())
+        continue;
+      const MachineOperand &DefSrc = Def->getOperand(1);
+      if (DefSrc.getReg().isVirtual() && !DefSrc.getSubReg() &&
+          RI.isSGPRReg(MRI, DefSrc.getReg()) &&
+          isOperandLegal(User, Op.getOperandNo(), &DefSrc))
+        SGPRsUsed.insert(RegSubRegPair(DefSrc.getReg()));
+    }
+    return SGPRsUsed.size() + UsesLiteral <=
+           ST.getConstantBusLimit(User.getOpcode());
+  };
+
+  MachineOperand ImmOp = MachineOperand::CreateImm(Imm);
+  return all_of(MRI.use_nodbg_operands(DstReg), [&](const MachineOperand &MO) {
+    const MachineInstr &User = *MO.getParent();
+    unsigned OpIdx = MO.getOperandNo();
+    // Conservatively skip any user with a 32-bit encoding, since SIFoldOperands
+    // may be able to fold the literal by shrinking it. This misses cases where
+    // shrinking isn't possible (e.g. source modifiers, clamp or the literal in
+    // src1).
+    return isVALU(User, /*AllowLDSDMA=*/false) &&
+           AMDGPU::getVOPe32(User.getOpcode()) == -1 &&
+           !isOperandLegal(User, OpIdx, &ImmOp) &&
+           isOperandLegal(User, OpIdx, &SrcOp) && HasConstantBusRoom(User, MO);
+  });
 }
 
 bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,

@@ -108,9 +108,9 @@ define amdgpu_ps i64 @fptoui_bf16_i64_v(bfloat %a) {
 ; GFX6789-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
+; GFX6789-NEXT:    s_mov_b32 s0, 0xcf800000
 ; GFX6789-NEXT:    v_floor_f32_e32 v1, v1
-; GFX6789-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX6789-NEXT:    v_fma_f32 v0, v1, v2, v0
+; GFX6789-NEXT:    v_fma_f32 v0, v1, s0, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v1
@@ -156,9 +156,9 @@ define amdgpu_ps i64 @fptoui_bf16_i64_s(bfloat inreg %a) {
 ; GFX6789-NEXT:    s_lshl_b32 s0, s0, 16
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, s0
 ; GFX6789-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
+; GFX6789-NEXT:    s_mov_b32 s0, 0xcf800000
 ; GFX6789-NEXT:    v_floor_f32_e32 v1, v1
-; GFX6789-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX6789-NEXT:    v_fma_f32 v0, v1, v2, v0
+; GFX6789-NEXT:    v_fma_f32 v0, v1, s0, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v1
@@ -449,16 +449,16 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_v(<2 x bfloat> %a) {
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_mul_f32_e32 v2, 0x2f800000, v0
-; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v1
+; GFX6789-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v1
+; GFX6789-NEXT:    s_mov_b32 s0, 0xcf800000
 ; GFX6789-NEXT:    v_floor_f32_e32 v2, v2
-; GFX6789-NEXT:    v_mov_b32_e32 v3, 0xcf800000
-; GFX6789-NEXT:    v_floor_f32_e32 v4, v4
-; GFX6789-NEXT:    v_fma_f32 v0, v2, v3, v0
-; GFX6789-NEXT:    v_fma_f32 v1, v4, v3, v1
+; GFX6789-NEXT:    v_floor_f32_e32 v3, v3
+; GFX6789-NEXT:    v_fma_f32 v0, v2, s0, v0
+; GFX6789-NEXT:    v_fma_f32 v1, v3, s0, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v4
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX6789-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s2, v1
@@ -520,20 +520,20 @@ define amdgpu_ps <2 x i64> @fptoui_v2bf16_v2i64_s(<2 x bfloat> inreg %a) {
 ; GFX6789:       ; %bb.0:
 ; GFX6789-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX6789-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX6789-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX6789-NEXT:    v_trunc_f32_e32 v0, s0
-; GFX6789-NEXT:    s_lshl_b32 s0, s1, 16
-; GFX6789-NEXT:    v_trunc_f32_e32 v3, s0
+; GFX6789-NEXT:    v_trunc_f32_e32 v2, s1
 ; GFX6789-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
-; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v3
+; GFX6789-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
+; GFX6789-NEXT:    s_mov_b32 s0, 0xcf800000
 ; GFX6789-NEXT:    v_floor_f32_e32 v1, v1
-; GFX6789-NEXT:    v_mov_b32_e32 v2, 0xcf800000
-; GFX6789-NEXT:    v_floor_f32_e32 v4, v4
-; GFX6789-NEXT:    v_fma_f32 v0, v1, v2, v0
-; GFX6789-NEXT:    v_fma_f32 v2, v4, v2, v3
+; GFX6789-NEXT:    v_floor_f32_e32 v3, v3
+; GFX6789-NEXT:    v_fma_f32 v0, v1, s0, v0
+; GFX6789-NEXT:    v_fma_f32 v2, v3, s0, v2
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v4
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6789-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s2, v2
@@ -758,27 +758,27 @@ define amdgpu_ps <3 x i64> @fptoui_v3bf16_v3i64_v(<3 x bfloat> %a) {
 ; GFX6789-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX6789-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v0
-; GFX6789-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v2
-; GFX6789-NEXT:    v_mul_f32_e32 v6, 0x2f800000, v1
+; GFX6789-NEXT:    v_mul_f32_e32 v4, 0x2f800000, v2
+; GFX6789-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v1
+; GFX6789-NEXT:    s_mov_b32 s0, 0xcf800000
 ; GFX6789-NEXT:    v_floor_f32_e32 v3, v3
-; GFX6789-NEXT:    v_mov_b32_e32 v4, 0xcf800000
+; GFX6789-NEXT:    v_floor_f32_e32 v4, v4
 ; GFX6789-NEXT:    v_floor_f32_e32 v5, v5
-; GFX6789-NEXT:    v_floor_f32_e32 v6, v6
-; GFX6789-NEXT:    v_fma_f32 v0, v3, v4, v0
-; GFX6789-NEXT:    v_fma_f32 v2, v5, v4, v2
-; GFX6789-NEXT:    v_fma_f32 v1, v6, v4, v1
+; GFX6789-NEXT:    v_fma_f32 v0, v3, s0, v0
+; GFX6789-NEXT:    v_fma_f32 v2, v4, s0, v2
+; GFX6789-NEXT:    v_fma_f32 v1, v5, s0, v1
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v5, v5
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v4, v4
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX6789-NEXT:    v_cvt_u32_f32_e32 v4, v6
+; GFX6789-NEXT:    v_cvt_u32_f32_e32 v5, v5
 ; GFX6789-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6789-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6789-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX6789-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX6789-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX6789-NEXT:    v_readfirstlane_b32 s3, v4
 ; GFX6789-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX6789-NEXT:    v_readfirstlane_b32 s5, v4
+; GFX6789-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: fptoui_v3bf16_v3i64_v:

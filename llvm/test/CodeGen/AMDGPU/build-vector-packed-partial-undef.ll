@@ -279,11 +279,11 @@ define void @undef_lo_op_v2i16(i16 %arg0) {
 ; GFX9-GISEL-LABEL: undef_lo_op_v2i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0x630063
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, s4, v1
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x630063
-; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
+; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, s4
 ; GFX9-GISEL-NEXT:    ;;#ASMSTART
 ; GFX9-GISEL-NEXT:    ; use v0
 ; GFX9-GISEL-NEXT:    ;;#ASMEND
@@ -855,10 +855,10 @@ define void @undef_hi_op_v2i16(i16 %arg0) {
 ; GFX9-GISEL-LABEL: undef_hi_op_v2i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0x630063
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e64 v1, 16, s4
 ; GFX9-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x630063
-; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
+; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, s4
 ; GFX9-GISEL-NEXT:    ;;#ASMSTART
 ; GFX9-GISEL-NEXT:    ; use v0
 ; GFX9-GISEL-NEXT:    ;;#ASMEND

@@ -112,9 +112,9 @@ define i64 @intrinsic_lrint_i64_f32(float %arg) {
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x2f800000
 ; GFX9-GISEL-NEXT:    v_mul_f32_e64 v2, |v1|, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX9-GISEL-NEXT:    v_floor_f32_e32 v2, v2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0xcf800000
-; GFX9-GISEL-NEXT:    v_fma_f32 v1, v2, v3, |v1|
+; GFX9-GISEL-NEXT:    v_fma_f32 v1, v2, s4, |v1|
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
@@ -315,9 +315,9 @@ define i64 @intrinsic_llrint_i64_f32(float %arg) {
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x2f800000
 ; GFX9-GISEL-NEXT:    v_mul_f32_e64 v2, |v1|, v2
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX9-GISEL-NEXT:    v_floor_f32_e32 v2, v2
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0xcf800000
-; GFX9-GISEL-NEXT:    v_fma_f32 v1, v2, v3, |v1|
+; GFX9-GISEL-NEXT:    v_fma_f32 v1, v2, s4, |v1|
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
@@ -672,25 +672,25 @@ define <2 x i64> @intrinsic_lrint_v2i64_v2f32(<2 x float> %arg) {
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v2, v0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x2f800000
 ; GFX9-GISEL-NEXT:    v_mul_f32_e64 v4, |v2|, v3
+; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0xcf800000
 ; GFX9-GISEL-NEXT:    v_floor_f32_e32 v4, v4
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xcf800000
-; GFX9-GISEL-NEXT:    v_fma_f32 v2, v4, v5, |v2|
+; GFX9-GISEL-NEXT:    v_fma_f32 v2, v4, s4, |v2|
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v4, v4
-; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v6, 31, v0
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v2, v6
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, v4, v6
+; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v5, 31, v0
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v2, v5
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, v4, v5
 ; GFX9-GISEL-NEXT:    v_rndne_f32_e32 v4, v1
 ; GFX9-GISEL-NEXT:    v_trunc_f32_e32 v1, v4
 ; GFX9-GISEL-NEXT:    v_mul_f32_e64 v3, |v1|, v3
 ; GFX9-GISEL-NEXT:    v_floor_f32_e32 v3, v3
-; GFX9-GISEL-NEXT:    v_fma_f32 v1, v3, v5, |v1|
-; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v5, v1
+; GFX9-GISEL-NEXT:    v_fma_f32 v1, v3, s4, |v1|
+; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v6, v1
 ; GFX9-GISEL-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX9-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v6
+; GFX9-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v5
 ; GFX9-GISEL-NEXT:    v_ashrrev_i32_e32 v4, 31, v4
-; GFX9-GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v2, v6, vcc
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, v5, v4
+; GFX9-GISEL-NEXT:    v_subb_co_u32_e32 v1, vcc, v2, v5, vcc
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, v6, v4
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v3, v3, v4
 ; GFX9-GISEL-NEXT:    v_sub_co_u32_e32 v2, vcc, v2, v4
 ; GFX9-GISEL-NEXT:    v_subb_co_u32_e32 v3, vcc, v3, v4, vcc
