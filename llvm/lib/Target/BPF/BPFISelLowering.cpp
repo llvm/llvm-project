@@ -696,6 +696,14 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
+  // A function that can unwind says in r3 that it did not.
+  if (bpfCanUnwind(MF.getFunction())) {
+    Chain = DAG.getCopyToReg(Chain, DL, BPF::R3,
+                             DAG.getConstant(0, DL, MVT::i64), Glue);
+    Glue = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(BPF::R3, MVT::i64));
+  }
+
   RetOps[0] = Chain; // Update chain.
 
   // Add the glue if we have it.

@@ -1645,6 +1645,10 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
   }
 
+  // Tell the kernel which functions say in r3 how they return.
+  if (bpfCanUnwind(MF->getFunction()))
+    addType(std::make_unique<BTFTypeDeclTag>(FuncTypeId, -1, "unwind"));
+
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
 
