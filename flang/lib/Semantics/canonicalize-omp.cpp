@@ -176,24 +176,9 @@ parser::ExecutionPartConstruct CanonicalizationOfOmp::EmbedInExec(
 
 void CanonicalizationOfOmp::MakeExecutableAllocateFromDecls(
     std::list<parser::DeclarationConstruct> &decls, parser::Block &body) {
-  using OpenMPDeclarativeConstruct =
-      common::Indirection<parser::OpenMPDeclarativeConstruct>;
-
-  auto getAllocate = [](parser::DeclarationConstruct *dc) {
-    if (auto *sc = std::get_if<parser::SpecificationConstruct>(&dc->u)) {
-      if (auto *odc = std::get_if<OpenMPDeclarativeConstruct>(&sc->u)) {
-        if (auto *alo =
-                std::get_if<parser::OmpAllocateDirective>(&odc->value().u)) {
-          return alo;
-        }
-      }
-    }
-    return static_cast<parser::OmpAllocateDirective *>(nullptr);
-  };
-
   std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
     for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
-      if (getAllocate(&*rit) == nullptr) {
+      if (!parser::Unwrap<parser::OmpAllocateDirective>(*rit)) {
         return rit;
       }
     }
@@ -205,7 +190,8 @@ void CanonicalizationOfOmp::MakeExecutableAllocateFromDecls(
     // ALLOCATE.
     parser::ExecutionPartConstruct epc(std::move(body.front()));
     for (auto rit = decls.rbegin(); rit != rlast; ++rit) {
-      epc = EmbedInExec(getAllocate(&*rit), std::move(epc));
+      epc = EmbedInExec(
+          parser::Unwrap<parser::OmpAllocateDirective>(*rit), std::move(epc));
     }
 
     body.pop_front();
@@ -301,19 +287,11 @@ void CanonicalizationOfOmp::MoveUtilityDirectivesFromDecls(
   std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
     for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
       parser::DeclarationConstruct &dc = *rit;
-      if (!std::holds_alternative<parser::SpecificationConstruct>(dc.u)) {
-        return rit;
-      }
-      auto &sc = std::get<parser::SpecificationConstruct>(dc.u);
-      using OpenMPDeclarativeConstruct =
-          common::Indirection<parser::OpenMPDeclarativeConstruct>;
-      if (!std::holds_alternative<OpenMPDeclarativeConstruct>(sc.u)) {
-        return rit;
-      }
-      // Got OpenMPDeclarativeConstruct. If it's not a utility directive
-      // then stop.
-      auto &odc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
-      if (!std::holds_alternative<parser::OmpUtilityDirective>(odc.u)) {
+      if (auto *odc = parser::Unwrap<parser::OpenMPDeclarativeConstruct>(dc)) {
+        if (!std::holds_alternative<parser::OmpUtilityDirective>(odc->u)) {
+          return rit;
+        }
+      } else {
         return rit;
       }
     }
