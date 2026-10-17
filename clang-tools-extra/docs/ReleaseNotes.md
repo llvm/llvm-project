@@ -208,10 +208,12 @@ infrastructure are described first, followed by tool-specific sections.
     - Fixed false positives when the condition variable is changed later in a loop that
       encloses the inner `if`.
 
-    - Fixed false negatives when there are two varibles statement in both side
-      of `&&` in `if` like `a && b` .it showing correct warning for first variable
-      and failed for second variable in if condition.eg.  `(x && y) { if (y) ... }`
-      in this example warning is not shown properly. 
+    - Fixed false negatives when two variables are present on both sides
+      of logical AND(`&&`) in `if` like `a && b`. Previously, it was only evaluated for 
+      first variable `a` and completely ignored the second variable `b` for redundant
+      branch condition.For example, In `(x && y) { if (y){} if(x){} }` a warning was
+      only generated for nested `if` with x(`if(x){}`) and never generated for nested `if`
+      with y(`if (y){}`).
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
