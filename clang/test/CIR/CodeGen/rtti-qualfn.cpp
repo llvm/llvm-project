@@ -21,7 +21,7 @@ void f() noexcept {
 // CIR-DAG: cir.global {{.*}} @_ZTSPDoFvvE = #cir.const_array<"PDoFvvE" : !cir.array<!s8i x 7>, trailing_zeros> : !cir.array<!s8i x 8>
 // CIR-DAG: cir.global {{.*}} @_ZTIPDoFvvE = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv119__pointer_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTSPDoFvvE> : !cir.ptr<!u8i>, #cir.int<64> : !u32i, #cir.global_view<@_ZTIFvvE> : !cir.ptr<!u8i>}>
 
-// CIR: cir.throw %{{.*}} : !cir.ptr<!cir.ptr<!cir.func<()>>>, @_ZTIPDoFvvE
+// CIR: cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.ptr<!cir.func<()>>>, !cir.ptr<!u8i>, !cir.ptr<!void>
 
 // LLVM-DAG: @_ZTSFvvE = linkonce_odr constant [5 x i8] c"FvvE\00", comdat
 // LLVM-DAG: @_ZTSPDoFvvE = linkonce_odr constant [8 x i8] c"PDoFvvE\00", comdat
