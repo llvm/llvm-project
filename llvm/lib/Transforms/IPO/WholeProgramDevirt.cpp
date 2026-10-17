@@ -1115,6 +1115,11 @@ bool DevirtModule::tryFindVirtualCallTargets(
                                     GlobalObject::VCallVisibilityPublic)
       return false;
 
+    // A local vtable without live uses cannot be loaded from, so it does not
+    // provide a call target.
+    if (TM.Bits->GV->hasLocalLinkage() && TM.Bits->GV->hasZeroLiveUses())
+      continue;
+
     Function *Fn = nullptr;
     Constant *C = nullptr;
     std::tie(Fn, C) =
