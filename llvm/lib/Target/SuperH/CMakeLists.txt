@@ -33,6 +33,7 @@ add_llvm_target(SuperHCodeGen
   SuperHFillDelaySlots.cpp
   SuperHConstantIslandPass.cpp
   SuperHExpandPseudoInsts.cpp
+  SuperHExpandBranches.cpp
 
   LINK_COMPONENTS
   Analysis

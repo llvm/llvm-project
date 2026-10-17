@@ -181,7 +181,7 @@ void SuperHTargetLowering::ReplaceNodeResults(SDNode *N,
 //===----------------------------------------------------------------------===//
 //                        CONDITIONAL BRANCH LOWERING
 //===----------------------------------------------------------------------===//
-SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
+SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS,
                                        ISD::CondCode CC, SDValue &OutCC,
                                        SelectionDAG &DAG, SDLoc DL) const {
   SDValue InCC;
@@ -256,11 +256,13 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
         }
 
         if (C->isOne()) {
+          std::swap(LHS, RHS);
           SHcc = SHCC::COND_Z;
           SHocc = SHCC::COND_F;
           break;
         }
       }
+
       SHcc = SHCC::COND_EQ;
       SHocc = SHCC::COND_T;
       break;
@@ -279,38 +281,22 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
           break;
         }
       }
+
       SHcc = SHCC::COND_EQ;
       SHocc = SHCC::COND_F;
       break;
     }
     case ISD::SETLT: {
-      // Swap operands and reverse the branching condition.
-      std::swap(LHS, RHS);
       SHcc = SHCC::COND_GE;
       SHocc = SHCC::COND_F;
       break;
     }
     case ISD::SETLE: {
-      // Swap operands and reverse the branching condition.
-      std::swap(LHS, RHS);
       SHcc = SHCC::COND_GT;
       SHocc = SHCC::COND_F;
       break;
     }
     case ISD::SETGT: {
-      if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-        if (C->getSExtValue() == -1) {
-          SHcc = SHCC::COND_PZ;
-          SHocc = SHCC::COND_T;
-          break;
-        }
-
-        if (C->isZero()) {
-          SHcc = SHCC::COND_PL;
-          SHocc = SHCC::COND_T;
-          break;
-        }
-      }
       SHcc = SHCC::COND_GT;
       SHocc = SHCC::COND_T;
       break;
@@ -331,15 +317,11 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
       break;
     }
     case ISD::SETULT: {
-      // Swap operands and reverse the branching condition.
-      std::swap(LHS, RHS);
       SHcc = SHCC::COND_HS;
       SHocc = SHCC::COND_F;
       break;
     }
     case ISD::SETULE: {
-      // Swap operands and reverse the branching condition.
-      std::swap(LHS, RHS);
       SHcc = SHCC::COND_HI;
       SHocc = SHCC::COND_F;
       break;

@@ -75,6 +75,7 @@ class SHInst32<dag outs, dag ins, string asmstr, list<dag> pattern = []>
 class SHPseudo<dag outs, dag ins, string asmstr="; error: this should not be emitted", list<dag> pattern = []>
     : SHInst<outs, ins, asmstr, pattern> {
   let Pattern = pattern;
+  let Size = 2;
 
   let isCodeGenOnly = 1;
   let isPseudo = 1;
@@ -89,11 +90,13 @@ class SHSelectPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 class SHLoadPseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
       : SHPseudo<outs, ins, asmstr, pattern> {
   let mayLoad = 1;
+  let Size = 6;
 }
 
 class SHStorePseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
       : SHPseudo<outs, ins, asmstr, pattern> {
   let mayStore = 1;
+  let Size = 6;
 }
 
 

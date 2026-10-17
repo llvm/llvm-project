@@ -15,7 +15,7 @@ using namespace llvm;
 namespace llvm {
 
 void SuperHBasicBlockUtils::computeBlockSize(MachineBasicBlock *MBB) {
-  LLVM_DEBUG(dbgs() << "computeBlockSize: " << MBB->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "computeBlockSize: " << MBB->getSymbol()->getName() << " = ");
   BasicBlockInfo &BBI = BBInfo[MBB->getNumber()];
   BBI.Size = 0;
   BBI.Unalign = 0;
@@ -28,6 +28,7 @@ void SuperHBasicBlockUtils::computeBlockSize(MachineBasicBlock *MBB) {
     if (I.isInlineAsm())
       BBI.Unalign = 2;
   }
+  LLVM_DEBUG(dbgs() << BBI.Size << "\n");
 }
 
 /// getOffsetOf - Return the current offset of the specified machine instruction

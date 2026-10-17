@@ -187,7 +187,7 @@ unsigned
 SuperHMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
-  return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
+  return getDispOpValue<2>(MI, OpNo, Fixups, STI);
 }
 
 

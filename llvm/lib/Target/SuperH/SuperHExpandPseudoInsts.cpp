@@ -29,6 +29,7 @@
 #include <cstddef>
 
 using namespace llvm;
+using namespace SH;
 
 #define DEBUG_TYPE "sh-expand-pseudo"
 #define SH_EXPAND_PSEUDO_NAME "SH pseudo instruction expansion pass"
@@ -81,6 +82,7 @@ private:
   const SuperHSubtarget *STI;
   const SuperHRegisterInfo *TRI;
   const SuperHInstrInfo *TII;
+  const SuperHMachineFunctionInfo *MFI;
 
   /// getStackBucketFor - Gets the enclosing bucket for a given Offset
   /// from the start of a stack frame.
@@ -306,7 +308,6 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
   const MachineFunction &MF = *MBB.getParent();
-  const SuperHMachineFunctionInfo *FI = MF.getInfo<SuperHMachineFunctionInfo>();
 
   bool SrcIsKill = MI.getOperand(0).isKill();
   Register SrcReg = MI.getOperand(0).getReg();
@@ -314,7 +315,7 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
   auto Offset = MI.getOperand(2).getImm();
 
   if (MI.getOperand(1).isGlobal()) {
-    if (auto *G = FI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
+    if (auto *G = MFI->tryGetConstant(MI.getOperand(1).getGlobal(), MF)) {
       BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
           .addConstantPoolIndex(G->getLabelId());
       DstReg = SH::R1;
@@ -651,9 +652,8 @@ bool SuperHExpandPseudo::expand<SH::MOVIF32>(Block &MBB, BlockIt MBBI) {
 
 
 
-
 //===----------------------------------------------------------------------===//
-//                              Bit Shifting
+//                               Bit Shifting
 //===----------------------------------------------------------------------===//
 
 template <>
@@ -805,12 +805,12 @@ bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
 //===----------------------------------------------------------------------===//
 
 template <>
-bool SuperHExpandPseudo::expand<SH::F32TOI32>(Block &MBB, BlockIt MBBI) {
+bool SuperHExpandPseudo::expand<SH::FTOI>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
 
-  auto SrcReg = MI.getOperand(1).getReg();
-  auto DstReg = MI.getOperand(2).getReg();
+  auto SrcReg = MI.getOperand(0).getReg();
+  auto DstReg = MI.getOperand(1).getReg();
 
   BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
     .addReg(SrcReg);
@@ -820,14 +820,44 @@ bool SuperHExpandPseudo::expand<SH::F32TOI32>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
-bool SuperHExpandPseudo::expand<SH::I32TOF32>(Block &MBB, BlockIt MBBI) {
+bool SuperHExpandPseudo::expand<SH::ITOF>(Block &MBB, BlockIt MBBI) {
   const DebugLoc &DL = MBBI->getDebugLoc();
   MachineInstr &MI = *MBBI;
 
-  auto SrcReg = MI.getOperand(1).getReg();
-  auto DstReg = MI.getOperand(2).getReg();
+  auto SrcReg = MI.getOperand(0).getReg();
+  auto DstReg = MI.getOperand(1).getReg();
 
   BuildMI(MBB, MBBI, DL, TII->get(SH::FTRC32))
+    .addReg(SrcReg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::STSFPUL), DstReg);
+
+  return eraseMI(MI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::FTOIBITS>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto SrcReg = MI.getOperand(0).getReg();
+  auto DstReg = MI.getOperand(1).getReg();
+
+  BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
+    .addReg(SrcReg);
+  BuildMI(MBB, MI, DL, TII->get(SH::FSTS), DstReg);
+
+  return eraseMI(MI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::ITOFBITS>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto SrcReg = MI.getOperand(0).getReg();
+  auto DstReg = MI.getOperand(1).getReg();
+
+  BuildMI(MBB, MI, DL, TII->get(SH::FLDS))
     .addReg(SrcReg);
   BuildMI(MBB, MBBI, DL, TII->get(SH::STSFPUL), DstReg);
 
@@ -866,6 +896,7 @@ bool SuperHExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<SuperHSubtarget>();
   TRI = STI->getRegisterInfo();
   TII = STI->getInstrInfo();
+  MFI = MF.getInfo<SuperHMachineFunctionInfo>();
 
   for (Block &MBB : MF) {
     bool ContinueExpanding = true;
@@ -924,8 +955,10 @@ bool SuperHExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(SH::SHLrr);
     EXPAND(SH::SHRrr);
     EXPAND(SH::SRArr);
-    EXPAND(SH::F32TOI32);
-    EXPAND(SH::I32TOF32);
+    EXPAND(SH::FTOI);
+    EXPAND(SH::ITOF);
+    EXPAND(SH::FTOIBITS);
+    EXPAND(SH::ITOFBITS);
   }
 #undef EXPAND
   return false;
