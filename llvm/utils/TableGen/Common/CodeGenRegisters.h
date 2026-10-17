@@ -111,13 +111,19 @@ public:
     assert(A && B);
     unsigned NumModes = CGH.getNumModeIds();
 
-    // An earlier identical call already added the ranges for every mode, so
-    // there is nothing left to do once B has an offset in all of them.
-    if (compose(A) == B && B->hasOffsetInAllModes(NumModes))
-      return nullptr;
+    CodeGenSubRegIndex *Prev = compose(A);
+    if (Prev == B) {
+      // An earlier identical call already added the ranges for every mode, so
+      // there is nothing left to do once B has an offset in all of them.
+      if (B->hasOffsetInAllModes(NumModes))
+        return nullptr;
+    } else {
+      // Keep an existing conflicting composition, and return it.
+      if (Prev)
+        return Prev;
 
-    std::pair<CompMap::iterator, bool> Ins = Composed.try_emplace(A, B);
-    if (Ins.second) {
+      if (!Composed.try_emplace(A, B).second)
+        llvm_unreachable("ComposedByIdx out of sync with Composed");
       if (ComposedByIdx.size() <= A->EnumValue)
         ComposedByIdx.resize(A->EnumValue + 1);
       ComposedByIdx[A->EnumValue] = B;
@@ -153,7 +159,7 @@ public:
       BRange.Size = ARange.Size;
     }
 
-    return (Ins.second || Ins.first->second == B) ? nullptr : Ins.first->second;
+    return nullptr;
   }
 
   // Update the composite maps of components specified in 'ComposedOf'.
