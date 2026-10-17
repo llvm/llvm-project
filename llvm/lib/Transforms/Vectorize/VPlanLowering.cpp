@@ -822,9 +822,8 @@ void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
 
         // Only introduce an Unpack if some, but not all, users use the first
         // lane only.
-        unsigned NumFirstLaneUsers = count_if(Def->users(), [&Def](VPUser *U) {
-          return U->usesFirstLaneOnly(Def);
-        });
+        unsigned NumFirstLaneUsers =
+            count_if(Def->users(), bind_back<vputils::usesFirstLaneOnly>(Def));
         if (!NumFirstLaneUsers || NumFirstLaneUsers == Def->getNumUsers())
           continue;
 
@@ -833,8 +832,8 @@ void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
           Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
-        Def->replaceUsesWithIf(
-            Unpack, [&Def](VPUser *U) { return U->usesFirstLaneOnly(Def); });
+        Def->replaceUsesWithIf(Unpack,
+                               bind_back<vputils::usesFirstLaneOnly>(Def));
       }
     }
   }
