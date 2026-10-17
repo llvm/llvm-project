@@ -3073,6 +3073,17 @@ attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
 struct or union, similar to clang `__builtin_preserve_access_index()`.
+
+The attribute may also be attached to an enum declaration. If -g is
+specified, each use of an enumerator of this enum whose value is computed
+at runtime is replaced by an `ENUM_VALUE` CO-RE relocation, similar to
+`__builtin_preserve_enum_value(*(enum_type *)enumerator, 1)`, so that the
+bpf loader may adjust the value based on the target kernel. Such uses are
+not constant folded. Uses that require a compile-time constant, e.g.,
+case labels, array sizes, bitfield widths, static assertions and global
+or static variable initializers, keep the compile-time value. The enum
+must be named or have a typedef name; otherwise, the attribute has no
+effect and a warning is issued.
   }];
 }
 

@@ -1780,6 +1780,57 @@ bool CodeGenFunction::mightAddDeclToScope(const Stmt *S) {
   return false;
 }
 
+QualType CodeGenFunction::getBPFPreservedEnumType(const DeclRefExpr *E) {
+  const auto *Enumerator = dyn_cast<EnumConstantDecl>(E->getDecl());
+  if (!Enumerator || !getTarget().getTriple().isBPF() || !getDebugInfo())
+    return QualType();
+
+  // In C, the type of an enumerator may not be the enum type, so get the
+  // enum from the declaration context.
+  const auto *ED = dyn_cast<EnumDecl>(Enumerator->getDeclContext());
+  if (!ED || !ED->hasAttr<BPFPreserveAccessIndexAttr>())
+    return QualType();
+
+  // The relocation is matched by type name, so an anonymous enum is
+  // only supported through its typedef name.
+  if (ED->getDeclName())
+    return getContext().getCanonicalTagType(ED);
+  if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+    return getContext().getTypeDeclType(TD);
+  return QualType();
+}
+
+bool CodeGenFunction::containsBPFPreservedEnumerator(const Expr *E) {
+  if (!getTarget().getTriple().isBPF() || !getDebugInfo())
+    return false;
+
+  llvm::SmallPtrSet<const VarDecl *, 4> Visited;
+  auto Contains = [this, &Visited](auto &&Self, const Stmt *S) -> bool {
+    if (!S)
+      return false;
+    // A ConstantExpr is always emitted as a constant, and the enumerators
+    // in an unevaluated operand do not contribute their values.
+    if (isa<ConstantExpr, UnaryExprOrTypeTraitExpr>(S))
+      return false;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+      if (!getBPFPreservedEnumType(DRE).isNull())
+        return true;
+      // A local const variable may be constant folded through its
+      // initializer.
+      const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      if (VD && VD->hasLocalStorage() && VD->getType().isConstQualified() &&
+          Visited.insert(VD).second)
+        return Self(Self, VD->getInit());
+      return false;
+    }
+    for (const Stmt *SubStmt : S->children())
+      if (Self(Self, SubStmt))
+        return true;
+    return false;
+  };
+  return Contains(Contains, E);
+}
+
 /// ConstantFoldsToSimpleInteger - If the specified expression does not fold
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the boolean result in Result.
@@ -1812,6 +1863,9 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   Expr::EvalResult Result;
   if (!Cond->EvaluateAsInt(Result, getContext()))
     return false;  // Not foldable, not integer or not fully evaluatable.
+
+  if (containsBPFPreservedEnumerator(Cond))
+    return false;
 
   llvm::APSInt Int = Result.Val.getInt();
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))

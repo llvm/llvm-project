@@ -1538,7 +1538,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
         (D.isConstexpr() ||
          ((Ty.isPODType(getContext()) ||
-           getContext().getBaseElementType(Ty)->isObjCObjectPointerType())))) {
+           getContext().getBaseElementType(Ty)->isObjCObjectPointerType()))) &&
+        !containsBPFPreservedEnumerator(D.getInit())) {
       emission.ConstantAggregateInitializer =
           ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
       if (emission.ConstantAggregateInitializer) {
