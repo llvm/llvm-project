@@ -5453,12 +5453,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         DenormalMode Mode =
             F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
-        if (KnownNotFromFlags & fcNan) {
+        if ((KnownNotFromFlags & fcNan) == fcNan) {
           KnownSrc.knownNot(fcNan);
           KnownAddend.knownNot(fcNan);
         }
 
-        if (KnownNotFromFlags & fcInf) {
+        if ((KnownNotFromFlags & fcInf) == fcInf) {
           KnownSrc.knownNot(fcInf);
           KnownAddend.knownNot(fcInf);
         }
@@ -5474,9 +5474,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownSrc[I].isUnknown())
           return;
 
-        if (KnownNotFromFlags & fcNan)
+        if ((KnownNotFromFlags & fcNan) == fcNan)
           KnownSrc[I].knownNot(fcNan);
-        if (KnownNotFromFlags & fcInf)
+        if ((KnownNotFromFlags & fcInf) == fcInf)
           KnownSrc[I].knownNot(fcInf);
       }
 
