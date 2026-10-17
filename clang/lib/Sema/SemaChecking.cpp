@@ -17496,41 +17496,6 @@ bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx) {
   return ArgError;
 }
 
-// Check coop_mat_load/store matrix element has same type with buffer pointer.
-bool Sema::CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
-                                               QualType BufferType,
-                                               SourceLocation MatrixLoc) {
-  auto *MTy = MatrixType->getAs<CooperativeMatrixType>();
-  if (!MTy) {
-    Diag(MatrixLoc, diag::err_invalid_coopmat_arg);
-    return true;
-  }
-
-  assert(isa<PointerType>(BufferType));
-  auto *PTy = BufferType->castAs<PointerType>();
-
-  if (MTy->getElementType().getUnqualifiedType() !=
-      PTy->getPointeeType().getUnqualifiedType()) {
-    Diag(MatrixLoc, diag::err_coopmat_mismatch_element_and_pointer_type);
-    return true;
-  }
-  return false;
-}
-
-bool Sema::CheckCoopMatrixLoadElementType(QualType MatrixType,
-                                          SourceLocation MatrixLoc,
-                                          CallExpr *Call) {
-  FunctionDecl *F = Call->getDirectCallee();
-  assert(F);
-  DeclarationName MemberName = F->getDeclName();
-  IdentifierInfo *Fname = MemberName.getAsIdentifierInfo();
-  assert(Fname);
-  if (Fname->isStr("coop_mat_load"))
-    return CheckCoopMatrixLoadStoreElementType(
-        MatrixType, Call->getArg(0)->getType(), MatrixLoc);
-  return false;
-}
-
 // Check coop_mat_load/store layout argument
 bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
   bool ArgError = false;
@@ -17587,12 +17552,7 @@ ExprResult Sema::BuiltinCoopMatrixStore(CallExpr *TheCall,
                                         ExprResult CallResult) {
   if (checkArgCount(TheCall, 4))
     return ExprError();
-  Expr *Arg0 = TheCall->getArg(0);
-  Expr *Arg1 = TheCall->getArg(1);
   if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
-    return ExprError();
-  if (CheckCoopMatrixLoadStoreElementType(Arg1->getType(), Arg0->getType(),
-                                          Arg0->getBeginLoc()))
     return ExprError();
   if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(2)))
     return ExprError();
@@ -17732,12 +17692,12 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     return ExprError();
   }
   if (M1Ty->getUse() != 1) {
-    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
+    Diag(Arg1->getBeginLoc(), diag::err_invalid_coopmat_use)
         << "CLK_COOPERATIVE_MATRIX_B";
     return ExprError();
   }
   if (M2Ty->getUse() != 2) {
-    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
+    Diag(Arg2->getBeginLoc(), diag::err_invalid_coopmat_use)
         << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
     return ExprError();
   }

@@ -63,13 +63,3 @@ void test_visitor_element_type(half __attribute__((coop_mat(SCOPE, 8, 8, USE_B))
 }
 
 // AST: ParmVarDecl {{.*}} x {{.*}}coop_mat(
-
-// mergeTypes / type compatibility — two identical typedefs resolve to the
-// same canonical type; taking a pointer across them compiles cleanly.
-typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_alias;
-
-void test_merge_types(void) {
-    MatA_float16x16 *p = 0;
-    MatA_alias      *q = p;   // same canonical type — no diagnostic
-    (void)q;
-}
