@@ -22517,12 +22517,11 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
     return Name;
   });
 
-  EvaluationMode EvalMode =
-      (IsConstantInitialization &&
-       (Ctx.getLangOpts().CPlusPlus ||
-        (VD->isConstexpr() && Ctx.getLangOpts().C23)))
-          ? EvaluationMode::ConstantExpression
-          : EvaluationMode::ConstantFold;
+  EvaluationMode EvalMode = (IsConstantInitialization &&
+                             (Ctx.getLangOpts().CPlusPlus ||
+                              (VD->isConstexpr() && Ctx.getLangOpts().C23)))
+                                ? EvaluationMode::ConstantExpression
+                                : EvaluationMode::ConstantFold;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvalMode, EStatus);
