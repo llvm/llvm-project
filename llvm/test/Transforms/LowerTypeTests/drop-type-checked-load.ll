@@ -22,7 +22,7 @@ declare void @use(ptr)
 @fn = dso_local global i32 0
 @vt = constant [1 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @fn to i64), i64 ptrtoint (ptr @vt to i64)) to i32)]
 
-; The guarded load stays, the check becomes true, and the intrinsic is gone.
+;; The guarded load stays, the check becomes true, and the intrinsic is gone.
 ; CHECK-LABEL: define void @absolute(
 ; CHECK-NEXT: %[[SLOT:.*]] = getelementptr i8, ptr %vtable, i32 8
 ; CHECK-NEXT: %[[FP:.*]] = load ptr, ptr %[[SLOT]], align 8
@@ -44,9 +44,9 @@ fail:
   ret void
 }
 
-; The relative form becomes llvm.load.relative: a 32-bit displacement added
-; to the vtable pointer. The non-zero offset pins the base: it is %vtable,
-; not the slot.
+;; The relative form becomes llvm.load.relative: a 32-bit displacement added
+;; to the vtable pointer. The non-zero offset pins the base: it is %vtable,
+;; not the slot.
 ; CHECK-LABEL: define void @relative(
 ; CHECK-NEXT: %[[REL:.*]] = call ptr @llvm.load.relative.i32(ptr %vtable, i32 4)
 ; CHECK-NEXT: %[[S0:.*]] = insertvalue { ptr, i1 } { ptr poison, i1 true }, ptr %[[REL]], 0
@@ -60,7 +60,7 @@ define void @relative(ptr %vtable) {
   ret void
 }
 
-; A type test in the same module drops alongside the checked load.
+;; A type test in the same module drops alongside the checked load.
 ; CHECK-LABEL: define void @with_type_test(
 ; CHECK-NOT: call {{.*}}@llvm.type.test(
 ; CHECK: %[[FP:.*]] = load ptr, ptr %{{.*}}, align 8
@@ -77,7 +77,7 @@ define void @with_type_test(ptr %vtable) {
   ret void
 }
 
-; With a constant vtable the relative load folds all the way to the function.
+;; With a constant vtable the relative load folds all the way to the function.
 ; FOLD-LABEL: define void @fold(
 ; FOLD-NOT: @llvm.load.relative
 ; FOLD: call void @use(ptr @fn)
