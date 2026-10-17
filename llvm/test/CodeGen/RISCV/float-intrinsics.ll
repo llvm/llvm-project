@@ -3067,3 +3067,80 @@ define { float, float } @test_modf_f32(float %a) nounwind {
   %result = call { float, float } @llvm.modf.f32(float %a)
   ret { float, float } %result
 }
+
+define float @max_positive_zero_f32(float %x) {
+; RV32IF-LABEL: max_positive_zero_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x fa5, zero
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa5
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: max_positive_zero_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmax.s a0, a0, zero
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: max_positive_zero_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x fa5, zero
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa5
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: max_positive_zero_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmax.s a0, a0, zero
+; RV64IZFINX-NEXT:    ret
+;
+; RV64IFD-LABEL: max_positive_zero_f32:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    fmv.w.x fa5, zero
+; RV64IFD-NEXT:    fmax.s fa0, fa0, fa5
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: max_positive_zero_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    call __gtsf2
+; RV32I-NEXT:    sgtz a0, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    and a0, a0, s0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: max_positive_zero_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    call __gtsf2
+; RV64I-NEXT:    sgtz a0, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    and a0, a0, s0
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+  %cmp = fcmp ogt float %x, 0.0
+  %r = select i1 %cmp, float %x, float 0.0
+  ret float %r
+}
