@@ -45,6 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -1562,7 +1563,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize();
+  globalMergeRecord.finalize(cl::LibraryOptionsContext());
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
