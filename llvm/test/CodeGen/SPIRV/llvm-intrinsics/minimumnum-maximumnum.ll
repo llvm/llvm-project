@@ -16,8 +16,16 @@
 
 ; CHECK: %[[#X:]] = OpFunctionParameter %[[#Float]]
 ; CHECK: %[[#Y:]] = OpFunctionParameter %[[#Float]]
-; CHECK: %[[#X1:]] = OpSelect %[[#Float]] %[[#]] %[[#Y]] %[[#X]]
-; CHECK: %[[#Y1:]] = OpSelect %[[#Float]] %[[#]] %[[#X1]] %[[#Y]]
+; CL: %[[#XNaN:]] = OpUnordered %[[#]] %[[#X]] %[[#X]]
+; VK: %[[#XNaNA:]] = OpIsNan %[[#]] %[[#X]]
+; VK: %[[#XNaNB:]] = OpIsNan %[[#]] %[[#X]]
+; VK: %[[#XNaN:]] = OpLogicalOr %[[#]] %[[#XNaNA]] %[[#XNaNB]]
+; CHECK: %[[#X1:]] = OpSelect %[[#Float]] %[[#XNaN]] %[[#Y]] %[[#X]]
+; CL: %[[#YNaN:]] = OpUnordered %[[#]] %[[#Y]] %[[#Y]]
+; VK: %[[#YNaNA:]] = OpIsNan %[[#]] %[[#Y]]
+; VK: %[[#YNaNB:]] = OpIsNan %[[#]] %[[#Y]]
+; VK: %[[#YNaN:]] = OpLogicalOr %[[#]] %[[#YNaNA]] %[[#YNaNB]]
+; CHECK: %[[#Y1:]] = OpSelect %[[#Float]] %[[#YNaN]] %[[#X1]] %[[#Y]]
 ; CL: %[[#Min:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] fmin %[[#X1]] %[[#Y1]]
 ; CL: %[[#XSign:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] copysign %[[#One]] %[[#X1]]
 ; VK: %[[#Min:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] NMin %[[#X1]] %[[#Y1]]
@@ -71,10 +79,15 @@ define spir_func float @test_minimumnum_snan() {
 ; CHECK: OpFunctionParameter %[[#Float]]
 ; CHECK-NOT: OpUnordered
 ; CHECK-NOT: OpIsNan
-; CL: OpExtInst %[[#Float]] %[[#ExtInstId]] fmin
-; VK: OpExtInst %[[#Float]] %[[#ExtInstId]] NMin
+; CL: %[[#M:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] fmin
+; VK: %[[#M:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] NMin
 ; CHECK: OpFOrdLessThan
-; CHECK: OpReturnValue
+; CL: %[[#Rn:]] = OpExtInst %[[#Float]] %[[#ExtInstId]] copysign %[[#M]]
+; VK: OpBitcast %[[#]] %[[#M]]
+; VK: %[[#Rn:]] = OpBitcast %[[#Float]]
+; CHECK-NOT: OpUnordered
+; CHECK-NOT: OpIsNan
+; CHECK: OpReturnValue %[[#Rn]]
 define spir_func float @test_nnan_only(float %x, float %y) {
   %r = call nnan float @llvm.minimumnum.f32(float %x, float %y)
   ret float %r
