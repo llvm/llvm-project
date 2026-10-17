@@ -624,7 +624,7 @@ let Class = PropertyTypeCase<APValue, "Reflection"> in {
   def : Property<"reflectionType", QualType> {
     let Conditional = [{ reflectionKind == ReflectionKind::Type }];
     let Read = [{
-      QualType::getFromOpaquePtr(node.getReflectionOpaqueOperand())
+      static_cast<const TypeSourceInfo *>(node.getReflectionOpaqueOperand())->getType()
     }];
   }
   def : Creator<[{
@@ -634,7 +634,7 @@ let Class = PropertyTypeCase<APValue, "Reflection"> in {
     case ReflectionKind::Null:
       return APValue(reflectionKind, nullptr);
     case ReflectionKind::Type:
-      return APValue(reflectionKind, (*reflectionType).getAsOpaquePtr());
+      return APValue(reflectionKind, ctx.getTrivialTypeSourceInfo(*reflectionType));
     }
     llvm_unreachable("unimplemented or unknow reflection entities");
   }]>;

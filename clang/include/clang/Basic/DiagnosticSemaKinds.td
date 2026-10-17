@@ -8648,6 +8648,10 @@ def err_uuidof_with_multiple_guids : Error<
   "cannot call operator __uuidof on a type with multiple GUIDs">;
 def err_incomplete_typeid : Error<"'typeid' of incomplete type %0">;
 def err_variably_modified_typeid : Error<"'typeid' of variably modified type %0">;
+def err_reflect_variably_modified_type : Error<
+  "cannot reflect variably modified type %0">;
+def err_reflect_using_declaration : Error<
+  "cannot reflect a name found through a using-declaration">;
 def err_static_illegal_in_new : Error<
   "the 'static' modifier for the array size is not legal in new expressions">;
 def err_array_new_needs_size : Error<

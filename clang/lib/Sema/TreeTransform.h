@@ -13636,12 +13636,21 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(reflection): Implement its transform
-
   switch (E->getKind()) {
   case ReflectionKind::Type: {
-    TypeSourceInfo *NewT = getDerived().TransformType(
-        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+    auto *TSI = const_cast<TypeSourceInfo *>(E->getTypeSourceInfo());
+    TypeSourceInfo *NewT;
+
+    // Rebuild the entire TypeLoc if this is an alias; for alias template
+    // specializations, what determines identity is the template arguments
+    // (and the identity of the alias declaration), not the canonical type.
+    if (isTypeAliasAsReflectionName(TSI->getType())) {
+      TypeLocBuilder TLB;
+      QualType T = getDerived().TransformType(TLB, TSI->getTypeLoc());
+      NewT = T.isNull() ? nullptr : TLB.getTypeSourceInfo(SemaRef.Context, T);
+    } else {
+      NewT = getDerived().TransformType(TSI);
+    }
     if (!NewT)
       return ExprError();
     return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
