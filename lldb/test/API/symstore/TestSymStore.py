@@ -246,6 +246,24 @@ class NeverRespondsHTTPHandler(http.server.BaseHTTPRequestHandler):
         pass  # suppress server-side output
 
 
+class PartialResponseHTTPHandler(http.server.BaseHTTPRequestHandler):
+    can_finish = threading.Event()
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", "1000000")
+        self.end_headers()
+        for _ in range(10):
+            self.wfile.write(b"a" * 4096)
+            self.wfile.flush()
+        # Wait until the client has finished running.
+        self.can_finish.wait()
+
+    def log_message(self, *args):
+        pass  # suppress server-side output
+
+
 class SymStoreTests(TestBase):
     # Build artifacts can't be shared across test functions because
     # MockedSymStore moves the built PDB out of the build directory to simulate
@@ -466,6 +484,32 @@ class SymStoreTests(TestBase):
                     self.assertIn("failed to download", warnings)
                 finally:
                     NeverRespondsHTTPHandler.can_finish.set()
+
+    def test_http_partial_response(self):
+        """
+        Check that a warning is emitted and no symbol is found when the server
+        sends a partial response but it ultimately times out.
+        """
+
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as dir:
+            PartialResponseHTTPHandler.can_finish.clear()
+            self.runCmd("settings set plugin.symbol-locator.symstore.timeout 1")
+
+            with HTTPServer(dir, PartialResponseHTTPHandler) as url:
+                try:
+                    self.runCmd(
+                        f"settings set plugin.symbol-locator.symstore.urls {url}"
+                    )
+                    with open(self.getBuildArtifact("stderr.txt"), "w+b") as err_file:
+                        self.dbg.SetErrorFileHandle(err_file, False)
+                        self.try_breakpoint(exe, should_have_loc=False)
+                        self.dbg.SetErrorFileHandle(sys.stderr, False)
+                        err_file.seek(0)
+                        warnings = err_file.read().decode()
+                    self.assertIn("failed to download", warnings)
+                finally:
+                    PartialResponseHTTPHandler.can_finish.set()
 
     @skipUnlessPackageAvailable("cryptography")
     def test_https(self):
