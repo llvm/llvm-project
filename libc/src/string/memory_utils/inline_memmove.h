@@ -27,8 +27,9 @@
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/inline_memmove.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
-  inline_memmove_no_small_size
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP inline_memmove_aarch64
+  inline_memmove_small_size_aarch64
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP                         \
+  inline_memmove_follow_up_aarch64
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memmove.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
