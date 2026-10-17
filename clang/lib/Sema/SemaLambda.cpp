@@ -1147,6 +1147,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
   // a dependent entity. Could this be because the implicit template parameter
   // is not in scope while the specifier is parsed, leaving the lambda's
   // dependency kind as LDK_Unknown? See:
+  // * clang/unittests/AST/LambdaDependencyTest.cpp
   // * https://github.com/llvm/llvm-project/issues/232874
   // * https://github.com/llvm/llvm-project/issues/233102
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
