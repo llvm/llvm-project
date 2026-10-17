@@ -145,5 +145,5 @@ endif ()
 
 if (TARGET intrinsics_gen)
   # Check if we are building as part of an LLVM build
-  add_dependencies(obj.Polly intrinsics_gen)
+  add_dependencies(obj.Polly analysis_gen)
 endif()
