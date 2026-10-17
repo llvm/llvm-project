@@ -538,6 +538,34 @@ TEST_F(OpenMPContextTest, ScoringDeviceWeights) {
   }
 }
 
+TEST_F(OpenMPContextTest, ScoringUnknownConstructs) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addUnknownConstruct();
+
+  APInt Score(64, 3);
+  VariantMatchInfo Scored, Device;
+  Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+  Device.addTrait(TraitProperty::device_kind_cpu, "");
+  SmallVector<VariantMatchInfo, 2> Candidates{Scored, Device};
+  // Both enclosing constructs contribute to the device weight: 1 + 2^2.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  OMPContext UnknownThenParallel(false, Triple("x86_64-unknown-linux"),
+                                 Triple(), -1);
+  UnknownThenParallel.addUnknownConstruct();
+  UnknownThenParallel.addTrait(TraitProperty::construct_parallel_parallel);
+  APInt LowerScore(64, 1);
+  VariantMatchInfo LowerScored, Parallel;
+  LowerScored.addTrait(TraitProperty::implementation_vendor_llvm, "",
+                       &LowerScore);
+  Parallel.addTrait(TraitProperty::construct_parallel_parallel, "");
+  // The unknown construct occupies position one, so PARALLEL scores 1 + 2.
+  EXPECT_TRUE(isVariantApplicableInContext(Parallel, UnknownThenParallel));
+  Candidates = {LowerScored, Parallel};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, UnknownThenParallel), 1);
+}
+
 TEST_F(OpenMPContextTest, ScoringWideTotals) {
   OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
   Context.addTrait(TraitProperty::construct_parallel_parallel);
@@ -576,6 +604,23 @@ TEST_F(OpenMPContextTest, ScoringDeepConstructs) {
     EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
     Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Weight);
     EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
+}
+
+TEST_F(OpenMPContextTest, GetConstructTraits) {
+  using TP = TraitProperty;
+  // Leaves appear in source order. DISTRIBUTE has no selector property, so a
+  // placeholder keeps its nesting level.
+  EXPECT_EQ(getConstructTraits(OMPD_target_teams_distribute_parallel_do_simd),
+            (SmallVector<TP, 8>{
+                TP::construct_target_target, TP::construct_teams_teams,
+                TP::invalid, TP::construct_parallel_parallel,
+                TP::construct_for_for, TP::construct_simd_simd}));
+  EXPECT_EQ(getConstructTraits(OMPD_task), (SmallVector<TP, 8>{TP::invalid}));
+  for (Directive D : {OMPD_section, OMPD_dispatch, OMPD_nothing,
+                      OMPD_metadirective, OMPD_requires, OMPD_assume}) {
+    SCOPED_TRACE(getOpenMPDirectiveName(D));
+    EXPECT_TRUE(getConstructTraits(D).empty());
   }
 }
 
