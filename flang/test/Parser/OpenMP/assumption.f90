@@ -1,5 +1,6 @@
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
 !RUN: %flang_fc1 -fopenmp-version=51 -fopenmp -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix="PARSE-TREE" %s
+!RUN: %flang_fc1 -fopenmp-version=52 -fopenmp -fdebug-unparse-no-sema %s | FileCheck --check-prefix="UNPARSE" %s
 
 subroutine sub1
   integer :: r
