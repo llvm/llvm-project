@@ -322,6 +322,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getCouldNotCompute();
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+            if (VPValue *Offset = R->getStartOffset())
+              Start =
+                  SE.getAddExpr(Start, getSCEVExprForVPValue(Offset, PSE, L));
             const SCEV *AddRec =
                 SE.getAddRecExpr(Start, Step, L, SCEV::FlagNone);
             if (R->isTruncated())
