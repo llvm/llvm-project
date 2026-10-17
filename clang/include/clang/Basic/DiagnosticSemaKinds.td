@@ -12075,6 +12075,9 @@ def err_incompatible_coopmat_types
 def err_invalid_coopmat_builtin_arg
     : Error<"invalid argument of cooperative matrix builtin">;
 
+def err_coopmat_pointer
+    : Error<"pointer to cooperative matrix type is not allowed">;
+
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
   "'mig_server_routine' attribute only applies to routines that return a kern_return_t">,

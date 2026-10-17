@@ -1844,6 +1844,11 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
 
 QualType Sema::BuildPointerType(QualType T,
                                 SourceLocation Loc, DeclarationName Entity) {
+  if (getLangOpts().OpenCL && T->getAs<CooperativeMatrixType>()) {
+    Diag(Loc, diag::err_coopmat_pointer);
+    return QualType();
+  }
+
   if (T->isReferenceType()) {
     // C++ 8.3.2p4: There shall be no ... pointers to references ...
     Diag(Loc, diag::err_illegal_decl_pointer_to_reference)

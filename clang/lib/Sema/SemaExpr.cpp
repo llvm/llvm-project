@@ -16112,9 +16112,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
         }
         Call->setType(LHSExpr->getType());
         RHS.get()->setType(LHSExpr->getType());
-        if (CheckCoopMatrixLoadElementType(LHSExpr->getType(),
-                                           LHSExpr->getBeginLoc(), Call))
-          return ExprError();
         if (CheckCoopMatrixMatMulOutput(Call))
           return ExprError();
       }
