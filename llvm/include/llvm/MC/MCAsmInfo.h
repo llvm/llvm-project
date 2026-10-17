@@ -353,11 +353,12 @@ protected:
   /// false.
   bool SupportsDebugInformation = false;
 
-  /// Exception handling format for the target.  Defaults to None.
+  /// Default exception handling model for the target.  Defaults to None.
   ExceptionHandling ExceptionsType = ExceptionHandling::None;
 
   /// True if target uses CFI unwind information for other purposes than EH
-  /// (debugging / sanitizers) when `ExceptionsType == ExceptionHandling::None`.
+  /// (debugging / sanitizers) when the exception model is
+  /// `ExceptionHandling::None`.
   bool UsesCFIWithoutEH = false;
 
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
@@ -656,21 +657,16 @@ public:
   ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
-  void setExceptionsType(ExceptionHandling EH) {
-    ExceptionsType = EH;
+  bool usesCFIWithoutEH(ExceptionHandling EH) const {
+    return EH == ExceptionHandling::None && UsesCFIWithoutEH;
   }
 
-  bool usesCFIWithoutEH() const {
-    return ExceptionsType == ExceptionHandling::None && UsesCFIWithoutEH;
-  }
-
-  /// Returns true if the exception handling method for the platform uses call
-  /// frame information to unwind.
-  bool usesCFIForEH() const {
-    return (ExceptionsType == ExceptionHandling::DwarfCFI ||
-            ExceptionsType == ExceptionHandling::ARM ||
-            ExceptionsType == ExceptionHandling::ZOS ||
-            (ExceptionsType == ExceptionHandling::WinEH && usesWindowsCFI()));
+  /// Returns true if the exception handling method \p EH uses call frame
+  /// information to unwind.
+  bool usesCFIForEH(ExceptionHandling EH) const {
+    return EH == ExceptionHandling::DwarfCFI || EH == ExceptionHandling::ARM ||
+           EH == ExceptionHandling::ZOS ||
+           (EH == ExceptionHandling::WinEH && usesWindowsCFI());
   }
 
   /// Returns true if the object format describes unwind information with
@@ -684,8 +680,8 @@ public:
 
   /// Returns true if the exception tables reference the per-invoke EH labels
   /// emitted around invokes. 32-bit x86 SEH and Wasm do not.
-  bool usesPerInvokeEHLabels() const {
-    switch (ExceptionsType) {
+  bool usesPerInvokeEHLabels(ExceptionHandling EH) const {
+    switch (EH) {
     case ExceptionHandling::WinEH:
       // 32-bit x86 SEH uses a state table, not per-invoke IP-to-state ranges.
       return WinEHEncodingType != WinEH::EncodingType::X86;

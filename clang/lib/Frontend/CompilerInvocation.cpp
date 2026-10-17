@@ -577,6 +577,12 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_fe_invalid_exception_model)
         << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
 
+  if (T.isWasm() &&
+      (CodeGenOpts.hasSjLjExceptions() || CodeGenOpts.hasSEHExceptions() ||
+       CodeGenOpts.hasDWARFExceptions()))
+    Diags.Report(diag::err_fe_invalid_exception_model)
+        << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
+
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
 
