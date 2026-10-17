@@ -128,9 +128,8 @@ void mempcpy_struct_fully_uninit() {
   struct st s1;
   struct st s2;
 
-  // FIXME: Maybe ask UninitializedObjectChecker whether s1 is fully
-  // initialized?
-  mempcpy(&s2, &s1, sizeof(struct st));
+  mempcpy(&s2, &s1, sizeof(struct st)); // expected-warning{{The 2nd argument contains uninitialized data (e.g., field: 'i')}}
+                                        // expected-note@-1{{Other elements might also be undefined}}
 }
 
 // Creduced crash. In this case, an symbolicregion is wrapped in an
