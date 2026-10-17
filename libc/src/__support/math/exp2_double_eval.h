@@ -96,7 +96,7 @@ LIBC_ALWAYS_INLINE double exp2(double x) {
   //   r_hi = m_hi + m_hi * u_hi
   //   r_lo = m * (u_lo + u^2 * P(u)) + m_lo * (1 + u_hi)
   //
-  // Since r_hi is in [0.997, 2.0), for r_hi to be exact in double precision,
+  // Since r_hi is in [1 - 2^-8, 2), for r_hi to be exact in double precision,
   // we need:
   //   lsb(m_hi * u_hi) >= 2^-52.
   // We choose:
