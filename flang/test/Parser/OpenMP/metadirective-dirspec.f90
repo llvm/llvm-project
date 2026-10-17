@@ -40,7 +40,8 @@ end
 !UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: CRITICAL(x))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
+!PARSE-TREE:  OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = metadirective
 !PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = User
@@ -227,7 +228,8 @@ end
 !UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: FLUSH(x, y))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
+!PARSE-TREE: OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = metadirective
 !PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = User
