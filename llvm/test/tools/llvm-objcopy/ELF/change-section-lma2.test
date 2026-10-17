@@ -1,0 +1,58 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --change-section-lma *-0x20 %t %t2
+# RUN: llvm-readelf --program-headers %t2 | FileCheck %s --check-prefix=CHECK-MINUS-RISCV-ATTRIBUTE
+# RUN: llvm-objcopy --change-section-lma *+0x30 %t %t3
+# RUN: llvm-readelf --program-headers %t3 | FileCheck %s --check-prefix=CHECK-PLUS-RISCV-ATTRIBUTE
+
+# CHECK-MINUS-RISCV-ATTRIBUTE:  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+# CHECK-MINUS-RISCV-ATTRIBUTE:  PHDR           0x000002 0x20028002 0x20027fe2 0x00020 0x00020     0x1
+# CHECK-MINUS-RISCV-ATTRIBUTE:  LOAD           0x000000 0x20028000 0x20027fe0 0x00650 0x00650     0x1
+# CHECK-MINUS-RISCV-ATTRIBUTE:  LOAD           0x000650 0x20030d50 0x20030d30 0x00190 0x00190     0x1
+# CHECK-MINUS-RISCV-ATTRIBUTE:  LOAD           0x0007e0 0x20030ee8 0x20030ec8 0x00000 0x00202     0x1
+# CHECK-MINUS-RISCV-ATTRIBUTE:  ATTRIBUTES     0x000000 0x00000000 0x00000000 0x00072 0x00072     0x1
+
+# CHECK-PLUS-RISCV-ATTRIBUTE:  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+# CHECK-PLUS-RISCV-ATTRIBUTE:  PHDR           0x000002 0x20028002 0x20028032 0x00020 0x00020     0x1
+# CHECK-PLUS-RISCV-ATTRIBUTE:  LOAD           0x000000 0x20028000 0x20028030 0x00650 0x00650     0x1
+# CHECK-PLUS-RISCV-ATTRIBUTE:  LOAD           0x000650 0x20030d50 0x20030d80 0x00190 0x00190     0x1
+# CHECK-PLUS-RISCV-ATTRIBUTE:  LOAD           0x0007e0 0x20030ee8 0x20030f18 0x00000 0x00202     0x1
+# CHECK-PLUS-RISCV-ATTRIBUTE:  ATTRIBUTES     0x000000 0x00000000 0x00000000 0x00072 0x00072     0x1
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+Sections:
+  - Name:          .rom_start
+    Type:          SHT_PROGBITS
+    Size:          0x57c
+  - Name:          .data
+    Type:          SHT_PROGBITS
+    Size:          0x190
+  - Name:          .bss
+    Type:          SHT_NOBITS
+    Size:          0x202
+ProgramHeaders:
+  - Type:          PT_PHDR
+    FileSize:      0x20
+    MemSize:       0x20
+    Offset:        0x2
+    VAddr:         0x20028002
+  - Type:          PT_LOAD
+    Offset:        0x0
+    VAddr:         0x20028000
+    FirstSec:      .rom_start
+    LastSec:       .rom_start
+  - Type:          PT_LOAD
+    VAddr:         0x20030d50
+    FirstSec:      .data
+    LastSec:       .data
+  - Type:          PT_LOAD
+    VAddr:         0x20030ee8
+    FirstSec:      .bss
+    LastSec:       .bss
+  - Type:          0x70000003
+    FileSize:      0x72
+    MemSize:       0x72
