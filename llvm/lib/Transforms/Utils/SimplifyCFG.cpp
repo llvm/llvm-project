@@ -2759,8 +2759,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
   // Either both `invoke`s must not have a normal destination,
   // or     both `invoke`s must     have a normal destination,
   auto HasNormalDest = [](InvokeInst *II) {
-    return !isa<UnreachableInst>(
-        II->getNormalDest()->getFirstNonPHIOrPseudoProbe());
+    return !isa<UnreachableInst>(II->getNormalDest()->getFirstNonPHIIt());
   };
   if (any_of(Invokes, HasNormalDest)) {
     // Do not merge `invoke` that does not have a normal destination with one
@@ -2845,8 +2844,8 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
   if (DTU)
     Updates.reserve(2 + 3 * Invokes.size());
 
-  bool HasNormalDest = !isa<UnreachableInst>(
-      Invokes[0]->getNormalDest()->getFirstNonPHIOrPseudoProbe());
+  bool HasNormalDest =
+      !isa<UnreachableInst>(Invokes[0]->getNormalDest()->getFirstNonPHIIt());
 
   // Clone one of the invokes into a new basic block.
   // Since they are all compatible, it doesn't matter which invoke is cloned.
