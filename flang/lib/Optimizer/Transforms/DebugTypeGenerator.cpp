@@ -730,12 +730,18 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     }
   }
 
-  // TODO: Populate the charType field to represent strings with non-default
-  // character types. Please see issue #95440 for more details.
+  // Set type of the underlying characters in the string
+  unsigned charBitSize = kindMapping.getCharacterBitsize(charTy.getFKind());
+  mlir::LLVM::DITypeAttr charTypeAttr = genBasicType(
+      context,
+      mlir::StringAttr::get(
+          context, "character(kind=" + llvm::Twine(charTy.getFKind()) + ")"),
+      charBitSize, encoding);
+
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, nullptr);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, charTypeAttr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
