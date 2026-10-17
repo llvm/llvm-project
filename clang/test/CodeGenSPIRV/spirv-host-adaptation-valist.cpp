@@ -5,7 +5,9 @@
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=WINDOWS %s
 
-[[clang::sycl_external]] int f(int n, ...) {
+/// The sycl_external attribute is ignored for a variadic function, so 'f' is
+/// emitted because 'g' references it.
+int f(int n, ...) {
   __builtin_va_list ap1, ap2;
   __builtin_va_start(ap1, n);
   int v = __builtin_va_arg(ap1, int);
@@ -14,6 +16,9 @@
   __builtin_va_end(ap2);
   return v;
 }
+
+using FP = int (*)(int, ...);
+[[clang::sycl_external]] FP g() { return f; }
 
 // LINUX:    define {{.*}} i32 @_Z1fiz(i32 noundef %n, ...) {{.*}} {
 // LINUX:      %ap1 = alloca [1 x %struct.__va_list_tag], align 8
