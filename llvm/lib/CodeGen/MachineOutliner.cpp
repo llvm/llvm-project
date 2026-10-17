@@ -263,7 +263,8 @@ struct InstructionMapper {
     CanOutlineWithPrevInstr = false;
 
     // Only add one illegal number per range of legal numbers.
-    if (AddedIllegalLastTime)
+    // Skip leading illegal numbers; each appended block ends with one.
+    if (UnsignedVecForMBB.empty() || AddedIllegalLastTime)
       return IllegalInstrNumber;
 
     // Remember that we added an illegal number last time.
@@ -401,10 +402,8 @@ struct InstructionMapper {
           break;
 
         case InstrType::Invisible:
-          // Normally this is set by mapTo(Blah)Unsigned, but we just want to
-          // skip this instruction. So, unset the flag here.
+          // Invisible instructions do not change the mapped sequence.
           ++NumInvisible;
-          AddedIllegalLastTime = false;
           break;
         }
       }
