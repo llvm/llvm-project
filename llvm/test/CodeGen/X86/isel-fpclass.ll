@@ -102,13 +102,11 @@ define i1 @issignaling_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0:
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    seta %dl
+; X64-GISEL-NEXT:    seta %cl
 ; X64-GISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X64-GISEL-NEXT:    setb %al
-; X64-GISEL-NEXT:    andb %dl, %al
-; X64-GISEL-NEXT:    orb %cl, %al
+; X64-GISEL-NEXT:    andb %cl, %al
 ; X64-GISEL-NEXT:    retq
    %a0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1)  ; "snan"
    ret i1 %a0
@@ -147,10 +145,8 @@ define i1 @issignaling_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X64-GISEL-NEXT:    setae %al
-; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
  entry:
    %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 2)  ; "qnan"
@@ -190,19 +186,16 @@ define i1 @not_isquiet_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    setb %dl
+; X64-GISEL-NEXT:    setb %cl
+; X64-GISEL-NEXT:    sete %dl
 ; X64-GISEL-NEXT:    orb %cl, %dl
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    sete %cl
-; X64-GISEL-NEXT:    orb %dl, %cl
-; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    seta %dl
+; X64-GISEL-NEXT:    seta %cl
 ; X64-GISEL-NEXT:    cmpl $2143289344, %eax # imm = 0x7FC00000
 ; X64-GISEL-NEXT:    setb %al
-; X64-GISEL-NEXT:    andb %dl, %al
-; X64-GISEL-NEXT:    orb %cl, %al
+; X64-GISEL-NEXT:    andb %cl, %al
+; X64-GISEL-NEXT:    orb %dl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1021)  ; ~"qnan"
@@ -242,10 +235,8 @@ define i1 @isinf_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-GISEL-NEXT:    sete %al
-; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 516)  ; 0x204 = "inf"
@@ -285,13 +276,10 @@ define i1 @not_isinf_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    setb %dl
-; X64-GISEL-NEXT:    orb %cl, %dl
-; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-GISEL-NEXT:    setb %cl
 ; X64-GISEL-NEXT:    seta %al
-; X64-GISEL-NEXT:    orb %dl, %al
+; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 507)  ; ~0x204 = "~inf"
@@ -324,11 +312,9 @@ define i1 @is_plus_inf_f(float %x) nounwind {
 ;
 ; X64-GISEL-LABEL: is_plus_inf_f:
 ; X64-GISEL:       # %bb.0: # %entry
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-GISEL-NEXT:    sete %al
-; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 512)  ; 0x200 = "+inf"
@@ -361,11 +347,9 @@ define i1 @is_minus_inf_f(float %x) nounwind {
 ;
 ; X64-GISEL-LABEL: is_minus_inf_f:
 ; X64-GISEL:       # %bb.0: # %entry
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    cmpl $-8388608, %eax # imm = 0xFF800000
 ; X64-GISEL-NEXT:    sete %al
-; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 4)  ; "-inf"
@@ -401,15 +385,13 @@ define i1 @not_is_minus_inf_f(float %x) nounwind {
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    movl %eax, %ecx
 ; X64-GISEL-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %edx, %edx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %ecx # imm = 0x7F800000
-; X64-GISEL-NEXT:    setb %sil
-; X64-GISEL-NEXT:    orb %dl, %sil
+; X64-GISEL-NEXT:    setb %dl
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    sete %dl
+; X64-GISEL-NEXT:    sete %sil
+; X64-GISEL-NEXT:    orb %dl, %sil
 ; X64-GISEL-NEXT:    cmpl $2139095040, %ecx # imm = 0x7F800000
 ; X64-GISEL-NEXT:    seta %al
-; X64-GISEL-NEXT:    orb %dl, %al
 ; X64-GISEL-NEXT:    orb %sil, %al
 ; X64-GISEL-NEXT:    retq
 entry:
@@ -420,18 +402,18 @@ entry:
 define i1 @isfinite_f(float %x) nounwind {
 ; X86-LABEL: isfinite_f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setl %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isfinite_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setl %al
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 ;
 ; X86-FASTISEL-LABEL: isfinite_f:
@@ -439,10 +421,10 @@ define i1 @isfinite_f(float %x) nounwind {
 ; X86-FASTISEL-NEXT:    pushl %eax
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
-; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-FASTISEL-NEXT:    andl (%esp), %eax
-; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-FASTISEL-NEXT:    setl %al
+; X86-FASTISEL-NEXT:    movl (%esp), %eax
+; X86-FASTISEL-NEXT:    addl %eax, %eax
+; X86-FASTISEL-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-FASTISEL-NEXT:    setb %al
 ; X86-FASTISEL-NEXT:    popl %ecx
 ; X86-FASTISEL-NEXT:    retl
 ;
@@ -450,10 +432,8 @@ define i1 @isfinite_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-GISEL-NEXT:    setb %al
-; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 504)  ; 0x1f8 = "finite"
@@ -463,18 +443,18 @@ entry:
 define i1 @not_isfinite_f(float %x) nounwind {
 ; X86-LABEL: not_isfinite_f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-NEXT:    setge %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: not_isfinite_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-NEXT:    setge %al
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 ;
 ; X86-FASTISEL-LABEL: not_isfinite_f:
@@ -482,10 +462,10 @@ define i1 @not_isfinite_f(float %x) nounwind {
 ; X86-FASTISEL-NEXT:    pushl %eax
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstps (%esp)
-; X86-FASTISEL-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; X86-FASTISEL-NEXT:    andl (%esp), %eax
-; X86-FASTISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X86-FASTISEL-NEXT:    setge %al
+; X86-FASTISEL-NEXT:    movl (%esp), %eax
+; X86-FASTISEL-NEXT:    addl %eax, %eax
+; X86-FASTISEL-NEXT:    cmpl $-16777216, %eax # imm = 0xFF000000
+; X86-FASTISEL-NEXT:    setae %al
 ; X86-FASTISEL-NEXT:    popl %ecx
 ; X86-FASTISEL-NEXT:    retl
 ;
@@ -493,13 +473,10 @@ define i1 @not_isfinite_f(float %x) nounwind {
 ; X64-GISEL:       # %bb.0: # %entry
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; X64-GISEL-NEXT:    sete %dl
-; X64-GISEL-NEXT:    orb %cl, %dl
-; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
+; X64-GISEL-NEXT:    sete %cl
 ; X64-GISEL-NEXT:    seta %al
-; X64-GISEL-NEXT:    orb %dl, %al
+; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ~0x1f8 = "~finite"
@@ -532,11 +509,9 @@ define i1 @is_plus_finite_f(float %x) nounwind {
 ;
 ; X64-GISEL-LABEL: is_plus_finite_f:
 ; X64-GISEL:       # %bb.0: # %entry
-; X64-GISEL-NEXT:    xorl %ecx, %ecx
 ; X64-GISEL-NEXT:    movd %xmm0, %eax
 ; X64-GISEL-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
 ; X64-GISEL-NEXT:    setb %al
-; X64-GISEL-NEXT:    orb %cl, %al
 ; X64-GISEL-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 448)  ; 0x1c0 = "+finite"

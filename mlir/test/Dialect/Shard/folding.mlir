@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-grid-simplifications %s | FileCheck %s
+// RUN: mlir-opt -shard-simplify %s | FileCheck %s
 
 shard.grid @grid0(shape = 4x?x2)
 shard.grid @grid1(shape = 2x3)

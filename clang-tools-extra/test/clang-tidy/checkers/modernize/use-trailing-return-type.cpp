@@ -487,6 +487,17 @@ decltype(COMMAND_LINE_INT{}) h21();
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: auto h21() -> decltype(COMMAND_LINE_INT{});
 
+// Builtin macros like __has_feature are registered as object-like macros but
+// require function-like syntax when expanded. Ensure the check does not cause
+// spurious "missing '(' after '__has_feature'" errors when they appear in the
+// raw lex span of a function return type.
+const decltype(__has_feature(cxx_constexpr)) h22();
+// CHECK-MESSAGES: :[[@LINE-1]]:46: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: const decltype(__has_feature(cxx_constexpr)) h22();
+const decltype(__has_builtin(__builtin_expect)) h23();
+// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: const decltype(__has_builtin(__builtin_expect)) h23();
+
 //
 // Name collisions
 //

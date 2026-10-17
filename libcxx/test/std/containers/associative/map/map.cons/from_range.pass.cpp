@@ -9,11 +9,11 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<container-compatible-range<value_type> R>
-//   map(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23
+//   constexpr map(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23, constexpr since C++26
 //
 // template<container-compatible-range<value_type> R>
-//   map(from_range_t, R&& rg, const Allocator& a))
-//     : map(from_range, std::forward<R>(rg), Compare(), a) { } // C++23
+//   constexpr map(from_range_t, R&& rg, const Allocator& a))
+//     : map(from_range, std::forward<R>(rg), Compare(), a) { } // C++23, constexpr since C++26
 
 #include <array>
 #include <map>
@@ -21,7 +21,7 @@
 #include "../../from_range_associative_containers.h"
 #include "test_macros.h"
 
-void test_duplicates() {
+TEST_CONSTEXPR_CXX26 void test_duplicates() {
   using T = std::pair<const int, char>;
 
   std::array input    = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}};
@@ -30,7 +30,7 @@ void test_duplicates() {
   assert(std::ranges::is_permutation(expected, c));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   using T = std::pair<const int, int>;
   for_all_iterators_and_allocators<T>([]<class Iter, class Sent, class Alloc>() {
     test_associative_map<std::map, int, int, Iter, Sent, test_less<int>, Alloc>();
@@ -42,6 +42,13 @@ int main(int, char**) {
 
   test_map_exception_safety_throwing_copy<std::map>();
   test_map_exception_safety_throwing_allocator<std::map, int, int>();
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -147,19 +147,20 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
 bool BracesAroundStatementsCheck::checkStmt(
     const MatchFinder::MatchResult &Result, const Stmt *S,
     SourceLocation StartLoc, SourceLocation EndLocHint) {
-  while (const auto *AS = dyn_cast<AttributedStmt>(S))
+  if (const auto *AS = dyn_cast<AttributedStmt>(S))
     S = AS->getSubStmt();
 
   const auto BraceInsertionHints = utils::getBraceInsertionsHints(
       S, Result.Context->getLangOpts(), *Result.SourceManager, StartLoc,
       EndLocHint);
   if (BraceInsertionHints) {
-    if (ShortStatementLines && !ForceBracesStmts.erase(S) &&
+    if (ShortStatementLines && BraceInsertionHints.offersFixIts() &&
+        !ForceBracesStmts.erase(S) &&
         BraceInsertionHints.resultingCompoundLineExtent(*Result.SourceManager) <
             ShortStatementLines)
       return false;
-    auto Diag = diag(BraceInsertionHints.DiagnosticPos,
-                     "statement should be inside braces");
+    const auto Diag = diag(BraceInsertionHints.DiagnosticPos,
+                           "statement should be inside braces");
     if (BraceInsertionHints.offersFixIts())
       Diag << BraceInsertionHints.openingBraceFixIt()
            << BraceInsertionHints.closingBraceFixIt();

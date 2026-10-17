@@ -31,14 +31,14 @@ end program do_concurrent_shape
 ! CHECK: %[[DIM0_EXT_MAP:.*]] = omp.map.info
 ! CHECK-SAME:   var_ptr(%[[DIM0_EXT]] : !fir.ref<index>, index)
 ! CHECK-SAME:   map_clauses(implicit)
-! CHECK-SAME:   capture(ByCopy) -> !fir.ref<index> {name = "_QFEa.extent.dim0"}
+! CHECK-SAME:   capture(ByCopy) name("_QFEa.extent.dim0") -> !fir.ref<index>
 
 ! CHECK: %[[DIM1_EXT_MAP:.*]] = omp.map.info
 ! CHECK-SAME:   var_ptr(%[[DIM1_EXT]] : !fir.ref<index>, index)
 ! CHECK-SAME:   map_clauses(implicit)
-! CHECK-SAME:   capture(ByCopy) -> !fir.ref<index> {name = "_QFEa.extent.dim1"}
+! CHECK-SAME:   capture(ByCopy) name("_QFEa.extent.dim1") -> !fir.ref<index>
 
-! CHECK: omp.target host_eval({{.*}}) map_entries(
+! CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) map_entries(
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
@@ -55,7 +55,7 @@ end program do_concurrent_shape
 ! CHECK-DAG:    %[[DIM1_EXT_DEV:.*]] = fir.load %[[DIM1_EXT_ARG]]
 
 ! CHECK:        %[[SHAPE:.*]] = fir.shape %[[DIM0_EXT_DEV]], %[[DIM1_EXT_DEV]]
-! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) {uniq_name = "_QFEa"}
+! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) uniq_name("_QFEa")
 
 subroutine do_concurrent_shape_shift
     implicit none
@@ -80,14 +80,14 @@ end subroutine do_concurrent_shape_shift
 ! CHECK: %[[DIM0_STRT_MAP:.*]] = omp.map.info
 ! CHECK-SAME:   var_ptr(%[[DIM0_STRT]] : !fir.ref<index>, index)
 ! CHECK-SAME:   map_clauses(implicit)
-! CHECK-SAME:   capture(ByCopy) -> !fir.ref<index> {name = "_QF{{.*}}Ea.start_idx.dim0"}
+! CHECK-SAME:   capture(ByCopy) name("_QF{{.*}}Ea.start_idx.dim0") -> !fir.ref<index>
 
 ! CHECK: %[[DIM0_EXT_MAP:.*]] = omp.map.info
 ! CHECK-SAME:   var_ptr(%[[DIM0_EXT]] : !fir.ref<index>, index)
 ! CHECK-SAME:   map_clauses(implicit)
-! CHECK-SAME:   capture(ByCopy) -> !fir.ref<index> {name = "_QF{{.*}}Ea.extent.dim0"}
+! CHECK-SAME:   capture(ByCopy) name("_QF{{.*}}Ea.extent.dim0") -> !fir.ref<index>
 
-! CHECK: omp.target host_eval({{.*}}) map_entries(
+! CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) map_entries(
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
@@ -100,5 +100,5 @@ end subroutine do_concurrent_shape_shift
 ! CHECK-DAG:    %[[DIM0_EXT_DEV:.*]] = fir.load %[[DIM0_EXT_ARG]]
 
 ! CHECK:        %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIM0_STRT_DEV]], %[[DIM0_EXT_DEV]]
-! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE_SHIFT]]) {uniq_name = "_QF{{.*}}Ea"}
+! CHECK:        %{{.*}}:2 = hlfir.declare %{{.*}}(%[[SHAPE_SHIFT]]) uniq_name("_QF{{.*}}Ea")
 

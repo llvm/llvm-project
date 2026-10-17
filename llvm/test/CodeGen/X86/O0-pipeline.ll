@@ -32,7 +32,7 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Expand indirectbr instructions
 ; CHECK-NEXT:       Exception handling preparation
-; CHECK-NEXT:       Prepare callbr
+; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
@@ -48,7 +48,6 @@
 ; CHECK-NEXT:       X86 DynAlloca Expander
 ; CHECK-NEXT:       Fast Tile Register Preconfigure
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Fast Tile Register Configure
 ; CHECK-NEXT:       X86 Lower Tile Copy

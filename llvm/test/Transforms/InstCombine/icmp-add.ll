@@ -3579,3 +3579,26 @@ define i1 @icmp_ult_add_lshr_neg_no_nuw(i32 %arg0) {
   %v2 = icmp ult i32 %v1, 256
   ret i1 %v2
 }
+
+define i1 @fold-icmp-sum-of-extended-i1(i16 %v0, i16 %v1, i16 %v2, i16 %v3) {
+; CHECK-LABEL: @fold-icmp-sum-of-extended-i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i16 [[V0:%.*]], [[V2:%.*]]
+; CHECK-NEXT:    [[V1_LT_V3:%.*]] = icmp ult i16 [[V1:%.*]], [[V3:%.*]]
+; CHECK-NEXT:    [[LESS_THAN:%.*]] = icmp slt i16 [[V0]], [[V2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[EQ]], i1 [[V1_LT_V3]], i1 [[LESS_THAN]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  ; Determines if (v0, v1) is lexicographically less than (v2, v3)
+  %is_gt = icmp sgt i16 %v0, %v2
+  %is_lt = icmp slt i16 %v0, %v2
+  %is_gt_i8 = zext i1 %is_gt to i8 ; 1 if v0 > v2, 0 otherwise
+  %is_lt_i8_neg = sext i1 %is_lt to i8 ; -1 if v0 < v2, 0 otherwise
+  %cmp3 = add nsw i8 %is_lt_i8_neg, %is_gt_i8 ; result of the three-way comparison of v0 and v2
+  %eq = icmp eq i8 %cmp3, 0
+  %v1_lt_v3 = icmp ult i16 %v1, %v3
+  %less_than = icmp slt i8 %cmp3, 0
+  %result = select i1 %eq, i1 %v1_lt_v3, i1 %less_than
+  ret i1 %result
+}

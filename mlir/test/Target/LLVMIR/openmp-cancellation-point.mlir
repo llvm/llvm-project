@@ -61,7 +61,7 @@ llvm.func @cancellation_point_sections() {
 // CHECK:         store i32 0, ptr %[[VAL_25]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_26]], align 4
 // CHECK:         %[[VAL_30:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_for_static_init_4u(ptr @1, i32 %[[VAL_30]], i32 34, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr %[[VAL_25]], ptr %[[VAL_26]], i32 1, i32 0)
+// CHECK:         call void @__kmpc_for_static_init_4u(ptr @3, i32 %[[VAL_30]], i32 34, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr %[[VAL_25]], ptr %[[VAL_26]], i32 1, i32 0)
 // CHECK:         %[[VAL_31:.*]] = load i32, ptr %[[VAL_24]], align 4
 // CHECK:         %[[VAL_32:.*]] = load i32, ptr %[[VAL_25]], align 4
 // CHECK:         %[[VAL_33:.*]] = sub i32 %[[VAL_32]], %[[VAL_31]]
@@ -97,7 +97,7 @@ llvm.func @cancellation_point_sections() {
 // CHECK:         %[[VAL_38]] = add nuw i32 %[[VAL_37]], 1
 // CHECK:         br label %[[VAL_35]]
 // CHECK:       omp_section_loop.exit:
-// CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_30]])
+// CHECK:         call void @__kmpc_for_static_fini(ptr @3, i32 %[[VAL_30]])
 // CHECK:         %[[VAL_55:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_55]])
 // CHECK:         br label %[[VAL_56:.*]]
@@ -146,7 +146,7 @@ llvm.func @cancellation_point_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         store i32 %[[VAL_83]], ptr %[[VAL_60]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_61]], align 4
 // CHECK:         %[[VAL_84:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_for_static_init_4u(ptr @1, i32 %[[VAL_84]], i32 34, ptr %[[VAL_58]], ptr %[[VAL_59]], ptr %[[VAL_60]], ptr %[[VAL_61]], i32 1, i32 0)
+// CHECK:         call void @__kmpc_for_static_init_4u(ptr @3, i32 %[[VAL_84]], i32 34, ptr %[[VAL_58]], ptr %[[VAL_59]], ptr %[[VAL_60]], ptr %[[VAL_61]], i32 1, i32 0)
 // CHECK:         %[[VAL_85:.*]] = load i32, ptr %[[VAL_59]], align 4
 // CHECK:         %[[VAL_86:.*]] = load i32, ptr %[[VAL_60]], align 4
 // CHECK:         %[[VAL_87:.*]] = sub i32 %[[VAL_86]], %[[VAL_85]]
@@ -176,7 +176,7 @@ llvm.func @cancellation_point_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         %[[VAL_92]] = add nuw i32 %[[VAL_91]], 1
 // CHECK:         br label %[[VAL_89]]
 // CHECK:       omp_loop.exit:
-// CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_84]])
+// CHECK:         call void @__kmpc_for_static_fini(ptr @3, i32 %[[VAL_84]])
 // CHECK:         %[[VAL_107:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_107]])
 // CHECK:         br label %[[VAL_108:.*]]

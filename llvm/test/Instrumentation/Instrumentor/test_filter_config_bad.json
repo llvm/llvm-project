@@ -1,0 +1,12 @@
+{
+  "configuration": {
+    "runtime_prefix": "__test_filter_",
+    "runtime_prefix.description": "The runtime API prefix."
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "filter": "unknown>0"
+    }
+  }
+}

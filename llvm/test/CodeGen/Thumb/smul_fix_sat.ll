@@ -421,69 +421,68 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ; ARM-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
 ; ARM-NEXT:    mov r3, r5
 ; ARM-NEXT:    bl __aeabi_lmul
-; ARM-NEXT:    adds r0, r0, r7
+; ARM-NEXT:    adds r3, r0, r7
 ; ARM-NEXT:    adcs r1, r6
-; ARM-NEXT:    rsbs r5, r1, #0
-; ARM-NEXT:    adcs r5, r1
-; ARM-NEXT:    movs r2, #1
-; ARM-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; ARM-NEXT:    cmp r0, #0
-; ARM-NEXT:    mov r3, r2
-; ARM-NEXT:    bge .LBB6_2
-; ARM-NEXT:  @ %bb.1:
-; ARM-NEXT:    mov r3, r4
-; ARM-NEXT:  .LBB6_2:
-; ARM-NEXT:    mov r6, r2
-; ARM-NEXT:    bmi .LBB6_4
-; ARM-NEXT:  @ %bb.3:
-; ARM-NEXT:    mov r6, r4
-; ARM-NEXT:  .LBB6_4:
-; ARM-NEXT:    ands r5, r6
+; ARM-NEXT:    rsbs r0, r1, #0
+; ARM-NEXT:    adcs r0, r1
+; ARM-NEXT:    lsrs r2, r3, #31
+; ARM-NEXT:    ands r2, r0
+; ARM-NEXT:    movs r0, #1
 ; ARM-NEXT:    cmp r1, #0
-; ARM-NEXT:    mov r7, r2
-; ARM-NEXT:    bgt .LBB6_6
-; ARM-NEXT:  @ %bb.5:
-; ARM-NEXT:    mov r7, r4
-; ARM-NEXT:  .LBB6_6:
-; ARM-NEXT:    orrs r7, r5
+; ARM-NEXT:    mov r5, r0
+; ARM-NEXT:    bgt .LBB6_2
+; ARM-NEXT:  @ %bb.1:
+; ARM-NEXT:    mov r5, r4
+; ARM-NEXT:  .LBB6_2:
+; ARM-NEXT:    orrs r5, r2
 ; ARM-NEXT:    mvns r6, r4
-; ARM-NEXT:    cmp r7, #0
-; ARM-NEXT:    beq .LBB6_8
-; ARM-NEXT:  @ %bb.7:
-; ARM-NEXT:    ldr r0, .LCPI6_0
-; ARM-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; ARM-NEXT:  .LBB6_8:
+; ARM-NEXT:    cmp r5, #0
+; ARM-NEXT:    bne .LBB6_4
+; ARM-NEXT:  @ %bb.3:
+; ARM-NEXT:    str r3, [sp, #16] @ 4-byte Spill
 ; ARM-NEXT:    mov r5, r6
-; ARM-NEXT:    bne .LBB6_10
-; ARM-NEXT:  @ %bb.9:
+; ARM-NEXT:    beq .LBB6_5
+; ARM-NEXT:    b .LBB6_6
+; ARM-NEXT:  .LBB6_4:
+; ARM-NEXT:    ldr r2, .LCPI6_0
+; ARM-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; ARM-NEXT:    mov r5, r6
+; ARM-NEXT:    bne .LBB6_6
+; ARM-NEXT:  .LBB6_5:
 ; ARM-NEXT:    ldr r5, [sp] @ 4-byte Reload
-; ARM-NEXT:  .LBB6_10:
-; ARM-NEXT:    adds r0, r1, #1
-; ARM-NEXT:    rsbs r7, r0, #0
-; ARM-NEXT:    adcs r7, r0
+; ARM-NEXT:  .LBB6_6:
+; ARM-NEXT:    adds r2, r1, #1
+; ARM-NEXT:    rsbs r7, r2, #0
+; ARM-NEXT:    adcs r7, r2
+; ARM-NEXT:    cmp r3, #0
+; ARM-NEXT:    mov r3, r0
+; ARM-NEXT:    bge .LBB6_8
+; ARM-NEXT:  @ %bb.7:
+; ARM-NEXT:    mov r3, r4
+; ARM-NEXT:  .LBB6_8:
 ; ARM-NEXT:    ands r7, r3
 ; ARM-NEXT:    cmp r1, r6
-; ARM-NEXT:    mov r3, r2
-; ARM-NEXT:    blt .LBB6_12
-; ARM-NEXT:  @ %bb.11:
+; ARM-NEXT:    mov r3, r0
+; ARM-NEXT:    blt .LBB6_10
+; ARM-NEXT:  @ %bb.9:
 ; ARM-NEXT:    mov r3, r4
-; ARM-NEXT:  .LBB6_12:
+; ARM-NEXT:  .LBB6_10:
 ; ARM-NEXT:    orrs r3, r7
-; ARM-NEXT:    lsls r1, r2, #31
+; ARM-NEXT:    lsls r1, r0, #31
 ; ARM-NEXT:    cmp r3, #0
+; ARM-NEXT:    bne .LBB6_12
+; ARM-NEXT:  @ %bb.11:
+; ARM-NEXT:    mov r4, r5
+; ARM-NEXT:  .LBB6_12:
 ; ARM-NEXT:    bne .LBB6_14
 ; ARM-NEXT:  @ %bb.13:
-; ARM-NEXT:    mov r4, r5
-; ARM-NEXT:  .LBB6_14:
-; ARM-NEXT:    bne .LBB6_16
-; ARM-NEXT:  @ %bb.15:
 ; ARM-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; ARM-NEXT:  .LBB6_16:
+; ARM-NEXT:  .LBB6_14:
 ; ARM-NEXT:    mov r0, r4
 ; ARM-NEXT:    add sp, #20
 ; ARM-NEXT:    pop {r4, r5, r6, r7, pc}
 ; ARM-NEXT:    .p2align 2
-; ARM-NEXT:  @ %bb.17:
+; ARM-NEXT:  @ %bb.15:
 ; ARM-NEXT:  .LCPI6_0:
 ; ARM-NEXT:    .long 2147483647 @ 0x7fffffff
   %tmp = call i64 @llvm.smul.fix.sat.i64(i64 %x, i64 %y, i32 32)

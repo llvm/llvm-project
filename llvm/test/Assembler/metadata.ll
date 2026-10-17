@@ -47,10 +47,12 @@ define void @test_attachment_name() {
 ; CHECK: [[M1]] = distinct !DISubprogram
 ; CHECK: [[M4]] = distinct !{}
 
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !llvm.module.flags = !{!7}
 !llvm.dbg.cu = !{!5}
 !0 = !DILocation(line: 662302, column: 26, scope: !1)
-!1 = distinct !DISubprogram(name: "foo", isDefinition: true, unit: !5)
+!1 = distinct !DISubprogram(name: "foo", isDefinition: true, type: !9, unit: !5)
 !2 = distinct !{}
 !3 = distinct !{}
 !4 = distinct !{}

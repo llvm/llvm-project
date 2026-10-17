@@ -54,6 +54,22 @@ Regardless of success or failure, the script performs the following cleanup step
 1.  **Checkout Original Branch:** The script will check out the branch you were on when you started the script.
 2.  **Delete Temporary Remote Branches:** Any temporary branches created on your fork (e.g., `users/johndoe/my-feature-1`) will be deleted from the remote. This prevents clutter in your fork.
 
+## Configuration
+
+In addition to accepting command line flags, `git-llvm-push` can also be configured
+through the git config. To do this, edit your git config (using a command like
+`git config --edit` to edit your repo specific configuration) and add the following
+section header:
+
+```
+[git-llvm-push]
+    <flag> = <flag value>
+```
+
+The flags are spelled the exact same as they are on the command line. All flags
+are supported, although `--verbose` and `--dry-run` will not have an impact on
+the git invocation to read the configuration.
+
 ## Examples
 
 ### Dry Run (Safe Mode)
@@ -129,3 +145,4 @@ To simplify usage, the script attempts to auto-detect certain values if they are
 | `--dry-run`         | Print the commands that would be run without executing them.                         | (not set)          |
 | `-v`, `--verbose`   | Print all commands being run and other verbose output.                               | (not set)          |
 | `-q`, `--quiet`     | Print only essential output and errors, suppressing progress messages.               | (not set)          |
+| `--use-gh-cli-token`| Automatically acquires a token by calling `gh auth token`                            | (not set).         |

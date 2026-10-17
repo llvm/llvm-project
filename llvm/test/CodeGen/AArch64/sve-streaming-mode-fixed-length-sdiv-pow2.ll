@@ -847,8 +847,7 @@ define <1 x i64> @sdiv_v1i64(<1 x i64> %op1) {
 ; NONEON-NOSVE-NEXT:    asr x9, x8, #63
 ; NONEON-NOSVE-NEXT:    add x8, x8, x9, lsr #59
 ; NONEON-NOSVE-NEXT:    asr x8, x8, #5
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = sdiv <1 x i64> %op1, shufflevector (<1 x i64> insertelement (<1 x i64> poison, i64 32, i32 0), <1 x i64> poison, <1 x i32> zeroinitializer)

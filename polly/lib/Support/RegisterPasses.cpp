@@ -50,6 +50,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
@@ -457,10 +458,15 @@ parsePollyCustomOptions(StringRef Params) {
 /// @param EnableForOpt Whether to add Polly IR transformations. If False, only
 ///                     the analysis passes are added, skipping Polly itself.
 ///                     The IR may still be modified.
-static void buildCommonPollyPipeline(FunctionPassManager &PM,
-                                     OptimizationLevel Level,
-                                     bool EnableForOpt) {
-  PassBuilder PB;
+static void
+buildCommonPollyPipeline(const cl::LibraryOptionsContext *LibraryOptions,
+                         FunctionPassManager &PM, OptimizationLevel Level,
+                         IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                         bool EnableForOpt) {
+  PassBuilder PB(
+      /*TM=*/nullptr, PipelineTuningOptions(LibraryOptions),
+      /*PGOOpt=*/{},
+      /*PIC=*/nullptr, std::move(FS));
 
   ExitOnError Err("Inconsistent Polly configuration: ");
   PollyPassOptions &&Opts =
@@ -474,10 +480,13 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
     PM.addPass(llvm::CFGPrinterPass());
 }
 
-static void buildEarlyPollyPipeline(llvm::ModulePassManager &MPM,
-                                    llvm::OptimizationLevel Level) {
+static void
+buildEarlyPollyPipeline(const cl::LibraryOptionsContext *LibraryOptions,
+                        llvm::ModulePassManager &MPM,
+                        llvm::OptimizationLevel Level,
+                        IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+      shouldEnablePollyForOptimization() && Level != OptimizationLevel::O0;
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
@@ -494,7 +503,8 @@ static void buildEarlyPollyPipeline(llvm::ModulePassManager &MPM,
     FPM = FunctionPassManager();
   }
 
-  buildCommonPollyPipeline(FPM, Level, EnableForOpt);
+  buildCommonPollyPipeline(LibraryOptions, FPM, Level, std::move(FS),
+                           EnableForOpt);
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
   if (DumpAfter)
@@ -503,10 +513,12 @@ static void buildEarlyPollyPipeline(llvm::ModulePassManager &MPM,
     MPM.addPass(DumpModulePass(Filename, false));
 }
 
-static void buildLatePollyPipeline(FunctionPassManager &PM,
-                                   llvm::OptimizationLevel Level) {
+static void
+buildLatePollyPipeline(const cl::LibraryOptionsContext *LibraryOptions,
+                       FunctionPassManager &PM, llvm::OptimizationLevel Level,
+                       IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+      shouldEnablePollyForOptimization() && Level != OptimizationLevel::O0;
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
@@ -518,7 +530,8 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
         "not supported with NPM",
         false);
 
-  buildCommonPollyPipeline(PM, Level, EnableForOpt);
+  buildCommonPollyPipeline(LibraryOptions, PM, Level, std::move(FS),
+                           EnableForOpt);
 
   if (DumpAfter)
     PM.addPass(DumpFunctionPass("-after"));
@@ -542,7 +555,8 @@ static llvm::Expected<std::monostate> parseNoOptions(StringRef Params) {
 static llvm::Expected<bool>
 parseCGPipeline(StringRef Name, llvm::CGSCCPassManager &CGPM,
                 PassInstrumentationCallbacks *PIC,
-                ArrayRef<PassBuilder::PipelineElement> Pipeline) {
+                ArrayRef<PassBuilder::PipelineElement> Pipeline,
+                IntrusiveRefCntPtr<vfs::FileSystem> FS) {
 #define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
     auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
@@ -624,6 +638,8 @@ parseModulePipeline(StringRef Name, llvm::ModulePassManager &MPM,
 /// handle LICMed code to make it useful.
 void registerPollyPasses(PassBuilder &PB) {
   PassInstrumentationCallbacks *PIC = PB.getPassInstrumentationCallbacks();
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = PB.getVirtualFileSystemPtr();
+  const cl::LibraryOptionsContext *LibraryOptions = PB.getLibraryOptions();
 
 #define MODULE_PASS(NAME, CREATE_PASS, PARSER)                                 \
   {                                                                            \
@@ -652,10 +668,10 @@ void registerPollyPasses(PassBuilder &PB) {
         return Err(parseFunctionPipeline(Name, FPM, PIC, Pipeline));
       });
   PB.registerPipelineParsingCallback(
-      [PIC](StringRef Name, CGSCCPassManager &CGPM,
-            ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
+      [PIC, FS](StringRef Name, CGSCCPassManager &CGPM,
+                ArrayRef<PassBuilder::PipelineElement> Pipeline) -> bool {
         ExitOnError Err("Unable to parse Polly call graph pass: ");
-        return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline));
+        return Err(parseCGPipeline(Name, CGPM, PIC, Pipeline, FS));
       });
   PB.registerPipelineParsingCallback(
       [PIC](StringRef Name, ModulePassManager &MPM,
@@ -666,16 +682,36 @@ void registerPollyPasses(PassBuilder &PB) {
 
   switch (PassPosition) {
   case POSITION_EARLY:
-    PB.registerPipelineStartEPCallback(buildEarlyPollyPipeline);
+    PB.registerPipelineStartEPCallback(
+        [FS, LibraryOptions](ModulePassManager &MPM, OptimizationLevel Level) {
+          buildEarlyPollyPipeline(LibraryOptions, MPM, Level, FS);
+        });
     break;
   case POSITION_BEFORE_VECTORIZER:
-    PB.registerVectorizerStartEPCallback(buildLatePollyPipeline);
+    PB.registerVectorizerStartEPCallback(
+        [FS, LibraryOptions](FunctionPassManager &FPM,
+                             OptimizationLevel Level) {
+          buildLatePollyPipeline(LibraryOptions, FPM, Level, FS);
+        });
     break;
   }
 }
 } // namespace polly
 
+static Error parseArguments(ArrayRef<const char *> Args) {
+  SmallVector<const char *> Argv = {"Polly"};
+  append_range(Argv, Args);
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
+  return Error::success();
+}
+
 llvm::PassPluginLibraryInfo getPollyPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
-          polly::registerPollyPasses};
+  llvm::PassPluginLibraryInfo Info = {LLVM_PLUGIN_API_VERSION, "Polly",
+                                      LLVM_VERSION_STRING,
+                                      polly::registerPollyPasses};
+  Info.ParseArguments = parseArguments;
+  return Info;
 }

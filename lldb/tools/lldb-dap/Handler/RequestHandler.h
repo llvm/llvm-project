@@ -11,6 +11,7 @@
 
 #include "DAP.h"
 #include "DAPError.h"
+#include "JSONUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
@@ -197,8 +198,7 @@ class DelayedResponseRequestHandler : public BaseRequestHandler {
     // The 'configurationDone' request is not sent until after 'initialized'
     // triggers the breakpoints being sent and 'configurationDone' is the last
     // message in the chain.
-    protocol::Event initialized{"initialized"};
-    dap.Send(initialized);
+    dap.SendJSON(CreateInitializedEventObject(dap.target));
   };
 
 protected:
@@ -234,8 +234,8 @@ public:
                                uint32_t start_column, uint32_t end_line,
                                uint32_t end_column) const;
   std::vector<std::pair<uint32_t, uint32_t>>
-  GetAssemblyBreakpointLocations(int64_t source_reference, uint32_t start_line,
-                                 uint32_t end_line) const;
+  GetAssemblyBreakpointLocations(src_ref_t source_reference,
+                                 uint32_t start_line, uint32_t end_line) const;
 };
 
 class CompletionsRequestHandler
@@ -275,17 +275,34 @@ public:
   void PostRun() const override;
 };
 
-class DisconnectRequestHandler
-    : public RequestHandler<std::optional<protocol::DisconnectArguments>,
-                            protocol::DisconnectResponse> {
+/// The response to 'disconnect' is sent once the session ended, as the last
+/// message to the client. See `DAP::Loop`.
+class DisconnectRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral GetCommand() { return "disconnect"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureTerminateDebuggee};
   }
   llvm::Error
-  Run(const std::optional<protocol::DisconnectArguments> &args) const override;
+  Run(const std::optional<protocol::DisconnectArguments> &args) const;
+
+private:
+  void operator()(const protocol::Request &request) const override {
+    protocol::Response response;
+    response.request_seq = request.seq;
+    response.command = request.command;
+
+    llvm::Expected<std::optional<protocol::DisconnectArguments>> arguments =
+        parseArgs<std::optional<protocol::DisconnectArguments>>(request);
+    if (llvm::Error err = arguments.takeError())
+      return SendError(std::move(err), response);
+
+    BuildErrorResponse(Run(*arguments), response);
+    dap.on_session_end = [this, response = std::move(response)]() mutable {
+      Send(response);
+    };
+  }
 };
 
 class EvaluateRequestHandler
@@ -473,14 +490,13 @@ public:
 
 class CompileUnitsRequestHandler
     : public RequestHandler<
-          std::optional<protocol::CompileUnitsArguments>,
+          protocol::CompileUnitsArguments,
           llvm::Expected<protocol::CompileUnitsResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "compileUnits"; }
   llvm::Expected<protocol::CompileUnitsResponseBody>
-  Run(const std::optional<protocol::CompileUnitsArguments> &args)
-      const override;
+  Run(const protocol::CompileUnitsArguments &args) const override;
 };
 
 class ModulesRequestHandler final
@@ -656,6 +672,15 @@ public:
   }
   llvm::Expected<protocol::WriteMemoryResponseBody>
   Run(const protocol::WriteMemoryArguments &args) const override;
+};
+
+class UnknownRequestHandler final
+    : public RequestHandler<protocol::UnknownArguments,
+                            protocol::UnknownResponseBody> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "unknown"; }
+  llvm::Error Run(const protocol::UnknownArguments &args) const override;
 };
 
 } // namespace lldb_dap

@@ -17,3 +17,11 @@ module attributes {gpu.container_module} {
   gpu.module @nvvm_target_invalid_opt_level [#nvvm.target<chip = "sm_90", O = 4>] {
   }
 }
+
+// -----
+
+module attributes {gpu.container_module} {
+  // expected-error @+1 {{invalid NVVM target chip "not-an-sm"}}
+  gpu.module @nvvm_target_invalid_chip [#nvvm.target<chip = "not-an-sm">] {
+  }
+}

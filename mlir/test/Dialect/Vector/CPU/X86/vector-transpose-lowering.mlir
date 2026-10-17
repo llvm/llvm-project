@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
-// NOTE: This file tests lowerings that are implemented in the X86Vector
+// NOTE: This file tests lowerings that are implemented in the X86
 // dialect. Since X86 does not support scalable vectors, all examples in this
 // file use fixed-width vectors.
 

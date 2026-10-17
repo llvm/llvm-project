@@ -1,16 +1,6 @@
 // RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -fno-delayed-template-parsing
 
-namespace std {
-template <typename T>
-struct remove_reference { typedef T type; };
-template <typename T>
-struct remove_reference<T &> { typedef T type; };
-template <typename T>
-struct remove_reference<T &&> { typedef T type; };
-template <typename T>
-typename remove_reference<T>::type &&move(T &&t);
-}
-
+#include <utility>
 
 struct Good {
   Good& operator=(const Good&);

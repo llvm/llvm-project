@@ -1,24 +1,24 @@
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK32
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64
 
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0  | FileCheck %s --check-prefix CHECK32
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy -O0 | FileCheck %s --check-prefix CHECK64-NOOPT
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST32
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST64
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs -O0 < %s | FileCheck %s --check-prefix TEST64
 
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK32LARGE
 ; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST32LARGE
 
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=large -verify-machineinstrs < %s \
 ; RUN:     -stop-before=ppc-vsx-copy | FileCheck %s --check-prefix CHECK64LARGE
-; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64LARGE
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -code-model=large -verify-machineinstrs < %s | FileCheck %s --check-prefix TEST64LARGE
 
 ; Global variables i and f have the toc-data attribute.
 ; In the following functions, those writing to or reading from
@@ -37,7 +37,7 @@ define dso_local void @write_int(i32 signext %in) {
 }
 ; CHECK32: name:            write_int
 ; CHECK32:      %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc $r2, @i
-; CHECK32-NEXT: STW %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store (s32) into @i)
+; CHECK32-NEXT: STW %{{[0-9]+}}, 0, %[[SCRATCH]] :: (store (s32) into @i)
 
 ; TEST32:         .write_int:
 ; TEST32:           la 4, i[TD](2)
@@ -45,7 +45,7 @@ define dso_local void @write_int(i32 signext %in) {
 
 ; CHECK64: name:            write_int
 ; CHECK64:      %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @i
-; CHECK64-NEXT: STW8 %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store (s32) into @i)
+; CHECK64-NEXT: STW8 %{{[0-9]+}}, 0, %[[SCRATCH]] :: (store (s32) into @i)
 
 ; CHECK64-NOOPT:  name: write_int
 ; CHECK64-NOOPT:    %[[SUBREG:[0-9]+]]:gprc = COPY %{{[0-9]}}.sub_32
@@ -58,8 +58,8 @@ define dso_local void @write_int(i32 signext %in) {
 
 ; CHECK32LARGE: name:            write_int
 ; CHECK32LARGE:      %[[SCRATCH1:[0-9]+]]:gprc_and_gprc_nor0 = ADDIStocHA $r2, @i
-; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc_and_gprc_nor0 = ADDItocL killed %[[SCRATCH1]], @i
-; CHECK32LARGE-NEXT: STW %{{[0-9]+}}, 0, killed %[[SCRATCH2]] :: (store (s32) into @i)
+; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc_and_gprc_nor0 = ADDItocL %[[SCRATCH1]], @i
+; CHECK32LARGE-NEXT: STW %{{[0-9]+}}, 0, %[[SCRATCH2]] :: (store (s32) into @i)
 
 ; FIXME: peephole optimization opportunity for lower part relocation @l to the consuming stw
 ; TEST32LARGE:         .write_int:
@@ -70,8 +70,8 @@ define dso_local void @write_int(i32 signext %in) {
 
 ; CHECK64LARGE: name:            write_int
 ; CHECK64LARGE:      %[[SCRATCH1:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @i
-; CHECK64LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItocL8 killed %[[SCRATCH1]], @i
-; CHECK64LARGE-NEXT: STW8 %{{[0-9]+}}, 0, killed %[[SCRATCH2]] :: (store (s32) into @i)
+; CHECK64LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItocL8 %[[SCRATCH1]], @i
+; CHECK64LARGE-NEXT: STW8 %{{[0-9]+}}, 0, %[[SCRATCH2]] :: (store (s32) into @i)
 
 ; TEST64LARGE:         .write_int:
 ; TEST64LARGE:          addis 4, i[TD]@u(2)
@@ -93,7 +93,7 @@ define dso_local i64 @read_ll() {
 
 ; CHECK64: name:            read_ll
 ; CHECK64:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = LDtoc @ll, $x2 :: (load (s64) from got)
-; CHECK64:   LD 0, killed %[[SCRATCH]]
+; CHECK64:   LD 0, %[[SCRATCH]]
 
 ; CHECK64-NOOPT: name:            read_ll
 ; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = LDtoc @ll, $x2
@@ -105,7 +105,7 @@ define dso_local i64 @read_ll() {
 
 ; CHECK32LARGE: name:            read_ll
 ; CHECK32LARGE: %[[SCRATCH1:[0-9]+]]:gprc_and_gprc_nor0 = ADDIStocHA $r2, @ll
-; CHECK32LARGE: LWZtocL @ll, killed %[[SCRATCH1]] :: (load (s32) from got)
+; CHECK32LARGE: LWZtocL @ll, %[[SCRATCH1]] :: (load (s32) from got)
 
 ; TEST32LARGE:         .read_ll:
 ; TEST32LARGE:          addis 3, L..C0@u(2)
@@ -115,7 +115,7 @@ define dso_local i64 @read_ll() {
 
 ; CHECK64LARGE: name:            read_ll
 ; CHECK64LARGE: %[[SCRATCH1:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @ll
-; CHECK64LARGE: LDtocL @ll, killed %[[SCRATCH1]] :: (load (s64) from got)
+; CHECK64LARGE: LDtocL @ll, %[[SCRATCH1]] :: (load (s64) from got)
 
 ; TEST64LARGE:         .read_ll:
 ; TEST64LARGE:          addis 3, L..C0@u(2)
@@ -129,7 +129,7 @@ define dso_local float @read_float() {
 }
 ; CHECK32: name:            read_float
 ; CHECK32: %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc $r2, @f
-; CHECK32: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
+; CHECK32: %{{[0-9]+}}:f4rc = LFS 0, %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
 
 ; TEST32:       .read_float:
 ; TEST32:         la 3, f[TD](2)
@@ -137,7 +137,7 @@ define dso_local float @read_float() {
 
 ; CHECK64: name:            read_float
 ; CHECK64: %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @f
-; CHECK64: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
+; CHECK64: %{{[0-9]+}}:f4rc = LFS 0, %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
 
 ; CHECK64-NOOPT: name:            read_float
 ; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItoc8 $x2, @f
@@ -149,8 +149,8 @@ define dso_local float @read_float() {
 
 ; CHECK32LARGE: name:            read_float
 ; CHECK32LARGE:      %[[SCRATCH1:[0-9]+]]:gprc_and_gprc_nor0 = ADDIStocHA $r2, @f
-; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc_and_gprc_nor0 = ADDItocL killed %[[SCRATCH1]], @f
-; CHECK32LARGE-NEXT: LFS 0, killed %[[SCRATCH2]] :: (dereferenceable load (s32) from @f)
+; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc_and_gprc_nor0 = ADDItocL %[[SCRATCH1]], @f
+; CHECK32LARGE-NEXT: LFS 0, %[[SCRATCH2]] :: (dereferenceable load (s32) from @f)
 
 ; FIXME: peephole optimization opportunity for lower part relocation @l to the consuming lfs
 ; TEST32LARGE:         .read_float:
@@ -161,8 +161,8 @@ define dso_local float @read_float() {
 
 ; CHECK64LARGE: name:            read_float
 ; CHECK64LARGE:      %[[SCRATCH1:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @f
-; CHECK64LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItocL8 killed %[[SCRATCH1]], @f
-; CHECK64LARGE-NEXT: LFS 0, killed %[[SCRATCH2]] :: (dereferenceable load (s32) from @f)
+; CHECK64LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDItocL8 %[[SCRATCH1]], @f
+; CHECK64LARGE-NEXT: LFS 0, %[[SCRATCH2]] :: (dereferenceable load (s32) from @f)
 
 
 ; TEST64LARGE:         .read_float:
@@ -184,7 +184,7 @@ define dso_local void @write_double(double %in) {
 
 ; CHECK64: name:            write_double
 ; CHECK64:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = LDtoc @d, $x2 :: (load (s64) from got)
-; CHECK64:   STFD %{{[0-9]+}}, 0, killed %[[SCRATCH]]
+; CHECK64:   STFD %{{[0-9]+}}, 0, %[[SCRATCH]]
 
 ; CHECK64-NOOPT: name:            write_double
 ; CHECK64-NOOPT:   %[[SCRATCH:[0-9]+]]:g8rc_and_g8rc_nox0 = LDtoc @d, $x2
@@ -196,7 +196,7 @@ define dso_local void @write_double(double %in) {
 
 ; CHECK32LARGE: name:            write_double
 ; CHECK32LARGE: %[[SCRATCH1:[0-9]+]]:gprc_and_gprc_nor0 = ADDIStocHA $r2, @d
-; CHECK32LARGE: LWZtocL @d, killed %[[SCRATCH1]] :: (load (s32) from got)
+; CHECK32LARGE: LWZtocL @d, %[[SCRATCH1]] :: (load (s32) from got)
 
 ; TEST32LARGE:         .write_double:
 ; TEST32LARGE:          addis 3, L..C1@u(2)
@@ -205,7 +205,7 @@ define dso_local void @write_double(double %in) {
 
 ; CHECK64LARGE: name:            write_double
 ; CHECK64LARGE: %[[SCRATCH1:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @d
-; CHECK64LARGE: LDtocL @d, killed %[[SCRATCH1]] :: (load (s64) from got)
+; CHECK64LARGE: LDtocL @d, %[[SCRATCH1]] :: (load (s64) from got)
 
 ; TEST64LARGE:         .write_double:
 ; TEST64LARGE:          addis 3, L..C1@u(2)
@@ -236,7 +236,7 @@ define dso_local nonnull ptr @addr() {
 
 ; CHECK32LARGE: name:            addr
 ; CHECK32LARGE:      %[[SCRATCH1:[0-9]+]]:gprc_and_gprc_nor0 = ADDIStocHA $r2, @i
-; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc = ADDItocL killed %[[SCRATCH1]], @i
+; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc = ADDItocL %[[SCRATCH1]], @i
 ; CHECK32LARGE-NEXT: $r3 = COPY %[[SCRATCH2]]
 
 ; TEST32LARGE:         .addr:
@@ -284,7 +284,7 @@ define dso_local nonnull ptr @addr() {
 
 ; CHECK64LARGE: name:            addr
 ; CHECK64LARGE:      %[[SCRATCH1:[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @i
-; CHECK64LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:g8rc = ADDItocL8 killed %[[SCRATCH1]], @i
+; CHECK64LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:g8rc = ADDItocL8 %[[SCRATCH1]], @i
 ; CHECK64LARGE-NEXT: $x3 = COPY %[[SCRATCH2]]
 
 ; TEST64LARGE:         .addr:

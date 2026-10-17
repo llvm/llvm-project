@@ -1,22 +1,20 @@
-// REQUIRES:arm
+// REQUIRES: arm
 
-// RUN: rm -rf %t
-// RUN: split-file %s %t
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-base.s -o base.o
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-vfp.s -o vfp.o
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-toolchain.s -o toolchain.o
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi main.s -o main.o
+// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi vendor.s -o vendor.o
+// RUN: not ld.lld main.o base.o vfp.o 2>&1 | FileCheck %s --implicit-check-not=error:
+// RUN: not ld.lld main.o base.o vendor.o 2>&1 | FileCheck %s --implicit-check-not=error:
+// RUN: not ld.lld main.o base.o toolchain.o 2>&1 | FileCheck %s --implicit-check-not=error:
+// RUN: not ld.lld main.o vfp.o base.o 2>&1 | FileCheck %s --implicit-check-not=error:
+// RUN: not ld.lld main.o vfp.o toolchain.o 2>&1 | FileCheck %s --implicit-check-not=error:
+// RUN: not ld.lld main.o toolchain.o base.o 2>&1 | FileCheck %s --implicit-check-not=error:
+// RUN: not ld.lld main.o toolchain.o vfp.o 2>&1 | FileCheck %s --implicit-check-not=error:
 
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-base.s -o %t/base.o
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-vfp.s -o %t/vfp.o
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-vfp-arg-toolchain.s -o %t/toolchain.o
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %t/main.s -o %t/main.o
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %t/vendor.s -o %t/vendor.o
-// RUN: not ld.lld %t/main.o %t/base.o %t/vfp.o -o%t/a.out 2>&1 | FileCheck %s
-// RUN: not ld.lld %t/main.o %t/base.o %t/vendor.o -o%t/a.out 2>&1 | FileCheck %s
-// RUN: not ld.lld %t/main.o %t/base.o %t/toolchain.o -o%t/a.out 2>&1 | FileCheck %s
-// RUN: not ld.lld %t/main.o %t/vfp.o %t/base.o -o%t/a.out 2>&1 | FileCheck %s
-// RUN: not ld.lld %t/main.o %t/vfp.o %t/toolchain.o -o%t/a.out 2>&1 | FileCheck %s
-// RUN: not ld.lld %t/main.o %t/toolchain.o %t/base.o -o%t/a.out 2>&1 | FileCheck %s
-// RUN: not ld.lld %t/main.o %t/toolchain.o %t/vfp.o -o%t/a.out 2>&1 | FileCheck %s
-
-// CHECK: incompatible Tag_ABI_VFP_args
+// CHECK: error: {{.*}}: incompatible Tag_ABI_VFP_args
 
 //--- main.s
 

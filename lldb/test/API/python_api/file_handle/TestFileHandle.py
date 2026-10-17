@@ -679,7 +679,6 @@ class FileHandleTestCase(lldbtest.TestBase):
             lines = [x for x in f.read().strip().split() if x != "7"]
             self.assertEqual(lines, ["foobar"])
 
-    @skipIf(hostoslist=["windows"])
     def test_stdout_file_interactive(self):
         """Ensure when we read stdin from a file, outputs from python goes to the right I/O stream."""
         with open(self.in_filename, "w") as f:
@@ -869,4 +868,6 @@ quit
         with open(self.out_filename, "r") as f:
             output = f.read()
             self.assertIn("Show a list of all debugger commands", output)
-            self.assertIn("List debugger commands related to a word", output)
+            self.assertIn(
+                "List debugger commands and settings related to a word", output
+            )

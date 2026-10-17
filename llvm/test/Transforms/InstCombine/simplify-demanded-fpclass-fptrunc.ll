@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare nofpclass(inf norm sub zero) float @returns_nan_f32()
+declare nofpclass(qnan inf norm sub zero) float @returns_snan_f32()
 declare nofpclass(nan ninf norm sub zero) float @returns_pinf_f32()
 declare nofpclass(nan pinf norm sub zero) float @returns_ninf_f32()
 declare nofpclass(nan norm sub zero) float @returns_inf_f32()
@@ -40,7 +41,7 @@ define nofpclass(inf norm sub zero qnan) half @ret_only_snan__fptrunc(float %x) 
 define nofpclass(inf norm sub zero snan) half @ret_only_qnan__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) half @ret_only_qnan__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = fptrunc float %x to half
   ret half %result
@@ -49,7 +50,7 @@ define nofpclass(inf norm sub zero snan) half @ret_only_qnan__fptrunc(float %x) 
 define nofpclass(inf norm sub zero) half @ret_only_nan__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7E00
+; CHECK-NEXT:    ret half +qnan
 ;
   %result = fptrunc float %x to half
   ret half %result
@@ -68,7 +69,7 @@ define nofpclass(nan norm sub zero) half @ret_only_inf__fptrunc(float %x) {
 define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) half @ret_only_ninf__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %result = fptrunc float %x to half
   ret half %result
@@ -77,7 +78,7 @@ define nofpclass(nan pinf norm sub zero) half @ret_only_ninf__fptrunc(float %x) 
 define nofpclass(nan ninf norm sub zero) half @ret_only_pinf__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) half @ret_only_pinf__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half +inf
 ;
   %result = fptrunc float %x to half
   ret half %result
@@ -96,7 +97,7 @@ define nofpclass(inf nan norm sub) half @ret_only_zero__fptrunc(float %x) {
 define nofpclass(inf nan norm sub nzero) half @ret_only_pzero__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) half @ret_only_pzero__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
   %result = fptrunc float %x to half
   ret half %result
@@ -105,7 +106,7 @@ define nofpclass(inf nan norm sub nzero) half @ret_only_pzero__fptrunc(float %x)
 define nofpclass(inf nan norm sub pzero) half @ret_only_nzero__fptrunc(float %x) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) half @ret_only_nzero__fptrunc(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret half 0xH8000
+; CHECK-NEXT:    ret half -0.000000e+00
 ;
   %result = fptrunc float %x to half
   ret half %result
@@ -417,7 +418,7 @@ define nofpclass(inf nan norm pzero psub) half @ret_only_nsub_nzero__fptrunc(flo
 define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 ; CHECK-LABEL: define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
-; CHECK-NEXT:    ret half 0xH7C00
+; CHECK-NEXT:    ret half +inf
 ;
   %inf = call float @returns_inf_f32()
   %result = fptrunc float %inf to half
@@ -428,7 +429,7 @@ define nofpclass(ninf) half @ret_no_ninf__fptrunc__inf() {
 define nofpclass(pinf) half @ret_no_pinf__fptrunc__inf() {
 ; CHECK-LABEL: define nofpclass(pinf) half @ret_no_pinf__fptrunc__inf() {
 ; CHECK-NEXT:    [[INF:%.*]] = call float @returns_inf_f32()
-; CHECK-NEXT:    ret half 0xHFC00
+; CHECK-NEXT:    ret half -inf
 ;
   %inf = call float @returns_inf_f32()
   %result = fptrunc float %inf to half
@@ -602,6 +603,20 @@ define nofpclass(inf norm sub) half @zero_demands_norm_source(i1 %cond, float %u
 ;
   %norm = call float @returns_norm_f32()
   %select = select i1 %cond, float %norm, float %unknown
+  %result = fptrunc float %select to half
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unknown0) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src2(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fptrunc float [[SELECT]] to half
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call float @returns_snan_f32()
+  %select = select i1 %cond, float %snan, float %unknown0
   %result = fptrunc float %select to half
   ret half %result
 }

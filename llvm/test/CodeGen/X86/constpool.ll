@@ -8,7 +8,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 define i32 @main() nounwind {
 entry:
-	%0 = fcmp oeq float undef, 0x7FF0000000000000		; <i1> [#uses=1]
+	%0 = fcmp oeq float undef, +inf		; <i1> [#uses=1]
 	%1 = zext i1 %0 to i32		; <i32> [#uses=1]
 	store i32 %1, ptr undef, align 4
 	ret i32 undef

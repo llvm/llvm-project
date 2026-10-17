@@ -324,7 +324,7 @@ def M7Ex1ReadNoFastBypass : SchedReadAdvance<-1, [WriteLd, M7LoadLatency1]>;
 
 def : InstRW<[WriteALUsi, M7Ex1ReadNoFastBypass, M7Read_ISS],
              (instregex "t2(ADC|ADDS|ADD|BIC|EOR|ORN|ORR|RSBS|RSB|SBC|SUBS)rs$",
-                        "t2(SUB|CMP|CMNz|TEQ|TST)rs$",
+                        "t2(SUB|CMP|CMN|TEQ|TST)rs$",
                         "t2(A|L)SRs1$")>;
 def : InstRW<[WriteALUsi, M7Read_ISS],
              (instregex "t2MVNs")>;

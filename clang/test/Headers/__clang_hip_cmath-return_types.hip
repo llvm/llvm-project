@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h      \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 %s -fcuda-is-device -fsyntax-only -o -
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: %s -fcuda-is-device -fsyntax-only -o -
 
 template<typename A, typename B>
 struct is_same {

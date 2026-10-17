@@ -69,7 +69,7 @@ namespace Dynamic {
   // CHECK:   unwind label %[[UNWIND:.*]]
   // CHECK: invoke noundef i32 @_ZN7Dynamic1fEv()
   // CHECK:   unwind label %[[UNWIND:.*]]
-  // CHECK: store i32 {{.*}}, ptr getelementptr {{.*}} @_ZN7Dynamic2d1E, i32 0, i32 2
+  // CHECK: store i32 {{.*}}, ptr getelementptr inbounds nuw (i8, ptr @_ZN7Dynamic2d1E, i64 12)
   // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN7Dynamic1DD1Ev, {{.*}} @_ZN7Dynamic2d1E
   // CHECK: ret
   //
@@ -83,7 +83,7 @@ namespace Dynamic {
   // CHECK: store i32 2, {{.*}}ptr getelementptr inbounds {{.*}}@_ZN7Dynamic2d2E{{.*}}, i64 8
   // CHECK: invoke void @_ZN7Dynamic1CC1Eb({{.*}} @_ZN7Dynamic2d2E{{.*}}, i1 noundef zeroext false)
   // CHECK: invoke noundef i32 @_ZN7Dynamic1fEv()
-  // CHECK: store i32 {{.*}}, ptr getelementptr {{.*}} @_ZN7Dynamic2d2E, i32 0, i32 2
+  // CHECK: store i32 {{.*}}, ptr getelementptr inbounds nuw (i8, ptr @_ZN7Dynamic2d2E, i64 12)
   // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN7Dynamic1DD1Ev, {{.*}} @_ZN7Dynamic2d2E
   // CHECK: ret void
 
@@ -98,7 +98,7 @@ namespace Dynamic {
   // CHECK:   unwind label %[[DESTROY_AB_LPAD:.*]]
   // CHECK: %[[I_CALL:.*]] = invoke noundef i32 @_ZN7Dynamic1iEv()
   // CHECK:   unwind label %[[DESTROY_AB_LPAD:.*]]
-  // CHECK: store i32 %[[I_CALL]], ptr getelementptr {{.*}} @_ZN7Dynamic2d3E, i32 0, i32 2
+  // CHECK: store i32 %[[I_CALL]], ptr getelementptr inbounds nuw (i8, ptr @_ZN7Dynamic2d3E, i64 12)
   // CHECK: call {{.*}} @__cxa_atexit({{.*}} @_ZN7Dynamic1DD1Ev, {{.*}} @_ZN7Dynamic2d3E
   // CHECK: ret
   //

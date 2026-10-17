@@ -35,7 +35,8 @@ namespace llvm {
 class MachineInstr;
 class MachineOperand;
 class MipsSubtarget;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class MipsInstrInfo : public MipsGenInstrInfo {
@@ -135,6 +136,9 @@ public:
     return static_cast<const MipsRegisterInfo &>(
         TargetInstrInfo::getRegisterInfo());
   }
+
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
 
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 

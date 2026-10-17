@@ -12,6 +12,7 @@
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/vfscanf_internal.h"
+#include "src/stdio/stdin.h"
 
 #include "hdr/types/FILE.h"
 #include <stdarg.h>
@@ -38,3 +39,7 @@ LLVM_LIBC_FUNCTION(int, vscanf,
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#ifdef LIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES
+LLVM_LIBC_ADD_FUNCTION_C_ALIAS(vscanf, __isoc99_vscanf);
+#endif // LIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES

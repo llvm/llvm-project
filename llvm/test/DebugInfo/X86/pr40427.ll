@@ -45,12 +45,14 @@ bb1:
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !llvm.module.flags = !{!4}
 !llvm.dbg.cu = !{!2}
 !1 = !DILocalVariable(name: "bees", scope: !5, type: null)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
 !3 = !DIFile(filename: "bees.cpp", directory: "")
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "nope", scope: !2, file: !3, line: 1, unit: !2)
+!5 = distinct !DISubprogram(name: "nope", scope: !2, file: !3, line: 1, type: !9, unit: !2)
 !6 = !DILocation(line: 0, scope: !5)
 !7 = !DILocalVariable(name: "flannel", scope: !5, type: null)

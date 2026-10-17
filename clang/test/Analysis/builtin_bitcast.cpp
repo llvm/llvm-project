@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-unknown-unknown -verify %s \
-// RUN:   -analyzer-checker=core,debug.ExprInspection -analyzer-disable-checker=core.FixedAddressDereference
+// RUN:   -analyzer-checker=core,debug.ExprInspection
 
 template <typename T> void clang_analyzer_dump(T);
 using size_t = decltype(sizeof(int));

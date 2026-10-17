@@ -1,0 +1,101 @@
+; Test that llvm-profgen detects and reports mismatching pseudo probe descriptor
+; hashes for the same function across translation units.
+
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+;; ELF
+; RUN: yaml2obj %t/elf.yaml -o %t/test.elf
+; RUN: llvm-profgen --show-disassembly-only --binary=%t/test.elf --output=%t/test.prof \
+; RUN:   2>&1 | FileCheck %s --check-prefix=SUMMARY
+; RUN: llvm-profgen --show-disassembly-only --show-detailed-warning \
+; RUN:   --binary=%t/test.elf --output=%t/test.prof 2>&1 | FileCheck %s --check-prefix=DETAIL
+
+;; COFF
+; RUN: yaml2obj %t/coff.yaml -o %t/test.exe
+; RUN: llvm-profgen --show-disassembly-only --binary=%t/test.exe --output=%t/test-coff.prof \
+; RUN:   2>&1 | FileCheck %s --check-prefix=SUMMARY
+; RUN: llvm-profgen --show-disassembly-only --show-detailed-warning \
+; RUN:   --binary=%t/test.exe --output=%t/test-coff.prof 2>&1 | FileCheck %s --check-prefix=DETAIL
+
+; SUMMARY: warning: 1 functions have mismatching pseudo probe descriptors across translation units.
+; SUMMARY-NOT: warning: pseudo probe descriptor for foo has mismatching hash
+
+; DETAIL: warning: pseudo probe descriptor for foo has mismatching hash across TUs: {{0x[0-9a-f]+}} vs {{0x[0-9a-f]+}}
+; DETAIL: warning: 1 functions have mismatching pseudo probe descriptors across translation units.
+
+;--- elf.yaml
+## Minimal ELF executable with .pseudo_probe_desc containing two entries for
+## the same function GUID (0x1234567890ABCDEF) with different hashes
+## (0xDEADBEEF vs 0xCAFEBABE).
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  Entry:   0x400000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [PF_X, PF_R]
+    VAddr:    0x400000
+    FirstSec: .text
+    LastSec:  .pseudo_probe
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x400000
+    Content: C3
+  - Name:    .pseudo_probe_desc
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    ## Two descriptors: same GUID=0x1234567890ABCDEF, different hashes.
+    ## Entry 1: GUID=0x1234567890ABCDEF, Hash=0xDEADBEEF, Name="foo"
+    ## Entry 2: GUID=0x1234567890ABCDEF, Hash=0xCAFEBABE, Name="foo"
+    Content: EFCDAB9078563412EFBEADDE0000000003666F6FEFCDAB9078563412BEBAFECA0000000003666F6F
+  - Name:    .pseudo_probe
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Content: ''
+
+;--- coff.yaml
+## Minimal PE/COFF executable with the same .pseudo_probe_desc content.
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 0x1000
+  ImageBase:           0x140000000
+  SectionAlignment:    4096
+  FileAlignment:       512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion:   0
+  MinorImageVersion:   0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:           IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics:  []
+  SizeOfStackReserve:  1048576
+  SizeOfStackCommit:   4096
+  SizeOfHeapReserve:   1048576
+  SizeOfHeapCommit:    4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE]
+sections:
+  - Name:            .text
+    Characteristics: [IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ]
+    VirtualAddress:  0x1000
+    VirtualSize:     1
+    SectionData:     C3
+  - Name:            .pseudo_probe_desc
+    Characteristics: [IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ]
+    VirtualAddress:  0x2000
+    VirtualSize:     40
+    SectionData:     EFCDAB9078563412EFBEADDE0000000003666F6FEFCDAB9078563412BEBAFECA0000000003666F6F
+  - Name:            .pseudo_probe
+    Characteristics: [IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ]
+    VirtualAddress:  0x3000
+    VirtualSize:     0
+    SectionData:     ''
+symbols: []

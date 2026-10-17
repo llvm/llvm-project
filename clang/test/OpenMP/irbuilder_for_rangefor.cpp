@@ -56,9 +56,9 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK-NEXT:    call void @_ZN7MyRangeC1Ei(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]], i32 noundef 42)
 // CHECK-NEXT:    store ptr [[REF_TMP]], ptr [[__RANGE2]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__RANGE2]], align 8, !nonnull [[META2:![0-9]+]]
 // CHECK-NEXT:    call void @_ZN7MyRange5beginEv(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[__BEGIN2]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]])
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE2]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE2]], align 8, !nonnull [[META2]]
 // CHECK-NEXT:    call void @_ZN7MyRange3endEv(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[__END2]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP1]])
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK10MyIteratordeEv(ptr noundef nonnull align 1 dereferenceable(1) [[__BEGIN2]])
 // CHECK-NEXT:    store i32 [[CALL]], ptr [[I]], align 4
@@ -75,8 +75,8 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[DOTCOUNT]], 1
 // CHECK-NEXT:    store i64 [[TMP4]], ptr [[P_UPPERBOUND]], align 8
 // CHECK-NEXT:    store i64 1, ptr [[P_STRIDE]], align 8
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
-// CHECK-NEXT:    call void @__kmpc_for_static_init_8u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i64 1, i64 0)
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+// CHECK-NEXT:    call void @__kmpc_for_static_init_8u(ptr @[[GLOB1:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]], i32 34, ptr [[P_LASTITER]], ptr [[P_LOWERBOUND]], ptr [[P_UPPERBOUND]], ptr [[P_STRIDE]], i64 1, i64 0)
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[P_LOWERBOUND]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[P_UPPERBOUND]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[TMP5]]
@@ -113,8 +113,8 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER]]
 // CHECK:       omp_loop.exit:
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
-// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2]])
+// CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER:%.*]]
 // CHECK:       omp_loop.after:
 // CHECK-NEXT:    ret void
@@ -132,10 +132,10 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON:%.*]], ptr [[TMP0]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !nonnull [[META2]]
 // CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[DOTSTART]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP0]], i32 0, i32 1
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8, !nonnull [[META2]]
 // CHECK-NEXT:    call void @_ZN10MyIteratorC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[DOTSTOP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP4]])
 // CHECK-NEXT:    store i64 1, ptr [[DOTSTEP]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[DOTSTEP]], align 8
@@ -156,7 +156,7 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    br label [[COND_END]]
 // CHECK:       cond.end:
 // CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ [[DIV3]], [[COND_FALSE]] ]
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DISTANCE_ADDR]], align 8, !nonnull [[META2]], !align [[META3:![0-9]+]]
 // CHECK-NEXT:    store i64 [[COND]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -177,7 +177,7 @@ extern "C" void workshareloop_rangefor(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[MUL]] to i32
 // CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]], i32 noundef [[CONV]])
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_ZNK10MyIteratordeEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8, !nonnull [[META2]], !align [[META4:![0-9]+]]
 // CHECK-NEXT:    store i32 [[CALL]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //

@@ -101,7 +101,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   const char *m = inst.GetMnemonic(target);
   const char *o = inst.GetOperands(target);
-  std::string c = inst.GetComment(target);
+  std::string comment = inst.GetComment(target);
   auto d = inst.GetData(target);
 
   std::string bytes;
@@ -119,24 +119,22 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
   if (!bytes.empty()) // remove last whitespace
     bytes.pop_back();
   disassembled_inst.instructionBytes = std::move(bytes);
-
-  llvm::raw_string_ostream si(disassembled_inst.instruction);
-  si << llvm::formatv("{0,-7} {1,-25}", m, o);
+  disassembled_inst.instruction = llvm::formatv("{0,-7} {1,-25}", m, o);
 
   // Only add the symbol on the first line of the function.
   // in the comment section
   if (lldb::SBSymbol symbol = addr.GetSymbol();
       symbol.GetStartAddress() == addr) {
     const llvm::StringRef sym_display_name = symbol.GetDisplayName();
-    c.append(" ");
-    c.append(sym_display_name);
+    comment.append(" ");
+    comment.append(sym_display_name);
 
     if (resolve_symbols)
       disassembled_inst.symbol = sym_display_name;
   }
 
-  if (!c.empty()) {
-    si << " ; " << c;
+  if (!comment.empty()) {
+    disassembled_inst.instruction += " ; " + comment;
   }
 
   std::optional<protocol::Source> source = dap.ResolveSource(addr);
@@ -156,22 +154,6 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
     const auto column = line_entry.GetColumn();
     if (column != 0 && column != LLDB_INVALID_COLUMN_NUMBER)
       disassembled_inst.column = column;
-
-    lldb::SBAddress end_addr = line_entry.GetEndAddress();
-    auto end_line_entry = GetLineEntryForAddress(target, end_addr);
-    if (end_line_entry.IsValid() &&
-        end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
-      const auto end_line = end_line_entry.GetLine();
-      if (end_line != 0 && end_line != LLDB_INVALID_LINE_NUMBER &&
-          end_line != line) {
-        disassembled_inst.endLine = end_line;
-
-        const auto end_column = end_line_entry.GetColumn();
-        if (end_column != 0 && end_column != LLDB_INVALID_COLUMN_NUMBER &&
-            end_column != column)
-          disassembled_inst.endColumn = end_column - 1;
-      }
-    }
   }
 
   return disassembled_inst;

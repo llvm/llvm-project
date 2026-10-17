@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -24,12 +25,18 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "flang/Optimizer/Dialect/FIROpsTypes.cpp.inc"
 
 using namespace fir;
+
+static llvm::cl::opt<bool> enableFirTypeAliases(
+    "enable-fir-type-aliases",
+    llvm::cl::desc("Enable MLIR type aliases for FIR derived types"),
+    llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 
@@ -78,6 +85,8 @@ bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
 }
 
 static llvm::StringRef getVolatileKeyword() { return "volatile"; }
+
+static llvm::StringRef getCorankKeyword() { return "corank"; }
 
 static mlir::ParseResult parseOptionalCommaAndKeyword(mlir::AsmParser &parser,
                                                       mlir::StringRef keyword,
@@ -183,18 +192,21 @@ struct RecordTypeStorage : public mlir::TypeStorage {
 
   bool isPacked() const { return packed; }
   void pack(bool p) { packed = p; }
+  bool isSequence() const { return sequence; }
+  void setSequence(bool s) { sequence = s; }
 
 protected:
   std::string name;
   bool finalized;
   bool packed;
+  bool sequence;
   std::vector<RecordType::TypePair> lens;
   std::vector<RecordType::TypePair> types;
 
 private:
   RecordTypeStorage() = delete;
   explicit RecordTypeStorage(llvm::StringRef name)
-      : name{name}, finalized{false}, packed{false} {}
+      : name{name}, finalized{false}, packed{false}, sequence{false} {}
 };
 
 } // namespace detail
@@ -329,8 +341,7 @@ bool isBoxedRecordType(mlir::Type ty) {
   if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty)) {
     if (mlir::isa<fir::RecordType>(boxTy.getEleTy()))
       return true;
-    mlir::Type innerType = boxTy.unwrapInnerType();
-    return innerType && mlir::isa<fir::RecordType>(innerType);
+    return mlir::isa<fir::RecordType>(boxTy.unwrapInnerType());
   }
   return false;
 }
@@ -340,8 +351,7 @@ bool isClassStarType(mlir::Type ty) {
   if (auto clTy = mlir::dyn_cast<fir::ClassType>(fir::unwrapRefType(ty))) {
     if (mlir::isa<mlir::NoneType>(clTy.getEleTy()))
       return true;
-    mlir::Type innerType = clTy.unwrapInnerType();
-    return innerType && mlir::isa<mlir::NoneType>(innerType);
+    return mlir::isa<mlir::NoneType>(clTy.unwrapInnerType());
   }
   return false;
 }
@@ -414,21 +424,11 @@ bool isUnlimitedPolymorphicType(mlir::Type ty) {
   return isAssumedType(ty);
 }
 
-mlir::Type unwrapInnerType(mlir::Type ty) {
-  return llvm::TypeSwitch<mlir::Type, mlir::Type>(ty)
-      .Case<fir::PointerType, fir::HeapType, fir::SequenceType>([](auto t) {
-        mlir::Type eleTy = t.getEleTy();
-        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
-          return seqTy.getEleTy();
-        return eleTy;
-      })
-      .Case([](fir::RecordType t) { return t; })
-      .Default([](mlir::Type) { return mlir::Type{}; });
-}
-
 bool isRecordWithAllocatableMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (fir::isAllocatableType(memTy))
         return true;
       // A record type cannot recursively include itself as a direct member.
@@ -486,6 +486,12 @@ unsigned getBoxRank(mlir::Type boxTy) {
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
     return seqTy.getDimension();
   return 0;
+}
+
+unsigned getBoxCorank(mlir::Type ty) {
+  return llvm::TypeSwitch<mlir::Type, unsigned>(ty)
+      .Case<fir::BoxType, fir::ClassType>([](auto t) { return t.getCorank(); })
+      .Default([](mlir::Type) { return 0; });
 }
 
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
@@ -681,29 +687,39 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   return buf;
 }
 
-mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
-                             bool turnBoxIntoClass) {
+static mlir::Type changeElementTypeImpl(mlir::Type type,
+                                        mlir::Type newElementType,
+                                        bool turnBoxIntoClass,
+                                        bool turnClassIntoBox) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
       .Case([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
-        auto newEleTy =
-            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        auto newEleTy = changeElementTypeImpl(
+            t.getEleTy(), newElementType, turnBoxIntoClass, turnClassIntoBox);
         return FIRT::get(newEleTy, t.isVolatile());
       })
       .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
-        return FIRT::get(
-            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
+        return FIRT::get(changeElementTypeImpl(
+            t.getEleTy(), newElementType, turnBoxIntoClass, turnClassIntoBox));
       })
       .Case([&](fir::BoxType t) -> mlir::Type {
         mlir::Type newInnerType =
-            changeElementType(t.getEleTy(), newElementType, false);
+            changeElementTypeImpl(t.getEleTy(), newElementType, false, false);
         if (turnBoxIntoClass)
-          return fir::ClassType::get(newInnerType, t.isVolatile());
-        return fir::BoxType::get(newInnerType, t.isVolatile());
+          return fir::ClassType::get(newInnerType, t.isVolatile(),
+                                     t.getCorank());
+        return fir::BoxType::get(newInnerType, t.isVolatile(), t.getCorank());
+      })
+      .Case([&](fir::ClassType t) -> mlir::Type {
+        mlir::Type newInnerType =
+            changeElementTypeImpl(t.getEleTy(), newElementType, false, false);
+        if (turnClassIntoBox)
+          return fir::BoxType::get(newInnerType, t.isVolatile(), t.getCorank());
+        return fir::ClassType::get(newInnerType, t.isVolatile(), t.getCorank());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
@@ -711,6 +727,12 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
                "unexpected FIR leaf type");
         return newElementType;
       });
+}
+
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass) {
+  return changeElementTypeImpl(type, newElementType, turnBoxIntoClass,
+                               /*turnClassIntoBox=*/false);
 }
 
 } // namespace fir
@@ -788,31 +810,44 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-// `box` `<` type (`, volatile` $volatile^)? `>`
+// `box` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)? `>`
 mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
+  int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
-    return {};
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    // Fortran 2023 C871
+    // VOLATILE attribute shall not be specified for a coarray, so the
+    // "volatile" keyword cannot coexist with the "corank".
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
+      isVolatile = true;
+    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
+      if (mlir::succeeded(parser.parseOptionalColon()))
+        if (!mlir::succeeded(parser.parseInteger(corank)))
+          return {};
+  }
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile);
+  return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile,
+                                         corank);
 }
 
 void fir::BoxType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy();
   if (isVolatile())
     printer << ", " << getVolatileKeyword();
+  if (getCorank())
+    printer << ", corank:" << getCorank();
   printer << '>';
 }
 
 llvm::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                     mlir::Type eleTy, bool isVolatile) {
+                     mlir::Type eleTy, bool isVolatile, int64_t corank) {
   if (mlir::isa<fir::BaseBoxType>(eleTy))
     return emitError() << "invalid element type\n";
   // TODO
@@ -879,32 +914,44 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 // ClassType
 //===----------------------------------------------------------------------===//
 
-// `class` `<` type (`, volatile` $volatile^)? `>`
+// `class` `<` type (`, volatile` $volatile^)? (`, corank: corank` $corank^)?`>`
 mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   mlir::Type eleTy;
   auto location = parser.getCurrentLocation();
   auto *context = parser.getContext();
   bool isVolatile = false;
+  int64_t corank = 0;
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
-  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
-    return {};
+  if (mlir::succeeded(parser.parseOptionalComma())) {
+    // Fortran 2023 C871
+    // VOLATILE attribute shall not be specified for a coarray, so the
+    // "volatile" keyword cannot coexist with the "corank".
+    if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
+      isVolatile = true;
+    else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
+      if (mlir::succeeded(parser.parseOptionalColon()))
+        if (!mlir::succeeded(parser.parseInteger(corank)))
+          return {};
+  }
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<fir::ClassType>(location, context, eleTy,
-                                           isVolatile);
+  return parser.getChecked<fir::ClassType>(location, context, eleTy, isVolatile,
+                                           corank);
 }
 
 void fir::ClassType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy();
   if (isVolatile())
     printer << ", " << getVolatileKeyword();
+  if (getCorank())
+    printer << ", corank:" << getCorank();
   printer << '>';
 }
 
 llvm::LogicalResult
 fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                       mlir::Type eleTy, bool isVolatile) {
+                       mlir::Type eleTy, bool isVolatile, int64_t corank) {
   if (mlir::isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
                 mlir::FloatType, fir::CharacterType, fir::LogicalType,
@@ -1013,6 +1060,14 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   if (parser.parseLess() || parser.parseKeyword(&name))
     return {};
   RecordType result = RecordType::get(parser.getContext(), name);
+  // Optional SEQUENCE attribute: ", sequence"
+  if (!parser.parseOptionalComma()) {
+    if (parser.parseKeyword("sequence")) {
+      parser.emitError(parser.getNameLoc(), "expected 'sequence' keyword");
+      return {};
+    }
+    result.setSequence(true);
+  }
 
   RecordType::TypeVector lenParamList;
   if (!parser.parseOptionalLParen()) {
@@ -1068,13 +1123,15 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
 
 void fir::RecordType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getName();
+  if (isSequence())
+    printer << ",sequence";
   if (!recordTypeVisited.count(uniqueKey())) {
     recordTypeVisited.insert(uniqueKey());
     if (getLenParamList().size()) {
       char ch = '(';
       for (auto p : getLenParamList()) {
         printer << ch << p.first << ':';
-        p.second.print(printer.getStream());
+        printer.printType(p.second);
         ch = ',';
       }
       printer << ')';
@@ -1086,7 +1143,7 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       char ch = '{';
       for (auto p : getTypeList()) {
         printer << ch << p.first << ':';
-        p.second.print(printer.getStream());
+        printer.printType(p.second);
         ch = ',';
       }
       printer << '}';
@@ -1097,6 +1154,18 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
     recordTypeVisited.erase(uniqueKey());
   }
   printer << '>';
+}
+
+mlir::OpAsmAliasResult fir::RecordType::getAlias(llvm::raw_ostream &os) const {
+  if (!enableFirTypeAliases)
+    return mlir::OpAsmAliasResult::NoAlias;
+  // Derived type names may contain "." that are forbidden in MLIR type
+  // alias. Replace them by a capital 'X' that cannot be found in user
+  // defined derived type and is also used as a replacement before generating
+  // llvm assembly.
+  for (char ch : getName())
+    os << (ch == '.' ? 'X' : ch);
+  return mlir::OpAsmAliasResult::OverridableAlias;
 }
 
 void fir::RecordType::finalize(llvm::ArrayRef<TypePair> lenPList,
@@ -1122,6 +1191,10 @@ void fir::RecordType::pack(bool p) { getImpl()->pack(p); }
 
 bool fir::RecordType::isPacked() const { return getImpl()->isPacked(); }
 
+bool fir::RecordType::isSequence() const { return getImpl()->isSequence(); }
+
+void fir::RecordType::setSequence(bool s) { getImpl()->setSequence(s); }
+
 detail::RecordTypeStorage const *fir::RecordType::uniqueKey() const {
   return getImpl();
 }
@@ -1145,7 +1218,7 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
   for (auto f : llvm::enumerate(getTypeList()))
     if (ident == f.value().first)
       return f.index();
-  return std::numeric_limits<unsigned>::max();
+  return Fortran::common::numeric_limits<unsigned>::max();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1415,15 +1488,22 @@ mlir::Type BaseBoxType::getEleTy() const {
           [](auto type) { return type.getEleTy(); });
 }
 
-mlir::Type BaseBoxType::getBaseAddressType() const {
+mlir::Type BaseBoxType::getBaseAddressType(bool dropHeapOrPtr) const {
   mlir::Type eleTy = getEleTy();
-  if (fir::isa_ref_type(eleTy))
+  if (!dropHeapOrPtr && fir::isa_ref_type(eleTy))
     return eleTy;
-  return fir::ReferenceType::get(eleTy, isVolatile());
+  return fir::ReferenceType::get(getElementOrSequenceType(), isVolatile());
 }
 
 mlir::Type BaseBoxType::unwrapInnerType() const {
-  return fir::unwrapInnerType(getEleTy());
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(getEleTy())
+      .Case<fir::PointerType, fir::HeapType, fir::SequenceType>([](auto t) {
+        mlir::Type eleTy = t.getEleTy();
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+          return seqTy.getEleTy();
+        return eleTy;
+      })
+      .Default([](mlir::Type t) { return t; });
 }
 
 mlir::Type BaseBoxType::getElementOrSequenceType() const {
@@ -1483,6 +1563,14 @@ fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewShape(int rank) const {
   return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
 }
 
+fir::BaseBoxType
+fir::BaseBoxType::getBoxTypeWithNewElementType(mlir::Type elementType,
+                                               bool polymorphic) const {
+  return llvm::cast<fir::BaseBoxType>(changeElementTypeImpl(
+      *this, elementType, /*turnBoxIntoClass=*/polymorphic,
+      /*turnClassIntoBox=*/!polymorphic));
+}
+
 fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewAttr(
     fir::BaseBoxType::Attribute attr) const {
   mlir::Type baseType = fir::unwrapRefType(getEleTy());
@@ -1522,6 +1610,17 @@ bool fir::BaseBoxType::isPointerOrAllocatable() const {
 
 bool BaseBoxType::isVolatile() const { return fir::isa_volatile_type(*this); }
 
+bool BaseBoxType::isArray() const {
+  return llvm::isa<fir::SequenceType>(getElementOrSequenceType());
+}
+
+bool BaseBoxType::isCoarray() const {
+  return llvm::TypeSwitch<mlir::Type, bool>(*this)
+      .Case<fir::BoxType, fir::ClassType>(
+          [](auto t) { return t.getCorank() > 0; })
+      .Default([](mlir::Type) { return false; });
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
@@ -1554,6 +1653,9 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     return std::pair{size, alignment};
   }
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    // Dynamic / unknown shapes have no compile-time byte size.
+    if (seqTy.hasDynamicExtents() || seqTy.hasUnknownShape())
+      return std::nullopt;
     auto result = getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
     if (!result)
       return result;
@@ -1565,6 +1667,25 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
     unsigned short align = 1;
+    if (recTy.isPacked()) {
+      // LLVM packed structs (<{ ... }>) place fields back-to-back with no
+      // inter-field alignment padding and no tail padding.  Each component
+      // still occupies its allocation size (llvm::alignTo(storeSize, ABI
+      // alignment)), because LLVM's packed StructLayout advances by
+      // getTypeAllocSize, not getTypeStoreSize.  For example, x86 f80 has
+      // store size 10 bytes but ABI alignment 16 bytes, so its allocation
+      // size is 16 bytes; a packed {f80, i8} therefore occupies 17 bytes,
+      // not 11.  The packed struct's own ABI alignment is always 1.
+      for (auto component : recTy.getTypeList()) {
+        auto result =
+            getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+        if (!result)
+          return result;
+        auto [compSize, compAlign] = *result;
+        size += llvm::alignTo(compSize, compAlign); // alloc size per field
+      }
+      return std::pair{size, static_cast<unsigned short>(1)};
+    }
     for (auto component : recTy.getTypeList()) {
       auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
       if (!result)
@@ -1574,6 +1695,8 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
           llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
       align = std::max(align, compAlign);
     }
+    // Round up to the record's alignment to include outermost tail padding.
+    size = llvm::alignTo(size, align);
     return std::pair{size, align};
   }
   if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
@@ -1590,7 +1713,12 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       return result;
     auto [compSize, compAlign] = *result;
     if (character.hasConstantLen())
-      compSize *= character.getLen();
+      // Use the code unit's allocation stride (aligned store size) rather than
+      // the bare store size.  Under kind mappings like a1:24 (i24, 3-byte
+      // store, 4-byte stride), multiplying by the store size under-counts the
+      // total byte footprint; using alignTo(compSize, compAlign) matches what
+      // LLVM allocates for each code unit.
+      compSize = llvm::alignTo(compSize, compAlign) * character.getLen();
     return std::pair{compSize, compAlign};
   }
   return std::nullopt;

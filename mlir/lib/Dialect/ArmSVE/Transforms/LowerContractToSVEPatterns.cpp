@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "lower-contract-to-arm-sve-i8mm"
 
 using namespace mlir;
+using namespace mlir::arm_sve;
 
 namespace {
 // Get the operand of a `vector.contract`. This function is intended to abstract
@@ -544,7 +545,7 @@ public:
 class LowerContractionToSVEI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
 
@@ -563,7 +564,7 @@ public:
 class LowerContractionToSVEBFMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
 
@@ -581,13 +582,13 @@ public:
 
 } // namespace
 
-void mlir::populateLowerContractionToSVEI8MMPatterns(
+void mlir::arm_sve::populateLowerContractionToSVEI8MMPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToSVEI8MMPattern>(context, /*benefit=*/2);
 }
 
-void mlir::populateLowerContractionToSVEBFMMLAPatterns(
+void mlir::arm_sve::populateLowerContractionToSVEBFMMLAPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToSVEBFMMLAPattern>(context, /*benefit=*/2);

@@ -32,7 +32,7 @@ body: |
     $fp = SUBXri $fp, 4, 0
     STRXui %2, $x1, 0
 
-    ; Is is fine to coalesce copies from constant physregs even when they are
+    ; It is fine to coalesce copies from constant physregs even when they are
     ; clobbered.
     ; CHECK-NOT: COPY
     ; CHECK: STRWui $wzr, $x1
@@ -40,7 +40,7 @@ body: |
     dead $wzr = SUBSWri $w1, 0, 0, implicit-def $nzcv
     STRWui %3, $x1, 0
 
-    ; Is is fine to coalesce copies from constant physregs even when they are
+    ; It is fine to coalesce copies from constant physregs even when they are
     ; clobbered.
     ; CHECK-NOT: COPY
     ; CHECK: STRXui $xzr, $x1

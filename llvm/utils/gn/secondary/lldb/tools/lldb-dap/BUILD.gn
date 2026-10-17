@@ -68,6 +68,7 @@ static_library("lib") {
     "Handler/StepOutRequestHandler.cpp",
     "Handler/TestGetTargetBreakpointsRequestHandler.cpp",
     "Handler/ThreadsRequestHandler.cpp",
+    "Handler/UnknownRequestHandler.cpp",
     "Handler/VariablesRequestHandler.cpp",
     "Handler/WriteMemoryRequestHandler.cpp",
     "InstructionBreakpoint.cpp",

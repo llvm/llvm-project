@@ -90,7 +90,7 @@ public:
   /// Convert variable location debugging information stored in DbgMarkers and
   /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
-  LLVM_ABI void convertFromNewDbgValues();
+  LLVM_ABI bool convertFromNewDbgValues();
 
   unsigned getNumber() const {
     assert(getParent() && "only basic blocks in functions have valid numbers");
@@ -228,16 +228,28 @@ public:
   /// Requires the basic block to have a parent module.
   LLVM_ABI const DataLayout &getDataLayout() const;
 
-  /// Returns the terminator instruction if the block is well formed or
-  /// null if the block is not well formed.
+  /// Returns whether the block has a terminator.
+  bool hasTerminator() const LLVM_READONLY {
+    return !InstList.empty() && InstList.back().isTerminator();
+  }
+
+  /// Returns the terminator instruction; assumes that the block is well-formed.
   const Instruction *getTerminator() const LLVM_READONLY {
-    if (InstList.empty() || !InstList.back().isTerminator())
-      return nullptr;
+    assert(hasTerminator() && "cannot get terminator of non-well-formed block");
     return &InstList.back();
   }
   Instruction *getTerminator() {
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getTerminator());
+  }
+
+  /// Returns the terminator instruction if the block is well formed or
+  /// null if the block is not well formed.
+  const Instruction *getTerminatorOrNull() const LLVM_READONLY {
+    return hasTerminator() ? getTerminator() : nullptr;
+  }
+  Instruction *getTerminatorOrNull() {
+    return hasTerminator() ? getTerminator() : nullptr;
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize
@@ -268,21 +280,6 @@ public:
         static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
   }
 
-  /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode instruction.
-  ///
-  /// When adding instructions to the beginning of the basic block, they should
-  /// be added before the returned value, not before the first instruction,
-  /// which might be PHI. Returns 0 is there's no non-PHI instruction.
-  ///
-  /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
-  /// preserves some debugging information.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "getFirstNonPHIIt") const
-      Instruction *getFirstNonPHI() const;
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions instead",
-                           "getFirstNonPHIIt") Instruction *getFirstNonPHI();
-
   /// Returns an iterator to the first instruction in this block that is not a
   /// PHINode instruction.
   ///
@@ -300,26 +297,21 @@ public:
     return It;
   }
 
-  /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode or a debug intrinsic, or any pseudo operation if \c SkipPseudoOp
-  /// is true.
-  LLVM_ABI InstListType::const_iterator
-  getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
-  InstListType::iterator getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
+  /// Returns an iterator to the first instruction in this block that is not a
+  /// PHINode or a pseudo operation.
+  LLVM_ABI InstListType::const_iterator getFirstNonPHIOrPseudoProbe() const;
+  InstListType::iterator getFirstNonPHIOrPseudoProbe() {
     return static_cast<const BasicBlock *>(this)
-        ->getFirstNonPHIOrDbg(SkipPseudoOp)
+        ->getFirstNonPHIOrPseudoProbe()
         .getNonConst();
   }
 
-  /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode, a debug intrinsic, or a lifetime intrinsic, or any pseudo
-  /// operation if \c SkipPseudoOp is true.
-  LLVM_ABI InstListType::const_iterator
-  getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) const;
-  InstListType::iterator
-  getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
+  /// Returns an iterator to the first instruction in this block that is not a
+  /// PHINode, a lifetime intrinsic, or a pseudo operation.
+  LLVM_ABI InstListType::const_iterator getFirstNonPHIOrLifetime() const;
+  InstListType::iterator getFirstNonPHIOrLifetime() {
     return static_cast<const BasicBlock *>(this)
-        ->getFirstNonPHIOrDbgOrLifetime(SkipPseudoOp)
+        ->getFirstNonPHIOrLifetime()
         .getNonConst();
   }
 
@@ -341,16 +333,15 @@ public:
   /// This is an O(1) check, unlike getFirstInsertionPt() which must scan
   /// through all PHI nodes.
   bool hasInsertionPt() const {
-    const Instruction *Term = getTerminator();
-    return Term && Term->getOpcode() != Instruction::CatchSwitch;
+    return getTerminator()->getOpcode() != Instruction::CatchSwitch;
   }
 
   /// Returns an iterator to the first instruction in this block that is
-  /// not a PHINode, a debug intrinsic, a static alloca or any pseudo operation.
-  LLVM_ABI const_iterator getFirstNonPHIOrDbgOrAlloca() const;
-  iterator getFirstNonPHIOrDbgOrAlloca() {
+  /// not a PHINode, a static alloca, or any pseudo operation.
+  LLVM_ABI const_iterator getFirstNonPHIOrAlloca() const;
+  iterator getFirstNonPHIOrAlloca() {
     return static_cast<const BasicBlock *>(this)
-        ->getFirstNonPHIOrDbgOrAlloca()
+        ->getFirstNonPHIOrAlloca()
         .getNonConst();
   }
 
@@ -362,27 +353,6 @@ public:
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getFirstMayFaultInst());
   }
-
-  /// Return a const iterator range over the instructions in the block, skipping
-  /// any debug instructions. Skip any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI
-  iterator_range<filter_iterator<BasicBlock::const_iterator,
-                                 std::function<bool(const Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true) const;
-
-  /// Return an iterator range over the instructions in the block, skipping any
-  /// debug instructions. Skip and any pseudo operations as well if \c
-  /// SkipPseudoOp is true.
-  LLVM_ABI iterator_range<
-      filter_iterator<BasicBlock::iterator, std::function<bool(Instruction &)>>>
-  instructionsWithoutDebug(bool SkipPseudoOp = true);
-
-  /// Return the size of the basic block ignoring debug instructions
-  LLVM_ABI
-  filter_iterator<BasicBlock::const_iterator,
-                  std::function<bool(const Instruction &)>>::difference_type
-  sizeWithoutDebug() const;
 
   /// Unlink 'this' from the containing function, but do not delete it.
   LLVM_ABI void removeFromParent();
@@ -623,9 +593,6 @@ public:
 
   /// Split the basic block into two basic blocks at the specified instruction.
   ///
-  /// If \p Before is true, splitBasicBlockBefore handles the
-  /// block splitting. Otherwise, execution proceeds as described below.
-  ///
   /// Note that all instructions BEFORE the specified iterator
   /// stay as part of the original basic block, an unconditional branch is added
   /// to the original BB, and the rest of the instructions in the BB are moved
@@ -639,11 +606,9 @@ public:
   ///
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlock utility function.
-  LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "",
-                                       bool Before = false);
-  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "",
-                              bool Before = false) {
-    return splitBasicBlock(I->getIterator(), BBName, Before);
+  LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "");
+  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "") {
+    return splitBasicBlock(I->getIterator(), BBName);
   }
 
   /// Split the basic block into two basic blocks at the specified instruction
@@ -761,15 +726,11 @@ public:
   /// instructions, so the order should be validated no more than once after
   /// each ordering to ensure that transforms have the same algorithmic
   /// complexity when asserts are enabled as when they are disabled.
-  LLVM_ABI_FOR_TEST void validateInstrOrdering() const;
+  LLVM_ABI void validateInstrOrdering() const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(BasicBlock, LLVMBasicBlockRef)
-
-/// Advance \p It while it points to a debug instruction and return the result.
-/// This assumes that \p It is not at the end of a block.
-LLVM_ABI BasicBlock::iterator skipDebugIntrinsics(BasicBlock::iterator It);
 
 #ifdef NDEBUG
 /// In release builds, this is a no-op. For !NDEBUG builds, the checks are
@@ -781,16 +742,6 @@ inline void BasicBlock::validateInstrOrdering() const {}
 // maps and sets. The iterator is made up of its node pointer, and the
 // debug-info "head" bit.
 template <> struct DenseMapInfo<BasicBlock::iterator> {
-  static inline BasicBlock::iterator getEmptyKey() {
-    return BasicBlock::iterator(nullptr);
-  }
-
-  static inline BasicBlock::iterator getTombstoneKey() {
-    BasicBlock::iterator It(nullptr);
-    It.setHeadBit(true);
-    return It;
-  }
-
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^

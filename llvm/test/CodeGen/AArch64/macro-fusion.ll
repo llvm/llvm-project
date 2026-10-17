@@ -5,7 +5,7 @@
 ; only 2 SU's are fused at most.
 define signext i32 @test(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: %bb.0 entry 
 ; CHECK: Macro fuse: SU([[SU4:[0-9]+]]) - SU([[SU5:[0-9]+]])
 ; CHECK: Bind SU([[SU1:[0-9]+]]) - SU([[SU4]])

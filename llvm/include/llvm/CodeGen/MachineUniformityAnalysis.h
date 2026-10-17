@@ -29,12 +29,12 @@ using MachineUniformityInfo = GenericUniformityInfo<MachineSSAContext>;
 ///
 /// If \p HasBranchDivergence is false, produces a dummy result which assumes
 /// everything is uniform.
-MachineUniformityInfo computeMachineUniformityInfo(
-    MachineFunction &F, const MachineCycleInfo &cycleInfo,
-    const MachineDominatorTree &domTree, bool HasBranchDivergence);
+LLVM_ABI MachineUniformityInfo computeMachineUniformityInfo(
+    MachineFunction &F, const MachineCycleInfo &CI,
+    const MachineDominatorTree &DT, bool HasBranchDivergence);
 
 /// Legacy analysis pass which computes a \ref MachineUniformityInfo.
-class MachineUniformityAnalysisPass : public MachineFunctionPass {
+class LLVM_ABI MachineUniformityAnalysisPass : public MachineFunctionPass {
   MachineUniformityInfo UI;
 
 public:
@@ -59,18 +59,18 @@ class MachineUniformityAnalysis
 
 public:
   using Result = MachineUniformityInfo;
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 class MachineUniformityPrinterPass
-    : public PassInfoMixin<MachineUniformityAnalysis> {
+    : public RequiredPassInfoMixin<MachineUniformityPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachineUniformityPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

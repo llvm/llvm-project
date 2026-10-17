@@ -57,7 +57,7 @@ int main(void) {
 
 /// CHECK: Allocating Memory on Device
 /// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_alloc
-/// CHECK-SAME: src_device_num=[[HOST:[0-9]+]]
+/// CHECK-SAME: src_device_num=[[HOST:-1]]
 /// CHECK-SAME: dest_device_num=[[DEVICE:[0-9]+]]
 /// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_alloc {{.+}} src_device_num=[[HOST]] {{.+}} dest_device_num=[[DEVICE]]
 

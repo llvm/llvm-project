@@ -253,6 +253,18 @@ void testVectorSizeType() {
     value = v.size();
 }
 
+namespace gh208708 {
+void f(int &n) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<`
+  // CHECK-FIXES: n = std::max(n, -1);
+  if (n < -1) n = -1 ;
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>`
+  // CHECK-FIXES: n = std::min(n, 1); /*use clamp when c++17 or later is enabled*/
+  if (n > 1) n = 1/*use clamp when c++17 or later is enabled*/;
+}
+} // namespace gh208708
+
 namespace gh121676 {
 
 void useLeft() {

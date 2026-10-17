@@ -162,17 +162,15 @@ define void @PR20134(ptr %a, i32 %i) {
 ; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    leal 2(%rsi), %ecx
-; CHECK-NEXT:    movslq %ecx, %rdx
-; CHECK-NEXT:    movb $2, %cl
-; CHECK-NEXT:    shlq %cl, %rdx
-; CHECK-NEXT:    leaq (%rdi,%rdx), %rcx
-; CHECK-NEXT:    movl (%rcx), %edx
-; CHECK-NEXT:    addl (%rax), %edx
+; CHECK-NEXT:    movslq %ecx, %rcx
+; CHECK-NEXT:    shlq $2, %rcx
+; CHECK-NEXT:    addq %rdi, %rcx
+; CHECK-NEXT:    movl (%rcx), %ecx
+; CHECK-NEXT:    addl (%rax), %ecx
 ; CHECK-NEXT:    movslq %esi, %rax
-; CHECK-NEXT:    movb $2, %cl
-; CHECK-NEXT:    shlq %cl, %rax
+; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
-; CHECK-NEXT:    movl %edx, (%rax)
+; CHECK-NEXT:    movl %ecx, (%rax)
 ; CHECK-NEXT:    retq
 
   %add1 = add nsw i32 %i, 1
@@ -202,17 +200,15 @@ define void @PR20134_zext(ptr %a, i32 %i) {
 ; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    leal 2(%rsi), %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    movb $2, %cl
-; CHECK-NEXT:    shlq %cl, %rdx
-; CHECK-NEXT:    leaq (%rdi,%rdx), %rcx
-; CHECK-NEXT:    movl (%rcx), %edx
-; CHECK-NEXT:    addl (%rax), %edx
+; CHECK-NEXT:    movl %ecx, %ecx
+; CHECK-NEXT:    shlq $2, %rcx
+; CHECK-NEXT:    addq %rdi, %rcx
+; CHECK-NEXT:    movl (%rcx), %ecx
+; CHECK-NEXT:    addl (%rax), %ecx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    movb $2, %cl
-; CHECK-NEXT:    shlq %cl, %rax
+; CHECK-NEXT:    shlq $2, %rax
 ; CHECK-NEXT:    addq %rdi, %rax
-; CHECK-NEXT:    movl %edx, (%rax)
+; CHECK-NEXT:    movl %ecx, (%rax)
 ; CHECK-NEXT:    retq
 
   %add1 = add nuw i32 %i, 1

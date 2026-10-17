@@ -50,7 +50,7 @@ static void getNameWithPrefixImpl(raw_ostream &OS, const Twine &GVName,
     Prefix = '\0';
 
   if (PrefixTy == Private)
-    OS << DL.getPrivateGlobalPrefix();
+    OS << DL.getInternalSymbolPrefix();
   else if (PrefixTy == LinkerPrivate)
     OS << DL.getLinkerPrivateGlobalPrefix();
 

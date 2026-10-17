@@ -400,6 +400,38 @@ void arm::setFloatABIInTriple(const Driver &D, const ArgList &Args,
   }
 }
 
+void arm::setEABIInTriple(const Driver &D, const ArgList &Args,
+                          llvm::Triple &Triple) {
+  Arg *A = Args.getLastArg(options::OPT_meabi);
+  if (!A)
+    return;
+
+  StringRef Value = A->getValue();
+  if (Value == "gnu") {
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABI:
+      Triple.setEnvironment(llvm::Triple::GNUEABI);
+      break;
+    case llvm::Triple::EABIHF:
+      Triple.setEnvironment(llvm::Triple::GNUEABIHF);
+      break;
+    default:
+      break;
+    }
+  } else if (Value == "4" || Value == "5") {
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::GNUEABI:
+      Triple.setEnvironment(llvm::Triple::EABI);
+      break;
+    case llvm::Triple::GNUEABIHF:
+      Triple.setEnvironment(llvm::Triple::EABIHF);
+      break;
+    default:
+      break;
+    }
+  }
+}
+
 arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
   return arm::getARMFloatABI(TC.getDriver(), TC.getEffectiveTriple(), Args);
 }
@@ -517,7 +549,8 @@ arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
     else
       ABI = FloatABI::Soft;
 
-    if (Triple.getOS() != llvm::Triple::UnknownOS ||
+    if (((Triple.getOS() != llvm::Triple::UnknownOS) &&
+         !Triple.isOSFirmware()) ||
         !Triple.isOSBinFormatMachO())
       D.Diag(diag::warn_drv_assuming_mfloat_abi_is) << "soft";
   }

@@ -19,12 +19,7 @@
 // (C) Removes unneccesary operands, results, region arguments, and region
 // terminator operands of region branch ops, and,
 // (D) Removes simple and region branch ops that have all non-live results and
-// don't affect memory in any way,
-//
-// iff
-//
-// the IR doesn't have any non-function symbol ops, non-call symbol user ops and
-// branch ops.
+// don't affect memory in any way.
 //
 // Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
 // region branch op, branch op, region branch terminator op, or return-like.
@@ -63,7 +58,7 @@
 #define DEBUG_TYPE "remove-dead-values"
 
 namespace mlir {
-#define GEN_PASS_DEF_REMOVEDEADVALUES
+#define GEN_PASS_DEF_REMOVEDEADVALUESPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -142,9 +137,8 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
     if (liveness->isLive) {
       LDBG() << "Value " << value << " is live according to liveness analysis";
       return true;
-    } else {
-      LDBG() << "Value " << value << " is dead according to liveness analysis";
     }
+    LDBG() << "Value " << value << " is dead according to liveness analysis";
   }
   return false;
 }
@@ -265,7 +259,8 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 }
 
 /// Process a function-like operation `funcOp` using the liveness analysis `la`
-/// and the IR in `module`. If it is not public or external:
+/// and `symbolUserMap`. If it is not public or external and all users are
+/// visible:
 ///   (1) Adding its non-live arguments to a list for future removal.
 ///   (2) Marking their corresponding operands in its callers for removal.
 ///   (3) Identifying and enqueueing unnecessary terminator operands
@@ -274,18 +269,27 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 ///   (5) Collecting the uses of these return values in its callers for future
 ///       removal.
 ///   (6) Marking all its results as non-live values.
-static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
+static void processFuncOp(FunctionOpInterface funcOp,
+                          const SymbolUserMap &symbolUserMap,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp,
                         OpPrintingFlags().skipRegions().printGenericOpForm());
-  if (funcOp.isPublic() || funcOp.isExternal()) {
-    LDBG() << "Function is public or external, skipping: "
+  // Preserve the signature if callers may exist outside the pass root.
+  if (funcOp.isPublic() || funcOp.isExternal() ||
+      !symbolUserMap.areAllUsesVisible(funcOp)) {
+    LDBG() << "Function is public, external, or has unknown users, skipping: "
            << funcOp.getOperation()->getName();
     return;
   }
-
+  ArrayRef<Operation *> users = symbolUserMap.getUsers(funcOp);
+  if (!llvm::all_of(users, llvm::IsaPred<CallOpInterface>)) {
+    // If a non-call operation references the function (e.g. spirv.EntryPoint),
+    // we cannot safely remove arguments or return values since we don't know
+    // what the user expects. Skip this function entirely.
+    return;
+  }
   // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
   SmallVector<Value> arguments(funcOp.getArguments());
   BitVector nonLiveArgs = markLives(arguments, nonLiveSet, la);
@@ -299,10 +303,7 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (2). (Skip creating generic operand cleanup entries for call ops.
   // Call arguments will be removed in the call-site specific segment-aware
   // cleanup, avoiding generic eraseOperands bitvector mechanics.)
-  SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
+  for (Operation *callOp : users) {
     // Push an empty operand cleanup entry so that call-site specific logic in
     // cleanUpDeadVals runs (it keys off CallOpInterface). The BitVector is
     // intentionally all false to avoid generic erasure.
@@ -336,10 +337,11 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
+  for (Operation *callOp : users) {
+    // Only the forwarded results of a call receive the values returned by the
+    // callee; any other result is produced by the call operation itself.
+    BitVector liveCallRets = markLives(
+        cast<CallOpInterface>(callOp).getForwardedResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
@@ -360,11 +362,17 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // Do (5) and (6).
   if (numReturns == 0)
     return;
-  for (SymbolTable::SymbolUse use : uses) {
-    Operation *callOp = use.getUser();
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    cl.results.push_back({callOp, nonLiveRets});
-    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
+  for (Operation *callOp : users) {
+    // `nonLiveRets` is indexed by callee result. Translate it into the index
+    // space of all results of the call operation, which is what the cleanup
+    // works on.
+    ResultRange forwardedResults =
+        cast<CallOpInterface>(callOp).getForwardedResults();
+    BitVector nonLiveCallResults(callOp->getNumResults(), false);
+    for (int index : nonLiveRets.set_bits())
+      nonLiveCallResults.set(forwardedResults[index].getResultNumber());
+    cl.results.push_back({callOp, nonLiveCallResults});
+    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveCallResults);
   }
 }
 
@@ -520,15 +528,12 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
   }
 }
 
-/// Create ub.poison ops for the given values. If a value has no uses, return
-/// an "empty" value.
-static SmallVector<Value> createPoisonedValues(OpBuilder &b,
-                                               ValueRange values) {
-  return llvm::map_to_vector(values, [&](Value value) {
-    if (value.use_empty())
-      return Value();
-    return ub::PoisonOp::create(b, value.getLoc(), value.getType()).getResult();
-  });
+/// Create a ub.poison op for the given value. If it has no uses, return an
+/// "empty" value.
+static Value createPoisonedValue(OpBuilder &b, Value value) {
+  if (value.use_empty())
+    return Value();
+  return ub::PoisonOp::create(b, value.getLoc(), value.getType()).getResult();
 }
 
 namespace {
@@ -558,7 +563,30 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   TrackingListener listener;
   IRRewriter rewriter(ctx, &listener);
 
-  // 1. Blocks, We must remove the block arguments and successor operands before
+  // 1. Operands to replace with poison. These rewrites need the original
+  // operand values for their location and type, so they must run before any
+  // cleanup that can drop uses and leave operands temporarily null.
+  LDBG() << "Replacing dead operands with poison in " << list.operands.size()
+         << " operand lists";
+  for (OperandsToCleanup &o : list.operands) {
+    if (!o.replaceWithPoison || !o.nonLive.any())
+      continue;
+    LDBG_OS([&](raw_ostream &os) {
+      os << "Replacing non-live operands [";
+      llvm::interleaveComma(o.nonLive.set_bits(), os);
+      os << "] with poison in operation: "
+         << OpWithFlags(o.op,
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
+    });
+    rewriter.setInsertionPoint(o.op);
+    for (auto deadIdx : o.nonLive.set_bits()) {
+      Value operand = o.op->getOperand(deadIdx);
+      assert(operand && "expected non-null operand for poison replacement");
+      o.op->setOperand(deadIdx, createPoisonedValue(rewriter, operand));
+    }
+  }
+
+  // 2. Blocks, We must remove the block arguments and successor operands before
   // deleting the operation, as they may reside in the region operation.
   LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
   for (auto &b : list.blocks) {
@@ -583,7 +611,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     }
   }
 
-  // 2. Successor Operands
+  // 3. Successor Operands
   LDBG() << "Cleaning up " << list.successorOperands.size()
          << " successor operand lists";
   for (auto &op : list.successorOperands) {
@@ -607,15 +635,15 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     }
   }
 
-  // 3. Functions
+  // 4. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
   // AttrSizedOperandSegments) in the next phase.
   DenseMap<Operation *, BitVector> erasedFuncArgs;
   for (auto &f : list.functions) {
-    LDBG() << "Cleaning up function: " << f.funcOp.getOperation()->getName()
-           << " (" << f.funcOp.getOperation() << ")";
+    LDBG() << "Cleaning up function: " << f.funcOp.getName() << " ("
+           << f.funcOp.getOperation() << ")";
     LDBG_OS([&](raw_ostream &os) {
       os << "  Erasing non-live arguments [";
       llvm::interleaveComma(f.nonLiveArgs.set_bits(), os);
@@ -624,9 +652,20 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       llvm::interleaveComma(f.nonLiveRets.set_bits(), os);
       os << "]";
     });
-    // Drop all uses of the dead arguments.
-    for (auto deadIdx : f.nonLiveArgs.set_bits())
-      f.funcOp.getArgument(deadIdx).dropAllUses();
+    // Replace remaining uses of the dead arguments with poison values. Simply
+    // dropping the uses would leave null operands behind in ops that survive
+    // the pass (e.g. a side-effecting op in an unreachable function, whose
+    // values are initialized as dead by the liveness analysis).
+    for (auto deadIdx : f.nonLiveArgs.set_bits()) {
+      BlockArgument arg = f.funcOp.getArgument(deadIdx);
+      // Avoid creating an unused poison value if there are no uses to replace.
+      if (arg.use_empty())
+        continue;
+      rewriter.setInsertionPointToStart(arg.getOwner());
+      Value poison =
+          ub::PoisonOp::create(rewriter, arg.getLoc(), arg.getType());
+      rewriter.replaceAllUsesWith(arg, poison);
+    }
     // Some functions may not allow erasing arguments or results. These calls
     // return failure in such cases without modifying the function, so it's okay
     // to proceed.
@@ -634,13 +673,18 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       // Record only if we actually erased something.
       if (f.nonLiveArgs.any())
         erasedFuncArgs.try_emplace(f.funcOp.getOperation(), f.nonLiveArgs);
+    } else {
+      LDBG() << "Failed to erase arguments for function: "
+             << f.funcOp.getName();
     }
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 4. Operands
+  // 5. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperandsToCleanup &o : list.operands) {
+    if (o.replaceWithPoison)
+      continue;
     // Handle call-specific cleanup only when we have a cached callee reference.
     // This avoids expensive symbol lookup and is defensive against future
     // changes.
@@ -683,20 +727,11 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
            << OpWithFlags(o.op,
                           OpPrintingFlags().skipRegions().printGenericOpForm());
       });
-      if (o.replaceWithPoison) {
-        rewriter.setInsertionPoint(o.op);
-        for (auto deadIdx : o.nonLive.set_bits()) {
-          o.op->setOperand(
-              deadIdx, createPoisonedValues(rewriter, o.op->getOperand(deadIdx))
-                           .front());
-        }
-      } else {
-        o.op->eraseOperands(o.nonLive);
-      }
+      rewriter.eraseOperands(o.op, o.nonLive);
     }
   }
 
-  // 5. Results
+  // 6. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG_OS([&](raw_ostream &os) {
@@ -709,7 +744,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     dropUsesAndEraseResults(rewriter, r.op, r.nonLive);
   }
 
-  // 6. Operations
+  // 7. Operations
   LDBG() << "Cleaning up " << list.operations.size() << " operations";
   for (Operation *op : list.operations) {
     LDBG() << "Erasing operation: "
@@ -720,11 +755,33 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       // When erasing a terminator, insert an unreachable op in its place.
       ub::UnreachableOp::create(rewriter, op->getLoc());
     }
+
+    // Before erasing the operation, replace all result values with live-uses by
+    // ub.poison values. This is important to maintain IR validity. For example,
+    // if we have an op with one of its results used by another op, erasing the
+    // op without replacing its corresponding result would leave us with a
+    // dangling operand in the user op. By replacing the result with a ub.poison
+    // value, we ensure that the user op still has a valid operand, even though
+    // it's a poison value which will be cleaned up later if it can be cleaned
+    // up. This keeps the IR valid for further simplification and
+    // canonicalization.
+    auto opResults = op->getResults();
+    for (Value opResult : opResults) {
+      // Early continue for the case where the op result has no uses. No need to
+      // create a poison op here.
+      if (opResult.use_empty())
+        continue;
+
+      rewriter.setInsertionPoint(op);
+      Value poisonedValue = createPoisonedValue(rewriter, opResult);
+      rewriter.replaceAllUsesWith(opResult, poisonedValue);
+    }
+
     op->dropAllUses();
     rewriter.eraseOp(op);
   }
 
-  // 7. Remove all dead poison ops.
+  // 8. Remove all dead poison ops.
   for (ub::PoisonOp poisonOp : listener.poisonOps) {
     if (poisonOp.use_empty())
       poisonOp.erase();
@@ -733,14 +790,24 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   LDBG() << "Finished cleanup of dead values";
 }
 
-struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
+struct RemoveDeadValues
+    : public impl::RemoveDeadValuesPassBase<RemoveDeadValues> {
+  using impl::RemoveDeadValuesPassBase<
+      RemoveDeadValues>::RemoveDeadValuesPassBase;
   void runOnOperation() override;
 };
 } // namespace
 
 void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
-  Operation *module = getOperation();
+  Operation *root = getOperation();
+
+  // Build a symbol user map once up front so that processFuncOp can look up the
+  // callers of each function in O(1). Otherwise, each call would walk the
+  // entire root to find the callers, making the pass O(numFunctions *
+  // numOperations).
+  SymbolTableCollection symbolTableCollection;
+  SymbolUserMap symbolUserMap(symbolTableCollection, root);
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
@@ -750,9 +817,14 @@ void RemoveDeadValues::runOnOperation() {
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
-  module->walk([&](Operation *op) {
+  root->walk([&](Operation *op) {
+    // Do not erase the pass root or change its operands and results. In
+    // particular, the symbol user map cannot see callers outside the root, so
+    // changing a root function's signature would leave those calls invalid.
+    if (op == root)
+      return;
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
+      processFuncOp(funcOp, symbolUserMap, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
       processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
@@ -768,31 +840,39 @@ void RemoveDeadValues::runOnOperation() {
     }
   });
 
-  MLIRContext *context = module->getContext();
+  MLIRContext *context = root->getContext();
   cleanUpDeadVals(context, finalCleanupList);
 
   if (!canonicalize)
     return;
 
-  // Canonicalize all region branch ops.
-  SmallVector<Operation *> opsToCanonicalize;
-  module->walk([&](RegionBranchOpInterface regionBranchOp) {
-    opsToCanonicalize.push_back(regionBranchOp.getOperation());
-  });
-  // Collect all canonicalization patterns for region branch ops.
+  // Collect and freeze the patterns once for all root regions.
   RewritePatternSet owningPatterns(context);
   DenseSet<RegisteredOperationName> populatedPatterns;
-  for (Operation *op : opsToCanonicalize)
+  root->walk([&](RegionBranchOpInterface regionBranchOp) {
+    Operation *op = regionBranchOp.getOperation();
+    if (op == root)
+      return;
     if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
       if (populatedPatterns.insert(*info).second)
         info->getCanonicalizationPatterns(owningPatterns, context);
-  if (failed(applyOpPatternsGreedily(opsToCanonicalize,
-                                     std::move(owningPatterns)))) {
-    module->emitError("greedy pattern rewrite failed to converge");
-    signalPassFailure();
-  }
-}
+  });
+  FrozenRewritePatternSet patterns(std::move(owningPatterns));
 
-std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
-  return std::make_unique<RemoveDeadValues>();
+  // Process each root region separately. For operations in different root
+  // regions, the inferred common scope can contain the root itself.
+  for (Region &region : root->getRegions()) {
+    SmallVector<Operation *> opsToCanonicalize;
+    region.walk([&](RegionBranchOpInterface regionBranchOp) {
+      opsToCanonicalize.push_back(regionBranchOp.getOperation());
+    });
+    // The greedy driver can add ancestors to its worklist. Set an explicit
+    // scope so that it cannot rewrite the root or operations outside the root.
+    GreedyRewriteConfig config;
+    config.setScope(&region);
+    if (failed(applyOpPatternsGreedily(opsToCanonicalize, patterns, config))) {
+      root->emitError("greedy pattern rewrite failed to converge");
+      return signalPassFailure();
+    }
+  }
 }

@@ -113,7 +113,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #    ifndef __cpp_lib_memory_resource
@@ -141,6 +141,34 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
+#    ifndef __cpp_lib_memory_resource
+#      error "__cpp_lib_memory_resource should be defined in c++29"
+#    endif
+#    if __cpp_lib_memory_resource != 201603L
+#      error "__cpp_lib_memory_resource should have the value 201603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_memory_resource
+#      error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
+#    ifndef __cpp_lib_polymorphic_allocator
+#      error "__cpp_lib_polymorphic_allocator should be defined in c++29"
+#    endif
+#    if __cpp_lib_polymorphic_allocator != 201902L
+#      error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_polymorphic_allocator
+#      error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

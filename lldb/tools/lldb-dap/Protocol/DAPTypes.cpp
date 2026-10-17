@@ -3,8 +3,15 @@
 #include "lldb/lldb-enumerations.h"
 
 using namespace llvm;
-
 namespace lldb_dap::protocol {
+bool fromJSON(const json::Value &E, var_ref_t &Out, json::Path P) {
+  if (auto S = E.getAsInteger()) {
+    Out = var_ref_t(*S);
+    return true;
+  }
+  P.report("expected unsigned integer");
+  return false;
+}
 
 bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
               llvm::json::Path P) {

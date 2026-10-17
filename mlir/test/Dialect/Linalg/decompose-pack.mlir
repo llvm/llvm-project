@@ -356,3 +356,22 @@ func.func @negative_non_unit_tiled_outer_dim(%dest: tensor<1x126x1x1x8xf32>, %sr
 }
 // CHECK-LABEL: @negative_non_unit_tiled_outer_dim(
 // CHECK: linalg.pack
+
+// -----
+
+/// Note "2" for dim 0, a non-unit un-tiled outer dim (only dims 1 and 2 are
+/// tiled). This is not supported and must not crash.
+
+func.func @negative_non_unit_untiled_outer_dim(%src: tensor<2x2x1xi32>, %dst: tensor<2x1x1x2x2xi32>) -> tensor<2x1x1x2x2xi32> {
+  %c0 = arith.constant 0 : i32
+  %pack = linalg.pack %src
+    padding_value(%c0 : i32)
+    inner_dims_pos = [1, 2]
+    inner_tiles = [2, 2]
+    into %dst
+    : tensor<2x2x1xi32> -> tensor<2x1x1x2x2xi32>
+
+  return %pack : tensor<2x1x1x2x2xi32>
+}
+// CHECK-LABEL: @negative_non_unit_untiled_outer_dim(
+// CHECK: linalg.pack

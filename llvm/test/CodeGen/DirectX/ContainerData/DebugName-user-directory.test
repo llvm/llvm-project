@@ -1,0 +1,16 @@
+RUN: rm -rf %t && mkdir %t
+RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-path=%t/
+RUN: llvm-objcopy --dump-section=DXIL=%t0.bc %t.dxbc
+RUN: %md5sum %t0.bc >%t0.bc.md5
+RUN: obj2yaml %t.dxbc >%t.yaml
+RUN: cat %t.yaml %t0.bc.md5 | FileCheck %s --implicit-check-not PDBN --implicit-check-not PDBH
+RUN: %python %S/Inputs/check_pdb_exists.py "%t" "%t0.bc.md5"
+
+CHECK:       - Name:            ILDN
+CHECK-NEXT:    Size:            {{.*}}
+CHECK-NEXT:    DebugName:
+CHECK-NEXT:      Flags:           0
+CHECK-NEXT:      NameLength:      {{.*}}
+CHECK-NEXT:      DebugName:       [[MD5:[0-9a-f]+]].pdb
+CHECK:       ...
+CHECK-NEXT:  [[MD5]]

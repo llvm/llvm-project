@@ -23,10 +23,10 @@ class Cls { public:
 // CHECK: [[@LINE+2]]:24 | class/C++ | Cls | [[Cls_USR]] | <no-cgname> | Ref,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | SubCls1 | [[SubCls1_USR]]
 class SubCls1 : public Cls {};
-// CHECK: [[@LINE+1]]:13 | type-alias/C | ClsAlias | [[ClsAlias_USR:.*]] | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+1]]:13 | type-alias/using-class/C | ClsAlias | [[ClsAlias_USR:.*]] | <no-cgname> | Def | rel: 0
 typedef Cls ClsAlias;
 // CHECK: [[@LINE+5]]:7 | class/C++ | SubCls2 | [[SubCls2_USR:.*]] | <no-cgname> | Def | rel: 0
-// CHECK: [[@LINE+4]]:24 | type-alias/C | ClsAlias | [[ClsAlias_USR]] | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE+4]]:24 | type-alias/using-class/C | ClsAlias | [[ClsAlias_USR]] | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | SubCls2 | [[SubCls2_USR]]
 // CHECK: [[@LINE+2]]:24 | class/C++ | Cls | [[Cls_USR]] | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | SubCls2 | [[SubCls2_USR]]

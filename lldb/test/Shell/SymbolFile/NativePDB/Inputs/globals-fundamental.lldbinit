@@ -62,10 +62,15 @@ target variable CD
 
 target variable ConstexprBFalse
 target variable ConstexprBTrue
+target variable ConstexprCMin
+target variable ConstexprCMax
 target variable ConstexprCA
 target variable ConstexprCZ
+target variable ConstexprSCMin
+target variable ConstexprSCMax
 target variable ConstexprSCa
 target variable ConstexprSCz
+target variable ConstexprUCMax
 target variable ConstexprUC24
 target variable ConstexprUC42
 target variable ConstexprC16_24

@@ -1,4 +1,4 @@
-// RUN: not clang-tidy %s --checks='-*,google-explicit-constructor,modernize-avoid-c-style-cast' 2>&1 | FileCheck %s
+// RUN: not clang-tidy %s --checks='-*,google-explicit-constructor,modernize-avoid-c-style-cast' -- 2>&1 | FileCheck %s
 
 // NOLINTBEGIN(google-explicit-constructor)
 class A { A(int i); };

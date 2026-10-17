@@ -49,7 +49,8 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> TANF_EXCEPTS{{
 
 } // namespace tanf_internal
 
-LIBC_INLINE static float tanf(float x) {
+LIBC_INLINE float tanf(float x) {
+  using namespace sincosf_utils_internal;
   using namespace tanf_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);

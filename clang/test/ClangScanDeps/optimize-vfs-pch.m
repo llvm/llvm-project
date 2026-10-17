@@ -63,6 +63,8 @@
 // CHECK-NEXT:         "[[PREFIX]]/build/pch-overlay.yaml"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "{{.*}}"
 // CHECK-NEXT:         "{{.*}}"
@@ -78,6 +80,8 @@
 // CHECK-NOT:          "-ivfsoverlay"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "{{.*}}"
 // CHECK-NEXT:         "{{.*}}"
@@ -90,7 +94,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -x objective-c-header DIR/pch.h -I DIR/modules/A -I DIR/modules/B -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -o DIR/pch.h.pch -ivfsoverlay DIR/build/pch-overlay.yaml",
+  "command": "clang -nostdinc -x objective-c-header DIR/pch.h -I DIR/modules/A -I DIR/modules/B -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -o DIR/pch.h.pch -ivfsoverlay DIR/build/pch-overlay.yaml",
   "file": "DIR/pch.h"
 }
 ]
@@ -100,7 +104,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu.m -I DIR/modules/A -I DIR/modules/B -I DIR/modules/C -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu.o -ivfsoverlay DIR/build/pch-overlay.yaml",
+  "command": "clang -nostdinc -fsyntax-only DIR/tu.m -I DIR/modules/A -I DIR/modules/B -I DIR/modules/C -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu.o -ivfsoverlay DIR/build/pch-overlay.yaml",
   "file": "DIR/tu.m"
 }
 ]
@@ -110,7 +114,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -Wpch-vfs-diff -Werror=pch-vfs-diff -fsyntax-only DIR/tu.m -I DIR/modules/A -I DIR/modules/B -I DIR/modules/C -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu.o",
+  "command": "clang -nostdinc -Wpch-vfs-diff -Werror=pch-vfs-diff -fsyntax-only DIR/tu.m -I DIR/modules/A -I DIR/modules/B -I DIR/modules/C -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu.o",
   "file": "DIR/tu.m"
 }
 ]
@@ -120,7 +124,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu1.m -I DIR/modules/B -I DIR/modules/D -I DIR/modules/E -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu1.o -ivfsoverlay DIR/build/pch-overlay.yaml",
+  "command": "clang -nostdinc -fsyntax-only DIR/tu1.m -I DIR/modules/B -I DIR/modules/D -I DIR/modules/E -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu1.o -ivfsoverlay DIR/build/pch-overlay.yaml",
   "file": "DIR/tu1.m"
 }
 ]

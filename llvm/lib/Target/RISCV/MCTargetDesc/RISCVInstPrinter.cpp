@@ -12,6 +12,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -19,7 +20,6 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -29,26 +29,23 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "RISCVGenAsmWriter.inc"
 
-static cl::opt<bool>
-    NoAliases("riscv-no-aliases",
-              cl::desc("Disable the emission of assembler pseudo instructions"),
-              cl::init(false), cl::Hidden);
-
-static cl::opt<bool> EmitX8AsFP("riscv-emit-x8-as-fp",
-                                cl::desc("Emit x8 as fp instead of s0"),
-                                cl::init(false), cl::Hidden);
-
 // Print architectural register names rather than the ABI names (such as x2
 // instead of sp).
-// TODO: Make RISCVInstPrinter::getRegisterName non-static so that this can a
-// member.
+// TODO: Make RISCVInstPrinter::getRegisterName non-static so that this and
+// EmitX8AsFP can be members.
 static bool ArchRegNames;
+static bool EmitX8AsFP;
 
-// The command-line flags above are used by llvm-mc and llc. They can be used by
-// `llvm-objdump`, but we override their values here to handle options passed to
-// `llvm-objdump` with `-M` (which matches GNU objdump). There did not seem to
-// be an easier way to allow these options in all these tools, without doing it
-// this way.
+RISCVInstPrinter::RISCVInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
+                                   const MCRegisterInfo &MRI)
+    : MCInstPrinter(MAI, MII, MRI),
+      CLOpts(RISCV_MC::getCLOpts(MAI.getTargetOptions())) {}
+
+// -riscv-no-aliases and -riscv-emit-x8-as-fp are used by llvm-mc and llc. They
+// can be used by `llvm-objdump`, but we override their values here to handle
+// options passed to `llvm-objdump` with `-M` (which matches GNU objdump). There
+// did not seem to be an easier way to allow these options in all these tools,
+// without doing it this way.
 bool RISCVInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   if (Opt == "no-aliases") {
     PrintAliases = false;
@@ -73,17 +70,18 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   bool Res = false;
   const MCInst *NewMI = MI;
   MCInst UncompressedMI;
-  if (PrintAliases && !NoAliases)
+  if (PrintAliases && !CLOpts.no_aliases)
     Res = RISCVRVC::uncompress(UncompressedMI, *MI, STI);
   if (Res)
     NewMI = &UncompressedMI;
-  if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
+  if (!PrintAliases || CLOpts.no_aliases ||
+      !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
 }
 
 void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
-  markup(O, Markup::Register) << getRegisterName(Reg);
+  markup(O, Markup::Register) << getRegisterName(CLOpts, Reg);
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -132,11 +130,17 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                                               raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   auto Range = RISCVSysReg::lookupSysRegByEncoding(Imm);
+  bool PreferFeatureSpecific = llvm::any_of(Range, [&](const auto &Reg) {
+    return !Reg.IsAltName && !Reg.IsDeprecatedName &&
+           Reg.FeaturesRequired.any() &&
+           Reg.haveRequiredFeatures(STI.getFeatureBits());
+  });
   for (auto &Reg : Range) {
     if (Reg.IsAltName || Reg.IsDeprecatedName)
       continue;
-    if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
-      markup(O, Markup::Register) << Reg.Name;
+    if (Reg.haveRequiredFeatures(STI.getFeatureBits()) &&
+        (!PreferFeatureSpecific || Reg.FeaturesRequired.any())) {
+      markup(O, Markup::Register) << RISCVSysReg::getSysRegStr(Reg.Name);
       return;
     }
   }
@@ -161,11 +165,22 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << "0";
 }
 
+void RISCVInstPrinter::printSMTVType(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  auto VType =
+      static_cast<XSMTVTypeMode::SMTVTypeMode>(MI->getOperand(OpNo).getImm());
+  assert(XSMTVTypeMode::isValidSMTVTypeMode(VType) &&
+         "SpacemiT's Integer Matrix only supports [i4|i8] mode");
+  O << ", " << XSMTVTypeMode::SMTVTypeModeToString(VType);
+}
+
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   auto FRMArg =
       static_cast<RISCVFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());
-  if (PrintAliases && !NoAliases && FRMArg == RISCVFPRndMode::RoundingMode::DYN)
+  if (PrintAliases && !CLOpts.no_aliases &&
+      FRMArg == RISCVFPRndMode::RoundingMode::DYN)
     return;
   O << ", " << RISCVFPRndMode::roundingModeToString(FRMArg);
 }
@@ -221,15 +236,8 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // altfmt=1 without zvfbfa or zvfofp8min extension, or non-zero in bits 9 and
-  // above.
-  if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
-      RISCVVType::getSEW(Imm) > 64 ||
-      (RISCVVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
-         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))) ||
-      (Imm >> 9) != 0) {
+  // altfmt=1 without sew=8 or sew=16, or non-zero in bits 9 and above.
+  if (!RISCVVType::isValidVType(Imm) || (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
   }
@@ -342,6 +350,31 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   O << ".t";
 }
 
+void RISCVInstPrinter::printVScaleReg(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isReg() && "printVScaleReg can only print register operands");
+  O << ", ";
+  printRegName(O, MO.getReg());
+  O << ".scale";
+}
+
+void RISCVInstPrinter::printTileLambda(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isImm() && "printTileLambda can only print immediate operands");
+  unsigned Lambda = MO.getImm();
+  if (Lambda == 0)
+    return;
+
+  assert(Lambda <= 7 && "Unexpected tile lambda encoding");
+  O << ", L" << (1U << (Lambda - 1));
+}
+
 void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
                                 const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
@@ -358,13 +391,14 @@ void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,
     markup(O, Markup::Immediate) << formatImm(Imm);
 }
 
-const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
+const char *RISCVInstPrinter::getRegisterName(const RISCVMCOptions &CLOpts,
+                                              MCRegister Reg) {
   // When PrintAliases is enabled, and EmitX8AsFP is enabled, x8 will be printed
   // as fp instead of s0. Note that these similar registers are not replaced:
   // - X8_H: used for f16 register in zhinx
   // - X8_W: used for f32 register in zfinx
   // - X8_X9: used for GPR Pair
-  if (!ArchRegNames && EmitX8AsFP && Reg == RISCV::X8)
+  if (!ArchRegNames && (EmitX8AsFP || CLOpts.emit_x8_as_fp) && Reg == RISCV::X8)
     return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);

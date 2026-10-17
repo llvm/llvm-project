@@ -140,12 +140,20 @@ entry:
 }
 
 define <2 x i32> @test_ld_from_poll_v2i32(<2 x i32> %a) {
-; CHECK-LABEL: test_ld_from_poll_v2i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_ld_from_poll_v2i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
+; CHECK-SD-NEXT:    movk x8, #2, lsl #32
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ld_from_poll_v2i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
+; CHECK-GI-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    ret
 entry:
   %b = add <2 x i32> %a, <i32 1, i32 2>
   ret <2 x i32> %b

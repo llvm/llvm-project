@@ -46,13 +46,13 @@ static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
     return {};
   }
 
-  auto NewName = (IsConst ? "k" : "g") +
-                 llvm::StringRef(std::string(1, FC)).upper() +
-                 Decl->getName().substr(1).str();
+  const auto NewName = (IsConst ? "k" : "g") +
+                       StringRef(std::string(1, FC)).upper() +
+                       Decl->getName().substr(1).str();
 
   return FixItHint::CreateReplacement(
       CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
-      llvm::StringRef(NewName));
+      StringRef(NewName));
 }
 
 void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {

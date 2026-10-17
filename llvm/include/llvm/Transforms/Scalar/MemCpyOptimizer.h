@@ -42,7 +42,7 @@ class TargetLibraryInfo;
 class TypeSize;
 class Value;
 
-class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
+class MemCpyOptPass : public OptionalPassInfoMixin<MemCpyOptPass> {
   TargetLibraryInfo *TLI = nullptr;
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
@@ -84,8 +84,8 @@ private:
                                     Value *ByteVal);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
-                             AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
-                             TypeSize Size, BatchAAResults &BAA);
+                             Value *DestPtr, Value *SrcPtr, TypeSize Size,
+                             BatchAAResults &BAA);
   bool isMemMoveMemSetDependency(MemMoveInst *M);
 
   void eraseInstruction(Instruction *I);

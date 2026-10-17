@@ -169,7 +169,7 @@ def CallAndMessageChecker
            CmdLineOption<Boolean, "ArgPointeeInitializedness",
                          "Check whether the pointee of a pass-by-reference or "
                          "pass-by-pointer is undefined",
-                         "false", InAlpha>,
+                         "false", Released>,
            CmdLineOption<
                Boolean, "NilReceiver",
                "Check whether the receiver in the message expression is nil",
@@ -186,11 +186,6 @@ def CallAndMessageChecker
                "member (used only at ArgPointeeInitializedness)",
                "false", Released>,
 ]>,
-      Documentation<HasDocumentation>;
-
-def FixedAddressDereferenceChecker
-    : Checker<"FixedAddressDereference">,
-      HelpText<"Check for dereferences of fixed addresses">,
       Documentation<HasDocumentation>;
 
 def NullDereferenceChecker
@@ -252,10 +247,6 @@ def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
   Documentation<HasDocumentation>;
 
-def FixedAddressChecker : Checker<"FixedAddr">,
-  HelpText<"Check for assignment of a fixed address to a pointer">,
-  Documentation<HasDocumentation>;
-
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,
@@ -296,6 +287,22 @@ def C11LockChecker : Checker<"C11Lock">,
 
 def StdVariantChecker : Checker<"StdVariant">,
   HelpText<"Check for bad type access for std::variant.">,
+  Documentation<HasDocumentation>;
+
+def LifetimeModeling : Checker<"LifetimeModeling">,
+  HelpText<"Model lifetime annotations for other checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
+  HelpText<"Check for uses of references or pointers that "
+           "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<HasDocumentation>;
+
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
+  Dependencies<[LifetimeModeling]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.core"
@@ -345,6 +352,10 @@ let ParentPackage = APIModeling in {
 
 def ErrnoModeling : Checker<"Errno">,
   HelpText<"Make the special value 'errno' available to other checkers.">,
+  Documentation<NotDocumented>;
+
+def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
+  HelpText<"Model opaque, conservative evaluation of some STL functions">,
   Documentation<NotDocumented>;
 
 def TrustNonnullChecker : Checker<"TrustNonnull">,
@@ -422,6 +433,16 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
   HelpText<"Check integer to enumeration casts for out of range values">,
   Documentation<HasDocumentation>;
 
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
+
+def UnconditionalVAArgChecker
+    : Checker<"UnconditionalVAArg">,
+      HelpText<"Check variadic functions unconditionally using va_arg">,
+      Documentation<HasDocumentation>;
+
 } // end "optin.core"
 
 //===----------------------------------------------------------------------===//
@@ -455,6 +476,11 @@ def CStringSyntaxChecker : Checker<"BadSizeArg">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
+def CStringUninitializedRead : Checker<"UninitializedRead">,
+  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "unix.cstring"
 
 let ParentPackage = CStringAlpha in {
@@ -466,11 +492,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringUninitializedRead : Checker<"UninitializedRead">,
-  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -507,7 +528,14 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
                   "NoStoreFuncVisitor.",
                   "true",
                   Released,
-                  Hide>
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelAllocationFailure",
+                  "At allocation functions, add extra execution branches for "
+                  "failed memory allocation (function returns null value when "
+                  "size is non-null) if applicable.",
+                  "false",
+                  Released>
   ]>,
   Dependencies<[CStringModeling]>,
   Documentation<NotDocumented>,
@@ -589,6 +617,13 @@ let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "WarnOnLockOrderReversal",
+                  "Warn when locks are not released in LIFO order.",
+                  "false",
+                  Released>
+  ]>,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
@@ -1571,6 +1606,11 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
+def DebugLifetimeModeling : Checker<"DebugLifetimeModeling">,
+  HelpText<"Dump the set of regions the bound variable originates from">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
 } // end "debug"
 
 
@@ -1634,6 +1674,14 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "EnableDefaultConfig",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
+                  "true",
                   Released>
   ]>,
   Documentation<NotDocumented>,
@@ -1738,8 +1786,16 @@ def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
   HelpText<"Check unretained call arguments.">,
   Documentation<HasDocumentation>;
 
+def UnborrowedCallArgsChecker : Checker<"UnborrowedCallArgsChecker">,
+  HelpText<"Check call arguments holding a loan on a CanBorrow object that is not guarded by const or a Borrow.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
+  Documentation<HasDocumentation>;
+
+def UncheckedLambdaCapturesChecker : Checker<"UncheckedLambdaCapturesChecker">,
+  HelpText<"Check unchecked lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
@@ -1748,6 +1804,14 @@ def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
 
 def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def UnborrowedLocalVarsChecker : Checker<"UnborrowedLocalVarsChecker">,
+  HelpText<"Check local variables holding a loan on a CanBorrow object that is not guarded by const or a Borrow.">,
+  Documentation<HasDocumentation>;
+
+def UnborrowedLambdaCapturesChecker : Checker<"UnborrowedLambdaCapturesChecker">,
+  HelpText<"Check lambda captures holding a loan on a CanBorrow object that is not guarded by const or a Borrow.">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,

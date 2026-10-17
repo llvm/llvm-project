@@ -1,6 +1,6 @@
 ;; Entirely zeroed kernel descriptor (for GFX10).
 
-; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-xnack -filetype=obj -o %t
+; RUN: llvm-mc %s --triple=amdgpu10.10-amd-amdhsa -filetype=obj -o %t
 ; RUN: llvm-objdump -s -d -j .text %t | FileCheck --check-prefix=OBJDUMP %s
 
 ;; TODO:
@@ -11,11 +11,13 @@
 
 ;; Check the raw bytes right now.
 
-; OBJDUMP-LABEL: Contents of section .text:
+; OBJDUMP-LABEL: file format elf64-amdgpu
+; OBJDUMP-NEXT: Contents of section .text:
 ; OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0030 01000000 00000000 00000000 00000000
+; OBJDUMP-NEXT: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx1010:xnack-"
 ; OBJDUMP-EMPTY:
 
 ; OBJDUMP-LABEL: Disassembly of section .text:
@@ -65,6 +67,7 @@
 ; OBJDUMP-NEXT:         .amdhsa_uses_dynamic_stack 0
 ; OBJDUMP-NEXT: .end_amdhsa_kernel
 
+.amdgcn_target "amdgcn-amd-amdhsa--gfx1010:xnack-"
 .amdhsa_code_object_version 5
 .amdhsa_kernel my_kernel
   .amdhsa_group_segment_fixed_size 0

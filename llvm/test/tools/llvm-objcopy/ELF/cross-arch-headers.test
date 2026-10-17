@@ -121,6 +121,13 @@
 # RUN: llvm-readobj --file-headers %t.elf64_s390.o | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
 # RUN: llvm-readobj --file-headers %t.elf64_s390.dwo | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
 
+# Converting a non-AMDGPU ELF to elf64-amdgpu sets EM_AMDGPU but leaves
+# e_flags=0 (no EF_AMDGPU_MACH value), so llvm-readobj reports Arch: unknown.
+# Flag control is a separate concern not addressed by --output-format.
+# RUN: llvm-objcopy %t.o -O elf64-amdgpu %t-amdgpu.elf64_amdgpu.o --split-dwo=%t-amdgpu.elf64_amdgpu.dwo
+# RUN: llvm-readobj --file-headers %t-amdgpu.elf64_amdgpu.o | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
+# RUN: llvm-readobj --file-headers %t-amdgpu.elf64_amdgpu.dwo | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
+
 !ELF
 FileHeader:
   Class:           ELFCLASS32
@@ -154,6 +161,7 @@ Symbols:
 # I386-SAME:    i386
 # IAMCU-SAME:   iamcu
 # AARCH-SAME:   aarch64
+# AMDGPU-SAME:  amdgpu
 # ARM-SAME:     littlearm
 # HEXAGON-SAME: hexagon
 # LA32-SAME:    loongarch{{$}}
@@ -171,6 +179,7 @@ Symbols:
 # I386-NEXT:     Arch: i386
 # IAMCU-NEXT:    Arch: i386
 # AARCH-NEXT:    Arch: aarch64
+# AMDGPU-NEXT:   Arch: unknown
 # ARM-NEXT:      Arch: arm
 # HEXAGON-NEXT:  Arch: hexagon
 # LA32-NEXT:     Arch: loongarch32
@@ -204,6 +213,7 @@ Symbols:
 # DEFAULT: OS/ABI: Standalone (0xFF)
 
 # AARCH:   Machine: EM_AARCH64 (0xB7)
+# AMDGPU:  Machine: EM_AMDGPU (0xE0)
 # ARM:     Machine: EM_ARM (0x28)
 # HEXAGON: Machine: EM_HEXAGON (0xA4)
 # I386:    Machine: EM_386 (0x3)

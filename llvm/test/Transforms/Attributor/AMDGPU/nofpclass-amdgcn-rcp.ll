@@ -426,5 +426,5 @@ define float @ret_rcp_f32_known_negative_not_nan(float nofpclass(nan pinf pzero 
 }
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { "denormal-fp-math-f32"="ieee,dynamic" }
-attributes #2 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #1 = { denormal_fpenv(float: ieee|dynamic) }
+attributes #2 = { denormal_fpenv(ieee|dynamic) }

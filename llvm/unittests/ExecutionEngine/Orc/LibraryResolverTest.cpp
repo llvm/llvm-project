@@ -575,7 +575,7 @@ TEST_F(LibraryResolverIT, PathResolverCachesResults) {
 
   SmallString<128> TmpDylib;
   std::error_code EC;
-  EC = sys::fs::createUniqueFile(withext("A-copy"), TmpDylib);
+  EC = sys::fs::createUniqueFile(withext("A-copy-%%%%%%"), TmpDylib);
   if (EC)
     GTEST_SKIP() << "Failed to create temp dylib" << EC.message();
 

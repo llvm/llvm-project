@@ -142,18 +142,17 @@ define void @assume_loop_variant_operand_bundle(ptr noalias %a, ptr noalias %b) 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP0]]) ]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[INDEX]]) ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP1]]) ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP2]]) ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 [[TMP3]]) ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600

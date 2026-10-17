@@ -207,7 +207,7 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const auto AddFrom =
       [&Results](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
                  std::initializer_list<StringRef> Names, StringRef Prefix) {
-        llvm::SmallString<64> Buffer;
+        SmallString<64> Buffer;
         for (const auto &Name : Names) {
           Buffer.assign({"::", Prefix, (Prefix.empty() ? "" : "::"), Name});
           Results.try_emplace(Buffer, Replacer);

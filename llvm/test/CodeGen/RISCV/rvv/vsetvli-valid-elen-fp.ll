@@ -7,21 +7,22 @@
 define void @foo(half %y, ptr %i64p) {
 ; CHECK-NO-FELEN64-LABEL: foo:
 ; CHECK-NO-FELEN64:       # %bb.0: # %entry
-; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NO-FELEN64-NEXT:    vle64.v v8, (a0)
-; CHECK-NO-FELEN64-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NO-FELEN64-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; CHECK-NO-FELEN64-NEXT:    vle64.v v9, (a0)
 ; CHECK-NO-FELEN64-NEXT:    #APP
-; CHECK-NO-FELEN64-NEXT:    # use v8 v9
+; CHECK-NO-FELEN64-NEXT:    # use v9 v8
 ; CHECK-NO-FELEN64-NEXT:    #NO_APP
 ; CHECK-NO-FELEN64-NEXT:    ret
 ;
 ; CHECK-FELEN64-LABEL: foo:
 ; CHECK-FELEN64:       # %bb.0: # %entry
 ; CHECK-FELEN64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-FELEN64-NEXT:    vle64.v v8, (a0)
-; CHECK-FELEN64-NEXT:    vfmv.s.f v9, fa0
+; CHECK-FELEN64-NEXT:    vfmv.s.f v8, fa0
+; CHECK-FELEN64-NEXT:    vle64.v v9, (a0)
 ; CHECK-FELEN64-NEXT:    #APP
-; CHECK-FELEN64-NEXT:    # use v8 v9
+; CHECK-FELEN64-NEXT:    # use v9 v8
 ; CHECK-FELEN64-NEXT:    #NO_APP
 ; CHECK-FELEN64-NEXT:    ret
 entry:
@@ -35,20 +36,20 @@ define void @bar(half %y, ptr %i32p) {
 ; CHECK-NO-FELEN64-LABEL: bar:
 ; CHECK-NO-FELEN64:       # %bb.0: # %entry
 ; CHECK-NO-FELEN64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NO-FELEN64-NEXT:    vle32.v v8, (a0)
-; CHECK-NO-FELEN64-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NO-FELEN64-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NO-FELEN64-NEXT:    vle32.v v9, (a0)
 ; CHECK-NO-FELEN64-NEXT:    #APP
-; CHECK-NO-FELEN64-NEXT:    # use v8 v9
+; CHECK-NO-FELEN64-NEXT:    # use v9 v8
 ; CHECK-NO-FELEN64-NEXT:    #NO_APP
 ; CHECK-NO-FELEN64-NEXT:    ret
 ;
 ; CHECK-FELEN64-LABEL: bar:
 ; CHECK-FELEN64:       # %bb.0: # %entry
 ; CHECK-FELEN64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-FELEN64-NEXT:    vle32.v v8, (a0)
-; CHECK-FELEN64-NEXT:    vfmv.s.f v9, fa0
+; CHECK-FELEN64-NEXT:    vfmv.s.f v8, fa0
+; CHECK-FELEN64-NEXT:    vle32.v v9, (a0)
 ; CHECK-FELEN64-NEXT:    #APP
-; CHECK-FELEN64-NEXT:    # use v8 v9
+; CHECK-FELEN64-NEXT:    # use v9 v8
 ; CHECK-FELEN64-NEXT:    #NO_APP
 ; CHECK-FELEN64-NEXT:    ret
 entry:

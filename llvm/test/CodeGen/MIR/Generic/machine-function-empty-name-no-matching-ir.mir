@@ -1,0 +1,19 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# This test ensures that the MIR parser fails if there are more machine
+# functions with empty names than there unnamed functions in the embedded LLVM
+# IR.
+--- |
+  define void @0() {
+    ret void
+  }
+
+  define void @foo() {
+    ret void 
+  }
+...
+---
+name: ''
+---
+# CHECK: function '' isn't defined in the provided LLVM IR
+name: ''
+...

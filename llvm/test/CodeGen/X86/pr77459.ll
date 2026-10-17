@@ -80,7 +80,7 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE42-LABEL: reverse_cmp_v8i1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,15,12,13,10,11,8,9,6,7,4,5,2,3,0,1]
 ; SSE42-NEXT:    packsswb %xmm0, %xmm0
 ; SSE42-NEXT:    pmovmskb %xmm0, %eax
 ; SSE42-NEXT:    # kill: def $al killed $al killed $eax
@@ -98,8 +98,8 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    vpmovm2d %k0, %ymm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [7,6,5,4,3,2,1,0]
-; AVX512-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX512-NEXT:    vmovmskps %ymm0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper

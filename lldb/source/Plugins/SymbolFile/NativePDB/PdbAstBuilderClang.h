@@ -12,6 +12,7 @@
 #include "PdbAstBuilder.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "lldb/Utility/ConstString.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
@@ -91,6 +92,15 @@ public:
   bool CompleteTagDecl(clang::TagDecl &tag);
 
   TypeSystemClang &clang() { return m_clang; }
+
+  /// Returns the method named \p name with type \p method_ct in the record
+  /// \p parent_ty, creating it if it doesn't exist yet.
+  clang::CXXMethodDecl *
+  GetOrCreateMethodDecl(lldb::opaque_compiler_type_t parent_ty,
+                        llvm::StringRef name, llvm::StringRef asm_label,
+                        const CompilerType &method_ct, bool is_virtual,
+                        bool is_static, bool is_artificial);
+
   ClangASTImporter &GetClangASTImporter() { return m_importer; }
 
 private:
@@ -120,7 +130,8 @@ private:
                                  const llvm::codeview::EnumRecord &record);
   clang::QualType
   CreateFunctionType(TypeIndex args_type_idx, TypeIndex return_type_idx,
-                     llvm::codeview::CallingConvention calling_convention);
+                     llvm::codeview::CallingConvention calling_convention,
+                     unsigned int type_quals);
   clang::QualType CreateType(PdbTypeSymId type);
 
   void CreateFunctionParameters(PdbCompilandSymId func_id,
@@ -149,6 +160,10 @@ private:
   CreateDeclInfoForType(const llvm::codeview::TagRecord &record, TypeIndex ti);
   std::pair<clang::DeclContext *, std::string>
   CreateDeclInfoForUndecoratedName(llvm::StringRef uname);
+
+  clang::DeclContext *
+  GetOrCreateDeclContextForCompilandSymbol(PdbCompilandSymId uid);
+
   clang::QualType CreateSimpleType(TypeIndex ti);
 
   TypeSystemClang &m_clang;
@@ -160,11 +175,12 @@ private:
   llvm::DenseMap<lldb::user_id_t, clang::Decl *> m_uid_to_decl;
   llvm::DenseMap<lldb::user_id_t, clang::QualType> m_uid_to_type;
 
-  // From class/struct's opaque_compiler_type_t to a set containing the pairs of
-  // method's name and CompilerType.
-  llvm::DenseMap<lldb::opaque_compiler_type_t,
-                 llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
-      m_cxx_record_map;
+  // From a class/struct's opaque_compiler_type_t, a method's name and the
+  // method's opaque_compiler_type_t to the method decl.
+  llvm::DenseMap<std::tuple<lldb::opaque_compiler_type_t, ConstString,
+                            lldb::opaque_compiler_type_t>,
+                 clang::CXXMethodDecl *>
+      m_cxx_method_decls;
 
   using NamespaceSet = llvm::DenseSet<clang::NamespaceDecl *>;
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
-#define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
+#ifndef LLDB_SYMBOL_SAVECOREOPTIONS_H
+#define LLDB_SYMBOL_SAVECOREOPTIONS_H
 
 #include "lldb/Target/CoreFileMemoryRanges.h"
 #include "lldb/Target/ThreadCollection.h"
@@ -68,4 +68,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_SAVECOREOPTIONS_H
+#endif // LLDB_SYMBOL_SAVECOREOPTIONS_H

@@ -592,6 +592,142 @@ TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
   EXPECT_THAT(make_second_range(Pairs), ElementsAre(1, 2));
 }
 
+/// Utility classes to setup casting functionality.
+struct Shape {
+  enum ShapeKind { SK_Circle, SK_Square };
+  const ShapeKind Kind;
+  Shape(ShapeKind Kind) : Kind(Kind) {}
+};
+template <Shape::ShapeKind K> struct ShapeImpl : Shape {
+  ShapeImpl() : Shape(K) {}
+  static bool classof(const Shape *S) { return S->Kind == K; }
+};
+struct Circle : ShapeImpl<Shape::SK_Circle> {};
+struct Square : ShapeImpl<Shape::SK_Square> {};
+
+TEST(STLExtrasTest, MakeIsaRangePointers) {
+  Circle C0, C1;
+  Square S;
+  std::vector<Shape *> Shapes = {&C0, &S, &C1};
+
+  auto Circles = make_isa_range<Circle>(Shapes);
+  static_assert(std::is_same_v<decltype(*Circles.begin()), Circle *>);
+  EXPECT_THAT(Circles, ElementsAre(&C0, &C1));
+  EXPECT_THAT(make_isa_range<Square>(Shapes), ElementsAre(&S));
+
+  // Ranges without any element of the requested type are empty.
+  std::vector<Shape *> OnlyCircles = {&C0, &C1};
+  EXPECT_TRUE(make_isa_range<Square>(OnlyCircles).empty());
+
+  // Ranges dereferencing to `Shape *const &`, like ArrayRef, work as well.
+  ArrayRef<Shape *> ShapesRef = Shapes;
+  auto RefCircles = make_isa_range<Circle>(ShapesRef);
+  static_assert(std::is_same_v<decltype(*RefCircles.begin()), Circle *>);
+  EXPECT_THAT(RefCircles, ElementsAre(&C0, &C1));
+
+  // The same holds for ranges returning their elements by value.
+  auto ByValue = map_range(Shapes, [](Shape *S) { return S; });
+  auto ValueCircles = make_isa_range<Circle>(ByValue);
+  static_assert(std::is_same_v<decltype(*ValueCircles.begin()), Circle *>);
+  EXPECT_THAT(ValueCircles, ElementsAre(&C0, &C1));
+
+  // Constness of the elements is preserved.
+  std::vector<const Shape *> ConstShapes = {&C0, &S, &C1};
+  auto ConstCircles = make_isa_range<Circle>(ConstShapes);
+  static_assert(
+      std::is_same_v<decltype(*ConstCircles.begin()), const Circle *>);
+  EXPECT_THAT(ConstCircles, ElementsAre(&C0, &C1));
+}
+
+TEST(STLExtrasTest, MakeIsaRangeReferences) {
+  Circle C0, C1;
+  Square S;
+  std::vector<Shape *> Shapes = {&C0, &S, &C1};
+
+  auto Circles = make_isa_range<Circle>(make_pointee_range(Shapes));
+  static_assert(std::is_same_v<decltype(*Circles.begin()), Circle &>);
+  EXPECT_THAT(map_range(Circles, [](Circle &C) { return &C; }),
+              ElementsAre(&C0, &C1));
+
+  // Constness of the elements is preserved.
+  std::vector<const Shape *> ConstShapes = {&C0, &S, &C1};
+  auto ConstCircles = make_isa_range<Circle>(make_pointee_range(ConstShapes));
+  static_assert(
+      std::is_same_v<decltype(*ConstCircles.begin()), const Circle &>);
+  EXPECT_THAT(map_range(ConstCircles, [](const Circle &C) { return &C; }),
+              ElementsAre(&C0, &C1));
+}
+
+TEST(STLExtrasTest, MakeIsaRangeEarlyIncrement) {
+  Circle C0, C1;
+  Square S;
+  std::list<Shape *> Shapes = {&C0, &S, &C1};
+
+  for (Circle *C : make_early_inc_range(make_isa_range<Circle>(Shapes)))
+    Shapes.remove(C);
+  EXPECT_THAT(Shapes, ElementsAre(&S));
+}
+
+/// A value-typed handle hierarchy that casts by value.
+struct HandleImpl {
+  unsigned Kind;
+};
+
+struct Handle {
+public:
+  Handle(const HandleImpl *Impl = nullptr) : Impl(Impl) {}
+  const HandleImpl *getImpl() const { return Impl; }
+  bool operator==(const Handle &Other) const { return Impl == Other.Impl; }
+
+protected:
+  const HandleImpl *Impl;
+};
+
+struct FooHandle : public Handle {
+  using Handle::Handle;
+  static bool classof(Handle H) { return H.getImpl()->Kind == 0; }
+};
+
+struct BarHandle : public Handle {
+  using Handle::Handle;
+  static bool classof(Handle H) { return H.getImpl()->Kind == 1; }
+};
+} // namespace
+
+namespace llvm {
+/// Casts take and return the handle by value.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<std::is_base_of_v<Handle, std::decay_t<From>>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  static bool isPossible(Handle H) { return To::classof(H); }
+  static To doCast(Handle H) { return To(H.getImpl()); }
+};
+} // namespace llvm
+
+namespace {
+TEST(STLExtrasTest, MakeIsaRangeValueTypes) {
+  HandleImpl FooImpl0 = {0}, BarImpl = {1}, FooImpl1 = {0};
+  std::vector<Handle> Handles = {Handle(&FooImpl0), Handle(&BarImpl),
+                                 Handle(&FooImpl1)};
+
+  // Casting a handle yields a handle by value, not a reference.
+  auto Foos = make_isa_range<FooHandle>(Handles);
+  static_assert(std::is_same_v<decltype(*Foos.begin()), FooHandle>);
+  EXPECT_THAT(Foos, ElementsAre(FooHandle(&FooImpl0), FooHandle(&FooImpl1)));
+  EXPECT_THAT(make_isa_range<BarHandle>(Handles),
+              ElementsAre(BarHandle(&BarImpl)));
+
+  // Ranges that only materialize the handles as temporaries work as well,
+  // because the cast does not refer back to the element.
+  auto ByValue = map_range(Handles, [](Handle H) { return H; });
+  auto ByValueFoos = make_isa_range<FooHandle>(ByValue);
+  static_assert(std::is_same_v<decltype(*ByValueFoos.begin()), FooHandle>);
+  EXPECT_THAT(ByValueFoos,
+              ElementsAre(FooHandle(&FooImpl0), FooHandle(&FooImpl1)));
+}
+
 template <typename T> struct Iterator {
   int i = 0;
   T operator*() const { return i; }
@@ -835,6 +971,22 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
 }
 
+TEST(STLExtrasTest, CallableMemberPointer) {
+  struct S {
+    int X;
+    int getX() const { return X; }
+  };
+  S Obj{42};
+
+  // Data member pointer.
+  callable_detail::Callable<int S::*> DataMember(&S::X);
+  EXPECT_EQ(DataMember(Obj), 42);
+
+  // Member function pointer.
+  callable_detail::Callable<int (S::*)() const> MemFn(&S::getX);
+  EXPECT_EQ(MemFn(Obj), 42);
+}
+
 TEST(STLExtrasTest, MapRangeTest) {
   SmallVector<int, 5> Vec{0, 1, 2};
   EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),
@@ -845,6 +997,17 @@ TEST(STLExtrasTest, MapRangeTest) {
   some_namespace::some_struct S;
   S.data = {3, 4, 5};
   EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
+
+  // Pointer to data member.
+  struct MapRangeStruct {
+    int X;
+    int getX() const { return X; }
+  };
+  std::vector<MapRangeStruct> Structs = {{1}, {2}, {3}};
+  EXPECT_THAT(map_range(Structs, &MapRangeStruct::X), ElementsAre(1, 2, 3));
+
+  // Pointer to member function.
+  EXPECT_THAT(map_range(Structs, &MapRangeStruct::getX), ElementsAre(1, 2, 3));
 }
 
 TEST(STLExtrasTest, EarlyIncrementTest) {
@@ -1143,7 +1306,7 @@ TEST(STLExtrasTest, getSingleElement) {
 }
 
 TEST(STLExtrasTest, hasNItems) {
-  const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
+  const std::list<int> V0 = {}, V1 = {1};
   const std::list<int> V3 = {1, 3, 5};
 
   EXPECT_TRUE(hasNItems(V0, 0));
@@ -1164,7 +1327,7 @@ TEST(STLExtrasTest, hasNItems) {
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
-  const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
+  const std::list<int> V1 = {1}, V2 = {1, 2};
   const std::list<int> V3 = {1, 3, 5};
 
   EXPECT_TRUE(hasNItemsOrMore(V1, 1));
@@ -1780,6 +1943,32 @@ struct Bar {};
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
+TEST(STLExtrasTest, HasEqualityComparison) {
+  struct NoEqualityComparison {};
+  static_assert(!has_equality_comparison_v<NoEqualityComparison>);
+
+  // Mutating equality comparison doesn't count.
+  struct MutatingEqualityComparison {
+    bool operator==(MutatingEqualityComparison &Other) { return false; }
+  };
+  static_assert(!has_equality_comparison_v<MutatingEqualityComparison>);
+
+  struct PublicEqualityComparison {
+    bool operator==(const PublicEqualityComparison &Other) const {
+      return false;
+    }
+  };
+  static_assert(has_equality_comparison_v<PublicEqualityComparison>);
+
+  struct StructA {};
+  struct StructB {
+    bool operator==(const StructA &Other) const { return false; }
+  };
+  static_assert(has_equality_comparison_v<StructB, StructA>);
+
+  SUCCEED();
+}
+
 TEST(STLExtrasTest, Search) {
   // Test finding a subsequence in the middle.
   std::vector<int> Haystack = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -1936,5 +2125,15 @@ TEST(STLExtrasTest, AdjacentFind) {
   EXPECT_EQ(*It13, 3);
   EXPECT_EQ(*std::next(It13), 3);
 }
+
+// Compile-time tests for llvm::is_sorted_constexpr
+// Check to ensure range based functions as expected
+static constexpr std::array<int, 5> CSorted{{1, 2, 2, 3, 5}};
+static_assert(llvm::is_sorted_constexpr(CSorted),
+              "Non-descending order with duplicates should be sorted");
+static_assert(llvm::is_sorted_constexpr(CSorted, std::less<>()),
+              "Explicit std::less non-descending order should be sorted");
+static_assert(!llvm::is_sorted_constexpr(CSorted, std::greater<>()),
+              "Non-descending order should not be sorted by std::greater");
 
 } // namespace

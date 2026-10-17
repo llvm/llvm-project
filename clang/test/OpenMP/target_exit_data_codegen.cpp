@@ -144,9 +144,9 @@ void foo(int arg) {
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
   // CK1-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
-  // CK1-DAG: [[VAR0]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i{{.*}} 0, i{{.*}} 1)
+  // CK1-DAG: [[VAR0]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @gb, i{{64|32}} {{8|4}})
   // CK1-DAG: [[SEC0]] = getelementptr inbounds nuw double, ptr [[SEC00:%.+]], i{{.*}} 0
-  // CK1-DAG: [[SEC00]] = load ptr, ptr getelementptr inbounds nuw ([[ST]], ptr @gb, i{{.*}} 0, i{{.*}} 1)
+  // CK1-DAG: [[SEC00]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @gb, i{{64|32}} {{8|4}})
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   #pragma omp target exit data map(release: gb.b[:3])

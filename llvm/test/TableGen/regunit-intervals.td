@@ -32,6 +32,9 @@ let Namespace = "Test" in {
 }
 
 // CHECK: extern const unsigned TestTargetRegUnitIntervals[][2] = {
+// Sentinel
+// CHECK-NEXT: { 0, 0 },
+// Real values
 // CHECK-NEXT: { 0, 1 },
 // CHECK-NEXT: { 1, 2 },
 // CHECK-NEXT: { 2, 3 },

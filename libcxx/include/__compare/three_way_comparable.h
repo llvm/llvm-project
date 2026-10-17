@@ -24,9 +24,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Cat>
 concept __compares_as = same_as<common_comparison_category_t<_Tp, _Cat>, _Cat>;
@@ -48,8 +48,8 @@ concept three_way_comparable_with =
       { __u <=> __t } -> __compares_as<_Cat>;
     };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H

@@ -12,8 +12,6 @@ struct false_type {
 template <class T> struct is_const : false_type {};
 template <class T> struct is_const<const T> : true_type {};
 
-// expected-no-diagnostics
-
 void test_builtin_elementwise_abs() {
   const int a = 2;
   int b = 1;
@@ -64,16 +62,22 @@ void test_builtin_elementwise_max_fp() {
   const float a = 2.0f;
   float b = 1.0f;
   static_assert(!is_const<decltype(__builtin_elementwise_max(a, b))>::value);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
   static_assert(!is_const<decltype(__builtin_elementwise_max(b, a))>::value);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
   static_assert(!is_const<decltype(__builtin_elementwise_max(a, a))>::value);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_max' is deprecated}}
 }
 
 void test_builtin_elementwise_min_fp() {
   const float a = 2.0f;
   float b = 1.0f;
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, b))>::value);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
   static_assert(!is_const<decltype(__builtin_elementwise_min(b, a))>::value);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
+  // expected-warning@-1 {{builtin '__builtin_elementwise_min' is deprecated}}
 }
 
 void test_builtin_elementwise_maximum() {

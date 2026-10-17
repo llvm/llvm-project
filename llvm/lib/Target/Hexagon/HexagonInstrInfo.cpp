@@ -53,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -1674,6 +1673,13 @@ bool HexagonInstrInfo::isPostIncrement(const MachineInstr &MI) const {
   return getAddrMode(MI) == HexagonII::PostInc;
 }
 
+bool HexagonInstrInfo::isPostIncWithImmOffset(const MachineInstr &MI) const {
+  unsigned BasePos, OffsetPos;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
+    return false;
+  return isPostIncrement(MI) && MI.getOperand(OffsetPos).isImm();
+}
+
 // Returns true if an instruction is predicated irrespective of the predicate
 // sense. For example, all of the following will return true.
 // if (p0) R1 = add(R2, R3)
@@ -2779,7 +2785,7 @@ bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
 }
 
 bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
-      const TargetRegisterInfo *TRI, bool Extend) const {
+                                     bool Extend) const {
   // This function is to check whether the "Offset" is in the correct range of
   // the given "Opcode". If "Offset" is not in the correct range, "A2_addi" is
   // inserted to calculate the final address. Due to this reason, the function
@@ -2833,6 +2839,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_cur_npred_ai:
   case Hexagon::V6_vL32b_nt_tmp_pred_ai:
   case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vS32Ub_pred_ai:
   case Hexagon::V6_vS32Ub_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
   case Hexagon::V6_vgather_vscatter_mh_pseudo:
@@ -2841,7 +2848,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vgathermhq_pseudo:
   case Hexagon::V6_vgathermwq_pseudo:
   case Hexagon::V6_vgathermhwq_pseudo: {
-    unsigned VectorSize = TRI->getSpillSize(Hexagon::HvxVRRegClass);
+    unsigned VectorSize = RegInfo.getSpillSize(Hexagon::HvxVRRegClass);
     assert(isPowerOf2_32(VectorSize));
     if (Offset & (VectorSize-1))
       return false;
@@ -2961,6 +2968,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L2_ploadruhf_io:
   case Hexagon::S2_pstorerht_io:
   case Hexagon::S2_pstorerhf_io:
+  case Hexagon::S2_pstorerft_io:
+  case Hexagon::S2_pstorerff_io:
     return isShiftedUInt<6,1>(Offset);
 
   case Hexagon::L2_ploadrit_io:
@@ -3106,8 +3115,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
   if (!BaseOp || !BaseOp->isReg())
@@ -3189,11 +3197,6 @@ bool HexagonInstrInfo::hasNonExtEquivalent(const MachineInstr &MI) const {
     return true;
   }
   return false;
-}
-
-bool HexagonInstrInfo::hasPseudoInstrPair(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(),
-                                 Hexagon::InstrType_Pseudo) >= 0;
 }
 
 bool HexagonInstrInfo::hasUncondBranch(const MachineBasicBlock *B)
@@ -4335,10 +4338,6 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   return HexagonII::HSIG_None;
 }
 
-short HexagonInstrInfo::getEquivalentHWInstr(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(), Hexagon::InstrType_Real);
-}
-
 unsigned HexagonInstrInfo::getInstrTimingClassLatency(
       const InstrItineraryData *ItinData, const MachineInstr &MI) const {
   // Default to one cycle for no itinerary. However, an "empty" itinerary may
@@ -4602,10 +4601,6 @@ bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
   return true;
 }
 
-short HexagonInstrInfo::getPseudoInstrPair(const MachineInstr &MI) const {
-  return Hexagon::getRealHWInstr(MI.getOpcode(), Hexagon::InstrType_Pseudo);
-}
-
 short HexagonInstrInfo::getRegForm(const MachineInstr &MI) const {
   return Hexagon::getRegForm(MI.getOpcode());
 }
@@ -4631,7 +4626,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
   if (BranchRelaxAsmLarge && MI.getOpcode() == Hexagon::INLINEASM) {
     const MachineBasicBlock &MBB = *MI.getParent();
     const MachineFunction *MF = MBB.getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
@@ -4642,7 +4637,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
     assert(MI.getOperand(NumDefs).isSymbol() && "No asm string?");
     // Disassemble the AsmStr and approximate number of instructions.
     const char *AsmStr = MI.getOperand(NumDefs).getSymbolName();
-    Size = getInlineAsmLength(AsmStr, *MAI);
+    Size = getInlineAsmLength(AsmStr, MAI);
   }
 
   return Size;
@@ -4781,6 +4776,197 @@ bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
           MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
           MI->getOpcode() == Hexagon::V6_vmpy_qf32_qf16 ||
           MI->getOpcode() == Hexagon::V6_vmpy_qf32);
+}
+
+namespace llvm::HexagonII {
+
+static constexpr RegTypeInfo make(RegType Out, RegType In1 = RegType::Unknown,
+                                  RegType In2 = RegType::Unknown,
+                                  RegType In3 = RegType::Unknown) {
+  RegTypeInfo I;
+  I.Output = Out;
+  I.Input1 = In1;
+  I.Input2 = In2;
+  I.Input3 = In3;
+  return I;
+}
+
+RegTypeInfo getRegTypeInfo(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return {};
+
+  case Hexagon::V6_vabs_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vabs_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vabs_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vabs_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vadd_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vadd_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vadd_qf16_mix:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vadd_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vadd_qf32_mix:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vadd_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vconv_bf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vconv_f8_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vconv_hf_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vconv_hf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vconv_qf16_f8:
+    return make(RegType::QF16);
+  case Hexagon::V6_vconv_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vconv_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vconv_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vconv_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vconv_sf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vilog2_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vilog2_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vmpy_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vmpy_qf16_mix_hf:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vmpy_qf32_hf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vmpy_qf32_mix_hf:
+    return make(RegType::QF32, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32_qf16:
+    return make(RegType::QF32, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vmpy_rt_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vmpy_rt_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_rt_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vneg_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vneg_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vneg_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vneg_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vsub_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vsub_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vsub_qf16_mix:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vsub_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vsub_qf32_mix:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vsub_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vsub_sf_mix:
+    return make(RegType::QF32, RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vsub_hf_mix:
+    return make(RegType::QF16, RegType::Unknown, RegType::QF16);
+  }
+}
+
+} // namespace llvm::HexagonII
+
+bool HexagonInstrInfo::usesQF32Operand(MachineInstr *MI, unsigned Index) const {
+  auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
+  switch (Index) {
+  case 1:
+    return Info.Input1 == HexagonII::RegType::QF32;
+  case 2:
+    return Info.Input2 == HexagonII::RegType::QF32;
+  case 3:
+    return Info.Input3 == HexagonII::RegType::QF32;
+  case 0:
+    return Info.Input1 == HexagonII::RegType::QF32 ||
+           Info.Input2 == HexagonII::RegType::QF32 ||
+           Info.Input3 == HexagonII::RegType::QF32;
+  default: // No instruction with more than 3 operands uses QF32.
+    return false;
+  }
+  return false;
+}
+
+bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
+  auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
+  switch (Index) {
+  case 1:
+    return Info.Input1 == HexagonII::RegType::QF16;
+  case 2:
+    return Info.Input2 == HexagonII::RegType::QF16;
+  case 3:
+    return Info.Input3 == HexagonII::RegType::QF16;
+  case 0:
+    return Info.Input1 == HexagonII::RegType::QF16 ||
+           Info.Input2 == HexagonII::RegType::QF16 ||
+           Info.Input3 == HexagonII::RegType::QF16;
+  default: // No instruction with more than 3 operands uses QF16.
+    return false;
+  }
+  return false;
+}
+
+bool HexagonInstrInfo::usesQFOperand(MachineInstr *MI, unsigned Index) const {
+  return usesQF32Operand(MI, Index) || usesQF16Operand(MI, Index);
+}
+
+bool HexagonInstrInfo::isQFP32Instr(MachineInstr *MI) const {
+  return HexagonII::getOpRegType(MI->getOpcode()) == HexagonII::RegType::QF32;
+}
+
+bool HexagonInstrInfo::isQFP16Instr(MachineInstr *MI) const {
+  return HexagonII::getOpRegType(MI->getOpcode()) == HexagonII::RegType::QF16;
+}
+
+bool HexagonInstrInfo::isQFPInstr(MachineInstr *MI) const {
+  return isQFP32Instr(MI) || isQFP16Instr(MI);
+}
+
+// Return true if the function contains any qf-generating instructions.
+bool HexagonInstrInfo::hasQFPInstrs(const MachineFunction &MF) const {
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isQFPInstr(const_cast<MachineInstr *>(&MI)))
+        return true;
+  return false;
+}
+
+// Returns true if A appears before B within the same basic block.
+bool HexagonInstrInfo::isMIBefore(const MachineInstr *A,
+                                  const MachineInstr *B) const {
+  if (!A || !B || A->getParent() != B->getParent())
+    return false;
+
+  for (const MachineInstr &MI : *A->getParent()) {
+    if (&MI == A)
+      return true;
+    if (&MI == B)
+      return false;
+  }
+  return false;
 }
 
 // Addressing mode relations.

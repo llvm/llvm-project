@@ -78,11 +78,6 @@ private:
   // Order must match Kind enum!
   std::variant<const Decl *, struct Macro> Storage;
 
-  // Disambiguation tag to make sure we can call the right constructor from
-  // DenseMapInfo methods.
-  struct SentinelTag {};
-  Symbol(SentinelTag, decltype(Storage) Sentinel)
-      : Storage(std::move(Sentinel)) {}
   friend llvm::DenseMapInfo<Symbol>;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Symbol &);
@@ -144,11 +139,6 @@ private:
   // Order must match Kind enum!
   std::variant<FileEntryRef, tooling::stdlib::Header, StringRef> Storage;
 
-  // Disambiguation tag to make sure we can call the right constructor from
-  // DenseMapInfo methods.
-  struct SentinelTag {};
-  Header(SentinelTag, decltype(Storage) Sentinel)
-      : Storage(std::move(Sentinel)) {}
   friend llvm::DenseMapInfo<Header>;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Header &);
@@ -219,12 +209,6 @@ template <> struct DenseMapInfo<clang::include_cleaner::Symbol> {
   using Outer = clang::include_cleaner::Symbol;
   using Base = DenseMapInfo<decltype(Outer::Storage)>;
 
-  static Outer getEmptyKey() {
-    return {Outer::SentinelTag{}, Base::getEmptyKey()};
-  }
-  static Outer getTombstoneKey() {
-    return {Outer::SentinelTag{}, Base::getTombstoneKey()};
-  }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Storage);
   }
@@ -236,8 +220,6 @@ template <> struct DenseMapInfo<clang::include_cleaner::Macro> {
   using Outer = clang::include_cleaner::Macro;
   using Base = DenseMapInfo<decltype(Outer::Definition)>;
 
-  static Outer getEmptyKey() { return {nullptr, Base::getEmptyKey()}; }
-  static Outer getTombstoneKey() { return {nullptr, Base::getTombstoneKey()}; }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Definition);
   }
@@ -249,12 +231,6 @@ template <> struct DenseMapInfo<clang::include_cleaner::Header> {
   using Outer = clang::include_cleaner::Header;
   using Base = DenseMapInfo<decltype(Outer::Storage)>;
 
-  static Outer getEmptyKey() {
-    return {Outer::SentinelTag{}, Base::getEmptyKey()};
-  }
-  static Outer getTombstoneKey() {
-    return {Outer::SentinelTag{}, Base::getTombstoneKey()};
-  }
   static unsigned getHashValue(const Outer &Val) {
     return Base::getHashValue(Val.Storage);
   }

@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=BOTH %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=VI -check-prefix=BOTH %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=BOTH %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=VI -check-prefix=BOTH %s
 
 ; BOTH-LABEL: {{^}}s_rotl_i64:
 ; BOTH-DAG: s_lshl_b64
@@ -25,15 +25,11 @@ entry:
 ; VI: v_lshrrev_b64
 ; BOTH: v_or_b32
 ; BOTH: v_or_b32
-; BOTH: s_endpgm
-define amdgpu_kernel void @v_rotl_i64(ptr addrspace(1) %in, ptr addrspace(1) %xptr, ptr addrspace(1) %yptr) {
-entry:
-  %x = load i64, ptr addrspace(1) %xptr, align 8
-  %y = load i64, ptr addrspace(1) %yptr, align 8
+; BOTH: s_setpc_b64
+define i64 @v_rotl_i64(i64 %x, i64 %y) {
   %tmp0 = shl i64 %x, %y
   %tmp1 = sub i64 64, %y
   %tmp2 = lshr i64 %x, %tmp1
   %tmp3 = or i64 %tmp0, %tmp2
-  store i64 %tmp3, ptr addrspace(1) %in, align 8
-  ret void
+  ret i64 %tmp3
 }

@@ -124,6 +124,17 @@ TEST_F(FormatTestCSharp, AccessModifiers) {
                "}");
 }
 
+TEST_F(FormatTestCSharp, IndentAccessModifiersAfterFirstUsesAlways) {
+  FormatStyle Style = getDefaultStyle();
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  verifyFormat("class C\n"
+               "{\n"
+               "        int Before;\n"
+               "        public int After;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestCSharp, NoStringLiteralBreaks) {
   // Breaking of interpolated strings is not implemented.
   auto Style = getDefaultStyle();
@@ -1673,7 +1684,8 @@ TEST_F(FormatTestCSharp, EmptyShortBlock) {
 TEST_F(FormatTestCSharp, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
   Style.NamespaceIndentation = FormatStyle::NI_All;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("interface Interface {\n"
                "  void f() { return; }\n"
                "};",

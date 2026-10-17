@@ -1,8 +1,6 @@
 ; Test that -inline-threshold overrides thresholds derived from opt levels.
 ; RUN: opt < %s -O2 -inline-threshold=500 -S  | FileCheck %s
 ; RUN: opt < %s -O3 -inline-threshold=500 -S  | FileCheck %s
-; RUN: opt < %s -Os -inline-threshold=500 -S  | FileCheck %s
-; RUN: opt < %s -Oz -inline-threshold=500 -S  | FileCheck %s
 
 @a = global i32 4
 

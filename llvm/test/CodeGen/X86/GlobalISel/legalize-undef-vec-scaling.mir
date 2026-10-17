@@ -30,37 +30,30 @@ name: test_g_implicit_def_cample_size
 body: |
   bb.1:
     ; AVX2-LABEL: name: test_g_implicit_def_cample_size
-    ; AVX2: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; AVX2-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64)
-    ; AVX2-NEXT: [[TRUNC:%[0-9]+]]:_(<5 x s63>) = G_TRUNC [[BUILD_VECTOR]](<5 x s64>)
-    ; AVX2-NEXT: RET 0, implicit [[TRUNC]](<5 x s63>)
+    ; AVX2: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; AVX2-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF
+    ; AVX2-NEXT: G_STORE [[DEF]](<5 x s63>), [[COPY]](p0) :: (store (<5 x s63>), align 64)
+    ; AVX2-NEXT: $rax = COPY [[COPY]](p0)
+    ; AVX2-NEXT: RET 0, $rax
     ;
     ; SSE2-LABEL: name: test_g_implicit_def_cample_size
-    ; SSE2: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; SSE2-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64), [[DEF]](s64)
-    ; SSE2-NEXT: [[TRUNC:%[0-9]+]]:_(<5 x s63>) = G_TRUNC [[BUILD_VECTOR]](<5 x s64>)
-    ; SSE2-NEXT: RET 0, implicit [[TRUNC]](<5 x s63>)
+    ; SSE2: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; SSE2-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF
+    ; SSE2-NEXT: G_STORE [[DEF]](<5 x s63>), [[COPY]](p0) :: (store (<5 x s63>), align 64)
+    ; SSE2-NEXT: $rax = COPY [[COPY]](p0)
+    ; SSE2-NEXT: RET 0, $rax
     ;
     ; AVX512F-LABEL: name: test_g_implicit_def_cample_size
-    ; AVX512F: [[CONSTANT_POOL:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
-    ; AVX512F-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[CONSTANT_POOL]](p0) :: (load (s64) from constant-pool, align 64)
-    ; AVX512F-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; AVX512F-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[CONSTANT_POOL]], [[C]](s64)
-    ; AVX512F-NEXT: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from constant-pool + 8, basealign 64)
-    ; AVX512F-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; AVX512F-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[CONSTANT_POOL]], [[C1]](s64)
-    ; AVX512F-NEXT: [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from constant-pool + 16, align 16, basealign 64)
-    ; AVX512F-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; AVX512F-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[CONSTANT_POOL]], [[C2]](s64)
-    ; AVX512F-NEXT: [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from constant-pool + 24, basealign 64)
-    ; AVX512F-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; AVX512F-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[CONSTANT_POOL]], [[C3]](s64)
-    ; AVX512F-NEXT: [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD3]](p0) :: (load (s64) from constant-pool + 32, align 32, basealign 64)
-    ; AVX512F-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<5 x s64>) = G_BUILD_VECTOR [[LOAD]](s64), [[LOAD1]](s64), [[LOAD2]](s64), [[LOAD3]](s64), [[LOAD4]](s64)
-    ; AVX512F-NEXT: [[TRUNC:%[0-9]+]]:_(<5 x s63>) = G_TRUNC [[BUILD_VECTOR]](<5 x s64>)
-    ; AVX512F-NEXT: RET 0, implicit [[TRUNC]](<5 x s63>)
-    %0:_(<5 x s63>) = G_IMPLICIT_DEF
-    RET 0, implicit %0
+    ; AVX512F: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+    ; AVX512F-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF
+    ; AVX512F-NEXT: G_STORE [[DEF]](<5 x s63>), [[COPY]](p0) :: (store (<5 x s63>), align 64)
+    ; AVX512F-NEXT: $rax = COPY [[COPY]](p0)
+    ; AVX512F-NEXT: RET 0, $rax
+    %0:_(p0) = COPY $rdi
+    %1:_(<5 x s63>) = G_IMPLICIT_DEF
+    G_STORE %1:_(<5 x s63>), %0:_(p0) :: (store (<5 x s63>), align 64)
+    $rax = COPY %0:_(p0)
+    RET 0, $rax
 ...
 
 

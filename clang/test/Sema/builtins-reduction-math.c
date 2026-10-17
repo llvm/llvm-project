@@ -148,3 +148,23 @@ void test_builtin_reduce_minimum(int i, float4 v, int3 iv) {
   i = __builtin_reduce_minimum(i);
   // expected-error@-1 {{1st argument must be a vector of floating-point types (was 'int')}}
 }
+
+void test_builtin_reduce_addf(float f, float4 v, int3 iv) {
+  struct Foo s = __builtin_reduce_assoc_fadd(v);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  f = __builtin_reduce_in_order_fadd(v);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  f = __builtin_reduce_in_order_fadd(v, f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  f = __builtin_reduce_assoc_fadd();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  f = __builtin_reduce_assoc_fadd(iv);
+  // expected-error@-1 {{1st argument must be a vector of floating-point types (was 'int3' (vector of 3 'int' values))}}
+
+  f = __builtin_reduce_in_order_fadd(v, (int)121);
+  // expected-error@-1 {{2nd argument must be a scalar floating-point type (was 'int')}}
+}

@@ -1742,6 +1742,7 @@ class fixed_box {
   inline boolean is_valid() const;
   inline isl::checked::multi_aff offset() const;
   inline isl::checked::multi_aff get_offset() const;
+  inline boolean plain_is_equal(const isl::checked::fixed_box &box2) const;
   inline isl::checked::multi_val size() const;
   inline isl::checked::multi_val get_size() const;
   inline isl::checked::space space() const;
@@ -2586,6 +2587,7 @@ class multi_val {
   inline isl::checked::multi_val flat_range_product(isl::checked::multi_val multi2) const;
   inline boolean has_range_tuple_id() const;
   inline boolean involves_nan() const;
+  inline boolean is_equal(const isl::checked::multi_val &mv2) const;
   inline isl::checked::val_list list() const;
   inline isl::checked::val_list get_list() const;
   inline isl::checked::multi_val max(isl::checked::multi_val multi2) const;
@@ -9037,6 +9039,12 @@ isl::checked::multi_aff fixed_box::get_offset() const
   return offset();
 }
 
+boolean fixed_box::plain_is_equal(const isl::checked::fixed_box &box2) const
+{
+  auto res = isl_fixed_box_plain_is_equal(get(), box2.get());
+  return manage(res);
+}
+
 isl::checked::multi_val fixed_box::size() const
 {
   auto res = isl_fixed_box_get_size(get());
@@ -12840,6 +12848,12 @@ boolean multi_val::has_range_tuple_id() const
 boolean multi_val::involves_nan() const
 {
   auto res = isl_multi_val_involves_nan(get());
+  return manage(res);
+}
+
+boolean multi_val::is_equal(const isl::checked::multi_val &mv2) const
+{
+  auto res = isl_multi_val_is_equal(get(), mv2.get());
   return manage(res);
 }
 

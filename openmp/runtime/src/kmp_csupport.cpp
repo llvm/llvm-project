@@ -2040,6 +2040,14 @@ void ompc_set_num_threads(int arg) {
   __kmp_set_num_threads(arg, __kmp_entry_gtid());
 }
 
+void kmpc_set_num_threads_8(kmp_int64 arg) {
+  if (arg > (kmp_int64)INT_MAX)
+    arg = INT_MAX;
+  else if (arg < (kmp_int64)INT_MIN)
+    arg = INT_MIN;
+  __kmp_set_num_threads((int)arg, __kmp_entry_gtid());
+}
+
 void ompc_set_dynamic(int flag) {
   kmp_info_t *thread;
 
@@ -4514,6 +4522,20 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   ___kmpc_free(__kmp_entry_gtid(), ptr, allocator);
 }
 /* end of OpenMP 5.1 Memory Management routines */
+
+void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group) {
+  return NULL;
+}
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group) {
+  return NULL;
+}
+
+size_t omp_get_dyn_gprivate_size(omp_access_t access_group) { return 0; }
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t access_group) {
+  return omp_null_mem_space;
+}
 
 int __kmpc_get_target_offload(void) {
   if (!__kmp_init_serial) {

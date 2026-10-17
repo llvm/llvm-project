@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class BasicBlockMatchingAndInference : public MachineFunctionPass {
+class LLVM_ABI BasicBlockMatchingAndInference : public MachineFunctionPass {
 private:
   using Edge = std::pair<const MachineBasicBlock *, const MachineBasicBlock *>;
   using BlockWeightMap = DenseMap<const MachineBasicBlock *, uint64_t>;
@@ -52,6 +52,7 @@ private:
   StringMap<WeightInfo> ProgramWeightInfo;
 
   WeightInfo initWeightInfoByMatching(MachineFunction &MF);
+  WeightInfo initWeightInfoByBBID(MachineFunction &MF, const CFGProfile &CFG);
 
   void generateWeightInfoByInference(MachineFunction &MF,
                                      WeightInfo &MatchWeight);

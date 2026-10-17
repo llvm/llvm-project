@@ -115,15 +115,15 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     ///
     /// Stops the AST traversal if more than one usage is found.
     bool VisitDeclRefExpr(DeclRefExpr *D) {
-      if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl())) {
-        if (To == ParamDecl) {
-          ++Count;
-          if (Count > 1U) {
-            // No need to look further, used more than once.
-            return false;
-          }
+      if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl());
+          To && To == ParamDecl) {
+        ++Count;
+        if (Count > 1U) {
+          // No need to look further, used more than once.
+          return false;
         }
       }
+
       return true;
     }
 
@@ -173,9 +173,9 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
         C->getNumParams() != Ctor->getNumParams())
       return false;
     for (int I = 0, E = C->getNumParams(); I < E; ++I) {
-      const clang::QualType CandidateParamType =
+      const QualType CandidateParamType =
           C->parameters()[I]->getType().getCanonicalType();
-      const clang::QualType CtorParamType =
+      const QualType CtorParamType =
           Ctor->parameters()[I]->getType().getCanonicalType();
       const bool IsLValueRValuePair =
           CtorParamType->isLValueReferenceType() &&
@@ -216,11 +216,13 @@ PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
-      ValuesOnly(Options.get("ValuesOnly", false)) {}
+      ValuesOnly(Options.get("ValuesOnly", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "ValuesOnly", ValuesOnly);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
@@ -273,6 +275,9 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CXXCtorInitializer>("Initializer");
   const SourceManager &SM = *Result.SourceManager;
 
+  if (IgnoreMacros && ParamDecl->getBeginLoc().isMacroID())
+    return;
+
   // If the parameter is used or anything other than the copy, do not apply
   // the changes.
   if (!paramReferredExactlyOnce(Ctor, ParamDecl))
@@ -288,7 +293,8 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (hasRValueOverload(Ctor, ParamDecl))
     return;
 
-  auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
+  const auto Diag =
+      diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
 
   // If we received a `const&` type, we need to rewrite the function
   // declarations.
@@ -296,7 +302,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Check if we can succesfully rewrite all declarations of the constructor.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      const auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
       if (RefTL.isNull()) {
         // We cannot rewrite this instance. The type is probably hidden behind
         // some `typedef`. Do not offer a fix-it in this case.
@@ -306,7 +312,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Rewrite all declarations.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      const auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
 
       const TypeLoc ValueTL = RefTL.getPointeeLoc();
       const CharSourceRange TypeRange = CharSourceRange::getTokenRange(

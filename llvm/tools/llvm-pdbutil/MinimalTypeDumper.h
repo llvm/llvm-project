@@ -37,8 +37,11 @@ public:
   Error visitTypeBegin(codeview::CVType &Record,
                        codeview::TypeIndex Index) override;
   Error visitTypeEnd(codeview::CVType &Record) override;
+  Error visitUnknownType(codeview::CVType &Record) override;
+
   Error visitMemberBegin(codeview::CVMemberRecord &Record) override;
   Error visitMemberEnd(codeview::CVMemberRecord &Record) override;
+  Error visitUnknownMember(codeview::CVMemberRecord &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(codeview::CVType &CVR,                                \

@@ -1,6 +1,9 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-linux -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-LINUX %s
 // CHECK-LINUX: --target=aarch64-unknown-linux
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=x86_64-pc-windows-msvc -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-WINDOWS %s
+// CHECK-WINDOWS: --target=x86_64-pc-windows-msvc
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-fuchsia -fsanitize=hwaddress | FileCheck --check-prefix=CHECK-FUCHSIA %s
 // CHECK-FUCHSIA: --target=aarch64-unknown-fuchsia
 
@@ -68,6 +71,10 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbranch-protection=standard | FileCheck --check-prefix=CHECK-BRANCH-PROTECTION %s
 // CHECK-BRANCH-PROTECTION: -mbranch-protection=standard
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi --cstdlib=picolibc | FileCheck --check-prefix=CHECK-CSTDLIB %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi --cstdlib picolibc | FileCheck --check-prefix=CHECK-CSTDLIB %s
+// CHECK-CSTDLIB: --cstdlib=picolibc
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mno-unaligned-access | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi -mstrict-align | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=arm-none-eabi | FileCheck --check-prefix=CHECK-NO-UNALIGNED-ACCESS %s
@@ -86,6 +93,12 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-none-elf -mbig-endian | FileCheck --check-prefix=CHECK-BIG-ENDIAN %s
 // CHECK-BIG-ENDIAN: -mbig-endian
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fsanitize=shadow-call-stack | FileCheck --check-prefix=CHECK-SHADOW-CALL-STACK %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fno-sanitize=shadow-call-stack | FileCheck --check-prefix=CHECK-NO-SHADOW-CALL-STACK %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf | FileCheck --check-prefix=CHECK-NO-SHADOW-CALL-STACK %s
+// CHECK-SHADOW-CALL-STACK: -fsanitize=shadow-call-stack
+// CHECK-NO-SHADOW-CALL-STACK: -fno-sanitize=shadow-call-stack
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv32-none-elf -march=rv32g | FileCheck --check-prefix=CHECK-RV32 %s
 // CHECK-RV32: --target=riscv32-unknown-none-elf
 // CHECK-RV32: -mabi=ilp32d
@@ -103,8 +116,10 @@
 
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=armv8m.main-none-eabi -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-ARM-MULTILIB-CUSTOM-FLAG %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=aarch64-none-eabi     -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-AARCH64-MULTILIB-CUSTOM-FLAG %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-RISCV-MULTILIB-CUSTOM-FLAG %s
 // CHECK-ARM-MULTILIB-CUSTOM-FLAG:     --target=thumbv8m.main-unknown-none-eabi
 // CHECK-AARCH64-MULTILIB-CUSTOM-FLAG: --target=aarch64-unknown-none-eabi
+// CHECK-RISCV-MULTILIB-CUSTOM-FLAG:   --target=riscv64-unknown-none-elf
 // CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=foo
 // CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=bar
 
@@ -143,3 +158,16 @@
 // CHECK-OPT-OS: -Os
 // CHECK-OPT-NOT: -Oz
 // CHECK-OPT-NOT: -Os
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf                                                         | FileCheck --check-prefix=CHECK-CF-PROTECTION-NONE --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=none                                   | FileCheck --check-prefix=CHECK-CF-PROTECTION-NONE --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=return                                 | FileCheck --check-prefix=CHECK-CF-PROTECTION-RETURN --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=branch -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-BRANCH %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=full   -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-FULL   %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection        -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-FULL   %s
+// CHECK-CF-PROTECTION-NONE: -fcf-protection=none
+// CHECK-CF-PROTECTION-RETURN: -fcf-protection=return
+// CHECK-CF-PROTECTION-BRANCH: -fcf-protection=branch
+// CHECK-CF-PROTECTION-BRANCH: -mcf-branch-label-scheme=unlabeled
+// CHECK-CF-PROTECTION-FULL: -fcf-protection=full
+// CHECK-CF-PROTECTION-FULL: -mcf-branch-label-scheme=unlabeled

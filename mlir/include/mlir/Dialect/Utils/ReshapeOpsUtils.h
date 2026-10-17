@@ -19,6 +19,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -83,16 +84,32 @@ getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
 bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
+/// Verify that none of the reassociation groups is empty.
+template <typename ReshapeOpTy>
+LogicalResult verifyReassociationIndicesNotEmpty(ReshapeOpTy op) {
+  if (llvm::any_of(
+          op.getReassociationIndices(),
+          [](const ReassociationIndices &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
+  return success();
+}
+
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
-static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
-                                  ArrayRef<Attribute> operands) {
+OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
+                           ArrayRef<Attribute> operands) {
   // Fold identity reshape.
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
 
-  // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front()))
-    return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
+  // Reshape of a constant can be replaced with a new constant, but only when
+  // the result type has a static shape. DenseElementsAttr::reshape requires
+  // a static shape to preserve the element count invariant.
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+    auto resultType = cast<ShapedType>(reshapeOp.getResult().getType());
+    if (resultType.hasStaticShape())
+      return elements.reshape(resultType);
+  }
 
   // Fold if the producer reshape source has the same shape with at most 1
   // dynamic dimension.
@@ -135,8 +152,8 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 /// Common verifier for reshape-like types. Fills `expandedType` and
 ///`collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
-static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
-                                            T collapsedType, bool isExpansion) {
+LogicalResult verifyReshapeLikeTypes(Op op, T expandedType, T collapsedType,
+                                     bool isExpansion) {
 
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
@@ -332,11 +349,13 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
         // the first dynamic size.
         Value result = dynamicSizes[0];
         for (Value v : llvm::drop_begin(dynamicSizes))
-          result = arith::MulIOp::create(rewriter, loc, result, v);
+          result = arith::MulIOp::create(rewriter, loc, result, v,
+                                         arith::IntegerOverflowFlags::nsw);
         if (numStaticElems != 1) {
           result = arith::MulIOp::create(
               rewriter, loc, result,
-              arith::ConstantIndexOp::create(rewriter, loc, numStaticElems));
+              arith::ConstantIndexOp::create(rewriter, loc, numStaticElems),
+              arith::IntegerOverflowFlags::nsw);
         }
         newOutputShape.push_back(result);
       }
@@ -370,7 +389,8 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getResult().getType())) {
-      if (CastOpTy::areCastCompatible(srcType, resultType)) {
+      if (srcType.hasStaticShape() &&
+          CastOpTy::areCastCompatible(srcType, resultType)) {
         rewriter.replaceOpWithNewOp<CastOpTy>(expandOp, resultType,
                                               collapseOp.getSrc());
         return success();

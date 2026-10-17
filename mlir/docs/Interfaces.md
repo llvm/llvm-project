@@ -133,7 +133,7 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
     -   The C++ namespace that the interface class should be generated in.
 *   Methods (`methods`)
     -   The list of interface hook methods that are defined by the IR object.
-    -   The structure of these methods is defined [here](#interface-methods).
+    -   The structure of these methods is defined [here](#dialect-interface-methods).
 
 The header file can be generated via the following command:
 
@@ -150,6 +150,28 @@ mlir_tablegen(DialectInlinerInterface.h.inc -gen-dialect-interface-decls)
 
 An example of this can be found in the DialectInlinerInterface implementation 
 and the related `CMakeLists.txt` under `mlir/include/mlir/Transforms`.
+
+##### Dialect Interface Methods
+
+There are three types of methods that can be used with a dialect interface,
+`InterfaceMethod`, `InterfaceMethodDeclaration` and `PureVirtualInterfaceMethod`.
+They are all comprised of the same core components, with the distinction that
+`InterfaceMethod` also supports a default method body.
+
+Interface methods are comprised of the following components:
+
+*   Description: a string description of this method, its invariants, example usages,
+etc.
+*   ReturnType: a string corresponding to the C++ return type of the method.
+*   MethodName: a string corresponding to the C++ name of the method.
+*   Arguments (Optional): a dag of strings that correspond to a C++ type and variable name
+respectively.
+*   MethodBody (Optional, only in `InterfaceMethod`): an optional explicit implementation
+of the interface method.
+
+`InterfaceMethodDeclaration` will only declare the class method. On the other hand,
+`PureVirtualInterfaceMethod` marks the method as pure virtual, but also makes the
+constructor of the dialect calss protected.
 
 #### DialectInterfaceCollection
 
@@ -510,10 +532,14 @@ comprised of the following components:
 
 ##### Interface Methods
 
-There are two types of methods that can be used with an interface,
-`InterfaceMethod` and `StaticInterfaceMethod`. They are both comprised of the
-same core components, with the distinction that `StaticInterfaceMethod` models a
-static method on the derived IR object.
+`InterfaceMethod` and `StaticInterfaceMethod` both define methods on an
+attr/op/type interface. `InterfaceMethod` models an instance method, while
+`StaticInterfaceMethod` models a static method in the derived IR object class.
+For an operation interface method whose body only needs the raw `Operation *`,
+use `$_raw_op` in the `InterfaceMethod` body. The model callback is then
+generated once per interface rather than once per concrete operation type.
+Prefer this form when possible: it avoids generating a copy of the callback
+for every operation that implements the interface, reducing binary size.
 
 Interface methods are comprised of the following components:
 
@@ -529,15 +555,20 @@ Interface methods are comprised of the following components:
         respectively.
 *   MethodBody (Optional)
     -   An optional explicit implementation of the interface method.
-    -   This implementation is placed within the method defined on the `Model`
-        traits class, and is not defined by the `Trait` class that is attached
-        to the IR entity. More concretely, this body is only visible by the
-        interface class and does not affect the derived IR entity.
+    -   Normally, this implementation is placed within the method defined on
+        the `Model` traits class, and is not defined by the `Trait` class that
+        is attached to the IR entity. More concretely, this body is only
+        visible by the interface class and does not affect the derived IR
+        entity.
+    -   For a non-static operation interface method, a body that uses
+        `$_raw_op` without `ConcreteOp`, `$_op`, or `$_self` is instead placed in
+        a shared model callback. `$_raw_op` refers to the `Operation *` in both
+        shared and per-operation model callbacks. Fallback and external models
+        still use their own implementations.
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
-        entity currently being operated on.
-    -   In non-static methods, `$_op` and `$_self` may be used to refer to an
-        instance of the derived IR entity.
+        entity currently being operated on. In non-static methods, `$_op` and
+        `$_self` may be used to refer to an instance of the derived IR entity.
 *   DefaultImplementation (Optional)
     -   An optional explicit default implementation of the interface method.
     -   This implementation is placed within the `Trait` class that is attached
@@ -553,6 +584,17 @@ Interface methods are comprised of the following components:
 ODS also allows for generating declarations for the `InterfaceMethod`s of an
 operation if the operation specifies the interface with
 `DeclareOpInterfaceMethods` (see an example below).
+
+For example, an operation interface can share a callback across its concrete
+operation models while keeping a default implementation for the operation trait:
+
+```tablegen
+InterfaceMethod<
+  "Return the number of operands", "unsigned", "getNumOperands", (ins),
+  /*methodBody=*/[{ return $_raw_op->getNumOperands(); }],
+  /*defaultImplementation=*/[{ return this->getOperation()->getNumOperands(); }]
+>
+```
 
 Examples:
 
@@ -818,6 +860,11 @@ interface section goes as follows:
 *   `CallOpInterface` - Used to represent operations like 'call'
     -   `CallInterfaceCallable getCallableForCallee()`
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
+    -   `Operation::operand_range getArgOperands()`
+    -   `MutableOperandRange getArgOperandsMutable()`
+    -   `Operation::result_range getForwardedResults()`
+    -   `Operation * resolveCallable()`
+    -   `Operation * resolveCallableInTable(SymbolTableCollection *)`
     -   `ArrayAttr getArgAttrsAttr()`
     -   `ArrayAttr getResAttrsAttr()`
     -   `void setArgAttrsAttr(ArrayAttr)`
@@ -834,6 +881,22 @@ interface section goes as follows:
     -   `void setResAttrsAttr(ArrayAttr)`
     -   `Attribute removeArgAttrsAttr()`
     -   `Attribute removeResAttrsAttr()`
+
+A call operation may have operands and results that are not part of the call
+itself; such operands are said to be *consumed* by the operation and such
+results to be *produced* by it. The operands that are passed to the callee
+(`getArgOperands`) and the results that receive the values returned by the
+callee (`getForwardedResults`) are said to be *forwarded*, and they are in a 1:1
+relationship with the arguments and results of the callee: the i-th forwarded
+operand is passed as the i-th argument of the callee and the i-th forwarded
+result receives the i-th value returned by the callee. Corresponding types are
+not required to be equal; it is up to the call operation to verify them as
+needed.
+
+Variadic arguments of a call to a variadic callee (if supported by the call
+op / callee op) are consumed operands, not forwarded ones: they do not
+correspond to any argument of the callee, which reads them through dedicated
+operations instead of receiving them as block arguments.
 
 ##### RegionKindInterfaces
 

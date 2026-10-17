@@ -41,10 +41,9 @@ static void dump(const StructuredData::Array &array, Stream &s) {
   s << '[' << llvm::join(values, ", ") << ']';
 }
 
-// The default dump output is too verbose.
 static void dump(const StructuredData::Dictionary &config, Stream &s) {
-  config.ForEach(
-      [&](llvm::StringRef key, StructuredData::Object *object) -> bool {
+  config.ForEachSorted(
+      [&s](llvm::StringRef key, StructuredData::Object *object) -> bool {
         assert(object);
 
         StructuredData::Dictionary *value_dict = object->GetAsDictionary();
@@ -59,13 +58,12 @@ static void dump(const StructuredData::Dictionary &config, Stream &s) {
         else if (StructuredData::Array *array = value_sp->GetAsArray())
           dump(*array, s);
         s << '\n';
-
         return true;
       });
 }
 
 void CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
-  result.AppendMessageWithFormat("%s\n", lldb_private::GetVersion());
+  result.AppendMessageWithFormatv("{0}", lldb_private::GetVersion());
 
   if (m_options.verbose)
     dump(*Debugger::GetBuildConfiguration(), result.GetOutputStream());

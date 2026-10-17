@@ -30,10 +30,6 @@ def TosaShapeOperator : NativeOpTrait<"TosaShapeOperator"> {
 
 class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator])> {
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_SHAPE]>,
-  ];
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -89,6 +85,8 @@ def Tosa_ConcatShapeOp : Tosa_ShapeOp<"concat_shape", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -104,7 +102,7 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
     ```mlir
     // Generic form
-    %out = "tosa.const_shape"() {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
+    %out = "tosa.const_shape"() <{values = dense<0> : tensor<4xindex>}> : () -> !tosa.shape<4>
     ```
   }];
 
@@ -112,13 +110,12 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
   let results = (outs Tosa_Shape:$output);
 
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
-  ];
-
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let assemblyFormat =
+      "operands `values` `(` $values `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -141,6 +138,10 @@ def Tosa_DimOp : Tosa_ShapeOp<"dim", [Pure]> {
   let hasVerifier = 1;
 
   let hasFolder = 1;
+
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -159,6 +160,8 @@ def Tosa_DivCeilShapeOp : Tosa_ElementwiseShapeOp<"div_ceil_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -177,6 +180,8 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -194,6 +199,8 @@ def Tosa_Exp2ShapeOp : Tosa_ElementwiseShapeOp<"exp2_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +218,8 @@ def Tosa_Log2CeilShapeOp : Tosa_ElementwiseShapeOp<"log2_ceil_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -228,6 +237,8 @@ def Tosa_Log2FloorShapeOp : Tosa_ElementwiseShapeOp<"log2_floor_shape", [Pure]> 
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -246,6 +257,8 @@ def Tosa_MaxShapeOp : Tosa_ElementwiseShapeOp<"max_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -264,6 +277,8 @@ def Tosa_MinShapeOp : Tosa_ElementwiseShapeOp<"min_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -282,6 +297,8 @@ def Tosa_ModShapeOp : Tosa_ElementwiseShapeOp<"mod_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -300,6 +317,8 @@ def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -321,6 +340,8 @@ def Tosa_SliceShapeOp : Tosa_ShapeOp<"slice_shape", [Pure]> {
   let results = (outs Tosa_Shape:$output);
 
   let hasVerifier = 1;
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -339,6 +360,8 @@ def Tosa_SubShapeOp : Tosa_ElementwiseShapeOp<"sub_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -357,6 +380,11 @@ def Tosa_AssertEqualShapeOp
       BoolAttr:$allow_broadcast);
 
   let results = (outs);
+
+  let assemblyFormat =
+      "operands `allow_broadcast` `(` $allow_broadcast "
+      "`)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 #endif // TOSA_SHAPE_OPS

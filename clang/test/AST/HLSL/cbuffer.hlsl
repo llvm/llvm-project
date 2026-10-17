@@ -151,7 +151,7 @@ cbuffer CB {
   void f() {}
   // CHECK: VarDecl {{.*}} SV 'hlsl_private float' static
   static float SV;
-  // CHECK: VarDecl {{.*}} s7 'EmptyStruct' callinit
+  // CHECK: VarDecl {{.*}} s7 'EmptyStruct'
   EmptyStruct s7;
   // CHECK: VarDecl {{.*}} Buf 'RWBuffer<float>':'hlsl::RWBuffer<float>' callinit
   RWBuffer<float> Buf;

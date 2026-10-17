@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -24,6 +25,10 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   if (!type.hasStaticShape())
     return false;
 
+  int64_t rank = type.getRank();
+  if (rank == 0)
+    return true;
+
   SmallVector<int64_t> strides;
   int64_t offset;
   if (failed(type.getStridesAndOffset(strides, offset)))
@@ -32,7 +37,7 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
   // MemRef is contiguous if outer dimensions are size-1 and inner
   // dimensions have unit strides.
   int64_t runningStride = 1;
-  int64_t curDim = strides.size() - 1;
+  int64_t curDim = rank - 1;
   // Finds all inner dimensions with unit strides.
   while (curDim >= 0 && strides[curDim] == runningStride) {
     runningStride *= type.getDimSize(curDim);
@@ -51,7 +56,8 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices) {
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices,
+    LinearizedDivKind sizeDivKind) {
   unsigned sourceRank = sizes.size();
   assert(sizes.size() == strides.size() &&
          "expected as many sizes as strides for a memref");
@@ -88,7 +94,10 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     AffineExpr sizeExpr = symbols[symbolIndex++];
     values.push_back(sizes[i]);
 
-    productExpressions.push_back((strideExpr * sizeExpr).floorDiv(scaler));
+    AffineExpr product = strideExpr * sizeExpr;
+    productExpressions.push_back(sizeDivKind == LinearizedDivKind::Ceil
+                                     ? product.ceilDiv(scaler)
+                                     : product.floorDiv(scaler));
   }
   AffineMap maxMap = AffineMap::get(
       /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
@@ -112,13 +121,15 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 LinearizedMemRefInfo
 getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
-                                 ArrayRef<OpFoldResult> sizes) {
+                                 ArrayRef<OpFoldResult> sizes,
+                                 LinearizedDivKind sizeDivKind) {
   SmallVector<OpFoldResult> strides(sizes.size());
   if (!sizes.empty()) {
     strides.back() = builder.getIndexAttr(1);
     AffineExpr s0, s1;
     bindSymbols(builder.getContext(), s0, s1);
-    for (int index = sizes.size() - 1; index > 0; --index) {
+    for (int64_t index = static_cast<int64_t>(sizes.size()) - 1; index > 0;
+         --index) {
       strides[index - 1] = affine::makeComposedFoldedAffineApply(
           builder, loc, s0 * s1,
           ArrayRef<OpFoldResult>{strides[index], sizes[index]});
@@ -128,7 +139,8 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
   LinearizedMemRefInfo linearizedMemRefInfo;
   std::tie(linearizedMemRefInfo, std::ignore) =
       getLinearizedMemRefOffsetAndSize(builder, loc, srcBits, dstBits, offset,
-                                       sizes, strides);
+                                       sizes, strides, /*indices=*/{},
+                                       sizeDivKind);
   return linearizedMemRefInfo;
 }
 
@@ -179,7 +191,7 @@ computeSuffixProductIRBlockImpl(Location loc, OpBuilder &builder,
   AffineExpr s0, s1;
   bindSymbols(builder.getContext(), s0, s1);
 
-  for (int64_t r = strides.size() - 1; r > 0; --r) {
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 1; r > 0; --r) {
     strides[r - 1] = affine::makeComposedFoldedAffineApply(
         builder, loc, s0 * s1, {strides[r], sizes[r]});
   }
@@ -252,7 +264,8 @@ void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
 void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                        memref::CollapseShapeOp collapseShapeOp,
                                        ValueRange indices,
-                                       SmallVectorImpl<Value> &sourceIndices) {
+                                       SmallVectorImpl<Value> &sourceIndices,
+                                       bool startsInbounds) {
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = memref::ExtractStridedMetadataOp::create(
       rewriter, loc, collapseShapeOp.getSrc());
@@ -267,10 +280,15 @@ void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
       continue;
     }
 
-    SmallVector<OpFoldResult> basis =
-        llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
+    // If we don't know that this value is in-bounds, the largest return value
+    // of the delinearization may exceed `sourceSizes[d]`, so we drop that first
+    // group entry in order to maintain soundness.
+    auto trimmedGroup =
+        ArrayRef<int64_t>(group).drop_front(startsInbounds ? 0 : 1);
+    SmallVector<OpFoldResult> basis = llvm::map_to_vector(
+        trimmedGroup, [&](int64_t d) { return sourceSizes[d]; });
     auto delinearize = affine::AffineDelinearizeIndexOp::create(
-        rewriter, loc, index, basis, /*hasOuterBound=*/true);
+        rewriter, loc, index, basis, /*hasOuterBound=*/startsInbounds);
     llvm::append_range(sourceIndices, delinearize.getResults());
   }
   if (collapseShapeOp.getReassociationIndices().empty()) {
@@ -284,6 +302,184 @@ void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
           getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
     }
   }
+}
+
+LogicalResult resolveSourceIndicesRankReducingSubview(
+    Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices) {
+  if (!subViewOp.hasZeroOffset() || !subViewOp.hasUnitStride())
+    return failure();
+
+  MemRefType srcType = subViewOp.getSourceType();
+  MemRefType resType = subViewOp.getType();
+  unsigned srcRank = srcType.getRank();
+  unsigned resRank = resType.getRank();
+  if (srcRank <= resRank || indices.size() != resRank)
+    return failure();
+
+  auto droppedDims = subViewOp.getDroppedDims();
+  if (droppedDims.none() || droppedDims.count() != srcRank - resRank)
+    return failure();
+
+  auto mixedSizes = subViewOp.getMixedSizes();
+  if (mixedSizes.size() != srcRank)
+    return failure();
+
+  unsigned resultDim = 0;
+  for (unsigned sourceDim = 0; sourceDim < srcRank; ++sourceDim) {
+    if (droppedDims.test(sourceDim)) {
+      auto sizeCst = getConstantIntValue(mixedSizes[sourceDim]);
+      if (!sizeCst || *sizeCst != 1)
+        return failure();
+      sourceIndices.push_back(
+          getValueOrCreateConstantIndexOp(b, loc, b.getIndexAttr(0)));
+      continue;
+    }
+    if (resultDim >= indices.size())
+      return failure();
+    sourceIndices.push_back(indices[resultDim++]);
+  }
+  if (resultDim != indices.size())
+    return failure();
+
+  return success();
+}
+
+bool hasNegativeStaticStride(MemRefType memRefTy) {
+  auto [strides, offset] = memRefTy.getStridesAndOffset();
+  return llvm::any_of(strides, [](int64_t stride) {
+    return ShapedType::isStatic(stride) && stride < 0;
+  });
+}
+
+namespace {
+// TODO: This footprint modelling and its logic overlap with
+// `SubsetOpInterface`, which is unfortunately tensor-only today; if it gains
+// memref support, look into unifying with it to improve code reuse.
+//
+/// Footprint of a memref value relative to a `root` memref reached through a
+/// chain of rank-preserving `memref.subview` ops whose `strides` operand is all
+/// ones (so each result index steps one source element in every dimension): per
+/// `root` dimension, the `[offset, offset + size)` interval the value covers (a
+/// `size` may be dynamic). The root is the underlying buffer if the whole chain
+/// composes, otherwise the result of the first subview (walking toward the
+/// root) that cannot be composed. Two footprints are therefore comparable only
+/// when they resolve to the *same* root value.
+struct SubviewFootprint {
+  Value root;
+  SmallVector<int64_t> offsets;
+  SmallVector<int64_t> sizes;
+};
+} // namespace
+
+/// Resolve `base` through a `memref.subview` chain to a footprint, or
+/// `std::nullopt` if it cannot be modelled. Composition stops at the first
+/// subview with a dynamic offset, a `strides` operand other than all ones, or a
+/// rank reduction; that subview's own result becomes the footprint root. This
+/// keeps two slices that share a common (possibly dynamically-offset) base
+/// comparable through their static offsets relative to that base. Sizes may be
+/// dynamic: such dimensions simply cannot be used to prove disjointness.
+static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
+  auto baseTy = dyn_cast<MemRefType>(base.getType());
+  if (!baseTy)
+    return std::nullopt;
+  SubviewFootprint footprint;
+  // Size is fixed by `base` itself; offset accumulates the static offsets of
+  // the composable subviews walked toward the root.
+  footprint.offsets.assign(baseTy.getRank(), 0);
+  footprint.sizes.assign(baseTy.getShape().begin(), baseTy.getShape().end());
+
+  Value cur = base;
+  while (auto sv = cur.getDefiningOp<SubViewOp>()) {
+    ArrayRef<int64_t> staticOffsets = sv.getStaticOffsets();
+    ArrayRef<int64_t> staticStrides = sv.getStaticStrides();
+    // Rank-reducing subviews, or those with a dynamic offset or a `strides`
+    // operand other than all ones, cannot be composed: stop here and use `sv`'s
+    // result as the root.
+    if (sv.getSourceType().getRank() != sv.getType().getRank() ||
+        llvm::any_of(staticOffsets, ShapedType::isDynamic) ||
+        llvm::any_of(staticStrides, [](int64_t s) { return s != 1; }))
+      break;
+    for (unsigned d = 0, e = staticOffsets.size(); d < e; ++d)
+      footprint.offsets[d] += staticOffsets[d];
+    cur = sv.getSource();
+  }
+  // The root must be a genuine buffer or a `memref.subview` result, not another
+  // kind of view (collapse/expand/reshape) whose coordinate remapping would
+  // invalidate the per-dimension offset bookkeeping.
+  if (auto *def = cur.getDefiningOp())
+    if (isa<ViewLikeOpInterface>(def) && !isa<SubViewOp>(def))
+      return std::nullopt;
+  footprint.root = cur;
+  return footprint;
+}
+
+/// True if two footprints provably cover disjoint memory: they must share the
+/// same root and be separated along at least one statically-sized dimension.
+static bool areFootprintDisjoint(const SubviewFootprint &a,
+                                 const SubviewFootprint &b) {
+  if (a.root != b.root)
+    return false;
+  for (unsigned d = 0, e = a.offsets.size(); d < e; ++d) {
+    // A dimension can prove disjointness only when both extents are static.
+    if (ShapedType::isDynamic(a.sizes[d]) || ShapedType::isDynamic(b.sizes[d]))
+      continue;
+    int64_t aHi = a.offsets[d] + a.sizes[d];
+    int64_t bHi = b.offsets[d] + b.sizes[d];
+    if (aHi <= b.offsets[d] || bHi <= a.offsets[d])
+      return true;
+  }
+  return false;
+}
+
+bool hasNoAliasingAccessInScope(Value base, Operation *scope,
+                                ArrayRef<Operation *> excludedOps,
+                                bool readsAreSafe) {
+  auto baseMemref = dyn_cast<MemrefValue>(base);
+  if (!baseMemref)
+    return false;
+  Value rootBuffer = skipViewLikeOps(baseMemref);
+  // Footprint of `base`, if modellable; enables the disjointness escape.
+  std::optional<SubviewFootprint> baseFp = resolveSubviewFootprint(base);
+
+  // Visit the transitive users of the root buffer, following views.
+  SmallVector<Operation *> worklist(rootBuffer.getUsers().begin(),
+                                    rootBuffer.getUsers().end());
+  SmallPtrSet<Operation *, 8> processed;
+  while (!worklist.empty()) {
+    Operation *user = worklist.pop_back_val();
+    if (!processed.insert(user).second)
+      continue;
+    // Views do not access memory; follow them to their own users.
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      Value viewDest = viewLike.getViewDest();
+      worklist.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
+      continue;
+    }
+    if (isMemoryEffectFree(user) || llvm::is_contained(excludedOps, user))
+      continue;
+    if (!scope->isAncestor(user))
+      continue;
+    // In-`scope`, memory-effecting op: each of its operands that resolves to
+    // the root buffer conflicts unless it is a provably-disjoint slice or (when
+    // allowed) is only read.
+    for (Value operand : user->getOperands()) {
+      auto slice = dyn_cast<MemrefValue>(operand);
+      if (!slice || skipViewLikeOps(slice) != rootBuffer)
+        continue;
+      if (baseFp) {
+        std::optional<SubviewFootprint> sliceFp =
+            resolveSubviewFootprint(slice);
+        if (sliceFp && areFootprintDisjoint(*baseFp, *sliceFp))
+          continue;
+      }
+      if (readsAreSafe && isa<MemoryEffectOpInterface>(user) &&
+          !hasEffect<MemoryEffects::Write>(user, slice))
+        continue;
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace memref

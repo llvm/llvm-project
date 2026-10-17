@@ -14,6 +14,7 @@ let Predicates = [FeatureVector] in {
   // Register move.
   let isMoveReg = 1 in {
     def VLR : UnaryVRRa<"vlr", 0xE756, null_frag, v128any, v128any>;
+    def VLR16 : UnaryAliasVRR<null_frag, v16hb, v16hb>;
     def VLR32 : UnaryAliasVRR<null_frag, v32sb, v32sb>;
     def VLR64 : UnaryAliasVRR<null_frag, v64db, v64db>;
   }
@@ -51,6 +52,31 @@ class VectorExtractSubreg<ValueType type, Instruction insn>
 def : VectorExtractSubreg<v16i8, VLGVB>;
 def : VectorExtractSubreg<v8i16, VLGVH>;
 def : VectorExtractSubreg<v4i32, VLGVF>;
+
+// VLGVX extractions always zero extend to 64 bits, so no need for a
+// following zero extend.
+// i8/i16 -> i32.
+class VectorExtractZextSubreg<ValueType VecTy, Instruction insn,
+                              SDPatternOperator operator>
+  : Pat<(i32 (operator (i32 (z_vector_extract (VecTy VR128:$vec),
+                                              shift12only:$index)))),
+        (EXTRACT_SUBREG (insn VR128:$vec, shift12only:$index), subreg_l32)>;
+def : VectorExtractZextSubreg<v16i8, VLGVB, zext8>;
+def : VectorExtractZextSubreg<v8i16, VLGVH, zext16>;
+
+// i8/i16 -> i64.
+class VectorExtractZext<ValueType VecTy, Instruction insn,
+                        SDPatternOperator operator>
+  : Pat<(i64 (operator (anyext (i32 (z_vector_extract (VecTy VR128:$vec),
+                                                      shift12only:$index))))),
+        (insn VR128:$vec, shift12only:$index)>;
+def : VectorExtractZext<v16i8, VLGVB, zext8>;
+def : VectorExtractZext<v8i16, VLGVH, zext16>;
+
+// i32 -> i64.
+def : Pat<(i64 (zext (i32 (z_vector_extract (v4i32 VR128:$vec),
+                                            shift12only:$index)))),
+          (VLGVF VR128:$vec, shift12only:$index)>;
 
 //===----------------------------------------------------------------------===//
 // Immediate instructions
@@ -144,7 +170,8 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1 in {
+  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1,
+      isReMaterializable = 1 in {
     def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;
@@ -1597,7 +1624,9 @@ let Predicates = [FeatureVector] in {
   // Maximum.
   multiclass VectorMax<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, any_fmaxnum, tr, 4>;
+    def : FPMinMax<insn, fmaximumnum, tr, 4>;
     def : FPMinMax<insn, any_fmaximum, tr, 1>;
+    def : FPMinMax<insn, any_pseudo_fmax, tr, 2>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
@@ -1623,7 +1652,9 @@ let Predicates = [FeatureVector] in {
   // Minimum.
   multiclass VectorMin<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, any_fminnum, tr, 4>;
+    def : FPMinMax<insn, fminimumnum, tr, 4>;
     def : FPMinMax<insn, any_fminimum, tr, 1>;
+    def : FPMinMax<insn, any_pseudo_fmin, tr, 2>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
@@ -2395,27 +2426,27 @@ let Predicates = [FeatureVector, FeatureNNPAssist] in {
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCFN : UnaryVRRaFloatGeneric<"vcfn", 0xE65D>;
   def : Pat<(int_s390_vcfn VR128:$x, imm32zx4_timm:$m),
-            (VCFN VR128:$x, 1, imm32zx4:$m)>;
+            (VCFN VR128:$x, 1, imm32zx4_timm:$m)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCLFNL : UnaryVRRaFloatGeneric<"vclfnl", 0xE65E>;
   def : Pat<(int_s390_vclfnls VR128:$x, imm32zx4_timm:$m),
-            (VCLFNL VR128:$x, 2, imm32zx4:$m)>;
+            (VCLFNL VR128:$x, 2, imm32zx4_timm:$m)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCLFNH : UnaryVRRaFloatGeneric<"vclfnh", 0xE656>;
   def : Pat<(int_s390_vclfnhs VR128:$x, imm32zx4_timm:$m),
-            (VCLFNH VR128:$x, 2, imm32zx4:$m)>;
+            (VCLFNH VR128:$x, 2, imm32zx4_timm:$m)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCNF : UnaryVRRaFloatGeneric<"vcnf", 0xE655>;
   def : Pat<(int_s390_vcnf VR128:$x, imm32zx4_timm:$m),
-            (VCNF VR128:$x, imm32zx4:$m, 1)>;
+            (VCNF VR128:$x, imm32zx4_timm:$m, 1)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCRNF : BinaryVRRcFloatGeneric<"vcrnf", 0xE675>;
   def : Pat<(int_s390_vcrnfs VR128:$x, VR128:$y, imm32zx4_timm:$m),
-            (VCRNF VR128:$x, VR128:$y, imm32zx4:$m, 2)>;
+            (VCRNF VR128:$x, VR128:$y, imm32zx4_timm:$m, 2)>;
 }
 
 //===----------------------------------------------------------------------===//

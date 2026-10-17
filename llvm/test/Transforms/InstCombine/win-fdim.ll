@@ -22,7 +22,7 @@ define float @fdim_float() {
 ;fdiml is not supported by windows
 define fp128 @fdim_long() {
 ; MSVC19-LABEL: define fp128 @fdim_long() {
-; MSVC19-NEXT:    [[DIM:%.*]] = call fp128 @fdiml(fp128 0xL00000000000000000000000000000000, fp128 0xL00000000000000000000000000000000)
+; MSVC19-NEXT:    [[DIM:%.*]] = call fp128 @fdiml(fp128 0.000000e+00, fp128 0.000000e+00)
 ; MSVC19-NEXT:    ret fp128 [[DIM]]
 ;
   %dim = call fp128 @fdiml(fp128  0xL00000000000000000000000000000000 , fp128 0xL00000000000000000000000000000000)

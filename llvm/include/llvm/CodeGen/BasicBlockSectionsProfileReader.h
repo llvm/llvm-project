@@ -71,18 +71,11 @@ struct CFGProfile {
   }
 };
 
-// The prefetch symbol is emitted immediately after the call of the given index,
-// in block `BBID` (First call has an index of 1). Zero callsite index means the
-// start of the block.
-struct CallsiteID {
-  UniqueBBID BBID;
-  unsigned CallsiteIndex;
-};
-
 // This struct represents the raw optimization profile for a function,
 // including CFG data (block and edge counts) and layout directives (clustering
 // and cloning paths).
 struct FunctionOptimizationProfile {
+  // This represents the raw input profile for one function.
   // BB Cluster information specified by `UniqueBBID`s.
   SmallVector<BBClusterInfo> ClusterInfo;
   // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
@@ -94,6 +87,9 @@ struct FunctionOptimizationProfile {
   // Code prefetch targets, specified by the callsite ID. The target is the code
   // immediately following this callsite.
   SmallVector<CallsiteID> PrefetchTargets;
+  // Code prefetch hints, specified by the injection site ID, the target
+  // function and the target site ID.
+  SmallVector<PrefetchHint> PrefetchHints;
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge.
@@ -114,19 +110,19 @@ public:
 
   // Returns true if function \p FuncName is hot based on the basic block
   // section profile.
-  bool isFunctionHot(StringRef FuncName) const;
+  LLVM_ABI bool isFunctionHot(StringRef FuncName) const;
 
   // Returns the cluster info for the function \p FuncName. Returns an empty
   // vector if function has no cluster info.
-  SmallVector<BBClusterInfo>
+  LLVM_ABI SmallVector<BBClusterInfo>
   getClusterInfoForFunction(StringRef FuncName) const;
 
   // Returns the path clonings for the given function.
-  SmallVector<SmallVector<unsigned>>
+  LLVM_ABI SmallVector<SmallVector<unsigned>>
   getClonePathsForFunction(StringRef FuncName) const;
 
-  uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
-                        const UniqueBBID &DestBBID) const;
+  LLVM_ABI uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
+                                 const UniqueBBID &DestBBID) const;
 
   // Returns a pointer to the CFGProfile for the function \p FuncName.
   // Returns nullptr if no profile data is available for the function.
@@ -139,8 +135,12 @@ public:
 
   // Returns the prefetch targets (identified by their containing callsite IDs)
   // for function `FuncName`.
-  SmallVector<CallsiteID>
+  LLVM_ABI SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
+
+  // Returns the prefetch hints to be injected in function `FuncName`.
+  LLVM_ABI SmallVector<PrefetchHint>
+  getPrefetchHintsForFunction(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -196,7 +196,7 @@ private:
 // Creates a BasicBlockSectionsProfileReader pass to parse the basic block
 // sections profile. \p Buf is a memory buffer that contains the list of
 // functions and basic block ids to selectively enable basic block sections.
-ImmutablePass *
+LLVM_ABI ImmutablePass *
 createBasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf);
 
 /// Analysis pass providing the \c BasicBlockSectionsProfileReader.
@@ -207,17 +207,18 @@ class BasicBlockSectionsProfileReaderAnalysis
     : public AnalysisInfoMixin<BasicBlockSectionsProfileReaderAnalysis> {
 
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
   typedef BasicBlockSectionsProfileReader Result;
   BasicBlockSectionsProfileReaderAnalysis(const TargetMachine &TM) : TM(&TM) {}
 
-  Result run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   const TargetMachine *TM;
 };
 
-class BasicBlockSectionsProfileReaderWrapperPass : public ImmutablePass {
+class LLVM_ABI BasicBlockSectionsProfileReaderWrapperPass
+    : public ImmutablePass {
 public:
   static char ID;
   BasicBlockSectionsProfileReader BBSPR;
@@ -247,6 +248,9 @@ public:
 
   SmallVector<CallsiteID>
   getPrefetchTargetsForFunction(StringRef FuncName) const;
+
+  SmallVector<PrefetchHint>
+  getPrefetchHintsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.

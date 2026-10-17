@@ -83,14 +83,12 @@ define i1 @opt_setcc_srl_eq_zero(i128 %a) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    shrl $17, %eax
 ; X86-NEXT:    orl 20(%ebp), %ecx
-; X86-NEXT:    movl 8(%ebp), %edx
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    orl 16(%ebp), %ecx
 ; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    shldl $15, %edx, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -114,14 +112,12 @@ define i1 @opt_setcc_srl_ne_zero(i128 %a) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    shrl $17, %eax
 ; X86-NEXT:    orl 20(%ebp), %ecx
-; X86-NEXT:    movl 8(%ebp), %edx
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    orl 16(%ebp), %ecx
 ; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    shldl $15, %edx, %ecx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -145,10 +141,10 @@ define i1 @opt_setcc_shl_eq_zero(i128 %a) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 20(%ebp), %ecx
 ; X86-NEXT:    shll $17, %ecx
-; X86-NEXT:    orl 8(%ebp), %eax
+; X86-NEXT:    orl 16(%ebp), %eax
 ; X86-NEXT:    orl 12(%ebp), %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    sete %al
@@ -174,10 +170,10 @@ define i1 @opt_setcc_shl_ne_zero(i128 %a) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 20(%ebp), %ecx
 ; X86-NEXT:    shll $17, %ecx
-; X86-NEXT:    orl 8(%ebp), %eax
+; X86-NEXT:    orl 16(%ebp), %eax
 ; X86-NEXT:    orl 12(%ebp), %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    setne %al

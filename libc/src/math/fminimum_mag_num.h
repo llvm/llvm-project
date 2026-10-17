@@ -18,4 +18,4 @@ double fminimum_mag_num(double x, double y);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_FMINIMUM_MAG_NUMH
+#endif // LLVM_LIBC_SRC_MATH_FMINIMUM_MAG_NUM_H

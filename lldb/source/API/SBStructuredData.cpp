@@ -77,13 +77,17 @@ operator=(const lldb::SBStructuredData &rhs) {
   return *this;
 }
 
+void SBStructuredData::CopyImpl(lldb_private::StructuredDataImpl &new_impl) {
+  new_impl.SetObjectSP(m_impl_up->GetObjectSP());
+}
+
 lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
 
   lldb::SBError error;
 
-  StructuredData::ObjectSP json_obj =
-      StructuredData::ParseJSON(stream.GetData());
+  llvm::StringRef stream_data = stream.GetString();
+  StructuredData::ObjectSP json_obj = StructuredData::ParseJSON(stream_data);
   m_impl_up->SetObjectSP(json_obj);
 
   static constexpr StructuredDataType unsupported_type[] = {
@@ -268,7 +272,7 @@ void SBStructuredData::SetBooleanValue(bool value) {
 void SBStructuredData::SetStringValue(const char *value) {
   LLDB_INSTRUMENT_VA(this, value);
 
-  m_impl_up->SetStringValue(value);
+  m_impl_up->SetStringValue(llvm::StringRef(value));
 }
 
 void SBStructuredData::SetGenericValue(SBScriptObject value) {

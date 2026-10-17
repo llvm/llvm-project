@@ -92,10 +92,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 
@@ -381,11 +379,11 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
       cast<FixedVectorType>(ActiveLaneMask->getType())->getNumElements();
 
   // Insert a phi to count the number of elements processed by the loop.
-  Builder.SetInsertPoint(L->getHeader(), L->getHeader()->getFirstNonPHIIt());
+  Builder.SetInsertPoint(L->getHeader()->getFirstNonPHIIt());
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 
-  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinic, and
+  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinsic, and
   // thus represent the effect of tail predication.
   Builder.SetInsertPoint(ActiveLaneMask);
   ConstantInt *Factor = ConstantInt::get(cast<IntegerType>(Ty), VectorWidth);

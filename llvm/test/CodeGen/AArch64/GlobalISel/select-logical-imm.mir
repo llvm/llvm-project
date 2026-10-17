@@ -16,10 +16,10 @@ body:             |
     ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 4096
     ; CHECK-NEXT: $x0 = COPY [[ANDXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 1
-    %2:gpr(s64) = G_AND %0, %1:gpr(s64)
-    $x0 = COPY %2:gpr(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 1
+    %2:gpr(i64) = G_AND %0, %1:gpr(i64)
+    $x0 = COPY %2:gpr(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -37,10 +37,10 @@ body:             |
     ; CHECK-NEXT: [[ORRXri:%[0-9]+]]:gpr64sp = ORRXri [[COPY]], 4096
     ; CHECK-NEXT: $x0 = COPY [[ORRXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 1
-    %2:gpr(s64) = G_OR %0, %1:gpr(s64)
-    $x0 = COPY %2:gpr(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 1
+    %2:gpr(i64) = G_OR %0, %1:gpr(i64)
+    $x0 = COPY %2:gpr(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -58,10 +58,10 @@ body:             |
     ; CHECK-NEXT: [[EORXri:%[0-9]+]]:gpr64sp = EORXri [[COPY]], 4096
     ; CHECK-NEXT: $x0 = COPY [[EORXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 1
-    %2:gpr(s64) = G_XOR %0, %1:gpr(s64)
-    $x0 = COPY %2:gpr(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = G_CONSTANT i64 1
+    %2:gpr(i64) = G_XOR %0, %1:gpr(i64)
+    $x0 = COPY %2:gpr(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -79,10 +79,10 @@ body:             |
     ; CHECK-NEXT: [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri [[COPY]], 0
     ; CHECK-NEXT: $w0 = COPY [[ANDWri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 1
-    %2:gpr(s32) = G_AND %0, %1:gpr(s32)
-    $w0 = COPY %2:gpr(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 1
+    %2:gpr(i32) = G_AND %0, %1:gpr(i32)
+    $w0 = COPY %2:gpr(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -100,10 +100,10 @@ body:             |
     ; CHECK-NEXT: [[ORRWri:%[0-9]+]]:gpr32sp = ORRWri [[COPY]], 0
     ; CHECK-NEXT: $w0 = COPY [[ORRWri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 1
-    %2:gpr(s32) = G_OR %0, %1:gpr(s32)
-    $w0 = COPY %2:gpr(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 1
+    %2:gpr(i32) = G_OR %0, %1:gpr(i32)
+    $w0 = COPY %2:gpr(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -121,9 +121,9 @@ body:             |
     ; CHECK-NEXT: [[EORWri:%[0-9]+]]:gpr32sp = EORWri [[COPY]], 0
     ; CHECK-NEXT: $w0 = COPY [[EORWri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 1
-    %2:gpr(s32) = G_XOR %0, %1:gpr(s32)
-    $w0 = COPY %2:gpr(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = G_CONSTANT i32 1
+    %2:gpr(i32) = G_XOR %0, %1:gpr(i32)
+    $w0 = COPY %2:gpr(i32)
     RET_ReallyLR implicit $w0
 ...

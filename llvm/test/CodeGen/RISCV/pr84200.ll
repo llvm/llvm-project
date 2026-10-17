@@ -6,12 +6,9 @@
 define i64 @foo(i64 %1) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    sub a1, a1, a0
-; CHECK-NEXT:    sltiu a0, a0, 2
-; CHECK-NEXT:    xori a1, a1, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    sltiu a1, a0, 2
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
   %.urem.i = sub nuw i64 1, %1

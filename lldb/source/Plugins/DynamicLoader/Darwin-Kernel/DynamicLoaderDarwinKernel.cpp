@@ -17,6 +17,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -106,7 +107,7 @@ public:
 
   DynamicLoaderDarwinKernelProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_dynamicloaderdarwinkernel_properties);
+    m_collection_sp->Initialize(g_dynamicloaderdarwinkernel_properties_def);
   }
 
   ~DynamicLoaderDarwinKernelProperties() override = default;
@@ -465,8 +466,15 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   if (header.filetype == llvm::MachO::MH_EXECUTE &&
       (header.flags & llvm::MachO::MH_DYLDLINK) == 0) {
     // Create a full module to get the UUID
-    ModuleSP memory_module_sp =
+    llvm::Expected<ModuleSP> memory_module_sp_or_err =
         process->ReadModuleFromMemory(FileSpec("temp_mach_kernel"), addr);
+    if (auto err = memory_module_sp_or_err.takeError()) {
+      LLDB_LOG_ERROR(log, std::move(err),
+                     "DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
+                     "Failed to read module in memory -- {0}");
+      return UUID();
+    }
+    ModuleSP memory_module_sp = *memory_module_sp_or_err;
     if (!memory_module_sp.get())
       return UUID();
 
@@ -663,9 +671,16 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
       size_to_read = sizeof(llvm::MachO::mach_header_64) + mh.sizeofcmds;
   }
 
-  ModuleSP memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "KextImageInfo::ReadMemoryModule failed to read module from "
+                   "memory: {0}");
+    return false;
+  }
 
+  ModuleSP memory_module_sp = *memory_module_sp_or_err;
   if (memory_module_sp.get() == nullptr)
     return false;
 
@@ -676,14 +691,12 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   // something has gone wrong and we should discard it.
   if (m_uuid.IsValid()) {
     if (m_uuid != memory_module_sp->GetUUID()) {
-      if (log) {
-        LLDB_LOGF(log,
-                  "KextImageInfo::ReadMemoryModule the kernel said to find "
-                  "uuid %s at 0x%" PRIx64
-                  " but instead we found uuid %s, throwing it away",
-                  m_uuid.GetAsString().c_str(), m_load_address,
-                  memory_module_sp->GetUUID().GetAsString().c_str());
-      }
+      LLDB_LOGF(log,
+                "KextImageInfo::ReadMemoryModule the kernel said to find "
+                "uuid %s at 0x%" PRIx64
+                " but instead we found uuid %s, throwing it away",
+                m_uuid.GetAsString().c_str(), m_load_address,
+                memory_module_sp->GetUUID().GetAsString().c_str());
       return false;
     }
   }
@@ -696,12 +709,9 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   m_memory_module_sp = memory_module_sp;
   m_kernel_image = this_is_kernel;
   if (this_is_kernel) {
-    if (log) {
-      // This is unusual and probably not intended
-      LLDB_LOGF(log,
-                "KextImageInfo::ReadMemoryModule read the kernel binary out "
-                "of memory");
-    }
+    // This is unusual and probably not intended
+    LLDB_LOGF(log, "KextImageInfo::ReadMemoryModule read the kernel binary out "
+                   "of memory");
     if (memory_module_sp->GetArchitecture().IsValid()) {
       process->GetTarget().SetArchitecture(memory_module_sp->GetArchitecture());
     }
@@ -791,28 +801,56 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       ModuleSpec module_spec;
       module_spec.SetTarget(target.shared_from_this());
       module_spec.GetUUID() = m_uuid;
-      if (!m_uuid.IsValid())
-        module_spec.GetArchitecture() = target.GetArchitecture();
       module_spec.GetFileSpec() = FileSpec(m_name);
 
-      // If the current platform is PlatformDarwinKernel, create a ModuleSpec
-      // with the filename set to be the bundle ID for this kext, e.g.
-      // "com.apple.filesystems.msdosfs", and ask the platform to find it.
-      // PlatformDarwinKernel does a special scan for kexts on the local
-      // system.
-      PlatformSP platform_sp(target.GetPlatform());
-      if (platform_sp) {
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
-                                     nullptr);
-      }
+      if (IsKernel()) {
+        // The platform's index has to win over the shared module list.
+        PlatformSP platform_sp(target.GetPlatform());
+        if (platform_sp) {
+          platform_sp->GetSharedModule(module_spec, target, m_module_sp,
+                                       nullptr, nullptr);
+        }
 
-      // Ask the Target to find this file on the local system, if possible.
-      // This will search in the list of currently-loaded files, look in the
-      // standard search paths on the system, and on a Mac it will try calling
-      // the DebugSymbols framework with the UUID to find the binary via its
-      // search methods.
-      if (!m_module_sp) {
-        m_module_sp = target.GetOrCreateModule(module_spec, true /* notify */);
+        // Ask the Target to find this file on the local system, if possible.
+        // This will search in the list of currently-loaded files, look in the
+        // standard search paths on the system, and on a Mac it will try
+        // calling the DebugSymbols framework with the UUID to find the binary
+        // via its search methods.
+        if (!m_module_sp) {
+          m_module_sp =
+              target.GetOrCreateModule(module_spec, true /* notify */);
+        }
+      } else {
+        // SymbolLocator asks the platform first, and PlatformDarwinKernel
+        // answers from its kext index, using the bundle ID in the file name.
+        StatisticsMap statistics;
+        ModuleSP shared_module_sp;
+        ModuleList::GetSharedModule(module_spec, shared_module_sp, nullptr,
+                                    nullptr, /*invoke_locate_callback=*/false,
+                                    /*invoke_symbol_locators=*/false);
+        if (!shared_module_sp) {
+          SymbolLocator::Request request;
+          request.module_spec = module_spec;
+          request.platform = target.GetPlatform();
+
+          llvm::Expected<SymbolLocator::Result> located =
+              SymbolLocator::Locate(request, target.GetDebugFileSearchPaths());
+          if (located) {
+            module_spec = located->module_spec;
+            module_spec.SetTarget(target.shared_from_this());
+            statistics = std::move(located->statistics);
+          } else {
+            // The caller reports the kexts that failed to load.
+            llvm::consumeError(located.takeError());
+          }
+        }
+
+        // Already searched, so the Target must not search again.
+        m_module_sp =
+            target.GetOrCreateModule(module_spec, false /* notify */, nullptr,
+                                     /*invoke_symbol_locators=*/false);
+        if (m_module_sp)
+          m_module_sp->GetSymbolLocatorStatistics().merge(statistics);
       }
 
       // For the kernel, we really do need an on-disk file copy of the binary
@@ -1045,11 +1083,11 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
              ->GetObjectFile()
              ->GetFileSpec()
              .GetFilename()
-             .IsEmpty()) {
-      kernel_name =
-          m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename();
+             .empty()) {
+      kernel_name = ConstString(
+          m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename());
     }
-    m_kernel.SetName(kernel_name.AsCString());
+    m_kernel.SetName(kernel_name.AsCString(nullptr));
 
     if (m_kernel.GetLoadAddress() == LLDB_INVALID_ADDRESS) {
       m_kernel.SetLoadAddress(m_kernel_load_address);
@@ -1348,20 +1386,18 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     }
   }
 
-  if (log) {
-    if (load_kexts) {
-      LLDB_LOGF(log,
-                "DynamicLoaderDarwinKernel::ParseKextSummaries: %d kexts "
-                "added, %d kexts removed",
-                number_of_new_kexts_being_added,
-                number_of_old_kexts_being_removed);
-    } else {
-      LLDB_LOGF(log,
-                "DynamicLoaderDarwinKernel::ParseKextSummaries kext loading is "
-                "disabled, else would have %d kexts added, %d kexts removed",
-                number_of_new_kexts_being_added,
-                number_of_old_kexts_being_removed);
-    }
+  if (load_kexts) {
+    LLDB_LOGF(log,
+              "DynamicLoaderDarwinKernel::ParseKextSummaries: %d kexts "
+              "added, %d kexts removed",
+              number_of_new_kexts_being_added,
+              number_of_old_kexts_being_removed);
+  } else {
+    LLDB_LOGF(log,
+              "DynamicLoaderDarwinKernel::ParseKextSummaries kext loading is "
+              "disabled, else would have %d kexts added, %d kexts removed",
+              number_of_new_kexts_being_added,
+              number_of_old_kexts_being_removed);
   }
 
   // Build up a list of <kext-name, uuid> for any kexts that fail to load
@@ -1547,7 +1583,8 @@ void DynamicLoaderDarwinKernel::PrivateInitialize(Process *process) {
 }
 
 void DynamicLoaderDarwinKernel::SetNotificationBreakpointIfNeeded() {
-  if (m_break_id == LLDB_INVALID_BREAK_ID && m_kernel.GetModule()) {
+  if (m_break_id == LLDB_INVALID_BREAK_ID && m_kernel.GetModule() &&
+      m_process->IsLiveDebugSession()) {
     DEBUG_PRINTF("DynamicLoaderDarwinKernel::%s() process state = %s\n",
                  __FUNCTION__, StateAsCString(m_process->GetState()));
 

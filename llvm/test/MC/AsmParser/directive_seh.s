@@ -2,7 +2,7 @@
 
 #   Round trip via intel syntax printing and back.
 # RUN: llvm-mc -triple x86_64-pc-win32 %s -output-asm-variant=1 | \
-# RUN:     llvm-mc -triple x86_64-pc-win32 -x86-asm-syntax=intel | FileCheck %s
+# RUN:     llvm-mc -triple x86_64-pc-win32 -x86-asm-syntax=intel --output-asm-variant=0 | FileCheck %s
 
     .text
     .globl func

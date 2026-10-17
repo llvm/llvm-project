@@ -16,16 +16,12 @@ class TestCase(TestBase):
             "expr -O -- bad",
             substrs=["`po` was unsuccessful, running `p` instead\n", "(Bad *) 0x"],
         )
-        self.filecheck(
-            f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-EXPR"
-        )
+        self.filecheck_log(log, __file__, f"-check-prefix=CHECK-EXPR")
         # CHECK-EXPR: Object description fallback due to error: could not evaluate print object function: expression interrupted
 
         self.expect(
             "dwim-print -O -- bad",
             substrs=["`po` was unsuccessful, running `p` instead\n", "_lookHere = NO"],
         )
-        self.filecheck(
-            f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-DWIM-PRINT"
-        )
+        self.filecheck_log(log, __file__, f"-check-prefix=CHECK-DWIM-PRINT")
         # CHECK-DWIM-PRINT: Object description fallback due to error: could not evaluate print object function: expression interrupted

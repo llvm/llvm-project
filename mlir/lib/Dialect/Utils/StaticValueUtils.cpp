@@ -152,17 +152,25 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return apInt->first.getSExtValue();
 }
 
+/// If ofr is a constant integer or an IntegerAttr, return the integer
+/// zero-extended to 64 bits.
+std::optional<uint64_t> getConstantUIntValue(OpFoldResult ofr) {
+  std::optional<std::pair<APInt, bool>> apInt = getConstantAPIntValue(ofr);
+  if (!apInt)
+    return std::nullopt;
+  return apInt->first.getZExtValue();
+}
+
 std::optional<SmallVector<int64_t>>
 getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
-  bool failed = false;
-  SmallVector<int64_t> res = llvm::map_to_vector(ofrs, [&](OpFoldResult ofr) {
+  SmallVector<int64_t> res;
+  res.reserve(ofrs.size());
+  for (OpFoldResult ofr : ofrs) {
     auto cv = getConstantIntValue(ofr);
     if (!cv.has_value())
-      failed = true;
-    return cv.value_or(0);
-  });
-  if (failed)
-    return std::nullopt;
+      return std::nullopt;
+    res.push_back(cv.value());
+  }
   return res;
 }
 
@@ -323,6 +331,12 @@ std::optional<APInt> constantTripCount(
     // SSA values. That case cannot be detected here.
     return APInt(bitwidth, 0);
   }
+  if (isZeroInteger(lb) && ub == step) {
+    // Fast path: LB == 0 && UB == step. The loop has a single iteration.
+    // Note: LB and UB could match at runtime, even though they are different
+    // SSA values. That case cannot be detected here.
+    return APInt(bitwidth, 1);
+  }
 
   std::optional<std::pair<APInt, bool>> maybeStepCst =
       getConstantAPIntValue(step);
@@ -365,7 +379,13 @@ std::optional<APInt> constantTripCount(
              << (isSigned ? "isSigned" : "isUnsigned") << ")";
       return APInt(bitwidth, 0);
     }
+    // Compute the difference. Since we've already checked that ub > lb, the
+    // result can be interpreted as an unsigned value without overflow concerns.
     diff = ubCst - lbCst;
+    // Convert diff to unsigned. This handles cases like i8: ub=127, lb=-128
+    // where the subtraction yields 255, which wraps to -1 in signed i8 but is
+    // correctly represented as 255 when interpreted as unsigned.
+    diff.setIsUnsigned(true);
   } else {
     if (maybeUbCst)
       return std::nullopt;
@@ -397,11 +417,14 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
 
-  // Create new APSInt instances with explicit signedness to ensure they match
-  llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
-  llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
+  // Both diff and step are non-negative at this point (negative steps are
+  // rejected earlier), so we use unsigned division regardless of the loop
+  // comparison signedness.
+  llvm::APInt tripCount = diff.udiv(stepCst);
+  llvm::APInt remainder = diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
+
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
 }
@@ -424,16 +447,16 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
   for (OpFoldResult &ofr : ofrs) {
     if (isa<Attribute>(ofr))
       continue;
-    Attribute attr;
-    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
-      // Note: All ofrs have index type.
-      if (onlyNonNegative && *getConstantIntValue(attr) < 0)
-        continue;
-      if (onlyNonZero && *getConstantIntValue(attr) == 0)
-        continue;
-      ofr = attr;
-      valuesChanged = true;
-    }
+    // Note: All ofrs have index type; the kDynamic sentinel stays dynamic.
+    std::optional<int64_t> intVal = getConstantIntValue(ofr);
+    if (!intVal || *intVal == ShapedType::kDynamic)
+      continue;
+    if (onlyNonNegative && *intVal < 0)
+      continue;
+    if (onlyNonZero && *intVal == 0)
+      continue;
+    ofr = getAsIndexOpFoldResult(cast<Value>(ofr).getContext(), *intVal);
+    valuesChanged = true;
   }
   return success(valuesChanged);
 }
@@ -447,6 +470,25 @@ foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes) {
 LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides) {
   return foldDynamicIndexList(strides, /*onlyNonNegative=*/false,
                               /*onlyNonZero=*/true);
+}
+
+MemRefType updateTypeFromMetadata(MemRefType type, OpFoldResult offset,
+                                  ArrayRef<OpFoldResult> sizes,
+                                  ArrayRef<OpFoldResult> strides) {
+  SmallVector<OpFoldResult> offsets{offset};
+  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
+  SmallVector<int64_t> staticSizes = decomposeMixedValues(sizes).first;
+  SmallVector<int64_t> staticStrides = decomposeMixedValues(strides).first;
+  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
+                                       staticStrides);
+  // Build a MemRefType using the original element type and memory space,
+  // but derive its shape, offset, and strides from the supplied metadata.
+  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
+                                           layout, type.getMemorySpace());
+  if (!type.getLayout().isIdentity())
+    return updatedType;
+  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
+  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
 }
 
 } // namespace mlir

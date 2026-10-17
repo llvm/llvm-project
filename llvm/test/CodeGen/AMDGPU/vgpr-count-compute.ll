@@ -1,6 +1,5 @@
-; RUN: llc -mcpu=gfx1200 < %s | FileCheck %s --check-prefixes=CHECK,PACKED
-; RUN: llc -mcpu=gfx1030 < %s | FileCheck %s --check-prefixes=CHECK,NOTPACKED
-target triple = "amdgcn-amd-amdhsa"
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa < %s | FileCheck %s --check-prefixes=CHECK,PACKED
+; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa < %s | FileCheck %s --check-prefixes=CHECK,NOTPACKED
 
 @global = addrspace(1) global i32 poison, align 4
 

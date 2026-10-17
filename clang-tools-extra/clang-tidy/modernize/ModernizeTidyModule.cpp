@@ -39,6 +39,7 @@
 #include "UseEmplaceCheck.h"
 #include "UseEqualsDefaultCheck.h"
 #include "UseEqualsDeleteCheck.h"
+#include "UseIfConstevalCheck.h"
 #include "UseIntegerSignComparisonCheck.h"
 #include "UseNodiscardCheck.h"
 #include "UseNoexceptCheck.h"
@@ -47,10 +48,13 @@
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
 #include "UseStartsEndsWithCheck.h"
+#include "UseStdBitCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
 #include "UseStringViewCheck.h"
+#include "UseStructuredBindingCheck.h"
+#include "UseToUnderlyingCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
@@ -88,6 +92,8 @@ public:
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
+    CheckFactories.registerCheck<UseIfConstevalCheck>(
+        "modernize-use-if-consteval");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(
         "modernize-use-integer-sign-comparison");
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
@@ -95,6 +101,7 @@ public:
         "modernize-use-scoped-lock");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
+    CheckFactories.registerCheck<UseStdBitCheck>("modernize-use-std-bit");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");
@@ -133,6 +140,10 @@ public:
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
     CheckFactories.registerCheck<UseStringViewCheck>(
         "modernize-use-string-view");
+    CheckFactories.registerCheck<UseStructuredBindingCheck>(
+        "modernize-use-structured-binding");
+    CheckFactories.registerCheck<UseToUnderlyingCheck>(
+        "modernize-use-to-underlying");
     CheckFactories.registerCheck<UseTrailingReturnTypeCheck>(
         "modernize-use-trailing-return-type");
     CheckFactories.registerCheck<UseTransparentFunctorsCheck>(

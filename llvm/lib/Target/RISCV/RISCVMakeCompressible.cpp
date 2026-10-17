@@ -225,9 +225,9 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FLW:
-    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+    return !STI.is64Bit() && STI.hasStdExtZcf();
   case RISCV::FLD:
-    return STI.hasStdExtCOrZcd();
+    return STI.hasStdExtZcd();
   // For the Xqcilo loads we mark it as compressible only if Xqcilia is also
   // enabled so that QC_E_ADDI can be used to create the new base.
   case RISCV::QC_E_LBU:
@@ -258,9 +258,9 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SD_RV32:
     return STI.hasStdExtZclsd();
   case RISCV::FSW:
-    return !STI.is64Bit() && STI.hasStdExtCOrZcfOrZce();
+    return !STI.is64Bit() && STI.hasStdExtZcf();
   case RISCV::FSD:
-    return STI.hasStdExtCOrZcd();
+    return STI.hasStdExtZcd();
   // For the Xqcilo stores we mark it as compressible only if Xqcilia is also
   // enabled so that QC_E_ADDI can be used to create the new base.
   case RISCV::QC_E_SB:
@@ -470,7 +470,7 @@ static void updateOperands(MachineInstr &MI, RegImmPair OldRegImm,
 
 bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
   // This is a size optimization.
-  if (skipFunction(Fn.getFunction()) || !Fn.getFunction().hasMinSize())
+  if (skipFunction(Fn.getFunction()) || !Fn.getFunction().hasOptSize())
     return false;
 
   const RISCVSubtarget &STI = Fn.getSubtarget<RISCVSubtarget>();

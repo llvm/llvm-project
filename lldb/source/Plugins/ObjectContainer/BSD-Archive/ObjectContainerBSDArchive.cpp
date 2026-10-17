@@ -48,7 +48,7 @@ LLDB_PLUGIN_DEFINE(ObjectContainerBSDArchive)
 ObjectContainerBSDArchive::Object::Object() : ar_name() {}
 
 void ObjectContainerBSDArchive::Object::Clear() {
-  ar_name.Clear();
+  ar_name.clear();
   modification_time = 0;
   size = 0;
   file_offset = 0;
@@ -56,7 +56,7 @@ void ObjectContainerBSDArchive::Object::Clear() {
 }
 
 void ObjectContainerBSDArchive::Object::Dump() const {
-  printf("name        = \"%s\"\n", ar_name.GetCString());
+  printf("name        = \"%s\"\n", ar_name.c_str());
   printf("mtime       = 0x%8.8" PRIx32 "\n", modification_time);
   printf("size        = 0x%8.8" PRIx32 " (%" PRIu32 ")\n", size, size);
   printf("file_offset = 0x%16.16" PRIx64 " (%" PRIu64 ")\n", file_offset,
@@ -65,7 +65,7 @@ void ObjectContainerBSDArchive::Object::Dump() const {
          file_size);
 }
 
-ObjectContainerBSDArchive::Archive::Archive(const lldb_private::ArchSpec &arch,
+ObjectContainerBSDArchive::Archive::Archive(const ArchSpec &arch,
                                             const llvm::sys::TimePoint<> &time,
                                             lldb::offset_t file_offset,
                                             lldb::DataExtractorSP extractor_sp,
@@ -97,7 +97,7 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
     obj.Clear();
     auto exp_name = child.getName();
     if (exp_name) {
-      obj.ar_name = ConstString(exp_name.get());
+      obj.ar_name = exp_name.get().str();
     } else {
       LLDB_LOG_ERROR(l, exp_name.takeError(),
                      "failed to get archive object name: {0}");
@@ -137,50 +137,41 @@ size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
                      "failed to get archive object file size: {0}");
       continue;
     }
-    m_object_name_to_index_map.Append(obj.ar_name, m_objects.size());
+    auto &indices = m_object_name_to_index_map[obj.ar_name];
+    indices.push_back(m_objects.size());
     m_objects.push_back(obj);
   }
   if (iter_err) {
     LLDB_LOG_ERROR(l, std::move(iter_err),
                    "failed to iterate over archive objects: {0}");
   }
-  // Now sort all of the object name pointers
-  m_object_name_to_index_map.Sort();
   return m_objects.size();
 }
 
 ObjectContainerBSDArchive::Object *
 ObjectContainerBSDArchive::Archive::FindObject(
-    ConstString object_name, const llvm::sys::TimePoint<> &object_mod_time) {
-  const ObjectNameToIndexMap::Entry *match =
-      m_object_name_to_index_map.FindFirstValueForName(object_name);
-  if (!match)
+    llvm::StringRef object_name,
+    const llvm::sys::TimePoint<> &object_mod_time) {
+  auto it = m_object_name_to_index_map.find(object_name);
+  if (it == m_object_name_to_index_map.end())
     return nullptr;
   if (object_mod_time == llvm::sys::TimePoint<>())
-    return &m_objects[match->value];
+    return &m_objects[it->second.front()];
 
   const uint64_t object_modification_date = llvm::sys::toTimeT(object_mod_time);
-  if (m_objects[match->value].modification_time == object_modification_date)
-    return &m_objects[match->value];
-
-  const ObjectNameToIndexMap::Entry *next_match =
-      m_object_name_to_index_map.FindNextValueForName(match);
-  while (next_match) {
-    if (m_objects[next_match->value].modification_time ==
-        object_modification_date)
-      return &m_objects[next_match->value];
-    next_match = m_object_name_to_index_map.FindNextValueForName(next_match);
+  for (uint32_t idx : it->second) {
+    if (m_objects[idx].modification_time == object_modification_date)
+      return &m_objects[idx];
   }
-
   return nullptr;
 }
 
-ObjectContainerBSDArchive::Archive::shared_ptr
+ObjectContainerBSDArchive::ArchiveSP
 ObjectContainerBSDArchive::Archive::FindCachedArchive(
     const FileSpec &file, const ArchSpec &arch,
     const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset) {
   std::lock_guard<std::recursive_mutex> guard(Archive::GetArchiveCacheMutex());
-  shared_ptr archive_sp;
+  ArchiveSP archive_sp;
   Archive::Map &archive_map = Archive::GetArchiveCache();
   Archive::Map::iterator pos = archive_map.find(file);
   // Don't cache a value for "archive_map.end()" below since we might delete an
@@ -215,13 +206,13 @@ ObjectContainerBSDArchive::Archive::FindCachedArchive(
   return archive_sp;
 }
 
-ObjectContainerBSDArchive::Archive::shared_ptr
+ObjectContainerBSDArchive::ArchiveSP
 ObjectContainerBSDArchive::Archive::ParseAndCacheArchiveForFile(
     const FileSpec &file, const ArchSpec &arch,
     const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset,
     DataExtractorSP extractor_sp, ArchiveType archive_type) {
-  shared_ptr archive_sp(
-      new Archive(arch, time, file_offset, extractor_sp, archive_type));
+  ArchiveSP archive_sp = std::make_shared<Archive>(arch, time, file_offset,
+                                                   extractor_sp, archive_type);
   if (archive_sp) {
     const size_t num_objects = archive_sp->ParseObjects();
     if (num_objects > 0) {
@@ -290,7 +281,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
 
       lldb::offset_t archive_data_offset = 0;
 
-      Archive::shared_ptr archive_sp(Archive::FindCachedArchive(
+      ArchiveSP archive_sp(Archive::FindCachedArchive(
           *file, module_sp->GetArchitecture(), module_sp->GetModificationTime(),
           file_offset));
       std::unique_ptr<ObjectContainerBSDArchive> container_up(
@@ -309,7 +300,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
     }
   } else {
     // No data, just check for a cached archive
-    Archive::shared_ptr archive_sp(Archive::FindCachedArchive(
+    ArchiveSP archive_sp(Archive::FindCachedArchive(
         *file, module_sp->GetArchitecture(), module_sp->GetModificationTime(),
         file_offset));
     if (archive_sp) {
@@ -351,14 +342,14 @@ ObjectContainerBSDArchive::MagicBytesMatch(const DataExtractor &data) {
 
 ObjectContainerBSDArchive::ObjectContainerBSDArchive(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,
-    lldb::offset_t data_offset, const lldb_private::FileSpec *file,
+    lldb::offset_t data_offset, const FileSpec *file,
     lldb::offset_t file_offset, lldb::offset_t size, ArchiveType archive_type)
     : ObjectContainer(module_sp, file, file_offset, size, data_sp, data_offset),
       m_archive_sp() {
   m_archive_type = archive_type;
 }
 
-void ObjectContainerBSDArchive::SetArchive(Archive::shared_ptr &archive_sp) {
+void ObjectContainerBSDArchive::SetArchive(ArchiveSP &archive_sp) {
   m_archive_sp = archive_sp;
 }
 
@@ -375,7 +366,8 @@ bool ObjectContainerBSDArchive::ParseHeader() {
             m_archive_type);
       }
       // Clear the m_extractor_sp that contains the entire archive data and let
-      // our m_archive_sp hold onto the data.
+      // our m_archive_sp hold onto the data.  Need to have an empty
+      // DataExtractor for code that assumes it is non-null.
       m_extractor_sp = std::make_shared<DataExtractor>();
     }
   }
@@ -388,7 +380,7 @@ FileSpec GetChildFileSpecificationsFromThin(llvm::StringRef childPath,
   if (llvm::sys::path::is_absolute(childPath)) {
     FullPath = childPath;
   } else {
-    FullPath = parentFileSpec.GetDirectory().GetStringRef();
+    FullPath = parentFileSpec.GetDirectory();
     llvm::sys::path::append(FullPath, childPath);
   }
   FileSpec child = FileSpec(FullPath.str(), llvm::sys::path::Style::posix);
@@ -404,13 +396,12 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
       if (object) {
         if (m_archive_type == ArchiveType::ThinArchive) {
           // Set file to child object file
-          FileSpec child = GetChildFileSpecificationsFromThin(
-              object->ar_name.GetStringRef(), m_file);
+          FileSpec child =
+              GetChildFileSpecificationsFromThin(object->ar_name, m_file);
           lldb::offset_t file_offset = 0;
           lldb::offset_t file_size = object->size;
-          std::shared_ptr<DataBuffer> child_data_sp =
-              FileSystem::Instance().CreateDataBuffer(child, file_size,
-                                                      file_offset);
+          DataBufferSP child_data_sp = FileSystem::Instance().CreateDataBuffer(
+              child, file_size, file_offset);
           if (!child_data_sp ||
               child_data_sp->GetByteSize() != object->file_size)
             return ObjectFileSP();
@@ -422,6 +413,7 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
               object->file_size, extractor_sp, data_offset);
         }
         lldb::offset_t data_offset = object->file_offset;
+        // Create a new DataExtractor object, its DataBuffer will be shared.
         DataExtractorSP extractor_sp =
             std::make_shared<DataExtractor>(m_archive_sp->GetData());
         return lldb_private::ObjectFile::FindPlugin(
@@ -433,30 +425,28 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   return ObjectFileSP();
 }
 
-size_t ObjectContainerBSDArchive::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
+ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
+    const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
+
+  if (!file || !extractor_sp)
+    return {};
 
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
-  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>();
-  extractor_sp->SetData(data_sp, data_offset, data_sp->GetByteSize());
-  ArchiveType archive_type =
-      ObjectContainerBSDArchive::MagicBytesMatch(*extractor_sp.get());
-  if (!file || !data_sp || archive_type == ArchiveType::Invalid)
-    return 0;
+  ArchiveType archive_type = MagicBytesMatch(*extractor_sp);
+  if (archive_type == ArchiveType::Invalid)
+    return {};
 
-  const size_t initial_count = specs.GetSize();
   llvm::sys::TimePoint<> file_mod_time =
       FileSystem::Instance().GetModificationTime(file);
-  Archive::shared_ptr archive_sp(
+  ArchiveSP archive_sp(
       Archive::FindCachedArchive(file, ArchSpec(), file_mod_time, file_offset));
   bool set_archive_arch = false;
   if (!archive_sp) {
     set_archive_arch = true;
-    data_sp =
+    DataBufferSP data_sp =
         FileSystem::Instance().CreateDataBuffer(file, file_size, file_offset);
     if (data_sp) {
       extractor_sp->SetData(data_sp);
@@ -466,54 +456,59 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     }
   }
 
+  ModuleSpecList specs;
   if (archive_sp) {
     const size_t num_objects = archive_sp->GetNumObjects();
     for (size_t idx = 0; idx < num_objects; ++idx) {
       const Object *object = archive_sp->GetObjectAtIndex(idx);
       if (object) {
         if (archive_sp->GetArchiveType() == ArchiveType::ThinArchive) {
-          if (object->ar_name.IsEmpty())
+          if (object->ar_name.empty())
             continue;
-          FileSpec child = GetChildFileSpecificationsFromThin(
-              object->ar_name.GetStringRef(), file);
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  child, 0, object->file_size, specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          FileSpec child =
+              GetChildFileSpecificationsFromThin(object->ar_name, file);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  child, 0, object->file_size);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = object->ar_name;
+            spec.SetObjectName(object->ar_name);
             spec.SetObjectOffset(0);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
           continue;
         }
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
         if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (lldb_private::ObjectFile::GetModuleSpecifications(
-                  file, object_file_offset, file_size - object_file_offset,
-                  specs)) {
-            ModuleSpec &spec =
-                specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
+          ModuleSpecList object_specs =
+              lldb_private::ObjectFile::GetModuleSpecifications(
+                  file, object_file_offset, file_size - object_file_offset);
+          if (object_specs.GetSize() > 0) {
+            ModuleSpec &spec = object_specs.GetModuleSpecRefAtIndex(
+                object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = object->ar_name;
+            spec.SetObjectName(object->ar_name);
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
+            specs.Append(spec);
           }
         }
       }
     }
   }
   const size_t end_count = specs.GetSize();
-  size_t num_specs_added = end_count - initial_count;
-  if (set_archive_arch && num_specs_added > 0) {
+  if (set_archive_arch && specs.GetSize() > 0) {
     // The archive was created but we didn't have an architecture so we need to
     // set it
-    for (size_t i = initial_count; i < end_count; ++i) {
+    for (size_t i = 0; i < end_count; ++i) {
       ModuleSpec module_spec;
       if (specs.GetModuleSpecAtIndex(i, module_spec)) {
         if (module_spec.GetArchitecture().IsValid()) {
@@ -523,5 +518,5 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
       }
     }
   }
-  return num_specs_added;
+  return specs;
 }

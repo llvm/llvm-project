@@ -88,6 +88,10 @@ stilp   w24, w0, [x16, #-8]!
 ld64b x0, [x13]
 // CHECK: ld64b x0, [x13]
 
+.arch_extension lsc64b
+lda64b x0, [x13]
+// CHECK: lda64b x0, [x13]
+
 .arch_extension pauth
 paciasp
 // CHECK: paciasp
@@ -110,11 +114,9 @@ rcwswp x0, x1, [x2]
 // CHECK: rcwswp x0, x1, [x2]
 
 // This needs to come after `.arch_extension the` as it uses an instruction that
-// requires both the and d128
+// requires the extension.
 .arch_extension d128
-sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
-// CHECK: sysp #0, c2, c0, #0, x0, x1
 // CHECK: rcwcasp   x0, x1, x6, x7, [x4]
 
 .arch_extension rasv2
@@ -230,3 +232,7 @@ fcmla v0.4s, v1.4s, v2.4s, #0
 .arch_extension bti
 bti c
 // CHECK: bti c
+
+.arch_extension cflt
+cfltz #1, w0
+// CHECK: cflteq #1, w0, #0

@@ -7,7 +7,7 @@ define noundef half @frac_half(half noundef %a) {
 ; CHECK-LABEL: define noundef half @frac_half(
 ; CHECK-SAME: half noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DX_FRAC1:%.*]] = call half @dx.op.unary.f16(i32 22, half [[A]]) #[[#ATTR:]]
+; CHECK-NEXT:    [[DX_FRAC1:%.*]] = call half @dx.op.unary.f16(i32 22, half [[A]])
 ; CHECK-NEXT:    ret half [[DX_FRAC1]]
 ;
 entry:
@@ -19,7 +19,7 @@ define noundef float @frac_float(float noundef %a) #0 {
 ; CHECK-LABEL: define noundef float @frac_float(
 ; CHECK-SAME: float noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DX_FRAC1:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A]]) #[[#ATTR]]
+; CHECK-NEXT:    [[DX_FRAC1:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A]])
 ; CHECK-NEXT:    ret float [[DX_FRAC1]]
 ;
 entry:
@@ -32,13 +32,13 @@ define noundef <4 x float> @frac_float4(<4 x float> noundef %a) #0 {
 ; CHECK-SAME: <4 x float> noundef [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <4 x float> [[A]], i64 0
-; CHECK-NEXT:    [[DOTI04:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I0]]) #[[#ATTR]]
+; CHECK-NEXT:    [[DOTI04:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I0]])
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <4 x float> [[A]], i64 1
-; CHECK-NEXT:    [[DOTI13:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I1]]) #[[#ATTR]]
+; CHECK-NEXT:    [[DOTI13:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I1]])
 ; CHECK-NEXT:    [[A_I2:%.*]] = extractelement <4 x float> [[A]], i64 2
-; CHECK-NEXT:    [[DOTI22:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I2]]) #[[#ATTR]]
+; CHECK-NEXT:    [[DOTI22:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I2]])
 ; CHECK-NEXT:    [[A_I3:%.*]] = extractelement <4 x float> [[A]], i64 3
-; CHECK-NEXT:    [[DOTI31:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I3]]) #[[#ATTR]]
+; CHECK-NEXT:    [[DOTI31:%.*]] = call float @dx.op.unary.f32(i32 22, float [[A_I3]])
 ; CHECK-NEXT:    [[DOTUPTO0:%.*]] = insertelement <4 x float> poison, float [[DOTI04]], i64 0
 ; CHECK-NEXT:    [[DOTUPTO1:%.*]] = insertelement <4 x float> [[DOTUPTO0]], float [[DOTI13]], i64 1
 ; CHECK-NEXT:    [[DOTUPTO2:%.*]] = insertelement <4 x float> [[DOTUPTO1]], float [[DOTI22]], i64 2
@@ -50,7 +50,9 @@ entry:
   ret <4 x float> %2
 }
 
-; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare half  @llvm.dx.frac.f16(half)
 declare float @llvm.dx.frac.f32(float)

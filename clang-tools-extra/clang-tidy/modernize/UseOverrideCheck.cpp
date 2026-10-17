@@ -22,6 +22,7 @@ UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreTemplateInstantiations(
           Options.get("IgnoreTemplateInstantiations", false)),
       AllowOverrideAndFinal(Options.get("AllowOverrideAndFinal", false)),
+      AllowVirtualAndOverride(Options.get("AllowVirtualAndOverride", false)),
       OverrideSpelling(Options.get("OverrideSpelling", "override")),
       FinalSpelling(Options.get("FinalSpelling", "final")) {}
 
@@ -30,15 +31,16 @@ void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreTemplateInstantiations",
                 IgnoreTemplateInstantiations);
   Options.store(Opts, "AllowOverrideAndFinal", AllowOverrideAndFinal);
+  Options.store(Opts, "AllowVirtualAndOverride", AllowVirtualAndOverride);
   Options.store(Opts, "OverrideSpelling", OverrideSpelling);
   Options.store(Opts, "FinalSpelling", FinalSpelling);
 }
 
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
-  auto IgnoreDestructorMatcher =
+  const auto IgnoreDestructorMatcher =
       IgnoreDestructors ? cxxMethodDecl(unless(cxxDestructorDecl()))
                         : cxxMethodDecl();
-  auto IgnoreTemplateInstantiationsMatcher =
+  const auto IgnoreTemplateInstantiationsMatcher =
       IgnoreTemplateInstantiations
           ? cxxMethodDecl(unless(ast_matchers::isTemplateInstantiation()))
           : cxxMethodDecl();
@@ -105,8 +107,14 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   const bool OnlyVirtualSpecified = HasVirtual && !HasOverride && !HasFinal;
   const unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
 
-  if ((!OnlyVirtualSpecified && KeywordCount == 1) ||
-      (!HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal))
+  const bool AcceptsOverrideAndFinal =
+      !HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal;
+  const bool AcceptsVirtualAndOverride = HasVirtual && HasOverride &&
+                                         AllowVirtualAndOverride &&
+                                         (!HasFinal || AllowOverrideAndFinal);
+
+  if ((!OnlyVirtualSpecified && KeywordCount == 1) || AcceptsOverrideAndFinal ||
+      AcceptsVirtualAndOverride)
     return; // Nothing to do.
 
   std::string Message;
@@ -127,8 +135,8 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
                   .str();
   }
 
-  auto Diag = diag(Method->getLocation(), Message)
-              << OverrideSpelling << FinalSpelling;
+  const auto Diag = diag(Method->getLocation(), Message)
+                    << OverrideSpelling << FinalSpelling;
 
   const CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Method->getSourceRange()), Sources,
@@ -139,7 +147,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
 
   // FIXME: Instead of re-lexing and looking for the 'virtual' token,
   // store the location of 'virtual' in each FunctionDecl.
-  SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
+  const SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
 
   // Add 'override' on inline declarations that don't already have it.
   if (!HasFinal && !HasOverride) {

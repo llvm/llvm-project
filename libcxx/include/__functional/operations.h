@@ -379,8 +379,8 @@ struct less<void> {
   typedef void is_transparent;
 };
 
-template <class _Tp>
-struct __make_transparent<less<_Tp> > {
+template <class _ArgumentType>
+struct __make_transparent<_ArgumentType, less<_ArgumentType> > {
   using type _LIBCPP_NODEBUG = less<>;
 };
 
@@ -477,8 +477,8 @@ struct greater<void> {
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__greater_tag, greater<>, _Tp, _Up> = true;
 
-template <class _Tp>
-struct __make_transparent<greater<_Tp>> {
+template <class _ArgumentType>
+struct __make_transparent<_ArgumentType, greater<_ArgumentType>> {
   using type _LIBCPP_NODEBUG = greater<>;
 };
 

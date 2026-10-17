@@ -11,6 +11,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -45,15 +46,16 @@ static Function *ExtractDestroyFunction(lldb::TargetSP target_sp,
   lldb::ProcessSP process_sp = target_sp->GetProcessSP();
   auto ptr_size = process_sp->GetAddressByteSize();
 
-  Status error;
   auto destroy_func_ptr_addr = frame_ptr_addr + ptr_size;
-  lldb::addr_t destroy_func_addr =
-      process_sp->ReadPointerFromMemory(destroy_func_ptr_addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> destroy_func_addr =
+      process_sp->ReadPointerFromMemory(destroy_func_ptr_addr);
+  if (!destroy_func_addr) {
+    llvm::consumeError(destroy_func_addr.takeError());
     return nullptr;
+  }
 
   Address destroy_func_address;
-  if (!target_sp->ResolveLoadAddress(destroy_func_addr, destroy_func_address))
+  if (!target_sp->ResolveLoadAddress(*destroy_func_addr, destroy_func_address))
     return nullptr;
 
   return destroy_func_address.CalculateSymbolContextFunction();
@@ -166,11 +168,11 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
       /*result_type=*/void_type, args,
       /*is_variadic=*/false, /*qualifiers=*/0);
   CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
-  ValueObjectSP resume_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP resume_ptr_sp = CreateChildValueObjectFromAddress(
       "resume", frame_ptr_addr + 0 * ptr_size, exe_ctx, coro_func_ptr_type);
   assert(resume_ptr_sp);
   m_children.push_back(std::move(resume_ptr_sp));
-  ValueObjectSP destroy_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP destroy_ptr_sp = CreateChildValueObjectFromAddress(
       "destroy", frame_ptr_addr + 1 * ptr_size, exe_ctx, coro_func_ptr_type);
   assert(destroy_ptr_sp);
   m_children.push_back(std::move(destroy_ptr_sp));
@@ -181,11 +183,11 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   // those pointers. We do so to avoid potential very deep recursion in case
   // there is a cycle formed between `std::coroutine_handle`s and their
   // promises.
-  ValueObjectSP promise_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP promise_ptr_sp = CreateChildValueObjectFromAddress(
       "promise", frame_ptr_addr + 2 * ptr_size, exe_ctx,
       promise_type.GetPointerType(), /*do_deref=*/false);
   m_children.push_back(std::move(promise_ptr_sp));
-  ValueObjectSP coroframe_ptr_sp = CreateValueObjectFromAddress(
+  ValueObjectSP coroframe_ptr_sp = CreateChildValueObjectFromAddress(
       "coro_frame", frame_ptr_addr, exe_ctx, coro_frame_type.GetPointerType(),
       /*do_deref=*/false);
   m_children.push_back(std::move(coroframe_ptr_sp));
@@ -201,8 +203,7 @@ StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
       return idx;
   }
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

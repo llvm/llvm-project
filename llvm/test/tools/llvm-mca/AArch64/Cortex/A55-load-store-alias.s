@@ -99,4 +99,4 @@ ldr x3, [x10]
 # CHECK-NEXT: 3.     3     0.0    0.0    0.0       nop
 # CHECK-NEXT: 4.     3     0.0    0.0    0.0       ldr	x2, [x10]
 # CHECK-NEXT: 5.     3     0.0    0.0    0.0       ldr	x3, [x10]
-# CHECK-NEXT:        3     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        18    0.0    0.0    0.0       <total>

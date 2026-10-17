@@ -25,6 +25,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -113,6 +114,25 @@ public:
     SOB_Trapping
   };
 
+  // Used by __attribute__((overflow_behavior())) to describe overflow behavior
+  // on a per-type basis.
+  enum OverflowBehaviorKind {
+    // Default C standard behavior (type dependent).
+    OB_Unset,
+
+    // __attribute__((overflow_behavior("wrap")))
+    OB_Wrap,
+
+    // __attribute__((overflow_behavior("trap")))
+    OB_Trap,
+
+    // Signed types defined as wrapping via -fwrapv can still be instrumented
+    // by sanitizers (PR82432). This field is needed to disambiguate canonical
+    // wrapping type behaviors from -fwrapv behaviors.
+    // -fwrapv
+    OB_SignedAndDefined
+  };
+
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     /// Not compiling a module interface at all.
@@ -158,6 +178,7 @@ public:
     MSVC2017 = 1910,
     MSVC2017_5 = 1912,
     MSVC2017_7 = 1914,
+    MSVC2017_8 = 1915,
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
@@ -297,6 +318,13 @@ public:
     AKey,
     /// Return address signing uses APIB key.
     BKey
+  };
+
+  enum class SignReturnAddressHardeningKind {
+    /// Regular return address signing.
+    None,
+    /// Hardened return address signing with load from the return address.
+    LoadReturnAddress
   };
 
   enum class ThreadModelKind {
@@ -492,6 +520,11 @@ public:
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
 
   std::string ObjCConstantStringClass;
+  std::string ObjCConstantArrayClass;
+  std::string ObjCConstantDictionaryClass;
+  std::string ObjCConstantIntegerNumberClass;
+  std::string ObjCConstantFloatNumberClass;
+  std::string ObjCConstantDoubleNumberClass;
 
   /// The name of the handler function to be called when -ftrapv is
   /// specified.
@@ -523,6 +556,9 @@ public:
 
   /// A prefix map for __FILE__, __BASE_FILE__ and __builtin_FILE().
   std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
+
+  /// Macro name to use in lifetimebound fix-it suggestions.
+  std::string LifetimeSafetyLifetimeBoundMacro;
 
   /// Triples of the OpenMP targets that the host code codegen should
   /// take into account in order to generate accurate offloading descriptors.
@@ -593,6 +629,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the literal encoding to convert the internal encoding to.
+  std::string LiteralEncoding;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -643,6 +682,10 @@ public:
            !ObjCSubscriptingLegacyRuntime;
   }
 
+  bool isCompatibleWith(ClangABI Version) const {
+    return getClangABICompat() <= Version;
+  }
+
   bool isCompatibleWithMSVC() const { return MSCompatibilityVersion > 0; }
 
   bool isCompatibleWithMSVC(MSVCMajorVersion MajorVersion) const {
@@ -673,6 +716,14 @@ public:
   bool assumeFunctionsAreConvergent() const {
     return ConvergentFunctions;
   }
+
+  /// Return true if using -fbounds-safety in full or attribute-only mode.
+  /// Attribute-only mode exists only downstream, where this predicate gates
+  /// behavior that diverges from upstream. It is kept here to minimize that
+  /// divergence.
+  // TODO: Remove this once upstream and downstream no longer diverge and
+  // attribute-only mode is deprecated downstream.
+  bool hasBoundsSafetyAttributes() const { return BoundsSafety; }
 
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.
@@ -726,6 +777,12 @@ public:
   /// Check if leaf functions are also signed.
   bool isSignReturnAddressScopeAll() const {
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
+  }
+
+  /// Check if return address authentication hardening is enabled
+  bool hasSignReturnAddressHardening() const {
+    return getSignReturnAddressHardening() !=
+           SignReturnAddressHardeningKind::None;
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
@@ -785,6 +842,11 @@ public:
   /// True when compiling for an offloading target device.
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
+  }
+
+  /// Return the OpenMP version.
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMP);
   }
 
   /// Returns the most applicable C standard-compliant language version code.
@@ -954,6 +1016,10 @@ public:
 ///
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
+///
+/// NOTE: This type is serialized into the AST format (e.g. for defaulted
+/// functions). When adding a new field here or in FPOptions, ensure that the
+/// AST VERSION_MAJOR is bumped if it changes the layout or size.
 class FPOptionsOverride {
   FPOptions Options = FPOptions::getFromOpaqueInt(0);
   FPOptions::storage_type OverrideMask = 0;

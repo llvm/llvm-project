@@ -97,10 +97,11 @@ Finally, MLIR takes the same view on scalable Vectors as LLVM (c.f.
 [VectorType](https://llvm.org/docs/LangRef.html#vector-type)):
 > For scalable vectors, the total number of elements is a constant multiple
 > (called vscale) of the specified number of elements; vscale is a positive
-> integer that is unknown at compile time and the same hardware-dependent
-> constant for all scalable vectors at run time.  The size of a specific
-> scalable vector type is thus constant within IR, even if the exact size in
-> bytes cannot be determined until run time.
+> power-of-two integer that is unknown at compile time and the same
+> hardware-dependent constant for all scalable vectors at run time.
+> The size of a specific scalable vector type is thus constant within
+> IR, even if the exact size in bytes cannot be determined until run
+> time.
 
 ### Hardware Vector Ops
 

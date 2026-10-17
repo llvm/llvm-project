@@ -7,7 +7,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ConvertConv2DToImg2Col.cpp
   DataLayoutPropagation.cpp
   DecomposeLinalgOps.cpp
-  Detensorize.cpp
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
@@ -27,7 +26,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   TransposeMatmul.cpp
   ShardingInterfaceImpl.cpp
   SimplifyDepthwiseConv.cpp
-  NamedToElementwise.cpp
   BlockPackMatmul.cpp
   PackAndUnpackPatterns.cpp
   Padding.cpp

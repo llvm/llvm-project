@@ -161,6 +161,8 @@ PdbTypeSymId GetBestPossibleDecl(PdbTypeSymId id, llvm::pdb::TpiStream &tpi);
 
 size_t GetSizeOfType(PdbTypeSymId id, llvm::pdb::TpiStream &tpi);
 
+std::optional<PdbTypeSymId> GetFunctionType(llvm::codeview::CVSymbol symbol);
+
 } // namespace npdb
 } // namespace lldb_private
 

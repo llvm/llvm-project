@@ -26,7 +26,8 @@ class raw_ostream;
 ///       $definition^class Foo{};          // points can be named: "definition"
 ///       $(foo)^class Foo{};               // ...or have a payload: "foo"
 ///       $definition(foo)^class Foo{};     // ...or both
-///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads too
+///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads
+///                                         // too
 ///    )cpp");
 ///
 ///    StringRef Code = Example.code();             // annotations stripped.
@@ -43,13 +44,26 @@ class raw_ostream;
 /// Ranges may be nested (and points can be inside ranges), but there's no way
 /// to define general overlapping ranges.
 ///
-/// FIXME: the choice of the marking syntax makes it impossible to represent
-///        some of the C++ and Objective C constructs (including common ones
-///        like C++ attributes). We can fix this by:
-///          1. introducing an escaping mechanism for the special characters,
-///          2. making characters for marking points and ranges configurable,
-///          3. changing the syntax to something less commonly used,
-///          4. ...
+/// The markers for points, names and ranges can be customized. This is useful
+/// when the default markers would otherwise conflict with the underlying syntax
+/// (e.g. C++ attributes or the reflection operator). For example, to use "~" as
+/// the point marker, "@@" as the name/payload marker, and "{{" / "}}" as range
+/// delimiters:
+///
+///    Annotations Example("~point @@name{{range}}", {"~", "@@", "{{", "}}"});
+///
+/// Alternatively, use setters to customize markers individually:
+///
+///    // Customize only the point marker, leaving the rest as default:
+///    Annotations Example("~point $name[[range]]", Annotations::Markers()
+///      .setPoint("~"));
+///
+///    // Customize all markers:
+///    Annotations Example("~point @@name{{range}}", Annotations::Markers()
+///      .setPoint("~")
+///      .setName("@@")
+///      .setRangeBegin("{{")
+///      .setRangeEnd("}}"));
 class Annotations {
 public:
   /// Two offsets pointing to a continuous substring. End is not included, i.e.
@@ -64,8 +78,37 @@ public:
     friend bool operator!=(const Range &L, const Range &R) { return !(L == R); }
   };
 
+  /// Markers used to denote points, names/payloads and ranges in the annotated
+  /// text.
+  struct Markers {
+    llvm::StringRef Point = "^";
+    llvm::StringRef Name = "$";
+    llvm::StringRef RangeBegin = "[[";
+    llvm::StringRef RangeEnd = "]]";
+
+    Markers &setPoint(llvm::StringRef P) {
+      Point = P;
+      return *this;
+    }
+    Markers &setName(llvm::StringRef N) {
+      Name = N;
+      return *this;
+    }
+    Markers &setRangeBegin(llvm::StringRef B) {
+      RangeBegin = B;
+      return *this;
+    }
+    Markers &setRangeEnd(llvm::StringRef E) {
+      RangeEnd = E;
+      return *this;
+    }
+  };
+
   /// Parses the annotations from Text. Crashes if it's malformed.
   Annotations(llvm::StringRef Text);
+  /// Parses the annotations from Text using custom markers.
+  /// Markers must be non-empty and unambiguous.
+  Annotations(llvm::StringRef Text, const Markers &Markers);
 
   /// The input text with all annotations stripped.
   /// All points and ranges are relative to this stripped text.

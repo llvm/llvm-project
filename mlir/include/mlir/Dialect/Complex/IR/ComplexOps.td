@@ -66,7 +66,7 @@ def AbsOp : ComplexUnaryOp<"abs",
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def AddOp : ComplexArithmeticOp<"add"> {
+def AddOp : ComplexArithmeticOp<"add", [Commutative]> {
   let summary = "complex addition";
   let description = [{
     The `add` operation takes two complex numbers and returns their sum.
@@ -337,8 +337,6 @@ def LogOp : ComplexUnaryOp<"log", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
-
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -367,7 +365,7 @@ def Log1pOp : ComplexUnaryOp<"log1p", [SameOperandsAndResultType]> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def MulOp : ComplexArithmeticOp<"mul"> {
+def MulOp : ComplexArithmeticOp<"mul", [Commutative]> {
   let summary = "complex multiplication";
   let description = [{
     The `mul` operation takes two complex numbers and returns their product:

@@ -47,7 +47,8 @@ public:
   static llvm::Expected<TestFile> fromYamlFile(const llvm::Twine &Name);
 
   ModuleSpec moduleSpec() {
-    return ModuleSpec(FileSpec(), UUID(), dataBuffer());
+    return ModuleSpec(FileSpec(), UUID(),
+                      std::make_shared<DataExtractor>(dataBuffer()));
   }
 
   llvm::Expected<llvm::sys::fs::TempFile> writeToTemporaryFile();
@@ -64,7 +65,7 @@ private:
   std::string Buffer;
 };
 
-template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
+template <typename T> llvm::Expected<T> roundtripJSON(const T &input) {
   std::string encoded;
   llvm::raw_string_ostream OS(encoded);
   OS << toJSON(input);

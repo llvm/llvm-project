@@ -100,6 +100,30 @@ constexpr void test(std::decay_t<T> v) {
     assert(val.begin() != val.end());
     assert(*(val.begin()) == v);
   }
+
+  // [container.reqmts] operator-
+  {
+    std::optional<T> val(v);
+    auto it1 = val.begin();
+    auto it2 = val.begin();
+    auto it3 = val.end();
+
+    auto cit1 = std::as_const(val).begin();
+    auto cit2 = std::as_const(val).begin();
+    auto cit3 = std::as_const(val).end();
+
+    assert(it1 - it2 == 0);
+    assert(cit1 - cit2 == 0);
+    assert(it1 - cit1 == 0);
+    assert(it3 - it1 == 1);
+    assert(it1 - it3 == -1);
+
+    assert(cit3 - cit1 == 1);
+    assert(cit1 - cit3 == -1);
+    assert(cit3 - cit3 == 0);
+    assert(cit3 - it1 == 1);
+    assert(it1 - cit3 == -1);
+  }
 }
 
 constexpr bool test() {

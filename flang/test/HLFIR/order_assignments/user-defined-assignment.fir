@@ -16,7 +16,7 @@ func.func @test_simple_scalar(%i: !fir.ref<i32>, %l: !fir.ref<!fir.logical<4>>) 
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<i32>,
 // CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>>) {
 // CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.logical<4>>
-// CHECK:  %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]] {uniq_name = ".tmp.assign"} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
+// CHECK:  %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]] uniq_name(".tmp.assign") : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
 // CHECK:  fir.call @logical_to_numeric(%[[VAL_0]], %[[VAL_3]]#0) : (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
 // CHECK:  hlfir.end_associate %[[VAL_3]]#1, %[[VAL_3]]#2 : !fir.ref<!fir.logical<4>>, i1
 
@@ -54,7 +54,7 @@ func.func @test_elemental_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:    %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 // CHECK:    hlfir.yield_element %[[VAL_9]] : !fir.logical<4>
 // CHECK:  }
-// CHECK:  %[[VAL_10:.*]]:3 = hlfir.associate %[[VAL_11:.*]](%[[VAL_3]]) {uniq_name = ".tmp.assign"} : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
+// CHECK:  %[[VAL_10:.*]]:3 = hlfir.associate %[[VAL_11:.*]](%[[VAL_3]]) uniq_name(".tmp.assign") : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
 // CHECK:  %[[VAL_12:.*]] = arith.constant 10 : index
 // CHECK:  %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
 // CHECK:  %[[VAL_14:.*]] = arith.constant 1 : index
@@ -83,7 +83,7 @@ func.func @test_array_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
   } to {
     hlfir.yield %i : !fir.ref<!fir.array<10xi32>>
   } user_defined_assign (%arg0: !hlfir.expr<10x!fir.logical<4>>) to (%arg1: !fir.ref<!fir.array<10xi32>>) {
-     %1:3 = hlfir.associate %arg0(%shape) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
+     %1:3 = hlfir.associate %arg0(%shape) uniq_name("adapt.valuebyref") : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
     fir.call @logical_array_to_numeric(%arg1, %1#0) : (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10x!fir.logical<4>>>) -> ()
      hlfir.end_associate %1#1, %1#2 : !fir.ref<!fir.array<10x!fir.logical<4>>>, i1
   }
@@ -102,9 +102,9 @@ func.func @test_array_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:    %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 // CHECK:    hlfir.yield_element %[[VAL_9]] : !fir.logical<4>
 // CHECK:  }
-// CHECK:  %[[VAL_10:.*]]:3 = hlfir.associate %[[VAL_11:.*]](%[[VAL_3]]) {uniq_name = ".tmp.assign"} : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
+// CHECK:  %[[VAL_10:.*]]:3 = hlfir.associate %[[VAL_11:.*]](%[[VAL_3]]) uniq_name(".tmp.assign") : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
 // CHECK:  %[[VAL_12:.*]] = hlfir.as_expr %[[VAL_10]]#0 : (!fir.ref<!fir.array<10x!fir.logical<4>>>) -> !hlfir.expr<10x!fir.logical<4>>
-// CHECK:  %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_12]](%[[VAL_3]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
+// CHECK:  %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_12]](%[[VAL_3]]) uniq_name("adapt.valuebyref") : (!hlfir.expr<10x!fir.logical<4>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>, i1)
 // CHECK:  fir.call @logical_array_to_numeric(%[[VAL_0]], %[[VAL_13]]#0) : (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10x!fir.logical<4>>>) -> ()
 // CHECK:  hlfir.end_associate %[[VAL_13]]#1, %[[VAL_13]]#2 : !fir.ref<!fir.array<10x!fir.logical<4>>>, i1
 // CHECK:  hlfir.destroy %[[VAL_12]] : !hlfir.expr<10x!fir.logical<4>>
@@ -138,7 +138,6 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 }
 // CHECK-LABEL:   func.func @test_scalar_forall_overlap(
 // CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<10xi32>>) {
-// CHECK:  %[[VAL_1:.*]] = fir.alloca index
 // CHECK:  %[[VAL_2:.*]] = arith.constant 0 : i32
 // CHECK:  %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_4:.*]] = arith.constant 10 : index
@@ -150,30 +149,20 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:  %[[VAL_10:.*]] = arith.divsi %[[VAL_9]], %[[VAL_6]] : index
 // CHECK:  %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_7]] : index
 // CHECK:  %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_7]] : index
-// CHECK:  %[[VAL_13:.*]] = arith.constant 1 : index
-// CHECK:  %[[VAL_14:.*]] = arith.constant 1 : index
-// CHECK:  fir.store %[[VAL_13]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_12]] {bindc_name = ".tmp.forall", uniq_name = ""}
-// CHECK:  %[[VAL_16:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi1>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
+// CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_12]] <{bindc_name = ".tmp.forall", uniq_name = ""}>
+// CHECK:  %[[VAL_16:.*]] = fir.shape_shift %[[VAL_3]], %[[VAL_12]] : (index, index) -> !fir.shapeshift<1>
+// CHECK:  %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) uniq_name(".tmp.forall") : (!fir.heap<!fir.array<?xi1>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
 // CHECK:  fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_6]] {
 // CHECK:    %[[VAL_19:.*]] = arith.subi %[[VAL_5]], %[[VAL_18]] : index
 // CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_19]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:    %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i32>
 // CHECK:    %[[VAL_22:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_2]] : i32
-// CHECK:    %[[VAL_23:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_14]] : index
-// CHECK:    fir.store %[[VAL_24]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_25:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_23]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
+// CHECK:    %[[VAL_25:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_18]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
 // CHECK:    hlfir.assign %[[VAL_22]] to %[[VAL_25]] : i1, !fir.ref<i1>
 // CHECK:  }
 // CHECK:  %[[VAL_26:.*]] = arith.constant 1 : index
-// CHECK:  fir.store %[[VAL_13]] to %[[VAL_1]] : !fir.ref<index>
 // CHECK:  fir.do_loop %[[VAL_27:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_26]] {
-// CHECK:    %[[VAL_28:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_29:.*]] = arith.addi %[[VAL_28]], %[[VAL_14]] : index
-// CHECK:    fir.store %[[VAL_29]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:    %[[VAL_30:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_28]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
+// CHECK:    %[[VAL_30:.*]] = hlfir.designate %[[VAL_17]]#0 (%[[VAL_27]])  : (!fir.box<!fir.array<?xi1>>, index) -> !fir.ref<i1>
 // CHECK:    %[[VAL_31:.*]] = fir.load %[[VAL_30]] : !fir.ref<i1>
 // CHECK:    %[[VAL_32:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_27]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:    %[[VAL_33:.*]] = fir.convert %[[VAL_31]] : (i1) -> !fir.logical<4>

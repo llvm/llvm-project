@@ -219,13 +219,14 @@ bool PlatformLinux::CanDebugProcess() {
 }
 
 void PlatformLinux::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
-  m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
-  m_trap_handlers.push_back(ConstString("__restore_rt"));
-  m_trap_handlers.push_back(ConstString("__vdso_rt_sigreturn"));
+  m_trap_handlers.push_back("_sigtramp");
+  m_trap_handlers.push_back("__kernel_rt_sigreturn");
+  m_trap_handlers.push_back("__restore_rt");
+  m_trap_handlers.push_back("__vdso_rt_sigreturn");
 }
 
-static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
+static lldb::UnwindPlanSP
+GetAArch64TrapHandlerUnwindPlan(llvm::StringRef name) {
   UnwindPlanSP unwind_plan_sp;
   if (name != "__kernel_rt_sigreturn")
     return unwind_plan_sp;
@@ -305,7 +306,7 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   return unwind_plan_sp;
 }
 
-static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
+static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(llvm::StringRef name,
                                                         uint32_t fp_flags) {
   if (name != "__vdso_rt_sigreturn")
     return {};
@@ -382,8 +383,9 @@ static lldb::UnwindPlanSP GetRISCVTrapHandlerUnwindPlan(ConstString name,
   return unwind_plan_sp;
 }
 
-lldb::UnwindPlanSP PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                                           ConstString name) {
+lldb::UnwindPlanSP
+PlatformLinux::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                        llvm::StringRef name) {
   llvm::Triple triple = arch.GetTriple();
   if (triple.isAArch64())
     return GetAArch64TrapHandlerUnwindPlan(name);
@@ -446,17 +448,15 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
   CompilerType &band_type = long_type;
 
   CompilerType sigval_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_sigval_t",
+      nullptr, OptionalClangModuleID(), "__lldb_sigval_t",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigval_type);
-  ast->AddFieldToRecordType(sigval_type, "sival_int", int_type,
-                            lldb::eAccessPublic, 0);
-  ast->AddFieldToRecordType(sigval_type, "sival_ptr", voidp_type,
-                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(sigval_type, "sival_int", int_type, 0);
+  ast->AddFieldToRecordType(sigval_type, "sival_ptr", voidp_type, 0);
   ast->CompleteTagDeclarationDefinition(sigval_type);
 
   CompilerType sigfault_bounds_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
+      nullptr, OptionalClangModuleID(), "",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigfault_bounds_type);
   ast->AddFieldToRecordType(
@@ -466,39 +466,32 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"_lower", voidp_type},
                                          {"_upper", voidp_type},
                                      }),
-      lldb::eAccessPublic, 0);
-  ast->AddFieldToRecordType(sigfault_bounds_type, "_pkey", uint_type,
-                            lldb::eAccessPublic, 0);
+      0);
+  ast->AddFieldToRecordType(sigfault_bounds_type, "_pkey", uint_type, 0);
   ast->CompleteTagDeclarationDefinition(sigfault_bounds_type);
 
   // siginfo_t
   CompilerType siginfo_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
+      nullptr, OptionalClangModuleID(), "__lldb_siginfo_t",
       llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(siginfo_type);
-  ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type,
-                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type, 0);
 
   if (si_errno_then_code) {
-    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type,
-                              lldb::eAccessPublic, 0);
-    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type,
-                              lldb::eAccessPublic, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type, 0);
   } else {
-    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type,
-                              lldb::eAccessPublic, 0);
-    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type,
-                              lldb::eAccessPublic, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_code", int_type, 0);
+    ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type, 0);
   }
 
   // the structure is padded on 64-bit arches to fix alignment
   if (triple.isArch64Bit())
-    ast->AddFieldToRecordType(siginfo_type, "__pad0", int_type,
-                              lldb::eAccessPublic, 0);
+    ast->AddFieldToRecordType(siginfo_type, "__pad0", int_type, 0);
 
   // union used to hold the signal data
   CompilerType union_type = ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
+      nullptr, OptionalClangModuleID(), "",
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(union_type);
 
@@ -509,7 +502,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_pid", pid_type},
                                          {"si_uid", uid_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_timer",
@@ -519,7 +512,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_overrun", int_type},
                                          {"si_sigval", sigval_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_rt",
@@ -529,7 +522,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_uid", uid_type},
                                          {"si_sigval", sigval_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_sigchld",
@@ -541,7 +534,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_utime", clock_type},
                                          {"si_stime", clock_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_sigfault",
@@ -551,7 +544,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_addr_lsb", short_type},
                                          {"_bounds", sigfault_bounds_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->AddFieldToRecordType(
       union_type, "_sigpoll",
@@ -560,7 +553,7 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"si_band", band_type},
                                          {"si_fd", int_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   // NB: SIGSYS is not present on ia64 but we don't seem to support that
   ast->AddFieldToRecordType(
@@ -571,11 +564,10 @@ CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
                                          {"_syscall", int_type},
                                          {"_arch", uint_type},
                                      }),
-      lldb::eAccessPublic, 0);
+      0);
 
   ast->CompleteTagDeclarationDefinition(union_type);
-  ast->AddFieldToRecordType(siginfo_type, "_sifields", union_type,
-                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "_sifields", union_type, 0);
 
   ast->CompleteTagDeclarationDefinition(siginfo_type);
   return siginfo_type;

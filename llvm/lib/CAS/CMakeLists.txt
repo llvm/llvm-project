@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMCAS
   ActionCache.cpp
   ActionCaches.cpp
   BuiltinCAS.cpp
+  BuiltinObjectHasher.cpp
   BuiltinUnifiedCASDatabases.cpp
   CASNodeSchema.cpp
   DatabaseFile.cpp
@@ -20,6 +21,7 @@ add_llvm_component_library(LLVMCAS
   OnDiskGraphDB.cpp
   OnDiskKeyValueDB.cpp
   OnDiskTrieRawHashMap.cpp
+  PluginCAS.cpp
   UnifiedOnDiskCache.cpp
 
   ADDITIONAL_HEADER_DIRS

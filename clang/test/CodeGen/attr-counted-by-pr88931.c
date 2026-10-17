@@ -15,7 +15,12 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-SAME: ptr noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
-// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef -1) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[P]], align 4
+// CHECK-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// CHECK-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
+// CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
+// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef [[TMP1]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test1(struct bar *p) {

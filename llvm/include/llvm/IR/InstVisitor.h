@@ -199,6 +199,8 @@ public:
   RetTy visitCleanupPadInst(CleanupPadInst &I) { DELEGATE(FuncletPadInst); }
   RetTy visitCatchPadInst(CatchPadInst &I)     { DELEGATE(FuncletPadInst); }
   RetTy visitFreezeInst(FreezeInst &I)         { DELEGATE(Instruction); }
+  RetTy visitBitInsertInst(BitInsertInst &I) { DELEGATE(Instruction); }
+  RetTy visitBitExtractInst(BitExtractInst &I) { DELEGATE(Instruction); }
 
   RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
   RetTy visitMemSetPatternInst(MemSetPatternInst &I) {
@@ -221,7 +223,10 @@ public:
   RetTy visitReturnInst(ReturnInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
-  RetTy visitBranchInst(BranchInst &I) {
+  RetTy visitUncondBrInst(UncondBrInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitCondBrInst(CondBrInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
   RetTy visitSwitchInst(SwitchInst &I) {
@@ -253,7 +258,9 @@ public:
   //
   RetTy visitCastInst(CastInst &I)                { DELEGATE(UnaryInstruction);}
   RetTy visitUnaryOperator(UnaryOperator &I)      { DELEGATE(UnaryInstruction);}
+  RetTy visitFPUnaryOperator(FPUnaryOperator &I) { DELEGATE(UnaryOperator); }
   RetTy visitBinaryOperator(BinaryOperator &I)    { DELEGATE(Instruction);}
+  RetTy visitFPBinaryOperator(FPBinaryOperator &I) { DELEGATE(BinaryOperator); }
   RetTy visitCmpInst(CmpInst &I)                  { DELEGATE(Instruction);}
   RetTy visitUnaryInstruction(UnaryInstruction &I){ DELEGATE(Instruction);}
 

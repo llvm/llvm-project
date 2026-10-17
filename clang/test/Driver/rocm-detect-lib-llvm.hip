@@ -14,7 +14,7 @@
 // Set up a fake ROCm installation rooted at /opt/rocm in the synthetic sysroot
 // so that the device libraries and HIP runtime can be found.
 // RUN: mkdir -p %t/sysroot/opt/rocm
-// RUN: cp -r %S/Inputs/rocm/* %t/sysroot/opt/rocm
+// RUN: cp -R %S/Inputs/rocm/* %t/sysroot/opt/rocm
 // Copy the built clang binary so that its InstalledDir and the real path used
 // by the driver both reside under /opt/rocm/lib/llvm/bin, which is what the
 // detection logic inspects.
@@ -26,3 +26,6 @@
 //
 // ROCM-LIB-LLVM: ROCm installation search path: {{.*sysroot/opt/rocm$}}
 // ROCM-LIB-LLVM-NOT: ROCm installation search path: {{.*sysroot/opt/rocm/lib$}}
+
+// Clean up copy of large binary copied into temp directory to avoid bloat.
+// RUN: rm -f %t/sysroot/opt/rocm/lib/llvm/bin/clang || true

@@ -92,6 +92,8 @@ public:
     HasSeenNoTrivialPPDirective =
         0x1000, // Whether we've seen any 'no-trivial' pp-directives before
                 // current position.
+    PhysicalStartOfLine =
+        0x2000, // This token is at the start of a physical line.
   };
 
   tok::TokenKind getKind() const { return Kind; }
@@ -190,6 +192,34 @@ public:
     Loc = SourceLocation().getRawEncoding();
   }
 
+  static Token create(tok::TokenKind Kind, SourceLocation Loc,
+                      unsigned Length = 0) {
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setLocation(Loc);
+    Tok.setLength(Length);
+    return Tok;
+  }
+
+  static Token createAnnotation(tok::TokenKind Kind, SourceRange Range,
+                                void *Value = nullptr) {
+    assert(tok::isAnnotation(Kind) && "Expected an annotation token kind");
+    Token Tok;
+    Tok.startToken();
+    Tok.setKind(Kind);
+    Tok.setAnnotationRange(Range);
+    Tok.setAnnotationValue(Value);
+    return Tok;
+  }
+
+  static Token createEof(SourceLocation Loc = SourceLocation(),
+                         const void *Data = nullptr) {
+    Token Tok = create(tok::eof, Loc);
+    Tok.setEofData(Data);
+    return Tok;
+  }
+
   bool hasPtrData() const { return PtrData != nullptr; }
 
   IdentifierInfo *getIdentifierInfo() const {
@@ -282,6 +312,10 @@ public:
   /// isAtStartOfLine - Return true if this token is at the start of a line.
   ///
   bool isAtStartOfLine() const { return getFlag(StartOfLine); }
+
+  /// isAtPhysicalStartOfLine - Return true if this token is at the start of a
+  /// physical line.
+  bool isAtPhysicalStartOfLine() const { return getFlag(PhysicalStartOfLine); }
 
   /// Return true if this token has whitespace before it.
   ///

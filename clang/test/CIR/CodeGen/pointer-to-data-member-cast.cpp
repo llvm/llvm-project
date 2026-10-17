@@ -29,9 +29,9 @@ auto base_to_derived(int Base2::*ptr) -> int Derived::* {
 // CIR-AFTER: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %[[NULL_VALUE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp(eq, %[[PTR]], %[[NULL_VALUE]])
+// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp eq %[[PTR]], %[[NULL_VALUE]]
 // CIR-AFTER:   %[[OFFSET_VALUE:.*]] = cir.const #cir.int<4> : !s64i
-// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(add, %[[PTR]], %[[OFFSET_VALUE]]) nsw : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.add nsw %[[PTR]], %[[OFFSET_VALUE]] : !s64i
 // CIR-AFTER:   %[[SELECT:.*]] = cir.select if %[[IS_NULL]] then %[[PTR]] else %[[BINOP_KIND]]
 
 // LLVM: define {{.*}} i64 @_Z15base_to_derivedM5Base2i
@@ -57,9 +57,9 @@ auto derived_to_base(int Derived::*ptr) -> int Base2::* {
 // CIR-AFTER: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %[[NULL_VALUE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp(eq, %[[PTR]], %[[NULL_VALUE]])
+// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp eq %[[PTR]], %[[NULL_VALUE]]
 // CIR-AFTER:   %[[OFFSET_VALUE:.*]] = cir.const #cir.int<4> : !s64i
-// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(sub, %[[PTR]], %[[OFFSET_VALUE]]) nsw : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.sub nsw %[[PTR]], %[[OFFSET_VALUE]] : !s64i
 // CIR-AFTER:   %[[SELECT:.*]] = cir.select if %[[IS_NULL]] then %[[PTR]] else %[[BINOP_KIND]]
 
 // LLVM: define {{.*}} i64 @_Z15derived_to_baseM7Derivedi
@@ -89,8 +89,8 @@ auto base_to_derived_zero_offset(int Base1::*ptr) -> int Derived::* {
 // No LLVM instructions emitted for performing a zero-offset cast.
 
 // LLVM:      define {{.*}} i64 @_Z27base_to_derived_zero_offsetM5Base1i
-// LLVM-NEXT:   %[[PTR_ADDR:.*]] = alloca i64
 // LLVM-NEXT:   %[[RETVAL:.*]] = alloca i64
+// LLVM-NEXT:   %[[PTR_ADDR:.*]] = alloca i64
 // LLVM-NEXT:   store i64 %{{.*}}, ptr %[[PTR_ADDR]]
 // LLVM-NEXT:   %[[TEMP:.*]] = load i64, ptr %[[PTR_ADDR]]
 // LLVM-NEXT:   store i64 %[[TEMP]], ptr %[[RETVAL]]
@@ -119,8 +119,8 @@ auto derived_to_base_zero_offset(int Derived::*ptr) -> int Base1::* {
 // No LLVM instructions emitted for performing a zero-offset cast.
 
 // LLVM:      define {{.*}} i64 @_Z27derived_to_base_zero_offsetM7Derivedi
-// LLVM-NEXT:   %[[PTR_ADDR:.*]] = alloca i64
 // LLVM-NEXT:   %[[RETVAL:.*]] = alloca i64
+// LLVM-NEXT:   %[[PTR_ADDR:.*]] = alloca i64
 // LLVM-NEXT:   store i64 %{{.*}}, ptr %[[PTR_ADDR]]
 // LLVM-NEXT:   %[[TEMP:.*]] = load i64, ptr %[[PTR_ADDR]]
 // LLVM-NEXT:   store i64 %[[TEMP]], ptr %[[RETVAL]]
@@ -152,7 +152,7 @@ bool to_bool(int Foo::*x) {
 
 // CIR-AFTER: cir.func {{.*}} @_Z7to_boolM3Fooi
 // CIR-AFTER:   %[[NULL_VAL:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp(ne, %{{.*}}, %[[NULL_VAL]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp ne %{{.*}}, %[[NULL_VAL]] : !s64i
 
 // LLVM: define {{.*}} i1 @_Z7to_boolM3Fooi
 // LLVM:   %[[X:.*]] = load i64, ptr %{{.*}}
@@ -171,8 +171,8 @@ auto bitcast(int Foo::*x) {
 // CIR-BEFORE:   %{{.*}} = cir.cast bitcast %[[X]] : !cir.data_member<!s32i in !rec_Foo> -> !cir.data_member<!s32i in !rec_Bar>
 
 // CIR-AFTER: cir.func {{.*}} @_Z7bitcastM3Fooi(%[[ARG0:.*]]: !s64i
-// CIR-AFTER:   %[[X_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init] {alignment = 8 : i64}
-// CIR-AFTER:   %[[RET_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["__retval"] {alignment = 8 : i64}
+// CIR-AFTER:   %[[RET_ADDR:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s64i>
+// CIR-AFTER:   %[[X_ADDR:.*]] = cir.alloca "x" align(8) init : !cir.ptr<!s64i>
 // CIR-AFTER:   cir.store %[[ARG0]], %[[X_ADDR]]
 // CIR-AFTER:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR-AFTER:   cir.store %[[X]], %[[RET_ADDR]]

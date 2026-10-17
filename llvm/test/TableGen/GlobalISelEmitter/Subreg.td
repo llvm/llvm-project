@@ -234,8 +234,8 @@ def : Pat<(i16 (trunc DOP:$src)),
 
 // Test that we can import SUBREG_TO_REG
 def : Pat<(i32 (zext SOP:$src)),
-          (SUBREG_TO_REG (i64 0), (SUBSOME_INSN SOP:$src), sub0)>;
-// CHECK-LABEL:  (zext:{ *:[i32] } SOP:{ *:[i16] }:$src)  =>  (SUBREG_TO_REG:{ *:[i32] } 0:{ *:[i64] }, (SUBSOME_INSN:{ *:[i16] } SOP:{ *:[i16] }:$src), sub0:{ *:[i32] })
+          (SUBREG_TO_REG (SUBSOME_INSN SOP:$src), sub0)>;
+// CHECK-LABEL:  (zext:{ *:[i32] } SOP:{ *:[i16] }:$src)  =>  (SUBREG_TO_REG:{ *:[i32] } (SUBSOME_INSN:{ *:[i16] } SOP:{ *:[i16] }:$src), sub0:{ *:[i32] })
 // CHECK-NEXT:        GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s16,
 // CHECK-NEXT:        GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::SUBSOME_INSN),
 // CHECK-NEXT:        GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
@@ -243,10 +243,9 @@ def : Pat<(i32 (zext SOP:$src)),
 // CHECK-NEXT:        GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT:        GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::SUBREG_TO_REG),
 // CHECK-NEXT:        GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// CHECK-NEXT:        GIR_AddImm8, /*InsnID*/0, /*Imm*/0,
 // CHECK-NEXT:        GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:        GIR_AddImm8, /*InsnID*/0, /*Imm*/1,
 // CHECK-NEXT:        GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::DRegsRegClassID),
-// CHECK-NEXT:        GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/2, GIMT_Encode2(Test::SRegsRegClassID),
+// CHECK-NEXT:        GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT:        // GIR_Coverage, 11,
 // CHECK-NEXT:        GIR_EraseRootFromParent_Done,

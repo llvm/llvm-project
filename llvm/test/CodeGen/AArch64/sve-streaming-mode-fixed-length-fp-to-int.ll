@@ -433,8 +433,7 @@ define <1 x i64> @fcvtzu_v1f16_v1i64(<1 x half> %op1) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvtzu x8, s0
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = fptoui <1 x half> %op1 to <1 x i64>
@@ -1018,9 +1017,8 @@ define void @fcvtzu_v8f32_v8i32(ptr %a, ptr %b) {
 define <1 x i64> @fcvtzu_v1f32_v1i64(<1 x float> %op1) {
 ; CHECK-LABEL: fcvtzu_v1f32_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -1029,8 +1027,6 @@ define <1 x i64> @fcvtzu_v1f32_v1i64(<1 x float> %op1) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fcvtzu x8, s0
 ; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
@@ -1639,8 +1635,7 @@ define <1 x i64> @fcvtzu_v1f64_v1i64(<1 x double> %op1) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fcvtzu x8, d0
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = fptoui <1 x double> %op1 to <1 x i64>
@@ -2133,8 +2128,7 @@ define <1 x i64> @fcvtzs_v1f16_v1i64(<1 x half> %op1) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    fcvtzs x8, s0
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = fptosi <1 x half> %op1 to <1 x i64>
@@ -2719,9 +2713,8 @@ define void @fcvtzs_v8f32_v8i32(ptr %a, ptr %b) {
 define <1 x i64> @fcvtzs_v1f32_v1i64(<1 x float> %op1) {
 ; CHECK-LABEL: fcvtzs_v1f32_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -2730,8 +2723,6 @@ define <1 x i64> @fcvtzs_v1f32_v1i64(<1 x float> %op1) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fcvtzs x8, s0
 ; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
@@ -3342,8 +3333,7 @@ define <1 x i64> @fcvtzs_v1f64_v1i64(<1 x double> %op1) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fcvtzs x8, d0
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = fptosi <1 x double> %op1 to <1 x i64>

@@ -1,0 +1,77 @@
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes \
+// RUN:   -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes \
+// RUN:   -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
+
+// Verify that matrix initializer lists produce values in canonical column-major
+// register layout. The initializer list {1,2,3,4,5,6} for a float2x3 (2 rows,
+// 3 cols) is in row-major order: row0=[1,2,3], row1=[4,5,6].
+//
+// The register value is reordered to col0=[1,4], col1=[2,5], col2=[3,6] =
+// <1,4,2,5,3,6>. Row-major memory layout transposes that value at the store.
+
+constexpr float2x3 make_matrix() {
+  return float2x3(1, 2, 3, 4, 5, 6);
+}
+
+// Bool matrices use i1 elements in registers and i32 elements in memory.
+// CHECK: @_ZL1B = internal global <6 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
+static row_major bool2x3 B =
+    bool2x3(true, false, true, false, true, false);
+
+export bool read_bool_matrix() {
+// CHECK-LABEL: define {{.*}} i1 @_Z16read_bool_matrixv
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x i32>, ptr @_ZL1B
+// CHECK: [[AS_BOOL:%.*]] = icmp ne <6 x i32> [[FROM_MEMORY]], zeroinitializer
+// CHECK: [[IN_REGISTER:%.*]] = call <6 x i1> @llvm.matrix.transpose.v6i1(<6 x i1> [[AS_BOOL]], i32 3, i32 2)
+// CHECK: extractelement <6 x i1> [[IN_REGISTER]], i32 3
+  return B[1][1];
+}
+
+export float2x3 return_constexpr_matrix() {
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z23return_constexpr_matrixv
+// CHECK: ret <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>
+  constexpr float2x3 value = make_matrix();
+  return value;
+}
+
+export float test_row0_col2() {
+// CHECK-LABEL: define {{.*}} float @_Z14test_row0_col2v
+// COL-CHECK: store <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>
+// ROW-CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>, i32 2, i32 3)
+// CHECK: extractelement <6 x float> %{{.*}}, i32 4
+  float2x3 M = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  // Row 0, Col 2 in row-major is the 3rd element = 3.0
+  return M[0][2];
+}
+
+export float test_row1_col0() {
+// CHECK-LABEL: define {{.*}} float @_Z14test_row1_col0v
+// COL-CHECK: store <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>
+// ROW-CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>, i32 2, i32 3)
+// CHECK: extractelement <6 x float> %{{.*}}, i32 1
+  float2x3 M = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  // Row 1, Col 0 in row-major is the 4th element = 4.0
+  return M[1][0];
+}
+
+// Verify that elements are inserted at the correct positions according to the default matrix memory layout.
+
+export float2x3 test_dynamic(float a, float b, float c,
+                             float d, float e, float f) {
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z12test_dynamicffffff
+// CHECK: [[A:%.*]] = load float, ptr %a.addr
+// CHECK: [[VECINIT0:%.*]] = insertelement <6 x float> poison, float [[A]], i32 0
+// CHECK: [[B:%.*]] = load float, ptr %b.addr
+// CHECK: [[VECINIT1:%.*]] = insertelement <6 x float> [[VECINIT0]], float [[B]], i32 2
+// CHECK: [[C:%.*]] = load float, ptr %c.addr
+// CHECK: [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT1]], float [[C]], i32 4
+// CHECK: [[D:%.*]] = load float, ptr %d.addr
+// CHECK: [[VECINIT3:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[D]], i32 1
+// CHECK: [[E:%.*]] = load float, ptr %e.addr
+// CHECK: [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT3]], float [[E]], i32 3
+// CHECK: [[F:%.*]] = load float, ptr %f.addr
+// CHECK: [[VECINIT5:%.*]] = insertelement <6 x float> [[VECINIT4]], float [[F]], i32 5
+  return (float2x3){a, b, c, d, e, f};
+}

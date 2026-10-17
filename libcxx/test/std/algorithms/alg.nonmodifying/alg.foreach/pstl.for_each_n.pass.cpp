@@ -19,11 +19,13 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <type_traits>
 #include <vector>
 
 #include "test_macros.h"
 #include "test_execution_policies.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 EXECUTION_POLICY_SFINAE_TEST(for_each_n);
 
@@ -34,15 +36,23 @@ template <class Iter>
 struct Test {
   template <class Policy>
   void operator()(Policy&& policy) {
-    int sizes[] = {0, 1, 2, 100};
-    for (auto size : sizes) {
-      std::vector<int> a(size);
-      std::vector<Bool> called(size);
-      std::for_each_n(policy, Iter(std::data(a)), std::size(a), [&](int& v) {
-        assert(!called[&v - a.data()]);
-        called[&v - a.data()] = true;
-      });
-      assert(std::all_of(std::begin(called), std::end(called), [](bool b) { return b; }));
+    { // Check the return type
+      int a[]  = {0};
+      auto res = std::for_each_n(policy, Iter(std::begin(a)), 0, [](int) {});
+      static_assert(std::is_same_v<decltype(res), Iter>);
+    }
+    { // Check that every single element is visited
+      int sizes[] = {0, 1, 2, 100};
+      for (auto size : sizes) {
+        std::vector<int> a(size);
+        std::vector<Bool> called(size);
+        auto res = std::for_each_n(policy, Iter(std::data(a)), std::size(a), [&](int& v) {
+          assert(!called[&v - a.data()]);
+          called[&v - a.data()] = true;
+        });
+        assert(std::all_of(std::begin(called), std::end(called), [](bool b) { return b; }));
+        assert(res == Iter(std::data(a) + std::size(a)));
+      }
     }
   }
 };

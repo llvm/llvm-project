@@ -56,8 +56,7 @@ Error BuildIDRewriter::sectionInitializer() {
       continue;
 
     StringRef Buf = NoteSection.getContents();
-    DataExtractor DE = DataExtractor(Buf, BC.AsmInfo->isLittleEndian(),
-                                     BC.AsmInfo->getCodePointerSize());
+    DataExtractor DE = DataExtractor(Buf, BC.AsmInfo->isLittleEndian());
     DataExtractor::Cursor Cursor(0);
     while (Cursor && !DE.eof(Cursor)) {
       const uint32_t NameSz = DE.getU32(Cursor);
@@ -97,10 +96,11 @@ Error BuildIDRewriter::postEmitFinalizer() {
   if (!BuildIDSection || !BuildIDOffset)
     return Error::success();
 
-  const uint8_t LastByte = BuildID[BuildID.size() - 1];
-  SmallVector<char, 1> Patch = {static_cast<char>(LastByte ^ 1)};
-  BuildIDSection->addPatch(*BuildIDOffset + BuildID.size() - 1, Patch);
-  BC.outs() << "BOLT-INFO: patched build-id (flipped last bit)\n";
+  SmallVector<char, 20> Patch(BuildID.begin(), BuildID.end());
+  Patch.front() ^= 0x80;
+  Patch.back() ^= 0x01;
+  BuildIDSection->addPatch(*BuildIDOffset, Patch);
+  BC.outs() << "BOLT-INFO: patched build-id (flipped first and last bits)\n";
 
   return Error::success();
 }

@@ -16,6 +16,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -23,6 +24,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 
 namespace lldb_private {
 class Log;
@@ -83,12 +85,8 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const void *data, lldb::offset_t data_length,
-                lldb::ByteOrder byte_order, uint32_t addr_size,
-                uint32_t target_byte_size = 1);
+                lldb::ByteOrder byte_order, uint32_t addr_size);
 
   /// Construct with shared data.
   ///
@@ -105,11 +103,8 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
-                uint32_t addr_size, uint32_t target_byte_size = 1);
+                uint32_t addr_size);
 
   /// Construct with shared data, but byte-order & addr-size are unspecified.
   ///
@@ -120,8 +115,7 @@ public:
   ///
   /// \param[in] data_sp
   ///     A shared pointer to data.
-  DataExtractor(const lldb::DataBufferSP &data_sp,
-                uint32_t target_byte_size = 1);
+  explicit DataExtractor(const lldb::DataBufferSP &data_sp);
 
   /// Construct with a subset of \a data.
   ///
@@ -142,11 +136,8 @@ public:
   ///
   /// \param[in] length
   ///     The length in bytes of the subset of data.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const DataExtractor &data, lldb::offset_t offset,
-                lldb::offset_t length, uint32_t target_byte_size = 1);
+                lldb::offset_t length);
 
   /// Copy constructor.
   ///
@@ -181,13 +172,17 @@ public:
   /// freed.
   virtual ~DataExtractor();
 
-  uint32_t getTargetByteSize() const { return m_target_byte_size; }
-
   /// Clears the object state.
   ///
   /// Clears the object contents back to a default invalid state, and release
   /// any references to shared data that this object may contain.
   void Clear();
+
+  /// Return a shared pointer to a copy of this object.
+  /// May be overridden by a subclass, so the object is copied correctly.
+  virtual lldb::DataExtractorSP Clone() const {
+    return std::make_shared<DataExtractor>(*this);
+  }
 
   /// Dumps the binary data as \a type objects to stream \a s (or to Log() if
   /// \a s is nullptr) starting \a offset bytes into the data and stopping
@@ -281,14 +276,14 @@ public:
   ///
   /// \return
   ///     The total number of bytes of data this object refers to.
-  uint64_t GetByteSize() const { return m_end - m_start; }
+  virtual uint64_t GetByteSize() const { return m_end - m_start; }
 
   /// Extract a C string from \a *offset_ptr.
   ///
   /// Returns a pointer to a C String from the data at the offset pointed to
-  /// by \a offset_ptr. A variable length NULL terminated C string will be
+  /// by \a offset_ptr. A variable length null-terminated C string will be
   /// extracted and the \a offset_ptr will be updated with the offset of the
-  /// byte that follows the NULL terminator byte.
+  /// byte that follows the null terminator.
   ///
   /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -308,7 +303,7 @@ public:
   ///
   /// Returns a pointer to a C String from the data at the offset pointed to
   /// by \a offset_ptr, with a field length of \a len.
-  /// A NULL terminated C string will be extracted and the \a offset_ptr
+  /// A null-terminated C string will be extracted and the \a offset_ptr
   /// will be updated with the offset of the byte that follows the fixed
   /// length field.
   ///
@@ -323,8 +318,8 @@ public:
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the field is out of bounds, or if
-  ///     the field does not contain a NULL terminator byte, nullptr will
-  ///     be returned.
+  ///     the field does not contain a null terminator, nullptr will be
+  ///     returned.
   const char *GetCStr(lldb::offset_t *offset_ptr, lldb::offset_t len) const;
 
   /// Extract \a length bytes from \a *offset_ptr.
@@ -343,7 +338,7 @@ public:
   ///
   /// \param[in] length
   ///     The optional length of a string to extract. If the value is
-  ///     zero, a NULL terminated C string will be extracted.
+  ///     zero, a null-terminated C string will be extracted.
   ///
   /// \return
   ///     A pointer to the bytes in this object's data if the offset
@@ -846,23 +841,37 @@ public:
   ///     A shared pointer to a new DataExtractor.
   virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset);
 
-  lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.  The length will be the largest contiguous region that
+  /// can be provided starting the beginning of this extractor; it is safe
+  /// to read any bytes within the returned subset Extractor.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetContiguousDataExtractorSP() {
+    return GetSubsetExtractorSP(0);
+  }
+
+  lldb::DataBufferSP GetSharedDataBuffer() const { return m_data_sp; }
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
-  /// Peek at a C string at \a offset.
+  /// Peek at a null-terminated C string at \a offset.
   ///
-  /// Peeks at a string in the contained data. No verification is done to make
-  /// sure the entire string lies within the bounds of this object's data,
-  /// only \a offset is verified to be a valid offset.
+  /// The terminator must lie within the bounds of this object's data, so the
+  /// returned string never extends past the end of the data. Its data() is a
+  /// valid C string pointer, and its size() is the length the caller would
+  /// otherwise have to compute with strlen.
   ///
   /// \param[in] offset
   ///     An offset into the data.
   ///
   /// \return
-  ///     A non-nullptr C string pointer if \a offset is a valid offset,
-  ///     nullptr otherwise.
-  const char *PeekCStr(lldb::offset_t offset) const;
+  ///     The string at \a offset, or std::nullopt if \a offset is not a valid
+  ///     offset or the string is not terminated within the data. An empty
+  ///     string and a missing one are distinct.
+  std::optional<llvm::StringRef> PeekCStr(lldb::offset_t offset) const;
 
   /// Peek at a bytes at \a offset.
   ///
@@ -910,8 +919,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
-                         lldb::ByteOrder byte_order);
+  virtual lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
+                                 lldb::ByteOrder byte_order);
 
   /// Adopt a subset of \a data.
   ///
@@ -935,8 +944,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const DataExtractor &data, lldb::offset_t offset,
-                         lldb::offset_t length);
+  virtual lldb::offset_t SetData(const DataExtractor &data,
+                                 lldb::offset_t offset, lldb::offset_t length);
 
   /// Adopt a subset of shared data in \a data_sp.
   ///
@@ -960,9 +969,9 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
-                         lldb::offset_t offset = 0,
-                         lldb::offset_t length = LLDB_INVALID_OFFSET);
+  virtual lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
+                                 lldb::offset_t offset = 0,
+                                 lldb::offset_t length = LLDB_INVALID_OFFSET);
 
   /// Set the byte_order value.
   ///
@@ -1016,7 +1025,7 @@ public:
 
   bool Append(void *bytes, lldb::offset_t length);
 
-  lldb::offset_t BytesLeft(lldb::offset_t offset) const {
+  virtual lldb::offset_t BytesLeft(lldb::offset_t offset) const {
     const lldb::offset_t size = GetByteSize();
     if (size > offset)
       return size - offset;
@@ -1029,15 +1038,8 @@ public:
     return {GetDataStart(), size_t(GetByteSize())};
   }
 
-  llvm::DWARFDataExtractor GetAsLLVMDWARF() const {
-    return llvm::DWARFDataExtractor(GetData(),
-                                    GetByteOrder() == lldb::eByteOrderLittle,
-                                    GetAddressByteSize());
-  }
-
   llvm::DataExtractor GetAsLLVM() const {
-    return {GetData(), GetByteOrder() == lldb::eByteOrderLittle,
-            uint8_t(GetAddressByteSize())};
+    return {GetData(), GetByteOrder() == lldb::eByteOrderLittle};
   }
 
 protected:
@@ -1065,8 +1067,6 @@ protected:
   uint32_t m_addr_size; ///< The address size to use when extracting addresses.
   /// The shared pointer to data that can be shared among multiple instances
   lldb::DataBufferSP m_data_sp;
-  /// Making it const would require implementation of move assignment operator.
-  uint32_t m_target_byte_size = 1;
 };
 
 } // namespace lldb_private

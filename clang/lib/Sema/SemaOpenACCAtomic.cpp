@@ -434,9 +434,8 @@ class AtomicOperandChecker {
       return IDACInfo{
           CheckOperandExpr(
               BinInf->RHS,
-              SemaRef.PDiag(diag::note_acc_atomic_operand_lvalue_scalar
-                            << /*right=*/1
-                            << diag::OACCAtomicOpKind::CompoundAssign)),
+              SemaRef.PDiag(diag::note_acc_atomic_operand_lvalue_scalar)
+                  << /*right=*/1 << diag::OACCAtomicOpKind::CompoundAssign),
           IDACInfo::AssignBinOp, AssignInf.LHS};
 
     BinInf->RHS->Profile(InnerRHS_ID, SemaRef.getASTContext(),

@@ -29,7 +29,7 @@ body:             |
     %1:gpr64sp = ADDXri %stack.0, 0, 0
     %2:gpr64common = nuw ADDXri killed %1, 64, 0
     %3:gpr32 = MOVi32imm 64
-    %4:gpr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32
+    %4:gpr64 = SUBREG_TO_REG killed %3, %subreg.sub_32
     %6:gpr64 = COPY %4
     %5:gpr64common = COPY killed %2
     dead %5:gpr64common, dead early-clobber %6:gpr64 = MOPSMemorySetPseudo %5, %6, %4, implicit-def dead $nzcv
@@ -57,7 +57,7 @@ body:             |
   bb.1:
 
   bb.2:
-    %3:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    %3:gpr64all = SUBREG_TO_REG %0, %subreg.sub_32
 
   bb.3:
     $nzcv = IMPLICIT_DEF
@@ -69,7 +69,7 @@ body:             |
     Bcc 1, %bb.6, implicit killed $nzcv
 
   bb.5:
-    %5:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    %5:gpr64all = SUBREG_TO_REG %0, %subreg.sub_32
     %4:gpr64 = COPY killed %5
     B %bb.7
 
@@ -103,7 +103,7 @@ body:             |
   bb.1:
 
   bb.2:
-    %3:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    %3:gpr64all = SUBREG_TO_REG %0, %subreg.sub_32
 
   bb.3:
     $nzcv = IMPLICIT_DEF

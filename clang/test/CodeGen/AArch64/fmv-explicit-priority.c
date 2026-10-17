@@ -141,6 +141,5 @@ __attribute__((target_clones("sme;priority=3", "bti;priority=2", "mops;priority=
 // CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "fmv-features"="P0,mops" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
 // CHECK: attributes #[[ATTR7]] = { disable_sanitizer_instrumentation }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

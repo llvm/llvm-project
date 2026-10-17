@@ -45,6 +45,8 @@ static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6,  8192, 8192, 256,
 static constexpr TosaLevel TOSA_LEVEL_NONE = {32, 2147483647, 2147483647, 2048,
                                               63, 256,        256,        64};
 
+TosaLevel getTosaLevelFromEnum(const Level level);
+
 TargetEnvAttr lookupTargetEnv(Operation *op);
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 
@@ -59,22 +61,39 @@ class TosaSpecificationVersion {
 public:
   TosaSpecificationVersion() = default;
 
-  TosaSpecificationVersion(uint32_t major, uint32_t minor)
-      : majorVersion(major), minorVersion(minor) {}
+  TosaSpecificationVersion(uint32_t major, uint32_t minor, bool draft = false)
+      : majorVersion(major), minorVersion(minor), draft(draft) {}
   TosaSpecificationVersion(SpecificationVersion version)
       : TosaSpecificationVersion(fromVersionEnum(version)) {}
 
   bool isBackwardsCompatibleWith(TosaSpecificationVersion baseVersion) const {
-    return this->majorVersion == baseVersion.majorVersion &&
-           this->minorVersion >= baseVersion.minorVersion;
+    if (this->majorVersion != baseVersion.majorVersion)
+      return false;
+    if (this->minorVersion < baseVersion.minorVersion)
+      return false;
+    // An unreleased version is not expected to be backwards compatible with
+    // a corresponding released version. However, an unreleased version is
+    // expected to be backwards compatible with all released versions prior to
+    // it.
+    //
+    // For example:
+    // - 1.1.draft is not expected to be backwards compatible with 1.1
+    // - 1.1.draft is expected to be backwards compatible with 1.0
+    // - 1.1.draft is not expected to be backwards compatible with 1.0.draft
+    if (this->draft && !baseVersion.draft &&
+        this->minorVersion == baseVersion.minorVersion)
+      return false;
+    return true;
   }
 
   uint32_t getMajor() const { return majorVersion; }
   uint32_t getMinor() const { return minorVersion; }
+  bool isDraft() const { return draft; }
 
 private:
   uint32_t majorVersion = 0;
   uint32_t minorVersion = 0;
+  bool draft = false;
 
   static TosaSpecificationVersion
   fromVersionEnum(SpecificationVersion version) {
@@ -82,7 +101,7 @@ private:
     case SpecificationVersion::V_1_0:
       return TosaSpecificationVersion(1, 0);
     case SpecificationVersion::V_1_1_DRAFT:
-      return TosaSpecificationVersion(1, 1);
+      return TosaSpecificationVersion(1, 1, true);
     }
     llvm_unreachable("Unknown TOSA version");
   }
@@ -114,14 +133,7 @@ public:
     return specificationVersion;
   }
 
-  TosaLevel getLevel() const {
-    if (level == Level::eightK)
-      return TOSA_LEVEL_EIGHTK;
-    else if (level == Level::none)
-      return TOSA_LEVEL_NONE;
-    else
-      llvm_unreachable("Unknown TOSA level");
-  };
+  TosaLevel getLevel() const { return level; };
 
   // Returns true if the given profile is allowed.
   bool allows(Profile prof) const { return enabledProfiles.count(prof) != 0; }
@@ -151,13 +163,14 @@ private:
   explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
                      const ArrayRef<Profile> &profiles,
                      const ArrayRef<Extension> &extensions)
-      : specificationVersion(specificationVersion), level(level) {
+      : specificationVersion(specificationVersion),
+        level(getTosaLevelFromEnum(level)) {
     enabledProfiles.insert_range(profiles);
     enabledExtensions.insert_range(extensions);
   }
 
   TosaSpecificationVersion specificationVersion;
-  Level level;
+  TosaLevel level;
   llvm::SmallSet<Profile, 3> enabledProfiles;
   llvm::SmallSet<Extension, 13> enabledExtensions;
 };

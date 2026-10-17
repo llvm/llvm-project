@@ -1,7 +1,5 @@
 ; RUN: opt < %s -S -passes=inline -inline-threshold=2 | FileCheck %s
 ; RUN: opt < %s -S -strip-debug -passes=inline -inline-threshold=2 | FileCheck %s
-; RUN: opt < %s -S -passes='cgscc(inline)' -inline-threshold=2 | FileCheck %s
-; RUN: opt < %s -S -strip-debug -passes='cgscc(inline)' -inline-threshold=2 | FileCheck %s
 ;
 ; The purpose of this test is to check that debug info doesn't influence
 ; inlining decisions.
@@ -55,4 +53,6 @@ attributes #0 = { nounwind readnone }
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 1, !"Debug Info Version", i32 3}
 !5 = !{!""}
-!6 = distinct !DISubprogram(unit: !0)
+!6 = distinct !DISubprogram(unit: !0, type: !8)
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)

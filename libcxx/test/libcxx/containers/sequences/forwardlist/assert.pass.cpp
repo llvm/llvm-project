@@ -10,10 +10,7 @@
 
 // Test hardening assertions for std::forward_list.
 
-// REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// UNSUPPORTED: c++03
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 #include <forward_list>
 

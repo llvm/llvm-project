@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -inline-threshold=0 -debug-only=inline-cost -print-instruction-comments -S -mtriple=x86_64-unknown-linux-gnu 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=0 -debug-only=inline-cost -print-instruction-comments -S -mtriple=x86_64-unknown-linux-gnu 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

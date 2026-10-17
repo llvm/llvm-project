@@ -49,9 +49,13 @@ enum class CudaVersion {
   CUDA_128,
   CUDA_129,
   CUDA_130,
-  FULLY_SUPPORTED = CUDA_128,
+  CUDA_131,
+  CUDA_132,
+  CUDA_133,
+  CUDA_134,
+  FULLY_SUPPORTED = CUDA_133,
   PARTIALLY_SUPPORTED =
-      CUDA_129, // Partially supported. Proceed with a warning.
+      CUDA_134, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
@@ -89,6 +93,9 @@ unsigned CudaArchToID(OffloadArch Arch);
 
 /// Check if the CUDA architecture is an accelerated variant (e.g. sm_90a).
 bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch);
+
+/// Check if the CUDA architecture is a family-specific variant (e.g. sm_100f).
+bool IsNVIDIAFamilySpecificOffloadArch(OffloadArch Arch);
 
 } // namespace clang
 

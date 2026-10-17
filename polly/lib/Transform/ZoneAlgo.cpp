@@ -436,7 +436,7 @@ isl::union_map ZoneAlgorithm::getWrittenValue(MemoryAccess *MA,
   if (auto *Memset = dyn_cast<MemSetInst>(AccInst)) {
     auto *WrittenConstant = dyn_cast<Constant>(Memset->getValue());
     Type *Ty = MA->getLatestScopArrayInfo()->getElementType();
-    if (WrittenConstant && WrittenConstant->isZeroValue()) {
+    if (WrittenConstant && WrittenConstant->isNullValue()) {
       Constant *Zero = Constant::getNullValue(Ty);
       return makeNormalizedValInst(Zero, Stmt, L);
     }

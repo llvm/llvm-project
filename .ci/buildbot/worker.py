@@ -148,7 +148,7 @@ def rmtree(path):
     Taken from official Python docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
     """
-    shutil.rmtree(path, onexc=_remove_readonly)
+    shutil.rmtree(path, onerror=_remove_readonly)
 
 
 def try_delete(path):

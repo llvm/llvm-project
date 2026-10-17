@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 false to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, i64 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, i64 [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    br i1 false, label %[[BB3]], label %[[BB2:.*]]
 ; CHECK:       [[BB3]]:

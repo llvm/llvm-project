@@ -74,13 +74,13 @@ define void @extract_mask(ptr %object, double %conv503, double %conv520) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[BBOX483]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[CONV503]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[CONV503]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[TMP4]], <double 0.000000e+00, double -2.000000e+10>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double -2.000000e+10>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc <2 x double> [[TMP7]] to <2 x float>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[MUL646:%.*]] = fmul float [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[CMP663:%.*]] = fcmp olt float [[MUL646]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP663]], label [[IF_THEN665:%.*]], label [[IF_END668:%.*]]
@@ -90,7 +90,7 @@ define void @extract_mask(ptr %object, double %conv503, double %conv520) {
 ; CHECK-NEXT:    [[CONV613:%.*]] = fptrunc double [[CONV503]] to float
 ; CHECK-NEXT:    store float [[CONV613]], ptr [[BBOX651]], align 8
 ; CHECK-NEXT:    [[BBOX_SROA_6_0_BBOX666_SROA_IDX:%.*]] = getelementptr float, ptr [[OBJECT]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[TMP6]], double [[CONV520]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> [[TMP6]], double [[CONV520]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptrunc <2 x double> [[TMP11]] to <2 x float>
 ; CHECK-NEXT:    store <2 x float> [[TMP12]], ptr [[BBOX_SROA_6_0_BBOX666_SROA_IDX]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX656]], align 8
@@ -142,9 +142,9 @@ define void @gather_2(ptr %mat1, float %0, float %1) {
 ; NON-POW2-LABEL: define void @gather_2(
 ; NON-POW2-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
 ; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i32 0
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i64 0
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <3 x i32> zeroinitializer
-; NON-POW2-NEXT:    [[TMP5:%.*]] = insertelement <3 x float> <float 0.000000e+00, float poison, float poison>, float [[TMP1]], i32 1
+; NON-POW2-NEXT:    [[TMP5:%.*]] = insertelement <3 x float> <float 0.000000e+00, float poison, float poison>, float [[TMP1]], i64 1
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = shufflevector <3 x float> [[TMP5]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 1>
 ; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP4]], <3 x float> [[TMP6]], <3 x float> zeroinitializer)
 ; NON-POW2-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
@@ -155,9 +155,9 @@ define void @gather_2(ptr %mat1, float %0, float %1) {
 ; POW2-ONLY-LABEL: define void @gather_2(
 ; POW2-ONLY-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
 ; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP1]], i32 1
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP1]], i64 1
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x float> zeroinitializer)
 ; POW2-ONLY-NEXT:    [[TMP6:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP1]], float 0.000000e+00)
 ; POW2-ONLY-NEXT:    [[TMP7:%.*]] = fmul float [[TMP6]], 0.000000e+00
@@ -192,7 +192,7 @@ define i32 @reorder_indices_1(float %0) {
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[NOR1]], align 4
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = fneg <3 x float> [[TMP2]]
-; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i32 0
+; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i64 0
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> zeroinitializer
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP3]], [[TMP5]]
 ; NON-POW2-NEXT:    [[TMP7:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> zeroinitializer, <3 x float> [[TMP6]])
@@ -210,12 +210,12 @@ define i32 @reorder_indices_1(float %0) {
 ; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX2_I265]], align 4
 ; POW2-ONLY-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[ARRAYIDX_I]], align 4
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[NOR1]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fneg float [[TMP3]]
 ; POW2-ONLY-NEXT:    [[NEG11_I:%.*]] = fmul float [[TMP4]], [[TMP0]]
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call float @llvm.fmuladd.f32(float [[TMP1]], float 0.000000e+00, float [[NEG11_I]])
 ; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fneg <2 x float> [[TMP7]]
-; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <2 x i32> zeroinitializer
 ; POW2-ONLY-NEXT:    [[TMP11:%.*]] = fmul <2 x float> [[TMP8]], [[TMP10]]
 ; POW2-ONLY-NEXT:    [[TMP12:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP2]], <2 x float> zeroinitializer, <2 x float> [[TMP11]])
@@ -333,8 +333,8 @@ define void @reuse_shuffle_indidces_1(ptr %col, float %0, float %1) {
 ; NON-POW2-LABEL: define void @reuse_shuffle_indidces_1(
 ; NON-POW2-SAME: ptr [[COL:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
 ; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP1]], i32 0
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> [[TMP2]], float [[TMP0]], i32 1
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP1]], i64 0
+; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> [[TMP2]], float [[TMP0]], i64 1
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 1>
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = fmul <3 x float> [[TMP4]], zeroinitializer
 ; NON-POW2-NEXT:    [[TMP6:%.*]] = fadd <3 x float> [[TMP5]], zeroinitializer
@@ -344,8 +344,8 @@ define void @reuse_shuffle_indidces_1(ptr %col, float %0, float %1) {
 ; POW2-ONLY-LABEL: define void @reuse_shuffle_indidces_1(
 ; POW2-ONLY-SAME: ptr [[COL:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
 ; POW2-ONLY-NEXT:  entry:
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP0]], i32 1
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i64 0
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP0]], i64 1
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], zeroinitializer
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP4]], zeroinitializer
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[COL]], align 4
@@ -405,9 +405,9 @@ define void @reuse_shuffle_indices_cost_crash_2(ptr %bezt, float %0) {
 ; NON-POW2-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[FNEG]], i32 0
+; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[FNEG]], i64 0
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> zeroinitializer
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> <float poison, float poison, float 0.000000e+00>, float [[TMP0]], i32 0
+; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> <float poison, float poison, float 0.000000e+00>, float [[TMP0]], i64 0
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 0, i32 0, i32 2>
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP2]], <3 x float> [[TMP4]], <3 x float> zeroinitializer)
 ; NON-POW2-NEXT:    store <3 x float> [[TMP5]], ptr [[BEZT]], align 4
@@ -417,9 +417,9 @@ define void @reuse_shuffle_indices_cost_crash_2(ptr %bezt, float %0) {
 ; POW2-ONLY-SAME: ptr [[BEZT:%.*]], float [[TMP0:%.*]]) {
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[FNEG:%.*]] = fmul float [[TMP0]], 0.000000e+00
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[FNEG]], i32 0
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[FNEG]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP2]], <2 x float> [[TMP4]], <2 x float> zeroinitializer)
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[BEZT]], align 4
@@ -445,10 +445,9 @@ define void @reuse_shuffle_indices_cost_crash_3(ptr %m, double %conv, double %co
 ; CHECK-LABEL: define void @reuse_shuffle_indices_cost_crash_3(
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB19:%.*]] = fsub double 0.000000e+00, [[CONV2]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[CONV]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[CONV2]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double [[CONV]], [[CONV]]
@@ -480,7 +479,7 @@ define void @reuse_shuffle_indices_cost_crash_4(double %conv7.i) {
 ; CHECK-NEXT:    [[ARRAYIDX_2_I:%.*]] = getelementptr [3 x float], ptr [[DATA_I111]], i64 0, i64 2
 ; CHECK-NEXT:    [[MUL17_I_US:%.*]] = fmul double [[CONV7_I]], 0.000000e+00
 ; CHECK-NEXT:    [[MUL_2_I_I_US:%.*]] = fmul double [[MUL17_I_US]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV7_I]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV7_I]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[ADD_2_I_I_US:%.*]] = fadd double [[MUL_2_I_I_US]], 0.000000e+00
@@ -520,10 +519,10 @@ define void @common_mask(ptr %m, double %conv, double %conv2) {
 ; CHECK-LABEL: define void @common_mask(
 ; CHECK-SAME: ptr [[M:%.*]], double [[CONV:%.*]], double [[CONV2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB19:%.*]] = fsub double [[CONV]], [[CONV]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV2]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB19]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP0]], double [[CONV2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> <double poison, double -0.000000e+00>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptrunc <2 x double> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[M]], align 4
 ; CHECK-NEXT:    [[ADD26:%.*]] = fsub double 0.000000e+00, [[CONV]]

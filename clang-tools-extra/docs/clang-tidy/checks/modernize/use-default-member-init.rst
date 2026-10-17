@@ -52,3 +52,10 @@ Options
 
    If this option is set to `true` (default is `true`), the check will not warn
    about members declared inside macros.
+
+.. option:: IgnoreNonVisibleReferences
+
+   If this option is set to `true` (default is `true`), the check will not warn
+   about member initializers that refer to declarations that would not be
+   visible from the default member initializer created by the fix-it. If set to
+   `false`, the check will warn about these cases without emitting fix-its.

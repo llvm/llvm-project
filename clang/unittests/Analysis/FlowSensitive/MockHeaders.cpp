@@ -219,6 +219,8 @@ inline constexpr bool is_convertible_v = is_convertible<From, To>::value;
 
 template <class...>
 using void_t = void;
+template <class...>
+using __void_t = void;
 
 template <class, class T, class... Args>
 struct is_constructible_ : false_type {};
@@ -605,10 +607,25 @@ struct __optional_destruct_base {
 template <class _Tp>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   constexpr bool has_value() const noexcept;
+
+  const _Tp& operator*() const&;
+  _Tp& operator*() &;
+  const _Tp&& operator*() const&&;
+  _Tp&& operator*() &&;
+
+  const _Tp* operator->() const;
+  _Tp* operator->();
+
+  const _Tp& value() const&;
+  _Tp& value() &;
+  const _Tp&& value() const&&;
+  _Tp&& value() &&;
 };
 
+// Note: the inheritance may or may not be private:
+// https://github.com/llvm/llvm-project/issues/187788
 template <typename _Tp>
-class optional : private __optional_storage_base<_Tp> {
+class optional : public __optional_storage_base<_Tp> {
   using __base = __optional_storage_base<_Tp>;
 
  public:
@@ -742,19 +759,6 @@ class optional : private __optional_storage_base<_Tp> {
                                      template __enable_assign<_Up>(),
                                  int> = 0>
   constexpr optional& operator=(optional<_Up>&& __v);
-
-  const _Tp& operator*() const&;
-  _Tp& operator*() &;
-  const _Tp&& operator*() const&&;
-  _Tp&& operator*() &&;
-
-  const _Tp* operator->() const;
-  _Tp* operator->();
-
-  const _Tp& value() const&;
-  _Tp& value() &;
-  const _Tp&& value() const&&;
-  _Tp&& value() &&;
 
   template <typename U>
   constexpr _Tp value_or(U&& v) const&;
@@ -1713,7 +1717,48 @@ bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 template <typename T>
 bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 
+using StatusBuilder = Status;
+namespace status_macro_internal {
+class ReturnIfErrorAdaptor {
+ public:
+  explicit ReturnIfErrorAdaptor(
+      const absl::Status& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  explicit ReturnIfErrorAdaptor(
+      absl::Status&& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  ~ReturnIfErrorAdaptor();
+
+  explicit operator bool() const;
+  StatusBuilder Consume();
+};
+
+ReturnIfErrorAdaptor MacroAdaptor(const absl::Status& s,
+                                         absl::SourceLocation loc);
+ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
+                                         absl::SourceLocation loc);
+}
+
 } // namespace absl
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_ \
+  switch (0)                                           \
+  case 0:                                              \
+  default:  // NOLINT
+
+#define ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return_keyword, \
+                                                          expr)           \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_                          \
+  if (auto status_macro_internal_adaptor =                                \
+          absl::status_macro_internal::MacroAdaptor(                      \
+              (expr), absl::SourceLocation::current())) {                 \
+  } else /* NOLINT */                                                     \
+    return_keyword status_macro_internal_adaptor.Consume()
+
+#define ABSL_RETURN_IF_ERROR(expr) \
+  ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
 
 #endif // STATUSOR_H_
 )cc";
@@ -2000,6 +2045,103 @@ char *Check_LTImpl(const T1 &v1, const T2 &v2, const char *names);
 #endif // ABSL_LOG_H
 )cc";
 
+static constexpr char StdCoroutineHeader[] = R"cc(
+#ifndef COROUTINE_H
+#define COROUTINE_H
+
+#include "std_type_traits.h"
+
+namespace std {
+
+template <class _Tp, class = void>
+struct __coroutine_traits_sfinae {};
+
+template <class _Tp>
+struct __coroutine_traits_sfinae< _Tp, __void_t<typename _Tp::promise_type> > {
+  using promise_type = typename _Tp::promise_type;
+};
+
+template <class _Ret, class... _Args>
+struct coroutine_traits : public __coroutine_traits_sfinae<_Ret> {};
+
+template <class _Promise = void>
+struct coroutine_handle;
+
+template <>
+struct coroutine_handle<void> {
+public:
+  constexpr coroutine_handle() noexcept;
+  constexpr coroutine_handle(nullptr_t) noexcept;
+  coroutine_handle& operator=(nullptr_t) noexcept;
+  constexpr void* address() const noexcept;
+
+  static constexpr coroutine_handle from_address(void* __addr) noexcept;
+
+  // [coroutine.handle.observers], observers
+  constexpr explicit operator bool() const noexcept;
+
+  bool done() const;
+
+  // [coroutine.handle.resumption], resumption
+  void operator()() const;
+
+  void resume() const;
+
+  void destroy() const;
+};
+
+template <class _Promise>
+struct coroutine_handle {
+public:
+  // [coroutine.handle.con], construct/reset
+  constexpr coroutine_handle() noexcept;
+
+  constexpr coroutine_handle(nullptr_t) noexcept;
+
+  static coroutine_handle from_promise(_Promise& __promise);
+  coroutine_handle& operator=(nullptr_t) noexcept;
+
+  // [coroutine.handle.export.import], export/import
+  constexpr void* address() const noexcept;
+
+  static constexpr coroutine_handle from_address(void* __addr) noexcept;
+
+  // [coroutine.handle.conv], conversion
+  constexpr operator coroutine_handle<>() const noexcept;
+
+  // [coroutine.handle.observers], observers
+  constexpr explicit operator bool() const noexcept;
+
+  bool done() const;
+
+  // [coroutine.handle.resumption], resumption
+  void operator()() const;
+
+  void resume() const;
+
+  void destroy() const;
+
+  // [coroutine.handle.promise], promise access
+  _Promise& promise() const;
+};
+
+struct suspend_never {
+  constexpr bool await_ready() const noexcept { return true; }
+  constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+  constexpr void await_resume() const noexcept {}
+};
+
+struct suspend_always {
+  constexpr bool await_ready() const noexcept { return false; }
+  constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+  constexpr void await_resume() const noexcept {}
+};
+
+} // namespace std
+
+#endif // COROUTINE_H
+)cc";
+
 constexpr const char TestingDefsHeader[] = R"cc(
 #pragma clang system_header
 
@@ -2067,6 +2209,16 @@ GTEST_IMPL_CMP_HELPER_(GE)
 GTEST_IMPL_CMP_HELPER_(GT)
 
 #undef GTEST_IMPL_CMP_HELPER_
+
+struct AssertionResultExpectation {
+  AssertionResult assertion_result;
+  bool expected_result;
+
+  explicit operator bool() const {
+    bool converted(assertion_result);
+    return converted == expected_result;
+  }
+};
 
 std::string GetBoolAssertionFailureMessage(
     const AssertionResult &assertion_result, const char *expression_text,
@@ -2192,17 +2344,17 @@ using testing::AssertionResult;
 
 #define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail)          \
   GTEST_AMBIGUOUS_ELSE_BLOCKER_                                                \
-  if (const ::testing::AssertionResult gtest_ar_ =                             \
-          ::testing::AssertionResult(expression))                              \
+  if (const ::testing::internal::AssertionResultExpectation gtest_are_ = {     \
+          ::testing::AssertionResult(expression), expected})                   \
     ;                                                                          \
   else                                                                         \
     fail(::testing::internal::GetBoolAssertionFailureMessage(                  \
-             gtest_ar_, text, #actual, #expected)                              \
+             gtest_are_.assertion_result, text, #actual, #expected)            \
              .c_str())
 #define GTEST_ASSERT_TRUE(condition)                                           \
   GTEST_TEST_BOOLEAN_(condition, #condition, false, true, GTEST_FATAL_FAILURE_)
 #define GTEST_ASSERT_FALSE(condition)                                          \
-  GTEST_TEST_BOOLEAN_(!(condition), #condition, true, false,                   \
+  GTEST_TEST_BOOLEAN_(condition, #condition, true, false,                      \
                       GTEST_FATAL_FAILURE_)
 #define ASSERT_TRUE(condition) GTEST_ASSERT_TRUE(condition)
 #define ASSERT_FALSE(condition) GTEST_ASSERT_FALSE(condition)
@@ -2325,6 +2477,24 @@ namespace std {
 }
 )cc";
 
+constexpr const char TaskHeader[] = R"cc(
+#include "std_coroutine.h"
+
+  template<typename T>
+  struct Task {
+    struct promise_type {
+        Task get_return_object();
+        std::suspend_never initial_suspend() noexcept;
+        std::suspend_always final_suspend() noexcept;
+        void return_value(T v);
+        void unhandled_exception();
+    };
+    bool await_ready() const noexcept;
+    T await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+  };
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -2333,6 +2503,7 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
   Headers.emplace_back("std_utility.h", StdUtilityHeader);
   Headers.emplace_back("std_optional.h", StdOptionalHeader);
+  Headers.emplace_back("std_coroutine.h", StdCoroutineHeader);
   Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
   Headers.emplace_back("absl_optional.h", AbslOptionalHeader);
   Headers.emplace_back("base_optional.h", BaseOptionalHeader);
@@ -2343,6 +2514,8 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("absl_log.h", AbslLogHeader);
   Headers.emplace_back("testing_defs.h", TestingDefsHeader);
   Headers.emplace_back("std_unique_ptr.h", StdUniquePtrHeader);
+  Headers.emplace_back("task.h", TaskHeader);
+
   return Headers;
 }
 

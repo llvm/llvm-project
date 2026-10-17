@@ -78,18 +78,16 @@ public:
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        lldb_private::ModuleSpecList &specs);
+  static lldb_private::ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP data_sp);
+  static bool MagicBytesMatch(lldb::DataExtractorSP extractor_sp);
 
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);
 
@@ -130,6 +128,8 @@ public:
   /// contains it.
   std::optional<lldb_private::FileSpec> GetDebugLink();
 
+  std::optional<lldb_private::FileSpec> GetPDBPath();
+
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
   lldb_private::Address GetEntryPointAddress() override;
@@ -153,6 +153,8 @@ public:
   lldb_private::DataExtractor ReadImageDataByRVA(uint32_t rva, size_t size);
 
   std::unique_ptr<lldb_private::CallFrameInfo> CreateCallFrameInfo() override;
+
+  lldb::addr_t GetTlsIndexAddress() const;
 
 protected:
   bool NeedsEndianSwap() const;

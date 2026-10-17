@@ -15,7 +15,7 @@ define internal spir_func void @main() #0 {
 
 ; CHECK:   %[[#entry:]] = OpLabel
 ; CHECK:      %[[#idx]] = OpVariable %[[#]] Function
-; CHECK:                  OpStore %[[#idx]] %[[#int_0]] Aligned 4
+; CHECK:                  OpStore %[[#idx]] %[[#int_0]]
 ; CHECK:                  OpBranch %[[#while_cond:]]
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
@@ -24,7 +24,7 @@ entry:
   br label %while.cond
 
 ; CHECK:   %[[#while_cond]] = OpLabel
-; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]] Aligned 4
+; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]]
 ; CHECK:         %[[#cmp:]] = OpINotEqual %[[#bool_ty]] %[[#tmp]] %[[#int_10]]
 ; CHECK:                      OpLoopMerge %[[#new_end:]] %[[#if_end:]] None
 ; CHECK:                      OpBranchConditional %[[#cmp]] %[[#while_body:]] %[[#new_end]]
@@ -35,9 +35,9 @@ while.cond:
   br i1 %cmp, label %while.body, label %while.end
 
 ; CHECK:      %[[#while_body]] = OpLabel
-; CHECK-NEXT:       %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]] Aligned 1
-; CHECK-NEXT:                    OpStore %[[#idx]] %[[#tmp]] Aligned 4
-; CHECK-NEXT:       %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]] Aligned 4
+; CHECK-NEXT:       %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]]
+; CHECK-NEXT:                    OpStore %[[#idx]] %[[#tmp]]
+; CHECK-NEXT:       %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#idx]]
 ; CHECK-NEXT:      %[[#cmp1:]] = OpIEqual %[[#bool_ty]] %[[#tmp]] %[[#int_0]]
 ; CHECK:                         OpBranchConditional %[[#cmp1]] %[[#if_then:]] %[[#if_end]]
 while.body:
@@ -51,8 +51,8 @@ while.body:
 ; CHECK:                OpBranch %[[#while_cond]]
 
 ; CHECK:      %[[#if_then]] = OpLabel
-; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]] Aligned 1
-; CHECK:                      OpStore %[[#idx]] %[[#tmp]] Aligned 4
+; CHECK:         %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#builtin]]
+; CHECK:                      OpStore %[[#idx]] %[[#tmp]]
 ; CHECK:                      OpBranch %[[#new_end]]
 if.then:
   %5 = call i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %1) ]

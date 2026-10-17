@@ -307,6 +307,8 @@ class VectorType;
       return V.getValueType().isScalarInteger();
     }
 
+    bool hasAndNot(SDValue Y) const override;
+
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
@@ -317,8 +319,8 @@ class VectorType;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize = false) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// Returns true if it is beneficial to convert a load of a constant
@@ -326,10 +328,10 @@ class VectorType;
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                            Type *Ty) const override;
 
-    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
-    /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                 unsigned Index) const override;
+    /// Return the cost of EXTRACT_SUBVECTOR for this result type with this
+    /// index.
+    ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const override;
 
     bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                               bool MathUsed) const override {
@@ -350,12 +352,14 @@ class VectorType;
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
 
     Instruction *makeDMB(IRBuilderBase &Builder, ARM_MB::MemBOpt Domain) const;
     Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
@@ -400,9 +404,12 @@ class VectorType;
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
 
-    bool canCreateUndefOrPoisonForTargetNode(
-        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+    bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             UndefPoisonKind Kind,
+                                             bool ConsiderFlags,
+                                             unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {
@@ -434,6 +441,8 @@ class VectorType;
     preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                        unsigned ExpansionFactor) const override;
 
+    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
+                                            bool isVarArg) const;
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
 
@@ -534,8 +543,6 @@ class VectorType;
                                  SDValue &Root, SelectionDAG &DAG,
                                  const SDLoc &dl) const;
 
-    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
-                                            bool isVarArg) const;
     CCAssignFn *CCAssignFnForNode(CallingConv::ID CC, bool Return,
                                   bool isVarArg) const;
     std::pair<SDValue, MachinePointerInfo>
@@ -567,8 +574,7 @@ class VectorType;
     SDValue LowerGlobalTLSAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
@@ -605,10 +611,14 @@ class VectorType;
     SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                    SelectionDAG &DAG) const;
+    SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
+                       const ARMSubtarget *Subtarget) const;
+    std::pair<SDValue, SDValue>
+    LowerAEABIUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerAEABIUnalignedStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
-
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 

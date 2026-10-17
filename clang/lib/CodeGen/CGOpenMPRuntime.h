@@ -1397,6 +1397,12 @@ public:
                               const Expr *IfCond,
                               OpenMPDirectiveKind CancelRegion);
 
+  /// Emit the '<kernel>_kernel_environment' global for a target region that
+  /// is compiled for a non-GPU (host-style) offload target, which does not
+  /// go through the GPU device-side runtime init/deinit sequence.
+  void emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                 CodeGenFunction &CGF);
+
   /// Emit outilined function for 'target' directive.
   /// \param D Directive to emit.
   /// \param ParentName Name of the function that encloses the target region.
@@ -1702,8 +1708,9 @@ public:
   /// Updates the dependency kind in the specified depobj object.
   /// \param DepobjLVal LValue for the main depobj object.
   /// \param NewDepKind New dependency kind.
-  void emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
-                        OpenMPDependClauseKind NewDepKind, SourceLocation Loc);
+  void emitUpdateDependObjectsClause(CodeGenFunction &CGF, LValue DepobjLVal,
+                                     OpenMPDependClauseKind NewDepKind,
+                                     SourceLocation Loc);
 
   /// Initializes user defined allocators specified in the uses_allocators
   /// clauses.

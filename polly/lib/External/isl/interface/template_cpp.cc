@@ -1647,7 +1647,7 @@ static int total_params(const Method &method)
 		auto callback_type = callback->getType();
 		auto proto = generator::extract_prototype(callback_type);
 
-		n += proto->getNumArgs() - 1;
+		n += proto->getNumParams() - 1;
 		n -= 1;
 	}
 
@@ -1729,10 +1729,10 @@ static void print_callback_args(std::ostream &os,
 	const std::function<void(const std::string &type,
 		const std::string &name)> &print_arg)
 {
-	auto n_arg = callback->getNumArgs() - 1;
+	auto n_arg = callback->getNumParams() - 1;
 
 	Method::print_arg_list(os, 0, n_arg, [&] (int i) {
-		auto type = callback->getArgType(i);
+		auto type = callback->getParamType(i);
 		auto name = "arg" + std::to_string(i);
 		auto cpptype = type_printer.param(shift + i, type);
 
@@ -2709,7 +2709,7 @@ const std::string callback_name(const Method &method)
 
 	auto type = method.callbacks.at(0)->getType();
 	auto callback = cpp_generator::extract_prototype(type);
-	auto arg_type = plain_type(callback->getArgType(0));
+	auto arg_type = plain_type(callback->getParamType(0));
 	return generator::drop_suffix(method.name, "_" + arg_type);
 }
 

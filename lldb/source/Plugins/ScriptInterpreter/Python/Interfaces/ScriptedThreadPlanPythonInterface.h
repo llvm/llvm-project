@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadPlanInterface.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
 
@@ -26,13 +23,17 @@ public:
   ScriptedThreadPlanPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(const llvm::StringRef class_name,
-                     lldb::ThreadPlanSP thread_plan_sp,
-                     const StructuredDataImpl &args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::ThreadPlanSP thread_plan_sp) override;
 
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
     return {};
+  }
+
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"explains_stop", "should_stop", "is_stale", "should_step",
+            "stop_description"};
   }
 
   llvm::Expected<bool> ExplainsStop(Event *event) override;
@@ -41,7 +42,7 @@ public:
 
   llvm::Expected<bool> IsStale() override;
 
-  lldb::StateType GetRunState() override;
+  llvm::Expected<lldb::StateType> GetRunState() override;
 
   llvm::Error GetStopDescription(lldb::StreamSP &stream) override;
 
@@ -57,5 +58,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H

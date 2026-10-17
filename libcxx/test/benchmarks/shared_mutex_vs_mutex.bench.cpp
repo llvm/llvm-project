@@ -23,19 +23,20 @@
 #include <thread>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 int global_value = 42;
 std::mutex m;
 std::shared_mutex sm;
 
-static void BM_shared_mutex(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_shared_mutex(benchmark::State& state) {
   for (auto _ : state) {
     std::shared_lock<std::shared_mutex> lock(sm);
     benchmark::DoNotOptimize(global_value);
   }
 }
 
-static void BM_mutex(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_mutex(benchmark::State& state) {
   for (auto _ : state) {
     std::lock_guard<std::mutex> lock(m);
     benchmark::DoNotOptimize(global_value);

@@ -912,7 +912,11 @@ public:
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
     // All initialization should be done on entry of the loop nest.
-    rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    if (isa<BlockArgument>(op.getTensor())) {
+      rewriter.setInsertionPointToStart(op->getBlock());
+    } else {
+      rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
+    }
 
     // Determine the size for access expansion (always the innermost stored
     // level size).
@@ -1150,6 +1154,13 @@ public:
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(op.getType());
     SparseTensorEncodingAttr encSrc =
         getSparseTensorEncoding(op.getSource().getType());
+
+    // If either the source or the destination don't have a valid sparse
+    // tensor encoding, we should fail to legalize. This should be handled
+    // by another set of passes before reaching here.
+    if (!encSrc || !encDst)
+      return failure();
+
     // The output tensor can not be a slice and those cases should have been
     // rejected by ConvertOp::verify() already.
     assert(!encDst.isSlice() && "Cannot convert to a sparse tensor slices.");
@@ -1353,7 +1364,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      assert(ShapedType::isStatic(stt.getDimShape()[lvl]));
+      assert(ShapedType::isStatic(stt.getLvlShape()[lvl]));
 
       // Sets up the level size.
       auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);

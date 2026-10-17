@@ -111,6 +111,10 @@ static types::ID foldType(types::ID Lang) {
     return types::TY_ObjC;
   case types::TY_CXX:
   case types::TY_CXXHeader:
+  case types::TY_CXXModule:
+  case types::TY_PP_CXXModule:
+  case types::TY_CXXStdModule:
+  case types::TY_PP_CXXStdModule:
     return types::TY_CXX;
   case types::TY_ObjCXX:
   case types::TY_ObjCXXHeader:
@@ -121,6 +125,14 @@ static types::ID foldType(types::ID Lang) {
   default:
     return types::TY_INVALID;
   }
+}
+
+// Whether two types use the same -std flag family.
+// C and ObjC share C standards; C++, ObjC++, CUDA, HIP share C++ standards.
+static bool typesSameStandardFamily(types::ID T1, types::ID T2) {
+  if (!types::isDerivedFromC(T1) || !types::isDerivedFromC(T2))
+    return false;
+  return types::isCXX(T1) == types::isCXX(T2);
 }
 
 // Return the language standard that's activated by the /std:clatest
@@ -136,9 +148,9 @@ static LangStandard::Kind latestLangStandardC() {
 // flag in clang-CL mode.
 static LangStandard::Kind latestLangStandardCXX() {
   // FIXME: Have a single source of truth for the mapping from
-  // c++latest --> c++26 that's shared by the driver code
+  // c++latest --> c++29 that's shared by the driver code
   // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
-  return LangStandard::lang_cxx26;
+  return LangStandard::lang_cxx29;
 }
 
 // A CompileCommand that can be applied to another file.
@@ -253,9 +265,11 @@ struct TransferableCommand {
       }
     }
 
-    // --std flag may only be transferred if the language is the same.
-    // We may consider "translating" these, e.g. c++11 -> c11.
-    if (Std != LangStandard::lang_unspecified && foldType(TargetType) == Type) {
+    // --std flag may only be transferred if the language families share
+    // compatible standards. C/ObjC share C standards; C++/ObjC++/CUDA/HIP
+    // share C++ standards.
+    if (Std != LangStandard::lang_unspecified && Type &&
+        typesSameStandardFamily(foldType(TargetType), *Type)) {
       const char *Spelling =
           LangStandard::getLangStandardForKind(Std).getName();
 
@@ -265,6 +279,8 @@ struct TransferableCommand {
       if (ClangCLMode) {
         if (Std == LangStandard::lang_cxx23)
           Spelling = "c++23preview";
+        else if (Std == LangStandard::lang_cxx26)
+          Spelling = "c++26preview";
         else if (Std == latestLangStandardC())
           Spelling = "clatest";
         else if (Std == latestLangStandardCXX())
@@ -336,6 +352,8 @@ private:
         // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
         if (StringRef(Arg.getValue()) == "c++23preview")
           return LangStandard::lang_cxx23;
+        if (StringRef(Arg.getValue()) == "c++26preview")
+          return LangStandard::lang_cxx26;
         if (StringRef(Arg.getValue()) == "clatest")
           return latestLangStandardC();
         if (StringRef(Arg.getValue()) == "c++latest")

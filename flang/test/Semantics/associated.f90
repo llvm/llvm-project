@@ -251,7 +251,6 @@ subroutine assoc()
     lvar = associated(intPointerArr, targetIntArr([2,1]))
     !ERROR: TARGET= argument 'targetintcoarray[1_8]' may not have a vector subscript or coindexing
     lvar = associated(intPointerVar1, targetIntCoarray[1])
-    !ERROR: 'neverdeclared' is not a procedure
     !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
     lvar = associated(badPointer)
   end subroutine test

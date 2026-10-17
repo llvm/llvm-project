@@ -19,13 +19,9 @@
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
 
 #include <array>
-
-#if __FreeBSD_version >= 1300139
-#define LLDB_HAS_FREEBSD_WATCHPOINT 1
-#endif
 
 namespace lldb_private {
 namespace process_freebsd {
@@ -64,10 +60,8 @@ private:
   // and sizes, so we do not have to worry about these (and we have
   // a unittest to assert that).
   std::array<uint8_t, sizeof(reg) + sizeof(fpreg)> m_reg_data;
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   dbreg m_dbreg;
   bool m_read_dbreg;
-#endif
 
   Status ReadRegisterSet(uint32_t set);
   Status WriteRegisterSet(uint32_t set);
@@ -75,7 +69,7 @@ private:
   llvm::Error ReadHardwareDebugInfo() override;
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
-  RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
+  RegisterInfo_arm64 &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

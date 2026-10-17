@@ -19,6 +19,7 @@ class TestCStepping(TestBase):
     @expectedFailureAll(oslist=["linux"], archs=no_match(["i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")
     @expectedFailureNetBSD
+    @skipIfWasm  # no expression evaluation
     def test_and_python_api(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
         self.build()

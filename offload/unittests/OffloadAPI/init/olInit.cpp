@@ -16,7 +16,7 @@
 struct olInitTest : ::testing::Test {};
 
 TEST_F(olInitTest, Success) {
-  ASSERT_SUCCESS(olInit());
+  ASSERT_SUCCESS(olInit(nullptr));
   ASSERT_SUCCESS(olShutDown());
 }
 
@@ -28,7 +28,42 @@ TEST_F(olInitTest, Uninitialized) {
 
 TEST_F(olInitTest, RepeatedInit) {
   for (size_t I = 0; I < 10; I++) {
-    ASSERT_SUCCESS(olInit());
+    ASSERT_SUCCESS(olInit(nullptr));
     ASSERT_SUCCESS(olShutDown());
   }
+}
+
+TEST_F(olInitTest, RepeatedInitWithDevices) {
+  size_t Expected = 0;
+  for (size_t I = 0; I < 3; I++) {
+    ASSERT_SUCCESS(olInit(nullptr));
+    size_t Count = 0;
+
+    // Force the platform to be initialized.
+    ASSERT_SUCCESS(olIterateDevices(
+        [](ol_device_handle_t, void *Data) {
+          ++*static_cast<size_t *>(Data);
+          return true;
+        },
+        &Count));
+    ASSERT_SUCCESS(olShutDown());
+    if (I == 0)
+      Expected = Count;
+    ASSERT_EQ(Count, Expected);
+  }
+}
+
+TEST_F(olInitTest, WithInitArgs) {
+  ol_init_args_t Args = OL_INIT_ARGS_INIT;
+  ol_platform_backend_t Backends[] = {OL_PLATFORM_BACKEND_HOST};
+  Args.NumPlatforms = 1;
+  Args.Platforms = Backends;
+  ASSERT_SUCCESS(olInit(&Args));
+  ASSERT_SUCCESS(olShutDown());
+}
+
+TEST_F(olInitTest, InvalidSize) {
+  ol_init_args_t Args = OL_INIT_ARGS_INIT;
+  Args.Size = 0;
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE, olInit(&Args));
 }

@@ -18,19 +18,19 @@ void fold_int_not() {
 
   n = ~0;
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.not
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i32 -1, ptr %{{.*}}
 
   n = ~1;
   // CIR: %[[MINUS_TWO:.*]] = cir.const #cir.int<-2> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.not
   // CIR: cir.store{{.*}} %[[MINUS_TWO]], %{{.*}}
   // LLVM_OGCG: store i32 -2, ptr %{{.*}}
 
   n = ~0xFFFFFFFE;
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.not
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i32 1, ptr %{{.*}}
 }
@@ -43,73 +43,73 @@ void fold_int_plus() {
 
   n = +1;
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i32 1, ptr %{{.*}}
 
   n = +2;
   // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[TWO]], %{{.*}}
   // LLVM_OGCG: store i32 2, ptr %{{.*}}
 
   n = +(-3);
   // CIR: %[[MINUS_THREE:.*]] = cir.const #cir.int<-3> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_THREE]], %{{.*}}
   // LLVM_OGCG: store i32 -3, ptr %{{.*}}
 
   n = +(0x1FFFFFFFF);
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i32 -1, ptr %{{.*}}
 
   s = +1;
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i16 1, ptr %{{.*}}
 
   s = +2;
   // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[TWO]], %{{.*}}
   // LLVM_OGCG: store i16 2, ptr %{{.*}}
 
   s = +(-3);
   // CIR: %[[MINUS_THREE:.*]] = cir.const #cir.int<-3> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_THREE]], %{{.*}}
   // LLVM_OGCG: store i16 -3, ptr %{{.*}}
 
   s = +(0x1FFFF);
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i16 -1, ptr %{{.*}}
 
   u = +1;
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i32 1, ptr %{{.*}}
 
   u = +2;
   // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[TWO]], %{{.*}}
   // LLVM_OGCG: store i32 2, ptr %{{.*}}
 
   u = +(-3);
   // CIR: %[[MINUS_THREE:.*]] = cir.const #cir.int<4294967293> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_THREE]], %{{.*}}
   // LLVM_OGCG: store i32 -3, ptr %{{.*}}
 
   u = +(0x1FFFFFFFF);
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<4294967295> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i32 -1, ptr %{{.*}}
 }
@@ -122,76 +122,76 @@ void fold_int_minus() {
 
   n = -1;
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i32 -1, ptr %{{.*}}
 
   n = -2;
   // CIR: %[[MINUS_TWO:.*]] = cir.const #cir.int<-2> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_TWO]], %{{.*}}
   // LLVM_OGCG: store i32 -2, ptr %{{.*}}
 
   n = -(-3);
   // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
   // LLVM_OGCG: store i32 3, ptr %{{.*}}
 
   n = -(0x1FFFFFFFF);
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i32 1, ptr %{{.*}}
 
   s = -1;
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i16 -1, ptr %{{.*}}
 
   s = -2;
   // CIR: %[[MINUS_TWO:.*]] = cir.const #cir.int<-2> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_TWO]], %{{.*}}
   // LLVM_OGCG: store i16 -2, ptr %{{.*}}
 
   s = -(-3);
   // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
   // LLVM_OGCG: store i16 3, ptr %{{.*}}
 
   s = -(0x1FFFF);
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s16i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i16 1, ptr %{{.*}}
 
   u = -1;
   // CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<4294967295> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_ONE]], %{{.*}}
   // LLVM_OGCG: store i32 -1, ptr %{{.*}}
 
   u = -2;
   // CIR: %[[MINUS_TWO:.*]] = cir.const #cir.int<4294967294> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_TWO]], %{{.*}}
   // LLVM_OGCG: store i32 -2, ptr %{{.*}}
 
   u = -(-3);
   // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.int<3> : !s32i
   // CIR: %[[THREE:.*]] = cir.const #cir.int<3> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
   // LLVM_OGCG: store i32 3, ptr %{{.*}}
 
   u = -(0x1FFFFFFFF);
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[ONE]], %{{.*}}
   // LLVM_OGCG: store i32 1, ptr %{{.*}}
 }
@@ -203,25 +203,25 @@ void fold_float_plus() {
 
   f = +2.0f;
   // CIR: %[[TWO:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.float
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[TWO]], %{{.*}}
   // LLVM_OGCG: store float 2.000000e+00, ptr %{{.*}}
 
   f = +(-3.0f);
   // CIR: %[[MINUS_THREE:.*]] = cir.const #cir.fp<-3.000000e+00> : !cir.float
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_THREE]], %{{.*}}
   // LLVM_OGCG: store float -3.000000e+00, ptr %{{.*}}
 
   d = +2.0;
   // CIR: %[[TWO:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.double
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[TWO]], %{{.*}}
   // LLVM_OGCG: store double 2.000000e+00, ptr %{{.*}}
 
   d = +(-3.0);
   // CIR: %[[MINUS_THREE:.*]] = cir.const #cir.fp<-3.000000e+00> : !cir.double
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.plus
   // CIR: cir.store{{.*}} %[[MINUS_THREE]], %{{.*}}
   // LLVM_OGCG: store double -3.000000e+00, ptr %{{.*}}
 }
@@ -233,27 +233,27 @@ void fold_float_minus() {
 
   f = -2.0f;
   // CIR: %[[MINUS_TWO:.*]] = cir.const #cir.fp<-2.000000e+00> : !cir.float
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_TWO]], %{{.*}}
   // LLVM_OGCG: store float -2.000000e+00, ptr %{{.*}}
 
   f = -(-3.0f);
   // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.float
   // CIR: %[[THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.float
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
   // LLVM_OGCG: store float 3.000000e+00, ptr %{{.*}}
 
   d = -2.0;
   // CIR: %[[MINUS_TWO:.*]] = cir.const #cir.fp<-2.000000e+00> : !cir.double
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[MINUS_TWO]], %{{.*}}
   // LLVM_OGCG: store double -2.000000e+00, ptr %{{.*}}
 
   d = -(-3.0);
   // CIR-DUP: %[[UNUSED_THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
   // CIR: %[[THREE:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.double
-  // CIR-NOT: cir.unary
+  // CIR-NOT: cir.minus
   // CIR: cir.store{{.*}} %[[THREE]], %{{.*}}
   // LLVM_OGCG: store double 3.000000e+00, ptr %{{.*}}
 }

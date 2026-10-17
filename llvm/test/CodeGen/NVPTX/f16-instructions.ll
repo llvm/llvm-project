@@ -138,8 +138,7 @@ define half @test_fsub(half %a, half %b) #0 {
 ; CHECK-F16-FTZ-NEXT:   mov.b16        [[Z:%rs[0-9]+]], 0x0000
 ; CHECK-F16-FTZ-NEXT:   sub.rn.ftz.f16     [[R:%rs[0-9]+]], [[Z]], [[A]];
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[A32:%r[0-9]+]], [[A]]
-; CHECK-NOF16-DAG:  mov.b32        [[Z:%r[0-9]+]], 0f00000000;
-; CHECK-NOF16-NEXT: sub.rn.f32     [[R32:%r[0-9]+]], [[Z]], [[A32]];
+; CHECK-NOF16-NEXT: sub.rn.f32     [[R32:%r[0-9]+]], 0f00000000, [[A32]];
 ; CHECK-NOF16-NEXT: cvt.rn.f16.f32 [[R:%rs[0-9]+]], [[R32]]
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
@@ -194,27 +193,30 @@ define half @test_fdiv(half %a, half %b) #0 {
 }
 
 ; CHECK-LABEL: test_frem(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_frem_param_0];
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_frem_param_1];
-; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FA:%r[0-9]+]], [[A]];
-; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FB:%r[0-9]+]], [[B]];
-; CHECK-NOFTZ-NEXT: div.rn.f32      [[D:%r[0-9]+]], [[FA]], [[FB]];
-; CHECK-NOFTZ-NEXT: cvt.rzi.f32.f32 [[DI:%r[0-9]+]], [[D]];
-; CHECK-NOFTZ-NEXT: neg.f32         [[DNEG:%r[0-9]+]], [[DI]];
-; CHECK-NOFTZ-NEXT: fma.rn.f32      [[RF:%r[0-9]+]], [[DNEG]], [[FB]], [[FA]];
-; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FA:%r[0-9]+]], [[A]];
-; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FB:%r[0-9]+]], [[B]];
-; CHECK-F16-FTZ-NEXT: div.rn.ftz.f32      [[D:%r[0-9]+]], [[FA]], [[FB]];
-; CHECK-F16-FTZ-NEXT: cvt.rzi.ftz.f32.f32 [[DI:%r[0-9]+]], [[D]];
-; CHECK-F16-FTZ-NEXT: neg.ftz.f32         [[DNEG:%r[0-9]+]], [[DI]];
-; CHECK-F16-FTZ-NEXT: fma.rn.ftz.f32      [[RF:%r[0-9]+]], [[DNEG]], [[FB]], [[FA]];
-; CHECK-NEXT: testp.infinite.f32 [[ISBINF:%p[0-9]+]], [[FB]];
-; CHECK-NEXT: selp.f32           [[RESULT:%r[0-9]+]], [[FA]], [[RF]], [[ISBINF]];
-; CHECK-NEXT: cvt.rn.f16.f32     [[R:%rs[0-9]+]], [[RESULT]];
-; CHECK-NEXT: st.param.b16       [func_retval0], [[R]];
+; CHECK-DAG: ld.param.b16 [[A:%rs[0-9]+]], [test_frem_param_0];
+; CHECK-DAG: ld.param.b16 [[B:%rs[0-9]+]], [test_frem_param_1];
+; CHECK-NOFTZ-DAG: cvt.f32.f16 [[FA:%r[0-9]+]], [[A]];
+; CHECK-NOFTZ-DAG: cvt.f32.f16 [[FB:%r[0-9]+]], [[B]];
+; CHECK-NOFTZ-NEXT: div.rn.f32 [[D:%r[0-9]+]], [[FA]], [[FB]];
+; CHECK-F16-FTZ-DAG: cvt.ftz.f32.f16 [[FA:%r[0-9]+]], [[A]];
+; CHECK-F16-FTZ-DAG: cvt.ftz.f32.f16 [[FB:%r[0-9]+]], [[B]];
+; CHECK-F16-FTZ-NEXT: div.rn.ftz.f32 [[D:%r[0-9]+]], [[FA]], [[FB]];
+; CHECK-NEXT: cvt.rn.f16.f32 [[DH:%rs[0-9]+]], [[D]];
+; CHECK-NEXT: cvt.rzi.f16.f16 [[DI:%rs[0-9]+]], [[DH]];
+; CHECK-F16-NOFTZ-NEXT: neg.f16 [[NEG:%rs[0-9]+]], [[DI]];
+; CHECK-F16-NOFTZ-NEXT: fma.rn.f16 [[R:%rs[0-9]+]], [[NEG]], [[B]], [[A]];
+; CHECK-F16-FTZ-NEXT: neg.ftz.f16 [[NEG:%rs[0-9]+]], [[DI]];
+; CHECK-F16-FTZ-NEXT: fma.rn.ftz.f16 [[R:%rs[0-9]+]], [[NEG]], [[B]], [[A]];
+; CHECK-NOF16-NEXT: xor.b16 [[NEG:%rs[0-9]+]], [[DI]], -32768;
+; CHECK-NOF16-DAG: cvt.f64.f16 [[DN:%rd[0-9]+]], [[NEG]];
+; CHECK-NOF16-DAG: cvt.f64.f16 [[DA:%rd[0-9]+]], [[A]];
+; CHECK-NOF16-DAG: cvt.f64.f16 [[DB:%rd[0-9]+]], [[B]];
+; CHECK-NOF16-NEXT: fma.rn.f64 [[DR:%rd[0-9]+]], [[DN]], [[DB]], [[DA]];
+; CHECK-NOF16-NEXT: cvt.rn.f16.f64 [[R:%rs[0-9]+]], [[DR]];
+; CHECK-NEXT: st.param.b16 [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_frem(half %a, half %b) #0 {
-  %r = frem half %a, %b
+  %r = frem afn half %a, %b
   ret half %r
 }
 
@@ -255,9 +257,9 @@ define void @test_halfp0a1(ptr noalias readonly %rrom, ptr %to) {
 declare half @test_callee(half %a, half %b) #0
 
 ; CHECK-LABEL: test_call(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_call_param_0];
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_call_param_1];
+; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_call_param_0];
 ; CHECK:      {
+; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_call_param_1];
 ; CHECK-DAG:  .param .align 2 .b8 param0[2];
 ; CHECK-DAG:  .param .align 2 .b8 param1[2];
 ; CHECK-DAG:  st.param.b16    [param0], [[A]];
@@ -274,9 +276,9 @@ define half @test_call(half %a, half %b) #0 {
 }
 
 ; CHECK-LABEL: test_call_flipped(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_call_flipped_param_0];
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_call_flipped_param_1];
+; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_call_flipped_param_0];
 ; CHECK:      {
+; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_call_flipped_param_1];
 ; CHECK-DAG:  .param .align 2 .b8 param0[2];
 ; CHECK-DAG:  .param .align 2 .b8 param1[2];
 ; CHECK-DAG:  st.param.b16    [param0], [[B]];
@@ -293,9 +295,9 @@ define half @test_call_flipped(half %a, half %b) #0 {
 }
 
 ; CHECK-LABEL: test_tailcall_flipped(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_tailcall_flipped_param_0];
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_tailcall_flipped_param_1];
+; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_tailcall_flipped_param_0];
 ; CHECK:      {
+; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_tailcall_flipped_param_1];
 ; CHECK-DAG:  .param .align 2 .b8 param0[2];
 ; CHECK-DAG:  .param .align 2 .b8 param1[2];
 ; CHECK-DAG:  st.param.b16    [param0], [[B]];
@@ -312,10 +314,11 @@ define half @test_tailcall_flipped(half %a, half %b) #0 {
 }
 
 ; CHECK-LABEL: test_select(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_select_param_0];
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_select_param_1];
 ; CHECK-DAG:  setp.ne.b16     [[PRED:%p[0-9]+]], %rs{{.*}}, 0;
-; CHECK-NEXT: selp.b16        [[R:%rs[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-DAG:  mov.b64         [[A:%rd[0-9]+]], test_select_param_0;
+; CHECK-DAG:  mov.b64         [[B:%rd[0-9]+]], test_select_param_1;
+; CHECK:      selp.b64        [[PTR:%rd[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], {{\[}}[[PTR]]{{\]}};
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
@@ -324,15 +327,14 @@ define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 }
 
 ; CHECK-LABEL: test_select_cc(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_select_cc_param_0];
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_select_cc_param_1];
-; CHECK-DAG:  ld.param.b16    [[C:%rs[0-9]+]], [test_select_cc_param_2];
-; CHECK-DAG:  ld.param.b16    [[D:%rs[0-9]+]], [test_select_cc_param_3];
-; CHECK-F16-NOFTZ:  setp.neu.f16    [[PRED:%p[0-9]+]], [[C]], [[D]]
-; CHECK-NOF16-DAG: cvt.f32.f16 [[DF:%r[0-9]+]], [[D]];
-; CHECK-NOF16-DAG: cvt.f32.f16 [[CF:%r[0-9]+]], [[C]];
-; CHECK-NOF16: setp.neu.f32    [[PRED:%p[0-9]+]], [[CF]], [[DF]]
-; CHECK:      selp.b16        [[R:%rs[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-DAG:  ld.param.b16    {{%rs[0-9]+}}, [test_select_cc_param_2];
+; CHECK-DAG:  ld.param.b16    {{%rs[0-9]+}}, [test_select_cc_param_3];
+; CHECK-F16-NOFTZ:  setp.neu.f16    [[PRED:%p[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK-NOF16: setp.neu.f32    [[PRED:%p[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK-DAG:  mov.b64         [[A:%rd[0-9]+]], test_select_cc_param_0;
+; CHECK-DAG:  mov.b64         [[B:%rd[0-9]+]], test_select_cc_param_1;
+; CHECK:      selp.b64        [[PTR:%rd[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], {{\[}}[[PTR]]{{\]}};
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_select_cc(half %a, half %b, half %c, half %d) #0 {
@@ -342,16 +344,15 @@ define half @test_select_cc(half %a, half %b, half %c, half %d) #0 {
 }
 
 ; CHECK-LABEL: test_select_cc_f32_f16(
-; CHECK-DAG:  ld.param.b32    [[A:%r[0-9]+]], [test_select_cc_f32_f16_param_0];
-; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_select_cc_f32_f16_param_1];
-; CHECK-DAG:  ld.param.b16    [[C:%rs[0-9]+]], [test_select_cc_f32_f16_param_2];
-; CHECK-DAG:  ld.param.b16    [[D:%rs[0-9]+]], [test_select_cc_f32_f16_param_3];
-; CHECK-F16-NOFTZ:  setp.neu.f16    [[PRED:%p[0-9]+]], [[C]], [[D]]
-; CHECK-F16-FTZ:  setp.neu.ftz.f16    [[PRED:%p[0-9]+]], [[C]], [[D]]
-; CHECK-NOF16-DAG: cvt.f32.f16 [[DF:%r[0-9]+]], [[D]];
-; CHECK-NOF16-DAG: cvt.f32.f16 [[CF:%r[0-9]+]], [[C]];
-; CHECK-NOF16: setp.neu.f32    [[PRED:%p[0-9]+]], [[CF]], [[DF]]
-; CHECK-NEXT: selp.f32        [[R:%r[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-DAG:  ld.param.b16    {{%rs[0-9]+}}, [test_select_cc_f32_f16_param_2];
+; CHECK-DAG:  ld.param.b16    {{%rs[0-9]+}}, [test_select_cc_f32_f16_param_3];
+; CHECK-F16-NOFTZ:  setp.neu.f16    [[PRED:%p[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK-F16-FTZ:  setp.neu.ftz.f16    [[PRED:%p[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK-NOF16: setp.neu.f32    [[PRED:%p[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK-DAG:  mov.b64         [[A:%rd[0-9]+]], test_select_cc_f32_f16_param_0;
+; CHECK-DAG:  mov.b64         [[B:%rd[0-9]+]], test_select_cc_f32_f16_param_1;
+; CHECK:      selp.b64        [[PTR:%rd[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-NEXT: ld.param.b32    [[R:%r[0-9]+]], {{\[}}[[PTR]]{{\]}};
 ; CHECK-NEXT: st.param.b32    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
@@ -361,13 +362,14 @@ define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
 }
 
 ; CHECK-LABEL: test_select_cc_f16_f32(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_select_cc_f16_f32_param_0];
-; CHECK-DAG:  ld.param.b32    [[C:%r[0-9]+]], [test_select_cc_f16_f32_param_2];
-; CHECK-DAG:  ld.param.b32    [[D:%r[0-9]+]], [test_select_cc_f16_f32_param_3];
-; CHECK-NOFTZ-DAG:  setp.neu.f32    [[PRED:%p[0-9]+]], [[C]], [[D]]
-; CHECK-F16-FTZ-DAG:  setp.neu.ftz.f32    [[PRED:%p[0-9]+]], [[C]], [[D]]
-; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_select_cc_f16_f32_param_1];
-; CHECK-NEXT: selp.b16        [[R:%rs[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-DAG:  ld.param.b32    {{%r[0-9]+}}, [test_select_cc_f16_f32_param_2];
+; CHECK-DAG:  ld.param.b32    {{%r[0-9]+}}, [test_select_cc_f16_f32_param_3];
+; CHECK-NOFTZ:  setp.neu.f32    [[PRED:%p[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK-F16-FTZ:  setp.neu.ftz.f32    [[PRED:%p[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK-DAG:  mov.b64         [[A:%rd[0-9]+]], test_select_cc_f16_f32_param_0;
+; CHECK-DAG:  mov.b64         [[B:%rd[0-9]+]], test_select_cc_f16_f32_param_1;
+; CHECK:      selp.b64        [[PTR:%rd[0-9]+]], [[A]], [[B]], [[PRED]];
+; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], {{\[}}[[PTR]]{{\]}};
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_select_cc_f16_f32(half %a, half %b, float %c, float %d) #0 {
@@ -814,8 +816,7 @@ define double @test_fpext_double(half %a) #0 {
 
 
 ; CHECK-LABEL: test_bitcast_halftoi16(
-; CHECK:      ld.param.b16    [[AH:%rs[0-9]+]], [test_bitcast_halftoi16_param_0];
-; CHECK:      cvt.u32.u16     [[R:%r[0-9]+]], [[AH]]
+; CHECK:      ld.param.b16    [[R:%r[0-9]+]], [test_bitcast_halftoi16_param_0];
 ; CHECK:      st.param.b32    [func_retval0], [[R]];
 ; CHECK:      ret;
 define i16 @test_bitcast_halftoi16(half %a) #0 {
@@ -1176,8 +1177,7 @@ define half @test_neg_f16(half noundef %arg) #0 {
 ; CHECK-LABEL: test_neg_f16x2(
 ; CHECK-F16-NOFTZ: neg.f16x2
 ; CHECK-F16-FTZ: neg.ftz.f16x2
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
+; CHECK-NOF16: xor.b32 %r{{.*}}, %r{{.*}}, -2147450880
 define <2 x half> @test_neg_f16x2(<2 x half> noundef %arg) #0 {
   %res = fneg <2 x half> %arg
   ret <2 x half> %res

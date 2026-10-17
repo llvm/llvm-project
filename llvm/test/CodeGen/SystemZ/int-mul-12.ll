@@ -7,21 +7,20 @@
 define i128 @f1(i128 %a, i128 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
-; CHECK-NEXT:    .cfi_offset %r12, -64
-; CHECK-NEXT:    .cfi_offset %r13, -56
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    lg %r13, 8(%r3)
-; CHECK-NEXT:    lg %r0, 8(%r4)
-; CHECK-NEXT:    lgr %r1, %r13
-; CHECK-NEXT:    mlgr %r12, %r0
-; CHECK-NEXT:    msg %r1, 0(%r4)
-; CHECK-NEXT:    msg %r0, 0(%r3)
-; CHECK-NEXT:    agr %r1, %r12
-; CHECK-NEXT:    agr %r0, %r1
-; CHECK-NEXT:    stg %r13, 8(%r2)
-; CHECK-NEXT:    stg %r0, 0(%r2)
-; CHECK-NEXT:    lmg %r12, %r15, 96(%r15)
+; CHECK-NEXT:    lg %r1, 8(%r3)
+; CHECK-NEXT:    lg %r5, 8(%r4)
+; CHECK-NEXT:    lgr %r14, %r1
+; CHECK-NEXT:    mlgr %r0, %r5
+; CHECK-NEXT:    msg %r14, 0(%r4)
+; CHECK-NEXT:    msg %r5, 0(%r3)
+; CHECK-NEXT:    agr %r14, %r0
+; CHECK-NEXT:    agr %r5, %r14
+; CHECK-NEXT:    stg %r1, 8(%r2)
+; CHECK-NEXT:    stg %r5, 0(%r2)
+; CHECK-NEXT:    lmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    br %r14
   %res = mul i128 %a, %b
   ret i128 %res

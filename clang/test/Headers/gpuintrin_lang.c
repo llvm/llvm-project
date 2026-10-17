@@ -8,18 +8,18 @@
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -fcuda-is-device -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -fcuda-is-device -triple amdgpu -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=HIP
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -cl-std=CL3.0 -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -cl-std=CL3.0 -triple amdgpu -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENCL
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers/ -cl-std=CL3.0 \
-// RUN:   -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-is-target-device -triple amdgcn -emit-llvm %s -o - \
+// RUN:   -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa \
+// RUN:   -fopenmp-is-target-device -triple amdgpu -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=OPENMP
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include -DSYCL \
@@ -29,7 +29,7 @@
 //
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -std=c89 -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
+// RUN:   -triple amdgpu-amd-amdhsa -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=C89
 
 #define _DEFAULT_FN_ATTRS __attribute__((always_inline))
@@ -49,10 +49,6 @@ extern "C" [[clang::sycl_external]] int foo() { return __gpu_thread_id_x(); }
 // HIP-LABEL: define dso_local i32 @foo(
 // HIP-SAME: ) #[[ATTR0:[0-9]+]] {
 // HIP-NEXT:  [[ENTRY:.*:]]
-// HIP-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4, addrspace(5)
-// HIP-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// HIP-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// HIP-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // HIP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // HIP-NEXT:    ret i32 [[TMP0]]
 //
@@ -71,10 +67,6 @@ extern "C" [[clang::sycl_external]] int foo() { return __gpu_thread_id_x(); }
 // SYCL-LABEL: define spir_func i32 @foo(
 // SYCL-SAME: ) #[[ATTR0:[0-9]+]] {
 // SYCL-NEXT:  [[ENTRY:.*:]]
-// SYCL-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4
-// SYCL-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// SYCL-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
-// SYCL-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr [[RETVAL_I]] to ptr addrspace(4)
 // SYCL-NEXT:    [[SPV_THREAD_ID_IN_GROUP_I:%.*]] = call i64 @llvm.spv.thread.id.in.group.i64(i32 0)
 // SYCL-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPV_THREAD_ID_IN_GROUP_I]] to i32
 // SYCL-NEXT:    ret i32 [[CONV_I]]
@@ -82,10 +74,6 @@ extern "C" [[clang::sycl_external]] int foo() { return __gpu_thread_id_x(); }
 // C89-LABEL: define dso_local i32 @foo(
 // C89-SAME: ) #[[ATTR0:[0-9]+]] {
 // C89-NEXT:  [[ENTRY:.*:]]
-// C89-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4, addrspace(5)
-// C89-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// C89-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// C89-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // C89-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // C89-NEXT:    ret i32 [[TMP0]]
 //

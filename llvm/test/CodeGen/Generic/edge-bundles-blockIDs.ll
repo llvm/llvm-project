@@ -1,6 +1,6 @@
 ; Make sure EdgeBoundles handles the case when the function size is less then 
 ; the number of block IDs.
-; RUN: llc -regalloc=fast -optimize-regalloc=0 < %s
+; RUN: llc -regalloc=fast < %s
 
 define void @foo() nounwind {
 entry:

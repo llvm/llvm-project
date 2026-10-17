@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -stop-after=finalize-isel < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -stop-after=finalize-isel < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgpu -mcpu=gfx1100 -stop-after=finalize-isel < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgpu -mcpu=gfx1100 -stop-after=finalize-isel < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: name: init_wwm
 ; GCN: hasInitWholeWave: true

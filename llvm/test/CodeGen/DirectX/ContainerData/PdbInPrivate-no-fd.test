@@ -1,0 +1,17 @@
+## Check that --dx-pdb-in-private generates a PDB in PRIV without --dx-pdb-path.
+
+# RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-in-private
+# RUN: obj2yaml %t.dxbc | FileCheck %s
+# RUN: llvm-objcopy --dump-section=PRIV=%t.priv %t.dxbc
+# RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.priv | FileCheck %s --check-prefix=PDB
+
+# CHECK:       - Name:            PRIV
+# CHECK-NEXT:    Size:
+
+# PDB:           PartCount:       5
+# PDB:         Parts:
+# PDB-DAG:       - Name:            ILDB
+# PDB-DAG:       - Name:            HASH
+# PDB-DAG:       - Name:            ILDN
+# PDB-DAG:       - Name:            VERS
+# PDB-DAG:       - Name:            SRCI

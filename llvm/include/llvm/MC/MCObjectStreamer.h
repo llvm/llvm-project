@@ -66,6 +66,10 @@ class LLVM_ABI MCObjectStreamer : public MCStreamer {
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
 
 protected:
+  // Within .bundle_lock/.bundle_unlock. A section cannot be switched while a
+  // group is open, so no per-section state is needed.
+  bool BundleLocked = false;
+
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
                    std::unique_ptr<MCCodeEmitter> Emitter);
@@ -79,6 +83,7 @@ public:
   bool isIntegratedAssemblerRequired() const override { return true; }
 
   void emitFrames();
+  void generateCompactUnwindEncodings();
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug, bool SFrame) override;
 
@@ -87,6 +92,9 @@ public:
 
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
+
+  bool isBundleLocked() const { return BundleLocked; }
+
   /// \name MCStreamer Interface
   /// @{
 
@@ -136,9 +144,10 @@ public:
   void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
-  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,

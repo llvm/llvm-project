@@ -55,8 +55,14 @@ MinidumpParser::GetRawStream(StreamType stream_type) {
 }
 
 UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
-  auto cv_record =
-      GetData().slice(module->CvRecord.RVA, module->CvRecord.DataSize);
+  llvm::Expected<llvm::ArrayRef<uint8_t>> expected_cv_record =
+      GetMinidumpFile().getRawData(module->CvRecord);
+  if (!expected_cv_record) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Modules), expected_cv_record.takeError(),
+                   "Failed to read the CodeView record: {0}");
+    return UUID();
+  }
+  llvm::ArrayRef<uint8_t> cv_record = *expected_cv_record;
 
   // Read the CV record signature
   const llvm::support::ulittle32_t *signature = nullptr;
@@ -96,9 +102,15 @@ llvm::ArrayRef<minidump::Thread> MinidumpParser::GetThreads() {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContext(const LocationDescriptor &location) {
-  if (location.RVA + location.DataSize > GetData().size())
+  // Use getRawData to widen the two 32-bit fields and check for overflow.
+  llvm::Expected<llvm::ArrayRef<uint8_t>> expected_context =
+      GetMinidumpFile().getRawData(location);
+  if (!expected_context) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), expected_context.takeError(),
+                   "Failed to read the thread context: {0}");
     return {};
-  return GetData().slice(location.RVA, location.DataSize);
+  }
+  return *expected_context;
 }
 
 llvm::ArrayRef<uint8_t>
@@ -353,7 +365,7 @@ static bool CheckForLinuxExecutable(ConstString path,
   lldb::addr_t addr = base_of_image;
   MemoryRegionInfo region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
   while (region.GetName() == path) {
-    if (region.GetExecutable() == MemoryRegionInfo::eYes)
+    if (region.GetExecutable() == eLazyBoolYes)
       return true;
     addr += region.GetRange().GetByteSize();
     region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
@@ -535,8 +547,8 @@ CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
                    "Failed to read memory info list: {0}");
     return false;
   }
-  constexpr auto yes = MemoryRegionInfo::eYes;
-  constexpr auto no = MemoryRegionInfo::eNo;
+  constexpr auto yes = eLazyBoolYes;
+  constexpr auto no = eLazyBoolNo;
   for (const MemoryInfo &entry : *ExpectedInfo) {
     MemoryRegionInfo region;
     region.GetRange().SetRangeBase(entry.BaseAddress);
@@ -579,8 +591,8 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
       MemoryRegionInfo region;
       region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
       region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
-      region.SetReadable(MemoryRegionInfo::eYes);
-      region.SetMapped(MemoryRegionInfo::eYes);
+      region.SetReadable(eLazyBoolYes);
+      region.SetMapped(eLazyBoolYes);
       regions.push_back(region);
     }
   }
@@ -593,8 +605,8 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
       MemoryRegionInfo region;
       region.GetRange().SetRangeBase(memory_desc.first.StartOfMemoryRange);
       region.GetRange().SetByteSize(memory_desc.first.DataSize);
-      region.SetReadable(MemoryRegionInfo::eYes);
-      region.SetMapped(MemoryRegionInfo::eYes);
+      region.SetReadable(eLazyBoolYes);
+      region.SetMapped(eLazyBoolYes);
       regions.push_back(region);
     }
 
@@ -705,9 +717,9 @@ MinidumpParser::GetMemoryRegionInfo(const MemoryRegionInfos &regions,
   else
     region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
 
-  region.SetReadable(MemoryRegionInfo::eNo);
-  region.SetWritable(MemoryRegionInfo::eNo);
-  region.SetExecutable(MemoryRegionInfo::eNo);
-  region.SetMapped(MemoryRegionInfo::eNo);
+  region.SetReadable(eLazyBoolNo);
+  region.SetWritable(eLazyBoolNo);
+  region.SetExecutable(eLazyBoolNo);
+  region.SetMapped(eLazyBoolNo);
   return region;
 }

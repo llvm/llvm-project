@@ -46,7 +46,7 @@ public:
   };
 
 private:
-  Triple TargetTriple;
+  const Triple &TargetTriple;
 
 protected:
   bool HasMulI24 = true;
@@ -54,14 +54,18 @@ protected:
   bool HasSMulHi = false;
   bool HasFminFmaxLegacy = true;
 
-  unsigned EUsPerCU = 4;
-  unsigned MaxWavesPerEU = 10;
+  unsigned NumWorkGroupSIMDs = 4;
+  // Set from TableGen subtarget features; R600Subtarget sets it directly.
+  unsigned MaxWavesPerEU = 0;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
+  unsigned LDSAllocationGranularity = 0;
+  unsigned LDSEncodingGranularity = 0;
   char WavefrontSizeLog2 = 0;
+  unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
+  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -78,6 +82,10 @@ public:
   /// \returns Subtarget's default values if explicitly requested values cannot
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
+
+  /// \returns true if the maximum flat work-group size for \p F is at most the
+  /// wavefront size, so a work-group may fit in a single wavefront.
+  bool isSingleWavefrontWorkgroup(const Function &F) const;
 
   /// \returns The required size of workgroups that will be used to execute \p F
   /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
@@ -97,7 +105,7 @@ public:
   /// This information is currently only gathered from the !reqd_work_group_size
   /// metadata on \p F, but this may be improved in the future.
   bool hasWavefrontsEvenlySplittingXDim(const Function &F,
-                                        bool REquiresUniformYZ = false) const;
+                                        bool RequiresUniformYZ = false) const;
 
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per
@@ -109,13 +117,6 @@ public:
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
   std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
-
-  /// Overload which uses the specified values for the flat work group sizes,
-  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
-  /// correspond to the function's value for getFlatWorkGroupSizes.
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Overload which uses the specified values for the flat workgroup sizes and
   /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes
@@ -242,10 +243,9 @@ public:
     return AddressableLocalMemorySize;
   }
 
-  /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
-  /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
-  /// CU mode into account.
-  unsigned getEUsPerCU() const { return EUsPerCU; }
+  /// \returns Number of SIMDs a work-group's waves run on: all of the block's
+  /// SIMDs in full-SIMD mode, half of them otherwise.
+  unsigned getNumWorkGroupSIMDs() const { return NumWorkGroupSIMDs; }
 
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);
@@ -295,9 +295,6 @@ public:
   /// Return the maximum workitem ID value in the function, for the given (0, 1,
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
-
-  /// Return the number of work groups for the function.
-  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
 
   /// Return true if only a single workitem can be active in a wave.
   bool isSingleLaneExecution(const Function &Kernel) const;

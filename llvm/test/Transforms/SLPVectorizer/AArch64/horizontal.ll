@@ -15,7 +15,7 @@ target triple = "aarch64--linux"
 ; YAML-NEXT: Function:        test_select
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-19'
+; YAML-NEXT:   - Cost:            '-38'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '10'
 
@@ -28,8 +28,8 @@ define i32 @test_select(ptr noalias nocapture readonly %blk1, ptr noalias nocapt
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[LX:%.*]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[S_026:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[J_025:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x i32> [ zeroinitializer, [[FOR_BODY_LR_PH]] ], [ [[SLPRDX_ACC1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[J_25:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P2_024:%.*]] = phi ptr [ [[BLK2:%.*]], [[FOR_BODY_LR_PH]] ], [ [[ADD_PTR29:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[P1_023:%.*]] = phi ptr [ [[BLK1:%.*]], [[FOR_BODY_LR_PH]] ], [ [[ADD_PTR:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P1_023]], align 4
@@ -38,18 +38,21 @@ define i32 @test_select(ptr noalias nocapture readonly %blk1, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP6]], [[S_026]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = add <4 x i32> [[SLPRDX_ACC]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[P1_023]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[ADD_PTR29]] = getelementptr inbounds i32, ptr [[P2_024]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_025]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[H]]
+; CHECK-NEXT:    [[INC1]] = add nuw nsw i32 [[J_25]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC1]], [[H]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[S_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX]], [[FOR_END_LOOPEXIT]] ]
-; CHECK-NEXT:    ret i32 [[S_0_LCSSA]]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x i32> [ poison, [[ENTRY:%.*]] ], [ [[SLPRDX_ACC1]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ false, [[ENTRY]] ], [ true, [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[S_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ poison, [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[SLPRDX_SEL:%.*]] = select i1 [[SLPRDX_FROMLOOP]], i32 [[TMP6]], i32 [[S_0_LCSSA]]
+; CHECK-NEXT:    ret i32 [[SLPRDX_SEL]]
 ;
 entry:
   %cmp.22 = icmp sgt i32 %h, 0
@@ -135,7 +138,7 @@ define i32 @reduction_with_br(ptr noalias nocapture readonly %blk1, ptr noalias 
 ; YAML-NEXT: Function:        reduction_with_br
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-10'
+; YAML-NEXT:   - Cost:            '-20'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '3'
 ; CHECK-LABEL: @reduction_with_br(
@@ -228,7 +231,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; YAML-NEXT: Function:        test_unrolled_select
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-44'
+; YAML-NEXT:   - Cost:            '-88'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '12'
 
@@ -250,8 +253,7 @@ define i32 @test_unrolled_select(ptr noalias nocapture readonly %blk1, ptr noali
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P2_045]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i16> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i16> [[TMP4]] to <8 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <8 x i32> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <8 x i16> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <8 x i16> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <8 x i1> [[TMP6]], <8 x i16> [[TMP7]], <8 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i16> [[TMP8]] to <8 x i32>

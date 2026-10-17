@@ -56,6 +56,7 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
 #include "clang/Basic/AttrList.inc"
     {NKI_None, "ObjCProtocolLoc"},
     {NKI_None, "ConceptReference"},
+    {NKI_None, "OffsetOfNode"},
 };
 
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other) const {
@@ -227,7 +228,7 @@ void DynTypedNode::dump(llvm::raw_ostream &OS,
   else if (const Type *T = get<Type>())
     T->dump(OS, Context);
   else if (const ConceptReference *C = get<ConceptReference>())
-    C->dump(OS);
+    C->dump(OS, Context);
   else if (const TypeLoc *TL = get<TypeLoc>())
     TL->dump(OS, Context);
   else
@@ -279,5 +280,7 @@ SourceRange DynTypedNode::getSourceRange(bool IncludeQualifier) const {
     return P->getSourceRange();
   if (const ConceptReference *C = get<ConceptReference>())
     return C->getSourceRange();
+  if (const OffsetOfNode *O = get<OffsetOfNode>())
+    return O->getSourceRange();
   return SourceRange();
 }

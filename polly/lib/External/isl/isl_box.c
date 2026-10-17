@@ -207,27 +207,65 @@ isl_bool isl_fixed_box_is_valid(__isl_keep isl_fixed_box *box)
 
 /* Return the offsets of the box "box".
  */
-__isl_give isl_multi_aff *isl_fixed_box_get_offset(
+static __isl_keep isl_multi_aff *isl_fixed_box_peek_offset(
 	__isl_keep isl_fixed_box *box)
 {
 	if (!box)
 		return NULL;
-	return isl_multi_aff_copy(box->offset);
+	return box->offset;
+}
+
+/* Return a copy of the offsets of the box "box".
+ */
+__isl_give isl_multi_aff *isl_fixed_box_get_offset(
+	__isl_keep isl_fixed_box *box)
+{
+	return isl_multi_aff_copy(isl_fixed_box_peek_offset(box));
 }
 
 /* Return the sizes of the box "box".
  */
-__isl_give isl_multi_val *isl_fixed_box_get_size(__isl_keep isl_fixed_box *box)
+static __isl_keep isl_multi_val *isl_fixed_box_peek_size(
+	__isl_keep isl_fixed_box *box)
 {
 	if (!box)
 		return NULL;
-	return isl_multi_val_copy(box->size);
+	return box->size;
+}
+
+/* Return a copy of the sizes of the box "box".
+ */
+__isl_give isl_multi_val *isl_fixed_box_get_size(__isl_keep isl_fixed_box *box)
+{
+	return isl_multi_val_copy(isl_fixed_box_peek_size(box));
+}
+
+/* Is "box1" obviously equal to "box2"?
+ *
+ * That is, does it have the same size and obviously the same offset?
+ */
+isl_bool isl_fixed_box_plain_is_equal(__isl_keep isl_fixed_box *box1,
+	__isl_keep isl_fixed_box *box2)
+{
+	isl_multi_aff *offset1, *offset2;
+	isl_multi_val *size1, *size2;
+	isl_bool equal;
+
+	size1 = isl_fixed_box_peek_size(box1);
+	size2 = isl_fixed_box_peek_size(box2);
+	equal = isl_multi_val_is_equal(size1, size2);
+	if (equal < 0 || !equal)
+		return equal;
+
+	offset1 = isl_fixed_box_peek_offset(box1);
+	offset2 = isl_fixed_box_peek_offset(box2);
+	return isl_multi_aff_plain_is_equal(offset1, offset2);
 }
 
 /* Data used in set_dim_extent and compute_size_in_direction.
  *
  * "bset" is a wrapped copy of the basic map that has the selected
- * output dimension as range.
+ * output dimension as range, without any contraction.
  * "pos" is the position of the variable representing the output dimension,
  * i.e., the variable for which the size should be computed.  This variable
  * is also the last variable in "bset".
@@ -235,34 +273,167 @@ __isl_give isl_multi_val *isl_fixed_box_get_size(__isl_keep isl_fixed_box *box)
  * (infinity if no offset was found so far).
  * "offset" is the offset corresponding to the best size
  * (NULL if no offset was found so far).
+ *
+ * If "expand" is not NULL, then it maps a contracted version of "bset"
+ * to the original "bset", while "domain_map" maps the space of "bset"
+ * to the domain of the wrapped map.
  */
 struct isl_size_info {
 	isl_basic_set *bset;
 	isl_size pos;
 	isl_val *size;
 	isl_aff *offset;
+
+	isl_multi_aff *expand;
+	isl_multi_aff *domain_map;
 };
+
+/* Detect any stride in the single output dimension of "map" and
+ * set the fields of "info" used in exploiting this stride.
+ * If no (non-trivial) stride can be found, then set those fields to NULL.
+ *
+ * If there is a non-trivial stride, then the single output dimension i
+ * is of the form
+ *
+ *	i = offset + stride * i'
+ *
+ * Construct a function that maps i' to i.
+ * Note that the offset may depend on the domain of the map,
+ * so it needs to be of the form
+ *
+ *	[D -> [i']] -> [i]
+ *
+ * In fact, it is more convenient for the function to be of the form
+ *
+ *	[D -> [i']] -> [D -> [i]]
+ *
+ * First construct helper functions
+ *
+ *	[D -> [i]] -> D
+ *	[D -> [i]] -> [i]
+ *
+ * Plug in [D -> [i]] -> D into the offset (defined on D) to obtain
+ * the offset defined on [D -> [i]] and add stride times [D -> [i]] -> [i].
+ * This produces the function
+ *
+ *	[D -> [i']] = [offset + stride i']
+ *
+ * Combine it with [D -> [i]] -> D again to obtain the desired result.
+ */
+static __isl_give isl_map *isl_size_info_detect_stride(
+	struct isl_size_info *info, __isl_take isl_map *map)
+{
+	isl_stride_info *si;
+	isl_val *stride;
+	isl_aff *offset;
+	isl_bool is_one;
+	isl_multi_aff *domain_map, *id;
+	isl_multi_aff *expand;
+
+	info->expand = NULL;
+	info->domain_map = NULL;
+
+	si = isl_map_get_range_stride_info(map, 0);
+	stride = isl_stride_info_get_stride(si);
+	is_one = isl_val_is_one(stride);
+	if (is_one < 0 || is_one) {
+		isl_val_free(stride);
+		isl_stride_info_free(si);
+		return is_one < 0 ? isl_map_free(map) : map;
+	}
+	offset = isl_stride_info_get_offset(si);
+	isl_stride_info_free(si);
+
+	domain_map = isl_space_domain_map_multi_aff(isl_aff_get_space(offset));
+	id = isl_space_range_map_multi_aff(isl_aff_get_space(offset));
+	offset = isl_aff_pullback_multi_aff(offset,
+					    isl_multi_aff_copy(domain_map));
+
+	expand = isl_multi_aff_scale_val(id, stride);
+	expand = isl_multi_aff_add(expand, isl_multi_aff_from_aff(offset));
+	expand = isl_multi_aff_range_product(isl_multi_aff_copy(domain_map),
+						expand);
+	info->expand = expand;
+	info->domain_map = domain_map;
+
+	if (!expand || !domain_map)
+		return isl_map_free(map);
+
+	return map;
+}
+
+/* If any stride was detected in the single output dimension
+ * in the wrapped map in "bset" (i.e., if info->expand is set),
+ * then plug in the expansion to obtain a description in terms
+ * of an output dimension without stride.
+ * Otherwise, return the original "bset".
+ */
+static __isl_give isl_basic_set *isl_size_info_contract(
+	struct isl_size_info *info, __isl_take isl_basic_set *bset)
+{
+	if (!info->expand)
+		return bset;
+
+	bset = isl_basic_set_preimage_multi_aff(bset,
+					isl_multi_aff_copy(info->expand));
+
+	return bset;
+}
+
+/* Given an affine function "aff" that maps the space of "bset"
+ * to a value in the (possibly) contracted space,
+ * expand it back to the original space.
+ * The value of "aff" only depends on the domain of wrapped relation
+ * inside "bset".
+ *
+ * If info->expand is not set, then no contraction was applied and
+ * "aff" is returned.
+ *
+ * Otherwise, combine "aff" of the form [D -> [*]] -> [v'(D)]
+ * with [D -> [*]] -> D to obtain [D -> [*]] -> [D -> [v'(D)]].
+ * Apply the expansion [D -> [i']] = [D -> [offset + stride * i']]
+ * to obtain [D -> [*]] -> [D -> [offset + stride * v'(D)]] and
+ * extract out [D -> [*]] -> [offset + stride * v'(D)].
+ */
+static __isl_give isl_aff *isl_size_info_expand(
+	struct isl_size_info *info, __isl_take isl_aff *aff)
+{
+	isl_multi_aff *ma;
+
+	if (!info->expand)
+		return aff;
+
+	ma = isl_multi_aff_from_aff(aff);
+	ma = isl_multi_aff_range_product(isl_multi_aff_copy(info->domain_map),
+					ma);
+	ma = isl_multi_aff_pullback_multi_aff(isl_multi_aff_copy(info->expand),
+					ma);
+	ma = isl_multi_aff_range_factor_range(ma);
+	aff = isl_multi_aff_get_at(ma, 0);
+	isl_multi_aff_free(ma);
+
+	return aff;
+}
+
+/* Free all memory allocated for "info".
+ */
+static void isl_size_info_clear(struct isl_size_info *info)
+{
+	isl_val_free(info->size);
+	isl_aff_free(info->offset);
+	isl_basic_set_free(info->bset);
+
+	isl_multi_aff_free(info->expand);
+	isl_multi_aff_free(info->domain_map);
+}
 
 /* Is "c" a suitable bound on dimension "pos" for use as a lower bound
  * of a fixed-size range.
  * In particular, it needs to be a lower bound on "pos".
- * In order for the final offset not to be too complicated,
- * the constraint itself should also not involve any integer divisions.
  */
 static isl_bool is_suitable_bound(__isl_keep isl_constraint *c, unsigned pos)
 {
-	isl_size n_div;
-	isl_bool is_bound, any_divs;
-
-	is_bound = isl_constraint_is_lower_bound(c, isl_dim_set, pos);
-	if (is_bound < 0 || !is_bound)
-		return is_bound;
-
-	n_div = isl_constraint_dim(c, isl_dim_div);
-	if (n_div < 0)
-		return isl_bool_error;
-	any_divs = isl_constraint_involves_dims(c, isl_dim_div, 0, n_div);
-	return isl_bool_not(any_divs);
+	return isl_constraint_is_lower_bound(c, isl_dim_set, pos);
 }
 
 /* Given a constraint from the basic set describing the bounds on
@@ -271,6 +442,10 @@ static isl_bool is_suitable_bound(__isl_keep isl_constraint *c, unsigned pos)
  * upper bound.  If so, and if this bound is smaller than any bound
  * derived from earlier constraints, set the size to this bound on
  * the expression and the lower bound to ceil(b(x)/m).
+ *
+ * If any contraction was applied, then the lower bound ceil(b(x)/m)
+ * is defined in the contracted space, so it needs to be expanded
+ * first before applying it to the original space.
  */
 static isl_stat compute_size_in_direction(__isl_take isl_constraint *c,
 	void *user)
@@ -289,6 +464,7 @@ static isl_stat compute_size_in_direction(__isl_take isl_constraint *c,
 
 	aff = isl_constraint_get_bound(c, isl_dim_set, info->pos);
 	aff = isl_aff_ceil(aff);
+	aff = isl_size_info_expand(info, aff);
 
 	lb = isl_aff_copy(aff);
 
@@ -326,10 +502,17 @@ static isl_stat compute_size_in_direction(__isl_take isl_constraint *c,
  * then invalidate the box.  Otherwise, set the offset and size
  * in the given direction by those that correspond to the smallest size.
  *
+ * If the output dimension is strided, then scale it down before
+ * looking for lower bounds.  The size computation is however performed
+ * in the original space.
+ *
  * Note that while evaluating the size corresponding to a lower bound,
  * an affine expression is constructed from the lower bound.
  * This lower bound may therefore not have any unknown local variables.
  * Eliminate any unknown local variables up front.
+ * Furthermore, the lower bound can clearly not involve
+ * (any local variables that involve) the output dimension itself,
+ * so any such local variables are eliminated as well.
  * No such restriction needs to be imposed on the set over which
  * the size is computed.
  */
@@ -347,14 +530,18 @@ static __isl_give isl_fixed_box *set_dim_extent(__isl_take isl_fixed_box *box,
 	ctx = isl_map_get_ctx(map);
 	map = isl_map_copy(map);
 	map = isl_map_project_onto(map, isl_dim_out, pos, 1);
+	map = isl_size_info_detect_stride(&info, map);
 	info.size = isl_val_infty(ctx);
 	info.offset = NULL;
 	info.pos = isl_map_dim(map, isl_dim_in);
 	info.bset = isl_basic_map_wrap(isl_map_simple_hull(map));
 	bset = isl_basic_set_copy(info.bset);
+	bset = isl_size_info_contract(&info, bset);
 	bset = isl_basic_set_remove_unknown_divs(bset);
 	if (info.pos < 0)
 		bset = isl_basic_set_free(bset);
+	bset = isl_basic_set_remove_divs_involving_dims(bset, isl_dim_set,
+							info.pos, 1);
 	if (isl_basic_set_foreach_constraint(bset,
 					&compute_size_in_direction, &info) < 0)
 		box = isl_fixed_box_free(box);
@@ -367,9 +554,7 @@ static __isl_give isl_fixed_box *set_dim_extent(__isl_take isl_fixed_box *box,
 						     info.offset, info.size);
 	else
 		box = isl_fixed_box_invalidate(box);
-	isl_val_free(info.size);
-	isl_aff_free(info.offset);
-	isl_basic_set_free(info.bset);
+	isl_size_info_clear(&info);
 
 	return box;
 }

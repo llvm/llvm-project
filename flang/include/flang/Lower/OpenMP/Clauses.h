@@ -76,6 +76,11 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   using IdTy = Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>;
   using ExprTy = Fortran::lower::omp::ExprTy;
 
+  ObjectT() = default;
+  ObjectT(IdTy id) : identity(std::move(id)) {}
+  ObjectT(Fortran::semantics::Symbol *symbol, std::optional<ExprTy> designator)
+      : identity{symbol, std::move(designator)} {}
+
   IdTy id() const { return identity; }
   Fortran::semantics::Symbol *sym() const { return identity.symbol; }
   const std::optional<ExprTy> &ref() const { return identity.designator; }
@@ -85,6 +90,13 @@ struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
   }
 
   IdTy identity;
+
+  // Resolved iterator references in the source locator, before expression
+  // folding can remove them. This is per-occurrence metadata, not object
+  // identity: a(j) and a(j + 0*i) may have equal folded designators.
+  // An engaged, empty list means the locator references no clause iterators.
+  std::optional<Fortran::lower::omp::List<const Fortran::semantics::Symbol *>>
+      sourceIteratorReferences = std::nullopt;
 };
 } // namespace tomp::type
 
@@ -221,6 +233,7 @@ using Counts = tomp::clause::CountsT<TypeTy, IdTy, ExprTy>;
 using Default = tomp::clause::DefaultT<TypeTy, IdTy, ExprTy>;
 using Defaultmap = tomp::clause::DefaultmapT<TypeTy, IdTy, ExprTy>;
 using Depend = tomp::clause::DependT<TypeTy, IdTy, ExprTy>;
+using Depth = tomp::clause::DepthT<TypeTy, IdTy, ExprTy>;
 using Destroy = tomp::clause::DestroyT<TypeTy, IdTy, ExprTy>;
 using Detach = tomp::clause::DetachT<TypeTy, IdTy, ExprTy>;
 using Device = tomp::clause::DeviceT<TypeTy, IdTy, ExprTy>;
@@ -294,6 +307,7 @@ using Private = tomp::clause::PrivateT<TypeTy, IdTy, ExprTy>;
 using ProcBind = tomp::clause::ProcBindT<TypeTy, IdTy, ExprTy>;
 using Read = tomp::clause::ReadT<TypeTy, IdTy, ExprTy>;
 using Reduction = tomp::clause::ReductionT<TypeTy, IdTy, ExprTy>;
+using ReductionKind = tomp::clause::ReductionKindT<TypeTy, IdTy, ExprTy>;
 using Relaxed = tomp::clause::RelaxedT<TypeTy, IdTy, ExprTy>;
 using Release = tomp::clause::ReleaseT<TypeTy, IdTy, ExprTy>;
 using Replayable = tomp::clause::ReplayableT<TypeTy, IdTy, ExprTy>;
@@ -306,6 +320,7 @@ using SeqCst = tomp::clause::SeqCstT<TypeTy, IdTy, ExprTy>;
 using Severity = tomp::clause::SeverityT<TypeTy, IdTy, ExprTy>;
 using Shared = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
 using Simd = tomp::clause::SimdT<TypeTy, IdTy, ExprTy>;
+using Shift = tomp::clause::ShiftT<TypeTy, IdTy, ExprTy>;
 using Simdlen = tomp::clause::SimdlenT<TypeTy, IdTy, ExprTy>;
 using Sizes = tomp::clause::SizesT<TypeTy, IdTy, ExprTy>;
 using TaskReduction = tomp::clause::TaskReductionT<TypeTy, IdTy, ExprTy>;
@@ -321,6 +336,8 @@ using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;
 using Update = tomp::clause::UpdateT<TypeTy, IdTy, ExprTy>;
+using UpdateDependObjects =
+    tomp::clause::UpdateDependObjectsT<TypeTy, IdTy, ExprTy>;
 using Use = tomp::clause::UseT<TypeTy, IdTy, ExprTy>;
 using UseDeviceAddr = tomp::clause::UseDeviceAddrT<TypeTy, IdTy, ExprTy>;
 using UseDevicePtr = tomp::clause::UseDevicePtrT<TypeTy, IdTy, ExprTy>;
@@ -328,6 +345,17 @@ using UsesAllocators = tomp::clause::UsesAllocatorsT<TypeTy, IdTy, ExprTy>;
 using Weak = tomp::clause::WeakT<TypeTy, IdTy, ExprTy>;
 using When = tomp::clause::WhenT<TypeTy, IdTy, ExprTy>;
 using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
+
+DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
+                                    semantics::SemanticsContext &semaCtx);
+
+ProcedureDesignator
+makeProcedureDesignator(const parser::ProcedureDesignator &inp,
+                        semantics::SemanticsContext &semaCtx);
+
+ReductionOperator
+makeReductionOperator(const parser::OmpReductionIdentifier &inp,
+                      semantics::SemanticsContext &semaCtx);
 } // namespace clause
 
 using tomp::type::operator==;

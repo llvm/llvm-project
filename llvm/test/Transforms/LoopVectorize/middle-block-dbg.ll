@@ -27,10 +27,10 @@
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 
-@"?x@@3HA" = external dso_local local_unnamed_addr global i32, align 4
-@"?y@@3HA" = external dso_local local_unnamed_addr global i32, align 4
+@"?x@@3HA" = external global i32, align 4
+@"?y@@3HA" = external global i32, align 4
 
-define dso_local void @"?a@@YAXXZ"() local_unnamed_addr #0 !dbg !8 {
+define void @"?a@@YAXXZ"() #0 !dbg !8 {
 entry:
   %0 = load i32, ptr @"?x@@3HA", align 4, !dbg !23, !tbaa !24
   %1 = zext i32 %0 to i64, !dbg !28
@@ -67,17 +67,14 @@ for.body:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
-!llvm.ident = !{!7}
+!llvm.module.flags = !{!3, !4, !6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 9.0.0 (https://github.com/llvm/llvm-project.git 045b8544fd2c4e14f7e72e0df2bc681d823b0838)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "vec.cpp", directory: "C:\5CUsers\5Cgbhyamso\5Cdev\5Cllvm\5Csamples", checksumkind: CSK_MD5, checksum: "fed997f50117f5514a69caf1c2fb2c49")
 !2 = !{}
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
-!7 = !{!"clang version 9.0.0 (https://github.com/llvm/llvm-project.git 045b8544fd2c4e14f7e72e0df2bc681d823b0838)"}
 !8 = distinct !DISubprogram(name: "a", linkageName: "?a@@YAXXZ", scope: !1, file: !1, line: 3, type: !9, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}

@@ -39,6 +39,10 @@ static_assert(arr4[1][0] == 0, "");
 
 constexpr VI4 B = __extension__(A);
 
+/// Can initialize atomic vectors.
+typedef char vs4 __attribute__((vector_size(4)));
+constexpr _Atomic vs4 foo = (vs4)0xDEADBEEF;
+
 /// From constant-expression-cxx11.cpp
 namespace Vector {
   typedef int __attribute__((vector_size(16))) VI4;
@@ -179,4 +183,13 @@ namespace CopyArrayDummy {
     struct S s;
     *(T *)&s = (T){0, 1, 2, 3};
   }
+}
+
+namespace CopyArrayCast {
+  typedef float __m128 __attribute__((__vector_size__(16)));
+  constexpr __m128 foo{1.0f, 2.0f, 3.0f, 4.0f};
+
+  typedef long T __attribute__((vector_size(4 * sizeof(long))));
+
+  void bar(void) { *(T *)&foo = (T{0, 1, 2, 3}); }
 }

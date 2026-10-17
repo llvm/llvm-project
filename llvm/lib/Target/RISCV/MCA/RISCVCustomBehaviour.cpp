@@ -27,7 +27,7 @@ struct VXMemOpInfo {
   unsigned Log2IdxEEW : 3;
   unsigned IsOrdered : 1;
   unsigned IsStore : 1;
-  unsigned NF : 4;
+  unsigned NFields : 4;
   unsigned BaseInstr;
 };
 
@@ -265,11 +265,14 @@ unsigned RISCVInstrumentManager::getSchedClassID(
 
   std::optional<unsigned> VPOpcode;
   if (const auto *VXMO = RISCV::getVXMemOpInfo(Opcode)) {
+    if (!SEW)
+      return SchedClassID;
+
     // Calculate the expected index EMUL. For indexed operations,
     // the DataEEW and DataEMUL are equal to SEW and LMUL, respectively.
     unsigned IndexEMUL = ((1 << VXMO->Log2IdxEEW) * LMUL) / SEW;
 
-    if (!VXMO->NF) {
+    if (!VXMO->NFields) {
       // Indexed Load / Store.
       if (VXMO->IsStore) {
         if (const auto *VXP = RISCV::getVSXPseudo(
@@ -285,18 +288,21 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     } else {
       // Segmented Indexed Load / Store.
       if (VXMO->IsStore) {
-        if (const auto *VXP =
-                RISCV::getVSXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
-                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+        if (const auto *VXP = RISCV::getVSXSEGPseudo(
+                VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW,
+                LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       } else {
-        if (const auto *VXP =
-                RISCV::getVLXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
-                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+        if (const auto *VXP = RISCV::getVLXSEGPseudo(
+                VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW,
+                LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       }
     }
   } else if (opcodeHasEEWAndEMULInfo(Opcode)) {
+    if (!SEW)
+      return SchedClassID;
+
     RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(LMUL);
     auto [EEW, EMUL] = getEEWAndEMUL(Opcode, VLMUL, SEW);
     if (const auto *RVV =

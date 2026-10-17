@@ -24,6 +24,8 @@
 ;;     intel_work_group_barrier_wait(CLK_LOCAL_MEM_FENCE, memory_scope_all_svm_devices);
 ;;     intel_work_group_barrier_arrive(CLK_LOCAL_MEM_FENCE, memory_scope_sub_group);
 ;;     intel_work_group_barrier_wait(CLK_LOCAL_MEM_FENCE, memory_scope_sub_group);
+;;     intel_work_group_barrier_arrive(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
+;;     intel_work_group_barrier_wait(CLK_GLOBAL_MEM_FENCE, memory_scope_device);
 ;;}
 
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
@@ -88,6 +90,8 @@
 ; CHECK: OpControlBarrierWaitINTEL %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_CROSS_DEVICE]] %[[#ACQUIRE_LOCAL]]
 ; CHECK: OpControlBarrierArriveINTEL %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_SUBGROUP]] %[[#RELEASE_LOCAL]]
 ; CHECK: OpControlBarrierWaitINTEL %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_SUBGROUP]] %[[#ACQUIRE_LOCAL]]
+; CHECK: OpControlBarrierArriveINTEL %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_DEVICE]] %[[#RELEASE_GLOBAL]]
+; CHECK: OpControlBarrierWaitINTEL %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_DEVICE]] %[[#ACQUIRE_GLOBAL]]
 
 ; Function Attrs: convergent norecurse nounwind
 define dso_local spir_kernel void @test(ptr addrspace(1) nocapture noundef readnone align 4 %0) local_unnamed_addr #0 !kernel_arg_addr_space !4 !kernel_arg_access_qual !5 !kernel_arg_type !6 !kernel_arg_base_type !6 !kernel_arg_type_qual !7 {
@@ -111,6 +115,8 @@ define dso_local spir_kernel void @test(ptr addrspace(1) nocapture noundef readn
   tail call spir_func void @_Z29intel_work_group_barrier_waitj12memory_scope(i32 noundef 1, i32 noundef 3) #2
   tail call spir_func void @_Z31intel_work_group_barrier_arrivej12memory_scope(i32 noundef 1, i32 noundef 4) #2
   tail call spir_func void @_Z29intel_work_group_barrier_waitj12memory_scope(i32 noundef 1, i32 noundef 4) #2
+  tail call spir_func void @_Z31intel_work_group_barrier_arrivej12memory_scope(i32 noundef 2, i32 noundef 2) #2
+  tail call spir_func void @_Z29intel_work_group_barrier_waitj12memory_scope(i32 noundef 2, i32 noundef 2) #2
   ret void
 }
 
@@ -126,7 +132,7 @@ declare dso_local spir_func void @_Z31intel_work_group_barrier_arrivej12memory_s
 ; Function Attrs: convergent
 declare dso_local spir_func void @_Z29intel_work_group_barrier_waitj12memory_scope(i32 noundef, i32 noundef) local_unnamed_addr #1
 
-attributes #0 = { convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+attributes #0 = { convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { convergent "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { convergent nounwind }
 

@@ -266,7 +266,7 @@ func.func @vecdim_reduction_xori(%in: memref<256x512xi32>, %out: memref<256xi32>
 // CHECK:             %[[vzero:.*]] = arith.constant dense<0> : vector<128xi32>
 // CHECK:             %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xi32>) {
 // CHECK:               %[[poison:.*]] = ub.poison : i32
-// CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] : memref<256x512xi32>, vector<128xi32>
+// CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] {in_bounds = [true]} : memref<256x512xi32>, vector<128xi32>
 // CHECK:               %[[xor:.*]] = arith.xori %[[red_iter]], %[[ld]] : vector<128xi32>
 // CHECK:               affine.yield %[[xor]] : vector<128xi32>
 // CHECK:             }
@@ -299,7 +299,7 @@ func.func @vecdim_reduction_minnumf(%in: memref<256x512xf32>, %out: memref<256xf
 // CHECK:             %[[vzero:.*]] = arith.constant dense<0x7FC00000> : vector<128xf32>
 // CHECK:             %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
 // CHECK:               %[[poison:.*]] = ub.poison : f32
-// CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] : memref<256x512xf32>, vector<128xf32>
+// CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] {in_bounds = [true]} : memref<256x512xf32>, vector<128xf32>
 // CHECK:               %[[min:.*]] = arith.minnumf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:               affine.yield %[[min]] : vector<128xf32>
 // CHECK:             }
@@ -333,7 +333,7 @@ func.func @vecdim_reduction_maxnumf(%in: memref<256x512xf32>, %out: memref<256xf
 // CHECK:             %[[vzero:.*]] = arith.constant dense<0xFFC00000> : vector<128xf32>
 // CHECK:             %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
 // CHECK:               %[[poison:.*]] = ub.poison : f32
-// CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] : memref<256x512xf32>, vector<128xf32>
+// CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] {in_bounds = [true]} : memref<256x512xf32>, vector<128xf32>
 // CHECK:               %[[max:.*]] = arith.maxnumf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:               affine.yield %[[max]] : vector<128xf32>
 // CHECK:             }
@@ -603,6 +603,25 @@ func.func @vecdim_none_reduction_rejected(%in: memref<256x512xf32>, %out: memref
 
 // CHECK-LABEL: @vecdim_none_reduction_rejected
 // CHECK-NOT:   vector
+
+// -----
+
+// The index_cast operation cannot be vectorized: vectorization is rolled back
+// and both loop nest and reduction op are removed.
+
+func.func @vecdim_reduction_rollback(%in: memref<512xf32>, %init: f32) -> f32 {
+ %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %init) -> (f32) {
+   %ld = affine.load %in[%j] : memref<512xf32>
+   %j_i32 = arith.index_cast %j : index to i32
+   %add = arith.addf %red_iter, %ld : f32
+   affine.yield %add : f32
+ }
+ return %final_red : f32
+}
+
+// CHECK-LABEL: @vecdim_reduction_rollback
+// CHECK:       affine.for {{.*}} iter_args
+// CHECK-NOT:   vector.reduction
 
 // -----
 

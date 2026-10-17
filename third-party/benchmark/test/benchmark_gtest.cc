@@ -38,7 +38,7 @@ TEST(AddRangeTest, Advanced64) {
 
 TEST(AddRangeTest, FullRange8) {
   std::vector<int8_t> dst;
-  AddRange(&dst, int8_t{1}, std::numeric_limits<int8_t>::max(), int8_t{8});
+  AddRange(&dst, int8_t{1}, std::numeric_limits<int8_t>::max(), 8);
   EXPECT_THAT(
       dst, testing::ElementsAre(int8_t{1}, int8_t{8}, int8_t{64}, int8_t{127}));
 }

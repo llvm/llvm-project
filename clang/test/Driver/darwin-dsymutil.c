@@ -19,8 +19,8 @@
 // RUN:   -arch i386 -arch x86_64 %s -g 2> %t
 // RUN: FileCheck -check-prefix=CHECK-MULTIARCH-BINDINGS < %t %s
 //
-// CHECK-MULTIARCH-BINDINGS: "x86_64-apple-darwin11" - "darwin::Lipo", inputs: [{{.*}}, {{.*}}], output: "a.out"
-// CHECK-MULTIARCH-BINDINGS: # "x86_64-apple-darwin11" - "darwin::Dsymutil", inputs: ["a.out"], output: "a.out.dSYM"
+// CHECK-MULTIARCH-BINDINGS: "x86_64-apple-macosx10.7.0" - "darwin::Lipo", inputs: [{{.*}}, {{.*}}], output: "a.out"
+// CHECK-MULTIARCH-BINDINGS: # "x86_64-apple-macosx10.7.0" - "darwin::Dsymutil", inputs: ["a.out"], output: "a.out.dSYM"
 
 // Check output name derivation.
 //
@@ -39,8 +39,8 @@
 // RUN: FileCheck -Doutfile=bar/foo -Ddsymfile=external/foo.dSYM \
 // RUN:           -check-prefix=CHECK-OUTPUT-NAME < %t %s
 //
-// CHECK-OUTPUT-NAME: "x86_64-apple-darwin11" - "darwin::Linker", inputs: [{{.*}}], output: "[[outfile]]"
-// CHECK-OUTPUT-NAME: "x86_64-apple-darwin11" - "darwin::Dsymutil", inputs: ["[[outfile]]"], output: "[[dsymfile]]"
+// CHECK-OUTPUT-NAME: "x86_64-apple-macosx10.7.0" - "darwin::Linker", inputs: [{{.*}}], output: "[[outfile]]"
+// CHECK-OUTPUT-NAME: "x86_64-apple-macosx10.7.0" - "darwin::Dsymutil", inputs: ["[[outfile]]"], output: "[[dsymfile]]"
 
 // Check output name derivation for multiple -arch options.
 //
@@ -48,17 +48,17 @@
 // RUN:   -arch x86_64 -arch arm64 -ccc-print-bindings %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-MULTIARCH-OUTPUT-NAME < %t %s
 //
-// CHECK-MULTIARCH-OUTPUT-NAME: "x86_64-apple-darwin11" - "darwin::Linker", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-x86_64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out"
-// CHECK-MULTIARCH-OUTPUT-NAME: "arm64-apple-darwin11" - "darwin::Linker", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-arm64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"
-// CHECK-MULTIARCH-OUTPUT-NAME: "arm64-apple-darwin11" - "darwin::Lipo", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out", "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"], output: "a.out"
+// CHECK-MULTIARCH-OUTPUT-NAME: "x86_64-apple-macosx10.7.0" - "darwin::Linker", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-x86_64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out"
+// CHECK-MULTIARCH-OUTPUT-NAME: "arm64-apple-macosx10.7.0" - "darwin::Linker", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-arm64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"
+// CHECK-MULTIARCH-OUTPUT-NAME: "arm64-apple-macosx10.7.0" - "darwin::Lipo", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out", "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"], output: "a.out"
 //
 // RUN: %clang -target x86_64-apple-darwin11 \
 // RUN:   -Wl,-foo -arch x86_64 -arch arm64 -ccc-print-bindings %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG < %t %s
 //
-// CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG: "x86_64-apple-darwin11" - "darwin::Linker", inputs: [(input arg), "{{.*}}{{/|\\}}darwin-dsymutil-x86_64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out"
-// CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG: "arm64-apple-darwin11" - "darwin::Linker", inputs: [(input arg), "{{.*}}{{/|\\}}darwin-dsymutil-arm64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"
-// CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG: "arm64-apple-darwin11" - "darwin::Lipo", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out", "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"], output: "a.out"
+// CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG: "x86_64-apple-macosx10.7.0" - "darwin::Linker", inputs: [(input arg), "{{.*}}{{/|\\}}darwin-dsymutil-x86_64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out"
+// CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG: "arm64-apple-macosx10.7.0" - "darwin::Linker", inputs: [(input arg), "{{.*}}{{/|\\}}darwin-dsymutil-arm64.o"], output: "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"
+// CHECK-MULTIARCH-OUTPUT-NAME-WITH-ARG: "arm64-apple-macosx10.7.0" - "darwin::Lipo", inputs: ["{{.*}}{{/|\\}}darwin-dsymutil-x86_64.out", "{{.*}}{{/|\\}}darwin-dsymutil-arm64.out"], output: "a.out"
 
 // Check that we only use dsymutil when needed.
 //

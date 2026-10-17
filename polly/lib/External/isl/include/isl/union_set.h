@@ -52,6 +52,8 @@ __isl_give isl_union_set *isl_union_set_remove_redundancies(
 	__isl_take isl_union_set *uset);
 __isl_give isl_union_set *isl_union_set_simple_hull(
 	__isl_take isl_union_set *uset);
+__isl_give isl_union_set *isl_union_set_plain_unshifted_simple_hull(
+	__isl_take isl_union_set *uset);
 __isl_export
 __isl_give isl_union_set *isl_union_set_coalesce(
 	__isl_take isl_union_set *uset);

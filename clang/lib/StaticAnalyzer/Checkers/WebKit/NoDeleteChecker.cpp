@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -66,57 +67,156 @@ public:
   }
 
   void visitFunctionDecl(const FunctionDecl *FD) const {
-    if (!FD->doesThisDeclarationHaveABody())
+    if (!FD->doesThisDeclarationHaveABody() || FD->isDependentContext())
       return;
 
-    bool HasNoDeleteAnnotation = isNoDeleteFunction(FD);
-    if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (auto *Cls = MD->getParent(); Cls && MD->isVirtual()) {
-        CXXBasePaths Paths;
-        Paths.setOrigin(Cls);
+    if (!isNoDeleteFunction(FD))
+      return;
 
-        Cls->lookupInBases(
-            [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-              const Type *T = Base->getType().getTypePtrOrNull();
-              if (!T)
-                return false;
+    auto Body = FD->getBody();
+    if (!Body)
+      return;
 
-              const CXXRecordDecl *R = T->getAsCXXRecordDecl();
-              if (!R)
-                return false;
-
-              for (const CXXMethodDecl *BaseMD : R->methods()) {
-                if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
-                  if (isNoDeleteFunction(FD)) {
-                    HasNoDeleteAnnotation = true;
-                    return false;
-                  }
-                }
-              }
-              return true;
-            },
-            Paths, /*LookupInDependent =*/true);
+    NamedDecl *ParamDecl = nullptr;
+    for (auto *D : FD->parameters()) {
+      if (!TFA.hasTrivialDtor(D)) {
+        ParamDecl = D;
+        break;
       }
     }
 
-    auto Body = FD->getBody();
-    if (!Body || TFA.isTrivial(Body))
+    const FieldDecl *Field = nullptr;
+    const Stmt *OffendingInit = nullptr;
+    bool IsCtor = false;
+    bool IsDtor = false;
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
+      IsCtor = true;
+      Field = TFA.fieldWithNonTrivialCtor(Ctor->getParent());
+      if (!Field) {
+        for (auto *CtorInit : Ctor->inits()) {
+          auto *Init = CtorInit->getInit();
+          if (!TFA.isTrivial(Init)) {
+            OffendingInit = Init;
+            break;
+          }
+        }
+      }
+    } else if (auto *Dtor = dyn_cast<CXXDestructorDecl>(FD)) {
+      IsDtor = true;
+      Field = TFA.fieldWithNonTrivialDtor(Dtor->getParent());
+    }
+
+    if (!ParamDecl && !Field && !OffendingInit && TFA.isTrivial(Body))
       return;
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "A function ";
+    if (IsCtor)
+      Os << "A constructor ";
+    else if (IsDtor)
+      Os << "A destructor ";
+    else
+      Os << "A function ";
     printQuotedName(Os, FD);
-    Os << " has [[clang::annotate_type(\"webkit.nodelete\")]] but it contains "
-          "code that could destruct an object";
+    // FIXME: Update this to say clang::annotate("webkit.nodelete").
+    Os << " has [[clang::annotate_type(\"webkit.nodelete\")]] but it ";
+    if (IsCtor && Field)
+      Os << "constructs ";
+    else if (IsDtor && Field)
+      Os << "destructs ";
+    else
+      Os << "contains ";
+    SourceLocation SrcLocToReport;
+    SourceRange Range;
+    NonTrivialityReason Reason;
+    if (ParamDecl) {
+      Os << "a parameter ";
+      printQuotedName(Os, ParamDecl);
+      Os << " which could destruct an object.";
+      SrcLocToReport = FD->getBeginLoc();
+      Range = ParamDecl->getSourceRange();
+    } else if (Field && !OffendingInit) {
+      Os << "a member variable ";
+      printQuotedName(Os, Field);
+      Os << " that could destruct an object.";
+      SrcLocToReport = FD->getBeginLoc();
+      Range = Field->getSourceRange();
+    } else {
+      Reason = TrivialFunctionAnalysis::computeReason(
+          OffendingInit ? OffendingInit : Body);
+      Os << "code that could destruct an object.";
+      const Stmt *Offender = Reason.OffendingStmt;
+      SrcLocToReport = Offender ? Offender->getBeginLoc() : FD->getBeginLoc();
+      Range = Offender ? Offender->getSourceRange() : FD->getSourceRange();
+    }
 
-    const SourceLocation SrcLocToReport = FD->getBeginLoc();
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(FD->getSourceRange());
+    Report->addRange(Range);
     Report->setDeclWithIssue(FD);
+    addCallStackNotes(*Report, Reason);
     BR->emitReport(std::move(Report));
+  }
+
+  static const FunctionDecl *getDirectCallee(const Stmt *S) {
+    if (const auto *CE = dyn_cast_or_null<CallExpr>(S))
+      return CE->getDirectCallee();
+    if (const auto *CE = dyn_cast_or_null<CXXConstructExpr>(S))
+      return CE->getConstructor();
+    return nullptr;
+  }
+
+  // The offending statement is often just the nearest call to a function that
+  // is itself unsafe several levels down. Walk the whole chain of calls, one
+  // note per function, down to the code that destructs an object or the
+  // function without a visible definition, since that is where the fix belongs.
+  void addCallStackNotes(BasicBugReport &Report,
+                         const NonTrivialityReason &Reason) const {
+    ArrayRef<NonTrivialityReason::Frame> CallStack = Reason.CallStack;
+    if (CallStack.empty())
+      return;
+
+    // Nothing to add when the offending statement is the call to a function
+    // that is opaque or rejected outright; a note would only point back at its
+    // declaration, which the primary diagnostic already names.
+    const auto &First = CallStack.front();
+    const FunctionDecl *Callee = getDirectCallee(Reason.OffendingStmt);
+    if (CallStack.size() == 1 && !First.OffendingStmt && Callee &&
+        Callee->getCanonicalDecl() == First.Callee->getCanonicalDecl())
+      return;
+
+    for (size_t I = 0; I < CallStack.size(); ++I) {
+      const FunctionDecl *Fn = CallStack[I].Callee;
+      const Stmt *Offender = CallStack[I].OffendingStmt;
+      // Implicit special members have nothing worth pointing at.
+      if (!Offender && !Fn->getLocation().isValid())
+        continue;
+
+      SmallString<100> Buf;
+      llvm::raw_svector_ostream Os(Buf);
+      // Each note sits on the line it describes, which already spells out the
+      // enclosing function and the callee, so name only the callee: naming
+      // both would repeat every function in the chain twice.
+      if (I + 1 < CallStack.size()) {
+        Os << "Calling ";
+        printQuotedName(Os, CallStack[I + 1].Callee);
+      } else if (Fn->doesThisDeclarationHaveABody()) {
+        Os << "Could destruct an object";
+      } else {
+        printQuotedName(Os, Fn);
+        Os << " has no visible definition here, so it is assumed to destruct "
+              "an object. Annotate it with "
+              "[[clang::annotate_type(\"webkit.nodelete\")]] if it does not.";
+      }
+
+      SourceLocation Loc =
+          Offender ? Offender->getBeginLoc() : Fn->getLocation();
+      SourceRange Range =
+          Offender ? Offender->getSourceRange() : Fn->getSourceRange();
+      Report.addNote(
+          Os.str(), PathDiagnosticLocation(Loc, BR->getSourceManager()), Range);
+    }
   }
 };
 

@@ -28,16 +28,22 @@ namespace cir {
 
 class LowerModule {
   mlir::ModuleOp module;
+  const clang::LangOptions langOpts;
   const std::unique_ptr<clang::TargetInfo> target;
   std::unique_ptr<TargetLoweringInfo> targetLoweringInfo;
   std::unique_ptr<CIRCXXABI> abi;
-  [[maybe_unused]] mlir::PatternRewriter &rewriter;
 
 public:
   LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
-              mlir::ModuleOp &module, std::unique_ptr<clang::TargetInfo> target,
-              mlir::PatternRewriter &rewriter);
+              mlir::ModuleOp &module,
+              std::unique_ptr<clang::TargetInfo> target);
   ~LowerModule() = default;
+
+  // The lowering-relevant LangOptions, populated by createLowerModule() from
+  // the module's #cir.lowering_lang_options attribute when present (so a
+  // reloaded .cir lowers the same way without a live clang::LangOptions),
+  // otherwise left at their defaults.
+  const clang::LangOptions &getLangOpts() const { return langOpts; }
 
   clang::TargetCXXABI::Kind getCXXABIKind() const {
     assert(!cir::MissingFeatures::lowerModuleLangOpts());
@@ -51,8 +57,7 @@ public:
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
 
-std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module,
-                                               mlir::PatternRewriter &rewriter);
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module);
 
 } // namespace cir
 

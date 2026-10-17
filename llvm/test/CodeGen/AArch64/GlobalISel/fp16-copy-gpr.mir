@@ -49,25 +49,25 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[COPY]], %subreg.hsub
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: [[BFMWri:%[0-9]+]]:gpr32 = BFMWri [[DEF]], [[COPY2]], 0, 15
-    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[COPY1]], %subreg.hsub
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG1]]
     ; CHECK-NEXT: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY3]], 16, 15
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: STRWui [[BFMWri1]], [[COPY4]], 0 :: (store (s32) into %ir.addr, align 2)
     ; CHECK-NEXT: RET_ReallyLR
-    %1:fpr(s16) = COPY $h0
-    %2:fpr(s16) = COPY $h1
-    %3:gpr(s32) = G_IMPLICIT_DEF
-    %11:gpr(s16) = COPY %1(s16)
-    %4:gpr(s32) = G_INSERT %3, %11(s16), 0
-    %12:gpr(s16) = COPY %2(s16)
-    %5:gpr(s32) = G_INSERT %4, %12(s16), 16
-    %0:gpr(s32) = COPY %5(s32)
+    %1:fpr(f16) = COPY $h0
+    %2:fpr(f16) = COPY $h1
+    %3:gpr(f32) = G_IMPLICIT_DEF
+    %11:gpr(f16) = COPY %1(f16)
+    %4:gpr(f32) = G_INSERT %3, %11(f16), 0
+    %12:gpr(f16) = COPY %2(f16)
+    %5:gpr(f32) = G_INSERT %4, %12(f16), 16
+    %0:gpr(f32) = COPY %5(f32)
     %6:gpr(p0) = COPY $x0
-    G_STORE %0(s32), %6(p0) :: (store (s32) into %ir.addr, align 2)
+    G_STORE %0(f32), %6(p0) :: (store (s32) into %ir.addr, align 2)
     RET_ReallyLR
 
 ...
@@ -94,10 +94,10 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
     ; CHECK-NEXT: $h0 = COPY [[COPY2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s16) = G_TRUNC %0(s32)
-    %2:fpr(s16) = COPY %1(s16)
-    $h0 = COPY %2(s16)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i16) = G_TRUNC %0(i32)
+    %2:fpr(i16) = COPY %1(i16)
+    $h0 = COPY %2(i16)
     RET_ReallyLR implicit $h0
 
 ...
@@ -122,9 +122,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
     ; CHECK-NEXT: $h0 = COPY [[COPY2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s16) = G_TRUNC %0(s32)
-    $h0 = COPY %1(s16)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i16) = G_TRUNC %0(i32)
+    $h0 = COPY %1(i16)
     RET_ReallyLR implicit $h0
 
 ...

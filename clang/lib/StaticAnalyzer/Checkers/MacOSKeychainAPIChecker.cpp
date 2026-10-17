@@ -19,8 +19,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -226,14 +224,14 @@ void MacOSKeychainAPIChecker::
 
   if (!N)
     return;
-  SmallString<80> sbuf;
-  llvm::raw_svector_ostream os(sbuf);
   unsigned int PDeallocIdx =
-               FunctionsToTrack[AP.second->AllocatorIdx].DeallocatorIdx;
+      FunctionsToTrack[AP.second->AllocatorIdx].DeallocatorIdx;
 
-  os << "Deallocator doesn't match the allocator: '"
-     << FunctionsToTrack[PDeallocIdx].Name << "' should be used.";
-  auto Report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+  auto Report = std::make_unique<PathSensitiveBugReport>(
+      BT,
+      "Deallocator doesn't match the allocator: '" +
+          Twine(FunctionsToTrack[PDeallocIdx].Name) + "' should be used.",
+      N);
   Report->addVisitor(std::make_unique<SecKeychainBugVisitor>(AP.first));
   Report->addRange(ArgExpr->getSourceRange());
   markInteresting(Report.get(), AP);
@@ -269,14 +267,13 @@ void MacOSKeychainAPIChecker::checkPreStmt(const CallExpr *CE,
         ExplodedNode *N = C.generateNonFatalErrorNode(State);
         if (!N)
           return;
-        SmallString<128> sbuf;
-        llvm::raw_svector_ostream os(sbuf);
         unsigned int DIdx = FunctionsToTrack[AS->AllocatorIdx].DeallocatorIdx;
-        os << "Allocated data should be released before another call to "
-            << "the allocator: missing a call to '"
-            << FunctionsToTrack[DIdx].Name
-            << "'.";
-        auto Report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+        auto Report = std::make_unique<PathSensitiveBugReport>(
+            BT,
+            "Allocated data should be released before another call to "
+            "the allocator: missing a call to '" +
+                Twine(FunctionsToTrack[DIdx].Name) + "'.",
+            N);
         Report->addVisitor(std::make_unique<SecKeychainBugVisitor>(V));
         Report->addRange(ArgExpr->getSourceRange());
         Report->markInteresting(AS->Region);
@@ -408,7 +405,7 @@ void MacOSKeychainAPIChecker::checkPostStmt(const CallExpr *CE,
   // If the argument entered as an enclosing function parameter, skip it to
   // avoid false positives.
   if (isEnclosingFunctionParam(ArgExpr) &&
-      C.getLocationContext()->getParent() == nullptr)
+      C.getStackFrame()->getParent() == nullptr)
     return;
 
   if (SymbolRef V = getAsPointeeSymbol(ArgExpr, C)) {
@@ -440,7 +437,7 @@ const ExplodedNode *
 MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
                                            SymbolRef Sym,
                                            CheckerContext &C) const {
-  const LocationContext *LeakContext = N->getLocationContext();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -450,9 +447,8 @@ MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
       break;
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getLocationContext();
-    if (NContext == LeakContext ||
-        NContext->isParentOf(LeakContext))
+    const StackFrame *NSF = N->getStackFrame();
+    if (NSF == LeakStackFrame || NSF->isParentOf(LeakStackFrame))
       AllocNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }
@@ -464,10 +460,6 @@ std::unique_ptr<PathSensitiveBugReport>
 MacOSKeychainAPIChecker::generateAllocatedDataNotReleasedReport(
     const AllocationPair &AP, ExplodedNode *N, CheckerContext &C) const {
   const ADFunctionInfo &FI = FunctionsToTrack[AP.second->AllocatorIdx];
-  SmallString<70> sbuf;
-  llvm::raw_svector_ostream os(sbuf);
-  os << "Allocated data is not released: missing a call to '"
-      << FunctionsToTrack[FI.DeallocatorIdx].Name << "'.";
 
   // Most bug reports are cached at the location where they occurred.
   // With leaks, we want to unique them by the location where they were
@@ -477,13 +469,14 @@ MacOSKeychainAPIChecker::generateAllocatedDataNotReleasedReport(
   const Stmt *AllocStmt = AllocNode->getStmtForDiagnostics();
 
   if (AllocStmt)
-    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocStmt,
-                                              C.getSourceManager(),
-                                              AllocNode->getLocationContext());
+    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+        AllocStmt, C.getSourceManager(), AllocNode->getStackFrame());
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
-      BT, os.str(), N, LocUsedForUniqueing,
-      AllocNode->getLocationContext()->getDecl());
+      BT,
+      "Allocated data is not released: missing a call to '" +
+          Twine(FunctionsToTrack[FI.DeallocatorIdx].Name) + "'.",
+      N, LocUsedForUniqueing, AllocNode->getStackFrame()->getDecl());
 
   Report->addVisitor(std::make_unique<SecKeychainBugVisitor>(AP.first));
   markInteresting(Report.get(), AP);
@@ -631,7 +624,7 @@ MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
   assert(Idx != InvalidIdx && "This should be a call to an allocator.");
   const Expr *ArgExpr = CE->getArg(FunctionsToTrack[Idx].Param);
   PathDiagnosticLocation Pos(ArgExpr, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos,
                                                     "Data is allocated here.");
 }

@@ -1108,6 +1108,8 @@ public:
   ConversionTarget(MLIRContext &ctx) : ctx(ctx) {}
   virtual ~ConversionTarget() = default;
 
+  MLIRContext &getContext() const { return ctx; }
+
   //===--------------------------------------------------------------------===//
   // Legality Registration
   //===--------------------------------------------------------------------===//

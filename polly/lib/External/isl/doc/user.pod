@@ -469,8 +469,8 @@ Use the system clang libraries installed in I<path>.
 
 =back
 
-It is best to use the latest release of the clang libraries (16.0),
-although any release since 3.5 should work as well.
+It is best to use the latest release of the clang libraries (21.1),
+although any release since 3.9 should work as well.
 Note that if you build the clang libraries from source,
 then you need to make sure they are also installed (using C<make install>).
 If the compiler that was used to compile the clang libraries
@@ -5247,6 +5247,9 @@ return true if the objects are not the same.
 		__isl_keep isl_multi_id *mi2);
 
 	#include <isl/val.h>
+	isl_bool isl_multi_val_is_equal(
+		__isl_keep isl_multi_val *mv1,
+		__isl_keep isl_multi_val *mv2);
 	isl_bool isl_multi_val_plain_is_equal(
 		__isl_keep isl_multi_val *mv1,
 		__isl_keep isl_multi_val *mv2);
@@ -6450,8 +6453,16 @@ variables, then the result of these operations is currently undefined.
 		__isl_take isl_map *map,
 		__isl_take isl_map_list *list);
 
+	#include <isl/union_set.h>
+	__isl_give isl_union_set *
+	isl_union_set_plain_unshifted_simple_hull(
+		__isl_take isl_union_set *uset);
+
 	#include <isl/union_map.h>
 	__isl_give isl_union_map *isl_union_map_simple_hull(
+		__isl_take isl_union_map *umap);
+	__isl_give isl_union_map *
+	isl_union_map_plain_unshifted_simple_hull(
 		__isl_take isl_union_map *umap);
 
 These functions compute a single basic set or relation
@@ -6552,6 +6563,14 @@ The box can be copied and freed using the following functions.
 		__isl_keep isl_fixed_box *box);
 	__isl_null isl_fixed_box *isl_fixed_box_free(
 		__isl_take isl_fixed_box *box);
+
+The following function checks whether two C<isl_fixed_box> objects
+are obviously the same.
+
+	#include <isl/fixed_box.h>
+	isl_bool isl_fixed_box_plain_is_equal(
+		__isl_keep isl_fixed_box *box1,
+		__isl_keep isl_fixed_box *box2);
 
 An object of type C<isl_fixed_box> can be read from input
 using the following function.

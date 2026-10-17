@@ -44,7 +44,7 @@ AST_MATCHER(FunctionDecl, isAssignmentOverloadedOperator) {
 }
 } // namespace
 
-UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
+UnusedReturnValueCheck::UnusedReturnValueCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       CheckedFunctions(utils::options::parseStringList(
@@ -148,13 +148,13 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
       AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
 
 UnusedReturnValueCheck::UnusedReturnValueCheck(
-    llvm::StringRef Name, ClangTidyContext *Context,
+    StringRef Name, ClangTidyContext *Context,
     std::vector<StringRef> CheckedFunctions)
     : UnusedReturnValueCheck(Name, Context, std::move(CheckedFunctions), {},
                              false) {}
 
 UnusedReturnValueCheck::UnusedReturnValueCheck(
-    llvm::StringRef Name, ClangTidyContext *Context,
+    StringRef Name, ClangTidyContext *Context,
     std::vector<StringRef> CheckedFunctions,
     std::vector<StringRef> CheckedReturnTypes, bool AllowCastToVoid)
     : ClangTidyCheck(Name, Context),
@@ -184,9 +184,9 @@ void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
                                  CheckedReturnTypes)))))))))
           .bind("match"));
 
-  auto CheckCastToVoid =
+  const auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();
-  auto MatchedCallExpr = expr(
+  const auto MatchedCallExpr = expr(
       anyOf(MatchedDirectCallExpr,
             explicitCastExpr(unless(cxxFunctionalCastExpr()), CheckCastToVoid,
                              hasSourceExpression(MatchedDirectCallExpr))));

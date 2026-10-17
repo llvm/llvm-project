@@ -41,12 +41,11 @@ class MTTR_ENC : COP0_MFTTR_MT<FIELD5_MTTR>;
 // MIPS MT Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
-class MT_1R_DESC_BASE<string instr_asm, InstrItinClass Itin = NoItinerary> {
+class MT_1R_DESC_BASE<string instr_asm> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins);
   string AsmString = !strconcat(instr_asm, "\t$rt");
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = Itin;
 }
 
 class MFTR_DESC {
@@ -54,7 +53,6 @@ class MFTR_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt, uimm1:$u, uimm3:$sel, uimm1:$h);
   string AsmString = "mftr\t$rd, $rt, $u, $sel, $h";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_MFTR;
 }
 
 class MTTR_DESC {
@@ -62,7 +60,6 @@ class MTTR_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt, uimm1:$u, uimm3:$sel, uimm1:$h);
   string AsmString = "mttr\t$rt, $rd, $u, $sel, $h";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_MTTR;
 }
 
 class FORK_DESC {
@@ -70,7 +67,6 @@ class FORK_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt);
   string AsmString = "fork\t$rd, $rs, $rt";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_FORK;
 }
 
 class YIELD_DESC {
@@ -78,16 +74,15 @@ class YIELD_DESC {
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = "yield\t$rd, $rs";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_YIELD;
 }
 
-class DMT_DESC : MT_1R_DESC_BASE<"dmt", II_DMT>;
+class DMT_DESC : MT_1R_DESC_BASE<"dmt">;
 
-class EMT_DESC : MT_1R_DESC_BASE<"emt", II_EMT>;
+class EMT_DESC : MT_1R_DESC_BASE<"emt">;
 
-class DVPE_DESC : MT_1R_DESC_BASE<"dvpe", II_DVPE>;
+class DVPE_DESC : MT_1R_DESC_BASE<"dvpe">;
 
-class EVPE_DESC : MT_1R_DESC_BASE<"evpe", II_EVPE>;
+class EVPE_DESC : MT_1R_DESC_BASE<"evpe">;
 
 //===----------------------------------------------------------------------===//
 // MIPS MT Instruction Definitions
@@ -140,7 +135,7 @@ def MFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32Opnd:$ft),
 def MFTHC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32Opnd:$ft),
                                "mfthc1 $rt, $ft">, ASE_MT;
 
-def CFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32CCOpnd:$ft),
+def CFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32Opnd:$ft),
                               "cftc1 $rt, $ft">, ASE_MT;
 
 
@@ -169,7 +164,7 @@ def MTTC1 : MipsAsmPseudoInst<(outs FGR32Opnd:$ft), (ins GPR32Opnd:$rt),
 def MTTHC1 : MipsAsmPseudoInst<(outs FGR32Opnd:$ft), (ins GPR32Opnd:$rt),
                                "mtthc1 $rt, $ft">, ASE_MT;
 
-def CTTC1 : MipsAsmPseudoInst<(outs FGR32CCOpnd:$ft), (ins GPR32Opnd:$rt),
+def CTTC1 : MipsAsmPseudoInst<(outs FGR32Opnd:$ft), (ins GPR32Opnd:$rt),
                               "cttc1 $rt, $ft">, ASE_MT;
 
 //===----------------------------------------------------------------------===//
@@ -177,15 +172,15 @@ def CTTC1 : MipsAsmPseudoInst<(outs FGR32CCOpnd:$ft), (ins GPR32Opnd:$rt),
 //===----------------------------------------------------------------------===//
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsInstAlias<"dmt", (DMT ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"dmt", (DMT R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"emt", (EMT ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"emt", (EMT R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"dvpe", (DVPE ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"dvpe", (DVPE R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"evpe", (EVPE ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"evpe", (EVPE R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"yield $rs", (YIELD ZERO, GPR32Opnd:$rs), 1>, ASE_MT;
+  def : MipsInstAlias<"yield $rs", (YIELD R0, GPR32Opnd:$rs), 1>, ASE_MT;
 
   def : MipsInstAlias<"mftc0 $rd, $rt", (MFTC0 GPR32Opnd:$rd, COP0Opnd:$rt, 0),
                       1>, ASE_MT;

@@ -8,6 +8,20 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zihintntl < %s \
 # RUN:     | llvm-objdump --mattr=+zihintntl -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+#
+# ntl.* hints are always available even without Zihintntl
+# (riscv-non-isa/riscv-elf-psabi-doc#474).
+#
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv64 -M no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 < %s \
+# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 < %s \
+# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: add zero, zero, sp
 # CHECK-ASM: encoding: [0x33,0x00,0x20,0x00]

@@ -1,0 +1,192 @@
+## Test ODR deduplication with two CUs that use DW_AT_language_name instead of
+## DW_AT_language. DW_LNAME_C_plus_plus is an ODR language and so dsymutil should
+## deduplicate `Foo`.
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: yaml2obj %s -o %t.dir/dwarf6-language-name-odr.o
+# RUN: echo '---'                                                                          >  %t.dir/map.yaml
+# RUN: echo "triple:          'x86_64-apple-darwin'"                                      >> %t.dir/map.yaml
+# RUN: echo 'objects:'                                                                     >> %t.dir/map.yaml
+# RUN: echo "  - filename: '%t.dir/dwarf6-language-name-odr.o'"                           >> %t.dir/map.yaml
+# RUN: echo '    symbols:'                                                                 >> %t.dir/map.yaml
+# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }'      >> %t.dir/map.yaml
+# RUN: echo '...'                                                                          >> %t.dir/map.yaml
+# RUN: dsymutil --linker classic -y %t.dir/map.yaml -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=ODR
+# RUN: dsymutil --linker parallel -y %t.dir/map.yaml -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=ODR
+# RUN: dsymutil --linker classic  --no-odr -y %t.dir/map.yaml -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=NOODR
+# RUN: dsymutil --linker parallel --no-odr -y %t.dir/map.yaml -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=NOODR
+
+# ODR:      .debug_info contents:
+# ODR:      0x[[#%x,FOO:]]: DW_TAG_structure_type
+# ODR-NEXT:                   DW_AT_name{{.*}}"Foo"
+# ODR-NOT:                    DW_TAG_structure_type
+# ODR:      DW_AT_name{{.*}}"var1"
+# ODR:      DW_AT_type (0x[[#%.16x,FOO]] "Foo")
+# ODR:      DW_AT_name{{.*}}"var2"
+# ODR:      DW_AT_type (0x[[#%.16x,FOO]] "Foo")
+
+# NOODR:     .debug_info contents:
+# NOODR:     DW_TAG_structure_type
+# NOODR:     DW_AT_name{{.*}}"Foo"
+# NOODR:     DW_TAG_structure_type
+# NOODR:     DW_AT_name{{.*}}"Foo"
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 376
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x3A          ## two identical 0x1D-byte tables
+        offset:    0x00000380
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x0000000000000100
+        size:      0x54          ## two CUs, each 0x2A bytes
+        offset:    0x000003BA    ## 0x380 + 0x3A
+        align:     0
+        reloff:    0x00000600
+        nreloc:    1
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x000001FC   ## phantom: past section end → addend=0
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           1
+    stroff:          0x710
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language_name
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language_name
+            Form:      DW_FORM_data2
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version: 4
+      Entries:
+        ## 0x0b: DW_TAG_compile_unit
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value: 0x0004   ## DW_LNAME_C_plus_plus
+        ## 0x16: DW_TAG_structure_type "Foo"
+        - AbbrCode: 2
+          Values:
+            - CStr: Foo
+        ## 0x1b: DW_TAG_variable "var1" → Foo at CU-relative 0x16
+        - AbbrCode: 3
+          Values:
+            - CStr: var1
+            - Value: 0x00000000
+            - Value: 0x00000016
+        ## 0x29: NULL
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        ## 0x0b: DW_TAG_compile_unit
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value: 0x0004   ## DW_LNAME_C_plus_plus
+        ## 0x16: DW_TAG_structure_type "Foo"
+        - AbbrCode: 2
+          Values:
+            - CStr: Foo
+        ## 0x1b: DW_TAG_variable "var2" → Foo at CU-relative 0x16
+        - AbbrCode: 3
+          Values:
+            - CStr: var2
+            - Value: 0x00000000
+            - Value: 0x00000016
+        ## 0x29: NULL
+        - AbbrCode: 0
+...

@@ -1,15 +1,7 @@
 // RUN: %check_clang_tidy \
-// RUN: -std=c++17-or-later %s modernize-use-string-view %t -- \
-// RUN: -- -isystem %clang_tidy_headers
-
+// RUN: -std=c++17-or-later %s modernize-use-string-view %t
 #include <string>
-
-namespace std {
-template <class T, class U> struct is_same { static constexpr bool value = false; };
-template <class T> struct is_same<T, T> { static constexpr bool value = true; };
-template <class T, class U> constexpr bool is_same_v = is_same<T, U>::value;
-} // namespace std
-
+#include <utility>
 
 // ==========================================================
 // Positive tests
@@ -144,8 +136,19 @@ std::string ternary(bool flag) {
 }
 
 std::string nested(int x) {
-  // TODO: support for nested ternary
+// CHECK-MESSAGES:[[@LINE-1]]:1: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view nested(int x) {
   return x < 0 ? "neg" : (x == 0 ? "zero" : "pos");
+}
+
+std::string deeplyNested(int x) {
+// CHECK-MESSAGES:[[@LINE-1]]:1: warning: consider using 'std::string_view' to avoid unnecessary copying and allocations [modernize-use-string-view]
+// CHECK-FIXES: std::string_view deeplyNested(int x) {
+  return x < 0 ? "negative"
+               : (x == 0 ? "zero"
+                         : (x == 1 ? "one"
+                                   : (x == 2 ? "two"
+                                             : (x == 3 ? "three" : "many"))));
 }
 
 class A {
@@ -214,6 +217,13 @@ MyString<wchar_t> aliasedWChar() {
 // ==========================================================
 // Negative tests
 // ==========================================================
+
+std::string nestedTernaryWithLocalString(int x) {
+  std::string local = "local";
+  // Must not be converted because one branch returns a local string.
+  return x < 0 ? "negative"
+               : (x == 0 ? "zero" : (x == 1 ? local : "positive"));
+}
 
 std::string toString() {
   return "ignored by default options";

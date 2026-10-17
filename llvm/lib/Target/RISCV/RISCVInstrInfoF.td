@@ -115,6 +115,7 @@ def GPRAsFPR32 : AsmOperandClass {
   let Name = "GPRAsFPR32";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
 def FPR32INX : RegisterOperand<GPRF32> {
@@ -159,6 +160,7 @@ def FRMArg : AsmOperandClass {
   let DefaultMethod = "defaultFRMArgOp";
 }
 
+// Operand should be named $frm for getNamedOperandIdx
 def frmarg : Operand<XLenVT> {
   let ParserMatchClass = FRMArg;
   let PrintMethod = "printFRMArg";
@@ -181,6 +183,7 @@ def FRMArgLegacy : AsmOperandClass {
   let DefaultMethod = "defaultFRMArgLegacyOp";
 }
 
+// Operand should be named $frm for getNamedOperandIdx
 def frmarglegacy : Operand<XLenVT> {
   let ParserMatchClass = FRMArgLegacy;
   let PrintMethod = "printFRMArgLegacy";
@@ -197,7 +200,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class FPLoad_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                SchedWrite sw>
     : RVInstI<funct3, OPC_LOAD_FP, (outs rty:$rd),
-              (ins GPRMem:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12_lo_optional:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">,
       Sched<[sw, ReadFMemBase]>;
 
@@ -205,7 +208,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class FPStore_r<bits<3> funct3, string opcodestr, DAGOperand rty,
                 SchedWrite sw>
     : RVInstS<funct3, OPC_STORE_FP, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
       Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
@@ -473,9 +476,6 @@ def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, SysRegFFLAGS.Encoding, ui
 } // Predicates = [HasStdExtFOrZfinx]
 
 let Predicates = [HasStdExtF] in {
-def : InstAlias<"flw $rd, (${rs1})",  (FLW FPR32:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsw $rs2, (${rs1})", (FSW FPR32:$rs2, GPR:$rs1, 0), 0>;
-
 def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
@@ -528,7 +528,7 @@ defvar FRM_DYN = 0b111;
 
 /// Floating point constants
 def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
+  return Imm.isPosZero();
 }]>;
 
 /// Generic pattern classes
@@ -864,3 +864,8 @@ def : Pat<(any_uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_S_WU_INX $rs1, 
 def : Pat<(any_sint_to_fp (i64 GPR:$rs1)), (FCVT_S_L_INX $rs1, FRM_DYN)>;
 def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_S_LU_INX $rs1, FRM_DYN)>;
 } // Predicates = [HasStdExtZfinx, IsRV64]
+
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearFPR32 : Pseudo<(outs FPR32:$rd), (ins), []>,
+                       PseudoInstExpansion<(FMV_W_X FPR32:$rd, X0)>;

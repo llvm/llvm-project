@@ -3,10 +3,12 @@
 # REQUIRES: system-linux,bolt-runtime,target=aarch64{{.*}}
 
 # RUN: llvm-mc -triple aarch64 -filetype=obj %s -o %t.o
-# RUN: ld.lld -q -pie -o %t.exe %t.o
+# RUN: %clang -nostartfiles -nostdlib -Wl,-q -Wl,-pie -o %t.exe %t.o
 # RUN: llvm-readelf -d %t.exe | FileCheck --check-prefix=CHECK-NO-FINI %s
-# RUN: not llvm-bolt --instrument -o %t.out %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-BOLT-FAIL
-# RUN: llvm-bolt --instrument --instrumentation-sleep-time=1 -o %t.out %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-BOLT-PASS
+# RUN: not llvm-bolt --instrument --runtime-lib-init-hook=init -o %t.out %t.exe 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-FAIL
+# RUN: llvm-bolt --instrument --runtime-lib-init-hook=init --instrumentation-sleep-time=1 -o %t.out %t.exe 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-PASS
 
 # CHECK-NO-FINI: INIT
 # CHECK-NO-FINI-NOT: FINI

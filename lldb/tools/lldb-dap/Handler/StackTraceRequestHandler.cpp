@@ -14,6 +14,7 @@
 #include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
@@ -80,6 +81,9 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
     if (llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
       stack_frame.moduleId = uuid.str();
   }
+  if (const uint32_t cu_id = frame.GetCompileUnit().GetIDInModule();
+      cu_id != LLDB_INVALID_INDEX32)
+    stack_frame.compileUnitId = cu_id;
 
   return stack_frame;
 }
@@ -189,6 +193,9 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
 
 llvm::Expected<protocol::StackTraceResponseBody>
 StackTraceRequestHandler::Run(const protocol::StackTraceArguments &args) const {
+  if (dap.ProcessIsNotStopped())
+    return llvm::make_error<NotStoppedError>();
+
   lldb::SBThread thread = dap.GetLLDBThread(args.threadId);
   if (!thread.IsValid())
     return llvm::make_error<DAPError>("invalid thread");

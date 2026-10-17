@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "summary_data": [],
+      "summary_name": "PairsEntitySummary"
+    }
+  ],
+  "id_table": [],
+  "linkage_table": [],
+  "target_triple": "arm64-apple-macosx",
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "type": "TUSummary"
+}

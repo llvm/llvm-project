@@ -54,3 +54,8 @@ Options
 
    When set to `true`, non-const global variables with thread-local storage
    duration will not generate a warning. The default value is `false`.
+
+.. option:: IgnoreMacros
+
+   When set to `true`, non-const global variables defined in macros will not
+   generate a warning. The default value is `false`.

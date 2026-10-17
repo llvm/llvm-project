@@ -8,11 +8,11 @@
 
 #include "flang/Runtime/stop.h"
 #include "config.h"
-#include "unit.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/file.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang-rt/runtime/unit.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
@@ -24,10 +24,14 @@
 extern "C" {
 
 [[maybe_unused]] static void DescribeIEEESignaledExceptions() {
+#if defined(RT_DEVICE_COMPILATION) || RT_GPU_TARGET
+  unsigned excepts{}; // No fenv support on the device.
+#else
 #ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
   auto excepts{std::fetestexcept(FE_ALL_EXCEPT)};
+#endif
 #endif
   if (excepts) {
     std::fputs("IEEE arithmetic exceptions signaled:", stderr);
@@ -61,8 +65,10 @@ extern "C" {
 }
 
 static void CloseAllExternalUnits(const char *why) {
+#if !RT_GPU_TARGET
   Fortran::runtime::io::IoErrorHandler handler{why};
   Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
+#endif
 }
 
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
@@ -134,6 +140,7 @@ static void CloseAllExternalUnits(const char *why) {
 #endif
 }
 
+#if !RT_GPU_TARGET
 static bool StartPause() {
   if (Fortran::runtime::io::IsATerminal(0)) {
     Fortran::runtime::io::IoErrorHandler handler{"PAUSE statement"};
@@ -173,6 +180,7 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
     EndPause();
   }
 }
+#endif
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
   CloseAllExternalUnits("FAIL IMAGE statement");
@@ -237,8 +245,65 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
+RT_EXT_API_GROUP_BEGIN
 [[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
   Fortran::runtime::Terminator{source, line}.Crash(message);
 }
+
+[[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserErrorValues)(
+    const char *message, const char *source, int line, long long v0,
+    long long v1, long long v2, long long v3) {
+  Fortran::runtime::Terminator{source, line}.Crash(message, v0, v1, v2, v3);
+}
+
+[[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserErrorValueArray)(
+    const char *message, const char *source, int line, std::size_t count,
+    const long long *values) {
+  Fortran::runtime::Terminator terminator{source, line};
+  RUNTIME_CHECK(terminator, message && (count == 0 || values));
+
+  // Validate the format and count before printing the diagnostic or reading
+  // values.
+  std::size_t conversions{0};
+  for (const char *p{message}; *p; ++p) {
+    if (*p == '%') {
+      if (p[1] == '%') {
+        ++p;
+      } else if (p[1] == 'l' && p[2] == 'l' && p[3] == 'd') {
+        ++conversions;
+        p += 3;
+      } else {
+        terminator.Crash("Invalid fatal error message format");
+      }
+    }
+  }
+  if (conversions != count) {
+    terminator.Crash("Fatal error message value count mismatch");
+  }
+
+  // Print in pieces so reporting the error does not require allocating a
+  // formatted message. Concurrent failures may interleave their output.
+  terminator.CrashHeader();
+  std::size_t nextValue{0};
+  for (const char *p{message}; *p;) {
+    if (*p != '%') {
+      char chunk[256];
+      std::size_t length{0};
+      while (*p && *p != '%' && length < sizeof chunk - 1) {
+        chunk[length++] = *p++;
+      }
+      chunk[length] = '\0';
+      terminator.PrintCrashArgs("%s", chunk);
+    } else if (p[1] == '%') {
+      terminator.PrintCrashArgs("%%");
+      p += 2;
+    } else {
+      terminator.PrintCrashArgs("%lld", values[nextValue++]);
+      p += 4;
+    }
+  }
+  terminator.CrashFooter();
+}
+RT_EXT_API_GROUP_END
 }

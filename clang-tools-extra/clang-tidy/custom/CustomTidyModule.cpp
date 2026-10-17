@@ -15,17 +15,17 @@ namespace custom {
 // will changed dynamically when switching to different source file.
 static void registerCustomChecks(const ClangTidyOptions &Options,
                                  ClangTidyCheckFactories &Factories) {
-  static llvm::SmallSet<llvm::SmallString<32>, 8> CustomCheckNames{};
+  static llvm::SmallSet<SmallString<32>, 8> CustomCheckNames{};
   if (!Options.CustomChecks.has_value() || Options.CustomChecks->empty())
     return;
-  for (const llvm::SmallString<32> &Name : CustomCheckNames)
+  for (const SmallString<32> &Name : CustomCheckNames)
     Factories.eraseCheck(Name);
   for (const ClangTidyOptions::CustomCheckValue &V :
        Options.CustomChecks.value()) {
-    llvm::SmallString<32> Name = llvm::StringRef{"custom-" + V.Name};
+    SmallString<32> Name = StringRef{"custom-" + V.Name};
     Factories.registerCheckFactory(
         // add custom- prefix to avoid conflicts with builtin checks
-        Name, [&V](llvm::StringRef Name, ClangTidyContext *Context) {
+        Name, [&V](StringRef Name, ClangTidyContext *Context) {
           return std::make_unique<custom::QueryCheck>(Name, V, Context);
         });
     CustomCheckNames.insert(std::move(Name));

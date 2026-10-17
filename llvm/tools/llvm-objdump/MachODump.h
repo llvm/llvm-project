@@ -40,6 +40,7 @@ enum class FunctionStartsMode { Addrs, Names, Both, None };
 extern bool Bind;
 extern bool DataInCode;
 extern std::string DisSymName;
+extern bool IsOtool;
 extern bool ChainedFixups;
 extern bool DyldInfo;
 extern bool DylibId;
@@ -58,8 +59,10 @@ extern bool Rebase;
 extern bool Rpaths;
 extern bool SymbolicOperands;
 extern bool UniversalHeaders;
+extern bool UseMemberSyntax;
 extern bool Verbose;
 extern bool WeakBind;
+extern std::vector<std::string> ArchFlags;
 
 Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
                                     const object::RelocationRef &RelRef,

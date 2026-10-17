@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -Wno-strict-prototypes -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -Wno-strict-prototypes -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefix=NONZEROALLOCAAS %s
+// RUN: %clang_cc1 %s -Wno-strict-prototypes -triple amdgpu-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefix=NONZEROALLOCAAS %s
 
 struct abc {
  long a;

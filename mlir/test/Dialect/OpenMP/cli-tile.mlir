@@ -136,3 +136,73 @@ func.func @omp_tile_3d_pretty(%tc : i32, %ts : i32) -> () {
   omp.tile (%grid1, %grid2, %grid3, %intratile1, %intratile2, %intratile3) <- (%cli_outer, %cli_middle, %cli_inner) sizes(%ts, %ts, %ts: i32, i32, i32)
   return
 }
+
+
+// Composition of multiple tilings
+// CHECK-LABEL: @omp_tile_composition(
+// CHECK-SAME: %[[tc:.+]]: i32, %[[ts:.+]]: i32, %[[grid_ts:.+]]: i32, %[[intratile_ts:.+]]: i32) {
+func.func @omp_tile_composition(%tc: i32, %ts: i32, %grid_ts: i32, %intratile_ts: i32) -> () {
+  %canonloop = omp.new_cli
+  %grid = omp.new_cli
+  %intratile = omp.new_cli
+  %grid_intratile = omp.new_cli
+  %grid_grid = omp.new_cli
+  %intratile_grid = omp.new_cli
+  %intratile_intratile = omp.new_cli
+
+  // CHECK: omp.canonical_loop(%canonloop) %iv : i32 in range(%[[tc]]) {
+  omp.canonical_loop(%canonloop) %iv : i32 in range(%tc) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.tile (%grid1, %intratile1) <- (%canonloop) sizes(%[[ts]] : i32)
+  omp.tile(%grid, %intratile) <- (%canonloop) sizes(%ts : i32)
+  // CHECK: omp.tile (%grid1_1, %intratile1_0) <- (%grid1) sizes(%[[grid_ts]] : i32)
+  omp.tile(%grid_grid, %grid_intratile) <- (%grid) sizes(%grid_ts : i32)
+  // CHECK: omp.tile (%grid1_2, %intratile1_3) <- (%intratile1) sizes(%[[intratile_ts]] : i32)
+  omp.tile(%intratile_grid, %intratile_intratile) <- (%intratile) sizes(%intratile_ts : i32)
+  // CHECK: return
+  return
+}
+
+
+// Composition of multiple 2d-tilings
+// CHECK-LABEL: @omp_tile_2d_composition(
+// CHECK-SAME: %[[tc1:.+]]: i32, %[[tc2:.+]]: i32, %[[ts:.+]]: i32) {
+func.func @omp_tile_2d_composition(%tc1: i32, %tc2: i32, %ts: i32) -> () {
+  %cli_outer = omp.new_cli
+  %cli_inner = omp.new_cli
+  %outer_grid = omp.new_cli
+  %inner_grid = omp.new_cli
+  %outer_intratile = omp.new_cli
+  %inner_intratile = omp.new_cli
+  %outer_grid_grid = omp.new_cli
+  %inner_grid_grid = omp.new_cli
+  %outer_grid_intratile = omp.new_cli
+  %inner_grid_intratile = omp.new_cli
+  %outer_intratile_grid = omp.new_cli
+  %inner_intratile_grid = omp.new_cli
+  %outer_intratile_intratile = omp.new_cli
+  %inner_intratile_intratile = omp.new_cli
+
+  // CHECK:  omp.canonical_loop(%canonloop) %iv : i32 in range(%[[tc1]]) {
+  omp.canonical_loop(%cli_outer) %iv_outer : i32 in range(%tc1) {
+    // CHECK-NEXT: omp.canonical_loop(%canonloop_d1) %iv_d1 : i32 in range(%[[tc2]]) {
+    omp.canonical_loop(%cli_inner) %iv_inner : i32 in range(%tc2) {
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.tile (%grid1, %grid2, %intratile1, %intratile2) <- (%canonloop, %canonloop_d1) sizes(%[[ts]], %[[ts]] : i32, i32)
+  omp.tile(%outer_grid, %inner_grid, %outer_intratile, %inner_intratile) <- (%cli_outer, %cli_inner) sizes(%ts, %ts : i32, i32)
+  // CHECK: omp.tile (%grid1_0, %grid2_1, %intratile1_2, %intratile2_3) <- (%grid1, %grid2) sizes(%[[ts]], %[[ts]] : i32, i32)
+  omp.tile(%outer_grid_grid, %inner_grid_grid, %outer_grid_intratile, %inner_grid_intratile) <- (%outer_grid, %inner_grid) sizes(%ts, %ts : i32, i32)
+  // CHECK: omp.tile (%grid1_4, %grid2_5, %intratile1_6, %intratile2_7) <- (%intratile2, %intratile1) sizes(%[[ts]], %[[ts]] : i32, i32)
+  omp.tile(%outer_intratile_grid, %inner_intratile_grid, %outer_intratile_intratile, %inner_intratile_intratile) <- (%inner_intratile, %outer_intratile) sizes(%ts, %ts : i32, i32)
+  // CHECK: return
+  return
+}

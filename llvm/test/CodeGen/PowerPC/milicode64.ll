@@ -302,7 +302,7 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 nounde
 ; CHECK-LE-P9-NEXT:    mflr r0
 ; CHECK-LE-P9-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-LE-P9-NEXT:    stdu r1, -48(r1)
-; CHECK-LE-P9-NEXT:    clrldi r4, r4, 56
+; CHECK-LE-P9-NEXT:    extsb r4, r4
 ; CHECK-LE-P9-NEXT:    std r0, 64(r1)
 ; CHECK-LE-P9-NEXT:    mr r30, r3
 ; CHECK-LE-P9-NEXT:    bl memset
@@ -318,7 +318,7 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 nounde
 ; CHECK-BE-P9:       # %bb.0: # %entry
 ; CHECK-BE-P9-NEXT:    mflr r0
 ; CHECK-BE-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-BE-P9-NEXT:    clrldi r4, r4, 56
+; CHECK-BE-P9-NEXT:    extsb r4, r4
 ; CHECK-BE-P9-NEXT:    std r0, 144(r1)
 ; CHECK-BE-P9-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; CHECK-BE-P9-NEXT:    mr r30, r3
@@ -335,7 +335,7 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i64 nounde
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -128(r1)
-; CHECK-AIX-64-P9-NEXT:    clrldi r4, r4, 56
+; CHECK-AIX-64-P9-NEXT:    extsb r4, r4
 ; CHECK-AIX-64-P9-NEXT:    std r0, 144(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; CHECK-AIX-64-P9-NEXT:    mr r31, r3
@@ -425,8 +425,9 @@ define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    clrldi r5, r5, 32
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .memccpy[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___memccpy64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
@@ -439,7 +440,7 @@ entry:
 
 declare ptr @memccpy(ptr noundef, ptr noundef, i32 noundef signext, i64 noundef)
 
-define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
+define  i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-LE-P9-LABEL: test_strcmp:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    mflr r0
@@ -469,14 +470,14 @@ define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .strcmp[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___strcmp64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-AIX-64-P9-NEXT:    mtlr r0
 ; CHECK-AIX-64-P9-NEXT:    blr
 entry:
-  %call = call signext i32 @strcmp(ptr noundef %s1, ptr noundef %s2)
+  %call = call i32 @strcmp(ptr noundef %s1, ptr noundef %s2)
   ret i32 %call
 }
 

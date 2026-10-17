@@ -7,7 +7,7 @@
 ; innermost loop headers have a greater than or equal to frequency than any
 ; block it dominates.
 
-define void @f(i1 %x) !prof !0 {
+define void @f(i1 %x) vscale_range(2, 1024) !prof !0 {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: i1 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {{.*}}{
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -19,7 +19,7 @@ define void @f(i1 %x) !prof !0 {
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 65, %[[ENTRY]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr null, i64 [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [8 x i8], ptr null, i64 [[EVL_BASED_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[TMP3]] to i64

@@ -27,12 +27,12 @@ float4 not_an_entry([[vk::location(0)]] float4 a : A, float4 b : B) : C {
 
 
 // CHECK: define void @vs_main()
-// CHECK: %[[#]] = load <4 x float>, ptr addrspace(7) @SV_Position0, align 16
-// CHECK: store <4 x float> %[[#]], ptr addrspace(8) @A0, align 16
+// CHECK: %[[#]] = load <4 x float>, ptr addrspace(7) @SV_Position0, align 4
+// CHECK: store <4 x float> %[[#]], ptr addrspace(8) @A0, align 4
 
 // CHECK: define void @ps_main()
-// CHECK: %[[#]] = load <4 x float>, ptr addrspace(7) @A0.1, align 16
-// CHECK: store <4 x float> %[[#]], ptr addrspace(8) @SV_Target0, align 16
+// CHECK: %[[#]] = load <4 x float>, ptr addrspace(7) @A0.1, align 4
+// CHECK: store <4 x float> %[[#]], ptr addrspace(8) @SV_Target0, align 4
 
 // CHECK: ![[#MD_0]] = !{![[#MD_1:]]}
 // CHECK: ![[#MD_1]] = !{i32 30, i32 0}

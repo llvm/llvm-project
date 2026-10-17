@@ -1,0 +1,39 @@
+# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
+
+# RUN: not llvm-lipo %t-universal.o -remove arm64_32 -output /dev/null 2>&1 | FileCheck --check-prefix=ARCH_NOT_IN_FILE %s
+# ARCH_NOT_IN_FILE: does not contain the specified architecture arm64_32 to remove
+
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-i386.o
+# RUN: not llvm-lipo %t-i386.o -remove i386 -output /dev/null 2>&1 | FileCheck --check-prefix=INPUT_NOT_A_FAT_FILE %s
+# INPUT_NOT_A_FAT_FILE: must be a fat file when the -remove option is specified
+
+# RUN: not llvm-lipo -remove FakeArch %t-universal.o -output /dev/null 2>&1 | FileCheck --check-prefix=INVALID_ARCH %s
+# INVALID_ARCH: Invalid architecture: FakeArch
+
+# RUN: yaml2obj %p/Inputs/i386-x86_64-armv7-arm64-universal.yaml -o %t-4arch.o
+# RUN: llvm-lipo -remove i386 %t-4arch.o -output %t-removed.o
+# RUN: llvm-lipo -info %t-removed.o | FileCheck --check-prefix=REMOVE_ONE %s
+# REMOVE_ONE: x86_64 armv7 arm64
+
+# RUN: llvm-lipo -remove i386 %t-universal.o -output %t-only-x86_64.o
+# RUN: llvm-lipo -thin x86_64 %t-universal.o -output %t-thinned-x86_64.o
+# RUN: yaml2obj %p/Inputs/x86_64-slice.yaml -o %t-x86_64.o
+# RUN: cmp %t-thinned-x86_64.o %t-x86_64.o
+
+# Multiple -remove flags
+# RUN: llvm-lipo -remove i386 -remove armv7 %t-4arch.o -output %t-removed-multi.o
+# RUN: llvm-lipo -info %t-removed-multi.o | FileCheck --check-prefix=REMOVE_MULTI %s
+# REMOVE_MULTI: x86_64 arm64
+
+# Multiple -remove flags removing all but one arch
+# RUN: llvm-lipo -remove i386 -remove x86_64 -remove armv7 %t-4arch.o -output %t-removed-three.o
+# RUN: llvm-lipo -info %t-removed-three.o | FileCheck --check-prefix=REMOVE_THREE %s
+# REMOVE_THREE: arm64
+
+# Error: one of multiple -remove arches not in file
+# RUN: not llvm-lipo -remove i386 -remove arm64_32 %t-4arch.o -output /dev/null 2>&1 | FileCheck --check-prefix=MULTI_ARCH_NOT_IN_FILE %s
+# MULTI_ARCH_NOT_IN_FILE: does not contain the specified architecture arm64_32 to remove
+
+# Error: removing all arches
+# RUN: not llvm-lipo -remove i386 -remove x86_64 %t-universal.o -output /dev/null 2>&1 | FileCheck --check-prefix=REMOVE_ALL %s
+# REMOVE_ALL: removing all architectures would result in an empty universal binary

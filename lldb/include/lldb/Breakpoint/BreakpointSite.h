@@ -77,20 +77,6 @@ public:
                        lldb::addr_t *intersect_addr, size_t *intersect_size,
                        size_t *opcode_offset) const;
 
-  /// Tells whether the current breakpoint site is enabled or not
-  ///
-  /// This is a low-level enable bit for the breakpoint sites.  If a
-  /// breakpoint site has no enabled constituents, it should just get removed.
-  /// This enable/disable is for the low-level target code to enable and disable
-  /// breakpoint sites when single stepping, etc.
-  bool IsEnabled() const;
-
-  /// Sets whether the current breakpoint site is enabled or not
-  ///
-  /// \param[in] enabled
-  ///    \b true if the breakpoint is enabled, \b false otherwise.
-  void SetEnabled(bool enabled);
-
   /// Enquires of the breakpoint locations that produced this breakpoint site
   /// whether we should stop at this location.
   ///
@@ -222,6 +208,12 @@ private:
   /// list.
   size_t RemoveConstituent(lldb::break_id_t break_id,
                            lldb::break_id_t break_loc_id);
+
+  /// Sets whether the current breakpoint site is enabled or not.
+  ///
+  /// \param[in] enabled
+  ///    \b true if the breakpoint is enabled, \b false otherwise.
+  void SetEnabled(bool enabled);
 
   BreakpointSite::Type m_type; ///< The type of this breakpoint site.
   uint8_t m_saved_opcode[8]; ///< The saved opcode bytes if this breakpoint site

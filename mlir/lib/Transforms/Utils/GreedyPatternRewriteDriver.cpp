@@ -14,12 +14,14 @@
 
 #include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Action.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
+#include "mlir/Transforms/CSE.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/BitVector.h"
@@ -781,7 +783,8 @@ void GreedyPatternRewriteDriver::notifyMatchFailure(
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This driver simplfies all ops in a region.
+/// This driver simplfies all ops in a region. If a scope is set in the
+/// config, the provided region must be within that scope.
 class RegionPatternRewriteDriver : public GreedyPatternRewriteDriver {
 public:
   explicit RegionPatternRewriteDriver(MLIRContext *ctx,
@@ -807,6 +810,15 @@ RegionPatternRewriteDriver::RegionPatternRewriteDriver(
   if (config.getStrictness() != GreedyRewriteStrictness::AnyOp) {
     region.walk([&](Operation *op) { strictModeFilteredOps.insert(op); });
   }
+#ifndef NDEBUG
+  // Verify that the region is within the configured scope (if any).
+  if (Region *scope = config.getScope()) {
+    Region *r = &region;
+    while (r && r != scope)
+      r = r->getParentRegion();
+    assert(r && "provided region is not within the config scope");
+  }
+#endif
 }
 
 namespace {
@@ -829,6 +841,7 @@ private:
 
 LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
   bool continueRewrites = false;
+  bool anyChanged = false;
   int64_t iteration = 0;
   MLIRContext *ctx = rewriter.getContext();
   do {
@@ -847,10 +860,12 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
       // Check for existing constants when populating the worklist. This avoids
       // accidentally reversing the constant order during processing.
       Attribute constValue;
-      if (matchPattern(op, m_Constant(&constValue)))
-        if (!folder.insertKnownConstant(op, constValue))
-          return true;
-      return false;
+      if (!matchPattern(op, m_Constant(&constValue)))
+        return false;
+      auto result = folder.insertKnownConstant(op, constValue);
+      anyChanged |=
+          result != OperationFolder::ConstantInsertionResult::Unchanged;
+      return result == OperationFolder::ConstantInsertionResult::Replaced;
     };
 
     if (!config.getUseTopDownTraversal()) {
@@ -897,12 +912,23 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
                 /*mergeBlocks=*/config.getRegionSimplificationLevel() ==
                     GreedySimplifyRegionLevel::Aggressive));
           }
+
+          // Optionally run full CSE. If CSE changes the IR we iterate again so
+          // that patterns can fire on the deduplicated operations.
+          if (config.isCSEBetweenIterationsEnabled()) {
+            DominanceInfo domInfo;
+            bool cseChanged = false;
+            eliminateCommonSubExpressions(rewriter, domInfo, region,
+                                          &cseChanged);
+            continueRewrites |= cseChanged;
+          }
         },
         {&region}, iteration);
+    anyChanged |= continueRewrites;
   } while (continueRewrites);
 
   if (changed)
-    *changed = iteration > 1;
+    *changed = anyChanged;
 
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return success(!continueRewrites);
@@ -928,10 +954,23 @@ mlir::applyPatternsGreedily(Region &region,
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
+#ifdef EXPENSIVE_CHECKS
+  OperationFingerPrint before(config.getScope()->getParentOp());
+#endif // EXPENSIVE_CHECKS
+  bool rewriteChanged = false;
+
   // Start the pattern driver.
   RegionPatternRewriteDriver driver(region.getContext(), patterns, config,
                                     region);
-  LogicalResult converged = std::move(driver).simplify(changed);
+  LogicalResult converged = std::move(driver).simplify(&rewriteChanged);
+#ifdef EXPENSIVE_CHECKS
+  if (rewriteChanged !=
+      (before != OperationFingerPrint(config.getScope()->getParentOp())))
+    llvm::report_fatal_error(
+        "greedy pattern rewriter changed flag does not match the IR");
+#endif // EXPENSIVE_CHECKS
+  if (changed)
+    *changed = rewriteChanged;
   if (failed(converged))
     LDBG() << "The pattern rewrite did not converge after scanning "
            << config.getMaxIterations() << " times";
@@ -1058,12 +1097,28 @@ LogicalResult mlir::applyOpPatternsGreedily(
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
+#ifdef EXPENSIVE_CHECKS
+  std::optional<OperationFingerPrint> before;
+  if (config.getScope())
+    before.emplace(config.getScope()->getParentOp());
+#endif // EXPENSIVE_CHECKS
+  bool rewriteChanged = false;
+
   // Start the pattern driver.
   llvm::SmallDenseSet<Operation *, 4> surviving;
   MultiOpPatternRewriteDriver driver(ops.front()->getContext(), patterns,
                                      config, ops,
                                      allErased ? &surviving : nullptr);
-  LogicalResult converged = std::move(driver).simplify(ops, changed);
+  LogicalResult converged = std::move(driver).simplify(ops, &rewriteChanged);
+#ifdef EXPENSIVE_CHECKS
+  if (before &&
+      rewriteChanged !=
+          (*before != OperationFingerPrint(config.getScope()->getParentOp())))
+    llvm::report_fatal_error(
+        "greedy pattern rewriter changed flag does not match the IR");
+#endif // EXPENSIVE_CHECKS
+  if (changed)
+    *changed = rewriteChanged;
   if (allErased)
     *allErased = surviving.empty();
   if (failed(converged))

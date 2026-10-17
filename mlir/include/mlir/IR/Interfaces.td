@@ -85,6 +85,11 @@ class StaticInterfaceMethod<string desc, string retTy, string methodName,
     : InterfaceMethod<desc, retTy, methodName, args, methodBody,
                       defaultImplementation>;
 
+// This class represents a pure virtual interface method.
+class PureVirtualInterfaceMethod<string desc, string retTy, string methodName,
+                            dag args = (ins)>
+    : InterfaceMethod<desc, retTy, methodName, args>;
+
 // This class represents a interface method declaration.
 class InterfaceMethodDeclaration<string desc, string retTy, string methodName,
                             dag args = (ins)>
