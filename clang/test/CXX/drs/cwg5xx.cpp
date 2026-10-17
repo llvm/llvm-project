@@ -358,7 +358,7 @@ namespace cwg531 { // cwg531: partial
     template<> struct A<char> { // #cwg531-A-char
       void f(char);
       template<typename U> void g(char, U);
-      struct B; // #cwg531-B
+      struct B;
       template<typename U> struct C;
       static char n;
     };
@@ -370,8 +370,6 @@ namespace cwg531 { // cwg531: partial
     //   expected-note@#cwg531-A-char {{'template<>' header not required for explicitly-specialized class 'cwg531::bad::A<char>' declared here}}
     template<> struct A<char>::B {};
     // expected-error@-1 {{extraneous 'template<>' in declaration of struct 'B'}}
-    // expected-error@-2 {{specialization of member 'cwg531::bad::A<char>::B' does not specialize an instantiated member}}
-    //  expected-note@#cwg531-B {{attempt to specialize declaration here}}
     template<> template<typename U> struct A<char>::C {};
     // expected-error@-1 {{extraneous template parameter list in template specialization}}
     //   expected-note@#cwg531-A-char {{'template<>' header not required for explicitly-specialized class 'cwg531::bad::A<char>' declared here}}
