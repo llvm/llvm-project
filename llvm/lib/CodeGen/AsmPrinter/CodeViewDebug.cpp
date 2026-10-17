@@ -1561,7 +1561,8 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
         GV.hasFnAttribute(Attribute::StackProtectReq)) {
       FPO |= FrameProcedureOptions::StrictSecurityChecks;
     }
-  } else if (!GV.hasStackProtectorFnAttr()) {
+  } else if (!GV.hasStackProtectorFnAttr() ||
+             GV.hasFnAttribute("stack-protector-layout-only")) {
     // __declspec(safebuffers) disables stack guards.
     FPO |= FrameProcedureOptions::SafeBuffers;
   }

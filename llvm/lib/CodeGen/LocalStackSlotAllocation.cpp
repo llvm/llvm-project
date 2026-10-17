@@ -218,27 +218,30 @@ void LocalStackSlotImpl::calculateFrameObjectOffsets(MachineFunction &Fn) {
   Align MaxAlign;
 
   // Make sure that the stack protector comes before the local variables on the
-  // stack.
+  // stack. With StackProtectorLayoutOnly these objects are ordered the same
+  // way although no stack protector is inserted.
   SmallSet<int, 16> ProtectedObjs;
-  if (MFI.hasStackProtectorIndex()) {
+  if (MFI.hasStackProtectorIndex() || MFI.hasStackProtectorLayoutOnly()) {
     int StackProtectorFI = MFI.getStackProtectorIndex();
-
-    // We need to make sure we didn't pre-allocate the stack protector when
-    // doing this.
-    // If we already have a stack protector, this will re-assign it to a slot
-    // that is **not** covering the protected objects.
-    assert(!MFI.isObjectPreAllocated(StackProtectorFI) &&
-           "Stack protector pre-allocated in LocalStackSlotAllocation");
 
     StackObjSet LargeArrayObjs;
     StackObjSet SmallArrayObjs;
     StackObjSet AddrOfObjs;
 
-    // Only place the stack protector in the local stack area if the target
-    // allows it.
-    if (TFI.isStackIdSafeForLocalArea(MFI.getStackID(StackProtectorFI)))
-      AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown,
-                        MaxAlign);
+    if (MFI.hasStackProtectorIndex()) {
+      // We need to make sure we didn't pre-allocate the stack protector when
+      // doing this.
+      // If we already have a stack protector, this will re-assign it to a slot
+      // that is **not** covering the protected objects.
+      assert(!MFI.isObjectPreAllocated(StackProtectorFI) &&
+             "Stack protector pre-allocated in LocalStackSlotAllocation");
+
+      // Only place the stack protector in the local stack area if the target
+      // allows it.
+      if (TFI.isStackIdSafeForLocalArea(MFI.getStackID(StackProtectorFI)))
+        AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown,
+                          MaxAlign);
+    }
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
