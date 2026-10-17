@@ -7,6 +7,18 @@
 ; RUN: llvm-readobj -s %t.lto.o | FileCheck --check-prefix=SECNAMES-FULL %s
 ; RUN: llvm-nm %t | FileCheck --check-prefix=SYMS %s
 
+;; A readable profile must reach both LTO backends and split the function.
+; RUN: echo 'v1' > %t.profile
+; RUN: echo 'f foo' >> %t.profile
+; RUN: echo 'c0' >> %t.profile
+; RUN: ld.lld %t.o -o %t --lto-basic-block-sections=%t.profile --lto-O0
+; RUN: llvm-nm %t | FileCheck --check-prefix=PROFILE %s
+; RUN: opt -module-summary %s -o %t.thin.o
+; RUN: ld.lld %t.thin.o -o %t --lto-basic-block-sections=%t.profile --lto-O0
+; RUN: llvm-nm %t | FileCheck --check-prefix=PROFILE %s
+
+; PROFILE: foo.cold
+
 ; LABELSWARN: --lto-basic-block-sections=labels' is deprecated; Please use '--lto-basic-block-address-map' instead
 
 ; SECNAMES: Name: .text.foo {{.*}}
