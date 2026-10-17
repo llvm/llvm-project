@@ -44,6 +44,11 @@ func.func @rsqrt(%arg: complex<f32>) -> complex<f32> {
   func.return %sqrt : complex<f32>
 }
 
+func.func @log1p(%arg: complex<f32>) -> complex<f32> {
+  %log1p = complex.log1p %arg : complex<f32>
+  func.return %log1p : complex<f32>
+}
+
 func.func @conj(%arg: complex<f32>) -> complex<f32> {
   %conj = complex.conj %arg : complex<f32>
   func.return %conj : complex<f32>
@@ -361,6 +366,38 @@ func.func @entry() {
 
   call @test_element_f64(%abs_test_cast, %abs_func)
     : (tensor<?xcomplex<f64>>, (complex<f64>) -> f64) -> ()
+
+  // complex.log1p test
+  %log1p_test = arith.constant dense<[
+    (1.0, 2.0),
+    // CHECK:       1.0397
+    // CHECK-NEXT:  0.7853
+
+    // log1p(-1 + 0i) = log(0 + 0i) = -inf + 0i. Both |real + 1| and |imag|
+    // are 0 here, so their ratio is 0 / 0 = NaN.
+    (-1.0, 0.0),
+    // CHECK-NEXT:  -inf
+    // CHECK-NEXT:  {{^}}0{{$}}
+    (-1.0, 0x80000000),
+    // CHECK-NEXT:  -inf
+    // CHECK-NEXT:  {{^}}-0{{$}}
+
+    // Both |real + 1| and |imag| are inf, their ratio is inf / inf = NaN.
+    // (inf, inf)
+    (0x7F800000, 0x7F800000),
+    // CHECK-NEXT:  inf
+    // CHECK-NEXT:  0.7853
+    // (-inf, inf)
+    (0xFF800000, 0x7F800000)
+    // CHECK-NEXT:  inf
+    // CHECK-NEXT:  2.3561
+  ]> : tensor<5xcomplex<f32>>
+  %log1p_test_cast = tensor.cast %log1p_test
+    :  tensor<5xcomplex<f32>> to tensor<?xcomplex<f32>>
+
+  %log1p_func = func.constant @log1p : (complex<f32>) -> complex<f32>
+  call @test_unary(%log1p_test_cast, %log1p_func)
+    : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
 
   // complex.exp test
   %exp_test = arith.constant dense<[

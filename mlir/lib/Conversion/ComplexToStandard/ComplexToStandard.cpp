@@ -522,11 +522,14 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
     Value r = arith::AddFOp::create(
         b, arith::MulFOp::create(b, half, logOfSqrtPart, fmfWithNaNInf),
         logOfMaxAbsOfRealPlusOneAndImag, fmfWithNaNInf);
+    // r is NaN when min/max is 0/0 or inf/inf, i.e. for log1p(-1 + 0i) and
+    // when both |real + 1| and |imag| are inf. log(max) is then the answer:
+    // -inf and inf respectively.
     Value resultReal = arith::SelectOp::create(
         b,
         arith::CmpFOp::create(b, arith::CmpFPredicate::UNO, r, r,
                               fmfWithNaNInf),
-        minAbs, r);
+        logOfMaxAbsOfRealPlusOneAndImag, r);
     Value resultImag = math::Atan2Op::create(b, imag, realPlusOne, fmf);
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
