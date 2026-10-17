@@ -80,32 +80,26 @@ struct constexpr_hash<Key> {
     } else if constexpr (std::floating_point<Key>) {
       if (key == 0.0f)
         return 0;
-      if constexpr (requires {
-                      requires([]() constexpr {
-                        (void)std::isnan(Key{});
-                        (void)std::isinf(Key{});
-                        (void)std::signbit(Key{});
-                        return true;
-                      })();
-                    }) {
-        if (std::isnan(key)) {
-          return 0xc3a5c85c97cb3127ULL;
-        }
-        if (std::isinf(key)) {
-          return std::signbit(key) ? 0xb492b66fbe98f273ULL : 0x9ae16a3b2f90404fULL;
-        }
-      } else {
-        // FIXME:
-        // std::isnan, std::isinf, std::signbit is not constexpr on Windows
-        // https://github.com/llvm/llvm-project/issues/214358
+#  if defined(_WIN32)
+      // FIXME:
+      // std::isnan, std::isinf, std::signbit is not constexpr on Windows
+      // https://github.com/llvm/llvm-project/issues/214358
 
-        if (__builtin_isnan(key)) {
-          return 0xc3a5c85c97cb3127ULL;
-        }
-        if (__builtin_isinf(key)) {
-          return __builtin_signbit(key) ? 0xb492b66fbe98f273ULL : 0x9ae16a3b2f90404fULL;
-        }
+      if (__builtin_isnan(key)) {
+        return 0xc3a5c85c97cb3127ULL;
       }
+      if (__builtin_isinf(key)) {
+        return __builtin_signbit(key) ? 0xb492b66fbe98f273ULL : 0x9ae16a3b2f90404fULL;
+      }
+
+#  else
+      if (std::isnan(key)) {
+        return 0xc3a5c85c97cb3127ULL;
+      }
+      if (std::isinf(key)) {
+        return std::signbit(key) ? 0xb492b66fbe98f273ULL : 0x9ae16a3b2f90404fULL;
+      }
+#  endif
 
       if constexpr (std::is_same_v<Key, long double>) {
         // long double can have padding on certain platforms which are uninitialized, and hence, can't be used during constant evaluation
