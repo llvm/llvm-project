@@ -7792,6 +7792,18 @@ TEST_F(FormatTest, BreakBinaryOperatorsInPresenceOfTemplates) {
                Style);
 }
 
+TEST_F(FormatTest, BreakBinaryOperatorsAfterAttributes) {
+  FormatStyle Style = getLLVMStyleWithColumns(25);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("int long_variable_name\n"
+               "    = 1;\n"
+               "int a [[maybe_unused]]\n"
+               "    = 2;",
+               "int long_variable_name = 1;\n"
+               "int a [[maybe_unused]] = 2;",
+               Style);
+}
+
 TEST_F(FormatTest, ConstructorInitializers) {
   verifyFormat("Constructor() : Initializer(FitsOnTheLine) {}");
   verifyFormat("Constructor() : Inttializer(FitsOnTheLine) {}",
