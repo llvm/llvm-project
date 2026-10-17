@@ -623,6 +623,8 @@ public:
   /// the operation in place, and as a failure otherwise.
   ///
   /// Note: This function does not erase the operation on a successful fold.
+  [[deprecated("use the overload that returns NormalizedOpFoldResults "
+               "and materializeFoldResults; they also return partial folds")]]
   LogicalResult
   tryFold(Operation *op, SmallVectorImpl<Value> &results,
           SmallVectorImpl<Operation *> *materializedConstants = nullptr);
