@@ -228,10 +228,17 @@ void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
-    I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                 ? classifyArgumentType(I.type)
-                 : ABIArgInfo::getDirect();
+  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments())) {
+    if (FI.isGridConstantArg(ArgumentsCount))
+      // NVVM represents grid-constant parameter objects as byval pointers,
+      // even when their source type is a scalar or vector.
+      I.info = getNaturalAlignIndirect(
+          I.type, getDataLayout().getAllocaAddrSpace(), /*byval=*/true);
+    else
+      I.info = ArgumentsCount < FI.getNumRequiredArgs()
+                   ? classifyArgumentType(I.type)
+                   : ABIArgInfo::getDirect();
+  }
 
   // Always honor user-specified calling convention.
   if (FI.getCallingConvention() != llvm::CallingConv::C)
