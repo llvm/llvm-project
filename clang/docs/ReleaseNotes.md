@@ -54,6 +54,13 @@ in a future version of Clang.
   mode, as it was removed from the standard by
   [P3475R2](https://wg21.link/P3475R2).
 
+- An error diagnostic is now issued if an `#embed` directive or a `__has_embed`
+  expression contains a parameter (i.e. `limit`, `prefix`, `suffix`, `if_empty`)
+  that has previously been defined as a macro, as per
+  [CWG3013](https://wg21.link/cwg3013). Previously macros that shared names with
+  `#embed` parameter names were expanded regardless, similar to its behavior in
+  C: Note that this expansion behavior is still present in C since there are no
+  rule analogue to CWG3013 in C.
 
 ### Objective-C Specific Potentially Breaking Changes
 
@@ -687,6 +694,12 @@ features cannot lower the translation-unit ABI level;
 - Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
+
+- Added `-Wembed-parameter-is-macro`, which warns in C if an `#embed` directive
+  or a `__has_embed` expression uses a parameter (i.e. `limit`, `prefix`,
+  `suffix`, `if_empty`) that has also been defined as a macro. C expands the
+  macro, but the same code is ill-formed in C++, so `-Wembed-parameter-is-macro`
+  is also part of `-Wc++-compat`; this warning is disabled by default otherwise.
 
 ### Improvements to Clang's time-trace
 
