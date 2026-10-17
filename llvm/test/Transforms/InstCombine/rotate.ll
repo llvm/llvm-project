@@ -1121,16 +1121,11 @@ define i32 @fold_rot_fshl_i32(i32 %x, i32 %y) {
 
 define i16 @check_rotate_masked_16bit_select(i8 %shamt, i32 %cond) {
 ; CHECK-LABEL: @check_rotate_masked_16bit_select(
-; CHECK-NEXT:    [[MASKX:%.*]] = and i32 [[COND:%.*]], 1
-; CHECK-NEXT:    [[MASKY:%.*]] = and i8 [[SHAMT:%.*]], 15
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i8 [[MASKY]], 0
-; CHECK-NEXT:    [[SHR:%.*]] = select i1 [[ISZERO]], i32 [[MASKX]], i32 0
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[SHAMT]]
-; CHECK-NEXT:    [[MASKW:%.*]] = and i8 [[SUB]], 15
-; CHECK-NEXT:    [[Z2:%.*]] = zext nneg i8 [[MASKW]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[MASKX]], [[Z2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[OR]] to i16
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i32 [[COND:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[COND_FR]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = call i16 @llvm.fshr.i16(i16 [[TMP3]], i16 [[TMP3]], i16 [[TMP1]])
 ; CHECK-NEXT:    ret i16 [[TRUNC]]
 ;
   %maskx = and i32 %cond, 1

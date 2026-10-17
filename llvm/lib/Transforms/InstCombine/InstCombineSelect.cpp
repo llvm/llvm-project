@@ -1120,6 +1120,41 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
 
+static Instruction*
+foldSelectZeroOrLShr(SelectInst &SI,
+                     InstCombinerImpl &IC) {
+  Value *X, *Z;
+  if (!match(&SI, m_Select(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Z), m_Zero()),
+  m_Value(X), m_Zero())))
+    return nullptr;
+  
+  Type *XTy = X->getType();
+  Type *ZTy = Z->getType();
+  if (!XTy->isIntOrIntVectorTy() || !ZTy->isIntOrIntVectorTy() ||
+      XTy->isVectorTy() != ZTy->isVectorTy())
+    return nullptr;
+
+  unsigned XBW = XTy->getScalarSizeInBits();
+  unsigned ZBW = ZTy->getScalarSizeInBits();
+  if (ZBW > XBW)
+    return nullptr;
+  if (IC.computeKnownBits(X, &SI).countMaxActiveBits() > 1)
+    return nullptr;
+
+  APInt ZMax = IC.computeKnownBits(Z, &SI).getMaxValue();
+  if (!ZMax.zext(XBW).ult(XBW))
+    return nullptr;
+
+  Value *ShVal = X;
+  if (!isGuaranteedNotToBePoison(X, &IC.getAssumptionCache(), &SI, &IC.getDominatorTree())) {
+    Value *Fr = IC.Builder.CreateFreeze(X, X->getName() + ".fr");
+    ShVal = IC.Builder.CreateAnd(Fr, ConstantInt::get(XTy, 1));
+  }
+  Value *ShAmt = IC.Builder.CreateZExtOrTrunc(Z, XTy);
+
+  return BinaryOperator::CreateLShr(ShVal, ShAmt);
+}
+
 /// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
 /// There are 8 commuted/swapped variants of this pattern.
 static Value *
@@ -5031,6 +5066,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *Or = foldSetClearBits(SI, Builder))
     return Or;
   if (Instruction *Mul = foldSelectZeroOrFixedOp(SI, *this))
+    return Mul;
+  if (Instruction *Mul = foldSelectZeroOrLShr(SI, *this))
     return Mul;
 
   // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))

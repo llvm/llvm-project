@@ -5,10 +5,11 @@
 define i32 @select_zero_lshr_i8_amt(i32 %cond, i8 %shamt) {
 ; CHECK-LABEL: define i32 @select_zero_lshr_i8_amt(
 ; CHECK-SAME: i32 [[COND:%.*]], i8 [[SHAMT:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND]], 1
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i32 [[COND]]
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND_FR]], 1
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[SHAMT]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[M]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[X]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[M]] to i32
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %cond, 1
@@ -22,10 +23,10 @@ define i32 @select_zero_lshr_i8_amt(i32 %cond, i8 %shamt) {
 define i32 @select_zero_lshr_same_type(i32 %cond, i32 %sh) {
 ; CHECK-LABEL: define i32 @select_zero_lshr_same_type(
 ; CHECK-SAME: i32 [[COND:%.*]], i32 [[SH:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND]], 1
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i32 [[COND]]
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND_FR]], 1
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[SH]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[M]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X]], [[M]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %cond, 1
@@ -39,10 +40,10 @@ define i32 @select_zero_lshr_same_type(i32 %cond, i32 %sh) {
 define <2 x i32> @select_zero_lshr_vec(<2 x i32> %cond, <2 x i32> %sh) {
 ; CHECK-LABEL: define <2 x i32> @select_zero_lshr_vec(
 ; CHECK-SAME: <2 x i32> [[COND:%.*]], <2 x i32> [[SH:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[COND]], splat (i32 1)
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i32> [[COND]]
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[COND_FR]], splat (i32 1)
 ; CHECK-NEXT:    [[M:%.*]] = and <2 x i32> [[SH]], splat (i32 15)
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[M]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[X]], [[M]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %x = and <2 x i32> %cond, splat (i32 1)
@@ -135,10 +136,11 @@ define i1 @no_fold_ptr_cond(ptr %a, i1 %x) {
 define i32 @select_zero_lshr_maybe_poison(i32 %cond, i8 %shamt) {
 ; CHECK-LABEL: define i32 @select_zero_lshr_maybe_poison(
 ; CHECK-SAME: i32 [[COND:%.*]], i8 [[SHAMT:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND]], 1
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i32 [[COND]]
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND_FR]], 1
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[SHAMT]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[M]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[X]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[M]] to i32
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %cond, 1
@@ -154,8 +156,8 @@ define i32 @select_zero_lshr_noundef(i32 noundef %cond, i8 %shamt) {
 ; CHECK-SAME: i32 noundef [[COND:%.*]], i8 [[SHAMT:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[COND]], 1
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[SHAMT]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[M]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[X]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[M]] to i32
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %cond, 1
