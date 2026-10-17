@@ -211,6 +211,20 @@ This encoding allows simple partial ordering of the architectures.
   the same family.
 - Detect `a` variants by checking FullSMVersion & 1.
 
+## Floating-point absolute value and negation
+
+By default, the NVPTX back-end lowers `llvm.fabs` and `fneg` to PTX `abs`
+and `neg` instructions, which may canonicalize NaNs. Two independent options
+instead use bitwise operations to preserve all bits except the sign:
+
+- `--nvptx-strict-abs` clears the sign bit for `llvm.fabs`.
+- `--nvptx-strict-neg` flips the sign bit for `fneg` using XOR.
+
+Both options are disabled by default. They preserve NaN payloads and signaling
+NaNs for scalar and vector floating-point types, including when native half or
+bfloat16 arithmetic is unavailable. Explicit `llvm.nvvm.fabs.*` and
+`llvm.nvvm.neg.*` intrinsics continue to use their corresponding PTX instructions.
+
 (nvptx-intrinsics)=
 
 ## NVPTX Intrinsics
