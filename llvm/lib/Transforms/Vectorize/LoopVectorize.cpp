@@ -7940,9 +7940,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     ++LoopsVectorized;
   }
 
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
-         "DT not preserved correctly");
-
   return true;
 }
 
@@ -8006,6 +8003,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
 
   // Verify once per function rather than once per processed loop, which would
   // make the pass quadratic in the number of loops.
+  assert((!Changed || DT->verify(DominatorTree::VerificationLevel::Fast)) &&
+         "DT not preserved correctly");
   assert((!Changed || !verifyFunction(F, &dbgs())) &&
          "Invalid IR produced by LoopVectorize");
 
