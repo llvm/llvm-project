@@ -134,8 +134,8 @@ void DIEAttributeCloner::clone() {
             .second;
   }
 
-  // No DW_AT_addr_base seen, as GCC emits; add one for the addrx-indexed
-  // entries. Not in update mode, where HasAddrBaseAttr is never set.
+  // No DW_AT_addr_base: add one for the addrx-indexed entries. Except in
+  // update mode, where HasAddrBaseAttr is never set.
   if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
       !AttrInfo.HasAddrBaseAttr &&
       !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {

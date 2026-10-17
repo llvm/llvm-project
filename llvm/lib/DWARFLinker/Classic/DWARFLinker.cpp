@@ -2242,7 +2242,7 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
     return Error::success();
 
   // Every cloned unit root has DW_AT_addr_base, so emit the table even when it
-  // is empty (DWARFv5 section 7.27).
+  // is empty.
   DIE *OutputUnitDIE = Unit.getOutputUnitDIE();
   if (OutputUnitDIE == nullptr)
     return Error::success();
