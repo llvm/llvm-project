@@ -1,7 +1,7 @@
 # Implements the /compile-time comment (usable by llvm-committers only).
 # The changes get pushed to a perf/pr-NNNNNN branch on the
-# llvm-compile-time-bot/llvm-project fork, which the compile-time tracker
-# will pick it up.
+# llvmbot/llvm-project fork, which the compile-time tracker
+# will pick up.
 
 name: Compile-time tracker
 
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  BOT_REPOSITORY: llvm-compile-time-bot/llvm-project
+  BOT_REPOSITORY: llvmbot/llvm-project
 
 jobs:
   permission-check:
@@ -121,9 +121,9 @@ jobs:
           MERGE_SHA: ${{ steps.get-pr.outputs.merge-sha }}
           GIT_AUTHOR_NAME: ${{ steps.get-pr.outputs.author-name }}
           GIT_AUTHOR_EMAIL: ${{ steps.get-pr.outputs.author-email }}
-          GIT_COMMITTER_NAME: llvm-compile-time-bot
-          GIT_COMMITTER_EMAIL: llvm-compile-time-bot@users.noreply.github.com
-          BOT_TOKEN: ${{ secrets.LLVM_COMPILE_TIME_BOT_TOKEN }}
+          GIT_COMMITTER_NAME: llvmbot
+          GIT_COMMITTER_EMAIL: llvmbot@llvm.org
+          BOT_TOKEN: ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }}
         run: |
           git init -q llvm-project
           cd llvm-project
