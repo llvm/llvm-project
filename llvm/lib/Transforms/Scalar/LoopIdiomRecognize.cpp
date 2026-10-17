@@ -2096,9 +2096,13 @@ public:
       // Don't call `wcslen` if the base pointer isn't known to be aligned.
       const DataLayout &DL = LoopLoad->getDataLayout();
       Align OperandAlign = DL.getABITypeAlign(OperandType);
-      if (LoopLoad->getAlign() < OperandAlign &&
-          Align::fromLog2(SE->getMinTrailingZeros(LoadBaseEv)) < OperandAlign)
-        return false;
+      if (LoopLoad->getAlign() < OperandAlign) {
+        // For null pointers the load base number of trailing zeros may be
+        // larger than what `Align` allows. So take log2 of operand alignment
+        // instead and compare trailing zeros instead of alignments.
+        if (SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
+          return false;
+      }
     }
 
     // Scan every instruction in the loop to ensure there are no side effects.
@@ -3448,7 +3452,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
       InsertPt = BitPosI->getInsertionPointAfterDef();
     else
-      InsertPt = DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+      InsertPt = DT->getRoot()->getFirstNonPHIOrAlloca();
     if (!InsertPt)
       return false;
     FreezeInst *BitPosFrozen =

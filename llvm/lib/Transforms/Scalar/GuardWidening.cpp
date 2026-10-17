@@ -599,7 +599,7 @@ static std::optional<BasicBlock::iterator>
 getFreezeInsertPt(Value *V, const DominatorTree &DT) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
-    return DT.getRoot()->getFirstNonPHIOrDbgOrAlloca()->getIterator();
+    return DT.getRoot()->getFirstNonPHIOrAlloca()->getIterator();
 
   std::optional<BasicBlock::iterator> Res = I->getInsertionPointAfterDef();
   // If there is no place to add freeze - return nullptr.

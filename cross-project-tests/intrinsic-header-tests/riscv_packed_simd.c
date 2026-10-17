@@ -3122,6 +3122,64 @@ int32_t test_mulhrsu_i32(int32_t rs1, uint32_t rs2) {
   return __riscv_mulhrsu_i32(rs1, rs2);
 }
 
+// Scalar multiply high accumulate
+// CHECK-LABEL: test_mhacc_i32:
+// RV32:        mhacc{{[[:space:]]}}
+// RV64:        pmhacc.w
+int32_t test_mhacc_i32(int32_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mhacc_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhracc_i32:
+// RV32:        mhracc{{[[:space:]]}}
+// RV64:        pmhracc.w
+int32_t test_mhracc_i32(int32_t rd, int32_t rs1, int32_t rs2) {
+  return __riscv_mhracc_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhaccu_u32:
+// RV32:        mhaccu{{[[:space:]]}}
+// RV64:        pmhaccu.w
+uint32_t test_mhaccu_u32(uint32_t rd, uint32_t rs1, uint32_t rs2) {
+  return __riscv_mhaccu_u32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhraccu_u32:
+// RV32:        mhraccu{{[[:space:]]}}
+// RV64:        pmhraccu.w
+uint32_t test_mhraccu_u32(uint32_t rd, uint32_t rs1, uint32_t rs2) {
+  return __riscv_mhraccu_u32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhaccsu_i32:
+// RV32:        mhaccsu{{[[:space:]]}}
+// RV64:        pmhaccsu.w
+int32_t test_mhaccsu_i32(int32_t rd, int32_t rs1, uint32_t rs2) {
+  return __riscv_mhaccsu_i32(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_mhraccsu_i32:
+// RV32:        mhraccsu{{[[:space:]]}}
+// RV64:        pmhraccsu.w
+int32_t test_mhraccsu_i32(int32_t rd, int32_t rs1, uint32_t rs2) {
+  return __riscv_mhraccsu_i32(rd, rs1, rs2);
+}
+
+// Scalar "Q-format" multiplication
+// CHECK-LABEL: test_mulq_i32:
+// RV32:        mulq{{[[:space:]]}}
+// RV64:        pmulq.w
+int32_t test_mulq_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_mulq_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_mulqr_i32:
+// RV32:        mulqr{{[[:space:]]}}
+// RV64:        pmulqr.w
+int32_t test_mulqr_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_mulqr_i32(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pmulh_i16x2:
 // CHECK:       pmulh.h
 int16x2_t test_pmulh_i16x2(int16x2_t rs1, int16x2_t rs2) {
