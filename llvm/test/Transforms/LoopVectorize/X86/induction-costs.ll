@@ -118,23 +118,23 @@ define void @multiple_truncated_ivs_with_wide_uses(i1 %c, ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT4:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
-; CHECK-NEXT:    [[STEP_ADD3:%.*]] = add <4 x i32> [[VEC_IND2]], splat (i32 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C]], <4 x i16> [[VEC_IND]], <4 x i16> splat (i16 10)
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], <4 x i16> [[STEP_ADD]], <4 x i16> splat (i16 10)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i16> [[VEC_IND]], splat (i16 8)
+; CHECK-NEXT:    [[STEP_ADD3:%.*]] = add <8 x i32> [[VEC_IND2]], splat (i32 8)
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[C]], <8 x i16> [[VEC_IND]], <8 x i16> splat (i16 10)
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C]], <8 x i16> [[STEP_ADD]], <8 x i16> splat (i16 10)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[TMP2]], i64 4
-; CHECK-NEXT:    store <4 x i16> [[TMP0]], ptr [[TMP2]], align 2, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
-; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[TMP3]], align 2, !alias.scope [[META6]], !noalias [[META9]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[TMP2]], i64 8
+; CHECK-NEXT:    store <8 x i16> [[TMP8]], ptr [[TMP2]], align 2, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
+; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[TMP5]], align 2, !alias.scope [[META6]], !noalias [[META9]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i64 4
-; CHECK-NEXT:    store <4 x i32> [[VEC_IND2]], ptr [[TMP4]], align 4, !alias.scope [[META9]]
-; CHECK-NEXT:    store <4 x i32> [[STEP_ADD3]], ptr [[TMP5]], align 4, !alias.scope [[META9]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], splat (i16 4)
-; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add <4 x i32> [[STEP_ADD3]], splat (i32 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[TMP4]], i64 8
+; CHECK-NEXT:    store <8 x i32> [[VEC_IND2]], ptr [[TMP4]], align 4, !alias.scope [[META9]]
+; CHECK-NEXT:    store <8 x i32> [[STEP_ADD3]], ptr [[TMP7]], align 4, !alias.scope [[META9]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[STEP_ADD]], splat (i16 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add <8 x i32> [[STEP_ADD3]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

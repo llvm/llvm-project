@@ -64,6 +64,12 @@ public:
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const override;
+  bool shouldMaximizeVectorBandwidth(
+      TargetTransformInfo::RegisterKind K) const override {
+    assert(K != TargetTransformInfo::RGK_Scalar &&
+           "Expected vector register kind");
+    return K == TargetTransformInfo::RGK_FixedWidthVector;
+  }
   unsigned getMaxInterleaveFactor(ElementCount VF,
                                   bool HasUnorderedReductions) const override;
   InstructionCost getArithmeticInstrCost(
