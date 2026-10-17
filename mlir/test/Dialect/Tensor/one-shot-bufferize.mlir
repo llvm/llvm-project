@@ -119,6 +119,83 @@ func.func @unknown_insert_extract(
 
 // -----
 
+// A write through an extracted view is confined to that subset. It does not
+// conflict with a read through a disjoint view of the same tensor.
+
+// CHECK-LABEL: func @disjoint_fill_through_extract(
+//  CHECK-SAME:     %[[T:.*]]: memref<8xf32, strided<[?], offset: ?>>
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   %[[LHS:.*]] = memref.subview %[[T]][0] [4] [1]
+//       CHECK:   %[[RHS:.*]] = memref.subview %[[T]][4] [4] [1]
+//       CHECK:   linalg.fill {{.*}} outs(%[[LHS]]
+//       CHECK:   return %[[LHS]], %[[RHS]]
+
+// CHECK-ANALYSIS-LABEL: func @disjoint_fill_through_extract(
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: linalg.fill
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "true"]
+func.func @disjoint_fill_through_extract(
+    %t: tensor<8xf32> {bufferization.writable = true}, %value: f32)
+    -> (tensor<4xf32>, tensor<4xf32>) {
+  %lhs = tensor.extract_slice %t[0][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %rhs = tensor.extract_slice %t[4][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %written = linalg.fill ins(%value : f32) outs(%lhs : tensor<4xf32>)
+      -> tensor<4xf32>
+  return %written, %rhs : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
+// A write through [0, 4) conflicts with a read through [2, 6).
+
+// CHECK-LABEL: func @overlapping_fill_through_extract(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+
+// CHECK-ANALYSIS-LABEL: func @overlapping_fill_through_extract(
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["false"]
+func.func @overlapping_fill_through_extract(
+    %t: tensor<8xf32> {bufferization.writable = true}, %value: f32)
+    -> (tensor<4xf32>, tensor<4xf32>) {
+  %lhs = tensor.extract_slice %t[0][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %rhs = tensor.extract_slice %t[2][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %written = linalg.fill ins(%value : f32) outs(%lhs : tensor<4xf32>)
+      -> tensor<4xf32>
+  return %written, %rhs : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
+// Dynamically positioned views remain conservative.
+
+// CHECK-LABEL: func @unknown_fill_through_extract(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+
+// CHECK-ANALYSIS-LABEL: func @unknown_fill_through_extract(
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["false", "none"]
+func.func @unknown_fill_through_extract(
+    %t: tensor<8xf32> {bufferization.writable = true}, %value: f32,
+    %write_idx: index, %read_idx: index)
+    -> (tensor<4xf32>, tensor<4xf32>) {
+  %lhs = tensor.extract_slice %t[%write_idx][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %rhs = tensor.extract_slice %t[%read_idx][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %written = linalg.fill ins(%value : f32) outs(%lhs : tensor<4xf32>)
+      -> tensor<4xf32>
+  return %written, %rhs : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func private @insert_slice_fun
 //  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
