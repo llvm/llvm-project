@@ -111,6 +111,10 @@ def CIR_Dialect : Dialect {
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // The initializer functions of the C++20 named modules this translation
+    // unit imports, as #cir.cxx_module_init attributes in the order the global
+    // init function calls them, precomputed by CIRGen for the same reason.
+    static llvm::StringRef getCXXModuleImportedInitsAttrName() { return "cir.cxx_module_imported_inits"; }
     // LangOptions facts that post-CIRGen lowering consumes, serialized by
     // CIRGen so a reloaded .cir module is self-describing without a live
     // clang::LangOptions. See #cir.lowering_lang_options.
@@ -129,6 +133,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUNoRemoteMemoryAttrName() { return "cir.amdgpu_no_remote_memory"; }
     static llvm::StringRef getAMDGPUIgnoreDenormalModeAttrName() { return "cir.amdgpu_ignore_denormal_mode"; }
     static llvm::StringRef getAMDGPURawAtomicAttrName() { return "cir.amdgpu_raw_atomic"; }
+    static llvm::StringRef getAMDGPUNoPrivateAddrSpaceAttrName() { return "cir.amdgpu_no_private_addrspace"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
     static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }

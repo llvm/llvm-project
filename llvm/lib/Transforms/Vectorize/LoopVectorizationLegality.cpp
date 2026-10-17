@@ -76,36 +76,38 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
 
-  // If the metadata doesn't explicitly specify whether to enable scalable
-  // vectorization, then decide based on the following criteria (increasing
-  // level of priority):
-  //  - Target default
-  //  - Metadata width
-  //  - Force option (always overrides)
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified) {
-    if (TTI)
-      Scalable = TTI->enableScalableVectorization() ? SK_PreferScalable
-                                                    : SK_FixedWidthOnly;
+  // Decide whether to enable scalable vectorization.
+  auto ComputeScalable =
+      [TTI](ScalableForceKind ForceScalableHint,
+            ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
+            ElementCount ForceWidthOpt) -> ScalableForceKind {
+    // -scalable-vectorization=(always|off|on) has the highest precedence.
+    if (ForceScalableOpt != SK_Unspecified)
+      return ForceScalableOpt;
 
-    if (Width.Value)
-      // If the width is set, but the metadata says nothing about the scalable
-      // property, then assume it concerns only a fixed-width UserVF.
-      // If width is not set, the flag takes precedence.
-      Scalable = SK_FixedWidthOnly;
-  }
+    // Then, consider loop hints.
+    assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
+    if (ForceScalableHint == SK_PreferScalable ||
+        ForceScalableHint == SK_FixedWidthOnly)
+      return ForceScalableHint;
 
-  // If the flag is set to force any use of scalable vectors, override the loop
-  // hints.
-  if (Opts.scalable_vectorization != LoopVectorizeHints::SK_Unspecified)
-    Scalable = Opts.scalable_vectorization;
+    // Then, infer scalability from a preferred VF.
+    assert(ForceScalableOpt == SK_Unspecified);
+    if (ForceWidthOpt.isScalable())
+      return SK_AlwaysScalable;
+    if (ForceWidth)
+      return SK_FixedWidthOnly;
 
-  // If force-vector-width is scalable, force scalable vectorization.
-  if (VectorizerParams::VectorizationFactor.isScalable())
-    Scalable = SK_AlwaysScalable;
+    // Finally, listen to TTI.
+    if (TTI && TTI->enableScalableVectorization())
+      return SK_PreferScalable;
 
-  // Scalable vectorization is disabled if no preference is specified.
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified)
-    Scalable = SK_FixedWidthOnly;
+    // Preference unspecified, fallback to fixed-length vectorization.
+    return SK_FixedWidthOnly;
+  };
+  Scalable =
+      ComputeScalable(ScalableForceKind(Scalable), Opts.scalable_vectorization,
+                      Width.Value, VectorizerParams::VectorizationFactor);
 
   if (IsVectorized.Value != 1)
     // If the vectorization width and interleaving count are both 1 then
@@ -1598,9 +1600,8 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
 /// with another term. Binds the pointer, load, and the other comparison term.
 static bool matchUncountableExitCondition(Value *Cond, Value *&Ptr,
                                           Instruction *&Load, Value *&Other) {
-  return match(Cond, m_OneUse(m_c_Cmp(
-                         m_OneUse(m_Instruction(Load, m_Load(m_Value(Ptr)))),
-                         m_Value(Other))));
+  return match(
+      Cond, m_c_Cmp(m_Instruction(Load, m_Load(m_Value(Ptr))), m_Value(Other)));
 }
 
 /// Matches an exit condition formed by comparing the current value of an
@@ -1627,7 +1628,7 @@ static bool matchCombinedExitCondition(Value *Cond, Instruction *&CountableCond,
                                        Value *&Other, ScalarEvolution &SE,
                                        Loop *TheLoop) {
   Value *L, *R;
-  if (!match(Cond, m_OneUse(m_LogicalOr(m_Value(L), m_Value(R)))))
+  if (!match(Cond, m_LogicalOr(m_Value(L), m_Value(R))))
     return false;
 
   if (matchCountableExitCondition(L, SE, TheLoop) &&
@@ -1833,9 +1834,6 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   // This is currently matching about the simplest form we can, expecting
   // only one in-loop load, the result of which is directly compared against
   // a loop-invariant value.
-  // FIXME: We're insisting on a single use for now, because otherwise we will
-  // need to make PHI nodes for other users. That can be done once the initial
-  // transform code lands.
   auto *Br = cast<CondBrInst>(ExitingBlock->getTerminator());
 
   using namespace llvm::PatternMatch;

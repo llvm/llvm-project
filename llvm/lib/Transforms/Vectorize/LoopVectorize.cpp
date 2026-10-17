@@ -5322,8 +5322,14 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
+  // Only charge legacy scalarization costs for instructions VPlan replicates.
+  SmallPtrSet<Instruction *, 8> Replicated;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
+      Replicated.insert(RepR.getUnderlyingInstr());
   for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
-    if (UseVPlanCostModel(Scalarized) ||
+    if (!Replicated.contains(Scalarized) || UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(Scalarized);
@@ -6204,19 +6210,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
-  // TODO: Remove this once we can properly check the VPlan itself for both
-  //       the presence of an uncountable exit and the presence of stores in
-  //       the loop inside handleUncountableEarlyExits itself.
+  // TODO: Remove this once we can properly check the VPlan itself for the
+  //       presence of an uncountable exit.
   if (Legal->hasUncountableEarlyExit()) {
     if (!RUN_VPLAN_PASS(VPlanTransforms::splitCombinedExits, *VPlan0, PSE,
                         OrigLoop))
       return nullptr;
 
     // TODO: Check target preference for style.
-    UncountableExitStyle EEStyle =
-        Legal->hasUncountableExitWithSideEffects()
-            ? UncountableExitStyle::MaskedHandleExitInScalarLoop
-            : UncountableExitStyle::ReadOnly;
+    UncountableExitStyle EEStyle = UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
                         ORE, OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
                         EEStyle)) {
