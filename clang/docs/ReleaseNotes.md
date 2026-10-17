@@ -1024,6 +1024,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed an issue where Clang would allow invoking consteval functions outside
   of a manifestly constant evaluated context. (#GH183415, #GH169139)
 
+- A pack-index-specifier (`T...[N]`) is now treated as a non-deduced context,
+  per C++26 [temp.deduct.type]. This fixes a crash when matching an explicit
+  instantiation, explicit specialization, or call against a function template
+  whose parameter type uses pack indexing, and makes such valid matches
+  succeed instead of being rejected. (#GH232220)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
