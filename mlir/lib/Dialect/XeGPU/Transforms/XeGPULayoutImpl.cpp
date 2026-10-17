@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -21,12 +22,14 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
@@ -132,23 +135,85 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
   return layout;
 }
 
-// Returns true if `op` is safe and cheap to clone (no side effects, no
-// regions, and all operands are themselves trivially rematerializable, e.g.
-// block-arg-free pure value generators such as `vector.step`, splat
-// `arith.constant`, or `vector.create_mask` whose operands are constants).
-bool xegpu::isTriviallyRematerializable(Operation *op) {
-  if (!op || op->getNumRegions() != 0)
+static constexpr unsigned kMaxRematerializableChainOps = 16;
+
+/// Accept pure vector generators and elementwise ops that preserve vector
+/// shape. Generators have no vector operands; elementwise ops share their
+/// result layout with their vector operands, so the chain needs no layout
+/// inference.
+static bool isLayoutPreservingVectorProducer(Operation *op) {
+  if (op->getNumResults() != 1 || op->getNumRegions() != 0 ||
+      !isa<VectorType>(op->getResult(0).getType()) || !isMemoryEffectFree(op))
     return false;
-  if (!isMemoryEffectFree(op))
-    return false;
-  for (Value v : op->getOperands()) {
-    Operation *defOp = v.getDefiningOp();
-    if (!defOp)
+  if (auto constant = dyn_cast<arith::ConstantOp>(op)) {
+    auto value = dyn_cast<DenseElementsAttr>(constant.getValue());
+    return value && value.isSplat();
+  }
+  if (isa<vector::StepOp, vector::CreateMaskOp>(op))
+    return true;
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
+    return !isa<VectorType>(broadcast.getSource().getType());
+  return OpTrait::hasElementwiseMappableTraits(op);
+}
+
+/// Collect each eligible producer once, producers first, for cloning with an
+/// IRMapping. Reject chains exceeding the duplication limit or reaching an
+/// unsupported producer or vector block argument.
+static bool collectRematerializableChain(Operation *root,
+                                         SmallVectorImpl<Operation *> &chain) {
+  // Re-push each op below its producers to obtain an iterative post-order walk.
+  SmallVector<std::pair<Operation *, bool>> worklist{{root, false}};
+  DenseSet<Operation *> visited;
+  while (!worklist.empty()) {
+    auto [op, expanded] = worklist.pop_back_val();
+    if (expanded) {
+      chain.push_back(op);
+      continue;
+    }
+    if (!visited.insert(op).second)
+      continue;
+    if (visited.size() > kMaxRematerializableChainOps ||
+        !isLayoutPreservingVectorProducer(op))
       return false;
-    if (!isTriviallyRematerializable(defOp))
-      return false;
+    worklist.emplace_back(op, true);
+    for (Value operand : op->getOperands()) {
+      if (!isa<VectorType>(operand.getType()))
+        continue;
+      Operation *producer = operand.getDefiningOp();
+      if (!producer)
+        return false;
+      if (!visited.contains(producer))
+        worklist.emplace_back(producer, false);
+    }
   }
   return true;
+}
+
+bool xegpu::isTriviallyRematerializable(Operation *op) {
+  if (!op)
+    return false;
+  SmallVector<Operation *> chain;
+  return collectRematerializableChain(op, chain);
+}
+
+Value xegpu::rematerializeWithLayout(OpBuilder &builder, Value value,
+                                     DistributeLayoutAttr layout) {
+  Operation *producer = value.getDefiningOp();
+  SmallVector<Operation *> chain;
+  if (!producer || !collectRematerializableChain(producer, chain))
+    return nullptr;
+  // Clone producers first so vector operands map to clones; scalars stay
+  // shared.
+  OpBuilder::InsertionGuard guard(builder);
+  IRMapping mapping;
+  for (Operation *op : chain) {
+    builder.setInsertionPointAfter(op);
+    Operation *clone = builder.clone(*op, mapping);
+    OpResult cloneResult = clone->getResult(0);
+    removeLayoutAttr(cloneResult);
+    setDistributeLayoutAttr(cloneResult, layout);
+  }
+  return mapping.lookup(value);
 }
 
 // For regular operations: First the result layouts are propagated from uses.
