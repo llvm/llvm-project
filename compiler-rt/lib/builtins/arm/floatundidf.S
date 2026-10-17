@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatundidf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_ul2d
   VMOV_TO_DOUBLE(d0, r0, r1)
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatundidf, __aeabi_ul2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ul2d)
+  BTI_LANDING
 
   // There are essentially three cases we need to separate. The leading bit of
   // the integer is either in xh or xl; if it's in xh, it makes a difference

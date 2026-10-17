@@ -18,6 +18,7 @@
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__gtsf2vfp)
+	BTI_LANDING
 #if defined(COMPILER_RT_ARMHF_TARGET)
 	vcmp.f32 s0, s1
 #else

@@ -19,6 +19,7 @@
 //
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__bswapsi2)
+ 	BTI_LANDING
 #if __ARM_ARCH < 6
     // before armv6 does not have "rev" instruction
  	eor	r1, r0, r0, ror #16

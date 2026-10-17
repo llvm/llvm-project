@@ -20,6 +20,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__unordsf2)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   vmov r1, s1
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__unordsf2, __aeabi_fcmpun)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpun)
+  BTI_LANDING
 
   // This function isn't based on the general-purpose code in fcmp.h, because
   // it's more effort than needed. Here we just need to identify whether or not

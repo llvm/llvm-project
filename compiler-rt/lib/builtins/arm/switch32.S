@@ -30,6 +30,7 @@
 //
 	.p2align 2
 DEFINE_COMPILERRT_PRIVATE_FUNCTION(__switch32)
+	BTI_LANDING
 	ldr     ip, [lr, #-1]            // get first 32-bit word in table
 	cmp     r0, ip                   // compare with index
 	add     r0, lr, r0, lsl #2       // compute address of element in table

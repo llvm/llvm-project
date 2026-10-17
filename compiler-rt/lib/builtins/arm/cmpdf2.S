@@ -39,6 +39,7 @@ op1l .req yl
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__cmpdf2)
+  BTI_LANDING
   push {r4, lr}
   VMOV_FROM_DOUBLE(r0, r1, d0)
   VMOV_FROM_DOUBLE(r2, r3, d1)
@@ -53,6 +54,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__eqdf2, __cmpdf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__nedf2, __cmpdf2)
 
 DEFINE_COMPILERRT_FUNCTION(__compiler_rt_softfp_cmpdf2)
+        BTI_LANDING
   #include "dcmp.h"
 
 LOCAL_LABEL(NaN):

@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__fixdfdi)
+  BTI_LANDING
   push {r4, lr}
   VMOV_FROM_DOUBLE(r0, r1, d0)
   bl __aeabi_d2lz
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__fixdfdi, __aeabi_d2lz)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_d2lz)
+  BTI_LANDING
 
   // The fast path: deliver an answer as quickly as possible for positive cases
   // that don't overflow, and branch out of line to handle everything else more

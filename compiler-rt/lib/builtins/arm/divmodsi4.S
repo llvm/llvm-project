@@ -30,6 +30,7 @@
 
 	.p2align 3
 DEFINE_COMPILERRT_FUNCTION(__divmodsi4)
+	BTI_LANDING
 #if __ARM_ARCH_EXT_IDIV__
 	tst     r1, r1
 	beq     LOCAL_LABEL(divzero)

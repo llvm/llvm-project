@@ -22,6 +22,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatdisf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_l2f
   vmov s0, r0
@@ -31,6 +32,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatdisf, __aeabi_l2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_l2f)
+  BTI_LANDING
 
   // Isolate the input integer's sign bit in r2, and if the input is negative,
   // negate it.
@@ -181,6 +183,7 @@ END_COMPILERRT_FUNCTION(__aeabi_l2f)
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatundisf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_ul2f
   vmov s0, r0
@@ -190,6 +193,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatundisf, __aeabi_ul2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ul2f)
+  BTI_LANDING
   // Jump to l2f_normalise above, without negating the input, and having set up
   // r2 unconditionally to indicate that a positive output is wanted.
   mov     r2, #0x3f800000

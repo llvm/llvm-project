@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatunsidf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_ui2d
   VMOV_TO_DOUBLE(d0, r0, r1)
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunsidf, __aeabi_ui2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2d)
+  BTI_LANDING
 
   // Shift the leading bit of the input to the top of xh. In the
   // process, we detect a zero input, and branch out of line for it.

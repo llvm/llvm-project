@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__truncdfsf2)
+  BTI_LANDING
   push {r4, lr}
   VMOV_FROM_DOUBLE(r0, r1, d0)
   bl __aeabi_d2f
@@ -31,6 +32,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__truncdfsf2, __aeabi_d2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_d2f)
+  BTI_LANDING
 
   // Start with the fast path, dealing with input values that give a normalized
   // single-precision output. We handle these as quickly as possible in

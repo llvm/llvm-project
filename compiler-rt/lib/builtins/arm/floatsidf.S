@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatsidf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_i2d
   VMOV_TO_DOUBLE(d0, r0, r1)
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatsidf, __aeabi_i2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_i2d)
+  BTI_LANDING
 
   // Start by separating the input into its sign and its absolute value.
   ands    r2, r0, #0x80000000   // get sign

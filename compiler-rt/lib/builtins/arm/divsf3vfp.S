@@ -17,6 +17,7 @@
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__divsf3vfp)
+	BTI_LANDING
 #if defined(COMPILER_RT_ARMHF_TARGET)
 	vdiv.f32 s0, s0, s1
 #else

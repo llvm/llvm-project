@@ -36,6 +36,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__addsf3)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   vmov r1, s1
@@ -47,6 +48,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__addsf3, __aeabi_fadd)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_fadd)
+  BTI_LANDING
   // Test for all uncommon values at once: infinities, NaNs, denormals and
   // zeroes. Branch out of line if any are found. We do this by XORing each
   // input with itself shifted left by a bit, which means that exponents 00 and
@@ -312,6 +314,7 @@ LOCAL_LABEL(add_inf):
 END_COMPILERRT_FUNCTION(__aeabi_fadd)
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_frsub)
+  BTI_LANDING
   // Reversed subtraction, that is, compute y-x, where x is in r0 and y in r1.
   //
   // We could implement this by simply swapping r0 with r1. But the point of
@@ -350,6 +353,7 @@ END_COMPILERRT_FUNCTION(__aeabi_frsub)
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__subsf3)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   vmov r1, s1
@@ -361,6 +365,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__subsf3, __aeabi_fsub)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_fsub)
+  BTI_LANDING
   // Main entry point for subtraction.
   //
   // Start by testing for uncommon operands in the usual way.

@@ -19,6 +19,7 @@
 	.syntax unified
 	.p2align 2
 DEFINE_COMPILERRT_FUNCTION(__fixunssfsivfp)
+	BTI_LANDING
 #if defined(COMPILER_RT_ARMHF_TARGET)
 	vcvt.u32.f32 s0, s0
 	vmov r0, s0

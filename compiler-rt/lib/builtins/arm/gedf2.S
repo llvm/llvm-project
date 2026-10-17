@@ -39,6 +39,7 @@ op1l .req yl
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__gedf2)
+  BTI_LANDING
   push {r4, lr}
   VMOV_FROM_DOUBLE(r0, r1, d0)
   VMOV_FROM_DOUBLE(r2, r3, d1)
@@ -50,6 +51,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__gedf2, __compiler_rt_softfp_gedf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__gtdf2, __gedf2)
 
 DEFINE_COMPILERRT_FUNCTION(__compiler_rt_softfp_gedf2)
+        BTI_LANDING
   #include "dcmp.h"
 
 LOCAL_LABEL(NaN):

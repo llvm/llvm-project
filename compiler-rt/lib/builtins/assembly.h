@@ -244,6 +244,12 @@
 #define PACBTI_LANDING
 #endif
 
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+#define BTI_LANDING bti
+#else
+#define BTI_LANDING
+#endif
+
 #if defined(__ARM_FEATURE_PAUTH)
 #define PAC_RETURN bxaut r12, lr, sp
 #else

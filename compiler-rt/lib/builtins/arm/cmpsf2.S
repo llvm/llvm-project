@@ -31,6 +31,7 @@ op1 .req r1
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__cmpsf2)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   vmov r1, s1
@@ -45,6 +46,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__eqsf2, __cmpsf2)
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__nesf2, __cmpsf2)
 
 DEFINE_COMPILERRT_FUNCTION(__compiler_rt_softfp_cmpsf2)
+        BTI_LANDING
   #include "fcmp.h"
 
 LOCAL_LABEL(NaN):

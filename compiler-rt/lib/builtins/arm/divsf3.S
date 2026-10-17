@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__divsf3)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   vmov r1, s1
@@ -32,6 +33,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__divsf3, __aeabi_fdiv)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_fdiv)
+  BTI_LANDING
   // Extract the exponents of the inputs into r2 and r3, occupying bits 16-23
   // of each register so that there will be space lower down to store extra
   // data without exponent arithmetic carrying into it. In the process, check

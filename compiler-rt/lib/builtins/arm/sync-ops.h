@@ -22,10 +22,12 @@
 #error DMB is only supported on ARMv6+
 #endif
 
+// clang-format off
 #define SYNC_OP_4(op)                                                          \
   .p2align 2;                                                                  \
   .syntax unified;                                                             \
   DEFINE_COMPILERRT_FUNCTION(__sync_fetch_and_##op)                            \
+  BTI_LANDING;                                                                 \
   DMB;                                                                         \
   mov r12, r0;                                                                 \
   LOCAL_LABEL(tryatomic_##op) : ldrex r0, [r12];                               \
@@ -40,6 +42,7 @@
   .p2align 2;                                                                  \
   .syntax unified;                                                             \
   DEFINE_COMPILERRT_FUNCTION(__sync_fetch_and_##op)                            \
+  BTI_LANDING;                                                                 \
   push {r4, r5, r6, lr};                                                       \
   DMB;                                                                         \
   mov r12, r0;                                                                 \
@@ -50,6 +53,7 @@
   bne LOCAL_LABEL(tryatomic_##op);                                             \
   DMB;                                                                         \
   pop { r4, r5, r6, pc }
+// clang-format on
 
 #define MINMAX_4(rD, rN, rM, cmp_kind)                                         \
   cmp rN, rM;                                                                  \

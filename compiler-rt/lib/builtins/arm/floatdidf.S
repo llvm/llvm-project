@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatdidf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_l2d
   VMOV_TO_DOUBLE(d0, r0, r1)
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatdidf, __aeabi_l2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_l2d)
+  BTI_LANDING
 
   // Start by finding out the sign of the input. This instruction sets up r2 to
   // be 0xFFFFFFFF for a _positive_ number, and 0 for a negative number.

@@ -20,6 +20,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__extendsfdf2)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   bl __aeabi_f2d
@@ -30,6 +31,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__extendsfdf2, __aeabi_f2d)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_f2d)
+  BTI_LANDING
 
   // Start with the fast path, dealing with normalized single-precision inputs.
   // We handle these as quickly as possible in straight-line code, and branch

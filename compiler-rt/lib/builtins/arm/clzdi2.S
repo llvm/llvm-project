@@ -18,6 +18,7 @@
 
 	.p2align	2
 DEFINE_COMPILERRT_FUNCTION(__clzdi2)
+	BTI_LANDING
 #ifdef __ARM_FEATURE_CLZ
 #ifdef __ARMEB__
 	cmp	r0, 0

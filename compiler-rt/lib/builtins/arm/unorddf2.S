@@ -22,6 +22,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__unorddf2)
+  BTI_LANDING
   push {r4, lr}
   VMOV_FROM_DOUBLE(r0, r1, d0)
   VMOV_FROM_DOUBLE(r2, r3, d1)
@@ -32,6 +33,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__unorddf2, __aeabi_dcmpun)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_dcmpun)
+  BTI_LANDING
 
   // This function isn't based on the general-purpose code in dcmp.h, because
   // it's more effort than needed. Here we just need to identify whether or not

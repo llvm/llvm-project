@@ -30,6 +30,7 @@
 //
 	.p2align 2
 DEFINE_COMPILERRT_PRIVATE_FUNCTION(__switch8)
+	BTI_LANDING
 	ldrb    ip, [lr, #-1]           // get first byte in table
 	cmp     r0, ip                  // signed compare with index
 	ite lo

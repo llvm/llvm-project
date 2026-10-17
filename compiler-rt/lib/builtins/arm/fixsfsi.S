@@ -20,6 +20,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__fixsfsi)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   bl __aeabi_f2iz
@@ -29,6 +30,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__fixsfsi, __aeabi_f2iz)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_f2iz)
+  BTI_LANDING
 
   // The fast path: deliver an answer as quickly as possible for cases that
   // don't overflow or involve a NaN, and branch out of line to handle

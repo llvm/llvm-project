@@ -20,6 +20,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatunsisf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_ui2f
   vmov s0, r0
@@ -29,6 +30,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunsisf, __aeabi_ui2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ui2f)
+  BTI_LANDING
 
   // Find the highest set bit of the input, and shift it up to the top bit. r3
   // contains the amount we shifted by, and r2 the shifted value.

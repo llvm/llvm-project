@@ -20,6 +20,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__floatsisf)
+  BTI_LANDING
   push {r4, lr}
   bl __aeabi_i2f
   vmov s0, r0
@@ -29,6 +30,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatsisf, __aeabi_i2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_i2f)
+  BTI_LANDING
 
   // Isolate the input integer's sign bit in r1, and if the input is negative,
   // negate it.

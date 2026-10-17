@@ -173,6 +173,7 @@ LOCAL_LABEL(CHECK_NAN\@):
 
     .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__eqsf2)
+    BTI_LANDING
 
     .macro __eqsf2_handle_nan
 #if defined(USE_THUMB_1)
@@ -199,6 +200,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__cmpsf2, __lesf2)
 
     .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__gtsf2)
+    BTI_LANDING
 
     .macro __gtsf2_handle_nan
 #if defined(USE_THUMB_1)
@@ -219,6 +221,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__gesf2, __gtsf2)
 
     .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__unordsf2)
+    BTI_LANDING
 
 #if defined(COMPILER_RT_ARMHF_TARGET)
     vmov    r0,         s0
@@ -249,6 +252,7 @@ END_COMPILERRT_FUNCTION(__unordsf2)
 
 #if defined(COMPILER_RT_ARMHF_TARGET)
 DEFINE_COMPILERRT_FUNCTION(__aeabi_fcmpun)
+	BTI_LANDING
 	vmov s0, r0
 	vmov s1, r1
 	b SYMBOL_NAME(__unordsf2)

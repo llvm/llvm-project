@@ -21,6 +21,7 @@
 
 #if __ARM_PCS_VFP
 DEFINE_COMPILERRT_FUNCTION(__mulsf3)
+  BTI_LANDING
   push {r4, lr}
   vmov r0, s0
   vmov r1, s1
@@ -32,6 +33,7 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__mulsf3, __aeabi_fmul)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_fmul)
+  BTI_LANDING
 
   // Check if either input exponent is 00 or FF (i.e. not a normalized number),
   // and if so, branch out of line. If we don't branch out of line, then we've
