@@ -657,6 +657,9 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       EntriesToErase.push_back(Entry.getFirst());
   }
 
+  const llvm::DenseSet<uint64_t> Dropped(EntriesToErase.begin(),
+                                         EntriesToErase.end());
+
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
@@ -664,9 +667,13 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
         It != CallstackProfileData.end()) {
       if (It->second.AccessHistogramSize > 0)
         free((void *)It->second.AccessHistogram);
-      CallstackProfileData.erase(It);
     }
   }
+
+  CallstackProfileData.remove_if(
+      [&Dropped](const std::pair<uint64_t, MemInfoBlock> &KV) {
+        return Dropped.contains(KV.first);
+      });
 
   if (StackMap.empty())
     return make_error<InstrProfError>(
