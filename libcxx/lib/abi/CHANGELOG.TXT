@@ -16,6 +16,16 @@ New entries should be added directly below the "Version" header.
 Version 24.0
 ------------
 
+* [libc++] Add an internal asymmetric thread fence helper
+
+  The heavy side of the asymmetric thread fence lives in the dylib, together with the flag telling the
+  inline light side whether the heavy side is a process-wide barrier.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__136__asymmetric_thread_fence_heavy_implENS_12memory_orderE
+  Symbol added: _ZNSt3__139__asymmetric_thread_fence_is_asymmetricE
+
 * [libc++] Remove locale::id::__next_id from the ABI
 
   `__next_id` is only ever used inside the dylib, so we can avoid making it public.
