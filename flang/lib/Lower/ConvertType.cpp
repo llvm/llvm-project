@@ -297,7 +297,8 @@ struct TypeBuilderImpl {
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());
-    if (Fortran::semantics::IsAllocatable(symbol))
+    if (Fortran::semantics::IsAllocatable(symbol) ||
+        Fortran::evaluate::IsCoarray(symbol))
       return fir::wrapInClassOrBoxType(fir::HeapType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());
     // isPtr and isAlloc are variable that were promoted to be on the
