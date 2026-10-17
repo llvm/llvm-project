@@ -610,16 +610,18 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
     writtenDims.push_back(cast<AffineDimExpr>(expr).getPosition());
   llvm::sort(writtenDims);
   SmallVector<OpFoldResult> maskSizes;
+  SmallVector<Value> writtenIndices;
+  SmallVector<int64_t> writtenShape;
   for (int64_t dim : writtenDims) {
     Value size = getValueOrCreateConstantIndexOp(builder, loc, destSizes[dim]);
     maskSizes.push_back(
         builder.createOrFold<arith::SubIOp>(loc, size, writeIndices[dim]));
+    writtenIndices.push_back(writeIndices[dim]);
+    writtenShape.push_back(destShape[dim]);
   }
 
-  // TODO: isMaskTriviallyFoldable checks the trailing dims against the leading
-  // indices. Make it use the dims that the map selects and their indices.
-  if (!permutationMap && isMaskTriviallyFoldable(maskSizes, writeIndices,
-                                                 destShape, vecToStoreShape))
+  if (isMaskTriviallyFoldable(maskSizes, writtenIndices, writtenShape,
+                              writeMaskType.getShape()))
     return write;
 
   Value maskForWrite =
