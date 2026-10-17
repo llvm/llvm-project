@@ -3142,6 +3142,11 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPD", v2f64x_info, v8f64_info>;
 }
 
+let Predicates = [HasFP16, NoVLX] in {
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v16f16x_info, v32f16_info>;
+  defm : axv512_cmp_packed_cc_no_vlx_lowering<"VCMPPH", v8f16x_info, v32f16_info>;
+}
+
 let Predicates = [HasBWI, NoVLX] in {
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpm, X86pcmpm_su, "VPCMPB", v32i8x_info, v64i8_info>;
   defm : axv512_icmp_packed_cc_no_vlx_lowering<X86pcmpum, X86pcmpum_su, "VPCMPUB", v32i8x_info, v64i8_info>;
@@ -4266,6 +4271,11 @@ def : Pat<(f16 (X86selects VK1WM:$mask, (f16 FR16X:$src1), (f16 FR16X:$src2))),
 def : Pat<(f16 (X86selects VK1WM:$mask, (f16 FR16X:$src1), fp16imm0)),
           (COPY_TO_REGCLASS (v8f16 (VMOVSHZrrkz VK1WM:$mask, (v8f16 (IMPLICIT_DEF)),
            (v8f16 (COPY_TO_REGCLASS FR16X:$src1, VR128X)))), FR16X)>;
+
+def : Pat<(v8f16 (X86selects VK1WM:$mask, (v8f16 VR128X:$src1), (v8f16 VR128X:$src2))),
+          (VMOVSHZrrk VR128X:$src2, VK1WM:$mask, VR128X:$src1, VR128X:$src1)>;
+def : Pat<(v8f16 (X86selects VK1WM:$mask, (v8f16 VR128X:$src1), (v8f16 immAllZerosV))),
+          (VMOVSHZrrkz VK1WM:$mask, VR128X:$src1, VR128X:$src1)>;
 }
 
 defm : avx512_store_scalar_lowering_subreg2<"VMOVSSZ", avx512vl_f32_info,

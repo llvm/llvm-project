@@ -39,10 +39,6 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-load-store-opt"
 #define RISCV_LOAD_STORE_OPT_NAME "RISC-V Load / Store Optimizer"
 
-// The LdStLimit limits number of instructions how far we search for load/store
-// pairs.
-static cl::opt<unsigned> LdStLimit("riscv-load-store-scan-limit", cl::init(128),
-                                   cl::Hidden);
 STATISTIC(NumLD2LW, "Number of LD instructions split back to LW");
 STATISTIC(NumSD2SW, "Number of SD instructions split back to SW");
 
@@ -591,7 +587,8 @@ RISCVLoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   // Remember any instructions that read/write memory between FirstMI and MI.
   SmallVector<MachineInstr *, 4> MemInsns;
 
-  for (unsigned Count = 0; MBBI != E && Count < LdStLimit;
+  for (unsigned Count = 0;
+       MBBI != E && Count < STI->getCLOpts().load_store_scan_limit;
        MBBI = next_nodbg(MBBI, E)) {
     MachineInstr &MI = *MBBI;
 

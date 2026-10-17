@@ -238,7 +238,7 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_lo(<2 x i16> %a) {
 ; GFX10-LABEL: v_add_v2i16_neg_inline_imm_lo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_add_u16 v0, 0x4ffc0, v0
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, 0x4ffc0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 -64, i16 4>
   ret <2 x i16> %add
@@ -276,7 +276,7 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_hi(<2 x i16> %a) {
 ; GFX10-LABEL: v_add_v2i16_neg_inline_imm_hi:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_add_u16 v0, 0xffc00004, v0
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, 0xffc00004
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 4, i16 -64>
   ret <2 x i16> %add

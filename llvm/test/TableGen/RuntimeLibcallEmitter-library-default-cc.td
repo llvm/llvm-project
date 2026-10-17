@@ -44,5 +44,5 @@ def FooSystem : SystemRuntimeLibrary<isFoo, (add FooLib)> {
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
 // CHECK: const CallingConv::ID DefaultCC = FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP : CallingConv::ARM_AAPCS;
-// CHECK: if (isLibraryAvailable("foo"))
+// CHECK: if (isLibraryAvailable(RTLIB::RuntimeLibrary::foo))
 // CHECK-NEXT: setAvailableLibFuncs_foo(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);

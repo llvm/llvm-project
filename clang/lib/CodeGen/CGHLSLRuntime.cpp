@@ -38,6 +38,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -102,6 +103,23 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
   RootSignatureValMD->addOperand(MDVals);
+}
+
+Expected<unsigned> packSemanticSignature(
+    MutableArrayRef<llvm::hlsl::SemanticSignatureElement> Elements,
+    llvm::Triple::EnvironmentType Stage, llvm::hlsl::IOType IOTy,
+    CodeGenOptions::HLSLSemanticSignaturePackingMode Mode,
+    bool UseNative16BitTypes) {
+  using namespace llvm::hlsl;
+  // Vertex inputs and pixel outputs have fixed packing rules, independent of
+  // the packing mode used between programmable stages.
+  if (Stage == llvm::Triple::Vertex && IOTy == IOType::In)
+    return packSignatureStacked(Elements, Stage, IOTy);
+  if (Stage == llvm::Triple::Pixel && IOTy == IOType::Out)
+    return packSignatureIndexed(Elements, Stage, IOTy);
+  if (Mode == CodeGenOptions::HLSLSemanticSignaturePackingMode::Optimized)
+    return packSignatureOptimized(Elements, Stage, IOTy, UseNative16BitTypes);
+  return packSignaturePrefixStable(Elements, Stage, IOTy, UseNative16BitTypes);
 }
 
 MDNode *buildSemanticSignatureMD(
@@ -1895,6 +1913,36 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       auto *RSDecl = RSAttr->getSignatureDecl();
       addRootSignatureMD(RSDecl->getVersion(), RSDecl->getRootElements(),
                          EntryFn, M);
+    }
+  }
+
+  if (CGM.getTarget().getTriple().isDXIL()) {
+    // Use the entry's shader stage, not the target environment, which may be
+    // 'library' when compiling multiple entry points.
+    auto Stage = FD->getAttr<HLSLShaderAttr>()->getType();
+    using PackingMode = CodeGenOptions::HLSLSemanticSignaturePackingMode;
+    auto Mode = CGM.getCodeGenOpts().getHLSLSemanticSignaturePacking();
+    for (auto IOTy : {llvm::hlsl::IOType::In, llvm::hlsl::IOType::Out}) {
+      bool IsOutput = IOTy == llvm::hlsl::IOType::Out;
+      auto &Signature = IsOutput ? OutputSignature : InputSignature;
+      auto Packed = packSemanticSignature(Signature, Stage, IOTy, Mode,
+                                          CGM.getLangOpts().NativeHalfType);
+      if (!Packed) {
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::err_hlsl_signature_packing)
+            << IsOutput << llvm::toString(Packed.takeError());
+        return;
+      }
+      // Library entry points retain stage-specific packing without warnings.
+      if (Mode != PackingMode::Default &&
+          CGM.getTarget().getTriple().getEnvironment() !=
+              llvm::Triple::Library &&
+          ((Stage == llvm::Triple::Vertex && !IsOutput) ||
+           (Stage == llvm::Triple::Pixel && IsOutput)))
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::warn_hlsl_signature_packing_ignored)
+            << (Mode == PackingMode::Optimized ? "optimized" : "prefix-stable")
+            << IsOutput;
     }
   }
 

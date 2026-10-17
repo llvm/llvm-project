@@ -3176,16 +3176,20 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     uint64_t NumElem = ConstOp.getCImm()->getValue().getZExtValue();
 
     Register LocalSizeArrayReg = Call->Arguments[LocalSizeElemPtrIdx];
+    SPIRVTypeInst PointeeTy =
+        GR->getPointeeType(GR->getSPIRVTypeForVReg(LocalSizeArrayReg));
+    bool IsArrayPtr = PointeeTy && PointeeTy->getOpcode() == SPIRV::OpTypeArray;
 
     for (unsigned i = 0; i < NumElem; ++i) {
       Register Reg = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
       auto GEPInst = MIRBuilder.buildIntrinsic(
           Intrinsic::spv_gep, ArrayRef<Register>{Reg}, true, false);
       GEPInst
-          .addImm(0)                                        // In bound.
-          .addUse(LocalSizeArrayReg)                        // Base pointer.
-          .addUse(buildConstantIntReg32(0, MIRBuilder, GR)) // Indices.
-          .addUse(buildConstantIntReg32(i, MIRBuilder, GR));
+          .addImm(0)                  // In bound.
+          .addUse(LocalSizeArrayReg); // Base pointer.
+      if (IsArrayPtr)
+        GEPInst.addUse(buildConstantIntReg32(0, MIRBuilder, GR));
+      GEPInst.addUse(buildConstantIntReg32(i, MIRBuilder, GR));
       LocalSizes.push_back(Reg);
     }
   }

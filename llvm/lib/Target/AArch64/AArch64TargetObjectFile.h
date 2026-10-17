@@ -17,7 +17,8 @@ namespace llvm {
 
 /// This implementation is used for AArch64 ELF targets (Linux in particular).
 class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
 public:
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,

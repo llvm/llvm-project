@@ -585,8 +585,6 @@ public:
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
 
-  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
-
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
   }
@@ -947,10 +945,6 @@ public:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
     case Intrinsic::arithmetic_fence:
-    case Intrinsic::dbg_assign:
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
@@ -1250,11 +1244,6 @@ public:
   }
 
   virtual unsigned getMaxNumArgs() const { return UINT_MAX; }
-
-  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                               Type *ArrayType) const {
-    return 0;
-  }
 
   virtual void collectKernelLaunchBounds(
       const Function &F,
