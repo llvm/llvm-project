@@ -1047,10 +1047,9 @@ struct ThreadParam {
   Semaphore started;
 };
 
-extern "C" void *__tsan_thread_start_func(void *arg) {
-  ThreadParam *p = (ThreadParam*)arg;
-  void* (*callback)(void *arg) = p->callback;
-  void *param = p->param;
+// NOTE: The creating thread may return once p->started is posted, so p must
+// not be used after ThreadStartCommon returns.
+static void ThreadStartCommon(ThreadParam* p) {
   {
     ThreadState *thr = cur_thread_init();
     // Thread-local state is not initialized yet.
@@ -1072,6 +1071,13 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
   }
 
   AdaptiveDelay::BeforeChildThreadRuns();
+}
+
+extern "C" void* __tsan_thread_start_func(void* arg) {
+  ThreadParam* p = (ThreadParam*)arg;
+  void* (*callback)(void* arg) = p->callback;
+  void* param = p->param;
+  ThreadStartCommon(p);
 
   void *res = callback(param);
   // Prevent the callback from being tail called,
@@ -1081,10 +1087,10 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
   return res;
 }
 
-TSAN_INTERCEPTOR(int, pthread_create,
-    void *th, void *attr, void *(*callback)(void*), void * param) {
-  SCOPED_INTERCEPTOR_RAW(pthread_create, th, attr, callback, param);
-
+template <class Fn>
+static int ThreadCreateCommon(ThreadState* thr, uptr pc, void* th,
+                              bool detached, void* (*callback)(void*),
+                              void* param, const Fn& create) {
   MaybeSpawnBackgroundThread();
 
   if (ctx->after_multithreaded_fork) {
@@ -1100,14 +1106,6 @@ TSAN_INTERCEPTOR(int, pthread_create,
               internal_getpid());
     }
   }
-  __sanitizer_pthread_attr_t myattr;
-  if (attr == 0) {
-    pthread_attr_init(&myattr);
-    attr = &myattr;
-  }
-  int detached = 0;
-  REAL(pthread_attr_getdetachstate)(attr, &detached);
-  AdjustStackSize(attr);
 
   ThreadParam p;
   p.callback = callback;
@@ -1118,11 +1116,11 @@ TSAN_INTERCEPTOR(int, pthread_create,
     // Otherwise we see false positives in pthread stack manipulation.
     ScopedIgnoreInterceptors ignore;
     ThreadIgnoreBegin(thr, pc);
-    res = REAL(pthread_create)(th, attr, __tsan_thread_start_func, &p);
+    res = create(&p);
     ThreadIgnoreEnd(thr);
   }
   if (res == 0) {
-    p.tid = ThreadCreate(thr, pc, *(uptr *)th, IsStateDetached(detached));
+    p.tid = ThreadCreate(thr, pc, *(uptr*)th, detached);
     CHECK_NE(p.tid, kMainTid);
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.
@@ -1134,9 +1132,43 @@ TSAN_INTERCEPTOR(int, pthread_create,
     p.created.Post();
     p.started.Wait();
   }
+  AdaptiveDelay::AfterThreadCreation();
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_create, void* th, void* attr,
+                 void* (*callback)(void*), void* param) {
+  SCOPED_INTERCEPTOR_RAW(pthread_create, th, attr, callback, param);
+
+  __sanitizer_pthread_attr_t myattr;
+  if (attr == 0) {
+    pthread_attr_init(&myattr);
+    attr = &myattr;
+  }
+  int detached = 0;
+  REAL(pthread_attr_getdetachstate)(attr, &detached);
+  AdjustStackSize(attr);
+
+  int res = ThreadCreateCommon(thr, pc, th, IsStateDetached(detached), callback,
+                               param, [&](ThreadParam* p) {
+                                 return REAL(pthread_create)(
+                                     th, attr, __tsan_thread_start_func, p);
+                               });
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
-  AdaptiveDelay::AfterThreadCreation();
+  return res;
+}
+
+template <class Fn>
+static int ThreadJoinCommon(ThreadState* thr, uptr pc, uptr th,
+                            const Fn& join) {
+  Tid tid = ThreadConsumeTid(thr, pc, th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = join();
+  ThreadIgnoreEnd(thr);
+  if (res == 0) {
+    ThreadJoin(thr, pc, tid);
+  }
   return res;
 }
 
@@ -1158,14 +1190,8 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
     }
   }
 #endif
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
-  ThreadIgnoreBegin(thr, pc);
-  int res = BLOCK_REAL(pthread_join)(th, ret);
-  ThreadIgnoreEnd(thr);
-  if (res == 0) {
-    ThreadJoin(thr, pc, tid);
-  }
-  return res;
+  return ThreadJoinCommon(thr, pc, (uptr)th,
+                          [&]() { return BLOCK_REAL(pthread_join)(th, ret); });
 }
 
 // DEFINE_INTERNAL_PTHREAD_FUNCTIONS
@@ -1181,14 +1207,21 @@ int internal_pthread_join(void *th, void **ret) {
 }
 }  // namespace __sanitizer
 
-TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
-  SCOPED_INTERCEPTOR_RAW(pthread_detach, th);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
-  int res = REAL(pthread_detach)(th);
+template <class Fn>
+static int ThreadDetachCommon(ThreadState* thr, uptr pc, uptr th,
+                              const Fn& detach) {
+  Tid tid = ThreadConsumeTid(thr, pc, th);
+  int res = detach();
   if (res == 0) {
     ThreadDetach(thr, pc, tid);
   }
   return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_detach, void* th) {
+  SCOPED_INTERCEPTOR_RAW(pthread_detach, th);
+  return ThreadDetachCommon(thr, pc, (uptr)th,
+                            [&]() { return REAL(pthread_detach)(th); });
 }
 
 TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
@@ -1229,6 +1262,44 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
   return res;
 }
 #endif
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+extern "C" int __tsan_c11_thread_start_func(void* arg) {
+  ThreadParam* p = (ThreadParam*)arg;
+  int (*callback)(void*) = (int (*)(void*))(uptr)p->callback;
+  void* param = p->param;
+  ThreadStartCommon(p);
+
+  int res = callback(param);
+  // Prevent the callback from being tail called,
+  // it mixes up stack traces.
+  volatile int foo = 42;
+  foo++;
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, thrd_create, void* th, int (*callback)(void*),
+                 void* param) {
+  SCOPED_INTERCEPTOR_RAW(thrd_create, th, callback, param);
+  return ThreadCreateCommon(
+      thr, pc, th, /*detached=*/false, (void* (*)(void*))(uptr)callback, param,
+      [&](ThreadParam* p) {
+        return REAL(thrd_create)(th, __tsan_c11_thread_start_func, p);
+      });
+}
+
+TSAN_INTERCEPTOR(int, thrd_join, uptr th, int* res) {
+  SCOPED_INTERCEPTOR_RAW(thrd_join, th, res);
+  return ThreadJoinCommon(thr, pc, th,
+                          [&]() { return BLOCK_REAL(thrd_join)(th, res); });
+}
+
+TSAN_INTERCEPTOR(int, thrd_detach, uptr th) {
+  SCOPED_INTERCEPTOR_RAW(thrd_detach, th);
+  return ThreadDetachCommon(thr, pc, th,
+                            [&]() { return REAL(thrd_detach)(th); });
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
 
 // Problem:
 // NPTL implementation of pthread_cond has 2 versions (2.2.5 and 2.3.2).
@@ -1403,6 +1474,43 @@ INTERCEPTOR(int, pthread_cond_destroy, void *c) {
   return res;
 }
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(int, cnd_init, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_init, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), true);
+  return REAL(cnd_init)(c);
+}
+
+TSAN_INTERCEPTOR(int, cnd_wait, void* c, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_wait, c, m);
+  return cond_wait(thr, pc, &si, [=]() { return REAL(cnd_wait)(c, m); }, c, m);
+}
+
+TSAN_INTERCEPTOR(int, cnd_timedwait, void* c, void* m, void* ts) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_timedwait, c, m, ts);
+  return cond_wait(
+      thr, pc, &si, [=]() { return REAL(cnd_timedwait)(c, m, ts); }, c, m);
+}
+
+TSAN_INTERCEPTOR(int, cnd_signal, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_signal, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  return REAL(cnd_signal)(c);
+}
+
+TSAN_INTERCEPTOR(int, cnd_broadcast, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_broadcast, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  return REAL(cnd_broadcast)(c);
+}
+
+TSAN_INTERCEPTOR(void, cnd_destroy, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_destroy, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), true);
+  REAL(cnd_destroy)(c);
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
+
 TSAN_INTERCEPTOR(int, pthread_mutex_init, void *m, void *a) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_init, m, a);
   int res = REAL(pthread_mutex_init)(m, a);
@@ -1522,6 +1630,60 @@ TSAN_INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
 }
 #  endif
 #endif
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(int, mtx_init, void* m, int type) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_init, m, type);
+  int res = REAL(mtx_init)(m, type);
+  if (res == 0) {
+    MutexCreate(thr, pc, (uptr)m,
+                (type & threads_mtx_recursive) ? MutexFlagWriteReentrant : 0);
+  }
+  return res;
+}
+
+TSAN_INTERCEPTOR(void, mtx_destroy, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_destroy, m);
+  REAL(mtx_destroy)(m);
+  MutexDestroy(thr, pc, (uptr)m);
+}
+
+TSAN_INTERCEPTOR(int, mtx_lock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_lock, m);
+  MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
+  int res = BLOCK_REAL(mtx_lock)(m);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_trylock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_trylock, m);
+  AdaptiveDelay::SyncOp();
+  int res = REAL(mtx_trylock)(m);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_timedlock, void* m, void* ts) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_timedlock, m, ts);
+  AdaptiveDelay::SyncOp();
+  int res = REAL(mtx_timedlock)(m, ts);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_unlock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_unlock, m);
+  MutexUnlock(thr, pc, (uptr)m);
+  int res = REAL(mtx_unlock)(m);
+  AdaptiveDelay::SyncOp();
+  return res;
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_spin_init, void *m, int pshared) {
@@ -1722,6 +1884,17 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   }
   return 0;
 }
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(void, call_once, void* flag, void (*f)()) {
+  SCOPED_INTERCEPTOR_RAW(call_once, flag, f);
+  atomic_uint32_t* a = static_cast<atomic_uint32_t*>(flag);
+  if (guard_acquire(thr, pc, a)) {
+    (*f)();
+    guard_release(thr, pc, a, kGuardDone);
+  }
+}
+#endif
 
 #if SANITIZER_GLIBC
 TSAN_INTERCEPTOR(int, __fxstat, int version, int fd, void *buf) {
@@ -3101,6 +3274,11 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(thrd_create);
+  TSAN_INTERCEPT(thrd_join);
+  TSAN_INTERCEPT(thrd_detach);
+#endif
 
   // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
   // may return an outdated symbol (max(2.2,base_version)) if the port was
@@ -3124,6 +3302,14 @@ void InitializeInterceptors() {
 #endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(cnd_init);
+  TSAN_INTERCEPT(cnd_signal);
+  TSAN_INTERCEPT(cnd_broadcast);
+  TSAN_INTERCEPT(cnd_wait);
+  TSAN_INTERCEPT(cnd_timedwait);
+  TSAN_INTERCEPT(cnd_destroy);
+#endif
 
   TSAN_INTERCEPT(pthread_mutex_init);
   TSAN_INTERCEPT(pthread_mutex_destroy);
@@ -3139,6 +3325,14 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(__pthread_mutex_lock);
   TSAN_INTERCEPT(__pthread_mutex_unlock);
 #  endif
+#endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(mtx_init);
+  TSAN_INTERCEPT(mtx_destroy);
+  TSAN_INTERCEPT(mtx_lock);
+  TSAN_INTERCEPT(mtx_trylock);
+  TSAN_INTERCEPT(mtx_timedlock);
+  TSAN_INTERCEPT(mtx_unlock);
 #endif
 
   TSAN_INTERCEPT(pthread_spin_init);
@@ -3162,6 +3356,9 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_barrier_wait);
 
   TSAN_INTERCEPT(pthread_once);
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(call_once);
+#endif
 
   TSAN_MAYBE_INTERCEPT___FXSTAT;
   TSAN_MAYBE_INTERCEPT_FSTAT;
