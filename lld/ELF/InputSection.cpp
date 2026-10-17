@@ -813,6 +813,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_DTPREL:
   case R_RELAX_GOT_PC_NOPIC:
   case RE_AARCH64_AUTH:
+  case RE_AARCH64_RELAX_GOT_LO12:
   case RE_RISCV_ADD:
   case RE_RISCV_LEB128:
     return r.sym->getVA(ctx, a);
@@ -908,7 +909,8 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_MIPS_TLSLD:
     return ctx.in.mipsGot->getVA() + ctx.in.mipsGot->getTlsIndexOffset(file) -
            ctx.in.mipsGot->getGp(file);
-  case RE_AARCH64_PAGE_PC: {
+  case RE_AARCH64_PAGE_PC:
+  case RE_AARCH64_RELAX_GOT_PAGE_PC: {
     uint64_t val = r.sym->isUndefWeak() ? p + a : r.sym->getVA(ctx, a);
     return getAArch64Page(val) - getAArch64Page(p);
   }
