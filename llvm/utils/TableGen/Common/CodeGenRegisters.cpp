@@ -1174,6 +1174,12 @@ bool CodeGenRegisterClass::hasSuperRegClass(
   return FindI != SuperRegClasses.end() && FindI->second.contains(RC);
 }
 
+bool CodeGenRegisterClass::hasSuperRegClass(
+    const CodeGenRegisterClass *RC) const {
+  return any_of(SuperRegClasses,
+                [RC](const auto &Entry) { return Entry.second.contains(RC); });
+}
+
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
                                               BitVector &Out) const {
   auto FindI = SuperRegClasses.find(SubIdx);
