@@ -52,9 +52,9 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
-                                      const SymbolTable &fallbackSymTab) {
+                                      ModuleOp module,
+                                      SymbolTableCollection &symbolTables) {
   SymbolRefAttr routineRef;
   if (isSpecializedAccRoutine(funcOp)) {
     auto attr = funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
@@ -70,10 +70,11 @@ static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
   }
 
   RoutineOp routine =
-      SymbolTable::lookupNearestSymbolFrom<RoutineOp>(funcOp, routineRef);
+      symbolTables.lookupNearestSymbolFrom<RoutineOp>(funcOp, routineRef);
   if (routine)
     return routine;
-  return fallbackSymTab.lookup<RoutineOp>(routineRef.getLeafReference());
+  return symbolTables.lookupSymbolIn<RoutineOp>(module,
+                                                routineRef.getLeafReference());
 }
 
 static bool isACCRoutineBindDefaultOrDeviceType(RoutineOp op,
@@ -112,8 +113,8 @@ public:
       return;
     }
 
-    SymbolTable outerSymTab(mod);
-    SymbolTable insertSymTab(symbolTableOp);
+    SymbolTableCollection symbolTables;
+    SymbolTable &insertSymTab = symbolTables.getSymbolTable(symbolTableOp);
     Block *insertBlock = &symbolTableOp->getRegion(0).front();
 
     symbolTableOp->walk<WalkOrder::PreOrder>([&](Operation *op) {
@@ -132,11 +133,11 @@ public:
       if (!calleeSymbolRef)
         return WalkResult::advance();
       FunctionOpInterface callee =
-          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(
+          symbolTables.lookupNearestSymbolFrom<FunctionOpInterface>(
               callOp, calleeSymbolRef);
       if (!callee)
-        callee = outerSymTab.lookup<FunctionOpInterface>(
-            calleeSymbolRef.getLeafReference());
+        callee = symbolTables.lookupSymbolIn<FunctionOpInterface>(
+            mod, calleeSymbolRef.getLeafReference());
       if (!callee || !(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
         return WalkResult::advance();
 
@@ -145,7 +146,7 @@ public:
         if (routineInfo.getAccRoutines().size() > 1)
           return WalkResult::advance();
 
-      RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
+      RoutineOp routine = getFirstAccRoutineOp(callee, mod, symbolTables);
       if (!routine ||
           !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return WalkResult::advance();
@@ -186,7 +187,7 @@ public:
         getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
     OpenACCSupport &accSupport =
         cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
-    SymbolTable outerSymTab(module);
+    SymbolTableCollection symbolTables;
     bool failed = false;
 
     func.walk([&](CallOpInterface callOp) {
@@ -200,11 +201,11 @@ public:
       if (!calleeSymbolRef)
         return;
       FunctionOpInterface callee =
-          SymbolTable::lookupNearestSymbolFrom<FunctionOpInterface>(
+          symbolTables.lookupNearestSymbolFrom<FunctionOpInterface>(
               callOp, calleeSymbolRef);
       if (!callee)
-        callee = outerSymTab.lookup<FunctionOpInterface>(
-            calleeSymbolRef.getLeafReference());
+        callee = symbolTables.lookupSymbolIn<FunctionOpInterface>(
+            module, calleeSymbolRef.getLeafReference());
       if (!callee)
         return;
 
@@ -220,7 +221,7 @@ public:
         }
       }
 
-      RoutineOp routine = getFirstAccRoutineOp(callee, outerSymTab);
+      RoutineOp routine = getFirstAccRoutineOp(callee, module, symbolTables);
       if (!routine ||
           !isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
         return;
@@ -238,8 +239,7 @@ public:
         auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
         Operation *symbolTableOp =
             gpuMod ? gpuMod.getOperation() : module.getOperation();
-        SymbolTable symbolTable(symbolTableOp);
-        if (!symbolTable.lookup(bindName)) {
+        if (!symbolTables.getSymbolTable(symbolTableOp).lookup(bindName)) {
           callOp.emitError(
               "string-bound ACC routine target was not materialized");
           failed = true;
