@@ -350,6 +350,12 @@ public:
 
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
+  // UEFI on x86-64 follows the Win64 ABI, so the lowering decisions that are
+  // dictated by that ABI rather than by the operating system apply to both.
+  bool isTargetWin64OrUEFI64() const {
+    return isTargetWin64() || isTargetUEFI64();
+  }
+
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
   bool isTargetWin32() const { return !Is64Bit && isOSWindows(); }
