@@ -1055,7 +1055,7 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
   for (VPExpandSCEVRecipe &ExpSCEV :
        make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(*Entry))) {
-    if (ExpSCEV.user_empty())
+    if (ExpSCEV.user_empty() || ExpSCEV.expandInIR())
       continue;
     Builder.setInsertPoint(&ExpSCEV);
     VPValue *Expanded = Expander.expand(ExpSCEV.getSCEV());
