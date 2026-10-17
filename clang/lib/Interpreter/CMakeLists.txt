@@ -31,6 +31,7 @@ endif()
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
+  ErrorRecovery.cpp
   IncrementalAction.cpp
   IncrementalParser.cpp
   Interpreter.cpp
