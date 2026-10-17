@@ -1,11 +1,10 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test declaration, constructor, and expression semantics for enumeration types
 
 ! C7114: access specifier only allowed in module
 subroutine test_access_specifier_outside_module()
   !ERROR: PRIVATE attribute may only appear in the specification part of a module
   !ERROR: Access specifier on ENUMERATION TYPE may only appear in the specification part of a module
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type, private :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -13,7 +12,6 @@ end subroutine
 
 ! Valid: basic declarations and usage
 subroutine test_basic_declarations()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -32,7 +30,6 @@ end subroutine
 
 ! Valid: constructor syntax — color(n) where n is a positive integer <= count
 subroutine test_constructor_valid()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -47,7 +44,6 @@ end subroutine
 
 ! Constructor errors
 subroutine test_constructor_errors()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -78,7 +74,6 @@ end subroutine
 
 ! Component reference on enumeration type is not allowed
 subroutine test_component_reference()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -93,7 +88,6 @@ end subroutine
 
 ! Module providing an enumeration type by USE association
 module enum_constructor_mod
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
@@ -132,7 +126,6 @@ end subroutine
 ! A duplicate enumerator name within an enumeration type is diagnosed as a
 ! clean semantic error.
 subroutine test_duplicate_enumerator()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     !ERROR: 'red' is already declared in this scoping unit
     enumerator :: red, green, red
@@ -143,7 +136,6 @@ end subroutine
 ! numeric: assignment and arithmetic mixing an enumeration value with an
 ! integer (or two enumeration values) must be rejected.
 subroutine test_assignment_and_arithmetic()
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type

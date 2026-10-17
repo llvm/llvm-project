@@ -168,6 +168,18 @@ page](https://llvm.org/releases/).
   F2023 15.5.2.10 p1). Declare the target `SIMPLE` if it satisfies the
   `SIMPLE` constraints, or give the pointer or dummy an explicit `PURE`
   interface.
+- Added support for the Fortran 2023 non-interoperable `ENUMERATION TYPE`
+  (F2023 7.6.2). An enumeration type is a distinct type whose values are
+  ordered, named enumerators. Supported features:
+  - declaration with `ENUMERATION TYPE` / `ENUMERATOR`, including
+    `ENUMERATION TYPE, PUBLIC/PRIVATE` and use through modules (module files
+    record enumeration types);
+  - enumeration constructors and use as named constants;
+  - relational operators (`==`, `/=`, `<`, `<=`, `>`, `>=`) between values of
+    the same enumeration type, and `SELECT CASE` on enumeration values;
+  - the `INT` intrinsic applied to an enumeration value, and the `HUGE`,
+    `NEXT` and `PREVIOUS` intrinsics;
+  - formatted I/O using the `I`, `B`, `O` and `Z` edit descriptors.
 
 ## Build System Changes
 
