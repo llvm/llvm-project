@@ -10,10 +10,10 @@ define dso_local fastcc i32 @tailcaller(i32 %in1, i32 %in2) nounwind {
 ; CHECK-LABEL: tailcaller:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    jmp tailcallee@PLT # TAILCALL
 entry:
