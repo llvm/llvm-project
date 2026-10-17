@@ -47,6 +47,7 @@
 #include <__utility/exception_guard.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <climits>
@@ -452,6 +453,16 @@ private:
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
   __insert_with_size(const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n);
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+  __is_valid_insert_position(const_iterator __position) const _NOEXCEPT {
+    // end() may point one word past the storage, so its word is compared for equality.
+    auto __first = std::__to_address(__begin_);
+    auto __last  = __first + __size_ / __bits_per_word;
+    auto __seg   = std::__to_address(__position.__seg_);
+    return std::__is_pointer_in_range(__first, __last, __seg) ||
+           (__seg == __last && __position.__ctz_ <= __size_ % __bits_per_word);
+  }
 
   //  Allocate space for __n objects
   //  throws length_error if __n > max_size()
@@ -895,6 +906,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::push_back(const val
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::insert(const_iterator __position, const value_type& __x) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector<bool>::insert/emplace called with an iterator outside [begin(), end()]");
   iterator __r;
   if (size() < capacity()) {
     const_iterator __old_end = end();
@@ -916,6 +929,8 @@ vector<bool, _Allocator>::insert(const_iterator __position, const value_type& __
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::insert(const_iterator __position, size_type __n, const value_type& __x) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector<bool>::insert/emplace called with an iterator outside [begin(), end()]");
   iterator __r;
   size_type __c = capacity();
   if (__n <= __c && size() <= __c - __n) {
@@ -946,6 +961,8 @@ template <class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::__insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector<bool>::insert/emplace called with an iterator outside [begin(), end()]");
   difference_type __off = __position - begin();
   iterator __p          = __const_iterator_cast(__position);
   iterator __old_end    = end();
@@ -981,6 +998,8 @@ template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::__insert_with_size(
     const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n_signed) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector<bool>::insert/emplace called with an iterator outside [begin(), end()]");
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__n_signed >= 0, "invalid range specified");
   const size_type __n = static_cast<size_type>(__n_signed);
   iterator __r;

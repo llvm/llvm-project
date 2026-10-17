@@ -234,6 +234,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
+#  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
 #  include <__utility/pair.h>
 #  include <__utility/swap.h>
@@ -1243,6 +1244,22 @@ private:
   template <class _BiIter>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n);
 
+  _LIBCPP_HIDE_FROM_ABI bool __is_valid_insert_position(const_iterator __p) const {
+    // Check that __p points into our map and blocks before computing its index from them.
+    if (__map_.empty())
+      return __p == end();
+    auto __map_first = std::__to_address(__map_.begin());
+    auto __slot      = std::__to_address(__p.__m_iter_);
+    if (!std::__is_pointer_in_range(__map_first, std::__to_address(__map_.end()), __slot))
+      return false;
+    auto __block_begin = std::__to_address(*__slot);
+    auto __elem        = std::__to_address(__p.__ptr_);
+    if (!std::__is_pointer_in_range(__block_begin, __block_begin + __block_size, __elem))
+      return false;
+    auto __pos = static_cast<size_type>((__slot - __map_first) * __block_size + (__elem - __block_begin));
+    return __start_ <= __pos && __pos <= __start_ + size();
+  }
+
   template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __append(_InpIter __f, _InpIter __l);
   template <class _ForIter, __enable_if_t<__has_forward_iterator_category<_ForIter>::value, int> = 0>
@@ -1683,6 +1700,8 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args) {
 template <class _Tp, class _Allocator>
 template <class... _Args>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(const_iterator __p, _Args&&... __args) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __is_valid_insert_position(__p), "deque::insert/emplace called with an iterator outside [begin(), end()]");
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
@@ -1732,6 +1751,8 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(cons
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, size_type __n, const value_type& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __is_valid_insert_position(__p), "deque::insert/emplace called with an iterator outside [begin(), end()]");
   size_type __pos     = __p - begin();
   size_type __to_end  = __size() - __pos;
   allocator_type& __a = __alloc();
@@ -1832,6 +1853,8 @@ template <class _Tp, class _Allocator>
 template <class _BiIter>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __is_valid_insert_position(__p), "deque::insert/emplace called with an iterator outside [begin(), end()]");
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
