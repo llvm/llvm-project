@@ -23,6 +23,83 @@ protected:
   void TearDown() override {}
 };
 
+TEST_F(OpenMPContextTest, ConditionIdentityInSubsetTies) {
+  OMPContext Ctx(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Four(64, 4), Three(64, 3), Five(64, 5);
+  VariantMatchInfo A, B;
+  A.addTrait(TraitProperty::user_condition_true, "<condition>");
+  A.addTrait(TraitProperty::implementation_vendor_llvm, "llvm", &Four);
+  B.addTrait(TraitProperty::user_condition_true, "<condition>");
+  B.addTrait(TraitProperty::implementation_vendor_llvm, "llvm", &Three);
+  B.addTrait(TraitProperty::device_kind_cpu, "cpu");
+  auto Best = [&](const VariantMatchInfo &X, const VariantMatchInfo &Y) {
+    return getBestVariantMatchForContext(
+        SmallVector<VariantMatchInfo, 2>{X, Y}, Ctx);
+  };
+
+  // Both scores are 5. Unavailable identity does not establish inclusion.
+  EXPECT_EQ(Best(A, B), 0);
+  A.UserCondition = "a";
+  B.UserCondition = "b";
+  EXPECT_EQ(Best(A, B), 0);
+  EXPECT_EQ(Best(B, A), 0);
+  B.UserCondition = "a";
+  EXPECT_EQ(Best(A, B), 1);
+  EXPECT_EQ(Best(B, A), 0);
+
+  // Copies own their keys. Equal conditions still participate in strictness.
+  auto Copy = B;
+  B.UserCondition = "b";
+  EXPECT_EQ(Best(A, Copy), 1);
+
+  // Identity only affects ties, never applicability or unequal scores.
+  B.ScoreMap[TraitProperty::implementation_vendor_llvm] = Five;
+  EXPECT_EQ(Best(A, B), 1);
+  B.RequiredTraits.reset(unsigned(TraitProperty::user_condition_true));
+  B.addTrait(TraitProperty::user_condition_false, "<condition>");
+  EXPECT_FALSE(isVariantApplicableInContext(B, Ctx));
+  EXPECT_EQ(Best(A, B), 0);
+}
+
+TEST_F(OpenMPContextTest, OriginalSelectorInSubsetTies) {
+  OMPContext Ctx(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Four(64, 4), Three(64, 3);
+  VariantMatchInfo A, B;
+  A.addTrait(TraitProperty::user_condition_unknown, "<condition>");
+  A.addTrait(TraitProperty::implementation_vendor_llvm, "llvm", &Four);
+  B = A;
+  B.addTrait(TraitProperty::device_kind_cpu, "cpu");
+  B.ScoreMap[TraitProperty::implementation_vendor_llvm] = Three;
+  A.UserCondition = "a";
+  B.UserCondition = "b";
+  A.preserveSelectorForSubsetComparison();
+  B.preserveSelectorForSubsetComparison();
+
+  // Model a guarded and an unguarded candidate. Both retain source identity.
+  A.RequiredTraits.reset(unsigned(TraitProperty::user_condition_unknown));
+  A.addTrait(TraitProperty::user_condition_true, "<condition>");
+  B.RequiredTraits.reset(unsigned(TraitProperty::user_condition_unknown));
+  B.UserCondition.reset();
+  EXPECT_EQ(getBestVariantMatchForContext(
+                SmallVector<VariantMatchInfo, 2>{A, B}, Ctx), 0);
+
+  // Preserve an identical source condition through the same transformation.
+  B.OriginalSelector = nullptr;
+  B.addTrait(TraitProperty::user_condition_false, "<condition>");
+  B.UserCondition = "a";
+  B.preserveSelectorForSubsetComparison();
+  B.RequiredTraits.reset(unsigned(TraitProperty::user_condition_false));
+  EXPECT_EQ(getBestVariantMatchForContext(
+                SmallVector<VariantMatchInfo, 2>{A, B}, Ctx), 1);
+
+  // A condition-free selector can be a subset of a conditioned selector.
+  A.OriginalSelector = nullptr;
+  A.UserCondition.reset();
+  A.RequiredTraits.reset(unsigned(TraitProperty::user_condition_true));
+  EXPECT_EQ(getBestVariantMatchForContext(
+                SmallVector<VariantMatchInfo, 2>{A, B}, Ctx), 1);
+}
+
 TEST_F(OpenMPContextTest, RoundTripAndAssociation) {
 #define OMP_TRAIT_SET(Enum, Str)                                               \
   EXPECT_EQ(TraitSet::Enum,                                                    \

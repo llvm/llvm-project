@@ -3048,6 +3048,12 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
       if (Selector.Kind == TraitSelector::user_condition) {
         assert(Selector.ScoreOrCondition &&
                "Ill-formed user condition, expected condition expression!");
+        llvm::FoldingSetNodeID ID;
+        profileOpenMPCondition(Selector.ScoreOrCondition, ASTCtx, ID);
+        auto Profile = ID.getRef();
+        VMI.UserCondition =
+            std::string(reinterpret_cast<const char *>(Profile.data()),
+                        Profile.size() * sizeof(unsigned));
         assert(Selector.Properties.size() == 1 &&
                Selector.Properties.front().Kind ==
                    TraitProperty::user_condition_unknown &&

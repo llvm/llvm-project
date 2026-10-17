@@ -30,6 +30,7 @@ namespace {
     llvm::FoldingSetNodeID &ID;
     bool Canonical;
     bool ProfileLambdaExpr;
+    bool OpenMPCondition = false;
 
   public:
     StmtProfiler(llvm::FoldingSetNodeID &ID, bool Canonical,
@@ -89,8 +90,11 @@ namespace {
   public:
     StmtProfilerWithPointers(llvm::FoldingSetNodeID &ID,
                              const ASTContext &Context, bool Canonical,
-                             bool ProfileLambdaExpr)
-        : StmtProfiler(ID, Canonical, ProfileLambdaExpr), Context(Context) {}
+                             bool ProfileLambdaExpr,
+                             bool OpenMPCondition = false)
+        : StmtProfiler(ID, Canonical, ProfileLambdaExpr), Context(Context) {
+      this->OpenMPCondition = OpenMPCondition;
+    }
 
   private:
     void HandleStmtClass(Stmt::StmtClass SC) override {
@@ -100,7 +104,16 @@ namespace {
     void VisitDecl(const Decl *D) override {
       ID.AddInteger(D ? D->getKind() : 0);
 
-      if (Canonical && D) {
+      if (OpenMPCondition && D) {
+        if (const auto *P = dyn_cast<ParmVarDecl>(D)) {
+          ID.AddPointer(Decl::castFromDeclContext(P->getDeclContext())
+                            ->getCanonicalDecl());
+          ID.AddInteger(P->getFunctionScopeIndex());
+          return;
+        }
+      }
+
+      if (Canonical && D && !OpenMPCondition) {
         if (const NonTypeTemplateParmDecl *NTTP =
                 dyn_cast<NonTypeTemplateParmDecl>(D)) {
           ID.AddInteger(NTTP->getDepth());
@@ -156,6 +169,57 @@ namespace {
     }
 
     void VisitType(QualType T) override {
+      if (OpenMPCondition && !T.isNull()) {
+        // Desugar aliases consistently, but keep the binding carried by a
+        // substituted template parameter instead of its replacement value.
+        while (true) {
+          if (const auto *S = dyn_cast<TemplateSpecializationType>(T)) {
+            if (!S->isTypeAlias()) {
+              ID.AddInteger(Type::TemplateSpecialization);
+              VisitTemplateName(S->getTemplateName());
+              ID.AddInteger(S->template_arguments().size());
+              for (const auto &Argument : S->template_arguments())
+                VisitTemplateArgument(Argument);
+              return;
+            }
+          }
+          if (const auto *S = dyn_cast<SubstTemplateTypeParmType>(T)) {
+            if (!isa<TypeAliasTemplateDecl>(S->getAssociatedDecl())) {
+              ID.AddInteger(Type::SubstTemplateTypeParm);
+              ID.AddPointer(S->getAssociatedDecl()->getCanonicalDecl());
+              ID.AddInteger(S->getIndex());
+              ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
+              return;
+            }
+          }
+          QualType Next = T.getSingleStepDesugaredType(Context);
+          if (Next == T)
+            break;
+          T = Next;
+        }
+        if (const auto *P = dyn_cast<PointerType>(T)) {
+          ID.AddInteger(Type::Pointer);
+          ID.AddInteger(T.getLocalQualifiers().getAsOpaqueValue());
+          VisitType(P->getPointeeType());
+          return;
+        }
+        if (const auto *R = dyn_cast<ReferenceType>(T)) {
+          ID.AddInteger(R->getTypeClass());
+          VisitType(R->getPointeeType());
+          return;
+        }
+        if (const auto *A = dyn_cast<ArrayType>(T)) {
+          ID.AddInteger(A->getTypeClass());
+          VisitType(A->getElementType());
+          if (const auto *C = dyn_cast<ConstantArrayType>(A))
+            C->getSize().Profile(ID);
+          else if (const auto *V = dyn_cast<VariableArrayType>(A))
+            Visit(V->getSizeExpr());
+          else if (const auto *D = dyn_cast<DependentSizedArrayType>(A))
+            Visit(D->getSizeExpr());
+          return;
+        }
+      }
       if (Canonical && !T.isNull())
         T = Context.getCanonicalType(T);
 
@@ -1623,6 +1687,8 @@ void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
 
 void StmtProfiler::VisitCompoundLiteralExpr(const CompoundLiteralExpr *S) {
   VisitExpr(S);
+  if (OpenMPCondition)
+    VisitType(S->getType());
   ID.AddBoolean(S->isFileScope());
 }
 
@@ -1678,6 +1744,8 @@ void StmtProfiler::VisitShuffleVectorExpr(const ShuffleVectorExpr *S) {
 
 void StmtProfiler::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
   VisitExpr(S);
+  if (OpenMPCondition)
+    VisitType(S->getTypeSourceInfo()->getType());
 }
 
 void StmtProfiler::VisitChooseExpr(const ChooseExpr *S) {
@@ -1690,6 +1758,8 @@ void StmtProfiler::VisitGNUNullExpr(const GNUNullExpr *S) {
 
 void StmtProfiler::VisitVAArgExpr(const VAArgExpr *S) {
   VisitExpr(S);
+  if (OpenMPCondition)
+    VisitType(S->getWrittenTypeInfo()->getType());
 }
 
 void StmtProfiler::VisitInitListExpr(const InitListExpr *S) {
@@ -2297,6 +2367,8 @@ void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
 void
 StmtProfiler::VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *S) {
   VisitExpr(S);
+  if (OpenMPCondition)
+    VisitType(S->getType());
 }
 
 void StmtProfiler::VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
@@ -2471,6 +2543,12 @@ void StmtProfiler::VisitSubstNonTypeTemplateParmPackExpr(
 
 void StmtProfiler::VisitSubstNonTypeTemplateParmExpr(
     const SubstNonTypeTemplateParmExpr *E) {
+  if (OpenMPCondition) {
+    VisitStmtNoChildren(E);
+    ID.AddPointer(E->getAssociatedDecl()->getCanonicalDecl());
+    ID.AddInteger(E->getIndex());
+    return;
+  }
   // Profile exactly as the replacement expression.
   Visit(E->getReplacement());
 }
@@ -2542,6 +2620,8 @@ void StmtProfiler::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
 
 void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
   VisitExpr(E);
+  if (OpenMPCondition)
+    ID.AddInteger(static_cast<unsigned>(E->getIdentKind()));
 }
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
@@ -3067,6 +3147,14 @@ void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                    bool Canonical, bool ProfileLambdaExpr) const {
   StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr);
   Profiler.Visit(this);
+}
+
+void clang::profileOpenMPCondition(const Expr *E, const ASTContext &Context,
+                                   llvm::FoldingSetNodeID &ID) {
+  StmtProfilerWithPointers Profiler(ID, Context, /*Canonical=*/true,
+                                    /*ProfileLambdaExpr=*/true,
+                                    /*OpenMPCondition=*/true);
+  Profiler.Visit(E->IgnoreParenImpCasts());
 }
 
 void Stmt::ProcessODRHash(llvm::FoldingSetNodeID &ID,

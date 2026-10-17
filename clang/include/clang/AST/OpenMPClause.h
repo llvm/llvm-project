@@ -10076,6 +10076,12 @@ struct OMPTraitSelector {
   SmallVector<OMPTraitProperty, 1> Properties;
 };
 
+/// Profile a source condition, retaining template bindings through
+/// substitution. The exact profile is local to the ASTContext and must not be
+/// serialized.
+void profileOpenMPCondition(const Expr *E, const ASTContext &Context,
+                            llvm::FoldingSetNodeID &ID);
+
 struct OMPTraitSet {
   llvm::omp::TraitSet Kind = llvm::omp::TraitSet::invalid;
   SmallVector<OMPTraitSelector, 2> Selectors;

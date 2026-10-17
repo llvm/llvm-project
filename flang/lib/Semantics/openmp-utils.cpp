@@ -39,6 +39,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2473,6 +2474,155 @@ static void AppendConstructTraitsForDirective(
     add(llvm::omp::TraitProperty::construct_dispatch_dispatch);
 }
 
+namespace {
+struct ConditionOperations
+    : evaluate::Traverse<ConditionOperations, bool, false> {
+  using Base = evaluate::Traverse<ConditionOperations, bool, false>;
+  explicit ConditionOperations(llvm::FoldingSetNodeID &id)
+      : Base{*this}, id{id} {}
+  using Base::operator();
+  bool Default() const { return true; }
+  template <typename... A> bool Combine(A...) const { return true; }
+  bool operator()(const evaluate::ProcedureDesignator &proc) const {
+    if (const Symbol * symbol{proc.GetSymbol()})
+      id.AddPointer(&symbol->GetUltimate());
+    else if (const auto *intrinsic{proc.GetSpecificIntrinsic()})
+      id.AddString(intrinsic->name);
+    return true;
+  }
+  llvm::FoldingSetNodeID &id;
+};
+
+// Source structure distinguishes expressions that fold to the same value.
+// Resolved annotations distinguish operations and types with equal spelling.
+// All pointers in this exact key belong to this compilation; module imports
+// rebuild the key from their parsed and resolved expressions.
+struct ConditionIdentity {
+  SemanticsContext &context;
+  llvm::FoldingSetNodeID id;
+
+  template <typename A> void AddNode() {
+    static const char tag{};
+    id.AddPointer(&tag);
+  }
+  template <typename A> bool Pre(const A &x) {
+    AddNode<A>();
+    if constexpr (std::is_enum_v<A> || std::is_integral_v<A>)
+      id.AddInteger(static_cast<uint64_t>(x));
+    else if constexpr (std::is_same_v<A, std::string>)
+      id.AddString(x);
+    return true;
+  }
+  template <typename A> void Post(const A &) { id.AddInteger(0); }
+
+  // The ordinary parse-tree walk skips missing optionals and list boundaries.
+  // Retain those here, so e.g. a lower bound cannot become an upper bound.
+  template <typename A> void Field(const A &x) { parser::Walk(x, *this); }
+  template <typename A> void Field(const std::optional<A> &x) {
+    id.AddBoolean(x.has_value());
+    if (x)
+      Field(*x);
+  }
+  template <typename A> void Field(const std::list<A> &x) {
+    id.AddInteger(x.size());
+    for (const auto &element : x)
+      Field(element);
+  }
+  template <typename... A> bool Pre(const std::tuple<A...> &x) {
+    AddNode<std::tuple<A...>>();
+    std::apply([&](const auto &...element) { (Field(element), ...); }, x);
+    id.AddInteger(0);
+    return false;
+  }
+  bool Pre(const parser::CharBlock &) { return false; }
+  bool Pre(const parser::SubstringInquiry &inquiry) {
+    AddNode<parser::SubstringInquiry>();
+    id.AddBoolean(inquiry.source.back() == 'n'); // LEN versus KIND.
+    return true;
+  }
+  bool Pre(const parser::Name &name) {
+    AddNode<parser::Name>();
+    if (name.symbol && !name.symbol->has<MiscDetails>())
+      id.AddPointer(&name.symbol->GetUltimate());
+    else
+      id.AddString(name.source.ToString());
+    return false;
+  }
+  bool Pre(const parser::Expr &expr) {
+    AddNode<parser::Expr>();
+    auto it{context.ompConditionExprs().find(&expr)};
+    const SomeExpr *resolved{it == context.ompConditionExprs().end()
+            ? (expr.typedExpr && expr.typedExpr->v ? &*expr.typedExpr->v
+                                                : nullptr)
+            : &it->second};
+    if (resolved) {
+      if (auto type{resolved->GetType()}) {
+        id.AddInteger(static_cast<unsigned>(type->category()));
+        if (const auto *derived{evaluate::GetDerivedTypeSpec(*type)})
+          id.AddPointer(&derived->typeSymbol().GetUltimate());
+        else
+          id.AddInteger(type->kind());
+      }
+      // This also retains intrinsic inquiry discriminators and the resolved
+      // kinds of implied-DO indices, even when the enclosing inquiry folds.
+      ConditionOperations{id}(*resolved);
+    }
+    if (const auto *negate{std::get_if<parser::Expr::Negate>(&expr.u)}) {
+      if (const auto *literal{
+              std::get_if<parser::LiteralConstant>(&negate->v.value().u)}) {
+        if (resolved &&
+            std::holds_alternative<parser::IntLiteralConstant>(literal->u)) {
+          // The positive magnitude of the minimum integer is out of range.
+          // Semantics analyzes that signed literal as one expression.
+          AddNode<parser::Expr::Negate>();
+          id.AddString(resolved->AsFortran());
+          return false;
+        }
+      }
+    }
+    if (const auto *literal{std::get_if<parser::LiteralConstant>(&expr.u)}) {
+      // Literal values and effective kinds are canonical. Complex literals
+      // can reference named constants, whose original bindings also matter.
+      if (resolved &&
+          !std::holds_alternative<parser::ComplexLiteralConstant>(literal->u)) {
+        id.AddString(resolved->AsFortran());
+        return false;
+      }
+    }
+    return true;
+  }
+  bool Pre(const parser::SignedIntLiteralConstant &literal) {
+    AddNode<parser::SignedIntLiteralConstant>();
+    if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)}) {
+      id.AddString(value->AsFortran());
+      return false;
+    }
+    return true;
+  }
+  bool Pre(const parser::SignedRealLiteralConstant &literal) {
+    AddNode<parser::SignedRealLiteralConstant>();
+    if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)}) {
+      id.AddString(value->AsFortran());
+      return false;
+    }
+    return true;
+  }
+};
+
+std::string GetConditionIdentity(
+    const parser::ScalarExpr &condition, SemanticsContext &context) {
+  const auto *expr{parser::Unwrap<parser::Expr>(condition)};
+  CHECK(expr);
+  while (const auto *parens{std::get_if<parser::Expr::Parentheses>(&expr->u)})
+    expr = &parens->v.value();
+  ConditionIdentity profile{context, {}};
+  parser::Walk(*expr, profile);
+  auto data{profile.id.getRef()};
+  return {reinterpret_cast<const char *>(data.data()),
+      data.size() * sizeof(unsigned)};
+}
+} // namespace
+
 static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     const parser::OmpTraitSelector &selector, llvm::omp::VariantMatchInfo &vmi,
     SemanticsContext &semaCtx,
@@ -2499,6 +2649,7 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
       if (!scalarExpr) {
         continue;
       }
+      vmi.UserCondition = GetConditionIdentity(*scalarExpr, semaCtx);
       if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
         vmi.addTrait(set,
             *constValue ? llvm::omp::TraitProperty::user_condition_true
@@ -2593,6 +2744,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
       llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCondition{
           MakeVariantMatchInfo(rawVMI, *ctxSel, context)};
+      rawVMI.preserveSelectorForSubsetComparison();
       if (llvm::any_of(
               rawVMI.ConstructTraits, [](llvm::omp::TraitProperty property) {
                 return llvm::omp::getOpenMPContextTraitSetForProperty(
@@ -2672,9 +2824,10 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         llvm::omp::VariantMatchInfo rankingVMI{staticVMI};
         // Preserve the existing lowering behavior for an omitted directive:
         // do not let its runtime condition raise the implicit NOTHING rank.
-        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
+        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable) {
           rankingVMI = llvm::omp::VariantMatchInfo();
-        else if (isExplicit)
+          rankingVMI.OriginalSelector = rawVMI.OriginalSelector;
+        } else if (isExplicit)
           addConditionTraitForRanking(rankingVMI);
         result.candidates.push_back({spec, std::move(rankingVMI), isExplicit,
             dynamicCondition, /*conditionShouldBeTrue=*/!hasMatchNone});

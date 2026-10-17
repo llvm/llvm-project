@@ -22,6 +22,10 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Compiler.h"
 
+#include <memory>
+#include <optional>
+#include <string>
+
 namespace llvm {
 class Triple;
 namespace omp {
@@ -122,6 +126,23 @@ LLVM_ABI bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
 /// scored (via the ScoresMap). In addition, the required consturct nesting is
 /// decribed as well.
 struct VariantMatchInfo {
+  /// The original selector, before a frontend changes applicability or scores
+  /// to represent a runtime alternative. Subset comparisons use this view.
+  struct Selector {
+    BitVector RequiredTraits;
+    SmallVector<TraitProperty, 8> ConstructTraits;
+    std::optional<std::string> UserCondition;
+  };
+
+  Selector getSelector() const {
+    return {RequiredTraits, ConstructTraits, UserCondition};
+  }
+
+  void preserveSelectorForSubsetComparison() {
+    if (!OriginalSelector)
+      OriginalSelector = std::make_shared<const Selector>(getSelector());
+  }
+
   /// Add the trait \p Property to the required trait set. \p RawString is the
   /// string we parsed and derived \p Property from. If \p Score is not null, it
   /// recorded as well. If \p Property is in the `construct` set it is recorded
@@ -156,6 +177,13 @@ struct VariantMatchInfo {
   SmallVector<StringRef, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
+
+  /// An exact, frontend-produced identity of the source condition. This is
+  /// independent of its truth value and does not contribute to the score.
+  /// A condition trait without a key has unavailable identity, not equality
+  /// with other conditions whose identities are unavailable.
+  std::optional<std::string> UserCondition;
+  std::shared_ptr<const Selector> OriginalSelector;
 };
 
 /// The context for a source location is made up of active property traits,

@@ -4745,6 +4745,8 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
   }
   if (result) {
     if constexpr (std::is_same_v<PARSED, parser::Expr>) {
+      if (context_.captureOmpCondition())
+        context_.ompConditionExprs().insert_or_assign(&x, *result);
       if (!isNullPointerOk_ && IsNullPointerOrAllocatable(&*result)) {
         Say(source,
             "NULL() may not be used as an expression in this context"_err_en_US);
@@ -6302,6 +6304,18 @@ bool CheckMisparsedArrayElement(
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
+
+bool ExprChecker::Pre(const parser::OmpTraitSelector &selector) {
+  const auto &name{std::get<parser::OmpTraitSelectorName>(selector.t)};
+  const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)};
+  context_.set_captureOmpCondition(
+      value && *value == parser::OmpTraitSelectorName::Value::Condition);
+  return true;
+}
+
+void ExprChecker::Post(const parser::OmpTraitSelector &) {
+  context_.set_captureOmpCondition(false);
+}
 
 bool ExprChecker::Pre(const parser::DataStmtObject &obj) {
   exprAnalyzer_.set_inDataStmtObject(true);

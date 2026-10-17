@@ -164,15 +164,37 @@ template <typename T> static bool isSubset(ArrayRef<T> C0, ArrayRef<T> C1) {
 
 static bool isStrictSubset(const VariantMatchInfo &VMI0,
                            const VariantMatchInfo &VMI1) {
+  auto GetSelector = [](const VariantMatchInfo &VMI) {
+    auto S = VMI.OriginalSelector ? *VMI.OriginalSelector : VMI.getSelector();
+    bool HasCondition = S.UserCondition.has_value();
+    for (auto P : {TraitProperty::user_condition_true,
+                   TraitProperty::user_condition_false,
+                   TraitProperty::user_condition_unknown}) {
+      HasCondition |= S.RequiredTraits.test(unsigned(P));
+      S.RequiredTraits.reset(unsigned(P));
+    }
+    // Count source condition presence once, regardless of the truth encoding
+    // used for this candidate's applicability and score.
+    if (HasCondition)
+      S.RequiredTraits.set(unsigned(TraitProperty::user_condition_unknown));
+    return S;
+  };
+  auto S0 = GetSelector(VMI0);
+  auto S1 = GetSelector(VMI1);
+  if (S0.RequiredTraits.test(unsigned(TraitProperty::user_condition_unknown)) &&
+      (!S0.UserCondition || !S1.UserCondition ||
+       *S0.UserCondition != *S1.UserCondition))
+    return false;
+
   // If all required traits are a strict subset and the ordered vectors storing
   // the construct traits, we say it is a strict subset. Note that the latter
   // relation is not required to be strict.
-  if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
+  if (S0.RequiredTraits.count() >= S1.RequiredTraits.count())
     return false;
-  for (unsigned Bit : VMI0.RequiredTraits.set_bits())
-    if (!VMI1.RequiredTraits.test(Bit))
+  for (unsigned Bit : S0.RequiredTraits.set_bits())
+    if (!S1.RequiredTraits.test(Bit))
       return false;
-  if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
+  if (!isSubset<TraitProperty>(S0.ConstructTraits, S1.ConstructTraits))
     return false;
   return true;
 }

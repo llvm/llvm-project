@@ -40,6 +40,7 @@ struct AssociateConstruct;
 struct BlockConstruct;
 struct CaseConstruct;
 struct DoConstruct;
+struct Expr;
 struct ChangeTeamConstruct;
 struct CriticalConstruct;
 struct ForallConstruct;
@@ -135,6 +136,14 @@ public:
   ModuleDependences &moduleDependences() { return moduleDependences_; }
   std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
     return moduleFileOutputRenamings_;
+  }
+
+  // Keep resolved operations before folding, only for OpenMP conditions.
+  // Their parsed structure and these annotations together identify selectors.
+  bool captureOmpCondition() const { return captureOmpCondition_; }
+  void set_captureOmpCondition(bool value) { captureOmpCondition_ = value; }
+  std::map<const parser::Expr *, SomeExpr> &ompConditionExprs() {
+    return ompConditionExprs_;
   }
 
   SemanticsContext &set_location(
@@ -474,6 +483,8 @@ private:
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
+  bool captureOmpCondition_{false};
+  std::map<const parser::Expr *, SomeExpr> ompConditionExprs_;
   UnorderedSymbolSet isDefined_;
   UnorderedSymbolSet isUsed_;
   std::set<const parser::AccObject *> accObjectDuplicates_;

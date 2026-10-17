@@ -503,6 +503,9 @@ public:
   template <typename A> void Post(const A &) {}
   bool Walk(const parser::Program &);
 
+  bool Pre(const parser::OmpTraitSelector &);
+  void Post(const parser::OmpTraitSelector &);
+
   bool Pre(const parser::Expr &x) {
     AnalyzeAndNoteUses(x);
     return false;
