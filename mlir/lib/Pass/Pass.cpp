@@ -25,6 +25,7 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
+#include <mutex>
 #include <optional>
 
 #define DEBUG_TYPE "pass-manager"
@@ -984,29 +985,22 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
                                                         this};
   auto *instrumentor = am.getPassInstrumentor();
 
-  // An atomic failure variable for the async executors.
-  std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
-  llvm::fill(activePMs, false);
+  // Each parallel task owns an executor for its entire lifetime. A worker
+  // index belongs to the task, rather than the thread: nested waits may run
+  // other tasks on the same thread while this task's executor is still in use.
   std::atomic<bool> hasFailure = false;
-  parallelForEach(context, opInfos, [&](OpPMInfo &opInfo) {
-    // Find an executor for this operation.
-    auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
-      bool expectedInactive = false;
-      return isActive.compare_exchange_strong(expectedInactive, true);
-    });
-    unsigned pmIndex = it - activePMs.begin();
-
-    // Get the pass manager for this operation and execute it.
-    OpPassManager &pm = asyncExecutors[pmIndex][opInfo.passManagerIdx];
-    LogicalResult pipelineResult = runPipeline(
-        pm, opInfo.op, opInfo.am, verifyPasses,
-        pm.impl->initializationGeneration, instrumentor, &parentInfo);
-    if (failed(pipelineResult))
-      hasFailure.store(true);
-
-    // Reset the active bit for this pass manager.
-    activePMs[pmIndex].store(false);
-  });
+  (void)failableParallelForEachWithWorkerId(
+      context, opInfos.begin(), opInfos.end(),
+      [&](OpPMInfo &opInfo, unsigned pmIndex) {
+        OpPassManager &pm = asyncExecutors[pmIndex][opInfo.passManagerIdx];
+        LogicalResult pipelineResult = runPipeline(
+            pm, opInfo.op, opInfo.am, verifyPasses,
+            pm.impl->initializationGeneration, instrumentor, &parentInfo);
+        if (failed(pipelineResult))
+          hasFailure.store(true);
+        // Continue processing independent operations after a pipeline failure.
+        return success();
+      });
 
   // Signal a failure if any of the executors failed.
   if (hasFailure)
@@ -1223,6 +1217,17 @@ struct PassInstrumentorImpl {
   /// Mutex to keep instrumentation access thread-safe.
   llvm::sys::SmartMutex<true> mutex;
 
+  /// Dispatch may run concurrently only if every instrumentation opts in.
+  /// Registration finishes before the pipeline starts running.
+  bool threadSafe = true;
+
+  auto lockInstrumentations() {
+    std::unique_lock<llvm::sys::SmartMutex<true>> lock(mutex, std::defer_lock);
+    if (!threadSafe)
+      lock.lock();
+    return lock;
+  }
+
   /// Set of registered instrumentations.
   std::vector<std::unique_ptr<PassInstrumentation>> instrumentations;
 };
@@ -1236,7 +1241,7 @@ PassInstrumentor::~PassInstrumentor() = default;
 void PassInstrumentor::runBeforePipeline(
     std::optional<OperationName> name,
     const PassInstrumentation::PipelineParentInfo &parentInfo) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : impl->instrumentations)
     instr->runBeforePipeline(name, parentInfo);
 }
@@ -1245,28 +1250,28 @@ void PassInstrumentor::runBeforePipeline(
 void PassInstrumentor::runAfterPipeline(
     std::optional<OperationName> name,
     const PassInstrumentation::PipelineParentInfo &parentInfo) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : llvm::reverse(impl->instrumentations))
     instr->runAfterPipeline(name, parentInfo);
 }
 
 /// See PassInstrumentation::runBeforePass for details.
 void PassInstrumentor::runBeforePass(Pass *pass, Operation *op) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : impl->instrumentations)
     instr->runBeforePass(pass, op);
 }
 
 /// See PassInstrumentation::runAfterPass for details.
 void PassInstrumentor::runAfterPass(Pass *pass, Operation *op) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : llvm::reverse(impl->instrumentations))
     instr->runAfterPass(pass, op);
 }
 
 /// See PassInstrumentation::runAfterPassFailed for details.
 void PassInstrumentor::runAfterPassFailed(Pass *pass, Operation *op) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : llvm::reverse(impl->instrumentations))
     instr->runAfterPassFailed(pass, op);
 }
@@ -1274,7 +1279,7 @@ void PassInstrumentor::runAfterPassFailed(Pass *pass, Operation *op) {
 /// See PassInstrumentation::runBeforeAnalysis for details.
 void PassInstrumentor::runBeforeAnalysis(StringRef name, TypeID id,
                                          Operation *op) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : impl->instrumentations)
     instr->runBeforeAnalysis(name, id, op);
 }
@@ -1282,7 +1287,7 @@ void PassInstrumentor::runBeforeAnalysis(StringRef name, TypeID id,
 /// See PassInstrumentation::runAfterAnalysis for details.
 void PassInstrumentor::runAfterAnalysis(StringRef name, TypeID id,
                                         Operation *op) {
-  llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  auto instrumentationLock = impl->lockInstrumentations();
   for (auto &instr : llvm::reverse(impl->instrumentations))
     instr->runAfterAnalysis(name, id, op);
 }
@@ -1291,5 +1296,6 @@ void PassInstrumentor::runAfterAnalysis(StringRef name, TypeID id,
 void PassInstrumentor::addInstrumentation(
     std::unique_ptr<PassInstrumentation> pi) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
+  impl->threadSafe &= pi->isThreadSafe();
   impl->instrumentations.emplace_back(std::move(pi));
 }
