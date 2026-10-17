@@ -318,11 +318,9 @@ define void @f1_vector_4096_arr(ptr %out) #0 {
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    sd zero, 0(sp)
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 4096
-; RV64IV-NEXT:    lui a0, 1
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    sd zero, 0(sp)
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 8192
-; RV64IV-NEXT:    lui a0, 1
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    sd zero, 0(sp)
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 12288
@@ -358,11 +356,9 @@ define void @f1_vector_4096_arr(ptr %out) #0 {
 ; RV32IV-NEXT:    sub sp, sp, a0
 ; RV32IV-NEXT:    sw zero, 0(sp)
 ; RV32IV-NEXT:    .cfi_def_cfa_offset 4096
-; RV32IV-NEXT:    lui a0, 1
 ; RV32IV-NEXT:    sub sp, sp, a0
 ; RV32IV-NEXT:    sw zero, 0(sp)
 ; RV32IV-NEXT:    .cfi_def_cfa_offset 8192
-; RV32IV-NEXT:    lui a0, 1
 ; RV32IV-NEXT:    sub sp, sp, a0
 ; RV32IV-NEXT:    sw zero, 0(sp)
 ; RV32IV-NEXT:    .cfi_def_cfa_offset 12288

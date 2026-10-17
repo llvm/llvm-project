@@ -17,7 +17,6 @@ define void @lmul1() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    ret
 ;

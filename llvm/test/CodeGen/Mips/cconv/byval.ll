@@ -58,7 +58,6 @@ define dso_local void @g() #0 {
 ; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    subu $sp, $sp, $1
 ; O32-NEXT:    .cfi_def_cfa_offset 65536
-; O32-NEXT:    lui $1, 1
 ; O32-NEXT:    addu $1, $sp, $1
 ; O32-NEXT:    sw $ra, -4($1) # 4-byte Folded Spill
 ; O32-NEXT:    .cfi_offset 31, -4
@@ -88,7 +87,6 @@ define dso_local void @g() #0 {
 ; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    subu $sp, $sp, $1
 ; N32-NEXT:    .cfi_def_cfa_offset 65536
-; N32-NEXT:    lui $1, 1
 ; N32-NEXT:    addu $1, $sp, $1
 ; N32-NEXT:    sd $ra, -8($1) # 8-byte Folded Spill
 ; N32-NEXT:    .cfi_offset 31, -8
@@ -122,7 +120,6 @@ define dso_local void @g() #0 {
 ; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    dsubu $sp, $sp, $1
 ; N64-NEXT:    .cfi_def_cfa_offset 65536
-; N64-NEXT:    lui $1, 1
 ; N64-NEXT:    daddu $1, $sp, $1
 ; N64-NEXT:    sd $ra, -8($1) # 8-byte Folded Spill
 ; N64-NEXT:    .cfi_offset 31, -8

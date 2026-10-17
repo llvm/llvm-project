@@ -125,7 +125,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; LA64-NEXT:    lu12i.w $a0, 8
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    st.d $zero, $sp, 0
-; LA64-NEXT:    lu12i.w $a0, 8
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    st.d $zero, $sp, 0
 ; LA64-NEXT:    addi.d $sp, $sp, -16
@@ -142,7 +141,6 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; LA32-NEXT:    lu12i.w $a0, 8
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    st.w $zero, $sp, 0
-; LA32-NEXT:    lu12i.w $a0, 8
 ; LA32-NEXT:    sub.w $sp, $sp, $a0
 ; LA32-NEXT:    st.w $zero, $sp, 0
 ; LA32-NEXT:    addi.w $sp, $sp, -16
