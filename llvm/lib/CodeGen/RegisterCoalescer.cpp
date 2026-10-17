@@ -890,22 +890,25 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       }))
     return {false, false};
 
-  // FIXME: The code below tries to commute 'UseOpIdx' operand with some other
-  // commutable operand which is expressed by 'CommuteAnyOperandIndex'value
-  // passed to the method. That _other_ operand is chosen by
-  // the findCommutedOpIndices() method.
-  //
-  // That is obviously an area for improvement in case of instructions having
-  // more than 2 operands. For example, if some instruction has 3 commutable
-  // operands then all possible variants (i.e. op#1<->op#2, op#1<->op#3,
-  // op#2<->op#3) of commute transformation should be considered/tried here.
+  // Commute the tied use with an operand reading IntB. Prefer the partner the
+  // target picks; if it does not read IntB, ask about each operand that does.
   unsigned NewDstIdx = TargetInstrInfo::CommuteAnyOperandIndex;
-  if (!TII->findCommutedOpIndices(*DefMI, UseOpIdx, NewDstIdx))
-    return {false, false};
+  if (!TII->findCommutedOpIndices(*DefMI, UseOpIdx, NewDstIdx) ||
+      DefMI->getOperand(NewDstIdx).getReg() != IntB.reg()) {
+    auto Uses = DefMI->all_uses();
+    auto It = find_if(Uses, [&](const MachineOperand &MO) {
+      unsigned Idx1 = UseOpIdx, Idx2 = MO.getOperandNo();
+      return MO.getReg() == IntB.reg() &&
+             TII->findCommutedOpIndices(*DefMI, Idx1, Idx2);
+    });
+    if (It == Uses.end())
+      return {false, false};
+    NewDstIdx = It->getOperandNo();
+  }
 
   MachineOperand &NewDstMO = DefMI->getOperand(NewDstIdx);
   Register NewReg = NewDstMO.getReg();
-  if (NewReg != IntB.reg() || !IntB.Query(AValNo->def).isKill())
+  if (!IntB.Query(AValNo->def).isKill())
     return {false, false};
 
   // Make sure there are no other definitions of IntB that would reach the
