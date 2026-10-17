@@ -21,6 +21,10 @@ private:
   ~ChildWithPrivateDestructor();
 };
 
+struct ChildWithDeletedDestructor: Base {
+  ~ChildWithDeletedDestructor() = delete;
+};
+
 void check_reset() {
   std::unique_ptr<Base> p;
   p.reset(new ChildWithPublicDestructor());
@@ -28,4 +32,5 @@ void check_reset() {
   // CHECK-FIXES: p = std::make_unique<ChildWithPublicDestructor>();
   p.reset(new ChildWithProtectedDestructor());
   p.reset(new ChildWithPrivateDestructor());
+  p.reset(new ChildWithDeletedDestructor());
 }

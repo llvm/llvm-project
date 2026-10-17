@@ -73,11 +73,12 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   const auto CanCallCtor = unless(has(ignoringImpCasts(
       cxxConstructExpr(hasDeclaration(decl(unless(isPublic())))))));
 
-  // A private destructor would require somehow making std::make_unique or some
-  // of its internal befriend the created type, so better be conservative in
-  // that case.
-  const auto CanCallDtor = unless(hasType(pointerType(pointee(recordType(
-      hasDeclaration(has(cxxDestructorDecl(unless(isPublic())))))))));
+  // A private/deleted destructor would require somehow making std::make_unique
+  // or some of its internal befriend the created type, so better be
+  // conservative in that case.
+  const auto CanCallDtor =
+      unless(hasType(pointerType(pointee(recordType(hasDeclaration(
+          has(cxxDestructorDecl(anyOf(isDeleted(), unless(isPublic()))))))))));
 
   auto IsPlacement = hasAnyPlacementArg(anything());
 
