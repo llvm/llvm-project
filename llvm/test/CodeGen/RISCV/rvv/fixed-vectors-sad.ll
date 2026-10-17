@@ -448,11 +448,10 @@ define i32 @add_zext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 ; CHECK-NEXT:    vmv.s.x v11, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vwaddu.vv v12, v8, v9
+; CHECK-NEXT:    vwaddu.wv v12, v12, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v10
-; CHECK-NEXT:    vwaddu.vv v9, v12, v8
+; CHECK-NEXT:    vwredsumu.vs v8, v12, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vredsum.vs v8, v9, v11
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -462,11 +461,10 @@ define i32 @add_zext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 ; ZVABD-NEXT:    vmv.s.x v11, zero
 ; ZVABD-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; ZVABD-NEXT:    vwaddu.vv v12, v8, v9
+; ZVABD-NEXT:    vwaddu.wv v12, v12, v10
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVABD-NEXT:    vzext.vf2 v8, v10
-; ZVABD-NEXT:    vwaddu.vv v9, v12, v8
+; ZVABD-NEXT:    vwredsumu.vs v8, v12, v11
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVABD-NEXT:    vredsum.vs v8, v9, v11
 ; ZVABD-NEXT:    vmv.x.s a0, v8
 ; ZVABD-NEXT:    ret
 entry:
@@ -487,11 +485,10 @@ define i32 @add_sext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 ; CHECK-NEXT:    vmv.s.x v11, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vwadd.vv v12, v8, v9
+; CHECK-NEXT:    vwadd.wv v12, v12, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v8, v10
-; CHECK-NEXT:    vwadd.vv v9, v12, v8
+; CHECK-NEXT:    vwredsum.vs v8, v12, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vredsum.vs v8, v9, v11
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -501,11 +498,10 @@ define i32 @add_sext_mismatch_type(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
 ; ZVABD-NEXT:    vmv.s.x v11, zero
 ; ZVABD-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; ZVABD-NEXT:    vwadd.vv v12, v8, v9
+; ZVABD-NEXT:    vwadd.wv v12, v12, v10
 ; ZVABD-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; ZVABD-NEXT:    vsext.vf2 v8, v10
-; ZVABD-NEXT:    vwadd.vv v9, v12, v8
+; ZVABD-NEXT:    vwredsum.vs v8, v12, v11
 ; ZVABD-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVABD-NEXT:    vredsum.vs v8, v9, v11
 ; ZVABD-NEXT:    vmv.x.s a0, v8
 ; ZVABD-NEXT:    ret
 entry:

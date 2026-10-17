@@ -19832,7 +19832,8 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 }
 
 // add (ext X), (ext Y) -> ext (add X, Y)
-// if the add can't overflow in the narrow type.
+// If X and Y have different types, extend the narrower one to the type of the
+// wider one before forming the add, if the add cannot overflow in that type.
 static SDValue
 combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -19865,16 +19866,34 @@ combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
 
   SDValue LHSSrc = LHS.getOperand(0);
   SDValue RHSSrc = RHS.getOperand(0);
-  if (LHSSrc.getValueType() != RHSSrc.getValueType() ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(LHSSrc.getValueType()))
+  EVT LHSSrcVT = LHSSrc.getValueType();
+  EVT RHSSrcVT = RHSSrc.getValueType();
+  if (!LHSSrcVT.isInteger() || !RHSSrcVT.isInteger() ||
+      (LHSSrcVT.isVector() != RHSSrcVT.isVector()) ||
+      (LHSSrcVT.isVector() &&
+       (LHSSrcVT.getVectorElementCount() != RHSSrcVT.getVectorElementCount())))
     return SDValue();
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(LHSSrcVT) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(RHSSrcVT))
+    return SDValue();
+
+  EVT CommonVT = LHSSrcVT;
+  SDLoc DL(N);
+  if (LHSSrcVT != RHSSrcVT) {
+    if (LHSSrcVT.getScalarSizeInBits() < RHSSrcVT.getScalarSizeInBits()) {
+      LHSSrc = DAG.getNode(ExtOpc, DL, RHSSrcVT, LHSSrc);
+      CommonVT = RHSSrcVT;
+    } else {
+      RHSSrc = DAG.getNode(ExtOpc, DL, LHSSrcVT, RHSSrc);
+      CommonVT = LHSSrcVT;
+    }
+  }
 
   if (!DAG.willNotOverflowAdd(ExtOpc == ISD::SIGN_EXTEND, LHSSrc, RHSSrc))
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue Add =
-      DAG.getNode(ISD::ADD, DL, LHSSrc.getValueType(), LHSSrc, RHSSrc);
+  SDValue Add = DAG.getNode(ISD::ADD, DL, CommonVT, LHSSrc, RHSSrc);
   return DAG.getNode(ExtOpc, DL, N->getValueType(0), Add);
 }
 
