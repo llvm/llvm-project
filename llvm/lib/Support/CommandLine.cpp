@@ -2943,19 +2943,10 @@ void cl::addLibraryOptions(LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
-LibraryOptionsContext::LibraryOptionsContext() { addDefaults(); }
-
-void LibraryOptionsContext::addDefaults() {
-  for (LibraryOptions *L : globalParser().Libraries)
-    if (L->isPerContext())
-      Values[L->getDefault()] = L->getDefault();
-}
-
 void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
   assert(this != &Other);
   Values.clear();
   SavedArgs.clear();
-  addDefaults();
   ArrayRef<const char *> Args = Other.SavedArgs;
   for (size_t I = 0, E = Args.size(); I != E;) {
     StringRef Name = Args[I];
@@ -2972,11 +2963,10 @@ void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
 Error LibraryOptionsContext::parse(LibraryOptions &L,
                                    ArrayRef<const char *> Args,
                                    unsigned &Consumed) {
-  auto It = Values.try_emplace(L.getDefault(), L.getDefault()).first;
-  if (It->second == L.getDefault())
-    It->second = L.copy(It->second, Alloc);
-  return parseLibraryOption(L, const_cast<void *>(It->second), Args, Consumed,
-                            Alloc, &SavedArgs);
+  auto [It, Inserted] = Values.try_emplace(L.getDefault());
+  if (Inserted)
+    It->second = L.copyDefault(Alloc);
+  return parseLibraryOption(L, It->second, Args, Consumed, Alloc, &SavedArgs);
 }
 
 void cl::ResetAllOptionOccurrences() {

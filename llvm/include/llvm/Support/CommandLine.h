@@ -2199,8 +2199,8 @@ public:
   /// Returns the default values.
   virtual const void *getDefault() const = 0;
 
-  /// Returns a copy of \p Opts allocated from \p Alloc.
-  virtual void *copy(const void *Opts, BumpPtrAllocator &Alloc) const = 0;
+  /// Returns a copy of getDefault() allocated from \p Alloc.
+  virtual void *copyDefault(BumpPtrAllocator &Alloc) const = 0;
 
   /// Restores the default values.
   virtual void reset() = 0;

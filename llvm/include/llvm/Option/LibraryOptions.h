@@ -130,8 +130,8 @@ public:
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
           return static_cast<T *>(Opts)->apply(A, Alloc);
         }),
-        Copy([](const void *Opts, BumpPtrAllocator &Alloc) -> void * {
-          return new (Alloc) T(*static_cast<const T *>(Opts));
+        Copy([](BumpPtrAllocator &Alloc) -> void * {
+          return new (Alloc) T(T::Default);
         }),
         Reset([] { T::Global = T(); }) {}
 
@@ -141,8 +141,8 @@ public:
               BumpPtrAllocator &Alloc) override;
   void *global() override { return Global; }
   const void *getDefault() const override { return Default; }
-  void *copy(const void *Opts, BumpPtrAllocator &Alloc) const override {
-    return Copy(Opts, Alloc);
+  void *copyDefault(BumpPtrAllocator &Alloc) const override {
+    return Copy(Alloc);
   }
   void reset() override { Reset(); }
 
@@ -151,7 +151,7 @@ private:
   void *Global;
   const void *Default;
   bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
-  void *(*Copy)(const void *Opts, BumpPtrAllocator &Alloc);
+  void *(*Copy)(BumpPtrAllocator &Alloc);
   void (*Reset)();
 };
 

@@ -27,8 +27,6 @@ class LibraryOptions;
 // Libraries declared with perContext read their options here.
 class LLVM_ABI LibraryOptionsContext {
 public:
-  LibraryOptionsContext();
-
   // Replaces the library options with Other's by replaying its arguments.
   // Indexing libraries registered since the last parse is not thread-safe.
   void assign(const LibraryOptionsContext &Other);
@@ -40,11 +38,11 @@ public:
   // The arguments assigned so far.
   ArrayRef<const char *> args() const { return SavedArgs; }
 
-  // T's values. T must have been registered when the context was created.
+  // T's values, or T::Default if none of its options is parsed.
   template <typename T> const T &get() const {
-    const void *Opts = Values.lookup(&T::Default);
-    assert(Opts && "library options registered after the context's creation");
-    return *static_cast<const T *>(Opts);
+    auto It = Values.find(&T::Default);
+    return It == Values.end() ? T::Default
+                              : *static_cast<const T *>(It->second);
   }
 
   // C's values of T, or T::Global if C is null.
@@ -53,11 +51,7 @@ public:
   }
 
 private:
-  void addDefaults();
-
-  // Maps a library's defaults to its values, which are the defaults until an
-  // option of the library is parsed.
-  DenseMap<const void *, const void *> Values;
+  DenseMap<const void *, void *> Values;
   SmallVector<const char *, 0> SavedArgs;
   BumpPtrAllocator Alloc;
 };
