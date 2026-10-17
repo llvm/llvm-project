@@ -248,7 +248,8 @@ int main(int argc, char **argv) {
   LLVMContext Context;
   SMDiagnostic Err;
   cl::HideUnrelatedOptions({&SplitCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "LLVM module splitter\n");
 
   Triple TT(MTriple);
 
@@ -265,6 +266,7 @@ int main(int argc, char **argv) {
     }
 
     TargetOptions Options;
+    Options.MCOptions.LibraryOptions = &Context.getLibraryOptions();
     TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
         TT, MCPU, /*FS*/ "", Options, std::nullopt, std::nullopt));
   }
