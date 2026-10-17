@@ -872,7 +872,7 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
           I->getOpcode() != Instruction::Or)
         return SelectInfo.end();
 
-      if (I->getOpcode() == Instruction::Or && I->getType()->isIntegerTy(1))
+      if (I->getType()->isIntegerTy(1))
         return SelectInfo.end();
 
       // Iterate through operands and find dependant on recognised sign
