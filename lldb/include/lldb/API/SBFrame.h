@@ -213,7 +213,7 @@ public:
 
   /// Similar to \a GetDescription() but the format of the description can be
   /// configured via the \p format parameter. See
-  /// https://lldb.llvm.org/use/formatting.html for more information on format
+  /// :doc:`/use/formatting` for more information on format
   /// strings.
   ///
   /// \param[in] format
