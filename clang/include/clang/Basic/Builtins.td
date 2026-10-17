@@ -3890,6 +3890,21 @@ def RecvFrom : LibBuiltin<"sys/socket.h"> {
   let Prototype = "";
 }
 
+def Send : LibBuiltin<"sys/socket.h"> {
+  let Spellings = ["send"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, const void*, size_t, int); ssize_t is target-specific
+  let Prototype = "";
+}
+
+def SendTo : LibBuiltin<"sys/socket.h"> {
+  let Spellings = ["sendto"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, const void*, size_t, int, const struct sockaddr*, socklen_t);
+  // ssize_t, struct sockaddr, and socklen_t are target-specific
+  let Prototype = "";
+}
+
 // POSIX poll.h
 
 def Poll : LibBuiltin<"poll.h"> {
