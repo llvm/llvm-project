@@ -11475,8 +11475,13 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_math_tanf",
-    hdrs = ["src/__support/math/tanf.h"],
+    hdrs = [
+        "src/__support/math/tanf.h",
+        "src/__support/math/tanf_double_eval.h",
+        "src/__support/math/tanf_float_eval.h",
+    ],
     deps = [
+        ":__support_common",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
