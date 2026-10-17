@@ -4,7 +4,7 @@
 ; TAILJMPri64 should not receive "callee-saved" registers beyond epilogue.
 
 ; AMD64: jmpq
-; AMD64-NOT: %{{e[a-z]|rbx|rbp|r10|r12|r13|r14|r15}}
+; AMD64-NOT: %{{e[a-z]|rbx|rbp|r12|r13|r14|r15}}
 
 ; WIN64: jmpq
 ; WIN64-NOT: %{{e[a-z]|rbx|rsi|rdi|rbp|r12|r13|r14|r15}}
