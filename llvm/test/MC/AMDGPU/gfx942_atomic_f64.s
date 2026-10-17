@@ -17,7 +17,7 @@ flat_atomic_add_f64 v[0:1], a[2:3] sc1
 flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0
 // GFX942: flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0 ; encoding: [0x00,0x00,0x3d,0xdd,0x00,0x02,0x80,0x04]
 flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0 sc1
-// GFX942: flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x3d,0xdd,0x00,0x02,0x80,0x04]
+// GFX942: flat_atomic_add_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x3d,0xdf,0x00,0x02,0x80,0x04]
 global_atomic_add_f64 v[0:1], v[2:3], off
 // GFX942: global_atomic_add_f64 v[0:1], v[2:3], off ; encoding: [0x00,0x80,0x3c,0xdd,0x00,0x02,0x7f,0x00]
 global_atomic_add_f64 v[0:1], v[2:3], off sc1
@@ -33,7 +33,7 @@ global_atomic_add_f64 v[0:1], a[2:3], off sc1
 global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0
 // GFX942: global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0 ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0xff,0x04]
 global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1
-// GFX942: global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0xff,0x04]
+// GFX942: global_atomic_add_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x3d,0xdf,0x00,0x02,0xff,0x04]
 global_atomic_add_f64 v0, v[2:3], s[0:1]
 // GFX942: global_atomic_add_f64 v0, v[2:3], s[0:1] ; encoding: [0x00,0x80,0x3c,0xdd,0x00,0x02,0x00,0x00]
 global_atomic_add_f64 v0, v[2:3], s[0:1] sc1
@@ -49,7 +49,7 @@ global_atomic_add_f64 v0, a[2:3], s[0:1] sc1
 global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0
 // GFX942: global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0 ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0x80,0x04]
 global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1
-// GFX942: global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x3d,0xdd,0x00,0x02,0x80,0x04]
+// GFX942: global_atomic_add_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x3d,0xdf,0x00,0x02,0x80,0x04]
 flat_atomic_min_f64 v[0:1], v[2:3]
 // GFX942: flat_atomic_min_f64 v[0:1], v[2:3]      ; encoding: [0x00,0x00,0x40,0xdd,0x00,0x02,0x00,0x00]
 flat_atomic_min_f64 v[0:1], v[2:3] sc1
@@ -65,7 +65,7 @@ flat_atomic_min_f64 v[0:1], a[2:3] sc1
 flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0
 // GFX942: flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0 ; encoding: [0x00,0x00,0x41,0xdd,0x00,0x02,0x80,0x04]
 flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0 sc1
-// GFX942: flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x41,0xdd,0x00,0x02,0x80,0x04]
+// GFX942: flat_atomic_min_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x41,0xdf,0x00,0x02,0x80,0x04]
 global_atomic_min_f64 v[0:1], v[2:3], off
 // GFX942: global_atomic_min_f64 v[0:1], v[2:3], off ; encoding: [0x00,0x80,0x40,0xdd,0x00,0x02,0x7f,0x00]
 global_atomic_min_f64 v[0:1], v[2:3], off sc1
@@ -81,7 +81,7 @@ global_atomic_min_f64 v[0:1], a[2:3], off sc1
 global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0
 // GFX942: global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0 ; encoding: [0x00,0x80,0x41,0xdd,0x00,0x02,0xff,0x04]
 global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1
-// GFX942: global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x41,0xdd,0x00,0x02,0xff,0x04]
+// GFX942: global_atomic_min_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x41,0xdf,0x00,0x02,0xff,0x04]
 global_atomic_min_f64 v0, v[2:3], s[0:1]
 // GFX942: global_atomic_min_f64 v0, v[2:3], s[0:1] ; encoding: [0x00,0x80,0x40,0xdd,0x00,0x02,0x00,0x00]
 global_atomic_min_f64 v0, v[2:3], s[0:1] sc1
@@ -97,7 +97,7 @@ global_atomic_min_f64 v0, a[2:3], s[0:1] sc1
 global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0
 // GFX942: global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0 ; encoding: [0x00,0x80,0x41,0xdd,0x00,0x02,0x80,0x04]
 global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1
-// GFX942: global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x41,0xdd,0x00,0x02,0x80,0x04]
+// GFX942: global_atomic_min_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x41,0xdf,0x00,0x02,0x80,0x04]
 flat_atomic_max_f64 v[0:1], v[2:3]
 // GFX942: flat_atomic_max_f64 v[0:1], v[2:3]      ; encoding: [0x00,0x00,0x44,0xdd,0x00,0x02,0x00,0x00]
 flat_atomic_max_f64 v[0:1], v[2:3] sc1
@@ -113,7 +113,7 @@ flat_atomic_max_f64 v[0:1], a[2:3] sc1
 flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0
 // GFX942: flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0 ; encoding: [0x00,0x00,0x45,0xdd,0x00,0x02,0x80,0x04]
 flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0 sc1
-// GFX942: flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x45,0xdd,0x00,0x02,0x80,0x04]
+// GFX942: flat_atomic_max_f64 a[4:5], v[0:1], a[2:3] sc0 sc1 ; encoding: [0x00,0x00,0x45,0xdf,0x00,0x02,0x80,0x04]
 global_atomic_max_f64 v[0:1], v[2:3], off
 // GFX942: global_atomic_max_f64 v[0:1], v[2:3], off ; encoding: [0x00,0x80,0x44,0xdd,0x00,0x02,0x7f,0x00]
 global_atomic_max_f64 v[0:1], v[2:3], off sc1
@@ -129,7 +129,7 @@ global_atomic_max_f64 v[0:1], a[2:3], off sc1
 global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0
 // GFX942: global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0 ; encoding: [0x00,0x80,0x45,0xdd,0x00,0x02,0xff,0x04]
 global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1
-// GFX942: global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x45,0xdd,0x00,0x02,0xff,0x04]
+// GFX942: global_atomic_max_f64 a[4:5], v[0:1], a[2:3], off sc0 sc1 ; encoding: [0x00,0x80,0x45,0xdf,0x00,0x02,0xff,0x04]
 global_atomic_max_f64 v0, v[2:3], s[0:1]
 // GFX942: global_atomic_max_f64 v0, v[2:3], s[0:1] ; encoding: [0x00,0x80,0x44,0xdd,0x00,0x02,0x00,0x00]
 global_atomic_max_f64 v0, v[2:3], s[0:1] sc1
@@ -145,4 +145,4 @@ global_atomic_max_f64 v0, a[2:3], s[0:1] sc1
 global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0
 // GFX942: global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0 ; encoding: [0x00,0x80,0x45,0xdd,0x00,0x02,0x80,0x04]
 global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1
-// GFX942: global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x45,0xdd,0x00,0x02,0x80,0x04]
+// GFX942: global_atomic_max_f64 a[4:5], v0, a[2:3], s[0:1] sc0 sc1 ; encoding: [0x00,0x80,0x45,0xdf,0x00,0x02,0x80,0x04]
