@@ -15,6 +15,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -24,6 +25,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/Support/TextEncoding.h"
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -235,7 +237,8 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
   return SourceLocation();
 }
 
-ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
+ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
+                                       bool IsConstExpr) {
   if (!Expr)
     return ExprError();
 
@@ -244,6 +247,17 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
     if (ForAsmLabel && SL->getString().empty()) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
+    }
+    if (!IsConstExpr &&
+        PP.getTextEncoding().getFromIBM1047Converter() != nullptr) {
+      SmallString<16> ConvertedAsm;
+      PP.getTextEncoding().getFromIBM1047Converter()->convert(SL->getString(),
+                                                              ConvertedAsm);
+      QualType StrTy = Context.getStringLiteralArrayType(Context.CharTy,
+                                                         ConvertedAsm.size());
+      return StringLiteral::Create(Context, ConvertedAsm,
+                                   StringLiteralKind::Ordinary,
+                                   /*Pascal*/ false, StrTy, SL->getBeginLoc());
     }
     return SL;
   }

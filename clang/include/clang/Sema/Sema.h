@@ -54,6 +54,7 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -7433,7 +7434,8 @@ public:
   /// from multiple tokens.  However, the common case is that StringToks points
   /// to one string.
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
-                                Scope *UDLScope = nullptr);
+                                Scope *UDLScope = nullptr,
+                                ConversionAction Action = CA_ToLiteralEncoding);
 
   ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
 
@@ -11476,7 +11478,8 @@ private:
   ///@{
 
 public:
-  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel,
+                                   bool IsConstExpr = false);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
