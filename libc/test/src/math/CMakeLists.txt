@@ -14,6 +14,7 @@ add_fp_unittest(
     libc.src.math.cosf
     libc.src.__support.math.cosf_double_eval
     libc.src.__support.math.cosf_float_eval
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
@@ -96,6 +97,7 @@ add_fp_unittest(
     libc.src.math.sinf
     libc.src.__support.math.sinf_double_eval
     libc.src.__support.math.sinf_float_eval
+    libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits

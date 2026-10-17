@@ -209,17 +209,6 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
-  if (getMCAsmInfo().getExceptionHandlingType() == ExceptionHandling::WinEH &&
-      getMCAsmInfo().usesWindowsCFI()) {
-    // Unwinding can get confused if the last instruction in an
-    // exception-handling region (function, funclet, try block, etc.)
-    // is a call.
-    //
-    // FIXME: We could elide the trap if the next instruction would be in
-    // the same region anyway.
-    this->Options.TrapUnreachable = true;
-  }
-
   if (this->Options.TLSSize == 0) // default
     this->Options.TLSSize = 24;
   if ((getCodeModel() == CodeModel::Small ||
