@@ -14,7 +14,8 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if !defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                   \
+    !defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 #error "Invalid include"
 #endif
 

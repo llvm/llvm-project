@@ -137,12 +137,14 @@
 #endif
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_ARM64EC) ||                                    \
     (defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                    \
      defined(LIBC_TARGET_CPU_HAS_SSE4_2))
 #define LIBC_TARGET_CPU_HAS_NEAREST_INT
 #endif
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_ARM64EC) || defined(LIBC_TARGET_ARCH_IS_GPU)
 #define LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS
 #endif
 

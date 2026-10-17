@@ -24,7 +24,8 @@
   inline_memmove_small_size_x86
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP                         \
   inline_memmove_follow_up_x86
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
+    defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 #include "src/string/memory_utils/aarch64/inline_memmove.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
   inline_memmove_no_small_size
