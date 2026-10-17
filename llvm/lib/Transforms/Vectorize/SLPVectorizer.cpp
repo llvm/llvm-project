@@ -36377,6 +36377,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
   SmallPtrSet<Value *, 16> VisitedInstrs;
+  // Only the original compares are the seeds. With revec the vectorized
+  // alternate compares are the pairs of compares of the same operands, which
+  // otherwise are vectorized again and again.
+  SmallPtrSet<const CmpInst *, 16> OrigCmps;
+  for (const CmpInst &CI : make_isa_range<CmpInst>(*BB))
+    OrigCmps.insert(&CI);
   // Maps phi nodes to the non-phi nodes found in the use tree for each phi
   // node. Allows better to identify the chains that can be vectorized in the
   // better way.
@@ -36759,13 +36765,14 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 
     if (isa<InsertElementInst, InsertValueInst>(It))
       PostProcessInserts.insert(&*It);
-    else if (auto *CI = dyn_cast<CmpInst>(It))
-      PostProcessCmps.insert(CI);
-    else if (auto *SI = dyn_cast<StoreInst>(It);
-             SI &&
-             (Opts->slp_revec ||
-              !SI->getValueOperand()->getType()->isVectorTy()) &&
-             isa<Instruction>(SI->getValueOperand()))
+    else if (auto *CI = dyn_cast<CmpInst>(It)) {
+      if (OrigCmps.contains(CI))
+        PostProcessCmps.insert(CI);
+    } else if (auto *SI = dyn_cast<StoreInst>(It);
+               SI &&
+               (Opts->slp_revec ||
+                !SI->getValueOperand()->getType()->isVectorTy()) &&
+               isa<Instruction>(SI->getValueOperand()))
       PostProcessStores.insert(SI);
     else if (isNonVectorizableInst(*Opts, &*It, TLI))
       PostProcessInsts.insert(&*It);
