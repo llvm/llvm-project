@@ -2765,7 +2765,8 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Convert linalg.conv_2d_xxx into linalg.generic (for img2col packing)
-    and linalg.matmul.
+    followed by a linalg.generic implementing matrix multiplication or batched
+    matrix-vector multiplication.
 
     A convolution operation can be written as a matrix-matrix multiplication by
     unfolding the cross-correlation between input and filter and explicitly copy
