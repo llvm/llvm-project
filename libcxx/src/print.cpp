@@ -50,14 +50,16 @@ struct FILE_FS_DEVICE_INFORMATION {
   ULONG Characteristics;
 };
 
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ne-wdm-_fsinfoclass
+#  define FileFsDeviceInformation 4
+
 // https://learn.microsoft.com/en-us/windows/console/console-handles
 static bool __is_handle_terminal_win8_or_greater(HANDLE __handle) {
-  // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ne-wdm-_fsinfoclass
-  constexpr ULONG FileFsDeviceInformation = 4;
-  IO_STATUS_BLOCK iosb;
-  FILE_FS_DEVICE_INFORMATION info;
-  const auto status = NtQueryVolumeInformationFile(__handle, &iosb, &info, sizeof(info), FileFsDeviceInformation);
-  return (status >= 0) && (info.DeviceType == FILE_DEVICE_CONSOLE);
+  IO_STATUS_BLOCK __iosb;
+  FILE_FS_DEVICE_INFORMATION __info;
+  const auto __status =
+      NtQueryVolumeInformationFile(__handle, &__iosb, &__info, sizeof(__info), FileFsDeviceInformation);
+  return (__status >= 0) && (info.DeviceType == FILE_DEVICE_CONSOLE);
 }
 
 static bool __is_handle_terminal(HANDLE __handle) {
