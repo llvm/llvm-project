@@ -3162,11 +3162,6 @@ private:
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Coop matrix handling.
-  bool CheckCoopMatrixLoadElementType(QualType MatrixType,
-                                      SourceLocation MatrixLoc, CallExpr *call);
-  bool CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
-                                           QualType BufferType,
-                                           SourceLocation MatrixLoc);
   bool CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx);
   bool CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr);
   bool CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx);
