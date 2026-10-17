@@ -19,7 +19,10 @@
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <io.h>
+#  include <versionhelpers.h>
 #  include <windows.h>
+#  include <winioctl.h>
+#  include <winternl.h>
 #elif __has_include(<unistd.h>)
 #  include <unistd.h>
 #  if defined(_NEWLIB_VERSION)
@@ -36,19 +39,42 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef _WIN32
+// Exported by ntdll.lib and can most efficiently query whether a HANDLE references a console.
+// Since the user mode header isn't provided, all needed declarations are declared manually.
+extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryVolumeInformationFile(
+    HANDLE handle, PIO_STATUS_BLOCK ioStatus, PVOID information, ULONG length, ULONG informationClass);
 
-_LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
+// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_fs_device_information
+struct FILE_FS_DEVICE_INFORMATION {
+  DEVICE_TYPE DeviceType;
+  ULONG Characteristics;
+};
+
+// https://learn.microsoft.com/en-us/windows/console/console-handles
+static bool __is_handle_terminal_win8_or_greater(HANDLE handle) {
+  // https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ne-wdm-_fsinfoclass
+  constexpr ULONG FileFsDeviceInformation = 4;
+  IO_STATUS_BLOCK iosb;
+  FILE_FS_DEVICE_INFORMATION info;
+  const auto status = NtQueryVolumeInformationFile(handle, &iosb, &info, sizeof(info), FileFsDeviceInformation);
+  return (status >= 0) && (info.DeviceType == FILE_DEVICE_CONSOLE);
+}
+
+static bool __is_handle_terminal(HANDLE handle) {
   // Note the Standard does this in one call, but it's unclear whether
   // an invalid handle is allowed when calling GetConsoleMode.
-  //
-  // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/get-osfhandle?view=msvc-170
   // https://learn.microsoft.com/en-us/windows/console/getconsolemode
+  unsigned long __mode;
+  return GetConsoleMode(reinterpret_cast<void*>(__handle), &__mode);
+}
+
+_LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
+  // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/get-osfhandle?view=msvc-170
   intptr_t __handle = _get_osfhandle(fileno(__stream));
   if (__handle == -1)
     return false;
-
-  unsigned long __mode;
-  return GetConsoleMode(reinterpret_cast<void*>(__handle), &__mode);
+  static bool __win8_or_greater = IsWindows8OrGreater();
+  return __win8_or_greater ? __is_handle_terminal_win8_or_greater(__handle) : __is_handle_terminal(__handle);
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
