@@ -938,6 +938,12 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
     // elements of an array ending in many zeros into one leading array. That
     // array has no trailing zeros, so it keeps its type and still lowers as
     // one dense constant.
+    //
+    // FIXME: A split array itself is a struct, which llvm.mlir.constant cannot
+    // hold with aggregate fields, so on this path each split array costs
+    // insertvalue ops. With many split arrays that cannot be folded into an
+    // enclosing constant, that may be slower than lowering them unsplit as
+    // dense arrays; consider a heuristic choosing between the two.
     auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmTy);
     if (structTy && structTy.getBody().size() < arrayAttr.size()) {
       auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
