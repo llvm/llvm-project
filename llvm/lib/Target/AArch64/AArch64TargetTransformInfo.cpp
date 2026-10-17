@@ -5119,6 +5119,18 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (Opcode == Instruction::And &&
         matchBSL(CtxI->user_back(), MainAnd, OtherAnd, A, B))
       return 0;
+
+    // A Not is folded into the BIC, ORN or BSL of each And/Or using it, unless
+    // that And/Or negates both of its operands.
+    if (match(CtxI, m_Not(m_Value())) &&
+        all_of(CtxI->users(), [&](const User *U) {
+          const auto *UI = cast<Instruction>(U);
+          return is_contained({Instruction::And, Instruction::Or},
+                              UI->getOpcode()) &&
+                 UI->getParent() == CtxI->getParent() &&
+                 !match(UI, m_BinOp(m_Not(m_Value()), m_Not(m_Value())));
+        }))
+      return 0;
   }
 
   // Legalize the type.

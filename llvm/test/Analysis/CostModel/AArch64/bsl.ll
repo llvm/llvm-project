@@ -4,10 +4,9 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-; TODO: The Not is folded into BSL and should be free.
 define <8 x i8> @bsl(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
 ; COST-LABEL: 'bsl'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %x = and <8 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %x, %y
@@ -24,10 +23,9 @@ define <8 x i8> @bsl(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b) {
   ret <8 x i8> %r
 }
 
-; TODO: The Not should be free here as well
 define void @bsl_shared_mask(<16 x i8> %m, <16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, ptr %p, ptr %q) {
 ; COST-LABEL: 'bsl_shared_mask'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <16 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <16 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %x0 = and <16 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 0 for: %y0 = and <16 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r0 = or <16 x i8> %x0, %y0
@@ -81,10 +79,93 @@ define <8 x i8> @bsl_not_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr %p)
   ret <8 x i8> %r
 }
 
-; TODO: BIT is still formed, so %y and the Not should be free.
+define <8 x i8> @bic(<8 x i8> %a, <8 x i8> %m) {
+; COST-LABEL: 'bic'
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 1 for: %r = and <8 x i8> %a, %n
+; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
+;
+; CODE-LABEL: bic:
+; CODE:       // %bb.0:
+; CODE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CODE-NEXT:    ret
+  %n = xor <8 x i8> %m, splat (i8 -1)
+  %r = and <8 x i8> %a, %n
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @orn(<8 x i8> %a, <8 x i8> %m) {
+; COST-LABEL: 'orn'
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %a, %n
+; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
+;
+; CODE-LABEL: orn:
+; CODE:       // %bb.0:
+; CODE-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CODE-NEXT:    ret
+  %n = xor <8 x i8> %m, splat (i8 -1)
+  %r = or <8 x i8> %a, %n
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @neg_not_xor(<8 x i8> %a, <8 x i8> %m) {
+; COST-LABEL: 'neg_not_xor'
+; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 1 for: %r = xor <8 x i8> %a, %n
+; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
+;
+; CODE-LABEL: neg_not_xor:
+; CODE:       // %bb.0:
+; CODE-NEXT:    eor v0.8b, v1.8b, v0.8b
+; CODE-NEXT:    mvn v0.8b, v0.8b
+; CODE-NEXT:    ret
+  %n = xor <8 x i8> %m, splat (i8 -1)
+  %r = xor <8 x i8> %a, %n
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @neg_not_two_nots(<8 x i8> %a, <8 x i8> %b) {
+; COST-LABEL: 'neg_not_two_nots'
+; COST-NEXT:  Cost Model: Found costs of 1 for: %na = xor <8 x i8> %a, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 1 for: %nb = xor <8 x i8> %b, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 1 for: %r = and <8 x i8> %na, %nb
+; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %r
+;
+; CODE-LABEL: neg_not_two_nots:
+; CODE:       // %bb.0:
+; CODE-NEXT:    mvn v0.8b, v0.8b
+; CODE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CODE-NEXT:    ret
+  %na = xor <8 x i8> %a, splat (i8 -1)
+  %nb = xor <8 x i8> %b, splat (i8 -1)
+  %r = and <8 x i8> %na, %nb
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @neg_not_bic_and_add(<8 x i8> %a, <8 x i8> %m) {
+; COST-LABEL: 'neg_not_bic_and_add'
+; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 1 for: %r = and <8 x i8> %a, %n
+; COST-NEXT:  Cost Model: Found costs of 1 for: %s = add <8 x i8> %r, %n
+; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %s
+;
+; CODE-LABEL: neg_not_bic_and_add:
+; CODE:       // %bb.0:
+; CODE-NEXT:    mvn v2.8b, v1.8b
+; CODE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CODE-NEXT:    add v0.8b, v0.8b, v2.8b
+; CODE-NEXT:    ret
+  %n = xor <8 x i8> %m, splat (i8 -1)
+  %r = and <8 x i8> %a, %n
+  %s = add <8 x i8> %r, %n
+  ret <8 x i8> %s
+}
+
+; TODO: BIT is still formed, so %y should be free.
 define <8 x i8> @neg_bsl_and_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr %p) {
 ; COST-LABEL: 'neg_bsl_and_multiuse'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %x = and <8 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %r = or <8 x i8> %x, %y
@@ -108,7 +189,7 @@ define <8 x i8> @neg_bsl_and_multiuse(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, ptr
 
 define <8 x i8> @neg_bsl_other_block(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, i1 %f, ptr %p) {
 ; COST-LABEL: 'neg_bsl_other_block'
-; COST-NEXT:  Cost Model: Found costs of 1 for: %n = xor <8 x i8> %m, splat (i8 -1)
+; COST-NEXT:  Cost Model: Found costs of 0 for: %n = xor <8 x i8> %m, splat (i8 -1)
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %x = and <8 x i8> %m, %a
 ; COST-NEXT:  Cost Model: Found costs of 1 for: %y = and <8 x i8> %n, %b
 ; COST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: br i1 %f, label %t, label %e
@@ -119,13 +200,13 @@ define <8 x i8> @neg_bsl_other_block(<8 x i8> %m, <8 x i8> %a, <8 x i8> %b, i1 %
 ;
 ; CODE-LABEL: neg_bsl_other_block:
 ; CODE:       // %bb.0: // %entry
-; CODE-NEXT:    tbz w0, #0, .LBB4_2
+; CODE-NEXT:    tbz w0, #0, .LBB9_2
 ; CODE-NEXT:  // %bb.1: // %t
 ; CODE-NEXT:    and v1.8b, v0.8b, v1.8b
 ; CODE-NEXT:    bic v0.8b, v2.8b, v0.8b
 ; CODE-NEXT:    orr v1.8b, v1.8b, v0.8b
 ; CODE-NEXT:    str d1, [x1]
-; CODE-NEXT:  .LBB4_2: // %common.ret
+; CODE-NEXT:  .LBB9_2: // %common.ret
 ; CODE-NEXT:    fmov d0, d1
 ; CODE-NEXT:    ret
 entry:
