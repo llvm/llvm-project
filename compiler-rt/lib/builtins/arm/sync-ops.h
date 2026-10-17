@@ -57,9 +57,12 @@
   it cmp_kind;                                                                 \
   mov##cmp_kind rD, rN
 
+// The 64-bit comparison of rN with rM is done with cmp and sbcs, using rD_HI as
+// a scratch register so that rN, which holds the old value, is preserved. As
+// the Z flag only reflects the high words, cmp_kind must be ge, lt, hs or lo.
 #define MINMAX_8(rD_LO, rD_HI, rN_LO, rN_HI, rM_LO, rM_HI, cmp_kind)           \
   cmp rN_LO, rM_LO;                                                            \
-  sbcs rN_HI, rM_HI;                                                           \
+  sbcs rD_HI, rN_HI, rM_HI;                                                    \
   mov rD_LO, rM_LO;                                                            \
   mov rD_HI, rM_HI;                                                            \
   itt cmp_kind;                                                                \
