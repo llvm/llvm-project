@@ -27,6 +27,10 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <list>
+#include <memory>
+#include <optional>
+
 using namespace mlir;
 using namespace cir;
 
@@ -77,6 +81,13 @@ static bool hasNestedOpsToFlatten(mlir::Region &region) {
       })
       .wasInterrupted();
 }
+
+class FlattenCFGState;
+
+/// True if the driver guarantees that every structured op nested in `op` has
+/// already been flattened, so that `op` need not check its regions with
+/// hasNestedOpsToFlatten. Always false without driver state.
+static bool nestedOpsAreFlat(FlattenCFGState *state, mlir::Operation *op);
 
 /// True if `op` is a non-returning terminator — currently `cir.unreachable`
 /// or `cir.trap`. Such terminators don't fall through and don't yield a
@@ -245,8 +256,11 @@ public:
 };
 
 class CIRSwitchOpFlattening : public mlir::OpRewritePattern<cir::SwitchOp> {
+  FlattenCFGState *state;
+
 public:
-  using OpRewritePattern<cir::SwitchOp>::OpRewritePattern;
+  CIRSwitchOpFlattening(mlir::MLIRContext *context, FlattenCFGState *state)
+      : OpRewritePattern(context), state(state) {}
 
   inline void rewriteYieldOp(mlir::PatternRewriter &rewriter,
                              cir::YieldOp yieldOp,
@@ -310,9 +324,10 @@ public:
     // Break statements inside nested structured ops would create branches to
     // blocks outside those ops' regions, which is invalid. Fail the match so
     // the pattern rewriter will process them first.
-    for (mlir::Region &region : op->getRegions())
-      if (hasNestedOpsToFlatten(region))
-        return mlir::failure();
+    if (!nestedOpsAreFlat(state, op))
+      for (mlir::Region &region : op->getRegions())
+        if (hasNestedOpsToFlatten(region))
+          return mlir::failure();
 
     // Empty switch statement: just erase it.
     if (op.getBody().hasOneBlock() &&
@@ -505,9 +520,12 @@ public:
 
 class CIRLoopOpInterfaceFlattening
     : public mlir::OpInterfaceRewritePattern<cir::LoopOpInterface> {
+  FlattenCFGState *state;
+
 public:
-  using mlir::OpInterfaceRewritePattern<
-      cir::LoopOpInterface>::OpInterfaceRewritePattern;
+  CIRLoopOpInterfaceFlattening(mlir::MLIRContext *context,
+                               FlattenCFGState *state)
+      : OpInterfaceRewritePattern(context), state(state) {}
 
   inline void lowerConditionOp(cir::ConditionOp op, mlir::Block *body,
                                mlir::Block *exit,
@@ -673,9 +691,10 @@ public:
     // Break/continue statements inside nested structured ops would create
     // branches to blocks outside those ops' regions, which is invalid. Fail
     // the match so the pattern rewriter will process them first.
-    for (mlir::Region &region : op->getRegions())
-      if (hasNestedOpsToFlatten(region))
-        return mlir::failure();
+    if (!nestedOpsAreFlat(state, op))
+      for (mlir::Region &region : op->getRegions())
+        if (hasNestedOpsToFlatten(region))
+          return mlir::failure();
 
     // Loops with a per-iteration cleanup region need every iteration-exit edge
     // routed through that cleanup, including the false-condition exit and any
@@ -860,31 +879,42 @@ static bool isLifetimeMarkerOnly(mlir::Region &region) {
 // Look for an enclosing handler or non-marker EH cleanup that protects this
 // operation. Follow regions, rather than just parent ops: a try does not catch
 // exceptions from its own handlers, and a cleanup does not protect itself.
+static bool isEHRequirementBoundary(mlir::Region *region) {
+  mlir::Operation *parent = region->getParentOp();
+  return !parent || isa<cir::FuncOp>(parent);
+}
+
+// Whether the parent op of `region` protects the operations in `region`.
+static bool regionHasEHRequirement(mlir::Region *region) {
+  mlir::Operation *parent = region->getParentOp();
+  if (auto tryOp = dyn_cast<cir::TryOp>(parent)) {
+    auto handlers = tryOp.getHandlerTypesAttr();
+    return region == &tryOp.getTryRegion() && handlers &&
+           llvm::any_of(handlers, [](mlir::Attribute handler) {
+             return !isa<cir::UnwindAttr>(handler);
+           });
+  }
+  if (auto cleanupOp = dyn_cast<cir::CleanupScopeOp>(parent))
+    return region == &cleanupOp.getBodyRegion() &&
+           cleanupOp.getCleanupKindAttr().isEH() &&
+           !isLifetimeMarkerOnly(cleanupOp.getCleanupRegion());
+  if (auto loopOp = dyn_cast<cir::LoopOpInterface>(parent)) {
+    // The enclosing loop may not yet have been rewritten to a cleanup scope.
+    mlir::Region *cleanup = loopOp.maybeGetCleanup();
+    return cleanup && region != cleanup &&
+           loopOp.maybeGetCleanupKind().isEH() &&
+           !isLifetimeMarkerOnly(*cleanup);
+  }
+  return false;
+}
+
 static bool hasEnclosingEHRequirement(mlir::Operation *op) {
   for (mlir::Region *region = op->getParentRegion(); region;
        region = region->getParentRegion()) {
-    mlir::Operation *parent = region->getParentOp();
-    if (!parent || isa<cir::FuncOp>(parent))
+    if (isEHRequirementBoundary(region))
       break;
-    if (auto tryOp = dyn_cast<cir::TryOp>(parent)) {
-      auto handlers = tryOp.getHandlerTypesAttr();
-      if (region == &tryOp.getTryRegion() && handlers &&
-          llvm::any_of(handlers, [](mlir::Attribute handler) {
-            return !isa<cir::UnwindAttr>(handler);
-          }))
-        return true;
-    } else if (auto cleanupOp = dyn_cast<cir::CleanupScopeOp>(parent)) {
-      if (region == &cleanupOp.getBodyRegion() &&
-          cleanupOp.getCleanupKindAttr().isEH() &&
-          !isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()))
-        return true;
-    } else if (auto loopOp = dyn_cast<cir::LoopOpInterface>(parent)) {
-      // The enclosing loop may not yet have been rewritten to a cleanup scope.
-      mlir::Region *cleanup = loopOp.maybeGetCleanup();
-      if (cleanup && region != cleanup && loopOp.maybeGetCleanupKind().isEH() &&
-          !isLifetimeMarkerOnly(*cleanup))
-        return true;
-    }
+    if (regionHasEHRequirement(region))
+      return true;
   }
   return false;
 }
@@ -928,6 +958,269 @@ static void collectResumeOps(mlir::Region &region,
   region.walk([&](cir::ResumeOp resumeOp) { resumeOps.push_back(resumeOp); });
 }
 
+/// The structured ops the driver flattens, innermost first.
+static bool isFlattenCandidate(mlir::Operation *op) {
+  return isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
+             CleanupScopeOp, TryOp>(op);
+}
+
+/// State shared by the FlattenCFG driver and the flattening patterns.
+///
+/// Flattening a cleanup scope or a try op needs a few operations from the body
+/// it flattens: the exits, the calls and throws that become try_call and
+/// try_throw, the resume ops to chain through its EH handler and, for gotos,
+/// the labels. By then everything nested in the body has been flattened and
+/// inlined into it, so finding those operations by walking the body rewalks
+/// each nested scope once per enclosing scope. That is quadratic in the
+/// nesting depth, which for C++ grows with the number of locals with cleanups
+/// in a function.
+///
+/// Instead, each such operation is recorded once, in the lists of the
+/// innermost body that consumes it: a cleanup scope body or a try region.
+/// Other regions are transparent, since flattening inlines them into the
+/// enclosing body. Once an op is flattened, whatever the lists of its body
+/// still hold is spliced, in constant time, into the lists of the enclosing
+/// body, which is where those operations now live. The state is also the
+/// rewriter's listener: operations created while an op is flattened are added
+/// to the lists of the body it is flattened into, and erased operations are
+/// invalidated, so the lists follow the IR without bookkeeping in the patterns.
+///
+/// The driver also records which ops still contain unflattened structured ops,
+/// because a nested rewrite failed or left new structured ops behind. Patterns
+/// only rely on the lists, and skip checking their regions for nested
+/// structured ops, when nestedOpsAreFlat() holds.
+class FlattenCFGState final : public mlir::RewriterBase::Listener {
+public:
+  enum Kind : unsigned { Exit, ThrowingOp, Resume, Label, NumKinds };
+
+  /// Prepare for one sweep of the driver over `root`, whose structured ops are
+  /// flattened innermost first.
+  void track(mlir::Operation *root) {
+    hasChanged = false;
+    bodies.clear();
+    generations.clear();
+    regionConsumer.clear();
+    regionCandidate.clear();
+    notFlat.clear();
+    ehRequirement.clear();
+    root->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      // Pre-order: the entries of the enclosing region are already set.
+      mlir::Region *parentRegion = op->getParentRegion();
+      mlir::Region *consumer = regionConsumer.lookup(parentRegion);
+      for (mlir::Region &region : op->getRegions()) {
+        regionConsumer[&region] = isConsumerBody(region) ? &region : consumer;
+        regionCandidate[&region] =
+            isFlattenCandidate(op) ? op : regionCandidate.lookup(parentRegion);
+      }
+      record(op, consumer);
+    });
+  }
+
+  /// Called before the driver flattens `op`.
+  void beginRewrite(mlir::Operation *op) {
+    currentOp = op;
+    currentErased = false;
+    // Patterns like the scope and if ones flatten their op even when it still
+    // contains unflattened structured ops, which then end up in the parent.
+    currentLeftNestedOps = notFlat.contains(op);
+    currentTarget = regionConsumer.lookup(op->getParentRegion());
+    currentParent = regionCandidate.lookup(op->getParentRegion());
+    currentBodies.clear();
+    for (mlir::Region &region : op->getRegions())
+      if (isConsumerBody(region))
+        currentBodies.push_back(&region);
+  }
+
+  /// Called after the driver tried to flatten the op passed to beginRewrite.
+  /// Unless the op was flattened without leaving structured ops behind, its
+  /// parent is not flat either.
+  void endRewrite(bool succeeded) {
+    if (!succeeded || !currentErased || currentLeftNestedOps) {
+      if (currentParent)
+        notFlat.insert(currentParent);
+    } else {
+      for (mlir::Region *body : currentBodies) {
+        auto it = bodies.find(body);
+        if (it == bodies.end())
+          continue;
+        if (currentTarget)
+          for (unsigned kind = 0; kind < NumKinds; ++kind) {
+            auto &into = getBody(*currentTarget).ops[kind];
+            into.splice(into.end(), it->second->ops[kind]);
+          }
+        bodies.erase(it);
+      }
+    }
+    currentOp = nullptr;
+    currentTarget = nullptr;
+    currentParent = nullptr;
+  }
+
+  bool changed() const { return hasChanged; }
+
+  /// True if every structured op nested in `op` has been flattened.
+  bool nestedOpsAreFlat(mlir::Operation *op) const {
+    return !notFlat.contains(op);
+  }
+
+  /// Call `fn` on each live operation of `kind` in `body`, in the order they
+  /// were recorded, dropping the entries of erased operations.
+  void forEach(mlir::Region &body, Kind kind,
+               llvm::function_ref<void(mlir::Operation *)> fn) {
+    auto &ops = getBody(body).ops[kind];
+    for (auto it = ops.begin(); it != ops.end();) {
+      if (generations.lookup(it->first) != it->second) {
+        it = ops.erase(it);
+        continue;
+      }
+      fn(it->first);
+      ++it;
+    }
+  }
+
+  /// Memoized hasEnclosingEHRequirement(). Only the enclosing ops are looked
+  /// at, and those are not flattened before `op` is.
+  bool hasEnclosingEHRequirement(mlir::Operation *op);
+
+  // RewriterBase::Listener. Any notification means the IR changed.
+  void
+  notifyOperationInserted(mlir::Operation *op,
+                          mlir::IRRewriter::InsertPoint previous) override {
+    hasChanged = true;
+    // A new structured op is only flattened by a later sweep. Moved ones, such
+    // as the ops after the one being flattened when its block is split, are
+    // still flattened in this sweep.
+    if (!previous.isSet() && op->getNumRegions() > 0 && !isa<cir::CaseOp>(op))
+      currentLeftNestedOps = true;
+    // A moved operation keeps its entry: it stays in the body that already
+    // lists it, or in a body whose lists are spliced into that of the body the
+    // current op is flattened into.
+    if (previous.isSet() && generations.contains(op))
+      return;
+    record(op, currentTarget);
+  }
+  void notifyOperationErased(mlir::Operation *op) override {
+    hasChanged = true;
+    generations.erase(op);
+    if (op == currentOp)
+      currentErased = true;
+  }
+  void notifyOperationModified(mlir::Operation *op) override {
+    hasChanged = true;
+    // Re-classify, e.g. in case a call became nothrow.
+    generations.erase(op);
+    record(op, currentTarget);
+  }
+  void notifyOperationReplaced(mlir::Operation *, mlir::Operation *) override {
+    hasChanged = true;
+  }
+  void notifyOperationReplaced(mlir::Operation *, mlir::ValueRange) override {
+    hasChanged = true;
+  }
+  void notifyBlockInserted(mlir::Block *, mlir::Region *,
+                           mlir::Region::iterator) override {
+    hasChanged = true;
+  }
+  void notifyBlockErased(mlir::Block *) override { hasChanged = true; }
+
+private:
+  struct TrackedOps {
+    // An entry is live while its generation is the one recorded for the
+    // operation, which is dropped when the operation is erased.
+    std::list<std::pair<mlir::Operation *, unsigned>> ops[NumKinds];
+  };
+
+  static bool isConsumerBody(mlir::Region &region) {
+    mlir::Operation *parent = region.getParentOp();
+    if (auto cleanupOp = dyn_cast<cir::CleanupScopeOp>(parent))
+      return &region == &cleanupOp.getBodyRegion();
+    if (auto tryOp = dyn_cast<cir::TryOp>(parent))
+      return &region == &tryOp.getTryRegion();
+    return false;
+  }
+
+  static std::optional<Kind> classify(mlir::Operation *op) {
+    if (isa<cir::YieldOp, cir::BreakOp, cir::ContinueOp, cir::ReturnOp,
+            cir::GotoOp>(op))
+      return Exit;
+    if (auto callOp = dyn_cast<cir::CallOp>(op)) {
+      // Same filter as collectThrowingCalls.
+      if (!callOp.getNothrow() && !callOp.getMusttail())
+        return ThrowingOp;
+      return std::nullopt;
+    }
+    if (isa<cir::ThrowOp>(op))
+      return ThrowingOp;
+    if (isa<cir::ResumeOp>(op))
+      return Resume;
+    if (isa<cir::LabelOp>(op))
+      return Label;
+    return std::nullopt;
+  }
+
+  TrackedOps &getBody(mlir::Region &body) {
+    std::unique_ptr<TrackedOps> &tracked = bodies[&body];
+    if (!tracked)
+      tracked = std::make_unique<TrackedOps>();
+    return *tracked;
+  }
+
+  void record(mlir::Operation *op, mlir::Region *body) {
+    std::optional<Kind> kind = classify(op);
+    if (!kind || !body)
+      return;
+    unsigned generation = ++lastGeneration;
+    generations[op] = generation;
+    getBody(*body).ops[*kind].emplace_back(op, generation);
+  }
+
+  bool hasChanged = false;
+  unsigned lastGeneration = 0;
+  llvm::DenseMap<mlir::Operation *, unsigned> generations;
+  llvm::DenseMap<mlir::Region *, std::unique_ptr<TrackedOps>> bodies;
+  // The innermost consumer body and flatten candidate enclosing each region.
+  llvm::DenseMap<mlir::Region *, mlir::Region *> regionConsumer;
+  llvm::DenseMap<mlir::Region *, mlir::Operation *> regionCandidate;
+  llvm::DenseSet<mlir::Operation *> notFlat;
+  llvm::DenseMap<mlir::Region *, bool> ehRequirement;
+
+  mlir::Operation *currentOp = nullptr;
+  mlir::Operation *currentParent = nullptr;
+  mlir::Region *currentTarget = nullptr;
+  llvm::SmallVector<mlir::Region *, 1> currentBodies;
+  bool currentErased = false;
+  bool currentLeftNestedOps = false;
+};
+
+bool FlattenCFGState::hasEnclosingEHRequirement(mlir::Operation *op) {
+  // Walk out until a region with a known answer, a boundary, or a region that
+  // has the requirement. Every region passed on the way has the same answer.
+  llvm::SmallVector<mlir::Region *> pending;
+  bool result = false;
+  for (mlir::Region *region = op->getParentRegion(); region;
+       region = region->getParentRegion()) {
+    auto it = ehRequirement.find(region);
+    if (it != ehRequirement.end()) {
+      result = it->second;
+      break;
+    }
+    if (isEHRequirementBoundary(region))
+      break;
+    pending.push_back(region);
+    if (regionHasEHRequirement(region)) {
+      result = true;
+      break;
+    }
+  }
+  for (mlir::Region *region : pending)
+    ehRequirement[region] = result;
+  return result;
+}
+
+static bool nestedOpsAreFlat(FlattenCFGState *state, mlir::Operation *op) {
+  return state && state->nestedOpsAreFlat(op);
+}
+
 // Create a shared unwind destination block. The block contains a
 // cir.eh.initiate operation (optionally with the cleanup attribute) and a
 // branch to the given destination block, passing the eh_token.
@@ -959,8 +1252,12 @@ static mlir::Block *buildTerminateUnwindBlock(mlir::Location loc,
 
 class CIRCleanupScopeOpFlattening
     : public mlir::OpRewritePattern<cir::CleanupScopeOp> {
+  FlattenCFGState *state;
+
 public:
-  using OpRewritePattern<cir::CleanupScopeOp>::OpRewritePattern;
+  CIRCleanupScopeOpFlattening(mlir::MLIRContext *context,
+                              FlattenCFGState *state)
+      : OpRewritePattern(context), state(state) {}
 
   struct CleanupExit {
     // An operation that exits the cleanup scope (yield, break, continue,
@@ -1136,6 +1433,72 @@ public:
     collectExitsInCleanup(cleanupBodyRegion, /*ignoreBreak=*/false);
   }
 
+  // Same as collectExits, using the exits the driver tracked for the body
+  // instead of walking it. Every structured op nested in the body has been
+  // flattened, so the body is a list of blocks without nested regions and its
+  // exits are terminators of those blocks: the loops and switches nested in
+  // the source have already turned their own breaks and continues into
+  // branches, so the ones left leave this scope. The exits are numbered in the
+  // same order as collectExits does: yields first, then the others, each in
+  // block order.
+  void collectTrackedExits(mlir::Region &cleanupBodyRegion,
+                           FlattenCFGState &state,
+                           llvm::SmallVectorImpl<CleanupExit> &exits,
+                           int &nextId) const {
+    llvm::SmallVector<mlir::Operation *> yields;
+    llvm::SmallVector<mlir::Operation *> others;
+    bool hasGoto = false;
+    state.forEach(cleanupBodyRegion, FlattenCFGState::Exit,
+                  [&](mlir::Operation *op) {
+                    assert(op->getParentRegion() == &cleanupBodyRegion &&
+                           op->getBlock()->getTerminator() == op &&
+                           "exit is not a terminator of the flat body");
+                    if (isa<cir::YieldOp>(op)) {
+                      yields.push_back(op);
+                      return;
+                    }
+                    hasGoto |= isa<cir::GotoOp>(op);
+                    others.push_back(op);
+                  });
+
+    // A goto whose target label is inside the body stays inside the scope.
+    llvm::SmallDenseSet<llvm::StringRef> bodyLabels;
+    if (hasGoto)
+      state.forEach(cleanupBodyRegion, FlattenCFGState::Label,
+                    [&](mlir::Operation *op) {
+                      bodyLabels.insert(cast<cir::LabelOp>(op).getLabel());
+                    });
+    llvm::erase_if(others, [&](mlir::Operation *op) {
+      if (auto gotoOp = dyn_cast<cir::GotoOp>(op))
+        return bodyLabels.contains(gotoOp.getLabel());
+      // The return that completes a musttail call is not an exit; see
+      // collectExits.
+      if (isa<cir::ReturnOp>(op)) {
+        auto callOp = dyn_cast_if_present<cir::CallOp>(op->getPrevNode());
+        return callOp && callOp.getMusttail();
+      }
+      return false;
+    });
+
+    // The tracked order is not block order, which only matters for the
+    // numbering of multiple exits. Each exit terminates its own block.
+    if (yields.size() + others.size() > 1) {
+      llvm::DenseMap<mlir::Block *, unsigned> blockIndex;
+      for (mlir::Block &block : cleanupBodyRegion)
+        blockIndex[&block] = blockIndex.size();
+      auto inBlockOrder = [&](mlir::Operation *a, mlir::Operation *b) {
+        return blockIndex.lookup(a->getBlock()) <
+               blockIndex.lookup(b->getBlock());
+      };
+      llvm::sort(yields, inBlockOrder);
+      llvm::sort(others, inBlockOrder);
+    }
+    for (mlir::Operation *op : yields)
+      exits.emplace_back(op, nextId++);
+    for (mlir::Operation *op : others)
+      exits.emplace_back(op, nextId++);
+  }
+
   // Check if an operand's defining op should be moved to the destination block.
   // We only sink constants and simple loads. Anything else should be saved
   // to a temporary alloca and reloaded at the destination block.
@@ -1291,6 +1654,15 @@ public:
   }
 
 #ifndef NDEBUG
+  static bool hasMustTailCall(mlir::Region &region) {
+    return region
+        .walk([](cir::CallOp callOp) {
+          return callOp.getMusttail() ? mlir::WalkResult::interrupt()
+                                      : mlir::WalkResult::advance();
+        })
+        .wasInterrupted();
+  }
+
   // Check that no block other than the last one in a region exits the region.
   static bool regionExitsOnlyFromLastBlock(mlir::Region &region) {
     for (mlir::Block &block : region) {
@@ -1710,33 +2082,40 @@ public:
     // lambda captures). The greedy rewriter may have already DCE'd them, but
     // when a trivially dead nested op is erased first, the parent isn't always
     // re-added to the worklist, so we handle it here.
-    llvm::SmallVector<cir::CleanupScopeOp> deadNestedOps;
-    cleanupOp.getBodyRegion().walk([&](cir::CleanupScopeOp nested) {
-      if (mlir::isOpTriviallyDead(nested))
-        deadNestedOps.push_back(nested);
-    });
-    for (auto op : deadNestedOps)
-      rewriter.eraseOp(op);
+    //
+    // With the driver's guarantee that every nested op has been flattened,
+    // there is neither a nested op left to wait for nor a dead nested cleanup
+    // scope, since those have been flattened like any other.
+    mlir::Region &body = cleanupOp.getBodyRegion();
+    bool nestedFlat = nestedOpsAreFlat(state, cleanupOp);
+    if (!nestedFlat) {
+      llvm::SmallVector<cir::CleanupScopeOp> deadNestedOps;
+      body.walk([&](cir::CleanupScopeOp nested) {
+        if (mlir::isOpTriviallyDead(nested))
+          deadNestedOps.push_back(nested);
+      });
+      for (auto op : deadNestedOps)
+        rewriter.eraseOp(op);
 
-    if (hasNestedOpsToFlatten(cleanupOp.getBodyRegion()))
-      return mlir::failure();
+      if (hasNestedOpsToFlatten(body))
+        return mlir::failure();
+    }
 
     bool hasEHCleanup = cleanupOp.getCleanupKindAttr().isEH();
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
     int nextId = 0;
-    collectExits(cleanupOp.getBodyRegion(), exits, nextId);
+    if (nestedFlat)
+      collectTrackedExits(body, *state, exits, nextId);
+    else
+      collectExits(body, exits, nextId);
 
-#ifndef NDEBUG
     // A body with no exits at all only happens when every path out of it is a
     // musttail return, which leaves the function without running the cleanup.
-    bool hasMustTailCall = false;
-    cleanupOp.getBodyRegion().walk(
-        [&](cir::CallOp callOp) { hasMustTailCall |= callOp.getMusttail(); });
-    assert((!exits.empty() || hasMustTailCall) &&
+    // Only walk the body to check this in the rare case without exits.
+    assert((!exits.empty() || hasMustTailCall(body)) &&
            "cleanup scope body has no exit");
-#endif
 
     // Collect non-nothrow calls and throws that need to be converted to
     // try_call/try_throw. A marker-only cleanup must not introduce an unwind
@@ -1744,17 +2123,34 @@ public:
     llvm::SmallVector<cir::CallOp> callsToRewrite;
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
     if (hasEHCleanup && (!isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()) ||
-                         hasEnclosingEHRequirement(cleanupOp))) {
-      collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
-      collectThrows(cleanupOp.getBodyRegion(), throwsToRewrite);
+                         (state ? state->hasEnclosingEHRequirement(cleanupOp)
+                                : hasEnclosingEHRequirement(cleanupOp)))) {
+      if (nestedFlat) {
+        state->forEach(body, FlattenCFGState::ThrowingOp,
+                       [&](mlir::Operation *op) {
+                         if (auto callOp = dyn_cast<cir::CallOp>(op))
+                           callsToRewrite.push_back(callOp);
+                         else
+                           throwsToRewrite.push_back(cast<cir::ThrowOp>(op));
+                       });
+      } else {
+        collectThrowingCalls(body, callsToRewrite);
+        collectThrows(body, throwsToRewrite);
+      }
     }
 
     // Collect resume ops from already-flattened inner cleanup scopes that
     // need to chain through this cleanup's EH handler, including lifetime
     // markers even when they did not introduce any unwind edges themselves.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
-    if (hasEHCleanup)
-      collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
+    if (hasEHCleanup) {
+      if (nestedFlat)
+        state->forEach(body, FlattenCFGState::Resume, [&](mlir::Operation *op) {
+          resumeOpsToChain.push_back(cast<cir::ResumeOp>(op));
+        });
+      else
+        collectResumeOps(body, resumeOpsToChain);
+    }
 
     return flattenCleanup(cleanupOp, exits, callsToRewrite, throwsToRewrite,
                           resumeOpsToChain, rewriter);
@@ -1783,8 +2179,11 @@ static cir::EhInitiateOp traceToEhInitiate(mlir::Value ehToken) {
 }
 
 class CIRTryOpFlattening : public mlir::OpRewritePattern<cir::TryOp> {
+  FlattenCFGState *state;
+
 public:
-  using OpRewritePattern<cir::TryOp>::OpRewritePattern;
+  CIRTryOpFlattening(mlir::MLIRContext *context, FlattenCFGState *state)
+      : OpRewritePattern(context), state(state) {}
 
   // Build the catch dispatch block with a cir.eh.dispatch operation.
   // The dispatch block receives an !cir.eh_token argument and dispatches
@@ -1962,9 +2361,11 @@ public:
     // ternaries) must be flat because replaceCallWithTryCall creates try_call
     // ops whose unwind destination is outside the structured op's region,
     // which would be an invalid cross-region reference.
-    for (mlir::Region &region : tryOp->getRegions())
-      if (hasNestedOpsToFlatten(region))
-        return mlir::failure();
+    bool nestedFlat = nestedOpsAreFlat(state, tryOp);
+    if (!nestedFlat)
+      for (mlir::Region &region : tryOp->getRegions())
+        if (hasNestedOpsToFlatten(region))
+          return mlir::failure();
 
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     mlir::Location loc = tryOp.getLoc();
@@ -1973,15 +2374,29 @@ public:
     mlir::MutableArrayRef<mlir::Region> handlerRegions =
         tryOp.getHandlerRegions();
 
-    // Collect throwing calls and throws in the try body.
+    // Collect throwing calls and throws in the try body, and resume ops from
+    // already-flattened cleanup scopes in it.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
-    collectThrowingCalls(tryOp.getTryRegion(), callsToRewrite);
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
-    collectThrows(tryOp.getTryRegion(), throwsToRewrite);
-
-    // Collect resume ops from already-flattened cleanup scopes in the try body.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
-    collectResumeOps(tryOp.getTryRegion(), resumeOpsToChain);
+    mlir::Region &tryRegion = tryOp.getTryRegion();
+    if (nestedFlat) {
+      state->forEach(tryRegion, FlattenCFGState::ThrowingOp,
+                     [&](mlir::Operation *op) {
+                       if (auto callOp = dyn_cast<cir::CallOp>(op))
+                         callsToRewrite.push_back(callOp);
+                       else
+                         throwsToRewrite.push_back(cast<cir::ThrowOp>(op));
+                     });
+      state->forEach(tryRegion, FlattenCFGState::Resume,
+                     [&](mlir::Operation *op) {
+                       resumeOpsToChain.push_back(cast<cir::ResumeOp>(op));
+                     });
+    } else {
+      collectThrowingCalls(tryRegion, callsToRewrite);
+      collectThrows(tryRegion, throwsToRewrite);
+      collectResumeOps(tryRegion, resumeOpsToChain);
+    }
 
     // Split the current block and inline the try body.
     mlir::Block *currentBlock = rewriter.getInsertionBlock();
@@ -2108,52 +2523,19 @@ public:
   }
 };
 
-void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
-  patterns
-      .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
-           CIRSwitchOpFlattening, CIRTernaryOpFlattening,
-           CIRCleanupScopeOpFlattening, CIRTryOpFlattening>(
-          patterns.getContext());
+void populateFlattenCFGPatterns(RewritePatternSet &patterns,
+                                FlattenCFGState *state) {
+  patterns.add<CIRIfFlattening, CIRScopeOpFlattening, CIRTernaryOpFlattening>(
+      patterns.getContext());
+  patterns.add<CIRLoopOpInterfaceFlattening, CIRSwitchOpFlattening,
+               CIRCleanupScopeOpFlattening, CIRTryOpFlattening>(
+      patterns.getContext(), state);
 }
 
-namespace {
-// An implementation of RewriterBase::Listener that determines whether the IR
-// has been modified since the last time it was 'reset'. At the moment, this is
-// the only use for something like this, but we might wish to move this
-// somewhere if someone else needs similar functionality in the future.
-class MLIRChangedListener final : public mlir::RewriterBase::Listener {
-  bool hasChanged = false;
-
-public:
-  void reset() { hasChanged = false; }
-
-  bool changed() const { return hasChanged; }
-
-  void notifyBlockErased(Block *) override { hasChanged = true; }
-  void notifyOperationModified(Operation *) override { hasChanged = true; }
-  void notifyOperationReplaced(Operation *, Operation *) override {
-    hasChanged = true;
-  }
-  void notifyOperationReplaced(Operation *, ValueRange) override {
-    hasChanged = true;
-  }
-  void notifyOperationErased(Operation *) override { hasChanged = true; }
-
-  // notifyPatternBegin, notifyPatternEnd, notifyMatchFailure all skipped, since
-  // they don't modify.
-  void notifyOperationInserted(Operation *,
-                               mlir::IRRewriter::InsertPoint) override {
-    hasChanged = true;
-  }
-  void notifyBlockInserted(Block *, Region *, Region::iterator) override {
-    hasChanged = true;
-  }
-};
-} // namespace
-
 void CIRFlattenCFGPass::runOnOperation() {
+  FlattenCFGState state;
   RewritePatternSet patternList(&getContext());
-  populateFlattenCFGPatterns(patternList);
+  populateFlattenCFGPatterns(patternList, &state);
   FrozenRewritePatternSet patterns(std::move(patternList));
 
   PatternApplicator applicator(patterns);
@@ -2161,12 +2543,13 @@ void CIRFlattenCFGPass::runOnOperation() {
   // is effectively a no-op, but necessary to use the PatternApplicator.
   applicator.applyDefaultCostModel();
 
+  // The state listens to every change the patterns make, both to tell whether
+  // another sweep is needed and to keep its tracked operations up to date.
   mlir::PatternRewriter rewriter(&getContext());
-  MLIRChangedListener changedListener;
-  rewriter.setListener(&changedListener);
+  rewriter.setListener(&state);
 
   do {
-    changedListener.reset();
+    state.track(getOperation());
 
     // Collect flatten candidates post-order so an inner op is handled before
     // its parent; op pointers stay valid across the block splits / region
@@ -2175,16 +2558,17 @@ void CIRFlattenCFGPass::runOnOperation() {
     // directly.
     llvm::SmallVector<Operation *, 16> ops;
     getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-      if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
-              CleanupScopeOp, TryOp>(op))
+      if (isFlattenCandidate(op))
         ops.push_back(op);
     });
 
     for (mlir::Operation *op : ops) {
       rewriter.setInsertionPoint(op);
-      (void)applicator.matchAndRewrite(op, rewriter);
+      state.beginRewrite(op);
+      state.endRewrite(
+          mlir::succeeded(applicator.matchAndRewrite(op, rewriter)));
     }
-  } while (changedListener.changed());
+  } while (state.changed());
 }
 
 } // namespace
