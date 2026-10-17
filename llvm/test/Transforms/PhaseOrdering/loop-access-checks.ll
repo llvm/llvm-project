@@ -473,11 +473,9 @@ define i64 @unswitch_after_indvars_rewrite_to_invariant(ptr %p, i64 %count, i64 
 ; CHECK-NEXT:    br i1 [[IN_RANGE1]], label %[[CHECK_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[CHECK_PREHEADER]]:
 ; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i64 [[FROM]], 0
-; CHECK-NEXT:    br label %[[CHECK:.*]]
-; CHECK:       [[CHECK]]:
-; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[FROM]], %[[CHECK_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 [[NEG]], label %[[TRAP:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[FROM]], %[[CHECK_PREHEADER]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[P]], i64 [[I2]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[IS_SPACE:%.*]] = icmp eq i16 [[LD]], 32
@@ -485,7 +483,7 @@ define i64 @unswitch_after_indvars_rewrite_to_invariant(ptr %p, i64 %count, i64 
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I2]], 1
 ; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp slt i64 [[I_NEXT]], [[COUNT]]
-; CHECK-NEXT:    br i1 [[IN_RANGE]], label %[[CHECK]], label %[[EXIT]]
+; CHECK-NEXT:    br i1 [[IN_RANGE]], label %[[BODY]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[I2]], %[[BODY]] ], [ -1, %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]

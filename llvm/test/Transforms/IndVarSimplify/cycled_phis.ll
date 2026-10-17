@@ -345,13 +345,13 @@ define i32 @start.from.sibling.iv.wide.cycled.phis(ptr %len.ptr, ptr %sibling.le
 ; CHECK-NEXT:    [[IV_START:%.*]] = phi i32 [ [[SIBLING_IV_NEXT_TRUNC]], [[OUTER_LOOP_PREHEADER]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_LOOP_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_START]], [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
 ; CHECK:       signed.passed:
-; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
@@ -463,13 +463,13 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(ptr %len.ptr, pt
 ; CHECK-NEXT:    [[IV_START:%.*]] = phi i32 [ [[SIBLING_IV_NEXT_TRUNC]], [[OUTER_LOOP_PREHEADER]] ], [ [[IV_START_UPDATED:%.*]], [[OUTER_LOOP_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_START]], [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
 ; CHECK:       signed.passed:
-; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1

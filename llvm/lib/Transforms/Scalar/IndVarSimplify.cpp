@@ -694,8 +694,9 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      const auto &[C, U] = simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts,
-                                             Rewriter, &Visitor);
+      const auto &[C, U] =
+          simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
+                            &Visitor, /*HoistInvariantCmps=*/true);
 
       Changed |= C;
       RunUnswitching |= U;
