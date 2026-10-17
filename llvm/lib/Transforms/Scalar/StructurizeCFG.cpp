@@ -368,16 +368,15 @@ public:
 
   explicit StructurizeCFGLegacyPass(bool SkipUniformRegions_ = false)
       : RegionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
-    SkipUniformRegions =
-        valueOr(ScalarOptions::Global.structurizecfg_skip_uniform_regions,
-                SkipUniformRegions);
     initializeStructurizeCFGLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnRegion(Region *R, RGPassManager &RGM) override {
     StructurizeCFG SCFG;
     SCFG.init(R);
-    if (SkipUniformRegions) {
+    const ScalarOptions &Opts =
+        R->getEntry()->getContext().getLibraryOptions().get<ScalarOptions>();
+    if (valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions)) {
       UniformityInfo &UA =
           getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
       if (SCFG.makeUniformRegion(R, UA))
@@ -393,8 +392,7 @@ public:
   StringRef getPassName() const override { return "Structurize control flow"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    if (SkipUniformRegions)
-      AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
 
@@ -1399,11 +1397,7 @@ static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
 }
 
 StructurizeCFGPass::StructurizeCFGPass(bool SkipUniformRegions_)
-    : SkipUniformRegions(SkipUniformRegions_) {
-  SkipUniformRegions =
-      valueOr(ScalarOptions::Global.structurizecfg_skip_uniform_regions,
-              SkipUniformRegions);
-}
+    : SkipUniformRegions(SkipUniformRegions_) {}
 
 void StructurizeCFGPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -1420,8 +1414,12 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
   TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  bool SkipUniform =
+      valueOr(Opts.structurizecfg_skip_uniform_regions, SkipUniformRegions);
   UniformityInfo *UI = nullptr;
-  if (SkipUniformRegions)
+  if (SkipUniform)
     UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
   std::vector<Region *> Regions;
@@ -1433,7 +1431,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
     StructurizeCFG SCFG;
     SCFG.init(R);
 
-    if (SkipUniformRegions && SCFG.makeUniformRegion(R, *UI)) {
+    if (SkipUniform && SCFG.makeUniformRegion(R, *UI)) {
       Changed = true; // May have added metadata.
       continue;
     }

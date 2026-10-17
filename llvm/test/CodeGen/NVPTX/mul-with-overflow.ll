@@ -10,8 +10,8 @@ define i32 @umulo_i32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r2, [umulo_i32_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r1, [umulo_i32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [umulo_i32_param_1];
 ; CHECK-NEXT:    mul.wide.u32 %rd1, %r1, %r2;
 ; CHECK-NEXT:    cvt.u32.u64 %r3, %rd1;
 ; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r4}, %rd1; }
