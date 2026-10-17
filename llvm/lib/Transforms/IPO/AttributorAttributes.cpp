@@ -2596,6 +2596,13 @@ struct AANonNullImpl : AANonNull {
                        AANonNull::StateType &State) {
     bool IsNonNull = false;
     bool TrackUse = false;
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+      if (!GEP->isInBounds() && !GEP->hasAllZeroIndices()) {
+        return false;
+      }
+    }
+
     getKnownNonNullAndDerefBytesForUse(A, *this, getAssociatedValue(), U, I,
                                        IsNonNull, TrackUse);
     State.setKnown(IsNonNull);
