@@ -378,3 +378,14 @@ int test(){
 
 }
 }
+
+namespace GH207483 {
+struct S;
+// The recovery type for this invalid pack index is dependent, but canonicalizes
+// to the non-dependent class 'S', which is not a current instantiation.
+template <template <typename> typename T> void foo() { S...[0] ::bar; } // expected-error {{'S' does not refer to the name of a parameter pack}}
+
+template <typename T> struct U;
+
+void baz() { foo<U>(); }
+}

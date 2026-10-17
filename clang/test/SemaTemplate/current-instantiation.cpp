@@ -247,3 +247,25 @@ namespace RebuildDependentScopeDeclRefExpr {
   // FIXME: We should issue a typo-correction here.
   template<typename T> N<X<T>::think> X<T>::foo() {} // expected-error {{no member named 'think' in 'RebuildDependentScopeDeclRefExpr::X<T>'}}
 }
+
+namespace GH207483 {
+  struct A { int value() const; };
+  A f(unsigned);
+
+  // '__typeof(e)' is treated as dependent whenever 'e' involves a template
+  // parameter, but it still canonicalizes to the type of 'e'. So this is a
+  // dependent type whose canonical type is the non-dependent class 'A', which
+  // is not a current instantiation.
+  template<typename T> struct B {
+    int g() {
+      __typeof(f(sizeof(T))) a = f(0);
+      return a.value();
+    }
+    int h() {
+      __typeof(f(sizeof(T))) a = f(0);
+      return a.nope(); // expected-error {{no member named 'nope' in 'GH207483::A'}}
+    }
+  };
+
+  int i() { return B<int>().g() + B<int>().h(); } // expected-note {{in instantiation of member function 'GH207483::B<int>::h' requested here}}
+}
