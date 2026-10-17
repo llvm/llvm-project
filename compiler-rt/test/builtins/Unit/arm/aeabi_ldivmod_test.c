@@ -38,7 +38,7 @@ int test_aeabi_ldivmod(di_int a, di_int b, di_int expected_q,
 #endif
       : [q] "=r"(q), [r] "=r"(r)
       : [a] "r"(a), [b] "r"(b)
-      : "lr", "r0", "r1", "r2", "r3");
+      : "lr", "r0", "r1", "r2", "r3", "r12", "cc");
   return q != expected_q || r != expected_r;
 }
 
