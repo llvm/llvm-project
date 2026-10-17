@@ -585,8 +585,16 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
-  if (Error Err = executeCommands(*ClangPath, CmdArgs))
-    return std::move(Err);
+  if (Error Err = executeCommands(*ClangPath, CmdArgs)) {
+    // The linker's diagnostics cannot tell that this is the device link,
+    // so add a hint on how to set options for the offload target.
+    std::string Target = Triple.getTriple();
+    if (!Arch.empty())
+      Target += " (" + Arch.str() + ")";
+    return createStringError(
+        "%s; pass options to the device link for %s with '-Xoffload-linker'",
+        toString(std::move(Err)).c_str(), Target.c_str());
+  }
 
   return *TempFileOrErr;
 }
