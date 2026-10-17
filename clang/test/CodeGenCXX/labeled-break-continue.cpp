@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fnamed-loops -triple x86_64-unknown-linux -std=c++20 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fnamed-loops -triple x86_64-unknown-linux -std=c++20 -O1 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=OPT
 
 static int a[10]{};
 struct NonTrivialDestructor {
@@ -219,3 +220,151 @@ template void f3<true>();
 // CHECK: while.end:
 // CHECK:   ret void
 template void f3<false>();
+
+// A named break out of the loop must run its cleanup, even though breaking out
+// of the inner switch would not require one.
+// OPT-LABEL: define {{.*}} void @_Z2f4i(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %sw.bb
+// OPT-NEXT: ]
+// OPT: sw.bb:
+// OPT-NEXT: store i32 [[EXIT:[0-9]+]], ptr %cleanup.dest.slot
+// OPT-NEXT: br label %cleanup
+// OPT: cleanup:
+// OPT-NEXT: call void @_ZN20NonTrivialDestructorD1Ev(
+// OPT: switch i32 %cleanup.dest, label %unreachable [
+// OPT: i32 [[EXIT]], label %while.end
+void f4(int x) {
+  loop: while (g(0)) {
+    NonTrivialDestructor n;
+    switch (x) {
+    case 0: break loop;
+    }
+  }
+}
+
+// Without loop-scope cleanups, the named break can go directly to the loop
+// exit. An ordinary break must still go to the switch exit.
+// CHECK-LABEL: define {{.*}} void @_Z2f5i(
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: i32 1, label %sw.bb1
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %for.end
+// CHECK: sw.bb1:
+// CHECK-NEXT: br label %sw.epilog
+// OPT-LABEL: define {{.*}} void @_Z2f5i(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %for.end
+// OPT-NEXT: i32 1, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.epilog:
+// OPT-NEXT: br label %for.cond
+void f5(int x) {
+  loop: for (; h();) {
+    switch (x) {
+    case 0: break loop;
+    case 1: break;
+    }
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @_Z2f6i(
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: i32 1, label %sw.bb1
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %while.end
+// CHECK: sw.bb1:
+// CHECK-NEXT: br label %sw.epilog
+// OPT-LABEL: define {{.*}} void @_Z2f6i(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %while.end
+// OPT-NEXT: i32 1, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.epilog:
+// OPT-NEXT: br label %while.cond
+void f6(int x) {
+  loop: while (h()) {
+    switch (x) {
+    case 0: break loop;
+    case 1: break;
+    }
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @_Z2f7i(
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: i32 1, label %sw.bb1
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %do.end
+// CHECK: sw.bb1:
+// CHECK-NEXT: br label %sw.epilog
+// OPT-LABEL: define {{.*}} void @_Z2f7i(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %do.end
+// OPT-NEXT: i32 1, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.epilog:
+// OPT-NEXT: br label %do.cond
+void f7(int x) {
+  loop: do {
+    switch (x) {
+    case 0: break loop;
+    case 1: break;
+    }
+  } while (h());
+}
+
+// A named break must end the loop variable and iterator lifetimes before
+// leaving the range-for. An ordinary break ends only the loop variable lifetime.
+// CHECK-LABEL: define {{.*}} void @_Z2f8i(
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: i32 1, label %sw.bb1
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %for.end
+// CHECK: sw.bb1:
+// CHECK-NEXT: br label %sw.epilog
+// OPT-LABEL: define {{.*}} void @_Z2f8i(
+// OPT: for.cond.cleanup:
+// OPT-NEXT: store i32 [[RANGE_EXIT:[1-9][0-9]*]], ptr %cleanup.dest.slot
+// OPT-NEXT: br label %cleanup1
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %sw.bb
+// OPT-NEXT: i32 1, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.bb:
+// OPT-NEXT: store i32 [[RANGE_EXIT]], ptr %cleanup.dest.slot
+// OPT-NEXT: br label %cleanup
+// OPT: sw.epilog:
+// OPT-NEXT: store i32 0, ptr %cleanup.dest.slot
+// OPT-NEXT: br label %cleanup
+// OPT: cleanup:
+// OPT-NEXT: call void @llvm.lifetime.end.p0(ptr %i)
+// OPT-NEXT: %cleanup.dest = load i32, ptr %cleanup.dest.slot
+// OPT-NEXT: switch i32 %cleanup.dest, label %cleanup1 [
+// OPT-NEXT: i32 0, label %cleanup.cont
+// OPT-NEXT: ]
+// OPT: cleanup.cont:
+// OPT-NEXT: br label %for.inc
+// OPT: cleanup1:
+// OPT-NEXT: call void @llvm.lifetime.end.p0(ptr %__end1)
+// OPT-NEXT: call void @llvm.lifetime.end.p0(ptr %__begin1)
+// OPT-NEXT: call void @llvm.lifetime.end.p0(ptr %__range1)
+// OPT-NEXT: br label %for.end
+// OPT: for.end:
+// OPT-NEXT: ret void
+void f8(int x) {
+  loop: for (int i : a) {
+    switch (x) {
+    case 0: break loop;
+    case 1: break;
+    }
+  }
+}

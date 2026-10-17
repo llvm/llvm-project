@@ -1870,7 +1870,8 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
   if (!CGM.getCodeGenOpts().hasProfileClangInstr() &&
       CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       isa<BreakStmt>(S.getSubStmt())) {
-    JumpDest Block = BreakContinueStack.back().BreakBlock;
+    const auto &Break = cast<BreakStmt>(*S.getSubStmt());
+    JumpDest Block = GetDestForLoopControlStmt(Break)->BreakBlock;
 
     // Only do this optimization if there are no cleanups that need emitting.
     if (isObviouslyBranchWithoutCleanups(Block)) {
@@ -1879,7 +1880,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
       SwitchInsn->addCase(CaseVal, Block.getBlock());
 
       // If there was a fallthrough into this case, make sure to redirect it to
-      // the end of the switch as well.
+      // the break destination as well.
       if (Builder.GetInsertBlock()) {
         Builder.CreateBr(Block.getBlock());
         Builder.ClearInsertionPoint();
