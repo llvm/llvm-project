@@ -3,7 +3,7 @@
 ...
 # GCN-LABEL: name: no_fold_imm_madak_mac_clamp_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-# GCN-NEXT: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, %19, 0, %21, 0, %23, 1, 0, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mac_clamp_f32
 tracksRegLiveness: true
@@ -54,27 +54,27 @@ body:             |
     %28 = REG_SEQUENCE %3, %subreg.sub0, %27, %subreg.sub1
     %11 = S_MOV_B32 61440
     %12 = S_MOV_B32 0
-    %13 = REG_SEQUENCE killed %12, %subreg.sub0, killed %11, %subreg.sub1
-    %14 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %13 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1
+    %14 = REG_SEQUENCE %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
-    %17 = REG_SEQUENCE killed %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
-    %18 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %29 = V_LSHL_B64_e64 %28, %15, implicit $exec
+    %17 = REG_SEQUENCE %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %18 = REG_SEQUENCE %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
-    %24 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+    %24 = nofpexcept V_MAC_F32_e64 0, %19, 0, %21, 0, %23, 1, 0, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %26, %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 ---
 # GCN-LABEL: name: no_fold_imm_madak_mac_omod_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-# GCN: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $mode, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAC_F32_e64 0, %19, 0, %21, 0, %23, 0, 2, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mac_omod_f32
 tracksRegLiveness: true
@@ -125,27 +125,27 @@ body:             |
     %28 = REG_SEQUENCE %3, %subreg.sub0, %27, %subreg.sub1
     %11 = S_MOV_B32 61440
     %12 = S_MOV_B32 0
-    %13 = REG_SEQUENCE killed %12, %subreg.sub0, killed %11, %subreg.sub1
-    %14 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %13 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1
+    %14 = REG_SEQUENCE %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
-    %17 = REG_SEQUENCE killed %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
-    %18 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %29 = V_LSHL_B64_e64 %28, %15, implicit $exec
+    %17 = REG_SEQUENCE %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %18 = REG_SEQUENCE %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
-    %24 = nofpexcept V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 2, implicit $mode, implicit $exec
+    %24 = nofpexcept V_MAC_F32_e64 0, %19, 0, %21, 0, %23, 0, 2, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %26, %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 ---
 # GCN: name: no_fold_imm_madak_mad_clamp_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %19, 0, %21, 0, %23, 1, 0, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mad_clamp_f32
 tracksRegLiveness: true
@@ -196,27 +196,27 @@ body:             |
     %28 = REG_SEQUENCE %3, %subreg.sub0, %27, %subreg.sub1
     %11 = S_MOV_B32 61440
     %12 = S_MOV_B32 0
-    %13 = REG_SEQUENCE killed %12, %subreg.sub0, killed %11, %subreg.sub1
-    %14 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %13 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1
+    %14 = REG_SEQUENCE %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
-    %17 = REG_SEQUENCE killed %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
-    %18 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %29 = V_LSHL_B64_e64 %28, %15, implicit $exec
+    %17 = REG_SEQUENCE %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %18 = REG_SEQUENCE %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
-    %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+    %24 = nofpexcept V_MAD_F32_e64 0, %19, 0, %21, 0, %23, 1, 0, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %26, %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 ---
 # GCN: name: no_fold_imm_madak_mad_omod_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %19, 0, %21, 0, %23, 0, 1, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mad_omod_f32
 tracksRegLiveness: true
@@ -267,20 +267,20 @@ body:             |
     %28 = REG_SEQUENCE %3, %subreg.sub0, %27, %subreg.sub1
     %11 = S_MOV_B32 61440
     %12 = S_MOV_B32 0
-    %13 = REG_SEQUENCE killed %12, %subreg.sub0, killed %11, %subreg.sub1
-    %14 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %13 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1
+    %14 = REG_SEQUENCE %5, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
-    %17 = REG_SEQUENCE killed %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
-    %18 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %29 = V_LSHL_B64_e64 %28, %15, implicit $exec
+    %17 = REG_SEQUENCE %6, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
+    %18 = REG_SEQUENCE %4, %subreg.sub0_sub1, %13, %subreg.sub2_sub3
     %20 = COPY %29
-    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, killed %14, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %20, %14, 0, 0, 0, 0, implicit $exec
     %22 = COPY %29
-    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, implicit $exec
+    %21 = BUFFER_LOAD_DWORD_ADDR64 %22, %17, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
-    %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
+    %24 = nofpexcept V_MAD_F32_e64 0, %19, 0, %21, 0, %23, 0, 1, implicit $mode, implicit $exec
     %26 = COPY %29
-    BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %26, %18, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

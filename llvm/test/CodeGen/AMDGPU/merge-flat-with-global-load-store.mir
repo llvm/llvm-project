@@ -179,13 +179,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
     ; GCN-NEXT: FLAT_STORE_DWORDX2 [[DEF]], [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `ptr poison`, align 4)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    FLAT_STORE_DWORD %0, killed %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
-    GLOBAL_STORE_DWORD killed %0, killed %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    FLAT_STORE_DWORD %0, %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    GLOBAL_STORE_DWORD %0, %2, 4, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
 ...
 
 ---
@@ -196,13 +196,13 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[DEF1]], %subreg.sub0, [[DEF2]], %subreg.sub1
     ; GCN-NEXT: FLAT_STORE_DWORDX2 [[DEF]], [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `ptr addrspace(1) poison`, align 4)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_STORE_DWORD %0, killed %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-    FLAT_STORE_DWORD %0, killed %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+    FLAT_STORE_DWORD %0, %2, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
 ...
 
 ---

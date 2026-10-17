@@ -184,45 +184,45 @@ body:             |
 
   bb.28:
     %9 = S_FF1_I32_B32 undef %10
-    %13 = V_MAD_U32_U24_e64 killed %9, 48, 32, 0, implicit $exec
-    %45 = BUFFER_LOAD_DWORD_OFFEN killed %13, undef %15, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s32))
-    %46 = V_AND_B32_e32 1, killed %45, implicit $exec
+    %13 = V_MAD_U32_U24_e64 %9, 48, 32, 0, implicit $exec
+    %45 = BUFFER_LOAD_DWORD_OFFEN %13, undef %15, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s32))
+    %46 = V_AND_B32_e32 1, %45, implicit $exec
     %21 = S_BUFFER_LOAD_DWORD_SGPR undef %22, undef %23, 0 :: (dereferenceable invariant load (s32))
-    %25 = nofpexcept V_CMP_GE_F32_e64 0, 0, 0, killed %21, 0, implicit $mode, implicit $exec
-    %26 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %25, implicit $exec
+    %25 = nofpexcept V_CMP_GE_F32_e64 0, 0, 0, %21, 0, implicit $mode, implicit $exec
+    %26 = V_CNDMASK_B32_e64 0, 0, 0, -1, %25, implicit $exec
     %62 = IMPLICIT_DEF
 
   bb.29:
     successors: %bb.30(0x30000000), %bb.36(0x50000000)
 
-    %53 = COPY killed %62
+    %53 = COPY %62
     %47 = V_ADD_CO_U32_e32 -1, %46, implicit-def dead $vcc, implicit $exec
-    %48 = V_OR_B32_e32 killed %47, %26, implicit $exec
+    %48 = V_OR_B32_e32 %47, %26, implicit $exec
     %49 = COPY %53
     %49.sub2 = COPY undef %48
-    %51 = COPY killed %49
+    %51 = COPY %49
     %51.sub3 = COPY undef %26
-    V_CMP_NE_U32_e32 0, killed %48, implicit-def $vcc, implicit $exec
+    V_CMP_NE_U32_e32 0, %48, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
     S_CBRANCH_VCCZ %bb.30, implicit killed $vcc
 
   bb.36:
-    %63 = COPY killed %51
+    %63 = COPY %51
     S_BRANCH %bb.31
 
   bb.30:
-    %33 = nofpexcept V_MAD_F32_e64 1, killed %53.sub0, 0, undef %34, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %35 = nofpexcept V_MAC_F32_e32 killed %33, undef %36, undef %35, implicit $mode, implicit $exec
-    %38 = nofpexcept V_MAX_F32_e32 0, killed %35, implicit $mode, implicit $exec
-    %39 = nofpexcept V_LOG_F32_e32 killed %38, implicit $mode, implicit $exec
-    %40 = nofpexcept V_MUL_F32_e32 killed %39, undef %41, implicit $mode, implicit $exec
-    %42 = nofpexcept V_EXP_F32_e32 killed %40, implicit $mode, implicit $exec
-    dead %43 = nofpexcept V_MUL_F32_e32 killed %42, undef %44, implicit $mode, implicit $exec
-    %63 = COPY killed %51
+    %33 = nofpexcept V_MAD_F32_e64 1, %53.sub0, 0, undef %34, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %35 = nofpexcept V_MAC_F32_e32 %33, undef %36, undef %35, implicit $mode, implicit $exec
+    %38 = nofpexcept V_MAX_F32_e32 0, %35, implicit $mode, implicit $exec
+    %39 = nofpexcept V_LOG_F32_e32 %38, implicit $mode, implicit $exec
+    %40 = nofpexcept V_MUL_F32_e32 %39, undef %41, implicit $mode, implicit $exec
+    %42 = nofpexcept V_EXP_F32_e32 %40, implicit $mode, implicit $exec
+    dead %43 = nofpexcept V_MUL_F32_e32 %42, undef %44, implicit $mode, implicit $exec
+    %63 = COPY %51
 
   bb.31:
-    %52 = COPY killed %63
-    %62 = COPY killed %52
+    %52 = COPY %63
+    %62 = COPY %52
     S_BRANCH %bb.29
 
   bb.32:

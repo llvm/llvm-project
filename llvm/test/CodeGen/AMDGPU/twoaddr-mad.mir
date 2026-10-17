@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.00 %s --passes=two-address-instruction -verify-each -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_madmk_reg_imm_f32
-# GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GCN: V_MADMK_F32 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_reg_imm_f32
 registers:
@@ -16,12 +16,12 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3 = V_MAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    %3 = V_MAC_F32_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_madmk_imm_reg_f32
-# GCN: V_MADMK_F32 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GCN: V_MADMK_F32 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_imm_reg_f32
 registers:
@@ -35,12 +35,12 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3 = V_MAC_F32_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
+    %3 = V_MAC_F32_e32 %2, %0.sub0, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_madak_f32
-# GCN: V_MADAK_F32 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
+# GCN: V_MADAK_F32 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_madak_f32
 registers:
@@ -52,12 +52,12 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
-    %2 = V_MAC_F32_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    %2 = V_MAC_F32_e32 %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 
 # GCN-LABEL: name: test_madmk_reg_imm_f16
-# GCN: V_MADMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GCN: V_MADMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_reg_imm_f16
 registers:
@@ -71,12 +71,12 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3 = V_MAC_F16_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
+    %3 = V_MAC_F16_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_madmk_imm_reg_f16
-# GCN: V_MADMK_F16 killed %0.sub0, 1078523331, killed %1, implicit $mode, implicit $exec
+# GCN: V_MADMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_madmk_imm_reg_f16
 registers:
@@ -90,12 +90,12 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3 = V_MAC_F16_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
+    %3 = V_MAC_F16_e32 %2, %0.sub0, %1, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_madak_f16
-# GCN: V_MADAK_F16 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
+# GCN: V_MADAK_F16 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_madak_f16
 registers:
@@ -107,7 +107,7 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
-    %2 = V_MAC_F16_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    %2 = V_MAC_F16_e32 %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 
@@ -115,7 +115,7 @@ body:             |
 
 # GCN-LABEL: name: test_madak_sgpr_src0_f32
 # GCN: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_madak_sgpr_src0_f32
@@ -130,7 +130,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
     %2 = IMPLICIT_DEF
-    %3 = V_MAC_F32_e32 killed %0, %1, %2, implicit $mode, implicit $exec
+    %3 = V_MAC_F32_e32 %0, %1, %2, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %2
 ...
 
@@ -196,7 +196,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_madak_inline_literal_f16
-# GCN: %2:vgpr_32 = V_MADAK_F16 16384, killed %0, 49664, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_MADAK_F16 16384, %0, 49664, implicit $mode, implicit $exec
 
 ---
 name:            test_madak_inline_literal_f16
@@ -205,7 +205,7 @@ body:             |
     %3:vgpr_32 = COPY killed $vgpr0
 
     %26:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec
-    %28:vgpr_32 = V_MAC_F16_e32 16384, killed %3, %26, implicit $mode, implicit $exec
+    %28:vgpr_32 = V_MAC_F16_e32 16384, %3, %26, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %26
 ...
 

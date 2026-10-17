@@ -26,7 +26,7 @@ body:             |
     %1:vgpr_32 = COPY $vgpr1
     undef %2.sub0:areg_64 = COPY %0
     %2.sub1:areg_64 = COPY %1
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
     SI_RETURN
 
 ...
@@ -134,7 +134,7 @@ body:             |
     %1:vreg_64 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128 = COPY %0
     %2.sub2_sub3:areg_128 = COPY %1
-    INLINEASM &"; use $0", attdialect, reguse:AReg_128, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_128, %2
     SI_RETURN
 
 ...
@@ -307,7 +307,7 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     undef %2.sub0:areg_64 = COPY %0
     %2.sub1:areg_64 = COPY %0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
     SI_RETURN
 
 ...
@@ -405,7 +405,7 @@ body:             |
     %1.sub1:areg_128 = COPY %0
     %1.sub2:areg_128 = COPY %0
     %1.sub3:areg_128 = COPY %0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_128, killed %1
+    INLINEASM &"; use $0", attdialect, reguse:AReg_128, %1
     SI_RETURN
 
 ...
@@ -458,8 +458,8 @@ body:             |
     %1:vgpr_32 = COPY $vgpr1
     undef %2.sub0:areg_64 = COPY %0
     %2.sub1:areg_64 = COPY %1
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
-    INLINEASM &"; use $0", attdialect, reguse:VGPR_32, killed %0
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
+    INLINEASM &"; use $0", attdialect, reguse:VGPR_32, %0
     SI_RETURN
 
 ...
@@ -483,8 +483,8 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     undef %1.sub0:areg_64 = COPY %0
     %1.sub1:areg_64 = COPY %0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %1
-    INLINEASM &"; use $0", attdialect, reguse:VGPR_32, killed %0
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %1
+    INLINEASM &"; use $0", attdialect, reguse:VGPR_32, %0
     SI_RETURN
 
 ...
@@ -511,8 +511,8 @@ body:             |
     %1.sub1:areg_64 = COPY %0
     undef %2.sub0:vreg_64 = COPY %0
     %2.sub1:vreg_64 = COPY %0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %1
-    INLINEASM &"; use $0", attdialect, reguse:VReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %1
+    INLINEASM &"; use $0", attdialect, reguse:VReg_64, %2
     SI_RETURN
 
 ...
@@ -539,7 +539,7 @@ body:             |
     %0.sub1:vreg_64 = COPY $vgpr1
     undef %2.sub0:areg_64 = COPY %0.sub0
     %2.sub1:areg_64 = COPY %0.sub1
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
     SI_RETURN
 
 ...
@@ -647,7 +647,7 @@ body:             |
     %0.sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128 = COPY %0.sub0_sub1
     %2.sub2_sub3:areg_128 = COPY %0.sub2_sub3
-    INLINEASM &"; use $0", attdialect, reguse:AReg_128, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_128, %2
     SI_RETURN
 
 ...
@@ -822,7 +822,7 @@ body:             |
     undef %0.sub0:vreg_64 = COPY $vgpr0
     undef %2.sub0:areg_64 = COPY %0.sub0
     %2.sub1:areg_64 = COPY %0.sub0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
     SI_RETURN
 
 ...
@@ -897,7 +897,7 @@ body:             |
     %1.sub1:areg_128 = COPY %0.sub0
     %1.sub2:areg_128 = COPY %0.sub0
     %1.sub3:areg_128 = COPY %0.sub0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_128, killed %1
+    INLINEASM &"; use $0", attdialect, reguse:AReg_128, %1
     SI_RETURN
 
 ...
@@ -949,7 +949,7 @@ body:             |
     %0.sub1:vreg_64 = COPY $vgpr1
     undef %2.sub0:areg_64 = COPY %0.sub0
     %2.sub1:areg_64 = COPY %0.sub1
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
     SI_RETURN
 
 ...
@@ -1057,7 +1057,7 @@ body:             |
     %0.sub2_sub3:vreg_128 = COPY $vgpr2_vgpr3
     undef %2.sub0_sub1:areg_128 = COPY %0.sub0_sub1
     %2.sub2_sub3:areg_128 = COPY %0.sub2_sub3
-    INLINEASM &"; use $0", attdialect, reguse:AReg_128, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_128, %2
     SI_RETURN
 
 ...
@@ -1279,7 +1279,7 @@ body:             |
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %2:areg_64 = COPY %0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_64, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_64, %2
     SI_RETURN
 
 ...
@@ -1363,7 +1363,7 @@ body:             |
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %2:areg_128 = COPY %0
-    INLINEASM &"; use $0", attdialect, reguse:AReg_128, killed %2
+    INLINEASM &"; use $0", attdialect, reguse:AReg_128, %2
     SI_RETURN
 
 ...

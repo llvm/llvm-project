@@ -94,7 +94,7 @@ body:             |
   bb.4:
     successors: %bb.5
     liveins: $vgpr1
-    S_NOP 0, implicit killed %1, implicit $vgpr1
+    S_NOP 0, implicit %1, implicit $vgpr1
     S_NOP 0, implicit %0, implicit $vgpr1
     S_BRANCH %bb.5
 

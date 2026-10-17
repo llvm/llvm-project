@@ -11619,7 +11619,7 @@ body:             |
   bb.4:
 
     %100:sreg_64 = S_MOV_B64 255
-    %101:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed %100, implicit-def $exec, implicit-def $scc, implicit $exec
+    %101:sreg_64_xexec = S_AND_SAVEEXEC_B64 %100, implicit-def $exec, implicit-def $scc, implicit $exec
     S_NOP 0, implicit %52, implicit %62
     S_NOP 0, implicit %50, implicit %60, implicit %20
     S_NOP 0, implicit %51, implicit %61, implicit %21

@@ -49,7 +49,7 @@ body:             |
     %1.sub1:sgpr_64 = IMPLICIT_DEF
 
   bb.3:
-    S_NOP 0, implicit killed %2
-    S_NOP 0, implicit killed %1
+    S_NOP 0, implicit %2
+    S_NOP 0, implicit %1
 
 ...

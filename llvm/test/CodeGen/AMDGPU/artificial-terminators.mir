@@ -18,19 +18,19 @@ body: |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 31
-  ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 killed [[S_MOV_B32_]], [[V_ADD_U32_e64_]], implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_ADD_U32_e64_]], killed [[V_LSHRREV_B32_e64_]], 0, implicit $exec
+  ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[S_MOV_B32_]], [[V_ADD_U32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_ADD_U32_e64_]], [[V_LSHRREV_B32_e64_]], 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 [[S_MOV_B32_1]], killed [[V_ADD_U32_e64_1]], implicit $exec
+  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 [[S_MOV_B32_1]], [[V_ADD_U32_e64_1]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 30
-  ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 killed [[S_MOV_B32_2]], [[V_ASHRREV_I32_e64_]], implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_ASHRREV_I32_e64_]], killed [[V_LSHRREV_B32_e64_1]], 0, implicit $exec
+  ; CHECK-NEXT:   [[V_LSHRREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[S_MOV_B32_2]], [[V_ASHRREV_I32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_ASHRREV_I32_e64_]], [[V_LSHRREV_B32_e64_1]], 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -4
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_3]]
-  ; CHECK-NEXT:   [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 killed [[V_ADD_U32_e64_2]], killed [[COPY2]], implicit $exec
-  ; CHECK-NEXT:   [[V_SUB_U32_e64_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[V_ASHRREV_I32_e64_]], killed [[V_AND_B32_e32_]], 0, implicit $exec
+  ; CHECK-NEXT:   [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 [[V_ADD_U32_e64_2]], [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_SUB_U32_e64_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[V_ASHRREV_I32_e64_]], [[V_AND_B32_e32_]], 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_3:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e64 killed [[V_SUB_U32_e64_]], killed [[S_MOV_B32_4]], 0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_3:%[0-9]+]]:vgpr_32 = nsw V_ADD_U32_e64 [[V_SUB_U32_e64_]], [[S_MOV_B32_4]], 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -51,7 +51,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[V_ADD_U32_e64_3]], killed [[S_MOV_B32_5]], implicit $exec
+  ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[V_ADD_U32_e64_3]], [[S_MOV_B32_5]], implicit $exec
   ; CHECK-NEXT:   [[S_XOR_B32_1:%[0-9]+]]:sreg_32 = S_XOR_B32 $exec_lo, [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[V_CMP_LT_I32_e64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_XOR_B32_1]]
@@ -74,19 +74,19 @@ body: |
     %5:vgpr_32 = COPY $vgpr4
     %9:vgpr_32 = V_ADD_U32_e64 %5:vgpr_32, %7:vgpr_32, 0, implicit $exec
     %11:sreg_32 = S_MOV_B32 31
-    %12:vgpr_32 = V_LSHRREV_B32_e64 killed %11:sreg_32, %9:vgpr_32, implicit $exec
-    %13:vgpr_32 = V_ADD_U32_e64 %9:vgpr_32, killed %12:vgpr_32, 0, implicit $exec
+    %12:vgpr_32 = V_LSHRREV_B32_e64 %11:sreg_32, %9:vgpr_32, implicit $exec
+    %13:vgpr_32 = V_ADD_U32_e64 %9:vgpr_32, %12:vgpr_32, 0, implicit $exec
     %14:sreg_32 = S_MOV_B32 1
-    %15:vgpr_32 = V_ASHRREV_I32_e64 %14:sreg_32, killed %13:vgpr_32, implicit $exec
+    %15:vgpr_32 = V_ASHRREV_I32_e64 %14:sreg_32, %13:vgpr_32, implicit $exec
     %16:sreg_32 = S_MOV_B32 30
-    %17:vgpr_32 = V_LSHRREV_B32_e64 killed %16:sreg_32, %15:vgpr_32, implicit $exec
-    %18:vgpr_32 = V_ADD_U32_e64 %15:vgpr_32, killed %17:vgpr_32, 0, implicit $exec
+    %17:vgpr_32 = V_LSHRREV_B32_e64 %16:sreg_32, %15:vgpr_32, implicit $exec
+    %18:vgpr_32 = V_ADD_U32_e64 %15:vgpr_32, %17:vgpr_32, 0, implicit $exec
     %19:sreg_32 = S_MOV_B32 -4
     %21:vgpr_32 = COPY %19:sreg_32
-    %20:vgpr_32 = V_AND_B32_e32 killed %18:vgpr_32, killed %21:vgpr_32, implicit $exec
-    %22:vgpr_32 = V_SUB_U32_e64 %15:vgpr_32, killed %20:vgpr_32, 0, implicit $exec
+    %20:vgpr_32 = V_AND_B32_e32 %18:vgpr_32, %21:vgpr_32, implicit $exec
+    %22:vgpr_32 = V_SUB_U32_e64 %15:vgpr_32, %20:vgpr_32, 0, implicit $exec
     %23:sreg_32 = S_MOV_B32 4
-    %0:vgpr_32 = nsw V_ADD_U32_e64 killed %22:vgpr_32, killed %23:sreg_32, 0, implicit $exec
+    %0:vgpr_32 = nsw V_ADD_U32_e64 %22:vgpr_32, %23:sreg_32, 0, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -105,7 +105,7 @@ body: |
     successors: %bb.4(0x40000000), %bb.3(0x40000000); %bb.4(50.00%), %bb.3(50.00%)
 
     %26:sreg_32 = S_MOV_B32 1
-    %27:sreg_32 = V_CMP_EQ_U32_e64 %0:vgpr_32, killed %26:sreg_32, implicit $exec
+    %27:sreg_32 = V_CMP_EQ_U32_e64 %0:vgpr_32, %26:sreg_32, implicit $exec
     %31:sreg_32 = S_XOR_B32 $exec_lo, %27:sreg_32, implicit-def $scc
     %34:sreg_32 = S_OR_B32 %25:sreg_32, %27:sreg_32, implicit-def $scc
     $exec_lo = S_MOV_B32_term %31:sreg_32

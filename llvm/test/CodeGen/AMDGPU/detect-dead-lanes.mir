@@ -420,22 +420,21 @@ body: |
 ...
 ---
 # Check that an undefined subregister use inside a BUNDLE is marked undef while
-# a defined subregister use is unchanged, and that existing kill flags are
-# preserved.
+# a defined subregister use is unchanged.
 # CHECK-LABEL: name: bundle_subregs
 # CHECK: %0:sreg_64 = REG_SEQUENCE $sgpr0, %subreg.sub0
-# CHECK: BUNDLE implicit killed %0.sub0, implicit killed undef %0.sub1 {
-# CHECK-NEXT: S_NOP 0, implicit killed %0.sub0
-# CHECK-NEXT: S_NOP 0, implicit killed undef %0.sub1
+# CHECK: BUNDLE implicit %0.sub0, implicit undef %0.sub1 {
+# CHECK-NEXT: S_NOP 0, implicit %0.sub0
+# CHECK-NEXT: S_NOP 0, implicit undef %0.sub1
 name: bundle_subregs
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
     %0:sreg_64 = REG_SEQUENCE $sgpr0, %subreg.sub0
-    BUNDLE implicit killed %0.sub0, implicit killed %0.sub1 {
-      S_NOP 0, implicit killed %0.sub0
-      S_NOP 0, implicit killed %0.sub1
+    BUNDLE implicit %0.sub0, implicit %0.sub1 {
+      S_NOP 0, implicit %0.sub0
+      S_NOP 0, implicit %0.sub1
     }
 ...
 ---

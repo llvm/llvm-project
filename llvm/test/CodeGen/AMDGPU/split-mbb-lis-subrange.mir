@@ -58,10 +58,10 @@ body:             |
     %c0:sreg_32 = IMPLICIT_DEF
     %c1:sreg_32 = IMPLICIT_DEF
     %const:vgpr_32 = IMPLICIT_DEF
-    %load:vreg_64 = IMAGE_LOAD_V2_V2_gfx11 %coord:vreg_64, killed %desc:sgpr_256, 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
+    %load:vreg_64 = IMAGE_LOAD_V2_V2_gfx11 %coord:vreg_64, %desc:sgpr_256, 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
     %s0a:vgpr_32 = COPY %load.sub0:vreg_64
     %s0b:vgpr_32 = COPY %load.sub1:vreg_64
-    S_CMP_EQ_U32 killed %c0:sreg_32, killed %c1:sreg_32, implicit-def $scc
+    S_CMP_EQ_U32 %c0:sreg_32, %c1:sreg_32, implicit-def $scc
     S_CBRANCH_SCC1 %bb.3, implicit $scc
     S_BRANCH %bb.1
 
