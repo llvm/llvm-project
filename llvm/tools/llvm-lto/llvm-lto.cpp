@@ -40,6 +40,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -267,6 +268,13 @@ namespace {
 
 struct ModuleInfo {
   BitVector CanBeHidden;
+};
+
+// An LLVMContext with the library options of the command line.
+struct ToolContext : LLVMContext {
+  explicit ToolContext(const cl::LibraryOptionsContext &LibraryOptions) {
+    getLibraryOptions().assign(LibraryOptions);
+  }
 };
 
 } // end anonymous namespace
@@ -652,11 +660,15 @@ static void writeModuleToFile(Module &TheModule, StringRef Filename) {
 
 class ThinLTOProcessing {
 public:
+  const cl::LibraryOptionsContext &LibraryOptions;
   ThinLTOCodeGenerator ThinGenerator;
 
-  ThinLTOProcessing(const TargetOptions &Options) {
+  ThinLTOProcessing(const cl::LibraryOptionsContext &LibraryOptions,
+                    const TargetOptions &Options)
+      : LibraryOptions(LibraryOptions) {
     ThinGenerator.setCodePICModel(codegen::getExplicitRelocModel());
     ThinGenerator.setTargetOptions(Options);
+    ThinGenerator.setLibraryOptions(&LibraryOptions);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
     ThinGenerator.setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
@@ -737,7 +749,7 @@ private:
 
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
+      ToolContext Ctx(LibraryOptions);
       auto Buffer = loadFile(Filename);
       auto Input = loadInputFile(Buffer->getMemBufferRef());
       auto TheModule = loadModuleFromInput(*Input, Ctx);
@@ -775,7 +787,7 @@ private:
 
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
+      ToolContext Ctx(LibraryOptions);
       auto Buffer = loadFile(Filename);
       auto Input = loadInputFile(Buffer->getMemBufferRef());
       auto TheModule = loadModuleFromInput(*Input, Ctx);
@@ -802,7 +814,7 @@ private:
 
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
+      ToolContext Ctx(LibraryOptions);
       auto Buffer = loadFile(Filename);
       auto Input = loadInputFile(Buffer->getMemBufferRef());
       auto TheModule = loadModuleFromInput(*Input, Ctx);
@@ -835,7 +847,7 @@ private:
                               MemBuffer->getBuffer());
 
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
+      ToolContext Ctx(LibraryOptions);
       auto Buffer = loadFile(Filename);
       auto Input = loadInputFile(Buffer->getMemBufferRef());
       auto TheModule = loadModuleFromInput(*Input, Ctx);
@@ -868,7 +880,7 @@ private:
                               MemBuffer->getBuffer());
 
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
+      ToolContext Ctx(LibraryOptions);
       auto Buffer = loadFile(Filename);
       auto Input = loadInputFile(Buffer->getMemBufferRef());
       auto TheModule = loadModuleFromInput(*Input, Ctx);
@@ -893,7 +905,7 @@ private:
       errs() << "Warning: -thinlto-index ignored for optimize stage";
 
     for (auto &Filename : InputFilenames) {
-      LLVMContext Ctx;
+      ToolContext Ctx(LibraryOptions);
       auto Buffer = loadFile(Filename);
       auto Input = loadInputFile(Buffer->getMemBufferRef());
       auto TheModule = loadModuleFromInput(*Input, Ctx);
@@ -998,7 +1010,9 @@ private:
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
-  cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
+                              "llvm LTO linker\n");
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
@@ -1050,7 +1064,7 @@ int main(int argc, char **argv) {
   if (ThinLTOMode.getNumOccurrences()) {
     if (ThinLTOMode.getNumOccurrences() > 1)
       report_fatal_error("You can't specify more than one -thinlto-action");
-    thinlto::ThinLTOProcessing ThinLTOProcessor(Options);
+    thinlto::ThinLTOProcessing ThinLTOProcessor(LibraryOptions, Options);
     ThinLTOProcessor.run();
     return 0;
   }
@@ -1062,7 +1076,7 @@ int main(int argc, char **argv) {
 
   unsigned BaseArg = 0;
 
-  LLVMContext Context;
+  ToolContext Context(LibraryOptions);
   Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
 
