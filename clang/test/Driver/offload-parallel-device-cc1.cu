@@ -17,6 +17,13 @@
 // RUN:   --cuda-gpu-arch=sm_70 --cuda-gpu-arch=sm_80 --offload-jobs=2 \
 // RUN:   --cuda-device-only -S -Werror %s
 
+// Device-only compilation to an object parallelizes the per-target compiles
+// even though each is followed by its own device link.
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
+// RUN:   -nostdinc -nogpuinc -nohipwrapperinc -nogpulib \
+// RUN:   --offload-arch=gfx900 --offload-arch=gfx906 --offload-jobs=2 \
+// RUN:   --offload-device-only -O3 -c -Werror %s -o %t/hip-dev.o
+
 // RUN: not %clang -x cuda --target=x86_64-unknown-linux-gnu \
 // RUN:   -nocudainc -nocudalib \
 // RUN:   --cuda-gpu-arch=sm_70 --cuda-gpu-arch=sm_80 --offload-jobs=0x4 \
