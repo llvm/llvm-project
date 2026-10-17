@@ -346,6 +346,7 @@ static int run(int argc, char **argv) {
 
   Config Conf;
   Conf.LibraryOptions = &LibraryOptions;
+  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   if (TimeTrace) {
     Conf.TimeTraceEnabled = TimeTrace;
     Conf.TimeTraceGranularity = TimeTraceGranularity;
