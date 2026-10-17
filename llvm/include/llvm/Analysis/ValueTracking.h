@@ -1079,6 +1079,14 @@ LLVM_ABI std::optional<bool>
 isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS, const Value *RHS,
                         const Instruction *ContextI, const DataLayout &DL);
 
+/// If PredBB's conditional branch implies `icmp Pred, LHS, RHS` on the
+/// PredBB->SuccBB edge, return that compare's value on the edge, else
+/// std::nullopt.
+LLVM_ABI std::optional<bool>
+isImpliedByEdgeCondition(const BasicBlock *PredBB, const BasicBlock *SuccBB,
+                         CmpPredicate Pred, const Value *LHS, const Value *RHS,
+                         const DataLayout &DL);
+
 /// Call \p InsertAffected on all Values whose known bits / value may be
 /// affected by the condition \p Cond. Used by AssumptionCache and
 /// DomConditionCache.
