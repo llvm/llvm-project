@@ -22744,20 +22744,16 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   unsigned N0Opc = N0->getOpcode(), N1Opc = N1->getOpcode();
 
-  // For unpacked types:
-  // concat(zip1(a, b), zip2(a, b)) => trn1(a, b)
-  if (DCI.isAfterLegalizeDAG() && isUnpackedType(N0.getValueType(), DAG) &&
-      N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
+  // concat(zip1(a, b), zip2(a, b))
+  // -> (zip1(concat(a, poison), concat(b, poison))
+  if (N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
       N1Opc == AArch64ISD::ZIP2 && N0.getOperand(0) == N1.getOperand(0) &&
       N0.getOperand(1) == N1.getOperand(1)) {
-    // If the type is unpacked, then each element is separated by a gap at least
-    // as big as the element size. It is therefore safe to re-interpret the
-    // inputs with double the elements and ignore odd elements (hence TRN1).
-    SDValue Op0MoreElems =
-        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(0));
-    SDValue Op1MoreElems =
-        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, N0.getOperand(1));
-    return DAG.getNode(AArch64ISD::TRN1, DL, VT, Op0MoreElems, Op1MoreElems);
+    SDValue E0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
+                             DAG.getPOISON(N0.getValueType()));
+    SDValue E1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(1),
+                             DAG.getPOISON(N0.getValueType()));
+    return DAG.getNode(AArch64ISD::ZIP1, DL, VT, E0, E1);
   }
 
   if (VT.isScalableVector())
@@ -22963,17 +22959,6 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     SDValue Shr =
         DAG.getNode(AArch64ISD::VLSHR, DL, BVT, Add, N0.getOperand(1));
     return Shr;
-  }
-
-  // concat(zip1(a, b), zip2(a, b)) is zip1(a, b)
-  if (N->getNumOperands() == 2 && N0Opc == AArch64ISD::ZIP1 &&
-      N1Opc == AArch64ISD::ZIP2 && N0.getOperand(0) == N1.getOperand(0) &&
-      N0.getOperand(1) == N1.getOperand(1)) {
-    SDValue E0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(0),
-                             DAG.getPOISON(N0.getValueType()));
-    SDValue E1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, N0.getOperand(1),
-                             DAG.getPOISON(N0.getValueType()));
-    return DAG.getNode(AArch64ISD::ZIP1, DL, VT, E0, E1);
   }
 
   // If we see a (concat_vectors (v1x64 A), (v1x64 A)) it's really a vector
@@ -26988,6 +26973,31 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
 
   return DAG.getNode(ISD::TRUNCATE, DL, ResVT,
                      DAG.getNode(ISD::BITCAST, DL, BitcastResultTy, UzpResult));
+}
+
+static SDValue performZip1Combine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
+  SDValue A, B;
+
+  // For unpacked types:
+  // zip1(concat(a, undef), concat(b, undef))
+  //   => trn1(reinterpret(a), reinterpret(b))
+  // If the type is unpacked, then each element is separated by a gap at least
+  // as big as the element size. It is therefore safe to re-interpret the
+  // inputs with double the elements and ignore odd elements (hence TRN1).
+  if (DCI.isAfterLegalizeDAG() &&
+      sd_match(N0, m_Node(ISD::CONCAT_VECTORS, m_Value(A), m_Undef())) &&
+      sd_match(N1, m_Node(ISD::CONCAT_VECTORS, m_Value(B), m_Undef())) &&
+      isUnpackedType(A.getValueType(), DAG))
+    return DAG.getNode(AArch64ISD::TRN1, DL, VT,
+                       DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, A),
+                       DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, B));
+  return SDValue();
 }
 
 static SDValue performGLD1Combine(SDNode *N, SelectionDAG &DAG) {
@@ -31993,6 +32003,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::UZP1:
   case AArch64ISD::UZP2:
     return performUzpCombine(N, DAG, Subtarget);
+  case AArch64ISD::ZIP1:
+    return performZip1Combine(N, DCI, DAG);
   case AArch64ISD::SETCC_MERGE_ZERO:
     return performSetccMergeZeroCombine(N, DCI);
   case AArch64ISD::REINTERPRET_CAST:
