@@ -1858,6 +1858,40 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
 
 using VPUtilsTest = VPlanTestBase;
 
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsWithSharedOperands) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBuilder Builder(Body);
+  VPValue *Value = Plan.getConstantInt(64, 1);
+  for (unsigned I = 0; I != 40; ++I)
+    Value = Builder.createOverflowingOp(Instruction::Add, {Value, Value});
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(Value));
+
+  auto *Step = Builder.createNaryOp(VPInstruction::StepVector, {},
+                                    IntegerType::get(C, 64));
+  auto *Root = Builder.createOverflowingOp(Instruction::Add, {Value, Step});
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(Root));
+}
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsAfterOperandChange) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBuilder Builder(Body);
+  VPValue *One = Plan.getConstantInt(64, 1);
+  auto *Step = Builder.createNaryOp(VPInstruction::StepVector, {},
+                                    IntegerType::get(C, 64));
+  auto *Value = Builder.createOverflowingOp(Instruction::Add, {One, One});
+  auto *Root = Builder.createOverflowingOp(Instruction::Add, {Value, Value});
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(Root));
+
+  Value->setOperand(1, Step);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(Root));
+  Value->setOperand(1, One);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(Root));
+}
+
 TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
