@@ -103,6 +103,38 @@ void CoverageSourceInfo::updateNextTokLoc(SourceLocation Loc) {
     SkippedRanges.back().NextTokLoc = Loc;
 }
 
+SmallVector<SkippedRange, 0>
+CoverageSourceInfo::getSkippedRangesIn(SourceRange Range) {
+  // Index the skipped ranges added since the last call. As they are mostly
+  // added in source order, they are usually appended.
+  for (unsigned I = NumIndexedSkippedRanges; I < SkippedRanges.size(); ++I) {
+    SourceLocation Begin = SkippedRanges[I].Range.getBegin();
+    auto &Indices = SkippedRangesByFile[SourceMgr.getFileID(Begin)];
+    Indices.insert(llvm::upper_bound(Indices, Begin,
+                                     [&](SourceLocation Loc, unsigned J) {
+                                       return Loc <
+                                              SkippedRanges[J].Range.getBegin();
+                                     }),
+                   I);
+  }
+  NumIndexedSkippedRanges = SkippedRanges.size();
+
+  SmallVector<SkippedRange, 0> Result;
+  auto It = SkippedRangesByFile.find(SourceMgr.getFileID(Range.getBegin()));
+  if (It == SkippedRangesByFile.end())
+    return Result;
+  ArrayRef<unsigned> Indices = It->second;
+  const unsigned *First = llvm::partition_point(Indices, [&](unsigned I) {
+    return SkippedRanges[I].Range.getBegin() < Range.getBegin();
+  });
+  for (unsigned I : llvm::make_range(First, Indices.end())) {
+    if (Range.getEnd() < SkippedRanges[I].Range.getBegin())
+      break;
+    Result.push_back(SkippedRanges[I]);
+  }
+  return Result;
+}
+
 namespace {
 /// A region of source code that can be mapped to a counter.
 class SourceMappingRegion {
@@ -479,34 +511,42 @@ public:
           std::max(FileLineRanges[R.FileID].second, R.LineEnd);
     }
 
-    auto SkippedRanges = CVM.getSourceInfo().getSkippedRanges();
-    for (auto &I : SkippedRanges) {
-      SourceRange Range = I.Range;
-      auto LocStart = Range.getBegin();
-      auto LocEnd = Range.getEnd();
-      assert(SM.isWrittenInSameFile(LocStart, LocEnd) &&
-             "region spans multiple files");
-
-      auto CovFileID = getCoverageFileID(LocStart);
-      if (!CovFileID)
+    for (const auto &[File, Mapping] : FileIDMapping) {
+      unsigned CovFileID = Mapping.first;
+      auto [FirstLine, LastLine] = FileLineRanges[CovFileID];
+      // Ignore files without regions and macro expansions, whose skipped
+      // ranges (e.g. comments in _Pragma) don't correspond to lines.
+      if (!SM.getSLocEntry(File).isFile() || FirstLine > LastLine)
         continue;
-      std::optional<SpellingRegion> SR;
-      if (I.isComment())
-        SR = adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc,
-                                I.NextTokLoc);
-      else if (I.isPPIfElse() || I.isEmptyLine())
-        SR = {SM, LocStart, LocEnd};
+      // Only collect the skipped ranges inside the source code of this
+      // function. As adjusting a skipped range may move its start to the next
+      // line, also consider the ones that begin on the line before.
+      SourceLocation Begin =
+          SM.translateLineCol(File, std::max(FirstLine, 2u) - 1, 1);
+      SourceLocation End = SM.translateLineCol(File, LastLine + 1, 1);
+      for (const SkippedRange &I :
+           CVM.getSourceInfo().getSkippedRangesIn({Begin, End})) {
+        SourceRange Range = I.Range;
+        auto LocStart = Range.getBegin();
+        auto LocEnd = Range.getEnd();
+        assert(SM.isWrittenInSameFile(LocStart, LocEnd) &&
+               "region spans multiple files");
 
-      if (!SR)
-        continue;
-      auto Region = CounterMappingRegion::makeSkipped(
-          *CovFileID, SR->LineStart, SR->ColumnStart, SR->LineEnd,
-          SR->ColumnEnd);
-      // Make sure that we only collect the regions that are inside
-      // the source code of this function.
-      if (Region.LineStart >= FileLineRanges[*CovFileID].first &&
-          Region.LineEnd <= FileLineRanges[*CovFileID].second)
-        MappingRegions.push_back(Region);
+        std::optional<SpellingRegion> SR;
+        if (I.isComment())
+          SR = adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc,
+                                  I.NextTokLoc);
+        else if (I.isPPIfElse() || I.isEmptyLine())
+          SR = {SM, LocStart, LocEnd};
+
+        if (!SR)
+          continue;
+        auto Region = CounterMappingRegion::makeSkipped(
+            CovFileID, SR->LineStart, SR->ColumnStart, SR->LineEnd,
+            SR->ColumnEnd);
+        if (Region.LineStart >= FirstLine && Region.LineEnd <= LastLine)
+          MappingRegions.push_back(Region);
+      }
     }
   }
 
