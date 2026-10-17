@@ -1786,7 +1786,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
                           allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
-    cleanupDominator = Builder.CreateUnreachable();
+    cleanupDominator =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
   }
 
   assert((allocSize == allocSizeWithoutCookie) ==

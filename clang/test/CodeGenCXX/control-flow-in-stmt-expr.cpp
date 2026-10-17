@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 --std=c++20 -fexceptions -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=EH %s
+// RUN: %clang_cc1 --std=c++20 -fexceptions -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=EH %s
 // RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=NOEH,CHECK %s
 
 struct Printy {
@@ -518,3 +518,227 @@ void InactiveNormalCleanup() {
   // CHECK:   br label %return
 }
 }  // namespace CleanupFlag
+
+struct NoThrow {};
+void *operator new(decltype(sizeof 0), NoThrow) noexcept;
+void operator delete(void *, NoThrow) noexcept;
+
+namespace GH175427 {
+struct S {
+  S(int);
+};
+[[noreturn]] void nr();
+
+void WhileTrue() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754279WhileTrueEv()
+  // EH:         call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    br label %while.cond
+  // EH:       while.cond:
+  // EH-NEXT:    br label %while.body
+  // EH:       while.body:
+  // EH-NEXT:    br label %while.cond
+  // NOEH-LABEL: define dso_local void @_ZN8GH1754279WhileTrueEv()
+  // NOEH:         call {{.*}}@_Znwm(i64 noundef 4)
+  // NOEH-NEXT:    br label %while.body
+  // NOEH:       while.body:
+  // NOEH-NEXT:    br label %while.body
+  new int(({
+    while (true)
+      ;
+    1;
+  }));
+}
+
+void ForFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754278ForFirstEv()
+  // EH:         call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    br label %for.cond
+  // EH:       for.cond:
+  // EH-NEXT:    br label %for.cond
+  new int(({
+    for (;;)
+      ;
+    1;
+  }));
+}
+
+void DoFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754277DoFirstEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    br label %do.body
+  // EH:       do.body:
+  // EH-NEXT:    br label %do.cond
+  // EH:       do.cond:
+  // EH-NEXT:    br i1 true, label %do.body, label %do.end
+  // EH:       do.end:
+  // EH:         store i32 {{.*}}, ptr [[CALL]]
+  // EH-NEXT:    ret void
+  new int(({
+    do
+      ;
+    while (true);
+    1;
+  }));
+}
+
+void LabelFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH17542710LabelFirstEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    br label %L
+  // EH:       L: ; preds = %entry
+  // EH-NEXT:    store i32 1, ptr [[TMP:%[^,]+]]
+  // EH-NEXT:    [[V:%.+]] = load i32, ptr [[TMP]]
+  // EH-NEXT:    store i32 [[V]], ptr [[CALL]]
+  // EH-NEXT:    ret void
+  new int(({
+  L:;
+    1;
+  }));
+}
+
+void WhileX(bool x) {
+  // EH-LABEL: define dso_local void @_ZN8GH1754276WhileXEb(
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    br label %while.cond
+  // EH:       while.cond:
+  // EH:         br i1 {{.*}}, label %while.body, label %while.end
+  // EH:       while.body:
+  // EH-NEXT:    br label %while.cond
+  // EH:       while.end:
+  // EH:         store i32 {{.*}}, ptr [[CALL]]
+  // EH-NEXT:    ret void
+  new int(({
+    while (x)
+      ;
+    1;
+  }));
+}
+
+void ArrayNew() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754278ArrayNewEv()
+  // EH:         call {{.*}}@_Znam(i64 noundef 8)
+  // EH-NEXT:    br label %while.cond
+  // EH:       while.cond:
+  // EH-NEXT:    br label %while.body
+  // EH:       while.body:
+  // EH-NEXT:    br label %while.cond
+  new int[2]{({
+    while (true)
+      ;
+    1;
+  })};
+}
+
+void ClassType() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754279ClassTypeEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 1)
+  // EH-NEXT:    br label %while.cond
+  // EH:       while.cond:
+  // EH-NEXT:    br label %while.body
+  // EH:       while.body:
+  // EH-NEXT:    br label %while.cond
+  // EH:         invoke void @_ZN8GH1754271SC1Ei(ptr {{.*}}[[CALL]], i32 {{.*}})
+  // EH-NEXT:    to label %invoke.cont unwind label %lpad
+  // EH:       lpad:
+  // EH:         call void @_ZdlPvm(ptr noundef [[CALL]], i64 noundef 1)
+  new S(({
+    while (true)
+      ;
+    1;
+  }));
+}
+
+void NothrowNew() {
+  // EH-LABEL: define dso_local void @_ZN8GH17542710NothrowNewEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm7NoThrow(i64 noundef 4
+  // EH-NEXT:    [[ISNULL:%.+]] = icmp eq ptr [[CALL]], null
+  // EH:         br i1 [[ISNULL]], label %new.cont, label %new.notnull
+  // EH:       new.notnull:
+  // EH:         br label %while.cond
+  // EH:       while.cond:
+  // EH-NEXT:    br label %while.body
+  // EH:       while.body:
+  // EH-NEXT:    br label %while.cond
+  // EH:       new.cont:
+  // EH-NEXT:    phi ptr [ [[CALL]], %{{.*}} ], [ null, %entry ]
+  // EH-NEXT:    ret void
+  new (NoThrow{}) int(({
+    while (true)
+      ;
+    1;
+  }));
+}
+
+void ReturnFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH17542711ReturnFirstEv()
+  // EH:         call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    ret void
+  new int(({
+    return;
+    1;
+  }));
+}
+
+void GotoFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754279GotoFirstEv()
+  // EH:         call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    br label %L
+  // EH:       L: ; preds = %entry
+  // EH-NEXT:    ret void
+  new int(({
+    goto L;
+    1;
+  }));
+L:;
+}
+
+void NoreturnFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH17542713NoreturnFirstEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    invoke void @_ZN8GH1754272nrEv()
+  // EH-NEXT:    to label %invoke.cont unwind label %lpad
+  // EH:       invoke.cont:
+  // EH-NEXT:    unreachable
+  // EH:       lpad:
+  // EH:         call void @_ZdlPvm(ptr noundef [[CALL]], i64 noundef 4)
+  new int(({
+    nr();
+    1;
+  }));
+}
+
+void UnreachableFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH17542716UnreachableFirstEv()
+  // EH:         call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    unreachable
+  new int(({
+    __builtin_unreachable();
+    1;
+  }));
+}
+
+#if __cpp_exceptions
+void ThrowFirst() {
+  // EH-LABEL: define dso_local void @_ZN8GH17542710ThrowFirstEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 4)
+  // EH:         invoke void @__cxa_throw(
+  // EH-NEXT:    to label %unreachable unwind label %lpad
+  // EH:       lpad:
+  // EH:         call void @_ZdlPvm(ptr noundef [[CALL]], i64 noundef 4)
+  new int(({
+    throw 1;
+    1;
+  }));
+}
+#endif
+
+void Plain() {
+  // EH-LABEL: define dso_local void @_ZN8GH1754275PlainEv()
+  // EH:         [[CALL:%.+]] = call {{.*}}@_Znwm(i64 noundef 4)
+  // EH-NEXT:    store i32 1, ptr [[TMP:%[^,]+]]
+  // EH-NEXT:    [[V:%.+]] = load i32, ptr [[TMP]]
+  // EH-NEXT:    store i32 [[V]], ptr [[CALL]]
+  // EH-NEXT:    ret void
+  new int(({ 1; }));
+}
+}  // namespace GH175427
