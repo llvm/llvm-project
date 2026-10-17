@@ -33,6 +33,11 @@ Examples:
 | `!(!a && b)`                               | `a \|\| !b`  |
 | `!(a && !b)`                               | `!a \|\| b`  |
 | `!(!a && !b)`                              | `a \|\| b`   |
+| `a && a != b`                              | `a && !b`    |
+| `a == b && !a`                             | `!b && !a`   |
+| `a && a == b`                              | `a && b`     |
+| `!a && a != b`                             | `!a && b`    |
+| `!a && a == b`                             | `!a && !b`   |
 
 The resulting expression `e` is modified as follows:
 
