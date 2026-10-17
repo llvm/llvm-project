@@ -12,6 +12,7 @@ add_llvm_unittest(JITLinkTests
     AArch32ErrorTests.cpp
     AArch64Tests.cpp
     COFFLinkGraphTests.cpp
+    CompactUnwindSupportTests.cpp
     EHFrameSupportTests.cpp
     JITLinkDylibTest.cpp
     JITLinkTestUtils.cpp
