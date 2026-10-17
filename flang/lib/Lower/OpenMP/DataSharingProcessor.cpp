@@ -290,6 +290,13 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     return false;
   };
 
+  auto collectWholeArrayReductionSymbols = [&](const auto &reductionClause) {
+    const ObjectList &objects = std::get<ObjectList>(reductionClause.t);
+    for (const Object &object : objects)
+      if (object.sym() && isWholeArraySection(object, semaCtx))
+        wholeArrayReductionSymbols.insert(&object.sym()->GetUltimate());
+  };
+
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -321,6 +328,15 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       } else {
         collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       }
+    } else if (const auto *inReductionClause =
+                   std::get_if<omp::clause::InReduction>(&clause.u)) {
+      collectWholeArrayReductionSymbols(*inReductionClause);
+    } else if (const auto *reductionClause =
+                   std::get_if<omp::clause::Reduction>(&clause.u)) {
+      collectWholeArrayReductionSymbols(*reductionClause);
+    } else if (const auto *taskReductionClause =
+                   std::get_if<omp::clause::TaskReduction>(&clause.u)) {
+      collectWholeArrayReductionSymbols(*taskReductionClause);
     }
   }
 
@@ -551,10 +567,13 @@ void DataSharingProcessor::collectPrivatizedSymbols(
     return;
 
   // Filter-out symbols that must not be privatized.
+  bool collectDefaultPrivate = false;
   bool collectImplicit = false;
   bool collectPreDetermined = false;
   bool collectIndirectRefs = !flag.has_value();
   if (!collectIndirectRefs) {
+    collectDefaultPrivate = *flag == semantics::Symbol::Flag::OmpPrivate ||
+                            *flag == semantics::Symbol::Flag::OmpFirstPrivate;
     collectImplicit = *flag == semantics::Symbol::Flag::OmpImplicit;
     collectPreDetermined = *flag == semantics::Symbol::Flag::OmpPreDetermined;
   }
@@ -569,6 +588,15 @@ void DataSharingProcessor::collectPrivatizedSymbols(
                       currentOp->getParentOfType<mlir::omp::TargetOp>());
 
     if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
+      return false;
+
+    // A full-extent section is lowered through the same descriptor as its base
+    // array. Do not create a second private descriptor when privatization is
+    // selected implicitly or by a default clause; the reduction region
+    // argument must be the binding used in the body. Explicit private clauses
+    // are collected separately in collectSymbolsForPrivatization().
+    if ((collectImplicit || collectDefaultPrivate) &&
+        wholeArrayReductionSymbols.contains(&sym->GetUltimate()))
       return false;
 
     if (collectImplicit) {
