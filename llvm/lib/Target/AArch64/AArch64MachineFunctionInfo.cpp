@@ -86,7 +86,7 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   if (F.hasFnAttribute("ptrauth-returns"))
     return true;
   if (!F.hasFnAttribute("sign-return-address-key")) {
-    if (STI.getTargetTriple().isOSWindows())
+    if (STI.getTargetTriple().isOSWindowsOrUEFI())
       return true;
     return false;
   }
@@ -94,7 +94,7 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
   assert(Key == "a_key" || Key == "b_key");
-  if (STI.getTargetTriple().isOSWindows() && Key == "a_key" &&
+  if (STI.getTargetTriple().isOSWindowsOrUEFI() && Key == "a_key" &&
       GetSignReturnAddress(F) != SignReturnAddress::None) {
     F.getContext().diagnose(DiagnosticInfoUnsupported{
         F, "A-key return address signing is unsupported on AArch64 Windows"});
