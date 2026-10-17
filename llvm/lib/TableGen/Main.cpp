@@ -77,17 +77,77 @@ static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
     cl::desc("Disable unused template argument warnings."));
 
+static cl::opt<bool> Preprocess("E", cl::desc("Write preprocessed output"));
+
 static int reportError(const char *ProgName, Twine Msg) {
   errs() << ProgName << ": " << Msg;
   errs().flush();
   return 1;
 }
 
+namespace {
+/// Encapsulate file, line and column numbers from SourceMgr.
+struct SMCoords {
+  unsigned Buf = 0;
+  unsigned Line = 0;
+  unsigned Col = 0;
+  SMCoords() = default;
+  SMCoords(const SourceMgr &Mgr, SMLoc Loc) {
+    Buf = Mgr.FindBufferContainingLoc(Loc);
+    // TODO: Find a faster way to do this. For example we don't need the column
+    // number for every token, only the first token on each output line.
+    std::tie(Line, Col) = Mgr.getLineAndColumn(Loc, Buf);
+  }
+};
+} // end anonymous namespace
+
+/// Create preprocessed output for `-E` option.
+static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
+  SMCoords Last;
+  while (true) {
+    Lex.Lex();
+    if (Lex.getCode() == tgtok::Eof || Lex.getCode() == tgtok::Error)
+      break;
+    SMCoords This(SrcMgr, Lex.getLoc());
+    if (This.Buf == Last.Buf && This.Line == Last.Line) {
+      // Add a single space between tokens on the same line. This is overkill in
+      // many cases but at least it will parse correctly.
+      OS << ' ';
+    } else {
+      // Always start a new line when including a new file or popping back out
+      // to the previous file. This is just a heuristic to make the output look
+      // reasonably pretty.
+      if (Last.Buf)
+        OS << '\n';
+      // Indent the first token on a line to its original indentation, to make
+      // the output look pretty.
+      OS.indent(This.Col - 1);
+    }
+
+    const char *Start = Lex.getLoc().getPointer();
+    const char *End = Lex.getLocRange().End.getPointer();
+    StringRef Text(Start, End - Start);
+    OS << Text;
+
+    Last = This;
+    // A code block is the only kind of token that can span multiple lines.
+    // Record the line it ends on, so that a following token on that line stays
+    // on the same output line. Count '\n' characters to match how SourceMgr
+    // counts lines.
+    if (Lex.getCode() == tgtok::CodeFragment)
+      Last.Line += Text.count('\n');
+  }
+  if (Last.Buf != 0)
+    OS << '\n';
+  return Lex.getCode() == tgtok::Error;
+}
+
 /// Create a dependency file for `-d` option.
 ///
 /// This functionality is really only for the benefit of the build system.
 /// It is similar to GCC's `-M*` family of options.
-static int createDependencyFile(const TGParser &Parser, const char *argv0) {
+static int createDependencyFile(const TGLexer::DependenciesSetTy &Dependencies,
+                                const char *argv0) {
   if (OutputFilename == "-")
     return reportError(argv0, "the option -d must be used together with -o\n");
 
@@ -107,7 +167,7 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   if (InputFilename != "-")
     DepOut.os() << ' ' << InputFilename;
 
-  for (const auto &Dep : Parser.getDependencies()) {
+  for (const auto &Dep : Dependencies) {
     DepOut.os() << ' ' << Dep;
   }
   DepOut.os() << "\n";
@@ -138,22 +198,11 @@ static int WriteOutput(const char *argv0, StringRef Filename,
 }
 
 int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
-  RecordKeeper Records;
-  TGTimer &Timer = Records.getTimer();
-
-  if (TimePhases)
-    Timer.startPhaseTiming();
-
-  // Parse the input file.
-
-  Timer.startTimer("Parse, build records");
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return reportError(argv0, "Could not open input file '" + InputFilename +
                                   "': " + EC.message() + "\n");
-
-  Records.saveInputFilename(InputFilename);
 
   // Tell SrcMgr about this buffer, which is what TGParser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
@@ -162,6 +211,34 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
   SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
+
+  if (Preprocess) {
+    TGLexer Lex(SrcMgr, MacroNames);
+    std::string OutString;
+    raw_string_ostream Out(OutString);
+    if (int Ret = preprocessInput(Lex, Out))
+      return Ret;
+    // Return early if the lexer printed errors but still reached EOF (e.g., a
+    // NUL character in the source).
+    if (ErrorsPrinted > 0)
+      return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
+    if (!DependFilename.empty()) {
+      if (int Ret = createDependencyFile(Lex.getDependencies(), argv0))
+        return Ret;
+    }
+    return WriteOutput(argv0, OutputFilename, OutString);
+  }
+
+  RecordKeeper Records;
+  Records.saveInputFilename(InputFilename);
+
+  TGTimer &Timer = Records.getTimer();
+  if (TimePhases)
+    Timer.startPhaseTiming();
+
+  // Parse the input file.
+
+  Timer.startTimer("Parse, build records");
 
   TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
@@ -192,7 +269,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser, argv0))
+    if (int Ret = createDependencyFile(Parser.getDependencies(), argv0))
       return Ret;
   }
 
