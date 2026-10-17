@@ -129,9 +129,8 @@ public:
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
           return static_cast<T *>(Opts)->apply(A, Alloc);
         }),
-        Copy([](BumpPtrAllocator &Alloc) -> void * {
-          return new (Alloc) T(T::Global);
-        }),
+        Create(
+            [](BumpPtrAllocator &Alloc) -> void * { return new (Alloc) T(); }),
         Reset([] { T::Global = T(); }) {}
 
   void forEachOption(
@@ -139,8 +138,8 @@ public:
   Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
               BumpPtrAllocator &Alloc) override;
   void *global() override { return Global; }
-  void *copyGlobal(BumpPtrAllocator &Alloc) const override {
-    return Copy(Alloc);
+  void *createDefault(BumpPtrAllocator &Alloc) const override {
+    return Create(Alloc);
   }
   void reset() override { Reset(); }
 
@@ -148,7 +147,7 @@ private:
   const OptTable &(*Table)();
   void *Global;
   bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
-  void *(*Copy)(BumpPtrAllocator &Alloc);
+  void *(*Create)(BumpPtrAllocator &Alloc);
   void (*Reset)();
 };
 

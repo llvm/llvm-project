@@ -2943,10 +2943,19 @@ void cl::addLibraryOptions(LibraryOptions &L) {
   globalParser().Libraries.push_back(&L);
 }
 
+LibraryOptionsContext::LibraryOptionsContext() { addDefaults(); }
+
+void LibraryOptionsContext::addDefaults() {
+  for (LibraryOptions *L : globalParser().Libraries)
+    if (L->isPerContext())
+      Values[L->global()] = L->createDefault(Alloc);
+}
+
 void LibraryOptionsContext::assign(const LibraryOptionsContext &Other) {
   assert(this != &Other);
   Values.clear();
   SavedArgs.clear();
+  addDefaults();
   ArrayRef<const char *> Args = Other.SavedArgs;
   for (size_t I = 0, E = Args.size(); I != E;) {
     StringRef Name = Args[I];
@@ -2965,7 +2974,7 @@ Error LibraryOptionsContext::parse(LibraryOptions &L,
                                    unsigned &Consumed) {
   auto [It, Inserted] = Values.try_emplace(L.global());
   if (Inserted)
-    It->second = L.copyGlobal(Alloc);
+    It->second = L.createDefault(Alloc);
   return parseLibraryOption(L, It->second, Args, Consumed, Alloc, &SavedArgs);
 }
 
