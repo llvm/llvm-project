@@ -36,6 +36,17 @@
   DMB;                                                                         \
   bx lr
 
+// The 64-bit operations take the register pairs of the new value, the old value
+// and the operand as (low word, high word). ldrexd, strexd and the AAPCS put
+// the lower-addressed word in the lower-numbered register, so on big-endian,
+// the high word comes first.
+#ifdef __ARMEB__
+#define SYNC_OP_8_ARGS(op) op(r5, r4, r1, r0, r3, r2)
+#else
+#define SYNC_OP_8_ARGS(op) op(r4, r5, r0, r1, r2, r3)
+#endif
+
+// clang-format off
 #define SYNC_OP_8(op)                                                          \
   .p2align 2;                                                                  \
   .syntax unified;                                                             \
@@ -44,12 +55,13 @@
   DMB;                                                                         \
   mov r12, r0;                                                                 \
   LOCAL_LABEL(tryatomic_##op) : ldrexd r0, r1, [r12];                          \
-  op(r4, r5, r0, r1, r2, r3);                                                  \
+  SYNC_OP_8_ARGS(op);                                                          \
   strexd r6, r4, r5, [r12];                                                    \
   cmp r6, #0;                                                                  \
   bne LOCAL_LABEL(tryatomic_##op);                                             \
   DMB;                                                                         \
   pop { r4, r5, r6, pc }
+// clang-format on
 
 #define MINMAX_4(rD, rN, rM, cmp_kind)                                         \
   cmp rN, rM;                                                                  \
