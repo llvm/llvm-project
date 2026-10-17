@@ -22,13 +22,16 @@
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/handler.hpp>
 #include <sycl/__impl/platform.hpp>
+#include <sycl/__impl/properties/queue_properties.hpp>
 #include <sycl/__impl/property_list.hpp>
+#include <sycl/__impl/property_traits.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/detail/kernel_arg_helpers.hpp>
 #include <sycl/__impl/detail/kernel_submission.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
+#include <sycl/__impl/detail/property_interface.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
 
 #include <cstddef>
@@ -104,7 +107,8 @@ private:
 } // namespace detail
 
 // SYCL 2020 4.6.5. Queue class.
-class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue> {
+class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue>,
+                              private detail::PropertyInterface<queue> {
 public:
   queue(const queue &rhs) = default;
   queue(queue &&rhs) = default;
@@ -258,6 +262,11 @@ public:
   ///
   /// \return true if and only if the queue is in order.
   bool is_in_order() const;
+
+  // The property interface (4.5.4.1.) is common to every SYCL class that
+  // accepts a property_list, so it comes from detail::PropertyInterface.
+  using detail::PropertyInterface<queue>::has_property;
+  using detail::PropertyInterface<queue>::get_property;
 
   /// Queries the queue for information.
   ///
@@ -709,12 +718,19 @@ private:
 
   event submitWithHandler(const detail::TypelessCGF &CGF);
 
+  /// \return the property list this queue was constructed with.
+  ///
+  /// Lets detail::PropertyInterface serve has_property() and get_property()
+  /// without exposing detail::QueueImpl, which is incomplete here.
+  const property_list &getPropertyList() const noexcept;
+
   queue(const std::shared_ptr<detail::QueueImpl> &Impl) : impl(Impl) {}
   std::shared_ptr<detail::QueueImpl> impl;
 
   friend sycl::detail::ImplUtils;
   friend sycl::detail::MockQueue;
   friend class detail::KernelSubmissionBase<queue>;
+  friend class detail::PropertyInterface<queue>;
 }; // class queue
 
 _LIBSYCL_END_NAMESPACE_SYCL

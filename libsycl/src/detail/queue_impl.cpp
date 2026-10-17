@@ -8,6 +8,8 @@
 
 #include <detail/queue_impl.hpp>
 
+#include <sycl/__impl/properties/queue_properties.hpp>
+
 #include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
@@ -54,9 +56,34 @@ private:
 QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &Context,
                      DeviceImpl &Device, const async_handler &AsyncHandler,
                      const property_list &PropList, PrivateTag)
-    : MIsInOrder(false), MAsyncHandler(AsyncHandler), MPropList(PropList),
-      MDevice(Device), MContext(Context) {
+    : MIsInOrder(PropList.has_property<property::queue::in_order>()),
+      MAsyncHandler(AsyncHandler), MPropList(PropList), MDevice(Device),
+      MContext(Context) {
   assert(MContext && "Context impl ptr can't be nullptr");
+
+  // Reject properties that cannot be applied to a queue before any resource
+  // is acquired for it. Not mandated by SYCL 2020, which provides only the
+  // compile-time is_property_of trait, but a property list built elsewhere
+  // and passed in would otherwise be ignored without a word.
+  checkPropertyList<queue>(PropList);
+
+  if (PropList.has_property<property::queue::enable_profiling>()) {
+    // SYCL 2020 4.6.5.5. enable_profiling requires aspect::queue_profiling.
+    if (!MDevice.has(aspect::queue_profiling))
+      throw sycl::exception(
+          createSyclObjFromImpl<context>(*MContext),
+          make_error_code(errc::feature_not_supported),
+          "The device associated with this queue does not support profiling.");
+
+    // TODO: Remove this once the queue actually captures profiling
+    // information and event::get_profiling_info can report it. Until then a
+    // device reporting aspect::queue_profiling would make the check above
+    // pass and the property be accepted and then silently ignored, so it is
+    // rejected as unsupported instead.
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          make_error_code(errc::feature_not_supported),
+                          "Queue profiling is not implemented yet.");
+  }
 
   ol_result_t Err = callNoCheck(olCreateQueue, MContext->getOLHandleRef(),
                                 MDevice.getOLHandle(), &MOffloadQueue);
