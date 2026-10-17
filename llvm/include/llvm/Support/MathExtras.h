@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
+#include <array>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -134,13 +135,13 @@ template <typename T> constexpr T reverseBits(T Val) {
     return __builtin_bitreverse64(Val);
 #endif
 
-  unsigned char in[sizeof(Val)];
-  unsigned char out[sizeof(Val)];
-  std::memcpy(in, &Val, sizeof(Val));
-  for (unsigned i = 0; i < sizeof(Val); ++i)
-    out[(sizeof(Val) - i) - 1] = BitReverseTable256[in[i]];
-  std::memcpy(&Val, out, sizeof(Val));
-  return Val;
+  // Reinterpret Val as a byte array, reverse into Out, then reinterpret back.
+  // bit_cast provides a compile-time size check and avoids raw byte counts.
+  auto In = llvm::bit_cast<std::array<unsigned char, sizeof(T)>>(Val);
+  std::array<unsigned char, sizeof(T)> Out;
+  for (unsigned i = 0; i < sizeof(T); ++i)
+    Out[(sizeof(T) - i) - 1] = BitReverseTable256[In[i]];
+  return llvm::bit_cast<T>(Out);
 }
 
 // NOTE: The following support functions use the _32/_64 extensions instead of

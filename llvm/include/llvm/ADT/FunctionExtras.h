@@ -204,8 +204,9 @@ protected:
     DestroyMovePtr = RHS.DestroyMovePtr;
     if (DestroyMovePtr)
       DestroyMovePtr(this, &RHS);
-    else // Trivial callable stored inline => memcpy.
-      memcpy(&Storage.Inline, &RHS.Storage.Inline, InlineStorageSize);
+    else // Trivial callable stored inline; both arrays are InlineStorageSize
+         // std::bytes — copy via range so no separate count argument exists.
+      llvm::copy(RHS.Storage.Inline, std::begin(Storage.Inline));
 
     RHS.CallPtr = nullptr;
     RHS.DestroyMovePtr = nullptr; // Moved everything out of RHS.
