@@ -1687,9 +1687,10 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp slt <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP15:%.*]] = freeze <vscale x 2 x i1> [[TMP5]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP15]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
@@ -1731,7 +1732,8 @@ define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
-; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
+; NO-VP-NEXT:    [[TMP17:%.*]] = freeze <vscale x 2 x i1> [[TMP6]]
+; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP17]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
@@ -1812,9 +1814,10 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sle <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP15:%.*]] = freeze <vscale x 2 x i1> [[TMP5]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP15]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
@@ -1856,7 +1859,8 @@ define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sle <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
-; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
+; NO-VP-NEXT:    [[TMP17:%.*]] = freeze <vscale x 2 x i1> [[TMP6]]
+; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP17]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
@@ -1937,9 +1941,10 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sgt <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP15:%.*]] = freeze <vscale x 2 x i1> [[TMP5]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP15]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
@@ -1981,7 +1986,8 @@ define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
-; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
+; NO-VP-NEXT:    [[TMP17:%.*]] = freeze <vscale x 2 x i1> [[TMP6]]
+; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP17]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
@@ -2062,9 +2068,10 @@ define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) {
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[I_018]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sge <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP15:%.*]] = freeze <vscale x 2 x i1> [[TMP5]]
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
-; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP15]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
@@ -2106,7 +2113,8 @@ define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) {
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP5]], align 8
 ; NO-VP-NEXT:    [[TMP6:%.*]] = icmp sge <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
-; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
+; NO-VP-NEXT:    [[TMP17:%.*]] = freeze <vscale x 2 x i1> [[TMP6]]
+; NO-VP-NEXT:    [[TMP7]] = select <vscale x 2 x i1> [[TMP17]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI3]]
 ; NO-VP-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]

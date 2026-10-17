@@ -275,7 +275,8 @@ define i64 @find_last_iv(ptr %src, i64 %n) !prof !0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD]], splat (i64 3)
-; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP8]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -309,7 +310,8 @@ define i64 @find_last_iv(ptr %src, i64 %n) !prof !0 {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX5]]
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x i64>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD8]], splat (i64 3)
-; CHECK-NEXT:    [[TMP13]] = select <2 x i1> [[TMP12]], <2 x i64> [[VEC_IND6]], <2 x i64> [[VEC_PHI7]]
+; CHECK-NEXT:    [[TMP19:%.*]] = freeze <2 x i1> [[TMP12]]
+; CHECK-NEXT:    [[TMP13]] = select <2 x i1> [[TMP19]], <2 x i64> [[VEC_IND6]], <2 x i64> [[VEC_PHI7]]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT10]] = add nuw nsw <2 x i64> [[VEC_IND6]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC2]]
