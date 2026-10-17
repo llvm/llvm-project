@@ -23,18 +23,19 @@ using namespace offload::tblgen;
 constexpr auto PrintTypeHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the {0} type
-/// @returns llvm::raw_ostream &
+/// @returns os
 )";
 
 constexpr auto PrintTaggedEnumHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print type-tagged {0} enum value
-/// @returns llvm::raw_ostream &
+/// @returns os
 )";
 
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv(PrintTypeHeader, Enum.getName());
-  OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
+  OS << formatv("template <typename OS>\n"
+                "inline ol_print::enable_if_stream_t<OS> operator<<(OS &os, "
                 "enum {0} value) "
                 "{{\n" TAB_1 "switch (value) {{\n",
                 Enum.getName());
@@ -55,8 +56,8 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 
   OS << formatv(PrintTaggedEnumHeader, Enum.getName());
 
-  OS << formatv(R"""(template <>
-inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_t size) {{
+  OS << formatv(R"""(template <typename OS>
+inline void printTagged(OS &os, const void *ptr, {0} value, size_t size) {{
   if (ptr == NULL) {{
     printPtr(os, ptr);
     return;
@@ -82,9 +83,10 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
         OS << formatv(
             TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n", Type);
       // TODO: Handle other cases here
-      OS << TAB_2 "os << (const void *)tptr << \" (\";\n";
+      OS << TAB_2 "os << (const void *)tptr;\n";
+      OS << TAB_2 "os << \" (\";\n";
       if (Type.ends_with("*")) {
-        OS << TAB_2 "os << printPtr(os, tptr);\n";
+        OS << TAB_2 "printPtr(os, tptr);\n";
       } else {
         OS << TAB_2 "os << *tptr;\n";
       }
@@ -101,7 +103,8 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
 
 static void EmitResultPrint(raw_ostream &OS) {
   OS << R""(
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+template <typename OS>
+inline ol_print::enable_if_stream_t<OS> operator<<(OS &os,
                                 const ol_error_struct_t *Err) {
   if (Err == nullptr) {
     os << "OL_SUCCESS";
@@ -120,7 +123,8 @@ static void EmitFunctionParamStructPrint(const FunctionRec &Func,
   }
 
   OS << formatv(R"(
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} *params) {{
+template <typename OS>
+inline ol_print::enable_if_stream_t<OS> operator<<(OS &os, const struct {0} *params) {{
 )",
                 Func.getParamStructName());
 
@@ -164,7 +168,8 @@ void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   }
   OS << formatv(PrintTypeHeader, Struct.getName());
   OS << formatv(R"(
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} params) {{
+template <typename OS>
+inline ol_print::enable_if_stream_t<OS> operator<<(OS &os, const struct {0} params) {{
 )",
                 Struct.getName());
   OS << formatv(TAB_1 "os << \"(struct {0}){{\";\n", Struct.getName());
@@ -192,11 +197,83 @@ void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
 #pragma once
 
 #include <OffloadAPI.h>
-#include <llvm/Support/raw_ostream.h>
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
+#include <utility>
 
+namespace ol_print {
+namespace detail {
+// The stream traits below only use member expressions (nested types, .write,
+// .flush, .operator<<). Member lookup never finds the free operator<< templates
+// in this header, so evaluating a trait cannot recursively require itself.
 
-template <typename T> inline ol_result_t printPtr(llvm::raw_ostream &os, const T *ptr);
-template <typename T> inline void printTagged(llvm::raw_ostream &os, const void *ptr, T value, size_t size);
+// Primitive inserts that are member functions of both std::basic_ostream and
+// llvm::raw_ostream.
+template <typename OS, typename = void>
+struct has_member_inserts : std::false_type {};
+template <typename OS>
+struct has_member_inserts<
+    OS, std::void_t<
+            decltype(std::declval<OS &>().operator<<(std::declval<const void *>())),
+            decltype(std::declval<OS &>().operator<<(std::declval<bool>())),
+            decltype(std::declval<OS &>().operator<<(std::declval<uint32_t>())),
+            decltype(std::declval<OS &>().operator<<(std::declval<uint64_t>())),
+            decltype(std::declval<OS &>().operator<<(std::declval<size_t>()))>>
+    : std::true_type {};
+
+// Character inserts, which llvm::raw_ostream provides as members (in
+// std::basic_ostream they are free functions).
+template <typename OS, typename = void>
+struct has_member_char_inserts : std::false_type {};
+template <typename OS>
+struct has_member_char_inserts<
+    OS, std::void_t<
+            decltype(std::declval<OS &>().operator<<(std::declval<const char *>())),
+            decltype(std::declval<OS &>().operator<<(std::declval<char>()))>>
+    : std::true_type {};
+
+// Detects std::basic_ostream-like types.
+template <typename OS, typename = void>
+struct is_std_ostream_like : std::false_type {};
+template <typename OS>
+struct is_std_ostream_like<
+    OS, std::void_t<typename OS::char_type, typename OS::traits_type,
+                    decltype(std::declval<OS &>().write(
+                        std::declval<const typename OS::char_type *>(),
+                        std::declval<size_t>())),
+                    decltype(std::declval<OS &>().flush())>>
+    : has_member_inserts<OS> {};
+
+// Detects llvm::raw_ostream-like types.
+template <typename OS, typename = void>
+struct is_raw_ostream_like : std::false_type {};
+template <typename OS>
+struct is_raw_ostream_like<
+    OS, std::void_t<typename OS::OStreamKind,
+                    decltype(std::declval<OS &>().write(
+                        std::declval<const char *>(), std::declval<size_t>())),
+                    decltype(std::declval<OS &>().flush())>>
+    : std::conjunction<has_member_inserts<OS>, has_member_char_inserts<OS>> {};
+} // namespace detail
+
+/// Selects the output types the print operators in this header accept.
+///
+/// std::ostream-like and llvm::raw_ostream-like types are detected
+/// structurally. Other output types can opt in by specializing this trait,
+/// either fully or partially through the second parameter, before first use.
+/// Such a type must support `os << x` for `const char *`, `const void *`,
+/// `char`, `bool`, `uint32_t`, `uint64_t` and `size_t`; the result of `<<` is
+/// not used.
+template <typename OS, typename = void>
+struct is_stream : std::disjunction<detail::is_std_ostream_like<OS>,
+                                    detail::is_raw_ostream_like<OS>> {};
+template <typename OS> inline constexpr bool is_stream_v = is_stream<OS>::value;
+template <typename OS>
+using enable_if_stream_t = std::enable_if_t<is_stream_v<OS>, OS &>;
+} // namespace ol_print
+
+template <typename OS, typename T> inline void printPtr(OS &os, const T *ptr);
 )""";
 
   // ==========
@@ -214,12 +291,14 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
   // use each other.
   OS << "\n";
   for (auto *R : Records.getAllDerivedDefinitions("Enum")) {
-    OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
+    OS << formatv("template <typename OS>\n"
+                  "inline ol_print::enable_if_stream_t<OS> operator<<(OS &os, "
                   "enum {0} value);\n",
                   EnumRec{R}.getName());
   }
   for (auto *R : Records.getAllDerivedDefinitions("Struct")) {
-    OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
+    OS << formatv("template <typename OS>\n"
+                  "inline ol_print::enable_if_stream_t<OS> operator<<(OS &os, "
                   "const struct {0} param);\n",
                   StructRec{R}.getName());
   }
@@ -245,26 +324,27 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
   OS << R"""(
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
-template <typename T> inline ol_result_t printPtr(llvm::raw_ostream &os, const T *ptr) {
+template <typename OS, typename T> inline void printPtr(OS &os, const T *ptr) {
     if (ptr == nullptr) {
         os << "nullptr";
     } else if constexpr (std::is_pointer_v<T>) {
-        os << (const void *)(ptr) << " (";
+        os << (const void *)(ptr);
+        os << " (";
         printPtr(os, *ptr);
         os << ")";
     } else if constexpr (std::is_void_v<T> || is_handle_v<T *>) {
         os << (const void *)ptr;
     } else if constexpr (std::is_same_v<std::remove_cv_t< T >, char>) {
-        os << (const void *)(ptr) << " (";
+        os << (const void *)(ptr);
+        os << " (";
         os << ptr;
         os << ")";
     } else {
-        os << (const void *)(ptr) << " (";
+        os << (const void *)(ptr);
+        os << " (";
         os << *ptr;
         os << ")";
     }
-
-    return OL_SUCCESS;
 }
   )""";
 }
