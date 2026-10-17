@@ -155,9 +155,7 @@ def ext: GICombineRule<
 def fullrev: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
-         [{ return mi_match(${src2}.getReg(), MRI, m_GImplicitDef()) &&
-                   ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
-                                                    ${mask}.getShuffleMask().size()); }]),
+         [{ return matchFullRev(*${root}, MRI); }]),
   (apply [{ applyFullRev(*${root}, MRI); }])
 >;
 

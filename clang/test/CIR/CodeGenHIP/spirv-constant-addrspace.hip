@@ -29,6 +29,10 @@
 __constant__ int tab[2] = {1, 2};
 __device__ int dev = 3;
 
+// Functions live in the program address space 4.
+// LLVM-DAG: @llvm.used = {{.*}}ptr addrspace(4) @_Z7used_fnv
+__attribute__((used)) __device__ void used_fn() {}
+
 // CIR-LABEL: cir.func{{.*}} @_Z10static_fmti
 // CIR: %[[G:.*]] = cir.get_global @_ZZ10static_fmtiE3fmt : !cir.ptr<!cir.array<!s8i x 3>, target_address_space(1)>
 // CIR: cir.cast address_space %[[G]] : !cir.ptr<!cir.array<!s8i x 3>, target_address_space(1)> -> !cir.ptr<!cir.array<!s8i x 3>, target_address_space(4)>

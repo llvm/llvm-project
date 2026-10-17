@@ -331,7 +331,7 @@ private:
   SDValue PromoteIntRes_SExtIntBinOp(SDNode *N);
   SDValue PromoteIntRes_ZExtMaskedIntBinOp(SDNode *N);
   SDValue PromoteIntRes_SExtMaskedIntBinOp(SDNode *N);
-  SDValue PromoteIntRes_UMINUMAX(SDNode *N);
+  SDValue PromoteIntRes_SExtOrZExtIntBinOp(SDNode *N);
   SDValue PromoteIntRes_SIGN_EXTEND_INREG(SDNode *N);
   SDValue PromoteIntRes_SRA(SDNode *N);
   SDValue PromoteIntRes_SRL(SDNode *N);

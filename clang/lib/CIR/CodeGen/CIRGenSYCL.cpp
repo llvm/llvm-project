@@ -164,8 +164,5 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
   setDSOLocal(static_cast<mlir::Operation *>(funcOp));
 
   setNonAliasAttributes(GlobalDecl(), funcOp);
-  // CIR's setter takes a FunctionDecl; nullptr skips OutlinedFunctionDecl-
-  // derived attributes (e.g. inline hints), not yet handled.
-  assert(!cir::MissingFeatures::opFuncExtraAttrs());
-  setCIRFunctionAttributesForDefinition(/*fd=*/nullptr, funcOp);
+  setCIRFunctionAttributesForDefinition(outlinedFnDecl, funcOp);
 }

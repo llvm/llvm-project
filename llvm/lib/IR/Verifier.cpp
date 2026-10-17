@@ -433,6 +433,7 @@ private:
   void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
+  void checkGEPOperator(const GEPOperator &GEP);
   void visitGetElementPtrInst(GetElementPtrInst &GEP);
   void visitLoadInst(LoadInst &LI);
   void visitStoreInst(StoreInst &SI);
@@ -2969,6 +2970,8 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
           "Invalid bitcast", CE);
   } else if (CE->getOpcode() == Instruction::PtrToAddr)
     checkPtrToAddr(CE->getOperand(0)->getType(), CE->getType(), *CE);
+  else if (CE->getOpcode() == Instruction::GetElementPtr)
+    checkGEPOperator(cast<GEPOperator>(*CE));
 }
 
 void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
@@ -3527,6 +3530,20 @@ void Verifier::visitFunction(const Function &F) {
           PrintDecl);
   }
 
+  // Oracle functions of llvm.speculative.load may not be referenced in any
+  // other way.
+  if (isMaterialized && F.hasFnAttribute("oracle-function")) {
+    Check(F.hasLocalLinkage(), "oracle function must have local linkage", &F);
+    for (const Use &U : F.uses()) {
+      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+      Check(II && II->getIntrinsicID() == Intrinsic::speculative_load &&
+                II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2,
+            "oracle function may only be used as the oracle operand of "
+            "llvm.speculative.load",
+            &F, U.getUser());
+    }
+  }
+
   auto *N = F.getSubprogram();
   HasDebugInfo = (N != nullptr);
   if (!HasDebugInfo)
@@ -3588,9 +3605,6 @@ void Verifier::visitFunction(const Function &F) {
 void Verifier::visitBasicBlock(BasicBlock &BB) {
   InstsInThisBlock.clear();
   ConvergenceVerifyHelper.visit(BB);
-
-  // Ensure that basic blocks have terminators!
-  Check(BB.getTerminator(), "Basic Block does not have terminator!", &BB);
 
   // Check constraints that this basic block imposes on all of the PHI nodes in
   // it.
@@ -4644,12 +4658,7 @@ void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
   visitInstruction(BEI);
 }
 
-void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
-  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
-          GEP.getModule()->getModuleFlag("require-logical-pointer")))
-    Check(!MD->getZExtValue(),
-          "Non-logical getelementptr disallowed for this module.");
-
+void Verifier::checkGEPOperator(const GEPOperator &GEP) {
   Type *TargetTy = GEP.getPointerOperandType()->getScalarType();
 
   Check(isa<PointerType>(TargetTy),
@@ -4706,9 +4715,17 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  Check(GEP.getAddressSpace() == PtrTy->getAddressSpace(),
+  Check(GEP.getPointerAddressSpace() == PtrTy->getAddressSpace(),
         "GEP address space doesn't match type", &GEP);
+}
 
+void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          GEP.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical getelementptr disallowed for this module.");
+
+  checkGEPOperator(cast<GEPOperator>(GEP));
   visitInstruction(GEP);
 }
 
@@ -6735,8 +6752,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       // statepoint terminator
       Check(InvokeBB, "safepoints should have unique landingpads",
             LandingPad->getParent());
-      Check(InvokeBB->getTerminator(), "safepoint block should be well formed",
-            InvokeBB);
       Check(isa<GCStatepointInst>(InvokeBB->getTerminator()),
             "gc relocate should be linked to a statepoint", InvokeBB);
     } else {
@@ -7090,6 +7105,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Check(OracleFn,
             "llvm.speculative.load third argument must be i64 or a direct "
             "reference to an oracle function",
+            &Call);
+
+      Check(OracleFn->hasFnAttribute("oracle-function"),
+            "llvm.speculative.load oracle function must have the "
+            "\"oracle-function\" attribute",
             &Call);
 
       // Make sure the called oracle matches the attributes of the intrinsic.
