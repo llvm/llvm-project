@@ -417,6 +417,17 @@ std::vector<TargetGroupSP> Target::GetTargetGroups() const {
   return m_target_groups.GetGroups();
 }
 
+std::vector<TargetGroupSP>
+Target::GetTargetGroups(TargetGroup::Role role) const {
+  TargetSP target_sp = std::const_pointer_cast<Target>(shared_from_this());
+  std::vector<TargetGroupSP> matching_groups;
+  for (const TargetGroupSP &group_sp : GetTargetGroups()) {
+    if (group_sp->GetRole(target_sp) == role)
+      matching_groups.push_back(group_sp);
+  }
+  return matching_groups;
+}
+
 void Target::AddTargetGroup(const TargetGroupSP &group_sp) {
   m_target_groups.Add(group_sp);
 }
