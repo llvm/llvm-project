@@ -252,7 +252,6 @@ define double @convert_u64_to_double(i64 %a) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vffint.d.lu $vr0, $vr0
-; LA64-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    ret
   %1 = uitofp i64 %a to double

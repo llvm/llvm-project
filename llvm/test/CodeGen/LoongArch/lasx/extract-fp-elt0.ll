@@ -6,7 +6,6 @@
 define double @extract_v4f64_0(<4 x double> %v, double %a) nounwind {
 ; CHECK-LABEL: extract_v4f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
 ; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %e = extractelement <4 x double> %v, i32 0
@@ -28,9 +27,8 @@ define double @extract_v4f64_1(<4 x double> %v, double %a) nounwind {
 define double @extract_v4f64_sum(<4 x double> %v) nounwind {
 ; CHECK-LABEL: extract_v4f64_sum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 0
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 1
-; CHECK-NEXT:    fadd.d $fa0, $fa1, $fa0
+; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 1
+; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <4 x double> %v, i32 0
   %e1 = extractelement <4 x double> %v, i32 1
@@ -41,7 +39,6 @@ define double @extract_v4f64_sum(<4 x double> %v) nounwind {
 define float @extract_v8f32_0(<8 x float> %v, float %a) nounwind {
 ; CHECK-LABEL: extract_v8f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 0
 ; CHECK-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x float> %v, i32 0
