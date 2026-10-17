@@ -1681,8 +1681,7 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
 //===- MachineOperandTypeMatcher -----------------------------------------===//
 
-void MachineOperandTypeMatcher::emitPredicateOpcodes(MatchTable &Table,
-                                                     RuleMatcher &Rule) const {
+void MachineOperandTypeMatcher::emitPredicateOpcodes(MatchTable &Table) const {
   Table << MatchTable::Opcode("GIM_CheckMachineOperandType")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)

@@ -1509,21 +1509,6 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   return false;
 }
 
-// TODO: This is a short term downstream fix to ignore $ prefixed
-// entries in a clang config file. A long term fix will be
-// upstreamed that will most likely include setting
-// FinalPhase = phase::Precompile for all PCH invocations.
-static bool anyInputReachesLinkPhase(const InputList &Inputs,
-                                     phases::ID FinalPhase) {
-  for (const auto &I : Inputs) {
-    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PL =
-        types::getCompilationPhases(I.first, FinalPhase);
-    if (!PL.empty() && PL.back() == phases::Link)
-      return true;
-  }
-  return false;
-}
-
 Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
 

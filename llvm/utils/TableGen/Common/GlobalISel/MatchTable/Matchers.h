@@ -1783,8 +1783,7 @@ public:
     return P->getKind() == OPM_MOType;
   }
 
-  void emitPredicateOpcodes(MatchTable &Table,
-                            RuleMatcher &Rule) const;
+  void emitPredicateOpcodes(MatchTable &Table) const override;
 };
 
 //===- Actions ------------------------------------------------------------===//
