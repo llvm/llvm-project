@@ -283,6 +283,9 @@ private:
   SmallVector<MCRegister, 4> LiveDefRegs;
 
   SmallVector<unsigned, 8> DefOperandIndexes;
+  // Def operands of the current instruction given an error assignment. They
+  // do not own their register, so freeing the defs must skip them.
+  SmallVector<unsigned, 2> ErrorDefOperands;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
 
@@ -1235,6 +1238,8 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   if (MI.getOpcode() == TargetOpcode::BUNDLE) {
     BundleVirtRegsMap[VirtReg] = *LRI;
   }
+  if (LRI->Error)
+    ErrorDefOperands.push_back(OpNum);
   markRegUsedInInstr(PhysReg);
   return setPhysReg(MI, MO, *LRI);
 }
@@ -1637,6 +1642,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   RegMasks.clear();
   LiveDefRegs.clear();
   BundleVirtRegsMap.clear();
+  ErrorDefOperands.clear();
 
   // Scan for special cases; Apply pre-assigned register defs to state.
   bool HasPhysRegUse = false;
@@ -1700,6 +1706,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       if (NeedToAssignLiveThroughs) {
         while (ReArrangedImplicitOps) {
           ReArrangedImplicitOps = false;
+          ErrorDefOperands.clear();
           findAndSortDefOperandIndexes(MI);
           for (unsigned OpIdx : DefOperandIndexes) {
             MachineOperand &MO = MI.getOperand(OpIdx);
@@ -1720,6 +1727,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         // Assign virtual register defs.
         while (ReArrangedImplicitOps) {
           ReArrangedImplicitOps = false;
+          ErrorDefOperands.clear();
           for (MachineOperand &MO : MI.all_defs()) {
             Register Reg = MO.getReg();
             if (Reg.isVirtual()) {
@@ -1766,6 +1774,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       }
       assert(Reg.isPhysical());
       if (MRI->isReserved(Reg))
+        continue;
+      if (is_contained(ErrorDefOperands, MI.getOperandNo(&MO)))
         continue;
       freePhysReg(Reg);
       unmarkRegUsedInInstr(Reg);
