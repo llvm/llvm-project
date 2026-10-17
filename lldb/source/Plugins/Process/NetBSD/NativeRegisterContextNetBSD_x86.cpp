@@ -16,8 +16,8 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Utility/RegisterContextNetBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoNetBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoNetBSD_x86_64.h"
 
 // clang-format off
 #include <sys/types.h>
@@ -253,14 +253,14 @@ NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
-    // 32-bit hosts run with a RegisterContextNetBSD_i386 context.
-    return new RegisterContextNetBSD_i386(target_arch);
+    // 32-bit hosts run with a RegisterInfoNetBSD_i386 context.
+    return new RegisterInfoNetBSD_i386(target_arch);
   } else {
     assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
            "Register setting path assumes this is a 64-bit host");
     // X86_64 hosts know how to work with 64-bit and 32-bit EXEs using the
     // x86_64 register context.
-    return new RegisterContextNetBSD_x86_64(target_arch);
+    return new RegisterInfoNetBSD_x86_64(target_arch);
   }
 }
 

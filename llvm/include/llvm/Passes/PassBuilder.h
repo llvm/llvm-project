@@ -37,13 +37,24 @@ class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
 struct PassesOptions;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
 public:
-  /// Constructor sets pipeline tuning defaults based on cl::opts. Each option
-  /// can be set in the PassBuilder when using a LLVM as a library.
-  LLVM_ABI PipelineTuningOptions();
+  /// Constructor sets pipeline tuning defaults based on the global values of
+  /// the library options. Each option can be set in the PassBuilder when using
+  /// a LLVM as a library.
+  PipelineTuningOptions() : PipelineTuningOptions(nullptr) {}
+
+  /// Reads the defaults from \p LibraryOptions, or their global values if
+  /// null.
+  LLVM_ABI explicit PipelineTuningOptions(
+      const cl::LibraryOptionsContext *LibraryOptions);
+
+  const cl::LibraryOptionsContext *LibraryOptions;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;
@@ -118,6 +129,7 @@ enum class PrintPipelinePassesFormat {
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
+  const cl::LibraryOptionsContext *LibraryOptions;
   const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
@@ -672,6 +684,13 @@ public:
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
+  }
+
+  /// Returns the library options the pipelines read: the
+  /// PipelineTuningOptions', else the TargetMachine's, else null for the global
+  /// values.
+  const cl::LibraryOptionsContext *getLibraryOptions() const {
+    return LibraryOptions;
   }
 
   /// Returns the virtual file system.

@@ -892,8 +892,8 @@ private:
           assert(FC1.GuardBranch && "Expecting valid FC1 guard branch");
 
           if (!isSafeToMoveBefore(*FC0.ExitBlock,
-                                  *FC1.ExitBlock->getFirstNonPHIOrDbg(), DT,
-                                  &PDT, &DI)) {
+                                  *FC1.ExitBlock->getFirstNonPHIOrPseudoProbe(),
+                                  DT, &PDT, &DI)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
                                  "instructions in exit block. Not fusing.\n");
             ++NonEmptyExitBlock;
@@ -2053,7 +2053,9 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
-  LoopFuser LF(ScalarOptions::Global, LI, DT, DI, AA, SE, PDT, ORE, AC, TTI);
+  const ScalarOptions &Opts =
+      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  LoopFuser LF(Opts, LI, DT, DI, AA, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
     return PreservedAnalyses::all();
