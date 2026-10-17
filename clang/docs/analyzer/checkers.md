@@ -3503,6 +3503,55 @@ void bad_insert3(std::vector &v1, std::vector &v2) {
 }
 ```
 
+(alpha-cplusplus-placementselfcopy)=
+
+#### alpha.cplusplus.PlacementSelfCopy (C++)
+
+Check for placement new expressions that initialize the new object from the
+storage it is placed into, e.g. `::new (p) T(*p)`. Construction overwrites that
+storage, so a read of a part that has already been written sees the new value
+of the object being created.
+
+If the constructor is inlined, the checker follows its writes to the storage
+and reports the first read of an overwritten part. Reads through `this` are
+allowed. The elements of an initializer list are treated as written in order.
+A copy or move constructor that is not inlined, such as a trivial copy or a
+constructor without a visible definition, is reported whenever its source is
+the storage itself. Calls of `std::construct_at` are reported at the call site.
+
+```cpp
+struct Buffer {
+  int *Data;
+  int Size;
+  Buffer(const Buffer &O) : Data(new int[O.Size]), Size(O.Size) {
+    for (int I = 0; I < Size; ++I)
+      Data[I] = O.Data[I]; // warn: placement new reads a part of its storage
+                           //       that it has already overwritten
+  }
+};
+
+void reconstruct(Buffer *B) {
+  ::new (B) Buffer(*B);
+}
+
+struct Point {
+  int X, Y;
+};
+
+void swap_coordinates(Point *P) {
+  ::new (P) Point{P->Y, P->X}; // warn: P->X is read after X is initialized
+}
+
+struct Trivial {
+  int X;
+};
+
+void trivial_copy(Trivial *T) {
+  ::new (T) Trivial(*T); // warn: object constructed by placement new is
+                         //       initialized from the storage it is placed into
+}
+```
+
 (alpha-cplusplus-smartptr)=
 
 #### alpha.cplusplus.SmartPtr (C++)
