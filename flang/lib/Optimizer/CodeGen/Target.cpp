@@ -2031,6 +2031,44 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// WebAssembly (wasm32 / wasm64) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+template <int Width>
+struct TargetWasm : public GenericTarget<TargetWasm<Width>> {
+  using GenericTarget<TargetWasm<Width>>::GenericTarget;
+  using AT = CodeGenSpecifics::Attributes;
+
+  static constexpr int defaultWidth = Width;
+
+  CodeGenSpecifics::Marshalling complexType(mlir::Type eleTy,
+                                            bool isResult) const {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
+    auto alignment = static_cast<unsigned short>(
+        this->getDataLayout().getTypeABIAlignment(eleTy));
+    marshal.emplace_back(fir::ReferenceType::get(structTy),
+                         AT{/*alignment=*/alignment, /*byval=*/!isResult,
+                            /*sret=*/isResult});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
+    return complexType(eleTy, /*isResult=*/false);
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location, mlir::Type eleTy) const override {
+    return complexType(eleTy, /*isResult=*/true);
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
@@ -2102,6 +2140,14 @@ std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
     return std::make_unique<TargetSystemZ>(ctx, std::move(trp),
                                            std::move(kindMap), targetCPU,
                                            targetFeatures, targetABI, dl);
+  case llvm::Triple::ArchType::wasm32:
+    return std::make_unique<TargetWasm<32>>(ctx, std::move(trp),
+                                            std::move(kindMap), targetCPU,
+                                            targetFeatures, targetABI, dl);
+  case llvm::Triple::ArchType::wasm64:
+    return std::make_unique<TargetWasm<64>>(ctx, std::move(trp),
+                                            std::move(kindMap), targetCPU,
+                                            targetFeatures, targetABI, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }
