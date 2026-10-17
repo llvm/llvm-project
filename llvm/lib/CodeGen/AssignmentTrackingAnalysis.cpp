@@ -13,6 +13,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -35,6 +36,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <assert.h>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <queue>
 #include <sstream>
@@ -368,12 +370,13 @@ class MemLocFragmentFill {
   using BaseAddress = unsigned;
   using OffsetInBitsTy = unsigned;
   using FragTraits = IntervalMapHalfOpenInfo<OffsetInBitsTy>;
-  using FragsInMemMap = IntervalMap<
-      OffsetInBitsTy, BaseAddress,
-      IntervalMapImpl::NodeSizer<OffsetInBitsTy, BaseAddress>::LeafSize,
-      FragTraits>;
+  using FragsInMemMap = IntervalMap<OffsetInBitsTy, BaseAddress, 4, FragTraits>;
   FragsInMemMap::Allocator IntervalMapAlloc;
   using VarFragMap = DenseMap<unsigned, FragsInMemMap>;
+
+  /// Variables in VarsWithStackSlot that have at least one sub-variable
+  /// fragment. Variables without fragments never need fragment filling.
+  SmallDenseSet<DebugAggregate, 8> FragmentedVars;
 
   /// IDs for memory location base addresses in maps. Use 0 to indicate that
   /// there's no memory location.
@@ -485,7 +488,7 @@ class MemLocFragmentFill {
         // [ r ]
         LLVM_DEBUG(dbgs() << "- a is contained within "
                           << toString(FirstOverlap));
-        if (*AIt && *AIt == *FirstOverlap)
+        if (*AIt == *FirstOverlap)
           Result.insert(AIt.start(), AIt.stop(), *AIt);
       } else {
         // There's an overlap but `a` is not fully contained within
@@ -498,7 +501,7 @@ class MemLocFragmentFill {
         if (IntersectStart) {
           LLVM_DEBUG(dbgs() << "- insert intersection of a and "
                             << toString(FirstOverlap));
-          if (*AIt && *AIt == *FirstOverlap)
+          if (*AIt == *FirstOverlap)
             Result.insert(AIt.start(), FirstOverlap.stop(), *AIt);
           ++Next;
         }
@@ -509,7 +512,7 @@ class MemLocFragmentFill {
         if (IntersectEnd) {
           LLVM_DEBUG(dbgs() << "- insert intersection of a and "
                             << toString(LastOverlap));
-          if (*AIt && *AIt == *LastOverlap)
+          if (*AIt == *LastOverlap)
             Result.insert(LastOverlap.start(), AIt.stop(), *AIt);
         }
 
@@ -523,7 +526,7 @@ class MemLocFragmentFill {
                Next.stop() <= AIt.stop()) {
           LLVM_DEBUG(dbgs()
                      << "- insert intersection of a and " << toString(Next));
-          if (*AIt && *AIt == *Next)
+          if (*AIt == *Next)
             Result.insert(Next.start(), Next.stop(), *Next);
           ++Next;
         }
@@ -544,12 +547,12 @@ class MemLocFragmentFill {
       LLVM_DEBUG(dbgs() << "meet fragment maps for "
                         << Aggregates[Entry.first].first->getName() << "\n");
       Entry.second = meetFragments(Entry.second, BIt->second);
-      return false;
+      return Entry.second.empty();
     });
   }
 
-  bool meet(const BasicBlock &BB,
-            const SmallPtrSet<BasicBlock *, 16> &Visited) {
+  bool meet(const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited,
+            bool StoreLiveIn, VarFragMap &LiveSet) {
     LLVM_DEBUG(dbgs() << "meet block info from preds of " << BB.getName()
                       << "\n");
 
@@ -584,12 +587,18 @@ class MemLocFragmentFill {
         break;
     }
 
+    if (!StoreLiveIn) {
+      LiveSet = std::move(BBLiveIn);
+      return /*Changed=*/true;
+    }
+
     // If there's no LiveIn entry for the block yet, add it.
     auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB);
     if (Inserted) {
       LLVM_DEBUG(dbgs() << "change=true (first) on meet on " << BB.getName()
                         << "\n");
-      CurrentLiveInEntry->second = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = BBLiveIn;
+      LiveSet = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -597,7 +606,8 @@ class MemLocFragmentFill {
     // true.
     if (!varFragMapsAreEqual(BBLiveIn, CurrentLiveInEntry->second)) {
       LLVM_DEBUG(dbgs() << "change=true on meet on " << BB.getName() << "\n");
-      CurrentLiveInEntry->second = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = BBLiveIn;
+      LiveSet = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -609,13 +619,11 @@ class MemLocFragmentFill {
                     unsigned StartBit, unsigned EndBit, unsigned Base,
                     DebugLoc DL) {
     assert(StartBit < EndBit && "Cannot create fragment of size <= 0");
-    if (!Base)
-      return;
+    assert(Base && "Expected a non-zero ID for Base address");
     FragMemLoc Loc;
     Loc.Var = Var;
     Loc.OffsetInBits = StartBit;
     Loc.SizeInBits = EndBit - StartBit;
-    assert(Base && "Expected a non-zero ID for Base address");
     Loc.Base = Base;
     Loc.DL = DL;
     BBInsertBeforeMap[&BB][Before].push_back(Loc);
@@ -654,9 +662,9 @@ class MemLocFragmentFill {
     if (skipVariable(DbgVar.getVariable()))
       return;
     // Don't bother doing anything for this variables if we know it's fully
-    // promoted. We're only interested in variables that (sometimes) live on
-    // the stack here.
-    if (!VarsWithStackSlot->count(getAggregate(DbgVar)))
+    // promoted or never fragmented. We're only interested in fragmented
+    // variables that (sometimes) live on the stack here.
+    if (!FragmentedVars.count(getAggregate(DbgVar)))
       return;
     unsigned Var = Aggregates.insert(
         DebugAggregate(DbgVar.getVariable(), VarLoc.DL.getInlinedAt()));
@@ -698,6 +706,8 @@ class MemLocFragmentFill {
 
     // Check if the variable does not exist in the map.
     if (FragIt == LiveSet.end()) {
+      if (!Base)
+        return;
       // Add this variable to the BB map.
       auto P = LiveSet.try_emplace(Var, FragsInMemMap(IntervalMapAlloc));
       assert(P.second && "Var already in map?");
@@ -712,9 +722,11 @@ class MemLocFragmentFill {
     // intervals.
     if (!FragMap.overlaps(StartBit, EndBit)) {
       LLVM_DEBUG(dbgs() << "- No overlaps\n");
-      FragMap.insert(StartBit, EndBit, Base);
-      coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
-                        FragMap);
+      if (Base) {
+        FragMap.insert(StartBit, EndBit, Base);
+        coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
+                          FragMap);
+      }
       return;
     }
     // There is at least one overlap.
@@ -752,7 +764,8 @@ class MemLocFragmentFill {
                    VarLoc.DL);
 
       // Insert the new (middle) fragment now there is space.
-      FragMap.insert(StartBit, EndBit, Base);
+      if (Base)
+        FragMap.insert(StartBit, EndBit, Base);
     } else {
       // There's an overlap but `f` may not be fully contained within
       // `i`. Shorten any end-point intersections so that we can then
@@ -802,12 +815,17 @@ class MemLocFragmentFill {
       }
       // We've dealt with all the overlaps now!
       assert(!FragMap.overlaps(StartBit, EndBit));
-      LLVM_DEBUG(dbgs() << "- Insert DEF into now-empty space\n");
-      FragMap.insert(StartBit, EndBit, Base);
+      if (Base) {
+        LLVM_DEBUG(dbgs() << "- Insert DEF into now-empty space\n");
+        FragMap.insert(StartBit, EndBit, Base);
+      }
     }
 
-    coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
-                      FragMap);
+    if (Base)
+      coalesceFragments(BB, Before, Var, StartBit, EndBit, Base, VarLoc.DL,
+                        FragMap);
+    else if (FragMap.empty())
+      LiveSet.erase(FragIt);
   }
 
   bool skipVariable(const DILocalVariable *V) { return !V->getSizeInBits(); }
@@ -863,27 +881,77 @@ public:
 
     this->FnVarLocs = FnVarLocs;
 
+    FragmentedVars.clear();
+    for (unsigned ID = 1, End = FnVarLocs->getNumVariables(); ID <= End; ++ID) {
+      const DebugVariable &DV =
+          FnVarLocs->getVariable(static_cast<VariableID>(ID));
+      if (skipVariable(DV.getVariable()))
+        continue;
+      auto Frag = DV.getFragment();
+      if (!Frag)
+        continue;
+      if (Frag->OffsetInBits != 0 ||
+          Frag->SizeInBits != *DV.getVariable()->getSizeInBits()) {
+        DebugAggregate Aggr = getAggregate(DV);
+        if (VarsWithStackSlot->count(Aggr))
+          FragmentedVars.insert(Aggr);
+      }
+    }
+    if (FragmentedVars.empty())
+      return;
+
     // Prepare for traversal.
     //
     ReversePostOrderTraversal<Function *> RPOT(&Fn);
-    std::priority_queue<unsigned int, std::vector<unsigned int>,
-                        std::greater<unsigned int>>
+    std::priority_queue<unsigned, std::vector<unsigned>, std::greater<unsigned>>
         Worklist;
-    std::priority_queue<unsigned int, std::vector<unsigned int>,
-                        std::greater<unsigned int>>
+    std::priority_queue<unsigned, std::vector<unsigned>, std::greater<unsigned>>
         Pending;
-    DenseMap<unsigned int, BasicBlock *> OrderToBB;
-    DenseMap<BasicBlock *, unsigned int> BBToOrder;
-    { // Init OrderToBB and BBToOrder.
-      unsigned int RPONumber = 0;
-      for (BasicBlock *BB : RPOT) {
-        OrderToBB[RPONumber] = BB;
-        BBToOrder[BB] = RPONumber;
-        Worklist.push(RPONumber);
-        ++RPONumber;
+    SmallVector<BasicBlock *, 16> OrderToBB;
+    SmallDenseMap<const BasicBlock *, unsigned, 16> BBToOrder;
+    for (BasicBlock *BB : RPOT) {
+      unsigned RPONumber = OrderToBB.size();
+      OrderToBB.push_back(BB);
+      BBToOrder[BB] = RPONumber;
+      Worklist.push(RPONumber);
+    }
+    unsigned NumBlocks = OrderToBB.size();
+    SmallBitVector OnWorklist(NumBlocks, true);
+    SmallBitVector OnPending(NumBlocks, false);
+
+    // Identify blocks reachable from backedges (the only blocks that can be
+    // visited more than once).
+    SmallBitVector CanRevisit(NumBlocks);
+    SmallVector<unsigned, 16> BackedgeWorklist;
+    for (unsigned RPO = 0; RPO < NumBlocks; ++RPO) {
+      for (BasicBlock *Succ : successors(OrderToBB[RPO])) {
+        unsigned SuccRPO = BBToOrder.lookup(Succ);
+        if (SuccRPO <= RPO && !CanRevisit.test(SuccRPO)) {
+          CanRevisit.set(SuccRPO);
+          BackedgeWorklist.push_back(SuccRPO);
+        }
       }
-      LiveIn.reserve(RPONumber);
-      LiveOut.reserve(RPONumber);
+    }
+    while (!BackedgeWorklist.empty()) {
+      unsigned RPO = BackedgeWorklist.pop_back_val();
+      for (BasicBlock *Succ : successors(OrderToBB[RPO])) {
+        unsigned SuccRPO = BBToOrder.lookup(Succ);
+        if (!CanRevisit.test(SuccRPO)) {
+          CanRevisit.set(SuccRPO);
+          BackedgeWorklist.push_back(SuccRPO);
+        }
+      }
+    }
+
+    SmallVector<unsigned, 16> RemainingReads(NumBlocks, 0);
+    for (unsigned RPO = 0; RPO < NumBlocks; ++RPO) {
+      for (BasicBlock *Succ : successors(OrderToBB[RPO])) {
+        if (CanRevisit.test(BBToOrder.lookup(Succ))) {
+          RemainingReads[RPO] = std::numeric_limits<unsigned>::max();
+          break;
+        }
+        ++RemainingReads[RPO];
+      }
     }
 
     // Perform the traversal.
@@ -897,49 +965,80 @@ public:
     // monotonically decrease in value throughout the dataflow.
     SmallPtrSet<BasicBlock *, 16> Visited;
     while (!Worklist.empty() || !Pending.empty()) {
-      // We track what is on the pending worklist to avoid inserting the same
-      // thing twice.  We could avoid this with a custom priority queue, but
-      // this is probably not worth it.
-      SmallPtrSet<BasicBlock *, 16> OnPending;
       LLVM_DEBUG(dbgs() << "Processing Worklist\n");
       while (!Worklist.empty()) {
-        BasicBlock *BB = OrderToBB[Worklist.top()];
+        unsigned RPO = Worklist.top();
+        BasicBlock *BB = OrderToBB[RPO];
         LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
         Worklist.pop();
-        bool InChanged = meet(*BB, Visited);
+        OnWorklist.reset(RPO);
+        bool SingleVisit = !CanRevisit.test(RPO);
+        bool StoreLiveIn = !SingleVisit && BB->hasNPredecessorsOrMore(2);
+        VarFragMap LiveSet;
+        bool InChanged = meet(*BB, Visited, StoreLiveIn, LiveSet);
+        if (SingleVisit) {
+          for (const BasicBlock *Pred : predecessors(BB)) {
+            if (!Visited.count(Pred))
+              continue;
+            unsigned PredRPO = BBToOrder.lookup(Pred);
+            if (RemainingReads[PredRPO] !=
+                    std::numeric_limits<unsigned>::max() &&
+                --RemainingReads[PredRPO] == 0)
+              LiveOut.erase(Pred);
+          }
+        }
         // Always consider LiveIn changed on the first visit.
         InChanged |= Visited.insert(BB).second;
         if (InChanged) {
           LLVM_DEBUG(dbgs()
                      << BB->getName() << " has new InLocs, process it\n");
-          //  Mutate a copy of LiveIn while processing BB. Once we've processed
-          //  the terminator LiveSet is the LiveOut set for BB.
-          //  This is an expensive copy!
-          VarFragMap LiveSet = LiveIn[BB];
-
           // Process the instructions in the block.
           process(*BB, LiveSet);
 
-          // Relatively expensive check: has anything changed in LiveOut for BB?
-          if (!varFragMapsAreEqual(LiveOut[BB], LiveSet)) {
-            LLVM_DEBUG(dbgs() << BB->getName()
-                              << " has new OutLocs, add succs to worklist: [ ");
-            LiveOut[BB] = std::move(LiveSet);
-            for (BasicBlock *Succ : successors(BB)) {
-              if (OnPending.insert(Succ).second) {
-                LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-                Pending.push(BBToOrder[Succ]);
+          if (SingleVisit) {
+            if (RemainingReads[RPO] > 0)
+              LiveOut[BB] = std::move(LiveSet);
+            continue;
+          }
+
+          if (RemainingReads[RPO] > 0) {
+            // Relatively expensive check: has anything changed in LiveOut for
+            // BB?
+            auto [OutIt, OutInserted] = LiveOut.try_emplace(BB);
+            bool OutChanged =
+                OutInserted || !varFragMapsAreEqual(OutIt->second, LiveSet);
+            if (OutChanged) {
+              OutIt->second = std::move(LiveSet);
+              LLVM_DEBUG(dbgs()
+                         << BB->getName()
+                         << " has new OutLocs, add succs to worklist: [ ");
+              for (BasicBlock *Succ : successors(BB)) {
+                unsigned SuccRPO = BBToOrder.lookup(Succ);
+                if (SuccRPO > RPO) {
+                  if (!OnWorklist.test(SuccRPO)) {
+                    LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+                    OnWorklist.set(SuccRPO);
+                    Worklist.push(SuccRPO);
+                  }
+                } else if (!OnPending.test(SuccRPO)) {
+                  LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+                  OnPending.set(SuccRPO);
+                  Pending.push(SuccRPO);
+                }
               }
+              LLVM_DEBUG(dbgs() << "]\n");
             }
-            LLVM_DEBUG(dbgs() << "]\n");
           }
         }
       }
       Worklist.swap(Pending);
+      std::swap(OnWorklist, OnPending);
       // At this point, pending must be empty, since it was just the empty
       // worklist
       assert(Pending.empty() && "Pending should be empty");
     }
+    LiveIn.clear();
+    LiveOut.clear();
 
     // Insert new location defs.
     for (auto &Pair : BBInsertBeforeMap) {
@@ -996,7 +1095,7 @@ public:
   /// clear that many additional locations would be recovered that way in
   /// practice as the likelihood of this sitation arising naturally seems
   /// incredibly low.
-  enum class LocKind { Mem, Val, None };
+  enum class LocKind : uint8_t { Mem, Val, None };
 
   /// An abstraction of the assignment of a value to a variable or memory
   /// location.
@@ -1013,21 +1112,23 @@ public:
   /// join(x, x) = x
   /// join(x, y) = NoneOrPhi
   struct Assignment {
-    enum S { Known, NoneOrPhi } Status;
+    enum S { Known, NoneOrPhi };
     /// ID of the assignment. nullptr if Status is not Known.
-    DIAssignID *ID;
+    DIAssignID *ID = nullptr;
     /// The dbg.assign that marks this dbg-def. Mem-defs don't use this field.
     /// May be nullptr.
     DbgVariableRecord *Source = nullptr;
 
+    S getStatus() const { return ID ? Known : NoneOrPhi; }
+
     bool isSameSourceAssignment(const Assignment &Other) const {
       // Don't include Source in the equality check. Assignments are
       // defined by their ID, not debug intrinsic(s).
-      return std::tie(Status, ID) == std::tie(Other.Status, Other.ID);
+      return ID == Other.ID;
     }
-    void dump(raw_ostream &OS) {
+    void dump(raw_ostream &OS) const {
       static const char *LUT[] = {"Known", "NoneOrPhi"};
-      OS << LUT[Status] << "(id=";
+      OS << LUT[getStatus()] << "(id=";
       if (ID)
         OS << ID;
       else
@@ -1050,19 +1151,23 @@ public:
     }
     static Assignment makeNoneOrPhi() { return Assignment(NoneOrPhi, nullptr); }
     // Again, need a Top value?
-    Assignment() : Status(NoneOrPhi), ID(nullptr) {} // Can we delete this?
-    Assignment(S Status, DIAssignID *ID) : Status(Status), ID(ID) {
+    Assignment() = default;
+    Assignment([[maybe_unused]] S Status, DIAssignID *ID) : ID(ID) {
       // If the Status is Known then we expect there to be an assignment ID.
-      assert(Status == NoneOrPhi || ID);
+      assert((Status == NoneOrPhi ? !ID : static_cast<bool>(ID)) &&
+             "Status and ID mismatch");
     }
-    Assignment(S Status, DIAssignID *ID, DbgVariableRecord *Source)
-        : Status(Status), ID(ID), Source(Source) {
+    Assignment([[maybe_unused]] S Status, DIAssignID *ID,
+               DbgVariableRecord *Source)
+        : ID(ID), Source(Source) {
       // If the Status is Known then we expect there to be an assignment ID.
-      assert(Status == NoneOrPhi || ID);
+      assert((Status == NoneOrPhi ? !ID : static_cast<bool>(ID)) &&
+             "Status and ID mismatch");
     }
   };
 
   using AssignmentMap = SmallVector<Assignment>;
+  using StackAssignmentMap = SmallVector<DIAssignID *>;
   using LocMap = SmallVector<LocKind>;
   using OverlapMap = DenseMap<VariableID, SmallVector<VariableID>>;
   using UntaggedStoreAssignmentMap =
@@ -1115,8 +1220,8 @@ private:
     /// The set of variables (VariableID) being tracked in this block.
     BitVector VariableIDsInBlock;
     /// Dominating assignment to memory for each variable, indexed by
-    /// VariableID.
-    AssignmentMap StackHomeValue;
+    /// VariableID. nullptr represents NoneOrPhi.
+    StackAssignmentMap StackHomeValue;
     /// Dominating assignemnt to each variable, indexed by VariableID.
     AssignmentMap DebugValue;
     /// Location kind for each variable. LiveLoc indicates whether the
@@ -1133,27 +1238,14 @@ private:
 
   public:
     enum AssignmentKind { Stack, Debug };
-    const AssignmentMap &getAssignmentMap(AssignmentKind Kind) const {
-      switch (Kind) {
-      case Stack:
-        return StackHomeValue;
-      case Debug:
-        return DebugValue;
-      }
-      llvm_unreachable("Unknown AssignmentKind");
-    }
-    AssignmentMap &getAssignmentMap(AssignmentKind Kind) {
-      return const_cast<AssignmentMap &>(
-          const_cast<const BlockInfo *>(this)->getAssignmentMap(Kind));
-    }
 
     bool isVariableTracked(VariableID Var) const {
       return VariableIDsInBlock[static_cast<unsigned>(Var)];
     }
 
-    const Assignment &getAssignment(AssignmentKind Kind, VariableID Var) const {
+    const Assignment &getDbgAssignment(VariableID Var) const {
       assert(isVariableTracked(Var) && "Var not tracked in block");
-      return getAssignmentMap(Kind)[static_cast<unsigned>(Var)];
+      return DebugValue[static_cast<unsigned>(Var)];
     }
 
     LocKind getLocKind(VariableID Var) const {
@@ -1173,8 +1265,17 @@ private:
     /// Var.
     void setAssignment(AssignmentKind Kind, VariableID Var,
                        const Assignment &AV) {
-      VariableIDsInBlock.set(static_cast<unsigned>(Var));
-      getAssignmentMap(Kind)[static_cast<unsigned>(Var)] = AV;
+      unsigned Idx = static_cast<unsigned>(Var);
+      VariableIDsInBlock.set(Idx);
+      switch (Kind) {
+      case Stack:
+        StackHomeValue[Idx] = AV.ID;
+        return;
+      case Debug:
+        DebugValue[Idx] = AV;
+        return;
+      }
+      llvm_unreachable("Unknown AssignmentKind");
     }
 
     /// Return true if there is an assignment matching \p AV in the \p Kind
@@ -1184,7 +1285,10 @@ private:
                        const Assignment &AV) const {
       if (!isVariableTracked(Var))
         return false;
-      return AV.isSameSourceAssignment(getAssignment(Kind, Var));
+      unsigned Idx = static_cast<unsigned>(Var);
+      if (Kind == Stack)
+        return AV.ID == StackHomeValue[Idx];
+      return AV.isSameSourceAssignment(DebugValue[Idx]);
     }
 
     /// Compare every element in each map to determine structural equality
@@ -1192,8 +1296,11 @@ private:
     bool operator==(const BlockInfo &Other) const {
       return VariableIDsInBlock == Other.VariableIDsInBlock &&
              LiveLoc == Other.LiveLoc &&
-             mapsAreEqual(VariableIDsInBlock, StackHomeValue,
-                          Other.StackHomeValue) &&
+             llvm::all_of(VariableIDsInBlock.set_bits(),
+                          [&](unsigned VarID) {
+                            return StackHomeValue[VarID] ==
+                                   Other.StackHomeValue[VarID];
+                          }) &&
              mapsAreEqual(VariableIDsInBlock, DebugValue, Other.DebugValue);
     }
     bool operator!=(const BlockInfo &Other) const { return !(*this == Other); }
@@ -1204,15 +1311,11 @@ private:
 
     /// Clear everything and initialise with ⊤-values for all variables.
     void init(int NumVars) {
-      StackHomeValue.clear();
-      DebugValue.clear();
-      LiveLoc.clear();
-      VariableIDsInBlock = BitVector(NumVars);
-      StackHomeValue.insert(StackHomeValue.begin(), NumVars,
-                            Assignment::makeNoneOrPhi());
-      DebugValue.insert(DebugValue.begin(), NumVars,
-                        Assignment::makeNoneOrPhi());
-      LiveLoc.insert(LiveLoc.begin(), NumVars, LocKind::None);
+      VariableIDsInBlock.clear();
+      VariableIDsInBlock.resize(NumVars);
+      StackHomeValue.assign(NumVars, nullptr);
+      DebugValue.assign(NumVars, Assignment::makeNoneOrPhi());
+      LiveLoc.assign(NumVars, LocKind::None);
     }
 
     /// Helper for join.
@@ -1251,8 +1354,8 @@ private:
         joinElmt(VarID, Join.LiveLoc, A.LiveLoc, B.LiveLoc, joinKind);
         joinElmt(VarID, Join.DebugValue, A.DebugValue, B.DebugValue,
                  joinAssignment);
-        joinElmt(VarID, Join.StackHomeValue, A.StackHomeValue, B.StackHomeValue,
-                 joinAssignment);
+        if (A.StackHomeValue[VarID] == B.StackHomeValue[VarID])
+          Join.StackHomeValue[VarID] = A.StackHomeValue[VarID];
       }
 
       Join.VariableIDsInBlock = A.VariableIDsInBlock;
@@ -1280,10 +1383,13 @@ private:
   }
 
   /// Join the LiveOut values of preds that are contained in \p Visited into
-  /// LiveIn[BB]. Return True if LiveIn[BB] has changed as a result. LiveIn[BB]
-  /// values monotonically increase. See the @link joinMethods join methods
-  /// @endlink documentation for more info.
-  bool join(const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited);
+  /// \p LiveSet (and into LiveIn[BB] when \p StoreLiveIn is true, or moving
+  /// from the single predecessor when \p CanMoveSinglePred is true). Return
+  /// true if the live-in value has changed. LiveIn[BB] values monotonically
+  /// increase. See the @link joinMethods join methods @endlink documentation
+  /// for more info.
+  bool join(const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited,
+            bool StoreLiveIn, bool CanMoveSinglePred, BlockInfo &LiveSet);
   ///@name joinMethods
   /// Functions that implement `join` (the least upper bound) for the
   /// join-semilattice types used in the dataflow. There is an explicit bottom
@@ -1397,14 +1503,8 @@ AssignmentTrackingLowering::getLocKind(BlockInfo *LiveSet, VariableID Var) {
 void AssignmentTrackingLowering::addMemDef(BlockInfo *LiveSet, VariableID Var,
                                            const Assignment &AV) {
   LiveSet->setAssignment(BlockInfo::Stack, Var, AV);
-
-  // Use this assignment for all fragments contained within Var, but do not
-  // provide a Source because we cannot convert Var's value to a value for the
-  // fragment.
-  Assignment FragAV = AV;
-  FragAV.Source = nullptr;
   for (VariableID Frag : getContainedFragments(Var))
-    LiveSet->setAssignment(BlockInfo::Stack, Frag, FragAV);
+    LiveSet->setAssignment(BlockInfo::Stack, Frag, AV);
 }
 
 void AssignmentTrackingLowering::addDbgDef(BlockInfo *LiveSet, VariableID Var,
@@ -1567,8 +1667,8 @@ void AssignmentTrackingLowering::processUnknownStoreToVariable(
     return;
   // If there is a live debug value for this variable, fall back to using
   // that.
-  Assignment DbgAV = LiveSet->getAssignment(BlockInfo::Debug, Var);
-  if (DbgAV.Status != Assignment::NoneOrPhi && DbgAV.Source) {
+  const Assignment &DbgAV = LiveSet->getDbgAssignment(Var);
+  if (DbgAV.getStatus() != Assignment::NoneOrPhi && DbgAV.Source) {
     LLVM_DEBUG(dbgs() << "Switching to fallback debug value: ";
                DbgAV.dump(dbgs()); dbgs() << "\n");
     setLocKind(LiveSet, Var, LocKind::Val);
@@ -1790,8 +1890,8 @@ void AssignmentTrackingLowering::processTaggedInstruction(
       // There's been an assignment to memory that we were using as a
       // location for this variable, and the Assignment doesn't match what
       // we'd expect to see in memory.
-      Assignment DbgAV = LiveSet->getAssignment(BlockInfo::Debug, Var);
-      if (DbgAV.Status == Assignment::NoneOrPhi) {
+      const Assignment &DbgAV = LiveSet->getDbgAssignment(Var);
+      if (DbgAV.getStatus() == Assignment::NoneOrPhi) {
         // We need to terminate any previously open location now.
         LLVM_DEBUG(dbgs() << "None, No Debug value available\n";);
         setLocKind(LiveSet, Var, LocKind::None);
@@ -1999,7 +2099,7 @@ AssignmentTrackingLowering::joinAssignment(const Assignment &A,
   // NoneOrPhi (joining two values is a Phi).
   if (!A.isSameSourceAssignment(B))
     return Assignment::makeNoneOrPhi();
-  if (A.Status == Assignment::NoneOrPhi)
+  if (A.getStatus() == Assignment::NoneOrPhi)
     return Assignment::makeNoneOrPhi();
 
   // Source is used to lookup the value + expression in the debug program if
@@ -2025,7 +2125,7 @@ AssignmentTrackingLowering::joinAssignment(const Assignment &A,
     return nullptr;
   };
   DbgVariableRecord *Source = JoinSource();
-  assert(A.Status == B.Status && A.Status == Assignment::Known);
+  assert(A.getStatus() == B.getStatus() && A.getStatus() == Assignment::Known);
   assert(A.ID == B.ID);
   return Assignment::make(A.ID, Source);
 }
@@ -2037,7 +2137,8 @@ AssignmentTrackingLowering::joinBlockInfo(const BlockInfo &A,
 }
 
 bool AssignmentTrackingLowering::join(
-    const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited) {
+    const BasicBlock &BB, const SmallPtrSet<BasicBlock *, 16> &Visited,
+    bool StoreLiveIn, bool CanMoveSinglePred, BlockInfo &LiveSet) {
 
   SmallVector<const BasicBlock *> VisitedPreds;
   // Ignore backedges if we have not visited the predecessor yet. As the
@@ -2054,24 +2155,42 @@ bool AssignmentTrackingLowering::join(
 
   // No preds visited yet.
   if (VisitedPreds.empty()) {
+    if (!StoreLiveIn) {
+      LiveSet.init(TrackedVariablesVectorSize);
+      return /*Changed*/ true;
+    }
     auto It = LiveIn.try_emplace(&BB, BlockInfo());
     bool DidInsert = It.second;
-    if (DidInsert)
+    if (DidInsert) {
       It.first->second.init(TrackedVariablesVectorSize);
+      LiveSet = It.first->second;
+    }
     return /*Changed*/ DidInsert;
   }
 
-  // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
+  // Exactly one visited pred. Copy (or move) the LiveOut from that pred into
+  // BB LiveIn.
   if (VisitedPreds.size() == 1) {
-    const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
+    auto PredIt = LiveOut.find(VisitedPreds[0]);
+    if (!StoreLiveIn) {
+      if (CanMoveSinglePred)
+        LiveSet = std::move(PredIt->second);
+      else
+        LiveSet = PredIt->second;
+      return /*Changed*/ true;
+    }
+    const BlockInfo &PredLiveOut = PredIt->second;
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
     auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
-    if (Inserted)
+    if (Inserted) {
+      LiveSet = CurrentLiveInEntry->second;
       return /*Changed*/ true;
+    }
     if (PredLiveOut != CurrentLiveInEntry->second) {
       CurrentLiveInEntry->second = PredLiveOut;
+      LiveSet = CurrentLiveInEntry->second;
       return /*Changed*/ true;
     }
     return /*Changed*/ false;
@@ -2092,16 +2211,24 @@ bool AssignmentTrackingLowering::join(
     BBLiveIn = joinBlockInfo(std::move(BBLiveIn), PredLiveOut->second);
   }
 
+  if (!StoreLiveIn) {
+    LiveSet = std::move(BBLiveIn);
+    return /*Changed*/ true;
+  }
+
   // Save the joined result for BB.
   auto CurrentLiveInEntry = LiveIn.find(&BB);
   // Check if there isn't an entry, or there is but the LiveIn set has changed
   // (expensive check).
-  if (CurrentLiveInEntry == LiveIn.end())
+  if (CurrentLiveInEntry == LiveIn.end()) {
+    LiveSet = BBLiveIn;
     LiveIn.try_emplace(&BB, std::move(BBLiveIn));
-  else if (BBLiveIn != CurrentLiveInEntry->second)
+  } else if (BBLiveIn != CurrentLiveInEntry->second) {
+    LiveSet = BBLiveIn;
     CurrentLiveInEntry->second = std::move(BBLiveIn);
-  else
+  } else {
     return /*Changed*/ false;
+  }
   return /*Changed*/ true;
 }
 
@@ -2386,24 +2513,61 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
-  std::priority_queue<unsigned int, std::vector<unsigned int>,
-                      std::greater<unsigned int>>
+  std::priority_queue<unsigned, std::vector<unsigned>, std::greater<unsigned>>
       Worklist;
-  std::priority_queue<unsigned int, std::vector<unsigned int>,
-                      std::greater<unsigned int>>
+  std::priority_queue<unsigned, std::vector<unsigned>, std::greater<unsigned>>
       Pending;
-  DenseMap<unsigned int, BasicBlock *> OrderToBB;
-  DenseMap<BasicBlock *, unsigned int> BBToOrder;
-  { // Init OrderToBB and BBToOrder.
-    unsigned int RPONumber = 0;
-    for (BasicBlock *BB : RPOT) {
-      OrderToBB[RPONumber] = BB;
-      BBToOrder[BB] = RPONumber;
-      Worklist.push(RPONumber);
-      ++RPONumber;
+  SmallVector<BasicBlock *, 16> OrderToBB;
+  SmallDenseMap<const BasicBlock *, unsigned, 16> BBToOrder;
+  for (BasicBlock *BB : RPOT) {
+    unsigned RPONumber = OrderToBB.size();
+    OrderToBB.push_back(BB);
+    BBToOrder[BB] = RPONumber;
+    Worklist.push(RPONumber);
+  }
+
+  const unsigned NumBlocks = OrderToBB.size();
+  // Identify blocks reachable from a backedge target (SuccRPO <= RPO).
+  // Any block with !CanRevisit[RPO] is visited exactly once in RPO order,
+  // so its LiveIn never needs to be stored, and any predecessor whose
+  // successors all have !CanRevisit can free its LiveOut once all its
+  // successors have been processed.
+  SmallBitVector CanRevisit(NumBlocks);
+  SmallVector<unsigned, 16> BackedgeWorklist;
+  for (unsigned RPO = 0; RPO < NumBlocks; ++RPO) {
+    BasicBlock *BB = OrderToBB[RPO];
+    for (BasicBlock *Succ : successors(BB)) {
+      unsigned SuccRPO = BBToOrder.lookup(Succ);
+      if (SuccRPO <= RPO && !CanRevisit.test(SuccRPO)) {
+        CanRevisit.set(SuccRPO);
+        BackedgeWorklist.push_back(SuccRPO);
+      }
     }
-    LiveIn.reserve(RPONumber);
-    LiveOut.reserve(RPONumber);
+  }
+  while (!BackedgeWorklist.empty()) {
+    unsigned RPO = BackedgeWorklist.pop_back_val();
+    for (BasicBlock *Succ : successors(OrderToBB[RPO])) {
+      unsigned SuccRPO = BBToOrder.lookup(Succ);
+      if (!CanRevisit.test(SuccRPO)) {
+        CanRevisit.set(SuccRPO);
+        BackedgeWorklist.push_back(SuccRPO);
+      }
+    }
+  }
+
+  // RemainingReads[RPO] counts how many future reads of LiveOut[BB] remain,
+  // or UINT_MAX if any successor of BB may be revisited.
+  SmallVector<unsigned, 16> RemainingReads(NumBlocks, 0);
+  for (unsigned RPO = 0; RPO < NumBlocks; ++RPO) {
+    BasicBlock *BB = OrderToBB[RPO];
+    for (BasicBlock *Succ : successors(BB)) {
+      unsigned SuccRPO = BBToOrder.lookup(Succ);
+      if (CanRevisit.test(SuccRPO)) {
+        RemainingReads[RPO] = std::numeric_limits<unsigned>::max();
+        break;
+      }
+      ++RemainingReads[RPO];
+    }
   }
 
   // Perform the traversal.
@@ -2417,47 +2581,91 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // monotonically increase in value throughout the dataflow.
   //
   SmallPtrSet<BasicBlock *, 16> Visited;
+  bool FirstPass = true;
   while (!Worklist.empty()) {
     // We track what is on the pending worklist to avoid inserting the same
     // thing twice.
     SmallPtrSet<BasicBlock *, 16> OnPending;
     LLVM_DEBUG(dbgs() << "Processing Worklist\n");
     while (!Worklist.empty()) {
-      BasicBlock *BB = OrderToBB[Worklist.top()];
+      unsigned RPO = Worklist.top();
+      BasicBlock *BB = OrderToBB[RPO];
       LLVM_DEBUG(dbgs() << "\nPop BB " << BB->getName() << "\n");
       Worklist.pop();
-      bool InChanged = join(*BB, Visited);
+      bool StoreLiveIn = CanRevisit.test(RPO);
+      // If BB has a single visited predecessor Pred and Pred has no other
+      // remaining readers, join() can move Pred's LiveOut into LiveSet.
+      bool CanMoveSinglePred = false;
+      if (!StoreLiveIn) {
+        const BasicBlock *SingleVisitedPred = nullptr;
+        unsigned VisitedPredCount = 0;
+        for (const BasicBlock *Pred : predecessors(BB)) {
+          if (Visited.count(Pred)) {
+            SingleVisitedPred = Pred;
+            ++VisitedPredCount;
+          }
+        }
+        if (VisitedPredCount == 1) {
+          unsigned PredRPO = BBToOrder.lookup(SingleVisitedPred);
+          CanMoveSinglePred = (RemainingReads[PredRPO] == 1);
+        }
+      }
+
+      BlockInfo LiveSet;
+      bool InChanged =
+          join(*BB, Visited, StoreLiveIn, CanMoveSinglePred, LiveSet);
+      // Free LiveOut of any predecessor that has no remaining readers.
+      if (!StoreLiveIn) {
+        for (const BasicBlock *Pred : predecessors(BB)) {
+          if (!Visited.count(Pred))
+            continue;
+          unsigned PredRPO = BBToOrder.lookup(Pred);
+          if (RemainingReads[PredRPO] != std::numeric_limits<unsigned>::max() &&
+              --RemainingReads[PredRPO] == 0)
+            LiveOut.erase(Pred);
+        }
+      }
+
       // Always consider LiveIn changed on the first visit.
       InChanged |= Visited.insert(BB).second;
       if (InChanged) {
         LLVM_DEBUG(dbgs() << BB->getName() << " has new InLocs, process it\n");
-        // Mutate a copy of LiveIn while processing BB. After calling process
+        // Process the instructions in the block. After calling process
         // LiveSet is the LiveOut set for BB.
-        BlockInfo LiveSet = LiveIn[BB];
-
-        // Process the instructions in the block.
         process(*BB, &LiveSet);
 
-        // Relatively expensive check: has anything changed in LiveOut for BB?
-        if (LiveOut[BB] != LiveSet) {
-          LLVM_DEBUG(dbgs() << BB->getName()
-                            << " has new OutLocs, add succs to worklist: [ ");
-          LiveOut[BB] = std::move(LiveSet);
-          for (BasicBlock *Succ : successors(BB)) {
-            if (OnPending.insert(Succ).second) {
-              LLVM_DEBUG(dbgs() << Succ->getName() << " ");
-              Pending.push(BBToOrder[Succ]);
+        if (RemainingReads[RPO] > 0) {
+          // Relatively expensive check: has anything changed in LiveOut for BB?
+          auto [OutIt, OutInserted] = LiveOut.try_emplace(BB);
+          bool OutChanged = OutInserted || (OutIt->second != LiveSet);
+          if (OutChanged) {
+            OutIt->second = std::move(LiveSet);
+            LLVM_DEBUG(dbgs() << BB->getName()
+                              << " has new OutLocs, add succs to worklist: [ ");
+            for (BasicBlock *Succ : successors(BB)) {
+              unsigned SuccRPO = BBToOrder.lookup(Succ);
+              // On the first pass, forward successors (SuccRPO > RPO) are
+              // already in Worklist and will be visited in RPO order.
+              if (FirstPass && SuccRPO > RPO)
+                continue;
+              if (OnPending.insert(Succ).second) {
+                LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+                Pending.push(SuccRPO);
+              }
             }
+            LLVM_DEBUG(dbgs() << "]\n");
           }
-          LLVM_DEBUG(dbgs() << "]\n");
         }
       }
     }
+    FirstPass = false;
     Worklist.swap(Pending);
     // At this point, pending must be empty, since it was just the empty
     // worklist
     assert(Pending.empty() && "Pending should be empty");
   }
+  LiveIn.clear();
+  LiveOut.clear();
 
   // That's the hard part over. Now we just have some admin to do.
 
