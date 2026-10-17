@@ -4651,6 +4651,9 @@ public:
   }
 
   static bool isValidElementType(QualType ElemTy) {
+    // OpenCL vector types are valid when their scalar element type is valid.
+    if (const auto *VT = ElemTy->getAs<VectorType>())
+      return isValidElementType(VT->getElementType());
     return ElemTy->isSpecificBuiltinType(BuiltinType::Char_S) ||
            ElemTy->isSpecificBuiltinType(BuiltinType::UChar) ||
            ElemTy->isSpecificBuiltinType(BuiltinType::Short) ||
