@@ -11788,7 +11788,7 @@ public:
   /// constrained by RequiresClause, that contains the template parameters in
   /// Params.
   TemplateParameterList *ActOnTemplateParameterList(
-      unsigned Depth, SourceLocation ExportLoc, SourceLocation TemplateLoc,
+      SourceLocation ExportLoc, SourceLocation TemplateLoc,
       SourceLocation LAngleLoc, ArrayRef<NamedDecl *> Params,
       SourceLocation RAngleLoc, Expr *RequiresClause);
 
