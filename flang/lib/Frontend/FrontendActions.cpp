@@ -1447,6 +1447,34 @@ void CodeGenAction::executeAction() {
   llvmModule->setTargetTriple(theTriple);
   llvmModule->setDataLayout(theTriple.computeDataLayout(targetOpts.abi));
 
+  // -fkeep-inline-functions: retain definitions of alwaysinline functions
+  // after they have been inlined into every caller. On ELF this uses
+  // llvm.compiler.used so the compiler keeps the definition but the linker may
+  // still drop it. Other object formats use llvm.used. Only functions defined
+  // in this translation unit are considered.
+  //
+  // This covers less than Clang's flag. The function-level alwaysinline
+  // attribute comes only from a named !dir$ inlinealways <name>, so call-site
+  // inlining directives do not count. A procedure that is never called has
+  // already been removed by the MLIR pipeline before this point, so it is not
+  // kept either. See flang/docs/Directives.md.
+  if (codeGenOpts.KeepInlineFunctions) {
+    llvm::SmallVector<llvm::GlobalValue *, 8> kept;
+    for (llvm::Function &func : *llvmModule) {
+      if (func.isDeclaration() || func.hasAvailableExternallyLinkage())
+        continue;
+      if (!func.hasFnAttribute(llvm::Attribute::AlwaysInline))
+        continue;
+      kept.push_back(&func);
+    }
+    if (!kept.empty()) {
+      if (theTriple.isOSBinFormatELF())
+        llvm::appendToCompilerUsed(*llvmModule, kept);
+      else
+        llvm::appendToUsed(*llvmModule, kept);
+    }
+  }
+
   // Link in builtin bitcode libraries
   if (!codeGenOpts.BuiltinBCLibs.empty())
     linkBuiltinBCLibs();

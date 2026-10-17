@@ -154,6 +154,17 @@ contains
     ...
   end function
   ```
+  By default, once such a procedure has been inlined into every caller, its
+  definition is removed. With `-fkeep-inline-functions`, the definition is
+  kept as well. On ELF targets it is added to `llvm.compiler.used`, so the
+  compiler keeps it but the linker may still discard it; other object formats
+  use `llvm.used`. Unlike Clang, where the flag applies to all inline
+  functions, in Flang it applies only to procedures that name themselves in
+  `!dir$ inlinealways <name>`. The call-site forms (`!dir$ inline`,
+  `!dir$ forceinline`, and `!dir$ inlinealways` without a name) do not make
+  the callee eligible. Clang also emits inline functions that are never
+  called, but Flang does not: an `INLINEALWAYS` procedure with no callers is
+  removed before LLVM IR is generated, even with `-fkeep-inline-functions`.
 * `!dir$ noinline` works in the same way as the `inline` directive, but prevents
   any attempt of inlining by the compiler on a function call statement.
 

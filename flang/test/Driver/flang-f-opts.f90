@@ -68,8 +68,6 @@
 ! RUN:     -fexpensive-optimizations                                        \
 ! RUN:     -fno-expensive-optimizations                                     \
 ! RUN:     -fno-defer-pop                                                   \
-! RUN:     -fkeep-inline-functions                                          \
-! RUN:     -fno-keep-inline-functions                                       \
 ! RUN:     -freorder-blocks                                                 \
 ! RUN:     -ffloat-store                                                    \
 ! RUN:     -fgcse                                                           \
@@ -122,8 +120,6 @@
 ! CHECK-WARNING-DAG: optimization flag '-fexpensive-optimizations' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fno-expensive-optimizations' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fno-defer-pop' is not supported
-! CHECK-WARNING-DAG: optimization flag '-fkeep-inline-functions' is not supported
-! CHECK-WARNING-DAG: optimization flag '-fno-keep-inline-functions' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-ffloat-store' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fgcse' is not supported
@@ -169,3 +165,24 @@
 ! CHECK-WARNING-DAG: optimization flag '-ftree-ter' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-ftree-vrp' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fno-devirtualize' is not supported
+!
+! ------------------------------------------------------------------------------
+! Unlike the gfortran-specific optimization flags above, -fkeep-inline-functions
+! and -fno-keep-inline-functions are implemented by Flang, so using them must
+! not produce the "optimization flag ... is not supported" warning, or any
+! other warning. Neither flag is the default: the driver forwards nothing to
+! fc1 unless -fkeep-inline-functions wins.
+! RUN: %flang -### -fkeep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-KEEP
+! RUN: %flang -### %s 2>&1 | FileCheck %s --check-prefix=DRIVER-NOKEEP
+! RUN: %flang -### -fno-keep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-NOKEEP
+! RUN: %flang -### -fkeep-inline-functions -fno-keep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-NOKEEP
+! RUN: %flang -### -fno-keep-inline-functions -fkeep-inline-functions %s 2>&1 | FileCheck %s --check-prefix=DRIVER-KEEP
+
+! DRIVER-KEEP-NOT: warning:
+! DRIVER-KEEP: "-fc1"
+! DRIVER-KEEP-SAME: "-fkeep-inline-functions"
+
+! DRIVER-NOKEEP-NOT: warning:
+! DRIVER-NOKEEP: "-fc1"
+! DRIVER-NOKEEP-NOT: "-fkeep-inline-functions"
+! DRIVER-NOKEEP-NOT: "-fno-keep-inline-functions"
