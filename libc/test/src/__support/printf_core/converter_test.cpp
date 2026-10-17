@@ -299,6 +299,10 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionNoNullTerminator,
   no_null_terminator_conv.raw_string = ENCODED(CharT, "%.3s");
   no_null_terminator_conv.conv_name = ENCODED(CharT, 's');
   no_null_terminator_conv.precision = 3;
+  if constexpr (LIBC_NAMESPACE::cpp::is_same_v<CharT, wchar_t>) {
+    no_null_terminator_conv.length_modifier =
+        LIBC_NAMESPACE::printf_core::LengthModifier::l;
+  }
   no_null_terminator_conv.conv_val_ptr = const_cast<CharT *>(input);
 
   LIBC_NAMESPACE::printf_core::convert(&writer, no_null_terminator_conv);
