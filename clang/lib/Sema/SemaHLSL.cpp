@@ -827,6 +827,14 @@ SemaHLSL::mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
   return HLSLParamModifierAttr::Create(getASTContext(), AL);
 }
 
+void SemaHLSL::handlePreciseAttr(Decl *D, const ParsedAttr &AL) {
+  // Only a simplified form of precise is supported: any use of the keyword
+  // puts the whole translation unit in IEEE-strict floating-point mode.
+  getASTContext().setHLSLPreciseUsed();
+  if (!D->hasAttr<HLSLPreciseAttr>())
+    D->addAttr(HLSLPreciseAttr::Create(getASTContext(), AL));
+}
+
 void SemaHLSL::handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL) {
   InterpolationModifier Modifier;
   switch (static_cast<HLSLInterpolationModifierAttr::Spelling>(

@@ -8328,6 +8328,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLInterpolationModifier:
     S.HLSL().handleInterpolationModifierAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLPrecise:
+    S.HLSL().handlePreciseAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;

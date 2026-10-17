@@ -983,6 +983,9 @@ private:
   /// The floating point pragma option settings.
   SmallVector<uint64_t, 1> FPPragmaOptions;
 
+  /// Whether any loaded AST file used the HLSL 'precise' keyword.
+  bool HLSLPreciseUsed = false;
+
   /// The pragma clang optimize location (if the pragma state is "off").
   SourceLocation OptimizeOffPragmaLocation;
 

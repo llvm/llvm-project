@@ -246,6 +246,7 @@ LANGOPT(OpenMPTargetAtomicReduction , 1, 0, NotCompatible, "Use atomic operation
 LANGOPT(NoGPULib  , 1, 0, NotCompatible, "Indicate a build without the standard GPU libraries.")
 
 LANGOPT(HLSL, 1, 0, NotCompatible, "HLSL")
+LANGOPT(HLSLPrecise, 1, 0, Benign, "TU-wide HLSL precise floating-point mode")
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, NotCompatible, "HLSL Version")
 LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")

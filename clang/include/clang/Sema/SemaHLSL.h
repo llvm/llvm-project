@@ -192,6 +192,7 @@ public:
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   void handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL);
+  void handlePreciseAttr(Decl *D, const ParsedAttr &AL);
   Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
   bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
                                          SourceLocation Loc);

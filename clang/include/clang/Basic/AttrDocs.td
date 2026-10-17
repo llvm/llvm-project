@@ -9434,6 +9434,23 @@ interpolation mode; their interpolation modifiers are ignored.
   }];
 }
 
+def HLSLPreciseDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "precise";
+  let Content = [{
+The HLSL ``precise`` keyword can be applied to variables, parameters, fields,
+and function return values to request that floating-point computations
+contributing to their values are performed with IEEE-strict semantics.
+
+Clang currently implements a simplified version of ``precise``: if the keyword
+is used anywhere in a translation unit, the whole translation unit is compiled
+in IEEE-strict floating-point mode, as if ``-Gis`` (``-ffp-model=strict``) had
+been specified.
+
+The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-syntax
+  }];
+}
+
 def HLSLParamQualifierDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "HLSL Parameter Modifiers";
