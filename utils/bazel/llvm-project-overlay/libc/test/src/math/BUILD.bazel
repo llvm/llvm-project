@@ -781,6 +781,13 @@ math_mpfr_test(
 math_mpfr_test(name = "sin")
 
 math_mpfr_test(
+    name = "sinbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "sinf",
     hdrs = ["sdcomp26094.h"],
     deps = [
