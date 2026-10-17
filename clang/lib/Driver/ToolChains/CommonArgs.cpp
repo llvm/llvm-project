@@ -1203,6 +1203,16 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
 
+  // Forward the loop vectorization preference to the LTO backend by toggling
+  // the existing -vectorize-loops cl::opt, which the pass honors directly.
+  // This avoids minting dedicated linker options for what is only pipeline
+  // tuning.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_fvectorize, options::OPT_fno_vectorize))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-vectorize-loops=" +
+        (A->getOption().matches(options::OPT_fvectorize) ? "1" : "0")));
+
   // Forward the SLP vectorization preference to the LTO backend by toggling
   // the existing -vectorize-slp cl::opt, which the pass honors directly. This
   // avoids minting dedicated linker options for what is only pipeline tuning.
