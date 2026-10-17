@@ -490,3 +490,75 @@ define <8 x i32> @shuf_uniform_const_mul_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a
   %res = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %res
 }
+
+define <8 x float> @shuf_fdiv_v4f32_extract_halves_poison(<4 x float> %x, <4 x float> %z, <8 x float> %d) {
+; CHECK-LABEL: define <8 x float> @shuf_fdiv_v4f32_extract_halves_poison(
+; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Z:%.*]], <8 x float> [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Z]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[S:%.*]] = fdiv <8 x float> [[TMP1]], [[D]]
+; CHECK-NEXT:    ret <8 x float> [[S]]
+;
+  %lo = shufflevector <8 x float> %d, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <8 x float> %d, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %l = fdiv <4 x float> %x, %lo
+  %r = fdiv <4 x float> %z, %hi
+  %s = shufflevector <4 x float> %l, <4 x float> %r, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+  ret <8 x float> %s
+}
+
+define <4 x i32> @shuf_sdiv_v4i32_same_width_permutes_of_same_src(<4 x i32> %a, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i32> @shuf_sdiv_v4i32_same_width_permutes_of_same_src(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[S:%.*]] = sdiv <4 x i32> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %a0 = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %a1 = shufflevector <4 x i32> %a, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %l = sdiv <4 x i32> %y, %a0
+  %r = sdiv <4 x i32> %y, %a1
+  %s = shufflevector <4 x i32> %l, <4 x i32> %r, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x i32> %s
+}
+
+define <8 x i32> @shuf_sdiv_v4i32_extract_halves_multiuse(<8 x i32> %a, <4 x i32> %y) {
+; CHECK-LABEL: define <8 x i32> @shuf_sdiv_v4i32_extract_halves_multiuse(
+; CHECK-SAME: <8 x i32> [[A:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    call void @use(<4 x i32> [[LO]])
+; CHECK-NEXT:    [[L:%.*]] = sdiv <4 x i32> [[Y]], [[LO]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i32> [[Y]], [[HI]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[L]], <4 x i32> [[R]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[S]]
+;
+  %lo = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  call void @use(<4 x i32> %lo)
+  %l = sdiv <4 x i32> %y, %lo
+  %r = sdiv <4 x i32> %y, %hi
+  %s = shufflevector <4 x i32> %l, <4 x i32> %r, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  ret <8 x i32> %s
+}
+
+define <8 x i32> @shuf_add_v4i32_extract_halves_multiuse_binops(<8 x i32> %a, <4 x i32> %y) {
+; CHECK-LABEL: define <8 x i32> @shuf_add_v4i32_extract_halves_multiuse_binops(
+; CHECK-SAME: <8 x i32> [[A:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A0:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[A1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[L:%.*]] = add <4 x i32> [[A0]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = add <4 x i32> [[A1]], [[Y]]
+; CHECK-NEXT:    call void @use(<4 x i32> [[L]])
+; CHECK-NEXT:    call void @use(<4 x i32> [[R]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[L]], <4 x i32> [[R]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[S]]
+;
+  %a0 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %a1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %l = add <4 x i32> %a0, %y
+  %r = add <4 x i32> %a1, %y
+  call void @use(<4 x i32> %l)
+  call void @use(<4 x i32> %r)
+  %s = shufflevector <4 x i32> %l, <4 x i32> %r, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %s
+}
