@@ -28,7 +28,7 @@ protected:
   MLIRContext context;
 
   uint64_t abiAlign(mlir::Type elementType, uint64_t size) {
-    cir::VectorType ty = cir::VectorType::get(elementType, size);
+    cir::VectorType ty = cir::VectorType::getFixed(elementType, size);
     OpBuilder builder(&context);
     auto module = ModuleOp::create(builder.getUnknownLoc());
     mlir::DataLayout dl(module);

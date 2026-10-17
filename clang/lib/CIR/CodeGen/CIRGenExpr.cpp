@@ -351,7 +351,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
   mlir::Value vec = builder.createLoad(loc, dstAddr, dst.isVolatile());
   if (const auto *vecTy = dst.getType()->getAs<clang::VectorType>()) {
     unsigned numSrcElts = vecTy->getNumElements();
-    unsigned numDstElts = cast<cir::VectorType>(vec.getType()).getSize();
+    unsigned numDstElts = cast<cir::VectorType>(vec.getType()).getFixedSize();
     if (numDstElts == numSrcElts) {
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be

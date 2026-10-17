@@ -912,7 +912,10 @@ cir::ConstVectorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
   const auto vecType = mlir::cast<cir::VectorType>(type);
 
-  if (vecType.getSize() != elts.size())
+  if (vecType.isScalable())
+    return emitError() << "scalable vector constants are not supported";
+
+  if (vecType.getFixedSize() != elts.size())
     return emitError()
            << "number of constant elements should match vector size";
 

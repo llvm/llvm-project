@@ -56,5 +56,5 @@ llvm::TypeSize CIRDataLayout::getTypeSizeInBits(mlir::Type ty) const {
   assert(!cir::MissingFeatures::addressSpace());
 
   // This is calling mlir::DataLayout::getTypeSizeInBits().
-  return llvm::TypeSize::getFixed(layout.getTypeSizeInBits(ty));
+  return layout.getTypeSizeInBits(ty);
 }
