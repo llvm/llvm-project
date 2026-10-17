@@ -1,0 +1,176 @@
+# Implements the /compile-time comment (usable by llvm-committers only).
+# The changes get pushed to a perf/pr-NNNNNN branch on the
+# llvmbot/llvm-project fork, which the compile-time tracker
+# will pick up.
+
+name: Compile-time tracker
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+
+env:
+  BOT_REPOSITORY: llvmbot/llvm-project
+
+jobs:
+  permission-check:
+    if: github.event.issue.pull_request && startswith(github.event.comment.body, '/compile-time')
+    runs-on: ubuntu-26.04
+    environment:
+      name: main-branch-only
+      deployment: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: $/.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  push-branch:
+    name: Push branch for compile-time tracker
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    needs:
+      - permission-check
+    environment:
+      name: main-branch-only
+      deployment: false
+    permissions:
+      pull-requests: write
+    concurrency:
+      group: compile-time-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Get pull request
+        id: get-pr
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const tmp = process.env.RUNNER_TEMP;
+            const fail = (reason) => {
+              fs.writeFileSync(`${tmp}/failure-reason`, reason);
+              core.setFailed(reason);
+            };
+
+            const getPR = async () => (await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.issue.number
+            })).data;
+            let pr = await getPR();
+            const defaultBranch = context.payload.repository.default_branch;
+            if (pr.state !== 'open') {
+              fail('The PR is not open.');
+              return;
+            }
+            if (pr.base.ref !== defaultBranch) {
+              fail(`The PR targets \`${pr.base.ref}\` instead of \`${defaultBranch}\`, which is not supported.`);
+              return;
+            }
+
+            // mergeable is null while GitHub is (re)computing the test merge
+            // commit in the background.
+            for (let i = 0; i < 12 && pr.mergeable === null; i++) {
+              await new Promise((resolve) => setTimeout(resolve, 5000));
+              pr = await getPR();
+            }
+            if (pr.mergeable === null) {
+              fail('GitHub has not computed a merge commit for the PR yet, please try again later.');
+              return;
+            }
+            if (!pr.mergeable) {
+              fail(`The PR has merge conflicts with \`${defaultBranch}\`, please resolve them.`);
+              return;
+            }
+
+            // Insert zero-width spaces to prevent the commit in the fork
+            // from creating backlinks in referenced issues and PRs.
+            const ZWSP = '\u200b';
+            const protect = (s) => s
+              .replace(/#(?=\d)/g, '#' + ZWSP)
+              .replace(/\bGH-(?=\d)/gi, (m) => m + ZWSP)
+              .replace(/github\.com/gi, 'github' + ZWSP + '.com');
+            const body = (pr.body || '').replace(/\r\n/g, '\n').trim();
+            let message = `${pr.title} (#${pr.number})\n\n`;
+            if (body)
+              message += `${body}\n\n`;
+            message += `Compile-time testing for ${pr.html_url}, ` +
+                       `requested by ${context.payload.comment.user.login}.\n`;
+            fs.writeFileSync(`${tmp}/commit-msg`, protect(message));
+
+            core.setOutput('merge-sha', pr.merge_commit_sha);
+            core.setOutput('author-name', pr.user.login);
+            core.setOutput('author-email',
+              `${pr.user.id}+${pr.user.login}@users.noreply.github.com`);
+
+      - name: Create and push branch
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+          MERGE_SHA: ${{ steps.get-pr.outputs.merge-sha }}
+          GIT_AUTHOR_NAME: ${{ steps.get-pr.outputs.author-name }}
+          GIT_AUTHOR_EMAIL: ${{ steps.get-pr.outputs.author-email }}
+          GIT_COMMITTER_NAME: llvmbot
+          GIT_COMMITTER_EMAIL: llvmbot@llvm.org
+          BOT_TOKEN: ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }}
+        run: |
+          git init -q llvm-project
+          cd llvm-project
+          # The first parent of the merge commit is main, the second the PR.
+          # Use a blobless clone, blobs needed for the push will be fetched
+          # on demand.
+          git fetch --no-tags --progress --depth 2 --filter=blob:none \
+            "https://github.com/$GITHUB_REPOSITORY.git" "$MERGE_SHA"
+
+          # Convert merge commit into a non-merge commit.
+          COMMIT=$(git commit-tree "$MERGE_SHA^{tree}" -p "$MERGE_SHA^1" -F "$RUNNER_TEMP/commit-msg")
+          git show --stat "$COMMIT"
+
+          # As we only have a shallow clone, git doesn't know which objects
+          # already exist in the fork, and would push the whole tree. Use
+          # push.negotiate to determine common commits with the remote first.
+          git -c push.negotiate=true \
+              push --force --progress \
+              "https://x-access-token:$BOT_TOKEN@github.com/$BOT_REPOSITORY.git" \
+              "$COMMIT:refs/heads/perf/pr-$PR_NUMBER"
+
+      - name: Thumbs up comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });
+
+      - name: Comment on failure
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const fs = require('fs');
+            const reasonFile = `${process.env.RUNNER_TEMP}/failure-reason`;
+            let body = `Failed to create compile-time tracker branch: ${process.env.RUN_URL}`;
+            if (fs.existsSync(reasonFile))
+              body += '\n\n' + fs.readFileSync(reasonFile, 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body
+            });
