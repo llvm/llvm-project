@@ -2361,15 +2361,21 @@ def : Pat<(v4i32 (sext_invec v16i8:$vj)),
 def : Pat<(v4i32 (sext_invec v8i16:$vj)),
           (v4i32 (EXTRACT_SUBREG (VEXT2XV_W_H (SUBREG_TO_REG v8i16:$vj, sub_128)),
                                  sub_128))>;
-def : Pat<(v4i64 (sext_invec v32i8:$xj)), (v4i64 (VEXT2XV_D_B v32i8:$xj))>;
-def : Pat<(v4i64 (sext_invec v16i16:$xj)), (v4i64 (VEXT2XV_D_H v16i16:$xj))>;
-def : Pat<(v4i64 (sext_invec v8i32:$xj)), (v4i64 (VEXT2XV_D_W v8i32:$xj))>;
 def : Pat<(v8i16 (sext_invec v16i8:$vj)),
           (v8i16 (EXTRACT_SUBREG (VEXT2XV_H_B (SUBREG_TO_REG v16i8:$vj, sub_128)),
                                  sub_128))>;
-def : Pat<(v16i16 (sext_invec v32i8:$xj)), (v16i16 (VEXT2XV_H_B v32i8:$xj))>;
+
+def : Pat<(v4i64 (sext_invec v32i8:$xj)), (v4i64 (VEXT2XV_D_B v32i8:$xj))>;
+def : Pat<(v4i64 (sext_invec v16i16:$xj)), (v4i64 (VEXT2XV_D_H v16i16:$xj))>;
+def : Pat<(v4i64 (sext_invec v8i32:$xj)), (v4i64 (VEXT2XV_D_W v8i32:$xj))>;
 def : Pat<(v8i32 (sext_invec v32i8:$xj)), (v8i32 (VEXT2XV_W_B v32i8:$xj))>;
 def : Pat<(v8i32 (sext_invec v16i16:$xj)), (v8i32 (VEXT2XV_W_H v16i16:$xj))>;
+def : Pat<(v16i16 (sext_invec v32i8:$xj)), (v16i16 (VEXT2XV_H_B v32i8:$xj))>;
+
+def : Pat<(v4i64 (sext_invec v16i8:$vj)),
+          (v4i64 (VEXT2XV_D_B (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
+def : Pat<(v4i64 (sext_invec v8i16:$vj)),
+          (v4i64 (VEXT2XV_D_H (SUBREG_TO_REG v8i16:$vj, sub_128)))>;
 def : Pat<(v8i32 (sext_invec v16i8:$vj)),
           (v8i32 (VEXT2XV_W_B (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
 
@@ -2396,15 +2402,21 @@ def : Pat<(v4i32 (zext_invec v16i8:$vj)),
 def : Pat<(v4i32 (zext_invec v8i16:$vj)),
           (v4i32 (EXTRACT_SUBREG (VEXT2XV_WU_HU (SUBREG_TO_REG v8i16:$vj, sub_128)),
                                  sub_128))>;
-def : Pat<(v4i64 (zext_invec v32i8:$xj)), (v4i64 (VEXT2XV_DU_BU v32i8:$xj))>;
-def : Pat<(v4i64 (zext_invec v16i16:$xj)), (v4i64 (VEXT2XV_DU_HU v16i16:$xj))>;
-def : Pat<(v4i64 (zext_invec v8i32:$xj)), (v4i64 (VEXT2XV_DU_WU v8i32:$xj))>;
 def : Pat<(v8i16 (zext_invec v16i8:$vj)),
           (v8i16 (EXTRACT_SUBREG (VEXT2XV_HU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)),
                                  sub_128))>;
-def : Pat<(v16i16 (zext_invec v32i8:$xj)), (v16i16 (VEXT2XV_HU_BU v32i8:$xj))>;
+
+def : Pat<(v4i64 (zext_invec v32i8:$xj)), (v4i64 (VEXT2XV_DU_BU v32i8:$xj))>;
+def : Pat<(v4i64 (zext_invec v16i16:$xj)), (v4i64 (VEXT2XV_DU_HU v16i16:$xj))>;
+def : Pat<(v4i64 (zext_invec v8i32:$xj)), (v4i64 (VEXT2XV_DU_WU v8i32:$xj))>;
 def : Pat<(v8i32 (zext_invec v32i8:$xj)), (v8i32 (VEXT2XV_WU_BU v32i8:$xj))>;
 def : Pat<(v8i32 (zext_invec v16i16:$xj)), (v8i32 (VEXT2XV_WU_HU v16i16:$xj))>;
+def : Pat<(v16i16 (zext_invec v32i8:$xj)), (v16i16 (VEXT2XV_HU_BU v32i8:$xj))>;
+
+def : Pat<(v4i64 (zext_invec v16i8:$vj)),
+          (v4i64 (VEXT2XV_DU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
+def : Pat<(v4i64 (zext_invec v8i16:$vj)),
+          (v4i64 (VEXT2XV_DU_HU (SUBREG_TO_REG v8i16:$vj, sub_128)))>;
 def : Pat<(v8i32 (zext_invec v16i8:$vj)),
           (v8i32 (VEXT2XV_WU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
 
@@ -2776,5 +2788,20 @@ def : Pat<(int_loongarch_lasx_xvstelm_w v8i32:$xd, GPR:$rj, timm:$imm, timm:$idx
 def : Pat<(int_loongarch_lasx_xvstelm_d v4i64:$xd, GPR:$rj, timm:$imm, timm:$idx),
           (XVSTELM_D v4i64:$xd, GPR:$rj, (to_valid_timm timm:$imm),
                     (to_valid_timm timm:$idx))>;
+
+
+// Whole-vector zero tests, see the LSX counterparts.
+foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
+def : Pat<(GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))),
+          (MOVCF2GR (XVSETNEZ_V LASX256:$xj))>;
+def : Pat<(GRLenVT (loongarch_vallzero (vt LASX256:$xj))),
+          (MOVCF2GR (XVSETEQZ_V LASX256:$xj))>;
+def : Pat<(loongarch_brcc (GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))), 0,
+                          SETNE, bb:$imm21),
+          (BCNEZ (XVSETNEZ_V LASX256:$xj), bb:$imm21)>;
+def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LASX256:$xj))), 0,
+                          SETNE, bb:$imm21),
+          (BCNEZ (XVSETEQZ_V LASX256:$xj), bb:$imm21)>;
+}
 
 } // Predicates = [HasExtLASX]

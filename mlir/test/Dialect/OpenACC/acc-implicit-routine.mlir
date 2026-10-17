@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -acc-implicit-routine -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -acc-implicit-routine=the-device-types=3,4 -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -acc-implicit-routine -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=NODEVICE
 
 // -----
 
@@ -244,7 +245,7 @@ module {
   func.func @test_undefined_callee() {
     %buf = memref.alloca() : memref<f32>
     acc.serial {
-      test.call_and_store @undefined_callee(%buf), %buf {store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+      test.call_and_store @undefined_callee(%buf), %buf <store_before_call = false> : (memref<f32>, memref<f32>) -> ()
       acc.yield
     }
     return
@@ -255,3 +256,162 @@ module {
 // CHECK: test.call_and_store @undefined_callee
 // CHECK-NOT: acc.routine @acc_routine_
 // CHECK-NOT: acc.routine_info
+
+// -----
+
+// An external procedure called from a compute region cannot receive an
+// implicit routine; it must already have acc routine information.
+module {
+  func.func private @ext_callee()
+  func.func @test_external_in_serial() {
+    acc.serial {
+      // expected-error @below {{Calls in an acc compute region must be marked with acc routine: "ext_callee"}}
+      func.call @ext_callee() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// -----
+
+// Same requirement for an external procedure called from an existing routine.
+module {
+  acc.routine @r_caller func(@routine_caller_ext) seq
+  func.func private @ext_from_routine()
+  func.func @routine_caller_ext() attributes {acc.routine_info = #acc.routine_info<[@r_caller]>} {
+    // expected-error @below {{Calls in acc routine must also be marked with acc routine: "ext_from_routine"}}
+    func.call @ext_from_routine() : () -> ()
+    return
+  }
+}
+
+// -----
+
+// External callee from acc.kernels.
+module {
+  func.func private @ext_kernels()
+  func.func @test_external_in_kernels() {
+    acc.kernels {
+      // expected-error @below {{Calls in an acc compute region must be marked with acc routine: "ext_kernels"}}
+      func.call @ext_kernels() : () -> ()
+      acc.terminator
+    }
+    return
+  }
+}
+
+// -----
+
+// Calls that do not execute for the-device-types=3,4 do not get an implicit
+// routine. 3 is acc_device_not_host and 4 is acc_device_nvidia, so:
+//   acc_on_device(2) then, acc_on_device(3) else, and acc_on_device(5) then
+// stay off the target. The else of acc_on_device(5) still executes on it.
+module {
+  func.func @host_then() {
+    return
+  }
+  func.func @device_else() {
+    return
+  }
+  func.func @device_then() {
+    return
+  }
+  func.func @host_else() {
+    return
+  }
+  func.func @other_device_then() {
+    return
+  }
+  func.func @other_device_else() {
+    return
+  }
+  func.func @test_host_branch_in_compute() {
+    %host = arith.constant 2 : i32
+    %not_host = arith.constant 3 : i32
+    %radeon = arith.constant 5 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    %on_not_host = acc.on_device %not_host : i32 -> i1
+    %on_radeon = acc.on_device %radeon : i32 -> i1
+    acc.serial {
+      scf.if %on_host {
+        func.call @host_then() : () -> ()
+      } else {
+        func.call @device_else() : () -> ()
+      }
+      scf.if %on_not_host {
+        func.call @device_then() : () -> ()
+      } else {
+        func.call @host_else() : () -> ()
+      }
+      scf.if %on_radeon {
+        func.call @other_device_then() : () -> ()
+      } else {
+        func.call @other_device_else() : () -> ()
+      }
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK-NOT: acc.routine @{{.*}} func(@host_then)
+// CHECK-NOT: acc.routine @{{.*}} func(@host_else)
+// CHECK-NOT: acc.routine @{{.*}} func(@other_device_then)
+// CHECK: acc.routine @acc_routine_0 func(@device_else) implicit
+// CHECK: func.func @device_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+// CHECK: acc.routine @acc_routine_1 func(@device_then) implicit
+// CHECK: func.func @device_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+// CHECK-NOT: acc.routine @{{.*}} func(@host_then)
+// CHECK-NOT: acc.routine @{{.*}} func(@host_else)
+// CHECK-NOT: acc.routine @{{.*}} func(@other_device_then)
+// CHECK: acc.routine @acc_routine_2 func(@other_device_else) implicit
+// CHECK: func.func @other_device_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_2]>}
+
+// -----
+
+// With no the-device-types, no branch is classified as off the target, so both
+// sides of acc.on_device get an implicit routine.
+module {
+  func.func @no_dev_host_then() {
+    return
+  }
+  func.func @no_dev_host_else() {
+    return
+  }
+  func.func @no_dev_device_then() {
+    return
+  }
+  func.func @no_dev_device_else() {
+    return
+  }
+  func.func @test_no_device_types() {
+    %host = arith.constant 2 : i32
+    %not_host = arith.constant 3 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    %on_device = acc.on_device %not_host : i32 -> i1
+    acc.serial {
+      scf.if %on_host {
+        func.call @no_dev_host_then() : () -> ()
+      } else {
+        func.call @no_dev_host_else() : () -> ()
+      }
+      scf.if %on_device {
+        func.call @no_dev_device_then() : () -> ()
+      } else {
+        func.call @no_dev_device_else() : () -> ()
+      }
+      acc.yield
+    }
+    return
+  }
+}
+
+// NODEVICE: acc.routine @acc_routine_0 func(@no_dev_host_then) implicit
+// NODEVICE: func.func @no_dev_host_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+// NODEVICE: acc.routine @acc_routine_1 func(@no_dev_host_else) implicit
+// NODEVICE: func.func @no_dev_host_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+// NODEVICE: acc.routine @acc_routine_2 func(@no_dev_device_then) implicit
+// NODEVICE: func.func @no_dev_device_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_2]>}
+// NODEVICE: acc.routine @acc_routine_3 func(@no_dev_device_else) implicit
+// NODEVICE: func.func @no_dev_device_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_3]>}

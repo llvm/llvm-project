@@ -4,7 +4,7 @@ Test that we are able to broadcast and receive progress events from lldb
 import lldb
 
 import lldbsuite.test.lldbutil as lldbutil
-
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -16,6 +16,7 @@ class TestProgressReporting(TestBase):
             self.broadcaster, lldb.SBDebugger.eBroadcastBitProgress
         )
 
+    @skipIf(remote=True, bugnumber="github.com/llvm/llvm-project/issues/232431")
     def test_wait_attach_progress_reporting(self):
         """Test that progress reports for wait attaching work as intended."""
         target = self.dbg.CreateTarget(None)

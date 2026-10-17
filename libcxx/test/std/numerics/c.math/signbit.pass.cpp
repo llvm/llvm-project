@@ -24,59 +24,43 @@
 
 struct TestFloat {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(!std::signbit(T(0)));
-    assert(!std::signbit(std::numeric_limits<T>::min()));
-    assert(!std::signbit(std::numeric_limits<T>::denorm_min()));
-    assert(!std::signbit(std::numeric_limits<T>::max()));
-    assert(!std::signbit(std::numeric_limits<T>::infinity()));
-    assert(!std::signbit(std::numeric_limits<T>::quiet_NaN()));
-    assert(!std::signbit(std::numeric_limits<T>::signaling_NaN()));
-    assert(std::signbit(-T(0)));
-    assert(std::signbit(-std::numeric_limits<T>::infinity()));
-    assert(std::signbit(std::numeric_limits<T>::lowest()));
-
-    return true;
-  }
-
-  template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
+    using lim = std::numeric_limits<T>;
+
+    assert(!std::signbit(T(0)));
+    assert(!std::signbit(lim::min()));
+    assert(!std::signbit(lim::denorm_min()));
+    assert(!std::signbit(lim::max()));
+    assert(!std::signbit(lim::infinity()));
+    assert(!std::signbit(lim::quiet_NaN()));
+    assert(!std::signbit(lim::signaling_NaN()));
+    assert(std::signbit(-T(0)));
+    assert(std::signbit(-lim::infinity()));
+    assert(std::signbit(lim::lowest()));
   }
 };
 
 struct TestInt {
   template <class T>
-  static TEST_CONSTEXPR_CXX23 bool test() {
-    assert(!std::signbit(std::numeric_limits<T>::max()));
+  TEST_CONSTEXPR_CXX23 void operator()() {
+    using lim = std::numeric_limits<T>;
+
+    assert(!std::signbit(lim::max()));
     assert(!std::signbit(T(0)));
     if (std::is_unsigned<T>::value) {
-      assert(!std::signbit(std::numeric_limits<T>::lowest()));
+      assert(!std::signbit(lim::lowest()));
     } else {
-      assert(std::signbit(std::numeric_limits<T>::lowest()));
+      assert(std::signbit(lim::lowest()));
     }
-
-    return true;
-  }
-
-  template <class T>
-  TEST_CONSTEXPR_CXX23 void operator()() {
-    test<T>();
-#if TEST_STD_VER >= 23
-    static_assert(test<T>());
-#endif
   }
 };
 
 template <typename T>
 struct ConvertibleTo {
-  operator T() const { return T(); }
+  TEST_CONSTEXPR_CXX23 operator T() const { return T(); }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
@@ -88,5 +72,14 @@ int main(int, char**) {
     assert(!std::signbit(ConvertibleTo<double>()));
     assert(!std::signbit(ConvertibleTo<long double>()));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
   return 0;
 }

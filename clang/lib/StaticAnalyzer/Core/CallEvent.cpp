@@ -798,9 +798,17 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   if (!MD->isVirtual())
     return AnyFunctionCall::getRuntimeDefinition();
 
+  // If the method is final or declared in a final class, we can inline it.
+  if (MD->hasAttr<FinalAttr>() || MD->getParent()->hasAttr<FinalAttr>())
+    return AnyFunctionCall::getRuntimeDefinition();
+
   auto [RD, CanBeSubClass] = getDeclForDynamicType();
   if (!RD || !RD->hasDefinition())
     return {};
+
+  // We can confidently inline a method called on an object with final type.
+  if (RD->hasAttr<FinalAttr>())
+    CanBeSubClass = false;
 
   // Find the decl for this method in that class.
   const CXXMethodDecl *Result = MD->getCorrespondingMethodInClass(RD, true);
@@ -821,6 +829,10 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
 
     return {};
   }
+
+  // A final method cannot be overriden in a subclass.
+  if (Result->hasAttr<FinalAttr>())
+    CanBeSubClass = false;
 
   // Does the decl that we found have an implementation?
   const FunctionDecl *Definition;

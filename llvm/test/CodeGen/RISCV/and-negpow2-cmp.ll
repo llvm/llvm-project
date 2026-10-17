@@ -261,3 +261,37 @@ entry:
   %4 = zext i1 %3 to i64
   ret i64 %4
 }
+
+define i64 @PR221593(i1 %0) {
+; RV32-LABEL: PR221593:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 245379
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    addi a1, a1, 78
+; RV32-NEXT:    lui a2, 3
+; RV32-NEXT:    and a3, a0, a1
+; RV32-NEXT:    addi a1, a2, -1907
+; RV32-NEXT:    seqz a2, a3
+; RV32-NEXT:    and a1, a0, a1
+; RV32-NEXT:    or a0, a3, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: PR221593:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, %hi(.LCPI13_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI13_0)(a1)
+; RV64-NEXT:    slli a0, a0, 63
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    slli a1, a0, 32
+; RV64-NEXT:    seqz a1, a1
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    ret
+  %2 = select i1 %0, i64 44587060572238, i64 0
+  %3 = and i64 %2, 1005072462
+  %4 = icmp eq i64 %3, 0
+  %5 = zext i1 %4 to i64
+  %6 = or i64 %2, %5
+  ret i64 %6
+}

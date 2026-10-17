@@ -33,7 +33,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
-  unsigned GPUFeatures;
   unsigned WavefrontSize;
 
   /// Whether to use cumode or WGP mode. True for cumode. False for WGP mode.
@@ -64,7 +63,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::R600_FEATURE_FMA);
+           llvm::AMDGPU::getFeatureBitsetR600(GPUKind).test(
+               llvm::AMDGPU::R600_FEAT_FMAF);
   }
 
   bool hasFullRateDenormalsF32() const {
@@ -282,13 +282,11 @@ public:
   bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
-      GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
       return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
                                                 GPUKind) &&
              !llvm::AMDGPU::isPseudoTarget(GPUKind);
     }
     GPUKind = llvm::AMDGPU::parseArchR600(Name);
-    GPUFeatures = llvm::AMDGPU::getArchAttrR600(GPUKind);
     return GPUKind != llvm::AMDGPU::GK_NONE;
   }
 

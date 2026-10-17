@@ -132,6 +132,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtf
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf128
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
@@ -155,11 +156,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf128
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdimf128
     libc.src.math.fdiml
     libc.src.math.fdiv
     libc.src.math.fdivl
@@ -171,9 +174,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmaf
+    libc.src.math.fmaximum_mag_numf128
+    libc.src.math.fmaximum_magf128
     libc.src.math.fmin
     libc.src.math.fminf
     libc.src.math.fminf128
+    libc.src.math.fminimum_mag_numf128
+    libc.src.math.fminimum_magf128
     libc.src.math.fminl
     libc.src.math.fmax
     libc.src.math.fmaxf
@@ -181,9 +188,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaxl
     libc.src.math.fmaximum
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf128
     libc.src.math.fmaximuml
     libc.src.math.fmaximum_num
     libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf128
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_magf
@@ -193,9 +202,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fminimum
     libc.src.math.fminimumf
+    libc.src.math.fminimumf128
     libc.src.math.fminimuml
     libc.src.math.fminimum_num
     libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf128
     libc.src.math.fminimum_numl
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_magf
@@ -217,11 +228,16 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
+    libc.src.math.issignalingf128
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
+    libc.src.math.lgammaf
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
@@ -240,6 +256,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logbl
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintf128
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
@@ -271,6 +288,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintf128
     libc.src.math.rintl
     libc.src.math.round
     libc.src.math.roundevenf128
@@ -297,6 +315,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanhf
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncf128
     libc.src.math.truncl
 )
 
@@ -442,6 +461,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.iscanonicalf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -501,26 +521,15 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2l
     libc.src.math.canonicalizef128
-    libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
-    libc.src.math.fabsf128
     libc.src.math.faddf128
-    libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.fmaximum_mag_numf128
-    libc.src.math.fmaximum_magf128
-    libc.src.math.fmaximum_numf128
-    libc.src.math.fmaximumf128
-    libc.src.math.fminimum_mag_numf128
-    libc.src.math.fminimum_magf128
-    libc.src.math.fminimum_numf128
-    libc.src.math.fminimumf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128
@@ -530,13 +539,9 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
-    libc.src.math.iscanonicalf128
-    libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
-    libc.src.math.llrintf128
     libc.src.math.logbf128
-    libc.src.math.lrintf128
     libc.src.math.modff128
     libc.src.math.nanf128
     libc.src.math.nextafterf128
@@ -544,14 +549,12 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.nextupf128
     libc.src.math.remainderf128
     libc.src.math.remquof128
-    libc.src.math.rintf128
     libc.src.math.scalblnf128
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.setpayloadsigf128
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
-    libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )

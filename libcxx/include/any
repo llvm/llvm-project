@@ -88,7 +88,6 @@ namespace std {
 #else
 #  include <__config>
 #  include <__memory/construct_at.h>
-#  include <__new/allocate.h>
 #  include <__type_traits/add_cv_quals.h>
 #  include <__type_traits/add_pointer.h>
 #  include <__type_traits/conditional.h>
@@ -105,7 +104,6 @@ namespace std {
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
-#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/in_place.h>
 #  include <__utility/move.h>
@@ -437,10 +435,7 @@ struct _LargeHandler {
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI static _Tp& __create(any& __dest, _Args&&... __args) {
-    _Tp* __ptr = static_cast<_Tp*>(std::__libcpp_allocate<_Tp>(__element_count(1)));
-    std::__exception_guard __guard([&] { std::__libcpp_deallocate<_Tp>(__ptr, __element_count(1)); });
-    std::__construct_at(__ptr, std::forward<_Args>(__args)...);
-    __guard.__complete();
+    _Tp* __ptr        = ::new _Tp(std::forward<_Args>(__args)...);
     __dest.__s_.__ptr = __ptr;
     __dest.__h_       = &_LargeHandler::__handle;
     return *__ptr;
@@ -448,9 +443,7 @@ struct _LargeHandler {
 
 private:
   _LIBCPP_HIDE_FROM_ABI static void __destroy(any& __this) {
-    _Tp* __p = static_cast<_Tp*>(__this.__s_.__ptr);
-    std::__destroy_at(__p);
-    std::__libcpp_deallocate<_Tp>(__p, __element_count(1));
+    ::delete static_cast<_Tp*>(__this.__s_.__ptr);
     __this.__h_ = nullptr;
   }
 

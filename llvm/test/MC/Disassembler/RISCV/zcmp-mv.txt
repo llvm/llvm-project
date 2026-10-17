@@ -1,0 +1,63 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+zcmp < %s 2>&1 \
+# RUN:   | FileCheck -check-prefixes=CHECK,RV %s
+# RUN: not llvm-mc -disassemble -triple=riscv64 -mattr=+zcmp < %s 2>&1 \
+# RUN:   | FileCheck -check-prefixes=CHECK,RV %s
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+e,+zcmp < %s 2>&1 \
+# RUN:   | FileCheck -check-prefixes=CHECK,RVE %s
+# RUN: not llvm-mc -disassemble -triple=riscv64 -mattr=+e,+zcmp < %s 2>&1 \
+# RUN:   | FileCheck -check-prefixes=CHECK,RVE %s
+
+# cm.mvsa01 requires r1s' != r2s'.
+
+[0x22,0xac]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cm.mvsa01 s0, s0
+
+[0xa6,0xac]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cm.mvsa01 s1, s1
+
+[0xbe,0xaf]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NOT: cm.mvsa01 s7, s7
+
+# On RVE, r1s' and r2s' values above 1 (s2-s7) are reserved.
+
+[0x26,0xad]
+# RV: cm.mvsa01 s2, s1
+# RVE: warning: invalid instruction encoding
+# RVE-NOT: cm.mvsa01 s2, s1
+
+[0xaa,0xac]
+# RV: cm.mvsa01 s1, s2
+# RVE: warning: invalid instruction encoding
+# RVE-NOT: cm.mvsa01 s1, s2
+
+[0xe2,0xaf]
+# RV: cm.mva01s s7, s0
+# RVE: warning: invalid instruction encoding
+# RVE-NOT: cm.mva01s s7, s0
+
+[0x7e,0xac]
+# RV: cm.mva01s s0, s7
+# RVE: warning: invalid instruction encoding
+# RVE-NOT: cm.mva01s s0, s7
+
+[0xee,0xad]
+# RV: cm.mva01s s3, s3
+# RVE: warning: invalid instruction encoding
+# RVE-NOT: cm.mva01s s3, s3
+
+# Valid on both RV and RVE. cm.mva01s allows r1s' == r2s'.
+
+[0xa2,0xac]
+# CHECK: cm.mvsa01 s1, s0
+
+[0x26,0xac]
+# CHECK: cm.mvsa01 s0, s1
+
+[0x62,0xac]
+# CHECK: cm.mva01s s0, s0
+
+[0xe6,0xac]
+# CHECK: cm.mva01s s1, s1

@@ -24,7 +24,7 @@ func.func @test_worker_private_foldable_nw() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

@@ -5,7 +5,6 @@
 %t = type { i32, i32 }
 
 declare ptr @llvm.launder.invariant.group.p0(ptr %a)
-declare ptr @llvm.strip.invariant.group.p0(ptr %a)
 declare void @h(i32 %a)
 declare i32 @somevalue()
 
@@ -57,7 +56,7 @@ define void @g() {
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[A2]], align 4
 ; CHECK-NEXT:    call void @h(i32 [[V1]])
 ; CHECK-NEXT:    call void @h(i32 [[V2]])
-; CHECK-NEXT:    [[A1_STRIPPED:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[A]])
+; CHECK-NEXT:    [[A1_STRIPPED:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[A]])
 ; CHECK-NEXT:    [[A1_INT:%.*]] = ptrtoint ptr [[A1_STRIPPED]] to i32
 ; CHECK-NEXT:    call void @h(i32 [[A1_INT]])
 ; CHECK-NEXT:    ret void
@@ -79,8 +78,8 @@ define void @g() {
   call void @h(i32 %v1)
   call void @h(i32 %v2)
 
-  %a1_stripped = call ptr @llvm.strip.invariant.group.p0(ptr %a)
-  %a1_int = ptrtoint ptr %a1_stripped to i32
+  %a1_laundered = call ptr @llvm.launder.invariant.group.p0(ptr %a)
+  %a1_int = ptrtoint ptr %a1_laundered to i32
   call void @h(i32 %a1_int)
 
   ret void

@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -scalable-vectorization=off -mtriple=riscv64 -mattr=+v -S | FileCheck %s --check-prefix=FIXED
 ; RUN: opt < %s -passes=loop-vectorize -scalable-vectorization=on -mtriple=riscv64 -mattr=+v -S | FileCheck %s --check-prefix=SCALABLE
 
-define void @load_store_factor2_i32(ptr %p) {
+define void @load_store_factor2_i32(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor2_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -115,7 +115,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor2_i64(ptr %p) {
+define void @load_store_factor2_i64(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor2_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -227,7 +227,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor3_i32(ptr %p) {
+define void @load_store_factor3_i32(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor3_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -353,7 +353,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor3_i64(ptr %p) {
+define void @load_store_factor3_i64(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor3_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -479,7 +479,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor4(ptr %p) {
+define void @load_store_factor4(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -606,7 +606,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor5(ptr %p) {
+define void @load_store_factor5(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -777,7 +777,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor6(ptr %p) {
+define void @load_store_factor6(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -969,7 +969,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor7(ptr %p) {
+define void @load_store_factor7(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -1182,7 +1182,7 @@ exit:
   ret void
 }
 
-define void @load_store_factor8(ptr %p) {
+define void @load_store_factor8(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @load_store_factor8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -1416,7 +1416,7 @@ exit:
   ret void
 }
 
-define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
+define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) vscale_range(2, 1024) {
 ; CHECK-LABEL: @combine_load_factor2_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -1523,7 +1523,7 @@ exit:
   ret void
 }
 
-define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
+define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) vscale_range(2, 1024) {
 ; CHECK-LABEL: @combine_load_factor2_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]

@@ -9,7 +9,6 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_step(DAPTestCaseBase):
-    @skipIfWindows
     def test_step(self):
         """
         Tests the stepping in/out/over in threads.

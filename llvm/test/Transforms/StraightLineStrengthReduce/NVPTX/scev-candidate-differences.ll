@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=slsr -stats -disable-output < %s 2>&1 | FileCheck %s
 
-; CHECK: 8 slsr - Number of candidate-basis SCEV differences computed by SLSR
+; CHECK: 6 slsr - Number of candidate-basis SCEV differences computed by SLSR
 
 target triple = "nvptx64-nvidia-cuda"
 

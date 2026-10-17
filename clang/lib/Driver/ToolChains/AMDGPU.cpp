@@ -667,7 +667,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
-  addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
+  // FIXME: Device ASan is provided by the ROCm device library, not compiler-rt.
+  if (!getToolChain().getSanitizerArgs(Args).needsAsanRt())
+    addSanitizerRuntimes(getToolChain(), Args, CmdArgs, C);
 
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
@@ -1364,11 +1366,12 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
     return false;
   llvm::StringRef Processor = getProcessorFromTargetID(TT, TargetID);
   llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
-  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(ProcKind);
 
   // If processor has xnack but doesn't support on/off modes, xnack is always on
-  bool XnackAlwaysOn = (Features & llvm::AMDGPU::FEATURE_XNACK) &&
-                       !(Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES);
+  bool XnackAlwaysOn = Features.test(llvm::AMDGPU::FEAT_XNACK_SUPPORT) &&
+                       !Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES);
   if (XnackAlwaysOn)
     return true;
 

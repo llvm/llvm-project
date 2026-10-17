@@ -125,6 +125,17 @@ def DISubroutineTypeAttr : DialectAttribute<(attr
 )>;
 
 //===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+def DISourceLanguageNameAttr : DialectAttribute<(attr
+  VarInt:$language,
+  VarInt:$name,
+  OptionalInt<"uint32_t">:$version,
+  VarInt:$dialect
+)>;
+
+//===----------------------------------------------------------------------===//
 // DICompileUnitAttr
 //===----------------------------------------------------------------------===//
 
@@ -132,8 +143,7 @@ def DICompileUnitAttr : DialectAttribute<(attr
   OptionalAttribute<"DistinctAttr">:$recId,
   Bool:$isRecSelf,
   OptionalAttribute<"DistinctAttr">:$id,
-  VarInt:$sourceLanguage,
-  VarInt:$sourceLanguageDialect,
+  OptionalAttribute<"DISourceLanguageNameAttr">:$sourceLanguage,
   OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,

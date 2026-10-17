@@ -82,7 +82,7 @@ public:
 
   void recordNumNamedBarriers(uint32_t GVAddr, unsigned BarCnt) {
     NumNamedBarriers =
-        std::max(NumNamedBarriers, ((GVAddr & 0x1ff) >> 4) + BarCnt - 1);
+        std::max(NumNamedBarriers, (GVAddr & 0x1ff) + BarCnt - 1);
   }
   uint32_t getNumNamedBarriers() const { return NumNamedBarriers; }
 
@@ -109,8 +109,13 @@ public:
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
                              Align Trailing);
 
+  unsigned allocateBarrierGlobal(const DataLayout &DL,
+                                 const GlobalVariable &GV);
+
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
-  static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);
+
+  static std::optional<uint32_t> get32BitAbsoluteAddress(const GlobalValue &GV,
+                                                         unsigned AS);
 
   Align getDynLDSAlign() const { return DynLDSAlign; }
 

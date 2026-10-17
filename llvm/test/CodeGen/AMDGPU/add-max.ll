@@ -290,7 +290,7 @@ define amdgpu_ps float @add_max_v2u16_slv(<2 x i16> inreg %a, <2 x i16> %b) {
 ; GCN-NEXT:    s_mov_b64 s[64:65], 0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GCN-NEXT:    v_pk_add_max_u16 v0, 0x640064, s0, v0
+; GCN-NEXT:    v_pk_add_max_u16 v0, s0, 0x640064, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %add = call <2 x i16> @llvm.uadd.sat.i32(<2 x i16> %a, <2 x i16> <i16 100, i16 100>)
   %max = call <2 x i16> @llvm.umax.v216(<2 x i16> %add, <2 x i16> %b)

@@ -7,7 +7,7 @@
 // the device number widened to i64. With the default ACCRuntimeCallConfig
 // mapping (dialect ordinal), nvidia is 5.
 // CHECK: %[[NVIDIA:.*]] = llvm.mlir.constant(5 : i64) : i64
-// CHECK: %[[IDENT:.*]] = llvm.mlir.addressof @[[ID:ident_[^ ]+]]
+// CHECK: %[[IDENT:.*]] = llvm.mlir.addressof @[[ID:acc\.ident\.[^ ]+]]
 // CHECK: %[[FLAGS:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK: %[[DEVNUM:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK: llvm.call @__tgt_acc_init(%[[IDENT]], %[[FLAGS]], %[[NVIDIA]], %[[DEVNUM]]) : (!llvm.ptr, i64, i64, i64) -> ()
@@ -93,15 +93,15 @@ module {
 // The ident is a constant global whose source field points at the location
 // string. Call sites take the address of that ident, not of the string.
 
-// CHECK: llvm.mlir.global internal constant @[[$SRC:loc_10_1_[0-9]+]](";init-shutdown-set.mlir;test_init_with_loc;10;1;;\00")
-// CHECK: llvm.mlir.global internal constant @[[$IDENT:ident_loc_10_1_[0-9]+]]() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
+// CHECK: llvm.mlir.global internal constant @acc.loc.[[$POS:10\.1\.[0-9]+]](";init-shutdown-set.mlir;test_init_with_loc;10;1;;\00")
+// CHECK: llvm.mlir.global internal constant @acc.ident.[[$POS]]() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
 // CHECK: llvm.mlir.zero : !llvm.struct<(i32, i32, i32, i32, ptr)>
-// CHECK: llvm.mlir.addressof @[[$SRC]]
+// CHECK: llvm.mlir.addressof @acc.loc.[[$POS]]
 // CHECK: llvm.getelementptr
 // CHECK: llvm.insertvalue {{.*}}[4]
 // CHECK: llvm.return
 // CHECK-LABEL: llvm.func @test_init_with_loc
-// CHECK: llvm.mlir.addressof @[[$IDENT]]
+// CHECK: llvm.mlir.addressof @acc.ident.[[$POS]]
 // CHECK: llvm.call @__tgt_acc_init
 
 #loc = loc("init-shutdown-set.mlir":10:1)
@@ -116,15 +116,15 @@ module {
 
 // Operations without file:line information fall back to an unknown ident.
 
-// CHECK: llvm.mlir.global internal constant @loc__(";unknown;unknown;0;0;;\00")
-// CHECK: llvm.mlir.global internal constant @ident_loc__() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
+// CHECK: llvm.mlir.global internal constant @acc.loc.unknown(";unknown;unknown;0;0;;\00")
+// CHECK: llvm.mlir.global internal constant @acc.ident.unknown() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
 // CHECK: llvm.mlir.zero : !llvm.struct<(i32, i32, i32, i32, ptr)>
-// CHECK: llvm.mlir.addressof @loc__
+// CHECK: llvm.mlir.addressof @acc.loc.unknown
 // CHECK: llvm.getelementptr
 // CHECK: llvm.insertvalue {{.*}}[4]
 // CHECK: llvm.return
 // CHECK-LABEL: llvm.func @test_init_unknown_loc
-// CHECK: llvm.mlir.addressof @ident_loc__
+// CHECK: llvm.mlir.addressof @acc.ident.unknown
 // CHECK: llvm.call @__tgt_acc_init
 
 module {
@@ -139,12 +139,12 @@ module {
 // Two operations at the same line and column of different files must not share
 // a location global, otherwise the ident would name the wrong file.
 
-// CHECK-DAG: llvm.mlir.global internal constant @[[$LOC_A:loc_7_3_[0-9]+]](";a.mlir;test_distinct_files;7;3;;\00")
-// CHECK-DAG: llvm.mlir.global internal constant @[[$LOC_B:loc_7_3_[0-9]+]](";b.mlir;test_distinct_files;7;3;;\00")
+// CHECK-DAG: llvm.mlir.global internal constant @acc.loc.[[$POS_A:7\.3\.[0-9]+]](";a.mlir;test_distinct_files;7;3;;\00")
+// CHECK-DAG: llvm.mlir.global internal constant @acc.loc.[[$POS_B:7\.3\.[0-9]+]](";b.mlir;test_distinct_files;7;3;;\00")
 // CHECK-LABEL: llvm.func @test_distinct_files
-// CHECK: llvm.mlir.addressof @ident_[[$LOC_A]]
+// CHECK: llvm.mlir.addressof @acc.ident.[[$POS_A]]
 // CHECK: llvm.call @__tgt_acc_init
-// CHECK: llvm.mlir.addressof @ident_[[$LOC_B]]
+// CHECK: llvm.mlir.addressof @acc.ident.[[$POS_B]]
 // CHECK: llvm.call @__tgt_acc_shutdown
 
 module {

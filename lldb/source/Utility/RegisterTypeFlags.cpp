@@ -335,7 +335,9 @@ void RegisterTypeEnum::ToXMLElement(Stream &strm,
   // it.
 
   strm.Indent();
-  strm << "<enum id=\"" << GetID() << "\"";
+  strm << "<enum id=\"";
+  PrintXMLAttributeValue(strm, GetID());
+  strm << "\"";
 
   // We don't expect the user of an enum type to be anything but a register,
   // but we cannot crash if that isn't true.
@@ -389,7 +391,9 @@ void RegisterTypeFlags::ToXMLElement(Stream &strm,
   //   <field name="incorrect" start="0" end="0"/>
   // </flags>
   strm.Indent();
-  strm << "<flags id=\"" << GetID() << "\" ";
+  strm << "<flags id=\"";
+  PrintXMLAttributeValue(strm, GetID());
+  strm << "\" ";
   strm.Printf("size=\"%d\"", GetSize());
   strm << ">";
   for (const Field &field : m_fields) {
@@ -421,8 +425,11 @@ void RegisterTypeFlags::Field::ToXMLElement(Stream &strm) const {
 
   strm.Printf("start=\"%d\" end=\"%d\"", GetStart(), GetEnd());
 
-  if (const RegisterTypeEnum *enum_type = GetEnum())
-    strm << " type=\"" << enum_type->GetID() << "\"";
+  if (const RegisterTypeEnum *enum_type = GetEnum()) {
+    strm << " type=\"";
+    RegisterType::PrintXMLAttributeValue(strm, enum_type->GetID());
+    strm << "\"";
+  }
 
   strm << "/>";
 }

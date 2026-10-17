@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstdlib>
 #include <string>
 #include <utility>
 
@@ -356,6 +355,10 @@ OptPassGate &LLVMContext::getOptPassGate() const {
 
 void LLVMContext::setOptPassGate(OptPassGate& OPG) {
   pImpl->setOptPassGate(OPG);
+}
+
+cl::LibraryOptionsContext &LLVMContext::getLibraryOptions() const {
+  return pImpl->LibraryOptions;
 }
 
 const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {

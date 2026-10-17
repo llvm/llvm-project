@@ -36,6 +36,13 @@ using namespace mlir;
 
 namespace {
 
+static bool
+computeRegionInSpecializedAccRoutine(acc::ComputeRegionOp computeRegion) {
+  if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
+    return acc::isSpecializedAccRoutine(func);
+  return false;
+}
+
 static bool shouldEmitLoopRemarks(acc::ComputeRegionOp computeRegion) {
   StringRef origin = computeRegion.getOrigin();
   if (origin == acc::KernelsOp::getOperationName() ||
@@ -43,9 +50,7 @@ static bool shouldEmitLoopRemarks(acc::ComputeRegionOp computeRegion) {
       origin == acc::SerialOp::getOperationName())
     return true;
 
-  if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
-    return acc::isSpecializedAccRoutine(func);
-  return false;
+  return computeRegionInSpecializedAccRoutine(computeRegion);
 }
 
 static std::string getACCParLevelName(acc::GPUParallelDimAttr parDim,
@@ -61,7 +66,10 @@ static std::string getACCParLevelName(acc::GPUParallelDimAttr parDim,
   else if (policy.isGang(parDim))
     accName = "gang";
 
-  if (!policy.isSeq(parDim)) {
+  // Don't specify the constant launch args for sequential loops or loops in
+  // specialized acc routines as the launch args are not determined here.
+  if (!policy.isSeq(parDim) &&
+      !computeRegionInSpecializedAccRoutine(computeRegion)) {
     if (std::optional<uint64_t> constant =
             computeRegion.getKnownConstantLaunchArg(parDim))
       accName += "(" + std::to_string(*constant) + ")";
@@ -96,7 +104,7 @@ static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
                                   const acc::ACCToGPUMappingPolicy &policy,
                                   llvm::StringRef gpuDimSeparator) {
   acc::GPUParallelDimsAttr parDimsAttr =
-      loopOp->getAttrOfType<acc::GPUParallelDimsAttr>(
+      loopOp->getDiscardableAttrOfType<acc::GPUParallelDimsAttr>(
           acc::GPUParallelDimsAttr::name);
 
   SmallVector<acc::GPUParallelDimAttr, 1> seqParDims;
@@ -136,6 +144,15 @@ static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
       DEBUG_TYPE);
 }
 
+static void
+emitUnstructuredIndependentLoopRemark(Operation *op,
+                                      acc::OpenACCSupport &accSupport) {
+  accSupport.emitRemark(op,
+                        "Loop is not parallelized: complex control "
+                        "flow prevents parallelization",
+                        DEBUG_TYPE);
+}
+
 class ACCEmitRemarksLoop
     : public acc::impl::ACCEmitRemarksLoopBase<ACCEmitRemarksLoop> {
 public:
@@ -152,9 +169,12 @@ public:
       if (!shouldEmitLoopRemarks(computeRegion))
         return;
 
-      computeRegion.getRegion().walk([&](LoopLikeOpInterface loopOp) {
-        emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
-                              gpuDimSeparator);
+      computeRegion.getRegion().walk([&](Operation *op) {
+        if (auto loopOp = dyn_cast<LoopLikeOpInterface>(op))
+          emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
+                                gpuDimSeparator);
+        else if (op->hasAttr(acc::getUnstructuredIndependentLoopAttrName()))
+          emitUnstructuredIndependentLoopRemark(op, accSupport);
       });
     });
   }

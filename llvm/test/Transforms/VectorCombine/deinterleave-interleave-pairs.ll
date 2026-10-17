@@ -397,7 +397,7 @@ define <4 x i32> @deinterleave2_select_scalar_condition_interleave2(
 ; CHECK-LABEL: define <4 x i32> @deinterleave2_select_scalar_condition_interleave2(
 ; CHECK-SAME: <4 x i32> [[V:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], <4 x i32> [[V]], <4 x i32> splat (i32 7)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], <4 x i32> [[V]], <4 x i32> splat (i32 7), !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   <4 x i32> %v, i32 %x, i32 %y) {
@@ -405,8 +405,8 @@ define <4 x i32> @deinterleave2_select_scalar_condition_interleave2(
   %d = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %v)
   %f0 = extractvalue { <2 x i32>, <2 x i32> } %d, 0
   %f1 = extractvalue { <2 x i32>, <2 x i32> } %d, 1
-  %u0 = select i1 %cond, <2 x i32> %f0, <2 x i32> splat (i32 7)
-  %u1 = select i1 %cond, <2 x i32> %f1, <2 x i32> splat (i32 7)
+  %u0 = select i1 %cond, <2 x i32> %f0, <2 x i32> splat (i32 7), !prof !1
+  %u1 = select i1 %cond, <2 x i32> %f1, <2 x i32> splat (i32 7), !prof !1
   %r = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %u0, <2 x i32> %u1)
   ret <4 x i32> %r
 }
@@ -712,6 +712,45 @@ else:
   ret <vscale x 16 x i16> zeroinitializer
 }
 
+define <4 x i16> @deinterleave2_same_intrinsic_interleave2(<4 x i16> %v) {
+; CHECK-LABEL: define <4 x i16> @deinterleave2_same_intrinsic_interleave2(
+; CHECK-SAME: <4 x i16> [[V:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[V]], <4 x i16> splat (i16 3))
+; CHECK-NEXT:    ret <4 x i16> [[R]]
+;
+  %d = call { <2 x i16>, <2 x i16> } @llvm.vector.deinterleave2.v4i16(<4 x i16> %v)
+  %f0 = extractvalue { <2 x i16>, <2 x i16> } %d, 0
+  %f1 = extractvalue { <2 x i16>, <2 x i16> } %d, 1
+  %u0 = call <2 x i16> @llvm.smax.v2i16(<2 x i16> %f0, <2 x i16> splat (i16 3))
+  %u1 = call <2 x i16> @llvm.smax.v2i16(<2 x i16> %f1, <2 x i16> splat (i16 3))
+  %r = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> %u0, <2 x i16> %u1)
+  ret <4 x i16> %r
+}
+
+define <4 x i16> @negative_deinterleave2_different_intrinsics_interleave2(<4 x i16> %v) {
+; CHECK-LABEL: define <4 x i16> @negative_deinterleave2_different_intrinsics_interleave2(
+; CHECK-SAME: <4 x i16> [[V:%.*]]) {
+; CHECK-NEXT:    [[D:%.*]] = call { <2 x i16>, <2 x i16> } @llvm.vector.deinterleave2.v4i16(<4 x i16> [[V]])
+; CHECK-NEXT:    [[F0:%.*]] = extractvalue { <2 x i16>, <2 x i16> } [[D]], 0
+; CHECK-NEXT:    [[F1:%.*]] = extractvalue { <2 x i16>, <2 x i16> } [[D]], 1
+; CHECK-NEXT:    [[U0:%.*]] = call <2 x i16> @llvm.smax.v2i16(<2 x i16> [[F0]], <2 x i16> splat (i16 3))
+; CHECK-NEXT:    [[U1:%.*]] = call <2 x i16> @llvm.smin.v2i16(<2 x i16> [[F1]], <2 x i16> splat (i16 3))
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> [[U0]], <2 x i16> [[U1]])
+; CHECK-NEXT:    ret <4 x i16> [[R]]
+;
+  %d = call { <2 x i16>, <2 x i16> } @llvm.vector.deinterleave2.v4i16(<4 x i16> %v)
+  %f0 = extractvalue { <2 x i16>, <2 x i16> } %d, 0
+  %f1 = extractvalue { <2 x i16>, <2 x i16> } %d, 1
+  %u0 = call <2 x i16> @llvm.smax.v2i16(<2 x i16> %f0, <2 x i16> splat (i16 3))
+  %u1 = call <2 x i16> @llvm.smin.v2i16(<2 x i16> %f1, <2 x i16> splat (i16 3))
+  %r = call <4 x i16> @llvm.vector.interleave2.v4i16(<2 x i16> %u0, <2 x i16> %u1)
+  ret <4 x i16> %r
+}
+
+!0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"branch_weights", i32 2, i32 3}
+
 ;.
 ; CHECK: [[META0]] = !{float 2.500000e+00}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
 ;.

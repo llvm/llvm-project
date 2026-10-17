@@ -52,12 +52,12 @@ __attribute__((visibility("protected"), used)) int x;
 // AMDGPU-LTO-TEMPS: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-save-temps
 
 // RUN: llvm-offload-binary -o %t.out \
-// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=generic
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=foo
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=SPIRV-LINK
 
-// SPIRV-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64..img. --target=spirv64-unknown-unknown {{.*}}.o --sycl-link -Xlinker -triple=spirv64-unknown-unknown -Xlinker -arch=
+// SPIRV-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.spirv64.foo.img. --target=spirv64-unknown-unknown -march=foo {{.*}}.o --sycl-link{{$}}
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \

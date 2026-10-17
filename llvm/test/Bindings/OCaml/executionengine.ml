@@ -9,7 +9,6 @@
 
 open Llvm
 open Llvm_executionengine
-open Llvm_target
 
 (* Note that this takes a moment to link, so it's best to keep the number of
    individual tests low. *)

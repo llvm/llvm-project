@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_EXPROBJC_H
 #define LLVM_CLANG_AST_EXPROBJC_H
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"

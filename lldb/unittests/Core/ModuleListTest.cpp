@@ -234,3 +234,15 @@ TEST_F(SymbolLocatorGate, GetSharedModuleCanSkipSymbolLocators) {
   EXPECT_FALSE(module_sp);
   EXPECT_TRUE(error.Fail());
 }
+
+// A Module whose object file could not be parsed is still appended, and does
+// not prevent later modules from being appended after it.
+TEST(ModuleListTest, AppendModuleWithoutObjectFile) {
+  SubsystemRAII<FileSystem> subsystems;
+
+  ModuleList list;
+  list.Append(std::make_shared<Module>(ModuleSpec()));
+  list.Append(std::make_shared<Module>(ModuleSpec()));
+
+  EXPECT_EQ(list.GetSize(), 2U);
+}

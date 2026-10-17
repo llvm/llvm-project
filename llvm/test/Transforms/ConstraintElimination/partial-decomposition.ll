@@ -30,7 +30,7 @@ define i1 @decompose_used_when_precondition_holds(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X_POS:%.*]] = and i16 [[X]], 127
 ; CHECK-NEXT:    [[Y_POS:%.*]] = and i16 [[Y]], 127
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[X_POS]], [[Y_POS]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[X_POS]], [[Y_POS]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[ADD]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true

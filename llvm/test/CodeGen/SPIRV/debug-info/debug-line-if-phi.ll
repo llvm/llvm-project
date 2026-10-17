@@ -1,7 +1,7 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; DebugLine/DebugNoLine must not appear before OpPhi.
+; DebugLine/DebugNoLine/DebugScope/DebugNoScope must not appear before OpPhi.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
@@ -22,18 +22,21 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF]] [[FN]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V10]] [[V11]]
 ; CHECK-NEXT: OpSLessThan
 ; CHECK-NEXT: OpBranchConditional
 
 ; then
 ; CHECK:      OpLabel
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V4]] [[V4]] [[V5]] [[V6]]
 ; CHECK-NEXT: OpIAdd
 ; CHECK-NEXT: OpBranch
 
 ; CHECK:      OpLabel
 ; CHECK-NEXT: [[PHI:%[0-9]+]] = OpPhi [[I32]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V9]] [[V9]] [[V3]] [[V4]]
 ; CHECK-NEXT: OpReturnValue [[PHI]]
 ; CHECK-NEXT: OpFunctionEnd

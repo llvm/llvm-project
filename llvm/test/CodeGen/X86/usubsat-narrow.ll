@@ -404,3 +404,30 @@ define <8 x i32> @usubsat_v8i32_both_narrow(<8 x i32> %x, <8 x i32> %y) {
   %z = call <8 x i32> @llvm.usub.sat.v8i32(<8 x i32> %mx, <8 x i32> %my)
   ret <8 x i32> %z
 }
+
+; Regression test: known-zero LHS caused divide-by-zero crash in visitSUBSAT
+; when ActiveBits == 0 and NarrowBits == 0.
+define <4 x i32> @usubsat_known_zero_lhs(<4 x i32> %v3) {
+; SSE2-LABEL: usubsat_known_zero_lhs:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: usubsat_known_zero_lhs:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    psubd %xmm0, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: usubsat_known_zero_lhs:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsubd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: usubsat_known_zero_lhs:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsubd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %v5 = xor <4 x i32> %v3, %v3
+  %v7 = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %v5, <4 x i32> %v3)
+  ret <4 x i32> %v7
+}

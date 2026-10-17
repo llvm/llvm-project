@@ -238,9 +238,9 @@ class OrcMips32_Base {
 public:
   static constexpr unsigned PointerSize = 4;
   static constexpr unsigned TrampolineSize = 20;
-  static constexpr unsigned StubSize = 8;
+  static constexpr unsigned StubSize = 16;
   static constexpr unsigned StubToPointerMaxDisplacement = 1 << 31;
-  static constexpr unsigned ResolverCodeSize = 0xfc;
+  static constexpr unsigned ResolverCodeSize = 0x104;
 
   /// Write the requested number of trampolines into the given memory,
   /// which must be big enough to hold 1 pointer, plus NumTrampolines
@@ -302,7 +302,7 @@ public:
   static constexpr unsigned TrampolineSize = 40;
   static constexpr unsigned StubSize = 32;
   static constexpr unsigned StubToPointerMaxDisplacement = 1 << 31;
-  static constexpr unsigned ResolverCodeSize = 0x120;
+  static constexpr unsigned ResolverCodeSize = 0x124;
 
   /// Write the resolver code into the given memory. The user is
   /// responsible for allocating the memory and setting permissions.

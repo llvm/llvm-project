@@ -283,7 +283,7 @@ multiclass VOP2bInst <string opName,
       let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
         def _e32 : VOP2_Pseudo <opName, P, VOPPatOrNull<node,P>.ret>,
                    Commutable_REV<revOp#"_e32", !eq(revOp, opName)> {
-          let usesCustomInserter = true;
+          let usesCustomInserter = useSGPRInput;
         }
 
         if P.HasExtSDWA then
@@ -943,13 +943,15 @@ let isAdd = 1 in {
 }
 
 let isReMaterializable = 1 in {
-let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit] in {
+let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit],
+    GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 // We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
 let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
-} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit]
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble] in
+} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble],
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
 
@@ -1486,17 +1488,19 @@ def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 }
 
 let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
-  let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1 in {
+  let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1,
+      GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
     defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x21, "v_add_f64", any_fadd>;
     defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x22, "v_mul_f64", any_fmul>;
-  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1
-  let SchedRW = [Write64Bit] in {
+  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
+  let SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
-  } // End SchedRW = [Write64Bit]
+  } // End SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 } // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, isReMaterializable = 1,
-    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1 in {
+    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
   defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
   defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
 }
@@ -2810,38 +2814,9 @@ defm V_LDEXP_F16          : VOP2_Real_e32e64_vi <0x33>;
 
 let SubtargetPredicate = isGFX8GFX9 in {
 
-// Aliases to simplify matching of floating-point instructions that
-// are VOP2 on SI and VOP3 on VI.
-class SI2_VI3Alias <string name, VOP3_Real inst> : InstAlias <
-  name#" $dst, $src0, $src1",
-  !if(inst.Pfl.HasOMod,
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0),
-      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0))
->, PredicateControl {
-  let UseInstAsmMatchConverter = 0;
-  let AsmVariantName = AMDGPUAsmVariants.VOP3;
-}
-
-def : SI2_VI3Alias <"v_ldexp_f32", V_LDEXP_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkaccum_u8_f32", V_CVT_PKACCUM_U8_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_i16_f32", V_CVT_PKNORM_I16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
-def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
-
 defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_vi>;
 
 } // End SubtargetPredicate = isGFX8GFX9
-
-let SubtargetPredicate = isGFX9Only in {
-
-defm : VOP2bInstAliases<V_ADD_U32_e32,     V_ADD_CO_U32_e32_gfx9,     "v_add_co_u32">;
-defm : VOP2bInstAliases<V_ADDC_U32_e32,    V_ADDC_CO_U32_e32_gfx9,    "v_addc_co_u32">;
-defm : VOP2bInstAliases<V_SUB_U32_e32,     V_SUB_CO_U32_e32_gfx9,     "v_sub_co_u32">;
-defm : VOP2bInstAliases<V_SUBB_U32_e32,    V_SUBB_CO_U32_e32_gfx9,    "v_subb_co_u32">;
-defm : VOP2bInstAliases<V_SUBREV_U32_e32,  V_SUBREV_CO_U32_e32_gfx9,  "v_subrev_co_u32">;
-defm : VOP2bInstAliases<V_SUBBREV_U32_e32, V_SUBBREV_CO_U32_e32_gfx9, "v_subbrev_co_u32">;
-
-} // End SubtargetPredicate = isGFX9Only
 
 let SubtargetPredicate = HasDLInsts in {
 
@@ -2926,10 +2901,6 @@ let OtherPredicates = [HasDot4Insts] in {
 let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
-
-let SubtargetPredicate = HasPkFmacF16Inst in {
-defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
-} // End SubtargetPredicate = HasPkFmacF16Inst
 
 let SubtargetPredicate = HasDot3Insts in {
   // NB: Opcode conflicts with V_DOT2C_F32_F16

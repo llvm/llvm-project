@@ -7,7 +7,7 @@
 ; RUN: -tail-folding-policy=dont-fold-tail \
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck --check-prefix=NO-VP %s
 
-define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
+define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @interleave(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -111,7 +111,7 @@ for.cond.cleanup:
 ;   rdx += a[i][3];
 ; }
 ;
-define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @load_factor_4_with_gap(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -148,8 +148,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP2]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
@@ -230,7 +229,7 @@ exit:
 ;   a[i][3] = i;
 ; }
 ;
-define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
+define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @store_factor_4_with_gap(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -268,8 +267,7 @@ define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 2
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 8)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP2]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP1]]
@@ -345,7 +343,7 @@ exit:
 ;   // No access a[i][3]
 ; }
 ;
-define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @load_factor_4_with_tail_gap(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -467,7 +465,7 @@ exit:
 ;   // No access a[i][3]
 ; }
 ;
-define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
+define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @store_factor_4_with_tail_gap(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -505,8 +503,7 @@ define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 2
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 8)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP2]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP1]]
@@ -571,7 +568,7 @@ exit:
   ret void
 }
 
-define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
+define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @load_factor_4_reverse(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N:%.*]], -1
@@ -625,8 +622,7 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; NO-VP-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; NO-VP-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP4]], i64 8)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP5]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP4]]
@@ -717,7 +713,7 @@ exit:
   ret i32 %add3
 }
 
-define void @store_factor_4_reverse(i32 %n, ptr noalias %a) {
+define void @store_factor_4_reverse(i32 %n, ptr noalias %a) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @store_factor_4_reverse(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N:%.*]], -1
@@ -774,8 +770,7 @@ define void @store_factor_4_reverse(i32 %n, ptr noalias %a) {
 ; NO-VP-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 2
-; NO-VP-NEXT:    [[TMP5:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP4]], i32 8)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], [[TMP5]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], [[TMP4]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], [[TMP4]]

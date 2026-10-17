@@ -362,11 +362,8 @@ function(darwin_lipo_libs name)
     set_target_properties(${name} PROPERTIES FOLDER "compiler-rt/Misc")
     add_dependencies(${LIB_PARENT_TARGET} ${name})
 
-    if(CMAKE_CONFIGURATION_TYPES)
-      set(install_component ${LIB_PARENT_TARGET})
-    else()
-      set(install_component ${name})
-    endif()
+    get_compiler_rt_install_component(${name} ${LIB_PARENT_TARGET}
+                                      install_component)
     install(FILES ${LIB_OUTPUT_DIR}/lib${name}.a
       DESTINATION ${LIB_INSTALL_DIR}
       COMPONENT ${install_component})

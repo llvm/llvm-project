@@ -20,7 +20,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
-class UnifiedRangeView;
+struct UnifiedRangeView;
 } // namespace detail
 
 // SYCL 2020 4.9.1.2. nd_range class.
@@ -81,7 +81,7 @@ protected:
   range<Dimensions> MLocalSize;
   id<Dimensions> MOffset;
 
-  friend class detail::UnifiedRangeView;
+  friend struct detail::UnifiedRangeView;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

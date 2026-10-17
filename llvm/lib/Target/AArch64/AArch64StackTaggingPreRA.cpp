@@ -18,36 +18,15 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-stack-tagging-pre-ra"
-
-enum UncheckedLdStMode { UncheckedNever, UncheckedSafe, UncheckedAlways };
-
-static cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
-    "stack-tagging-unchecked-ld-st", cl::Hidden, cl::init(UncheckedSafe),
-    cl::desc(
-        "Unconditionally apply unchecked-ld-st optimization (even for large "
-        "stack frames, or in the presence of variable sized allocas)."),
-    cl::values(
-        clEnumValN(UncheckedNever, "never", "never apply unchecked-ld-st"),
-        clEnumValN(
-            UncheckedSafe, "safe",
-            "apply unchecked-ld-st when the target is definitely within range"),
-        clEnumValN(UncheckedAlways, "always", "always apply unchecked-ld-st")));
-
-static cl::opt<bool>
-    ClFirstSlot("stack-tagging-first-slot-opt", cl::Hidden, cl::init(true),
-                cl::desc("Apply first slot optimization for stack tagging "
-                         "(eliminate ADDG Rt, Rn, 0, 0)."));
 
 namespace {
 
@@ -169,9 +148,12 @@ static bool isUncheckedLoadOrStoreOpcode(unsigned Opcode) {
 }
 
 bool AArch64StackTaggingPreRAImpl::mayUseUncheckedLoadStore() {
-  if (ClUncheckedLdSt == UncheckedNever)
+  AArch64::UncheckedLdStMode Mode = MF->getSubtarget<AArch64Subtarget>()
+                                        .getCLOpts()
+                                        .stack_tagging_unchecked_ld_st;
+  if (Mode == AArch64::UncheckedLdStMode::Never)
     return false;
-  else if (ClUncheckedLdSt == UncheckedAlways)
+  else if (Mode == AArch64::UncheckedLdStMode::Always)
     return true;
 
   // This estimate can be improved if we had harder guarantees about stack frame
@@ -270,7 +252,9 @@ std::optional<int> AArch64StackTaggingPreRAImpl::findFirstSlotCandidate() {
   // - Any other instruction may benefit from being pinned to offset 0.
   LLVM_DEBUG(
       dbgs() << "AArch64StackTaggingPreRAImpl::findFirstSlotCandidate\n");
-  if (!ClFirstSlot)
+  if (!MF->getSubtarget<AArch64Subtarget>()
+           .getCLOpts()
+           .stack_tagging_first_slot_opt)
     return std::nullopt;
 
   DenseMap<SlotWithTag, int> RetagScore;

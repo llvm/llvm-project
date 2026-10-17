@@ -15,6 +15,7 @@ class TestAutoInstallMainExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
+    @requireSocketPermission  # lldb-server runs in platform mode on a socket
     @skipIfRemote
     @skipIfWindows  # This test is flaky on Windows
     def test_target_auto_install_main_executable(self):

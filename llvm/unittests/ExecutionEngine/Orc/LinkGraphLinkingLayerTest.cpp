@@ -32,7 +32,7 @@ protected:
   static std::unique_ptr<LinkGraph> makeGraph(StringRef Name = "test") {
     return std::make_unique<LinkGraph>(
         Name.str(), std::make_shared<SymbolStringPool>(),
-        Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+        Triple("x86_64-apple-darwin"), 8, SubtargetFeatures(),
         getGenericEdgeKindName);
   }
 };

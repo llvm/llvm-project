@@ -57,6 +57,9 @@ def ol_device_info_t : Enum {
   list<TaggedEtor> basic_etors2 =
       [TaggedEtor<"COOPERATIVE_LAUNCH_SUPPORT", "bool",
                   "Is cooperative kernel launch supported">,
+       TaggedEtor<"DRIVER_ID", "uint32_t",
+                  "Backend driver identifier; within a platform, devices "
+                  "sharing the same value can be grouped in a single context">,
   ];
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths,
                           fp_support, basic_etors2);

@@ -142,7 +142,7 @@ def main(argv: List[str]) -> int:
                     'produce the same commits. This makes it possible to recompute the list in '
                     'a reproducible fashion, which is useful when e.g. re-generating historical '
                     'performance data after a configuration change.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
         formatter_class=HelpFormatter)
     parser.add_argument('--since', type=date, required=True,
         help='Only select commits on or after this date (UTC). Selection starts at the first '

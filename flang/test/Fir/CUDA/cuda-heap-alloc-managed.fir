@@ -1,6 +1,10 @@
 // RUN: fir-opt --cuda-heap-alloc-promotion %s | FileCheck %s --check-prefix=HEAP
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefix=LLVM
 
+// Only the managed allocator is device accessible here, so -fstack-arrays
+// cannot keep the automatic arrays on the stack.
+// RUN: fir-opt --cuda-heap-alloc-promotion=stack-arrays=true %s | FileCheck %s --check-prefix=HEAP
+
 // Same routing as cuda-heap-alloc-unified.fir, with the managed entry points.
 
 // Declarations are emitted at the top of the module, before any function.
@@ -12,7 +16,7 @@
 module attributes {fir.cuda_heap_alloc = "managed"} {
 
 // HEAP-LABEL: func.func @vla(
-// HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "a", fir.cuda_heap_alloc = "managed", fir.must_be_heap = true, uniq_name = "_QFvlaEa"}
+// HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = "a", uniq_name = "_QFvlaEa"}> {fir.cuda_heap_alloc = "managed", fir.must_be_heap = true}
 // HEAP: fir.freemem %[[MEM]] {fir.cuda_heap_alloc = "managed"} : !fir.heap<!fir.array<?xf32>>
 func.func @vla(%arg0: !fir.ref<i32>) {
   %0 = fir.load %arg0 : !fir.ref<i32>

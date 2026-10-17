@@ -19,7 +19,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -74,7 +74,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
-    ; CHECK-NEXT: BL &memmove, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memmove, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -103,7 +103,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $w1 = COPY [[COPY1]](i32)
     ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
-    ; CHECK-NEXT: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
+    ; CHECK-NEXT: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -133,7 +133,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
@@ -163,7 +163,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp
     %0:_(p0) = COPY $x0
@@ -241,7 +241,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x1 = COPY [[COPY]](p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
@@ -282,7 +282,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
@@ -325,7 +325,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x1 = COPY [[COPY]](p0)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
@@ -366,7 +366,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0)
     ; CHECK-NEXT: $x2 = COPY [[COPY2]](i64)
-    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK-NEXT: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
     ; CHECK-NEXT: RET_ReallyLR

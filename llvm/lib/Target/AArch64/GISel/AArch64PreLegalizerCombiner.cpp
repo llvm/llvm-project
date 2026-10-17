@@ -349,19 +349,16 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       // Split the elements into v16i8 and v8i8
       LLT MainTy = LLT::fixed_vector(16, LLT::integer(8));
       LLT LeftoverTy1, LeftoverTy2;
-      if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
-                         LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
-                         MRI)) ||
-          (!extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
-                         LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder,
-                         MRI))) {
+      if (!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
+                        LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder, MRI) ||
+          !extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
+                        LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder, MRI)) {
         llvm_unreachable("Unable to split this vector properly");
       }
 
       // Pad the leftover v8i8 vector with register of 0s of type v8i8
-      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
-                              ->getOperand(0)
-                              .getReg();
+      auto v8Zeroes =
+          Builder.buildConstant(LLT::fixed_vector(8, LLT::integer(8)), 0);
 
       Ext1UnmergeReg.push_back(
           Builder
@@ -396,10 +393,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
         ZeroesLLT = LLT::fixed_vector(2, LLT::integer(32));
         NumElements += 2;
       }
-      auto Zeroes = Builder.buildConstant(ZeroesLLT, 0)->getOperand(0).getReg();
+      auto Zeroes = Builder.buildConstant(ZeroesLLT, 0);
       DotReg.push_back(
           Builder
-              .buildInstr(DotOpcode, {MRI.getType(Zeroes)},
+              .buildInstr(DotOpcode, {ZeroesLLT},
                           {Zeroes, Ext1UnmergeReg[i], Ext2UnmergeReg[i]})
               .getReg(0));
     }

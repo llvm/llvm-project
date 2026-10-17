@@ -13,8 +13,8 @@
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
-// - Expansion of ‘frem‘ for types MVT::f16, MVT::f32, and MVT::f64 for
-// targets which use "Expand" as the legalization action for the
+// - Expansion of ‘frem‘ for types MVT::f16, MVT::bf16, MVT::f32, and MVT::f64
+// for targets which use "Expand" as the legalization action for the
 // corresponding type.
 //
 // - Expansion of ‘udiv‘, ‘sdiv‘, ‘urem‘, and ‘srem‘ instructions with
@@ -219,8 +219,8 @@ class FRemExpander {
   /// The frem argument/return types that can be expanded by this class.
   // TODO: The expansion could work for other floating point types
   // as well, but this would require additional testing.
-  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
-                                                      MVT::f64};
+  static constexpr std::array<MVT, 4> ExpandableTypes{MVT::f16, MVT::bf16,
+                                                      MVT::f32, MVT::f64};
 
 public:
   static bool canExpandType(Type *Ty) {
@@ -277,7 +277,7 @@ public:
     // uses the same input/result type.
     unsigned MaxIter = 2;
 
-    if (Ty->isHalfTy()) {
+    if (Ty->is16bitFPTy()) {
       // Use the wider type and less iterations.
       ComputeTy = B.getFloatTy();
       MaxIter = 1;
@@ -792,7 +792,7 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   Builder.CreateBr(End);
 
   // cleanup:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 3 + IsSaturating);
 
   if (IsSaturating)
@@ -1217,7 +1217,7 @@ static void expandIToFP(Instruction *IToFP) {
   Builder.CreateBr(End);
 
   // return:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(IToFP->getType(), 2);
   Retval0->addIncoming(A4, IfEnd26);
   Retval0->addIncoming(ConstantFP::getZero(IToFP->getType(), false), Entry);
@@ -1359,8 +1359,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem: {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
-          auto Res = std::make_optional<SimplifyQuery>(
-              I->getModule()->getDataLayout(), I);
+          auto Res = std::make_optional<SimplifyQuery>(I->getDataLayout(), I);
           Res->AC = AC;
           return Res;
         }

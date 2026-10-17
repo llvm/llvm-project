@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -one-shot-bufferize="use-encoding-for-memory-space" -split-input-file | FileCheck %s
 
 func.func @alloc_tesor_with_space_no_encoding() -> tensor<128xf32> {
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<128xf32>
+  %0 = bufferization.alloc_tensor() <{memory_space = 1 : i64}> : tensor<128xf32>
   return %0 : tensor<128xf32>
 }
 
@@ -14,7 +14,7 @@ func.func @alloc_tesor_with_space_no_encoding() -> tensor<128xf32> {
 // -----
 
 func.func @alloc_tesor_with_space_and_cast() -> tensor<128xf32, 1> {
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<128xf32>
+  %0 = bufferization.alloc_tensor() <{memory_space = 1 : i64}> : tensor<128xf32>
   %1 = tensor.cast %0 : tensor<128xf32> to tensor<128xf32, 1>
   return %1 : tensor<128xf32, 1>
 }
@@ -28,7 +28,7 @@ func.func @alloc_tesor_with_space_and_cast() -> tensor<128xf32, 1> {
 // -----
 
 func.func @alloc_tesor_with_space_with_encoding() -> tensor<128xf32, 1 : i64> {
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<128xf32, 1 : i64>
+  %0 = bufferization.alloc_tensor() <{memory_space = 1 : i64}> : tensor<128xf32, 1 : i64>
   return %0 : tensor<128xf32, 1 : i64>
 }
 
@@ -41,7 +41,7 @@ func.func @alloc_tesor_with_space_with_encoding() -> tensor<128xf32, 1 : i64> {
 // -----
 
 func.func @alloc_tesor_copy_from_default_space(%arg0: tensor<128xf32>) -> tensor<128xf32> {
-  %0 = bufferization.alloc_tensor() copy(%arg0) {memory_space = 1 : i64} : tensor<128xf32>
+  %0 = bufferization.alloc_tensor() copy(%arg0) <{memory_space = 1 : i64}> : tensor<128xf32>
   return %0 : tensor<128xf32>
 }
 
@@ -56,7 +56,7 @@ func.func @alloc_tesor_copy_from_default_space(%arg0: tensor<128xf32>) -> tensor
 // -----
 
 func.func @alloc_tesor_copy_from_non_default_space(%arg0: tensor<128xf32, 1>) -> tensor<128xf32, 2> {
-  %0 = bufferization.alloc_tensor() copy(%arg0) {memory_space = 2 : i64} : tensor<128xf32, 1>
+  %0 = bufferization.alloc_tensor() copy(%arg0) <{memory_space = 2 : i64}> : tensor<128xf32, 1>
   %1 = tensor.cast %0 : tensor<128xf32, 1> to tensor<128xf32, 2>
   return %1 : tensor<128xf32, 2>
 }
@@ -75,7 +75,7 @@ func.func @alloc_tesor_copy_from_non_default_space(%arg0: tensor<128xf32, 1>) ->
 // bufferize function boundaries.
 func.func @alloc_tesor_copy_from_non_default_space_no_cast(%arg0: tensor<128xf32, 1>,
                                                            %arg1: tensor<4xf32, 1>) -> tensor<128xf32, 1> {
-  %0 = bufferization.alloc_tensor() copy(%arg0) {memory_space = 2 : i64} : tensor<128xf32, 1>
+  %0 = bufferization.alloc_tensor() copy(%arg0) <{memory_space = 2 : i64}> : tensor<128xf32, 1>
   %1 = tensor.insert_slice %arg1 into %arg0 [0][4][1] : tensor<4xf32, 1> into tensor<128xf32, 1>
   return %0 : tensor<128xf32, 1>
 }
@@ -97,7 +97,7 @@ func.func @alloc_tesor_copy_from_non_default_space_no_cast(%arg0: tensor<128xf32
 // -----
 
 func.func @materialize_in_destination(%arg0: tensor<128xf32, 1>) -> tensor<128xf32, 2> {
-  %0 = bufferization.alloc_tensor () {memory_space = 2 : i64} : tensor<128xf32, 2>
+  %0 = bufferization.alloc_tensor () <{memory_space = 2 : i64}> : tensor<128xf32, 2>
   %1 = bufferization.materialize_in_destination %arg0 in %0 : (tensor<128xf32, 1>, tensor<128xf32, 2>) -> tensor<128xf32, 2>
   return %1 : tensor<128xf32, 2>
 }

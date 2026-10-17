@@ -1,7 +1,7 @@
 ; Test that the declaration for UDTs won't be "<unknown>" or "\<unknown>".
 ; Rustc sets the location of some builtin types to this string.
 
-; REQUIRES: system-windows
+; REQUIRES: system-windows, target-x86_64
 ; RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 ; RUN: lldb-test symbols %t.exe | FileCheck %s
 

@@ -24,5 +24,5 @@ end subroutine
 ! CHECK: omp.declare_mapper @[[MAPPER_NAME:.*record_with_alloc_omp_default_mapper]] : !fir.type<{{.*}}record_with_alloc{{.*}}>
 
 ! CHECK: func.func @{{.*}}random_inputs()
-! CHECK:   %[[ARR_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}inputs"}
+! CHECK:   %[[ARR_DECL:.*]]:2 = hlfir.declare {{.*}} uniq_name("{{.*}}inputs")
 ! CHECK:   omp.map.info var_ptr(%[[ARR_DECL]]#1 : {{.*}}) {{.*}} mapper(@[[MAPPER_NAME]])
