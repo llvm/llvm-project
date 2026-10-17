@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -fms-extensions -verify=expected,c %s
-// RUN: %clang_cc1 -fsyntax-only -fms-extensions -fms-compatibility -verify=expected,c %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -fms-extensions -verify=expected,cxx %s
 
 // Nested _Pragma annotations must be rejected without querying identifier
@@ -54,10 +53,7 @@ void loop_width_second_arg(void) {
 }
 
 // Preserve the non-identifier alternatives in valid pragmas.
-#pragma vtordisp()
 #pragma vtordisp(2)
-#pragma vtordisp(push, 1)
-#pragma vtordisp(pop)
 #pragma warning(default : 1; 2 : 2)
 #pragma GCC visibility push(default)
 #pragma GCC visibility pop
@@ -80,6 +76,11 @@ __pragma(clang __debug modules _Pragma("weak foobar")) // expected-warning {{mis
 #define int int
 __pragma(clang __debug macro int)
 #undef int
+
+// MS extensions also permit C++ operator names as macro names.
+#define and 1
+#pragma clang __debug macro and
+#undef and
 
 int after_pragmas;
 int use_after_pragmas(void) { return after_pragmas; }

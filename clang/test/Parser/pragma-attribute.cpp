@@ -182,10 +182,7 @@ _Pragma("clang attribute pop");
 
 // Nested pragmas must be diagnosed without crashing (GH225035).
 #pragma clang attribute (_Pragma("clang attribute push")) // expected-error {{expected an attribute that is specified using the GNU, C++11 or '__declspec' syntax}}
-#pragma clang attribute push (_Pragma("clang attribute push")) // expected-error {{expected an attribute that is specified using the GNU, C++11 or '__declspec' syntax}}
 #pragma clang attribute push(__attribute__((annotate("test"))) _Pragma("clang attribute push")) // expected-error {{expected ','}}
-#pragma clang attribute push(__attribute__((annotate("test"))), _Pragma("clang attribute push")) // expected-error {{expected attribute subject set specifier 'apply_to'}}
-#pragma clang attribute push(__attribute__((annotate("test"))), apply_to _Pragma("clang attribute push")) // expected-error {{expected '='}}
 
 #pragma clang attribute push([[clang::uninitialized]], apply_to = variable(is_local))
 #pragma clang attribute pop

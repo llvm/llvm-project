@@ -101,6 +101,13 @@ void PragmaNamespace::RemovePragmaHandler(PragmaHandler *Handler) {
   Handlers.erase(I);
 }
 
+// Names may be C++ operator keywords, which have punctuator token kinds.
+static IdentifierInfo *getPragmaIdentifierInfo(const Token &Tok) {
+  if (Tok.isAnnotation() || Tok.is(tok::raw_identifier))
+    return nullptr;
+  return Tok.getIdentifierInfo();
+}
+
 void PragmaNamespace::HandlePragma(Preprocessor &PP,
                                    PragmaIntroducer Introducer, Token &Tok) {
   // Read the 'namespace' that the directive is in, e.g. STDC.  Do not macro
@@ -108,11 +115,9 @@ void PragmaNamespace::HandlePragma(Preprocessor &PP,
   PP.LexUnexpandedToken(Tok);
 
   // Get the handler for this token.  If there is no handler, ignore the pragma.
-  PragmaHandler *Handler = FindHandler(
-      Tok.is(tok::identifier) || tok::getKeywordSpelling(Tok.getKind())
-          ? Tok.getIdentifierInfo()->getName()
-          : StringRef(),
-      /*IgnoreNull=*/false);
+  IdentifierInfo *II = getPragmaIdentifierInfo(Tok);
+  PragmaHandler *Handler =
+      FindHandler(II ? II->getName() : StringRef(), /*IgnoreNull=*/false);
   if (!Handler) {
     PP.Diag(Tok, diag::warn_pragma_ignored);
     return;
@@ -922,12 +927,12 @@ void Preprocessor::HandlePragmaSetPPState(PragmaIntroducer Introducer,
                                           Token &Tok) {
   // Lex the macro name we want to set.
   LexUnexpandedToken(Tok);
-  if (Tok.isNot(tok::identifier) && !tok::getKeywordSpelling(Tok.getKind())) {
+  IdentifierInfo *MacroName = getPragmaIdentifierInfo(Tok);
+  if (!MacroName) {
     Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_name);
     return;
   }
 
-  IdentifierInfo *MacroName = Tok.getIdentifierInfo();
   if (!isPragmaSetPPStateMacro(MacroName)) {
     Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_invalid_arg)
         << MacroName;
@@ -1150,10 +1155,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("macro")) {
       Token MacroName;
       PP.LexUnexpandedToken(MacroName);
-      auto *MacroII = MacroName.is(tok::identifier) ||
-                              tok::getKeywordSpelling(MacroName.getKind())
-                          ? MacroName.getIdentifierInfo()
-                          : nullptr;
+      auto *MacroII = getPragmaIdentifierInfo(MacroName);
       if (MacroII)
         PP.dumpMacroInfo(MacroII);
       else
@@ -1178,10 +1180,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("module_lookup")) {
       Token MName;
       PP.LexUnexpandedToken(MName);
-      auto *MNameII =
-          MName.is(tok::identifier) || tok::getKeywordSpelling(MName.getKind())
-              ? MName.getIdentifierInfo()
-              : nullptr;
+      auto *MNameII = getPragmaIdentifierInfo(MName);
       if (!MNameII) {
         PP.Diag(MName, diag::warn_pragma_debug_missing_argument)
             << II->getName();
@@ -1226,10 +1225,7 @@ struct PragmaDebugHandler : public PragmaHandler {
 
       Token Kind;
       PP.LexUnexpandedToken(Kind);
-      auto *DumpII =
-          Kind.is(tok::identifier) || tok::getKeywordSpelling(Kind.getKind())
-              ? Kind.getIdentifierInfo()
-              : nullptr;
+      auto *DumpII = getPragmaIdentifierInfo(Kind);
       if (!DumpII) {
         PP.Diag(Kind, diag::warn_pragma_debug_missing_argument)
             << II->getName();

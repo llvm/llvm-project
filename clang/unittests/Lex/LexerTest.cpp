@@ -137,6 +137,11 @@ protected:
 };
 
 TEST_F(LexerTest, PragmaKeywordAliasesKeepTheirNames) {
+  LangOpts.CPlusPlus = true;
+  LangOpts.CXXOperatorNames = true;
+  PP = std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, SourceMgr,
+                                      HeaderInfo, ModLoader);
+
   class RecordingPragmaHandler : public PragmaHandler {
     std::vector<std::string> &Names;
 
@@ -150,14 +155,21 @@ TEST_F(LexerTest, PragmaKeywordAliasesKeepTheirNames) {
   };
 
   std::vector<std::string> Names;
-  for (StringRef Name : {"const", "__const__"})
+  for (StringRef Name : {"const", "__const__", "and", "or"})
     PP->AddPragmaHandler(new RecordingPragmaHandler(Name, Names));
   PP->AddPragmaHandler("test", new RecordingPragmaHandler("__const__", Names));
+  PP->AddPragmaHandler("test", new RecordingPragmaHandler("or", Names));
 
   Lex("#pragma const\n"
       "#pragma __const__\n"
-      "#pragma test __const__\n");
-  EXPECT_THAT(Names, ElementsAre("const", "__const__", "__const__"));
+      "#pragma test __const__\n"
+      "#pragma and\n"
+      "#pragma or\n"
+      "#pragma test or\n"
+      "#pragma &&\n"
+      "#pragma test ||\n");
+  EXPECT_THAT(
+      Names, ElementsAre("const", "__const__", "__const__", "and", "or", "or"));
 }
 
 TEST_F(LexerTest, GetSourceTextExpandsToMaximumInMacroArgument) {
