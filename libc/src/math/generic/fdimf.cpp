@@ -12,6 +12,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fdimf, (float x, float y)) {
+  LIBC_FENV_ACCESS_ON
   return math::fdimf(x, y);
 }
 
