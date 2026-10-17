@@ -22,10 +22,10 @@
     (defined(LIBC_MATH_HAS_SMALL_TABLES) ||                                    \
      defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)) &&                     \
     defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
-#include "tanf_float_eval.h"
+#include "src/__support/math/tanf_float_eval.h"
 #define LIBC_MATH_TANF_IMPL float_eval
 #else
-#include "tanf_double_eval.h"
+#include "src/__support/math/tanf_double_eval.h"
 #define LIBC_MATH_TANF_IMPL double_eval
 #endif
 
