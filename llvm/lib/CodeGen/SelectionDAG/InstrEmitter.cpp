@@ -950,9 +950,9 @@ InstrEmitter::EmitDbgLabel(SDDbgLabel *SD) {
 /// EmitMachineNode - Generate machine code for a target-specific node and
 /// needed dependencies.
 ///
-void InstrEmitter::
-EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
-                VRBaseMapType &VRBaseMap) {
+MachineInstr *InstrEmitter::EmitMachineNode(SDNode *Node, bool IsClone,
+                                            bool IsCloned,
+                                            VRBaseMapType &VRBaseMap) {
   unsigned Opc = Node->getMachineOpcode();
 
   // Handle subreg insert/extract specially
@@ -960,24 +960,24 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       Opc == TargetOpcode::INSERT_SUBREG ||
       Opc == TargetOpcode::SUBREG_TO_REG) {
     EmitSubregNode(Node, VRBaseMap, IsClone, IsCloned);
-    return;
+    return nullptr;
   }
 
   // Handle COPY_TO_REGCLASS specially.
   if (Opc == TargetOpcode::COPY_TO_REGCLASS) {
     EmitCopyToRegClassNode(Node, VRBaseMap);
-    return;
+    return nullptr;
   }
 
   // Handle REG_SEQUENCE specially.
   if (Opc == TargetOpcode::REG_SEQUENCE) {
     EmitRegSequence(Node, VRBaseMap, IsClone, IsCloned);
-    return;
+    return nullptr;
   }
 
   if (Opc == TargetOpcode::IMPLICIT_DEF)
     // We want a unique VR for each IMPLICIT_DEF use.
-    return;
+    return nullptr;
 
   const MCInstrDesc &II = TII->get(Opc);
   unsigned NumResults = CountResults(Node);
@@ -1206,6 +1206,10 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Run post-isel target hook to adjust this instruction if needed.
   if (II.hasPostISelHook())
     TLI->AdjustInstrPostInstrSelection(*MIB, Node);
+
+  // Only return a call: the hook can erase other instructions, as Hexagon
+  // does for its HVX splats.
+  return II.isCall() ? MI : nullptr;
 }
 
 /// EmitSpecialNode - Generate machine code for a target-independent node and

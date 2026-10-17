@@ -867,7 +867,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     };
 
     MachineBasicBlock::iterator Before = GetPrevInsn(Emitter.getInsertPos());
-    Emitter.EmitNode(Node, IsClone, IsCloned, VRBaseMap);
+    MachineInstr *Call = Emitter.EmitNode(Node, IsClone, IsCloned, VRBaseMap);
     MachineBasicBlock::iterator After = GetPrevInsn(Emitter.getInsertPos());
 
     // If the iterator did not change, no instructions were inserted.
@@ -884,19 +884,23 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI = &*std::next(Before);
     }
 
-    if (MI->isCandidateForAdditionalCallInfo()) {
+    if (Call && Call->isCandidateForAdditionalCallInfo()) {
       if (DAG->getTarget().Options.EmitCallSiteInfo ||
           DAG->getTarget().Options.EmitCallGraphSection)
-        MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+        MF.addCallSiteInfo(Call, DAG->getCallSiteInfo(Node));
 
       if (auto CalledGlobal = DAG->getCalledGlobal(Node))
         if (CalledGlobal->Callee)
-          MF.addCalledGlobal(MI, *CalledGlobal);
+          MF.addCalledGlobal(Call, *CalledGlobal);
     }
 
-    if (DAG->getNoMergeSiteInfo(Node)) {
-      MI->setFlag(MachineInstr::MIFlag::NoMerge);
-    }
+    if (Call)
+      if (MDNode *MD = DAG->getHeapAllocSite(Node))
+        Call->setHeapAllocMarker(MF, MD);
+
+    // Nodes without a call, such as traps, can be nomerge too.
+    if (DAG->getNoMergeSiteInfo(Node))
+      (Call ? Call : MI)->setFlag(MachineInstr::MIFlag::NoMerge);
 
     if (MDNode *MD = DAG->getPCSections(Node))
       MI->setPCSections(MF, MD);
@@ -952,10 +956,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       if (HasDbg)
         ProcessSourceNode(N, DAG, Emitter, VRBaseMap, Orders, Seen, NewInsn);
 
-      if (MDNode *MD = DAG->getHeapAllocSite(N))
-        if (NewInsn && NewInsn->isCall())
-          NewInsn->setHeapAllocMarker(MF, MD);
-
       GluedNodes.pop_back();
     }
     auto NewInsn =
@@ -964,11 +964,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     if (HasDbg)
       ProcessSourceNode(SU->getNode(), DAG, Emitter, VRBaseMap, Orders, Seen,
                         NewInsn);
-
-    if (MDNode *MD = DAG->getHeapAllocSite(SU->getNode())) {
-      if (NewInsn && NewInsn->isCall())
-        NewInsn->setHeapAllocMarker(MF, MD);
-    }
   }
 
   // Insert all the dbg_values which have not already been inserted in source
