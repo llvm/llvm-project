@@ -50,9 +50,9 @@ struct SkippedRange {
   // The nature of this skipped range
   Kind RangeKind;
 
-  bool isComment() { return RangeKind == Comment; }
-  bool isEmptyLine() { return RangeKind == EmptyLine; }
-  bool isPPIfElse() { return RangeKind == PPIfElse; }
+  bool isComment() const { return RangeKind == Comment; }
+  bool isEmptyLine() const { return RangeKind == EmptyLine; }
+  bool isPPIfElse() const { return RangeKind == PPIfElse; }
 
   SkippedRange(SourceRange Range, Kind K,
                SourceLocation PrevTokLoc = SourceLocation(),
