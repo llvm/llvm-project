@@ -23,7 +23,8 @@ program omp_reduction
   !$omp end parallel
 
   ! - is deprecated for all types
-  ! ERROR: The minus reduction operator is deprecated since OpenMP 5.2 and is not supported in the REDUCTION clause.
+  ! ERROR: Invalid reduction operator in REDUCTION clause
+  ! ERROR: The minus reduction operator is deprecated since OpenMP 5.2
   !$omp parallel reduction(-:i,r,c,z,l)
   !$omp end parallel
 
