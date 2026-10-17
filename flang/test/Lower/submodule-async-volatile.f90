@@ -24,14 +24,11 @@ contains
   ! No submodule-mangled entity should appear inside the subroutine.
   ! CHECK-NOT: _QMm1Ssubmod
   ! n and k must resolve to the module globals.
-  ! CHECK-DAG: %[[N:.*]] = fir.address_of(@_QMm1En) : !fir.ref<i32>
-  ! CHECK-DAG: %[[K:.*]] = fir.address_of(@_QMm1Ek) : !fir.ref<i32>
-  ! CHECK-DAG: hlfir.declare %[[N]] uniq_name("_QMm1En")
-  ! CHECK-DAG: hlfir.declare %[[K]] uniq_name("_QMm1Ek")
-  ! FIXME: The volatile/asynchronous fortran_attrs are not propagated to the
-  ! hlfir.declare or fir.ref type for host-associated variables (this affects
-  ! regular subprograms too, not just submodules).
-  ! See https://github.com/llvm/llvm-project/issues/208588.
+  ! CHECK: %[[N:.*]] = fir.address_of(@_QMm1En) : !fir.ref<i32>
+  ! CHECK: %[[VOLATILE_N:.*]] = fir.volatile_cast %[[N]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+  ! CHECK: %[[N_DECLARE:.*]]:2 = hlfir.declare %[[VOLATILE_N]] uniq_name("_QMm1En") fortran_attrs<volatile>
+  ! CHECK: %[[K:.*]] = fir.address_of(@_QMm1Ek) : !fir.ref<i32>
+  ! CHECK: %[[K_DECLARE:.*]]:2 = hlfir.declare %[[K]] uniq_name("_QMm1Ek") fortran_attrs<asynchronous>
   module subroutine sub()
     implicit none
     if (n /= 1) print *, 'Error n=', n
