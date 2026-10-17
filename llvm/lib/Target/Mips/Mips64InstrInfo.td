@@ -67,6 +67,10 @@ def PowerOf2LO_i32 : PatLeaf<(imm), [{
     return false;
 }]>;
 
+def assertsext_le_i32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
+}]>;
+
 def assertzext_lt_i32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLT(MVT::i32);
 }]>;
@@ -820,8 +824,6 @@ let AdditionalPredicates = [NotInMicroMips] in {
   defm : SetgeImmPats<GPR64, XORi, SLTi64, SLTiu64>, ISA_MIPS3, GPR_64;
 }
 // truncate
-def : MipsPat<(trunc (assertsext GPR64:$src)),
-              (EXTRACT_SUBREG GPR64:$src, sub_32)>, ISA_MIPS3, GPR_64;
 // The forward compatibility strategy employed by MIPS requires us to treat
 // values as being sign extended to an infinite number of bits. This allows
 // existing software to run without modification on any future MIPS
@@ -831,7 +833,11 @@ def : MipsPat<(trunc (assertsext GPR64:$src)),
 // undefined results if this is not true.
 // For our case, this means that we can't issue an extract_subreg for nodes
 // such as (trunc:i32 (assertzext:i64 X, i32)), because the sign-bit of the
-// lower subreg would not be replicated into the upper half.
+// lower subreg would not be replicated into the upper half. Likewise, we can't
+// issue one for nodes such as (trunc:i32 (assertsext:i64 X, i33)), because X
+// is only known to be sign extended from bit 32, not from bit 31.
+def : MipsPat<(trunc (assertsext_le_i32 GPR64:$src)),
+              (EXTRACT_SUBREG GPR64:$src, sub_32)>, ISA_MIPS3, GPR_64;
 def : MipsPat<(trunc (assertzext_lt_i32 GPR64:$src)),
               (EXTRACT_SUBREG GPR64:$src, sub_32)>, ISA_MIPS3, GPR_64;
 def : MipsPat<(i32 (trunc GPR64:$src)),
