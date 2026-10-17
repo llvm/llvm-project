@@ -677,8 +677,8 @@ define i64 @sub_imm_subtrahend_noopt(i64 %a, i32 signext %c, i32 signext %d) nou
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ori $a4, $zero, 5
 ; LA32-NEXT:    sltu $a5, $a4, $a0
-; LA32-NEXT:    add.w $a5, $a1, $a5
-; LA32-NEXT:    sub.w $a5, $zero, $a5
+; LA32-NEXT:    sub.w $a6, $zero, $a1
+; LA32-NEXT:    sub.w $a5, $a6, $a5
 ; LA32-NEXT:    sub.w $a4, $a4, $a0
 ; LA32-NEXT:    slt $a2, $a2, $a3
 ; LA32-NEXT:    masknez $a3, $a4, $a2
