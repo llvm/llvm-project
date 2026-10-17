@@ -85,9 +85,11 @@ TEST(MemProf, DataAccessProfile) {
     EXPECT_TRUE(Data.isKnownColdSymbol((uint64_t)789));
     EXPECT_TRUE(Data.isKnownColdSymbol((uint64_t)678));
     EXPECT_TRUE(Data.isKnownColdSymbol("sym2"));
+    EXPECT_TRUE(Data.isKnownColdSymbol("sym2.llvm.123"));
     EXPECT_TRUE(Data.isKnownColdSymbol("sym1"));
 
     EXPECT_EQ(Data.getProfileRecord("non-existence"), std::nullopt);
+    EXPECT_EQ(Data.getProfileRecord(""), std::nullopt);
     EXPECT_EQ(Data.getProfileRecord((uint64_t)789987), std::nullopt);
 
     EXPECT_THAT(
@@ -145,6 +147,7 @@ TEST(MemProf, DataAccessProfile) {
     EXPECT_TRUE(deserializedData.isKnownColdSymbol((uint64_t)789));
     EXPECT_TRUE(deserializedData.isKnownColdSymbol((uint64_t)678));
     EXPECT_TRUE(deserializedData.isKnownColdSymbol("sym2"));
+    EXPECT_TRUE(deserializedData.isKnownColdSymbol("sym2.llvm.123"));
     EXPECT_TRUE(deserializedData.isKnownColdSymbol("sym1"));
 
     auto Records =
