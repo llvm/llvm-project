@@ -31,9 +31,9 @@ contains
   end subroutine
 
   attributes(host,device) subroutine both_caller()
-    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from host,device code.
+    !ERROR: 'grid_kernel', a procedure with the GRID_GLOBAL attribute, can't be called from HOST,DEVICE code.
     call grid_kernel<<<1,1>>>()
-    !ERROR: 'grid_generic' (specific procedure 'grid_kernel'), a procedure with the GRID_GLOBAL attribute, can't be called from host,device code.
+    !ERROR: 'grid_generic' (specific procedure 'grid_kernel'), a procedure with the GRID_GLOBAL attribute, can't be called from HOST,DEVICE code.
     call grid_generic<<<1,1>>>()
   end subroutine
 

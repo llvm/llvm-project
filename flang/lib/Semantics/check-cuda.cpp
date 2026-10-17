@@ -203,7 +203,7 @@ private:
             ? "HOST,DEVICE"
             : parser::ToUpperCaseLetters(common::EnumToString(calleeAttrs))};
     const char *codeContext{callContext_ == CallContext::HostDevice
-            ? "host,device"
+            ? "HOST,DEVICE"
             : inHostCode ? "host"
                          : "device"};
     if (auto generic{proc.genericName()}) {
