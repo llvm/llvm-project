@@ -2323,7 +2323,14 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
       module->getAttr(cir::CIRDialect::getLoweringLangOptionsAttrName());
   auto loweringLangOps =
       dyn_cast_if_present<cir::LoweringLangOptionsAttr>(langOpts);
+
   bool isForHLSL = loweringLangOps ? loweringLangOps.getHlsl() : false;
+  if (isForHLSL && mlir::isa<cir::MatrixType>(op.getAllocaType()) &&
+      mlir::isa<cir::BoolType>(
+          cast<cir::MatrixType>(op.getAllocaType()).getElementType())) {
+    return op.emitError()
+           << "NYI: Builtin matrix type with bool element type for HLSL";
+  }
 
   mlir::Value size =
       op.isDynamic()

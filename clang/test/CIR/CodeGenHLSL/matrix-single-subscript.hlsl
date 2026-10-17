@@ -15,12 +15,10 @@ void matrix_single_subscript() {
 
 // CIR: %[[MATRIX_ADDR:.*]] = cir.alloca "matrix" {{.*}} : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
 // CIR: %[[VEC_ADDR:.*]] = cir.alloca "vec" {{.*}} init : !cir.ptr<!cir.vector<3 x !cir.float>>
-// CIR: %[[VEC_ADDR_AS:.*]] = cir.cast address_space %[[VEC_ADDR]] : !cir.ptr<!cir.vector<3 x !cir.float>> -> !cir.ptr<!cir.vector<3 x !cir.float>>
-// CIR: %[[MATRIX_ADDR_AS:.*]] = cir.cast address_space %[[MATRIX_ADDR]] : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>> -> !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[TMP_MATRIX:.*]] = cir.load {{.*}} %[[MATRIX_ADDR_AS]] : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>, !cir.matrix<3 x 3 x !cir.float>
+// CIR: %[[TMP_MATRIX:.*]] = cir.load {{.*}} %[[MATRIX_ADDR]] : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>, !cir.matrix<3 x 3 x !cir.float>
 // CIR: %[[VEC:.*]] = cir.matrix.extract_row %[[TMP_MATRIX]][%[[CONST_1]] : !s32i] : !cir.matrix<3 x 3 x !cir.float>
-// CIR: cir.store {{.*}} %[[VEC]], %[[VEC_ADDR_AS]] : !cir.vector<3 x !cir.float>, !cir.ptr<!cir.vector<3 x !cir.float>>
+// CIR: cir.store {{.*}} %[[VEC]], %[[VEC_ADDR]] : !cir.vector<3 x !cir.float>, !cir.ptr<!cir.vector<3 x !cir.float>>
 
 // LLVM: %[[MATRIX_ADDR:.*]] = alloca [3 x <3 x float>], align 4
 // LLVM: %[[VEC_ADDR:.*]] = alloca <3 x float>, align 4

@@ -83,12 +83,6 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
 
   if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
     if (isForHLSL) {
-      if (mlir::isa<cir::BoolType>(matrixTy.getElementType())) {
-        assert(!cir::MissingFeatures::hlsl());
-        llvm_unreachable(
-            "convertTypeForMemory: HLSL -> Matrix with bool as element type");
-      }
-
       unsigned vecLen = matrixTy.getNumRows();
       unsigned arrayLen = matrixTy.getNumColumns();
       mlir::Type elementType = converter.convertType(matrixTy.getElementType());
