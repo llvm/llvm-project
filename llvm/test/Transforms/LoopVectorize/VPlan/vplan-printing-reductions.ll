@@ -262,7 +262,8 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.a> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp eq ir<%l.a>, ir<%start>
-; CHECK-NEXT:      WIDEN ir<%cond> = select ir<%cmp2>, ir<%iv>, ir<%rdx>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%cmp2>
+; CHECK-NEXT:      WIDEN ir<%cond> = select vp<[[VP6]]>, ir<%iv>, ir<%rdx>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -270,20 +271,20 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax) ir<%cond>
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp ne vp<[[VP7]]>, ir<-9223372036854775808>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = select vp<[[VP8]]>, vp<[[VP7]]>, ir<%start>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (smax) ir<%cond>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = icmp ne vp<[[VP8]]>, ir<-9223372036854775808>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP9]]>, vp<[[VP8]]>, ir<%start>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[VP9]]> from middle.block)
+; CHECK-NEXT:    IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[VP10]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP9]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP10]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:

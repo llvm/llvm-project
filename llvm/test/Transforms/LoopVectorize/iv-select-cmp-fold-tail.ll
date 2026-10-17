@@ -99,8 +99,9 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <4 x i64> [[WIDE_MASKED_LOAD8]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp sgt <4 x i64> [[TMP46]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP48]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP52]] = select <4 x i1> [[TMP49]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP50]] = or <4 x i1> [[VEC_PHI3]], [[TMP49]]
+; CHECK-NEXT:    [[TMP14:%.*]] = freeze <4 x i1> [[TMP49]]
+; CHECK-NEXT:    [[TMP52]] = select <4 x i1> [[TMP14]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP50]] = or <4 x i1> [[VEC_PHI3]], [[TMP14]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add nuw <4 x i64> [[VEC_IV]], splat (i64 4)

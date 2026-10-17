@@ -204,7 +204,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      CURRENT-ITERATION-PHI vp<[[VP4:%[0-9]+]]> = phi ir<0>, vp<%current.iteration.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP5:%[0-9]+]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP8:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP9:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT-SCALAR vp<%avl> = phi [ ir<%n>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP5]]> = zext vp<%evl> to i64
@@ -213,10 +213,11 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.a> = vp.load vp<[[VP7]]>, vp<%evl>
 ; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp eq ir<%l.a>, ir<%start>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP8]]> = call llvm.vp.merge(ir<%cmp2>, ir<%iv>, ir<%rdx>, vp<%evl>)
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = zext vp<%evl> to i64
-; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<[[VP9]]>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = freeze ir<%cmp2>
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP9]]> = call llvm.vp.merge(vp<[[VP8]]>, ir<%iv>, ir<%rdx>, vp<%evl>)
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = zext vp<%evl> to i64
+; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<[[VP10]]>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP10]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP2]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP1]]>
 ; CHECK-NEXT:    No successors
@@ -224,9 +225,9 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP8]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = icmp ne vp<[[VP11]]>, ir<-9223372036854775808>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = select vp<[[VP12]]>, vp<[[VP11]]>, ir<%start>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp ne vp<[[VP12]]>, ir<-9223372036854775808>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, vp<[[VP12]]>, ir<%start>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
