@@ -77,8 +77,8 @@ class B : public A<B> {
 };
 
 int main() {
-  // CFI: 1
-  // NCFI: 1
+  // CFI: {{^1$}}
+  // NCFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast

@@ -29,13 +29,13 @@ int f() {
 void f();
 
 int main() {
-  // CFI: 1
+  // CFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   void (*volatile p)() = &f;
   p();
 
-  // CFI-NOT: 2
+  // CFI-NOT: {{^2$}}
   fprintf(stderr, "2\n");
 }
 #endif
