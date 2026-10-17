@@ -4,9 +4,6 @@ add_mlir_conversion_library(MLIRMathToLibm
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/MathToLibm
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_COMPONENTS
   Core
 

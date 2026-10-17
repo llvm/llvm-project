@@ -14,9 +14,6 @@ add_mlir_conversion_library(MLIRArithToAPFloat
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/ArithToLLVM
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_COMPONENTS
   Core
 
@@ -35,9 +32,6 @@ add_mlir_conversion_library(MLIRMathToAPFloat
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/MathToLLVM
-
-  DEPENDS
-  MLIRConversionPassIncGen
 
   LINK_COMPONENTS
   Core

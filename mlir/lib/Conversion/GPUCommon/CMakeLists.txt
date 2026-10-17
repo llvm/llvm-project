@@ -21,7 +21,6 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   IndexIntrinsicsOpLowering.cpp
 
   DEPENDS
-  MLIRConversionPassIncGen
   intrinsics_gen
 
   LINK_COMPONENTS

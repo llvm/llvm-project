@@ -4,9 +4,6 @@ add_mlir_conversion_library(MLIRMathToROCDL
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/MathToROCDL
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_COMPONENTS
   Core
 

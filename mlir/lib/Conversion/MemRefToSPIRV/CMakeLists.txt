@@ -7,9 +7,6 @@ add_mlir_conversion_library(MLIRMemRefToSPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRFunctionInterfaces
   MLIRIR

@@ -5,9 +5,6 @@ add_mlir_unittest(MLIRInterfacesTests
   MemorySlotUtilsTest.cpp
   SideEffectInterfacesTest.cpp
   InferTypeOpInterfaceTest.cpp
-
-  DEPENDS
-  MLIRTestInterfaceIncGen
 )
 target_include_directories(MLIRInterfacesTests PRIVATE "${MLIR_BINARY_DIR}/test/lib/Dialect/Test")
 
