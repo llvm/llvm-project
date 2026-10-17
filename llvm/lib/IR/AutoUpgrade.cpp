@@ -1443,14 +1443,6 @@ shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
-  if (Name.consume_front("fma.rn."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
-        .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-        .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
-        .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
-        .Default(Intrinsic::not_intrinsic);
-
   if (Name.consume_front("fmax."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fmax_bf16)
@@ -1560,6 +1552,36 @@ getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
     return std::nullopt;
 
   return std::make_pair(IIDs[IsFTZ][IsSat], *RoundingMode);
+}
+
+static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
+getNVVMFMAUpgrade(StringRef Name) {
+  auto [Modifiers, Type] = Name.rsplit('.');
+  if (!is_contained({"f", "d", "f16", "f16x2", "bf16", "bf16x2"}, Type))
+    return std::nullopt;
+
+  std::optional<llvm::RoundingMode> RoundingMode =
+      StringSwitch<std::optional<llvm::RoundingMode>>(Modifiers.take_front(2))
+          .Case("rn", llvm::RoundingMode::NearestTiesToEven)
+          .Case("rz", llvm::RoundingMode::TowardZero)
+          .Case("rm", llvm::RoundingMode::TowardNegative)
+          .Case("rp", llvm::RoundingMode::TowardPositive)
+          .Default(std::nullopt);
+  if (!RoundingMode)
+    return std::nullopt;
+
+  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
+                          .Case("", Intrinsic::nvvm_fma)
+                          .Case(".ftz", Intrinsic::nvvm_fma_ftz)
+                          .Case(".sat", Intrinsic::nvvm_fma_sat)
+                          .Case(".ftz.sat", Intrinsic::nvvm_fma_ftz_sat)
+                          .Case(".relu", Intrinsic::nvvm_fma_relu)
+                          .Case(".ftz.relu", Intrinsic::nvvm_fma_ftz_relu)
+                          .Default(Intrinsic::not_intrinsic);
+  if (IID == Intrinsic::not_intrinsic)
+    return std::nullopt;
+
+  return std::make_pair(IID, *RoundingMode);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
@@ -2210,6 +2232,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
             Name == "f" || Name == "ftz.f" || Name == "d" || Name == "f16x2";
+      else if (Name.consume_front("fma."))
+        // nvvm.fma.<rnd>{.ftz}{.sat|.relu}.{f,d,f16,f16x2,bf16,bf16x2}
+        Expand = getNVVMFMAUpgrade(Name).has_value();
       else if (Name.consume_front("atomic.load."))
         // nvvm.atomic.load.add.{f32,f64}.p
         // nvvm.atomic.load.{inc,dec}.32.p
@@ -3310,6 +3335,33 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
                                                 : Intrinsic::nvvm_ex2_approx;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("fma.")) {
+    // nvvm.fma.<rnd>{.ftz}{.sat|.relu}.{f,d,f16,f16x2,bf16,bf16x2}
+    auto FMA = getNVVMFMAUpgrade(Name);
+    assert(FMA && "unsupported nvvm.fma.* intrinsic");
+    auto [IID, RoundingMode] = *FMA;
+
+    // The legacy bf16 variants used integer storage types for the bf16
+    // operands; bitcast them to the floating-point types of the new
+    // overloaded intrinsic.
+    Type *Ty = CI->getType();
+    const bool IsLegacyBF16Storage = Ty->getScalarType()->isIntegerTy();
+    if (IsLegacyBF16Storage)
+      Ty = Name.ends_with("bf16x2")
+               ? FixedVectorType::get(Builder.getBFloatTy(), 2)
+               : static_cast<Type *>(Builder.getBFloatTy());
+
+    SmallVector<Value *, 4> Args;
+    for (unsigned I = 0; I != 3; ++I) {
+      Value *Arg = CI->getArgOperand(I);
+      Args.push_back(IsLegacyBF16Storage ? Builder.CreateBitCast(Arg, Ty)
+                                         : Arg);
+    }
+    Args.push_back(Builder.getInt32(static_cast<int>(RoundingMode)));
+
+    Rep = Builder.CreateIntrinsic(Ty, IID, Args);
+    if (IsLegacyBF16Storage)
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
   } else if (Name.starts_with("atomic.load.add.f32.p") ||
              Name.starts_with("atomic.load.add.f64.p")) {
     Value *Ptr = CI->getArgOperand(0);
