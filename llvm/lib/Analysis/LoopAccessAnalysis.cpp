@@ -1756,10 +1756,22 @@ public:
   /// dependency checking (i.e. ShouldRetryWithRuntimeChecks).
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
-  /// We decided that no dependence analysis would be used.  Reset the state.
+  /// We decided to check the dependences at runtime instead. Reset the state,
+  /// keeping only the dependences that the runtime checks do not cover.
   void resetDepChecks(MemoryDepChecker &DepChecker) {
     CheckDeps.clear();
-    DepChecker.clearDependences();
+    // Only unknown dependences between different pointers are covered by the
+    // runtime checks. The others are safe, but their accesses may not be
+    // checked against each other, so later users such as the interleaved
+    // access analysis must still respect them.
+    DepChecker.removeDependencesIf(
+        [&](const MemoryDepChecker::Dependence &Dep) {
+          if (Dep.Type != MemoryDepChecker::Dependence::Unknown)
+            return false;
+          MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
+          MemAccessInfo Dst = DepChecker.getAccess(Dep.Destination);
+          return Src.getPointer() != Dst.getPointer();
+        });
   }
 
   ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
@@ -2277,10 +2289,13 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                "Should only skip safe dependences");
         continue;
       }
-      Instruction *Src = Dep.getSource(DepChecker);
-      Instruction *Dst = Dep.getDestination(DepChecker);
-      DepCands.eraseClass({getPointerOperand(Src), Src->mayWriteToMemory()});
-      DepCands.eraseClass({getPointerOperand(Dst), Dst->mayWriteToMemory()});
+      // Both accesses are in the same class, which may already have been
+      // erased for an earlier dependence.
+      MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
+      MemAccessInfo Dst = DepChecker.getAccess(Dep.Destination);
+      assert((!DepCands.contains(Src) || DepCands.isEquivalent(Src, Dst)) &&
+             "Dependences must be between accesses in the same class");
+      DepCands.eraseClass(Src);
     }
   } else {
     CheckDeps.clear();
@@ -2748,6 +2763,7 @@ void MemoryDepChecker::addAccess(StoreInst *SI) {
                 [this, SI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, true)].push_back(AccessIdx);
                   InstMap.push_back(SI);
+                  AccessLocs.emplace_back(Ptr, true);
                   ++AccessIdx;
                 });
 }
@@ -2757,6 +2773,7 @@ void MemoryDepChecker::addAccess(LoadInst *LI) {
                 [this, LI](Value *Ptr) {
                   Accesses[MemAccessInfo(Ptr, false)].push_back(AccessIdx);
                   InstMap.push_back(LI);
+                  AccessLocs.emplace_back(Ptr, false);
                   ++AccessIdx;
                 });
 }
@@ -3792,7 +3809,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         return false;
       }
 
-      // Clear the dependency checks. They are no longer needed.
       Accesses.resetDepChecks(*DepChecker);
 
       DepsAreSafe = true;

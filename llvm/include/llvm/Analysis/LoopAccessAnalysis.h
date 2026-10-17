@@ -297,7 +297,10 @@ public:
     return RecordDependences ? &Dependences : nullptr;
   }
 
-  void clearDependences() { Dependences.clear(); }
+  /// Remove the recorded dependences for which \p Pred returns true.
+  void removeDependencesIf(function_ref<bool(const Dependence &)> Pred) {
+    erase_if(Dependences, Pred);
+  }
 
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
@@ -328,6 +331,9 @@ public:
       return I->second;
     return {};
   }
+
+  /// Return the access location with program order index \p Idx.
+  MemAccessInfo getAccess(unsigned Idx) const { return AccessLocs[Idx]; }
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
@@ -371,6 +377,9 @@ private:
 
   /// Memory access instructions in program order.
   SmallVector<Instruction *, 16> InstMap;
+
+  /// Access locations in program order.
+  SmallVector<MemAccessInfo> AccessLocs;
 
   /// The program order index to be used for the next instruction.
   unsigned AccessIdx = 0;
