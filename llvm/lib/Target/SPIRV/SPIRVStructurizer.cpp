@@ -15,7 +15,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -24,6 +26,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -943,18 +946,94 @@ class SPIRVStructurizerImpl {
     return ToRemove.size() != 0;
   }
 
-  bool addHeaderToRemainingDivergentDAG(Function &F) {
+  // Fixes merge assignments where the header has a branch target that exits
+  // its own selection construct non-structurally. This happens when a header
+  // branches to a block that is outside [header, merge) — typically the merge
+  // of a parent construct. The fix inserts a new intermediate merge block that
+  // collects all edges from inside the construct that go to the exit target,
+  // and reassigns the header's merge to this new block.
+  bool fixInvalidMergeDominance(Function &F, DominatorTree &DT,
+                                PostDominatorTree &PDT, DomTreeUpdater &DTU) {
+    bool Modified = false;
+
+    for (BasicBlock &BB : F) {
+      auto MIS = getMergeInstructions(BB);
+      if (MIS.empty())
+        continue;
+
+      for (Instruction *MI : MIS) {
+        BasicBlock *Merge = getDesignatedMergeBlock(MI);
+        if (!Merge)
+          continue;
+
+        // Header must dominate its merge block.
+        if (DT.dominates(&BB, Merge))
+          continue;
+
+        // Find the convergence point of all successors.
+        BasicBlock *Convergence = nullptr;
+        for (BasicBlock *Succ : successors(&BB)) {
+          if (!Convergence)
+            Convergence = Succ;
+          else
+            Convergence = PDT.findNearestCommonDominator(Convergence, Succ);
+        }
+        if (!Convergence || Convergence == &BB)
+          continue;
+
+        // Target is not used directly as the merge. The downstream code
+        // creates a new intermediate block (NewMerge) intercepting only the
+        // BB-dominated predecessors of Target. This works regardless of
+        // whether BB dominates Convergence: if it does, all predecessors
+        // get redirected; if not, only the dominated subset does, while
+        // sibling paths continue directly to Convergence.
+        BasicBlock *Target = Convergence;
+
+        // Note: We do NOT check whether a successor escapes this construct
+        // by branching to the merge of an enclosing selection/loop. That is a
+        // valid structured exit in SPIR-V. The actual invalid patterns are
+        // caught above (header not dominating merge) on the deeper headers
+        // that lose dominance after routing blocks are created.
+
+        // Collect predecessors of Target that are dominated by BB (these
+        // are "inside" the construct and will be redirected).
+        SmallVector<BasicBlock *, 4> RedirectedPreds;
+        for (BasicBlock *Pred : predecessors(Target)) {
+          if (DT.dominates(&BB, Pred))
+            RedirectedPreds.push_back(Pred);
+        }
+
+        if (RedirectedPreds.empty())
+          continue;
+
+        // SplitBlockPredecessors creates the new intermediate block, moves
+        // the redirected edges to it, splits Target's PHI nodes to collect a
+        // single merged incoming value from it, and updates both dom trees.
+        BasicBlock *NewMerge = SplitBlockPredecessors(Target, RedirectedPreds,
+                                                      ".inner_merge", &DTU);
+
+        assert(NewMerge && "failed to split merge predecessors");
+        assert(DT.dominates(&BB, NewMerge) &&
+               "new merge must be dominated by header");
+
+        // Reassign merge.
+        auto *NewMergeAddr = BlockAddress::get(NewMerge->getParent(), NewMerge);
+        MI->setOperand(0, NewMergeAddr);
+        Modified = true;
+      }
+    }
+    return Modified;
+  }
+
+  bool addHeaderToRemainingDivergentDAG(Function &F, DominatorTree &DT,
+                                        PostDominatorTree &PDT,
+                                        DomTreeUpdater &DTU) {
     bool Modified = false;
 
     HeaderMergeContinueBlocks Blocks(F);
     auto &MergeBlocks = Blocks.Merge;
     auto &ContinueBlocks = Blocks.Continue;
     auto &HeaderBlocks = Blocks.Header;
-
-    DomTreeBuilder::BBDomTree DT;
-    DomTreeBuilder::BBPostDomTree PDT;
-    PDT.recalculate(F);
-    DT.recalculate(F);
 
     for (BasicBlock &BB : F) {
       if (HeaderBlocks.count(&BB) != 0)
@@ -964,10 +1043,15 @@ class SPIRVStructurizerImpl {
 
       size_t CandidateEdges = 0;
       for (BasicBlock *Successor : successors(&BB)) {
-        if (MergeBlocks.count(Successor) != 0 ||
-            ContinueBlocks.count(Successor) != 0)
+        if (ContinueBlocks.count(Successor) != 0)
           continue;
-        if (HeaderBlocks.count(Successor) != 0)
+        if (MergeBlocks.count(Successor) != 0)
+          continue;
+        // Filter header blocks that dominate us (we're inside their
+        // construct — branching to them is normal structured flow). But if
+        // a header does NOT dominate us, we're routing into it from outside
+        // and need our own selection merge.
+        if (HeaderBlocks.count(Successor) != 0 && DT.dominates(Successor, &BB))
           continue;
         CandidateEdges += 1;
       }
@@ -1008,17 +1092,162 @@ class SPIRVStructurizerImpl {
         continue;
       }
 
-      Instruction *SplitInstruction = Merge->getTerminator();
-      if (isMergeInstruction(SplitInstruction->getPrevNode()))
-        SplitInstruction = SplitInstruction->getPrevNode();
-      BasicBlock *NewMerge =
-          Merge->splitBasicBlockBefore(SplitInstruction, "new.merge");
+      BasicBlock *NewMerge;
+      {
+        Instruction *SplitInstruction = Merge->getTerminator();
+        if (isMergeInstruction(SplitInstruction->getPrevNode()))
+          SplitInstruction = SplitInstruction->getPrevNode();
+        NewMerge =
+            splitBlockBefore(Merge, SplitInstruction, &DTU,
+                             /*LI=*/nullptr, /*MSSAU=*/nullptr, "new.merge");
+      }
 
       IRBuilder<> Builder(Header);
       Builder.SetInsertPoint(Header->getTerminator());
 
       auto MergeAddress = BlockAddress::get(NewMerge->getParent(), NewMerge);
       createOpSelectMerge(&Builder, MergeAddress);
+    }
+
+    return Modified;
+  }
+
+  // Fix switch case ordering for SPIR-V: if a case construct branches to
+  // another case's target block, the branching case must immediately precede
+  // the target case in the OpSwitch target list. Only non-default cases
+  // participate in reordering (the default target is not part of the OpSwitch
+  // target list in SPIR-V).
+  bool fixSwitchCaseOrder(Function &F) {
+    bool Modified = false;
+
+    for (BasicBlock &BB : F) {
+      auto *SI = dyn_cast<SwitchInst>(BB.getTerminator());
+      if (!SI || SI->getNumCases() < 2)
+        continue;
+
+      // Collect non-default case targets. Use indices (not block pointers)
+      // to correctly handle multiple case values sharing the same target.
+      SmallVector<std::pair<ConstantInt *, BasicBlock *>, 8> Cases;
+      for (auto &Case : SI->cases())
+        Cases.push_back({Case.getCaseValue(), Case.getCaseSuccessor()});
+
+      // Map from target block to its case index (first occurrence only, used
+      // for fall-through detection).
+      SmallDenseMap<BasicBlock *, unsigned, 8> BlockToCaseIdx;
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        // Only record the first case targeting each block.
+        BlockToCaseIdx.try_emplace(Cases[I].second, I);
+      }
+
+      // Build fall-through edges among cases (excluding default).
+      // FallThrough[I] = J means case I's target block branches to case J's
+      // target block, so case I must immediately precede case J.
+      SmallDenseMap<unsigned, unsigned, 8> FallThrough;
+      SmallDenseMap<unsigned, unsigned, 8> IncomingCount;
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        for (BasicBlock *Succ : successors(Cases[I].second)) {
+          if (Succ == SI->getDefaultDest())
+            continue; // Skip fall-throughs involving default.
+          auto It = BlockToCaseIdx.find(Succ);
+          if (It != BlockToCaseIdx.end() && It->second != I) {
+            FallThrough[I] = It->second;
+            IncomingCount[It->second]++;
+            break;
+          }
+        }
+      }
+
+      if (FallThrough.empty())
+        continue;
+
+      // Detect unsatisfiable constraints: cycles or multiple predecessors
+      // targeting the same case. Skip reordering if found.
+      bool Unsatisfiable = false;
+      for (auto &[Target, Count] : IncomingCount) {
+        if (Count > 1) {
+          Unsatisfiable = true;
+          break;
+        }
+      }
+      if (!Unsatisfiable) {
+        // Check for cycles by following chains.
+        for (unsigned I = 0; I < Cases.size() && !Unsatisfiable; I++) {
+          if (!FallThrough.count(I))
+            continue;
+          SmallDenseSet<unsigned, 8> Visited;
+          unsigned Cur = I;
+          while (FallThrough.count(Cur)) {
+            if (!Visited.insert(Cur).second) {
+              Unsatisfiable = true;
+              break;
+            }
+            Cur = FallThrough[Cur];
+          }
+        }
+      }
+      if (Unsatisfiable)
+        continue;
+
+      // Topological sort: build chains respecting fall-through adjacency.
+      SmallVector<unsigned, 8> Order;
+      SmallDenseSet<unsigned, 8> Placed;
+
+      // Find chain heads (cases with no incoming fall-through).
+      SmallDenseSet<unsigned, 8> HasIncoming;
+      for (auto &[From, To] : FallThrough)
+        HasIncoming.insert(To);
+
+      // Start chains from cases that aren't landed on.
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        if (HasIncoming.count(I))
+          continue;
+        unsigned Cur = I;
+        while (true) {
+          if (Placed.contains(Cur))
+            break;
+          Order.push_back(Cur);
+          Placed.insert(Cur);
+          auto It = FallThrough.find(Cur);
+          if (It == FallThrough.end())
+            break;
+          Cur = It->second;
+        }
+      }
+
+      // Add any remaining cases not part of a chain.
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        if (!Placed.contains(I)) {
+          Order.push_back(I);
+          Placed.insert(I);
+        }
+      }
+
+      // Check if order actually changed.
+      bool Changed = false;
+      for (unsigned I = 0; I < Order.size(); I++) {
+        if (Order[I] != I) {
+          Changed = true;
+          break;
+        }
+      }
+      if (!Changed)
+        continue;
+
+      // Rebuild switch with reordered cases.
+      SmallVector<std::pair<ConstantInt *, BasicBlock *>, 8> NewCases;
+      for (unsigned Idx : Order)
+        NewCases.push_back(Cases[Idx]);
+
+      IRBuilder<> Builder(&BB);
+      Builder.SetInsertPoint(SI);
+      SwitchInst *NewSI = Builder.CreateSwitch(
+          SI->getCondition(), SI->getDefaultDest(), NewCases.size());
+      for (auto &[Val, Dest] : NewCases)
+        NewSI->addCase(Val, Dest);
+      NewSI->copyMetadata(*SI);
+      NewSI->setDebugLoc(SI->getDebugLoc());
+      SI->eraseFromParent();
+      Modified = true;
     }
 
     return Modified;
@@ -1086,7 +1315,34 @@ public:
     // STEP 8: Final fix-up steps: our tree boundaries are correct, but some
     // blocks are branching with no header. Those are often simple conditional
     // branches with 1 or 2 returning edges. Adding a header for those.
-    Modified |= addHeaderToRemainingDivergentDAG(F);
+    // Also fix any merge assignments where the header does not dominate its
+    // merge (caused by STEP 6 creating alternate paths). These two fixes
+    // interact: removing an invalid merge may expose a block that needs a new
+    // header, and adding headers may reveal new dominance violations. Run both
+    // in a loop until convergence.
+    {
+      DominatorTree DT(F);
+      PostDominatorTree PDT(F);
+      DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager);
+      bool Changed;
+      do {
+        Changed = false;
+        while (addHeaderToRemainingDivergentDAG(F, DT, PDT, DTU)) {
+          Changed = true;
+          Modified = true;
+        }
+        if (fixInvalidMergeDominance(F, DT, PDT, DTU)) {
+          Changed = true;
+          Modified = true;
+        }
+      } while (Changed);
+    }
+
+    // STEP 8b: Fix switch case ordering. SPIR-V requires that if one case
+    // construct falls through (branches) to another case construct, the
+    // falling-through case must immediately precede the target case in the
+    // OpSwitch target list.
+    Modified |= fixSwitchCaseOrder(F);
 
     // STEP 9: sort basic blocks to match both the LLVM & SPIR-V requirements.
     Modified |= sortBlocks(F);
