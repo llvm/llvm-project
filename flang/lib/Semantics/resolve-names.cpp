@@ -8821,7 +8821,7 @@ void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
 // used as an interface name only after that declaration.
 void DeclarationVisitor::CheckInterfaceNameDeclaredBeforeUse(
     const parser::Name &name) {
-  if (const Symbol * symbol{name.symbol}) {
+  if (const Symbol *symbol{name.symbol}) {
     if (!context().HasError(*symbol) && symbol->has<ProcEntityDetails>() &&
         symbol->HasExplicitInterface() &&
         context().allCookedSources().Precedes(name.source, symbol->name())) {
