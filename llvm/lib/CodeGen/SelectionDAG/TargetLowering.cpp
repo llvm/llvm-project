@@ -8878,13 +8878,13 @@ SDValue TargetLowering::expandGetActiveLaneMask(SelectionDAG &DAG, EVT VT,
 
   unsigned NumElts = VT.getVectorNumElements();
 
-  if (NumElts > 64)
-    return SDValue();
-
   EVT IndexVT = Index.getValueType();
   // Scalar integer type wide enough to hold all lane bits (at least i8).
   unsigned MaskBits = llvm::PowerOf2Ceil(std::max(8u, NumElts));
   EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), MaskBits);
+
+  if (!isTypeLegal(MaskVT))
+    return SDValue();
 
   // Clamp remaining lanes: Diff = (TripCount <= Index) ? 0 : (TripCount -
   // Index).
@@ -8898,7 +8898,8 @@ SDValue TargetLowering::expandGetActiveLaneMask(SelectionDAG &DAG, EVT VT,
   SDValue MaxLanes = DAG.getConstant(NumElts, DL, IndexVT);
   SDValue Clamped = DAG.getNode(ISD::UMIN, DL, IndexVT, Diff, MaxLanes);
   // Build the scalar bitmask: (1 << k) - 1.
-  SDValue ShiftAmt = DAG.getZExtOrTrunc(Clamped, DL, MaskVT);
+  EVT ShiftAmtVT = getShiftAmountTy(MaskVT, DAG.getDataLayout());
+  SDValue ShiftAmt = DAG.getZExtOrTrunc(Clamped, DL, ShiftAmtVT);
   SDValue One = DAG.getConstant(1, DL, MaskVT);
   SDValue Shl = DAG.getNode(ISD::SHL, DL, MaskVT, One, ShiftAmt);
   SDValue ScalarMask = DAG.getNode(ISD::SUB, DL, MaskVT, Shl, One);
@@ -8910,8 +8911,7 @@ SDValue TargetLowering::expandGetActiveLaneMask(SelectionDAG &DAG, EVT VT,
   if (BoolVecVT == VT)
     return Bitcast;
   // Extract the original subvector if padded (e.g. v4i1 from i8 -> v8i1).
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Bitcast,
-                     DAG.getVectorIdxConstant(0, DL));
+  return DAG.getExtractSubvector(DL, VT, Bitcast, 0);
 }
 
 SDValue TargetLowering::expandFunnelShift(SDNode *Node,
