@@ -244,6 +244,8 @@ Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
 
   LLVMContext Context;
   SMDiagnostic Err;
@@ -255,9 +257,6 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<TargetMachine> TM;
   if (!MTriple.empty()) {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T) {
