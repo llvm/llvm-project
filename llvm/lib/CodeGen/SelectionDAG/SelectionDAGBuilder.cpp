@@ -8677,11 +8677,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_fadd: {
+    SDNodeFlags Flags;
+    if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+      Flags.copyFMF(*FPOp);
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
-    setValue(&I, DAG.getNode(
-                     ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(), Acc,
-                     Input, DAG.getConstantFP(1.0, sdl, Input.getValueType())));
+    setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(),
+                             Acc, Input,
+                             DAG.getConstantFP(1.0, sdl, Input.getValueType()),
+                             Flags));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -10317,6 +10321,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
         MVT VT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
+        // No integer type of that size to bitcast to (e.g. f80).
+        if (!VT.isValid())
+          return std::nullopt;
         if (OpInfo.Type == InlineAsm::isInput)
           OpInfo.CallOperand =
               DAG.getNode(ISD::BITCAST, DL, VT, OpInfo.CallOperand);
@@ -12041,9 +12048,8 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       // We will look through cast uses, so ignore them completely.
       if (I.isCast())
         continue;
-      // Ignore debug info and pseudo op intrinsics, they don't escape or store
-      // to allocas.
-      if (I.isDebugOrPseudoInst())
+      // Ignore pseudo op intrinsics, they don't escape or store to allocas.
+      if (isa<PseudoProbeInst>(I))
         continue;
       // This is an unknown instruction. Assume it escapes or writes to all
       // static alloca operands.
@@ -12171,7 +12177,7 @@ static void tryToElideArgumentCopy(
   }
 }
 
-void SelectionDAGISel::LowerArguments(const Function &F) {
+void SelectionDAGISel::LowerArguments(const Function &F, bool FastISel) {
   SelectionDAG &DAG = SDB->DAG;
   SDLoc dl = SDB->getCurSDLoc();
   const DataLayout &DL = DAG.getDataLayout();
@@ -12507,7 +12513,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         continue;
       }
     }
-    if (!isOnlyUsedInEntryBlock(&Arg, TM.Options.EnableFastISel)) {
+    if (!isOnlyUsedInEntryBlock(&Arg, FastISel)) {
       FuncInfo->InitializeRegForValue(&Arg);
       SDB->CopyToExportRegsIfNeeded(&Arg);
     }
@@ -12745,8 +12751,8 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -13162,18 +13168,6 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
                              DAG.getVectorIdxConstant(OutNumElts * i, DL));
   }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
-  // from existing legalisation and combines.
-  if (OutVT.isFixedLengthVector() && Factor == 2) {
-    SDValue Even = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
-                                        createStrideMask(0, 2, OutNumElts));
-    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
-                                       createStrideMask(1, 2, OutNumElts));
-    SDValue Res = DAG.getMergeValues({Even, Odd}, getCurSDLoc());
-    setValue(&I, Res);
-    return;
-  }
-
   SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
                             DAG.getVTList(ValueVTs), SubVecs);
   setValue(&I, Res);
@@ -13191,16 +13185,6 @@ void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
     InVecs[i] = getValue(I.getOperand(i));
     assert(InVecs[i].getValueType() == InVecs[0].getValueType() &&
            "Expected VTs to be the same");
-  }
-
-  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
-  // from existing legalisation and combines.
-  if (OutVT.isFixedLengthVector() && Factor == 2) {
-    unsigned NumElts = InVT.getVectorMinNumElements();
-    SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVecs);
-    setValue(&I, DAG.getVectorShuffle(OutVT, DL, V, DAG.getUNDEF(OutVT),
-                                      createInterleaveMask(NumElts, 2)));
-    return;
   }
 
   SmallVector<EVT, 8> ValueVTs(Factor, InVT);

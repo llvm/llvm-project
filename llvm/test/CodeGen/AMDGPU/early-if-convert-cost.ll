@@ -1,5 +1,5 @@
-; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu6.01 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu7.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GCN,GCNX3 %s
 
 ; FIXME: Most of these cases that don't trigger because of broken cost
 ; heuristics. Should not need -stress-early-ifcvt
@@ -50,18 +50,23 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle96:
-; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 1.0
+; GCN: v_cmp_neq_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
 
-; GCN: v_add_i32_e64
-; GCN: v_add_i32_e64
-; GCN: v_add_i32_e64
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: s_mov_b64 vcc, [[CMP]]
 
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 
-define <3 x i32> @test_vccnz_ifcvt_triangle96(<3 x i32> %v, float inreg %cnd) #0 {
+; SI-DAG: buffer_store_dwordx2
+; SI-DAG: buffer_store_dword v
+; GCNX3: buffer_store_dwordx3
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle96(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
 entry:
+  %v = load volatile <3 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -71,24 +76,28 @@ if:
 
 endif:
   %r = phi <3 x i32> [ %v, %entry ], [ %u, %if ]
-  ret <3 x i32> %r
+  store <3 x i32> %r, ptr addrspace(1) %out
+  ret void
 }
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle128:
-; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 1.0
+; GCN: v_cmp_neq_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
 
-; GCN: v_add_i32_e64
-; GCN: v_add_i32_e64
-; GCN: v_add_i32_e64
-; GCN: v_add_i32_e64
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: v_add_i32_e32
+; GCN: s_mov_b64 vcc, [[CMP]]
 
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 
-define <4 x i32> @test_vccnz_ifcvt_triangle128(<4 x i32> %v, float inreg %cnd) #0 {
+; GCN: buffer_store_dwordx4
+define amdgpu_kernel void @test_vccnz_ifcvt_triangle128(ptr addrspace(1) %out, ptr addrspace(1) %in, float %cnd) #0 {
 entry:
+  %v = load volatile <4 x i32>, ptr addrspace(1) %in
   %cc = fcmp oeq float %cnd, 1.000000e+00
   br i1 %cc, label %if, label %endif
 
@@ -98,5 +107,6 @@ if:
 
 endif:
   %r = phi <4 x i32> [ %v, %entry ], [ %u, %if ]
-  ret <4 x i32> %r
+  store <4 x i32> %r, ptr addrspace(1) %out
+  ret void
 }

@@ -46,6 +46,21 @@ bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
 }
 
+bool isUndefTolerantBinOp(const Value *V) {
+  const BinaryOperator *BO;
+  return match(V, m_BinOp(BO)) && BO->getType()->isIntOrIntVectorTy() &&
+         !BO->isShift() && !BO->isIntDivRem();
+}
+
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V) {
+  if (!isUndefTolerantBinOp(V))
+    return nullptr;
+  for (const Value *Op : cast<BinaryOperator>(V)->operands())
+    if (const auto *LI = dyn_cast<LoadInst>(Op))
+      return LI;
+  return nullptr;
+}
+
 unsigned getReassocCombineOpcode(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::Sub:
@@ -588,25 +603,23 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
-  unsigned Size = accumulate(VL, 0u, [](unsigned S, Value *V) {
-    auto *EI = dyn_cast<ExtractElementInst>(V);
-    if (!EI)
-      return S;
-    auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VTy)
-      return S;
-    return std::max(S, VTy->getNumElements());
-  });
-
+  unsigned Size = 0;
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
-                               [&](ExtractElementInst *EE) {
-                                 Value *Vec = EE->getVectorOperand();
-                                 if (isa<UndefValue>(Vec))
-                                   return false;
-                                 return isGuaranteedNotToBePoison(Vec, AC);
-                               });
+  // The poison analysis is expensive, it is required only for the undef
+  // vectors.
+  std::optional<bool> HasNonUndefVec;
+  auto IsNonUndefVecPresent = [&]() {
+    if (!HasNonUndefVec)
+      HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                              [&](ExtractElementInst *EE) {
+                                Value *Vec = EE->getVectorOperand();
+                                if (isa<UndefValue>(Vec))
+                                  return false;
+                                return isGuaranteedNotToBePoison(Vec, AC);
+                              });
+    return *HasNonUndefVec;
+  };
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -639,7 +652,9 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
     }
-    if (isUndefVector(Vec).all() && HasNonUndefVec)
+    // The width is defined only by the lanes that are present in the mask.
+    Size = std::max(Size, getNumElements(Vec->getType()));
+    if (isUndefVector(Vec).all() && IsNonUndefVecPresent())
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
     // in all extractelement instructions.
@@ -647,23 +662,31 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       Vec1 = Vec;
     } else if (!Vec2 || Vec2 == Vec) {
       Vec2 = Vec;
-      Mask[I] += Size;
     } else {
       return std::nullopt;
     }
+  }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
+  for (auto [I, Idx] : enumerate(Mask)) {
+    if (Idx == PoisonMaskElem)
+      continue;
+    auto *Vec = cast<ExtractElementInst>(VL[I])->getVectorOperand();
+    if (Vec == Vec2)
+      Idx += Size;
+    else if (Vec != Vec1)
+      continue;
     if (CommonShuffleMode == Permute)
       continue;
     // If the extract index is not the same as the operation number, it is a
     // permutation.
-    if (Mask[I] % Size != I) {
+    if (Idx % Size != I) {
       CommonShuffleMode = Permute;
       continue;
     }
     CommonShuffleMode = Select;
   }
-  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
-                               getNumElements(Vec2->getType())))
-    return std::nullopt;
   // If we're not crossing lanes in different vectors, consider it as blending.
   if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;
@@ -1458,7 +1481,7 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
 }
 
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth, unsigned &NumInsts) {
+                    Type *ResultTy, unsigned ShiftWidth, unsigned &NumInsts) {
   NumInsts = 0;
   auto *VecTy = cast<FixedVectorType>(X->getType());
   unsigned BitWidth = VecTy->getScalarSizeInBits();
@@ -1488,19 +1511,21 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
   }
   unsigned InBytes = NumElts * (ShiftWidth / 8);
   auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
-  SmallVector<int> Mask =
-      getBitPackMask(Info, BitWidth / 8, NumElts, ShiftWidth / 8);
-  auto *IntTy = IntegerType::get(X->getContext(), BitWidth);
-  // A plain byte reversal of the shifted lanes is a bswap.
-  if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
-    NumInsts += 2;
-    return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
-                                        Builder.CreateBitCast(Y, IntTy));
-  }
-  // An identity byte order needs no shuffle.
-  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
-    ++NumInsts;
-    return Builder.CreateBitCast(Y, IntTy);
+  SmallVector<int> Mask = getBitPackMask(
+      Info, ResultTy->getScalarSizeInBits() / 8, NumElts, ShiftWidth / 8);
+  // Fields in lane order, possibly reversed, are a truncation of the shifted
+  // lanes. A reversal of byte fields is a bswap.
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  if (IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts))) {
+    Value *Fields = Builder.CreateTrunc(
+        Y, Y->getType()->getWithNewBitWidth(Info.FieldWidth));
+    NumInsts += 1 + (Info.FieldWidth != ShiftWidth) + IsReversed;
+    if (IsReversed && Info.FieldWidth == 8)
+      return Builder.CreateUnaryIntrinsic(
+          Intrinsic::bswap, Builder.CreateBitCast(Fields, ResultTy));
+    if (IsReversed)
+      Fields = Builder.CreateVectorReverse(Fields);
+    return Builder.CreateBitCast(Fields, ResultTy);
   }
   Value *Packed = Builder.CreateShuffleVector(
       Builder.CreateBitCast(Y, ByteTy),
@@ -1509,7 +1534,7 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
           : PoisonValue::get(ByteTy),
       Mask);
   NumInsts += 3;
-  return Builder.CreateBitCast(Packed, IntTy);
+  return Builder.CreateBitCast(Packed, ResultTy);
 }
 
 void redirectDbgValues(Instruction &From, Value &To) {

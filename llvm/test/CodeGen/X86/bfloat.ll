@@ -2708,3 +2708,74 @@ define <8 x bfloat> @vselect_v8bf16(<8 x i1> %m, <8 x bfloat> %a, <8 x bfloat> %
   %sel = select <8 x i1> %m, <8 x bfloat> %a, <8 x bfloat> %b
   ret <8 x bfloat> %sel
 }
+
+define half @bitcast_f32_hi16(float %f) {
+; X86-LABEL: bitcast_f32_hi16:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: bitcast_f32_hi16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: bitcast_f32_hi16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i = bitcast float %f to i32
+  %s = lshr i32 %i, 16
+  %t = trunc i32 %s to i16
+  %h = bitcast i16 %t to half
+  ret half %h
+}
+
+define <8 x i16> @insert_f32_hi16(<8 x i16> %vec, float %f) {
+; X86-LABEL: insert_f32_hi16:
+; X86:       # %bb.0:
+; X86-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: insert_f32_hi16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: insert_f32_hi16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
+; AVX-NEXT:    retq
+  %i = bitcast float %f to i32
+  %s = lshr i32 %i, 16
+  %t = trunc i32 %s to i16
+  %ins = insertelement <8 x i16> %vec, i16 %t, i32 1
+  ret <8 x i16> %ins
+}
+
+define <8 x i16> @insert_f32_hi16_lane2(<8 x i16> %vec, float %f) {
+; X86-LABEL: insert_f32_hi16_lane2:
+; X86:       # %bb.0:
+; X86-NEXT:    vpinsrw $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: insert_f32_hi16_lane2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    pinsrw $2, %eax, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: insert_f32_hi16_lane2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3,4,5,6,7]
+; AVX-NEXT:    retq
+  %i = bitcast float %f to i32
+  %s = lshr i32 %i, 16
+  %t = trunc i32 %s to i16
+  %ins = insertelement <8 x i16> %vec, i16 %t, i32 2
+  ret <8 x i16> %ins
+}

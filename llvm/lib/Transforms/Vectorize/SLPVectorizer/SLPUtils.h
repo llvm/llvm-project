@@ -38,6 +38,7 @@ class Constant;
 class DataLayout;
 class Instruction;
 class IRBuilderBase;
+class LoadInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -58,6 +59,14 @@ bool isConstant(Value *V);
 /// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
 /// returns for FAdd/FMul, whose identity fast-math may break anyway.
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+
+/// \returns True if \p V is an integer binary operator, which gives an undef
+/// result for the undef operands: neither a shift nor a division.
+bool isUndefTolerantBinOp(const Value *V);
+
+/// \returns the load operand of the undef tolerant binary operator \p V, if
+/// any.
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V);
 
 /// \returns the opcode of the combines emitted for a reassociated node:
 /// subtract chains regroup their positive and negative operand columns with
@@ -497,10 +506,10 @@ std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
 SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
                                 unsigned NumElts, unsigned BytesPerLane);
 
-/// Builds the bitfield packing of X per the layout and the shift width.
-/// \p NumInsts returns the number of emitted instructions.
+/// Builds the bitfield packing of X into \p ResultTy per the layout and the
+/// shift width. \p NumInsts returns the number of emitted instructions.
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth, unsigned &NumInsts);
+                    Type *ResultTy, unsigned ShiftWidth, unsigned &NumInsts);
 
 /// The debug values of the erased \p From are kept on its replacement \p To.
 /// A record placed before \p To is cloned right after it, while the original

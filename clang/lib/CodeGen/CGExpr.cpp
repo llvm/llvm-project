@@ -1064,8 +1064,8 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
 /// Returns true if \p Field is reachable from \p RD either as a direct field or
 /// through a chain of nested record fields (including anonymous
-/// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
-/// and is used to identify the right anchor expression in Base.
+/// structs/unions). This mirrors the path that getFieldOffsetInBits walks, and
+/// is used to identify the right anchor expression in Base.
 static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
   for (const FieldDecl *FD : RD->fields()) {
     if (FD == Field)
@@ -1100,7 +1100,7 @@ class StructAccessBase
     : public ConstStmtVisitor<StructAccessBase, const Expr *> {
   /// The count field we're navigating to. We stop at the innermost expression
   /// whose struct type transitively contains this field, so that
-  /// getGEPIndicesToField can navigate from that struct down to it.
+  /// getFieldOffsetInBits can navigate from that struct down to it.
   const FieldDecl *CountDecl;
 
   /// Returns true if E's record type (or pointee record type) transitively
@@ -1192,34 +1192,28 @@ public:
 
 } // end anonymous namespace
 
-using RecIndicesTy = SmallVector<llvm::Value *, 8>;
+/// The offset of a field from the beginning of the record.
+static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
+                                 const FieldDecl *Field, int64_t &Offset) {
+  ASTContext &Ctx = CGF.getContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  unsigned FieldNo = 0;
 
-static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *Field,
-                                 RecIndicesTy &Indices) {
-  const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
-  int64_t FieldNo = -1;
   for (const FieldDecl *FD : RD->fields()) {
-    if (!Layout.containsFieldDecl(FD))
-      // This could happen if the field has a struct type that's empty. I don't
-      // know why either.
-      continue;
-
-    FieldNo = Layout.getLLVMFieldNo(FD);
     if (FD == Field) {
-      Indices.emplace_back(CGF.Builder.getInt32(FieldNo));
+      Offset += Layout.getFieldOffset(FieldNo);
       return true;
     }
 
     QualType Ty = FD->getType();
-    if (Ty->isRecordType()) {
-      if (getGEPIndicesToField(CGF, Ty->getAsRecordDecl(), Field, Indices)) {
-        if (RD->isUnion())
-          FieldNo = 0;
-        Indices.emplace_back(CGF.Builder.getInt32(FieldNo));
+    if (Ty->isRecordType())
+      if (getFieldOffsetInBits(CGF, Ty->getAsRecordDecl(), Field, Offset)) {
+        Offset += Layout.getFieldOffset(FieldNo);
         return true;
       }
-    }
+
+    if (!RD->isUnion())
+      ++FieldNo;
   }
 
   return false;
@@ -1228,8 +1222,8 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
   // Walk Base to find the deepest sub-expression whose struct type transitively
-  // contains CountDecl. This is our GEP anchor — getGEPIndicesToField then
-  // builds the field indices from that struct down to CountDecl, handling any
+  // contains CountDecl. This is our GEP anchor — getFieldOffsetInBits then
+  // computes the offset from that struct down to CountDecl, handling any
   // intermediate nesting without requiring us to pre-compute a RecordDecl from
   // Base's type or from CountDecl's parent chain.
   const Expr *StructBase = StructAccessBase(CountDecl).Visit(Base);
@@ -1242,6 +1236,16 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     StructTy = StructTy->getPointeeType();
   const RecordDecl *RD = StructTy->getAsRecordDecl();
   if (!RD)
+    return nullptr;
+
+  // A bit-field count has no byte offset of its own to load from.
+  if (CountDecl->isBitField())
+    return nullptr;
+
+  // Struct GEP indices can't reach a count inside a union, because the union
+  // lowers to its largest member and the indices would walk that one instead.
+  int64_t Offset = 0;
+  if (!getFieldOffsetInBits(*this, RD, CountDecl, Offset))
     return nullptr;
 
   llvm::Value *Res = nullptr;
@@ -1258,16 +1262,9 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     return nullptr;
   }
 
-  RecIndicesTy Indices;
-  getGEPIndicesToField(*this, RD, CountDecl, Indices);
-  if (Indices.empty())
-    return nullptr;
-
-  Indices.push_back(Builder.getInt32(0));
-  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
-  return Builder.CreateInBoundsGEP(ConvertType(T), Res,
-                                   RecIndicesTy(llvm::reverse(Indices)),
-                                   "counted_by.gep");
+  return Builder.CreateInBoundsGEP(
+      Int8Ty, Res, Builder.getSize(getContext().toCharUnitsFromBits(Offset)),
+      "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1347,8 +1344,45 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
             IndexInst);
 }
 
+/// Returns the qualified name of \p D for use as the function name in
+/// !alloc_token metadata, or "" if \p D is null or not a NamedDecl.
+static SmallString<64> getAllocTokenFunctionName(const Decl *D,
+                                                 const ASTContext &Ctx) {
+  SmallString<64> Name;
+  const auto *ND = dyn_cast_if_present<NamedDecl>(D);
+  if (!ND)
+    return Name;
+  PrintingPolicy Policy(Ctx.getLangOpts());
+  // Do not use name lookup to decide whether to print inline namespaces.
+  Policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
+  // Do not print file paths for unnamed types, e.g. in template arguments.
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
+  llvm::raw_svector_ostream OS(Name);
+  ND->printQualifiedName(OS, Policy);
+  return Name;
+}
+
 llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
-  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, getContext());
+  std::optional<llvm::AllocTokenMetadata> ATMD;
+  if (!AllocType.isNull())
+    ATMD = infer_alloc::getAllocTokenMetadata(AllocType, getContext());
+
+  const llvm::AllocTokenMode Mode =
+      getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  if (Mode == llvm::AllocTokenMode::TypeFuncHash ||
+      Mode == llvm::AllocTokenMode::TypeFuncHashPointerSplit) {
+    // Even if the type cannot be inferred, emit metadata for a function-based
+    // token. This allows distinguishing allocations that would otherwise all
+    // share the fallback token.
+    if (!ATMD)
+      ATMD = llvm::AllocTokenMetadata{{}, false};
+    // Use the outermost non-closure function, i.e. allocations in lambdas,
+    // blocks, and captured statements use the enclosing function. Allocations
+    // outside of any function (e.g. global initializers) use "".
+    ATMD->FunctionName = getAllocTokenFunctionName(CurFuncDecl, getContext());
+  }
   if (!ATMD)
     return nullptr;
 
@@ -1357,8 +1391,11 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
   auto *ContainsPtrC = Builder.getInt1(ATMD->ContainsPointer);
   auto *ContainsPtrMD = MDB.createConstant(ContainsPtrC);
 
-  // Format: !{<type-name>, <contains-pointer>}
-  return llvm::MDNode::get(CGM.getLLVMContext(), {TypeNameMD, ContainsPtrMD});
+  // Format: !{<type-name>, <contains-pointer>[, <function-name>]}
+  SmallVector<llvm::Metadata *, 3> Ops = {TypeNameMD, ContainsPtrMD};
+  if (ATMD->FunctionName)
+    Ops.push_back(MDB.createString(*ATMD->FunctionName));
+  return llvm::MDNode::get(CGM.getLLVMContext(), Ops);
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
@@ -1369,10 +1406,8 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  QualType AllocType = infer_alloc::inferPossibleType(E, getContext(), CurCast);
-  if (!AllocType.isNull())
-    return buildAllocToken(AllocType);
-  return nullptr;
+  return buildAllocToken(
+      infer_alloc::inferPossibleType(E, getContext(), CurCast));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
@@ -1911,53 +1946,6 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   }
 }
 
-/// Given an object of the given canonical type, can we safely copy a
-/// value out of it based on its initializer?
-static bool isConstantEmittableObjectType(QualType type) {
-  assert(type.isCanonical());
-  assert(!type->isReferenceType());
-
-  // Must be const-qualified but non-volatile.
-  Qualifiers qs = type.getLocalQualifiers();
-  if (!qs.hasConst() || qs.hasVolatile()) return false;
-
-  // Otherwise, all object types satisfy this except C++ classes with
-  // mutable subobjects or non-trivial copy/destroy behavior.
-  if (const auto *RT = dyn_cast<RecordType>(type))
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-      RD = RD->getDefinitionOrSelf();
-      if (RD->hasMutableFields() || !RD->isTrivial())
-        return false;
-    }
-
-  return true;
-}
-
-/// Can we constant-emit a load of a reference to a variable of the
-/// given type?  This is different from predicates like
-/// Decl::mightBeUsableInConstantExpressions because we do want it to apply
-/// in situations that don't necessarily satisfy the language's rules
-/// for this (e.g. C++'s ODR-use rules).  For example, we want to able
-/// to do this with const float variables even if those variables
-/// aren't marked 'constexpr'.
-enum ConstantEmissionKind {
-  CEK_None,
-  CEK_AsReferenceOnly,
-  CEK_AsValueOrReference,
-  CEK_AsValueOnly
-};
-static ConstantEmissionKind checkVarTypeForConstantEmission(QualType type) {
-  type = type.getCanonicalType();
-  if (const auto *ref = dyn_cast<ReferenceType>(type)) {
-    if (isConstantEmittableObjectType(ref->getPointeeType()))
-      return CEK_AsValueOrReference;
-    return CEK_AsReferenceOnly;
-  }
-  if (isConstantEmittableObjectType(type))
-    return CEK_AsValueOnly;
-  return CEK_None;
-}
-
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  This is just an optimization, but it avoids us needing
 /// to emit global copies of variables if they're named without triggering
@@ -1969,30 +1957,31 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   const ValueDecl *Value = RefExpr->getDecl();
 
   // The value needs to be an enum constant or a constant variable.
-  ConstantEmissionKind CEK;
+  CodeGenUtils::ConstantEmissionKind CEK;
   if (isa<ParmVarDecl>(Value)) {
-    CEK = CEK_None;
+    CEK = CodeGenUtils::CEK_None;
   } else if (const auto *var = dyn_cast<VarDecl>(Value)) {
-    CEK = checkVarTypeForConstantEmission(var->getType());
+    CEK = CodeGenUtils::checkVarTypeForConstantEmission(var->getType());
   } else if (isa<EnumConstantDecl>(Value)) {
-    CEK = CEK_AsValueOnly;
+    CEK = CodeGenUtils::CEK_AsValueOnly;
   } else {
-    CEK = CEK_None;
+    CEK = CodeGenUtils::CEK_None;
   }
-  if (CEK == CEK_None) return ConstantEmission();
+  if (CEK == CodeGenUtils::CEK_None)
+    return ConstantEmission();
 
   Expr::EvalResult result;
   bool resultIsReference;
   QualType resultType;
 
   // It's best to evaluate all the way as an r-value if that's permitted.
-  if (CEK != CEK_AsReferenceOnly &&
+  if (CEK != CodeGenUtils::CEK_AsReferenceOnly &&
       RefExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
     resultType = RefExpr->getType().getUnqualifiedType();
 
   // Otherwise, try to evaluate as an l-value.
-  } else if (CEK != CEK_AsValueOnly &&
+  } else if (CEK != CodeGenUtils::CEK_AsValueOnly &&
              RefExpr->EvaluateAsLValue(result, getContext())) {
     resultIsReference = true;
     resultType = Value->getType();
@@ -5006,33 +4995,6 @@ struct StructFieldAccess
 };
 
 } // end anonymous namespace
-
-/// The offset of a field from the beginning of the record.
-static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *Field, int64_t &Offset) {
-  ASTContext &Ctx = CGF.getContext();
-  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-  unsigned FieldNo = 0;
-
-  for (const FieldDecl *FD : RD->fields()) {
-    if (FD == Field) {
-      Offset += Layout.getFieldOffset(FieldNo);
-      return true;
-    }
-
-    QualType Ty = FD->getType();
-    if (Ty->isRecordType())
-      if (getFieldOffsetInBits(CGF, Ty->getAsRecordDecl(), Field, Offset)) {
-        Offset += Layout.getFieldOffset(FieldNo);
-        return true;
-      }
-
-    if (!RD->isUnion())
-      ++FieldNo;
-  }
-
-  return false;
-}
 
 /// Returns the relative offset difference between \p FD1 and \p FD2.
 /// \code

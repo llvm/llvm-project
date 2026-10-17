@@ -965,22 +965,22 @@ define void @zext_v8i8_to_v8i20_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    fmov w14, s0
 ; CHECK-BE-NEXT:    mov w11, v1.s[2]
 ; CHECK-BE-NEXT:    mov w13, v0.s[2]
-; CHECK-BE-NEXT:    mov w15, v1.s[3]
+; CHECK-BE-NEXT:    mov s1, v1.s[3]
+; CHECK-BE-NEXT:    mov s0, v0.s[3]
 ; CHECK-BE-NEXT:    lsl x9, x9, #40
 ; CHECK-BE-NEXT:    lsl x10, x10, #40
 ; CHECK-BE-NEXT:    orr x9, x9, x12, lsl #60
 ; CHECK-BE-NEXT:    orr x10, x10, x14, lsl #60
-; CHECK-BE-NEXT:    lsr x12, x12, #4
-; CHECK-BE-NEXT:    strh w15, [x1, #18]
+; CHECK-BE-NEXT:    str h1, [x1, #18]
+; CHECK-BE-NEXT:    str h0, [x1, #8]
 ; CHECK-BE-NEXT:    orr x9, x9, x11, lsl #20
 ; CHECK-BE-NEXT:    orr x10, x10, x13, lsl #20
-; CHECK-BE-NEXT:    mov w11, v0.s[3]
-; CHECK-BE-NEXT:    lsr x13, x14, #4
+; CHECK-BE-NEXT:    lsr x11, x12, #4
+; CHECK-BE-NEXT:    lsr x12, x14, #4
 ; CHECK-BE-NEXT:    lsr x9, x9, #16
 ; CHECK-BE-NEXT:    lsr x10, x10, #16
-; CHECK-BE-NEXT:    bfi x9, x12, #48, #4
-; CHECK-BE-NEXT:    bfi x10, x13, #48, #4
-; CHECK-BE-NEXT:    strh w11, [x1, #8]
+; CHECK-BE-NEXT:    bfi x9, x11, #48, #4
+; CHECK-BE-NEXT:    bfi x10, x12, #48, #4
 ; CHECK-BE-NEXT:    stur x9, [x1, #10]
 ; CHECK-BE-NEXT:    str x10, [x1], #64
 ; CHECK-BE-NEXT:    b.ne .LBB10_1

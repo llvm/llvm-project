@@ -8,14 +8,22 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-">;
+def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-", perContext = false>;
 
 defm : BoolField<"lib-enable", "false", "A bool">;
+def InBuild : BuildCondition<"__cplusplus">;
+def NotInBuild : BuildCondition<"__cplusplus < 201103L">;
+let Condition = InBuild in
+defm : BoolField<"lib-in-build", "false", "Available">;
+let Condition = NotInBuild in
+defm : BoolField<"lib-not-in-build", "false", "Unavailable">;
 defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
-defm : ValueField<"lib-limit", "std::optional<unsigned>", "std::nullopt",
-  "An optional">;
+defm : OptionalValueField<"lib-limit", "unsigned", "An optional">;
+defm : ListField<"lib-list", "unsigned", "A list">;
 defm : EnumField<"lib-mode", "test::Mode", "test::Mode::A", "a,b",
   ["test::Mode::A", "test::Mode::B"], "An enum">;
+defm : EnumListField<"lib-modes", "test::Mode", "a,b",
+  ["test::Mode::A", "test::Mode::B"], "An enum list">;
 defm : OptionalBoolField<"lib-override", "An optional bool">;
 defm : FlagOrEnumField<"lib-print", "std::optional<test::Mode>", "std::nullopt",
   "a,b", ["test::Mode::A", "test::Mode::B"], "test::Mode::B",
@@ -23,3 +31,7 @@ defm : FlagOrEnumField<"lib-print", "std::optional<test::Mode>", "std::nullopt",
 defm : ValueField<"lib-ratio", "double", "0.5", "A double">;
 defm : DefaultOnOffField<"lib-tristate", "A tri-state">;
 defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;
+def : AliasOf<"lib-disable", "lib-enable=false">;
+def : AliasOf<"lib-number", "lib-count">;
+def : AliasOf<"lib-old-mode", "lib-mode">;
+def : AliasOf<"lib-mode-b", "lib-mode=b">;
