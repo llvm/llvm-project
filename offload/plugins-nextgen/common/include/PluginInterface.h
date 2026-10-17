@@ -163,14 +163,6 @@ struct AsyncInfoWrapperTy {
     return getQueueAs<Ty>();
   }
 
-  /// Explicitly synchronize with the __tgt_async_info's pending operations
-  /// regardless of which async info this object wraps. The associated
-  /// underlying queue (if any) will not be released. Calling this function does
-  /// not obviate the need to call the finalize function later. This function is
-  /// intended for specific use cases where a synchronous operation needs to
-  /// explicitly wait for the operations already on the queue.
-  Error synchronize();
-
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
@@ -375,10 +367,6 @@ struct KernelLaunchInfoTy {
   uint32_t ReductionDataSize = 0;
   /// The static memory size per block of the kernel.
   uint32_t StaticBlockMemSize = 0;
-  /// Number of blocks originally requested by the program for the first
-  /// dimension (e.g., num_teams clause), or 0 if none was requested. Unlike
-  /// the other fields, this is set per launch.
-  uint32_t RequestedNumBlocks = 0;
   /// Defaults to OMP_TGT_EXEC_MODE_BARE.
   OMPTgtExecModeFlags Mode = OMP_TGT_EXEC_MODE_BARE;
 
@@ -462,9 +450,6 @@ struct KernelLaunchArgsTy {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
     uint64_t Unused : 63;
   } Flags = {0, 0};
-  /// Set by the caller when replaying a previously recorded kernel launch, so
-  /// the plugin can report the outcome back; null for a normal launch.
-  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
