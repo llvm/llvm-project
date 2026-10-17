@@ -31,7 +31,7 @@
 #define DEBUG_TYPE "sh-isel"
 #define PASS_NAME "SH DAG->DAG Instruction Selection"
 
-static cl::opt<bool> CBranchForceDelaySlot(
+static cl::opt<bool> CForceDelaySlot(
     "sh-cbranch-force-delay-slot", cl::Hidden, cl::init(false),
     cl::desc("Force the usage of delay slots for conditional branches."));
 
@@ -425,21 +425,9 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   SDValue Cmp = N->getOperand(3);
   SDLoc DL(N);
 
-  // NOTE:  The comparisons just set the T bit, it's up to later instructions
-  //        to interpret the T bit as positive or negative.
-  MachineSDNode *Res = nullptr;
-  switch (CC) {
-  default:
-    break;
-  case SHCC::COND_T:
-    Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BTS : SH::BT, DL,
-                                 MVT::Other, Dest, Chain, Cmp);
-    break;
-  case SHCC::COND_F:
-    Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BFS : SH::BF, DL,
-                                 MVT::Other, Dest, Chain, Cmp);
-    break;
-  }
+  SDValue Ops[] = {Dest, CurDAG->getTargetConstant(CC, DL, MVT::i8), Cmp};
+  MachineSDNode *Res = CurDAG->getMachineNode(CForceDelaySlot ? SH::BRSCC : SH::BRCC, 
+                                              DL, MVT::Other, Ops);
 
   if (Res) {
     ReplaceUses(SDValue(N, 0), SDValue(Res, 0));

@@ -31,6 +31,7 @@ FunctionPass *createSuperHFillDelaySlotsPass();
 FunctionPass *createSuperHConstantIslandPass();
 FunctionPass *createSuperHExpandPseudoPass();
 FunctionPass *createSuperHFrameFixupPass();
+FunctionPass *createSuperHExpandBRPass();
 
 void initializeSuperHDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSuperHAsmPrinterPass(PassRegistry &);
@@ -38,6 +39,7 @@ void initializeSuperHAsmPrinterPass(PassRegistry &);
 void initializeSuperHFillDelaySlotsPass(PassRegistry &);
 void initializeSuperHConstantIslandsPass(PassRegistry &);
 void initializeSuperHExpandPseudoPass(PassRegistry &);
+void initializeSuperHExpandBRPass(PassRegistry &);
 } // namespace llvm
 
 #endif

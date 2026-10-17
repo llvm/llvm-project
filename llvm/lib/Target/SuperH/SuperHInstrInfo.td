@@ -1095,7 +1095,7 @@ let isTerminator = 1 in {
   def BRA            : InstD12<0b1010000000000000, 
                               (outs), (ins brtarget:$disp),
                               "bra $disp",
-                              [(br bb:$disp)]>;
+                              []>;
 
   let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
   def BSR            : InstD12<0b1011000000000000, 
@@ -1403,10 +1403,22 @@ include "SuperHInstrSH4.td"
 //        handling.
 //===--------------------------------------------------------------------------===//
 
-let isBranch = 1, isTerminator = 1, Uses = [SR] in {
-def BRCC       : SHPseudo<(outs), (ins brtarget:$disp, i8imm:$cc),
-                          "! BREQ $disp, $cc",
-                          [/*(SHbrcond bb:$disp, i8:$cc)*/]>;
+let isBranch = 1, isTerminator = 1 in {
+
+let Uses = [SR] in
+def BRCC        : SHPseudo<(outs), (ins brtarget:$bb, i8imm:$cc),
+                          "! BRCC $bb, $cc",
+                          []>;
+
+let Uses = [SR], hasDelaySlot = 1 in
+def BRSCC       : SHPseudo<(outs), (ins brtarget:$bb, i8imm:$cc),
+                          "! BRCC/s $bb, $cc",
+                          []>;
+
+let hasDelaySlot = 1 in
+def BR          : SHPseudo<(outs), (ins brtarget:$bb),
+                          "! BR $bb",
+                          [(br bb:$bb)]>;
 }
 
 

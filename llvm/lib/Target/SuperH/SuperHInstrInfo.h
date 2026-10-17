@@ -70,7 +70,6 @@ class SuperHInstrInfo : public SuperHGenInstrInfo {
   using MIFlag = MachineInstr::MIFlag;
   const SuperHSubtarget &STI;
   const SuperHRegisterInfo RI;
-  virtual void anchor();
 
 public:
   explicit SuperHInstrInfo(const SuperHSubtarget &STI);
@@ -146,6 +145,12 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
+
+  void insertIndirectBranch(MachineBasicBlock &MBB,
+                            MachineBasicBlock &NewDestBB,
+                            MachineBasicBlock &RestoreBB,
+                            const DebugLoc &DL, int64_t BrOffset,
+                            RegScavenger *RS) const override;
 };
 } // namespace llvm
 

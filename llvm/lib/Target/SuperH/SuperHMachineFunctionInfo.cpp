@@ -95,6 +95,30 @@ SuperHMachineFunctionInfo::getOrCreate(const ConstantInt *G,
       SHCP::SHCPModifier::DIR);
 }
 
+SuperHConstantPoolSymbol *
+SuperHMachineFunctionInfo::getOrCreate(const MachineBasicBlock *MBB,
+                                       const MachineFunction &MF) const {
+
+  // Run though the constant pool that is tied to the DAG and search for
+  // the constant there.
+  const MachineConstantPool *MCP = MF.getConstantPool();
+  for (auto &MC : MCP->getConstants()) {
+    if (MC.isMachineConstantPoolEntry()) {
+      if (auto *CPV = (SuperHConstantPoolSymbol *)MC.Val.MachineCPVal) {
+        if (CPV->getSymbol() == MBB->getSymbol()->getName())
+          return CPV;
+      }
+    }
+  }
+
+  // If not found, create a new one and add it.
+  SuperHMachineFunctionInfo *SFI = 
+    const_cast<SuperHMachineFunctionInfo *>(MF.getInfo<SuperHMachineFunctionInfo>());
+  unsigned LabelIndex = SFI->createConstIndex();
+  return SuperHConstantPoolSymbol::Create(
+    MF.getFunction().getContext(), MBB->getSymbol()->getName(), LabelIndex);
+}
+
 SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
     BlockAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier) {
 

@@ -17,6 +17,7 @@
 #include "SuperHConstantPoolValue.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -84,6 +85,8 @@ public:
 
   // Helpers for lower level passes to create constants.
   SuperHConstantPoolConstant *getOrCreate(const ConstantInt *G,
+                                          const MachineFunction &MF) const;
+  SuperHConstantPoolSymbol *getOrCreate(const MachineBasicBlock *MBB,
                                           const MachineFunction &MF) const;
 };
 
