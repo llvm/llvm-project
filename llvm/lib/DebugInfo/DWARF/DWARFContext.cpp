@@ -40,6 +40,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Decompressor.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
@@ -52,6 +53,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -2025,6 +2027,7 @@ class DWARFObjInMemory final : public DWARFObject {
   uint8_t AddressSize;
   StringRef FileName;
   const object::ObjectFile *Obj = nullptr;
+  uint64_t LowestAllocatedAddress = 0;
   std::vector<SectionName> SectionNames;
 
   using InfoSectionMap = MapVector<object::SectionRef, DWARFSectionMap,
@@ -2176,9 +2179,18 @@ public:
       : IsLittleEndian(Obj.isLittleEndian()),
         AddressSize(Obj.getBytesInAddress()), FileName(Obj.getFileName()),
         Obj(&Obj) {
-
+    const auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+    bool IsLinkedELF = ELFObj && (ELFObj->getEType() == ELF::ET_EXEC ||
+                                  ELFObj->getEType() == ELF::ET_DYN);
+    uint64_t LowestAddress = UINT64_MAX;
     StringMap<unsigned> SectionAmountMap;
     for (const SectionRef &Section : Obj.sections()) {
+      // Count NOBITS sections as well: .bss holds data, and code sections
+      // can also be NOBITS in debug-only files.
+      if (IsLinkedELF && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC) &&
+          Section.getSize())
+        LowestAddress = std::min(LowestAddress, Section.getAddress());
+
       StringRef Name;
       if (auto NameOrErr = Section.getName())
         Name = *NameOrErr;
@@ -2355,6 +2367,9 @@ public:
       }
     }
 
+    if (LowestAddress != UINT64_MAX)
+      LowestAllocatedAddress = LowestAddress;
+
     for (SectionName &S : SectionNames)
       if (SectionAmountMap[S.Name] > 1)
         S.IsNameUnique = false;
@@ -2370,6 +2385,10 @@ public:
   }
 
   const object::ObjectFile *getFile() const override { return Obj; }
+
+  uint64_t getLowestAllocatedAddress() const override {
+    return LowestAllocatedAddress;
+  }
 
   ArrayRef<SectionName> getSectionNames() const override {
     return SectionNames;

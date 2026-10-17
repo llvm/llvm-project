@@ -30,6 +30,12 @@ public:
   virtual ~DWARFObject() = default;
   virtual StringRef getFileName() const { llvm_unreachable("unimplemented"); }
   virtual const object::ObjectFile *getFile() const { return nullptr; }
+  /// Return the lowest link-time address of any nonempty allocated section,
+  /// including NOBITS sections, in a linked (ET_EXEC or ET_DYN) ELF image.
+  /// Debug-info addresses below this bound cannot refer to live code or data
+  /// in that image. Return zero if the lowest address is zero or no such
+  /// bound is known, e.g. for relocatable objects or other object formats.
+  virtual uint64_t getLowestAllocatedAddress() const { return 0; }
   virtual ArrayRef<SectionName> getSectionNames() const { return {}; }
   virtual bool isLittleEndian() const = 0;
   virtual uint8_t getAddressSize() const { llvm_unreachable("unimplemented"); }
