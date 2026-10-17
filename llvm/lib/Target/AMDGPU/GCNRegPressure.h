@@ -86,6 +86,22 @@ struct GCNRegPressure {
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
+  /// \returns the AVGPR32 pressure
+  unsigned getAVGPRNum() const { return Value[AVGPR]; }
+
+  /// \returns the ArchVGPR32 and AccVGPR32 pressure after distributing the
+  /// bank-agnostic AVGPR pressure across the two banks. Follow the register
+  /// allocator, first charge AVGPRs to the ArchVGPR bank, then to the AccVGPR
+  /// bank.
+  std::pair<unsigned, unsigned> getBankedVGPRNum(unsigned ArchLimit) const {
+    unsigned Arch = Value[VGPR];
+    unsigned Acc = Value[AGPR];
+    unsigned Flex = Value[AVGPR];
+    unsigned ArchHeadroom = Arch < ArchLimit ? ArchLimit - Arch : 0;
+    unsigned ToArch = std::min(Flex, ArchHeadroom);
+    unsigned ToAcc = Flex - ToArch;
+    return {Arch + ToArch, Acc + ToAcc};
+  }
 
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
