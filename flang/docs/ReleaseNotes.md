@@ -158,6 +158,11 @@ page](https://llvm.org/releases/).
   Both modes fill every storage byte including struct padding.
   PowerPC vector locals (`vector(real(4))` etc.) are not initialized.
 
+- Added `-f[no-]version-loops-for-trip-count`, enabled by default at `-O3` and
+  above. It versions innermost array-section loops whose runtime bound may
+  equal the array's declared leading extent, so that the common case has a
+  constant trip count.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang
