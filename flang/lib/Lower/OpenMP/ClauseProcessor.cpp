@@ -1287,7 +1287,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   std::string copyFuncName =
       fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
+  if (auto decl = builder.getNamedFunction(copyFuncName))
     return decl;
 
   // create function
@@ -1298,6 +1298,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   mlir::func::FuncOp funcOp =
       mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(builder.getMLIRSymbolTable(), funcOp);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
