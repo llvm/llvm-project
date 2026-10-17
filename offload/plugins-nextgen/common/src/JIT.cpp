@@ -156,7 +156,7 @@ void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
   ModuleAnalysisManager MAM;
   ModulePassManager MPM;
 
-  PassBuilder PB(TM, PTO, PGOOpt, nullptr);
+  PassBuilder PB(M.getContext(), TM, PTO, PGOOpt, nullptr);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 

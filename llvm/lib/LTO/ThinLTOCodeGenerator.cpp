@@ -264,7 +264,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PipelineTuningOptions PTO;
   PTO.LoopVectorization = true;
   PTO.SLPVectorization = true;
-  PassBuilder PB(&TM, PTO, PGOOpt, &PIC);
+  PassBuilder PB(TheModule.getContext(), &TM, PTO, PGOOpt, &PIC);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(TM.getTargetTriple(), TM.Options.VecLib));
