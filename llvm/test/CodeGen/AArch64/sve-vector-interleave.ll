@@ -820,7 +820,9 @@ define <vscale x 8 x i64> @interleave2_nxv8i64(<vscale x 4 x i64> %vec0, <vscale
 define <vscale x 16 x i8> @interleave2_nxv8i8(<vscale x 8 x i8> %vec0, <vscale x 8 x i8> %vec1) {
 ; SVE-LABEL: interleave2_nxv8i8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    trn1 z0.b, z0.b, z1.b
+; SVE-NEXT:    zip2 z2.h, z0.h, z1.h
+; SVE-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE-NEXT:    uzp1 z0.b, z0.b, z2.b
 ; SVE-NEXT:    ret
 ;
 ; SME2-LABEL: interleave2_nxv8i8:
@@ -835,7 +837,9 @@ define <vscale x 16 x i8> @interleave2_nxv8i8(<vscale x 8 x i8> %vec0, <vscale x
 define <vscale x 8 x i16> @interleave2_nxv4i16(<vscale x 4 x i16> %vec0, <vscale x 4 x i16> %vec1) {
 ; SVE-LABEL: interleave2_nxv4i16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    trn1 z0.h, z0.h, z1.h
+; SVE-NEXT:    zip2 z2.s, z0.s, z1.s
+; SVE-NEXT:    zip1 z0.s, z0.s, z1.s
+; SVE-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; SVE-NEXT:    ret
 ;
 ; SME2-LABEL: interleave2_nxv4i16:
@@ -850,7 +854,9 @@ define <vscale x 8 x i16> @interleave2_nxv4i16(<vscale x 4 x i16> %vec0, <vscale
 define <vscale x 4 x i32> @interleave2_nxv2i32(<vscale x 2 x i32> %vec0, <vscale x 2 x i32> %vec1) {
 ; SVE-LABEL: interleave2_nxv2i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    trn1 z0.s, z0.s, z1.s
+; SVE-NEXT:    zip2 z2.d, z0.d, z1.d
+; SVE-NEXT:    zip1 z0.d, z0.d, z1.d
+; SVE-NEXT:    uzp1 z0.s, z0.s, z2.s
 ; SVE-NEXT:    ret
 ;
 ; SME2-LABEL: interleave2_nxv2i32:
@@ -876,7 +882,9 @@ define <vscale x 4 x i16> @interleave2_diff_const_splat_nxv4i16() {
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, #4 // =0x4
 ; SVE-NEXT:    mov z1.d, #3 // =0x3
-; SVE-NEXT:    trn1 z0.s, z1.s, z0.s
+; SVE-NEXT:    zip2 z2.d, z1.d, z0.d
+; SVE-NEXT:    zip1 z0.d, z1.d, z0.d
+; SVE-NEXT:    uzp1 z0.s, z0.s, z2.s
 ; SVE-NEXT:    ret
 ;
 ; SME2-LABEL: interleave2_diff_const_splat_nxv4i16:
@@ -906,7 +914,9 @@ define <vscale x 4 x i16> @interleave2_diff_nonconst_splat_nxv4i16(i16 %a, i16 %
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z0.d, x0
 ; SVE-NEXT:    mov z1.d, x1
-; SVE-NEXT:    trn1 z0.s, z0.s, z1.s
+; SVE-NEXT:    zip2 z2.d, z0.d, z1.d
+; SVE-NEXT:    zip1 z0.d, z0.d, z1.d
+; SVE-NEXT:    uzp1 z0.s, z0.s, z2.s
 ; SVE-NEXT:    ret
 ;
 ; SME2-LABEL: interleave2_diff_nonconst_splat_nxv4i16:
