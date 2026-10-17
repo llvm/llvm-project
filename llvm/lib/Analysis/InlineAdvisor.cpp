@@ -165,17 +165,17 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
   };
 
   Function &Callee = *CB.getCalledFunction();
-  auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
+  auto &CallerTTI = FAM.getResult<TargetIRAnalysis>(Caller);
   auto GetInlineCost = [&](CallBase &CB) {
     bool RemarksEnabled =
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
-    return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
+    return getInlineCost(CB, Params, CallerTTI, GetAssumptionCache, GetTLI,
                          GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
                          GetEphValuesCache);
   };
   return llvm::shouldInline(
-      CB, CalleeTTI, GetInlineCost, ORE,
+      CB, CallerTTI, GetInlineCost, ORE,
       Params.EnableDeferral.value_or(EnableInlineDeferral));
 }
 
@@ -281,7 +281,7 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
 /// \p TotalSecondaryCost will be set to the estimated cost of inlining the
 /// caller if \p CB is suppressed for inlining.
 static bool
-shouldBeDeferred(Function *Caller, TargetTransformInfo &CalleeTTI,
+shouldBeDeferred(Function *Caller, TargetTransformInfo &CallerTTI,
                  InlineCost IC, int &TotalSecondaryCost,
                  function_ref<InlineCost(CallBase &CB)> GetInlineCost) {
   // For now we only handle local or inline functions.
@@ -355,7 +355,7 @@ shouldBeDeferred(Function *Caller, TargetTransformInfo &CalleeTTI,
   // be removed entirely.  We did not account for this above unless there
   // is only one caller of Caller.
   if (ApplyLastCallBonus)
-    TotalSecondaryCost -= CalleeTTI.getInliningLastCallToStaticBonus();
+    TotalSecondaryCost -= CallerTTI.getInliningLastCallToStaticBonus();
 
   // If InlineDeferralScale is negative, then ignore the cost of primary
   // inlining -- IC.getCost() multiplied by the number of callers to Caller.
@@ -409,7 +409,7 @@ void llvm::setInlineRemark(CallBase &CB, StringRef Message) {
 /// using that cost, so we won't do so from this function. Return std::nullopt
 /// if inlining should not be attempted.
 std::optional<InlineCost>
-llvm::shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
+llvm::shouldInline(CallBase &CB, TargetTransformInfo &CallerTTI,
                    function_ref<InlineCost(CallBase &CB)> GetInlineCost,
                    OptimizationRemarkEmitter &ORE, bool EnableDeferral) {
   using namespace ore;
@@ -448,7 +448,7 @@ llvm::shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
   }
 
   int TotalSecondaryCost = 0;
-  if (EnableDeferral && shouldBeDeferred(Caller, CalleeTTI, IC,
+  if (EnableDeferral && shouldBeDeferred(Caller, CallerTTI, IC,
                                          TotalSecondaryCost, GetInlineCost)) {
     LLVM_DEBUG(dbgs() << "    NOT Inlining: " << CB
                       << " Cost = " << IC.getCost()
@@ -630,7 +630,7 @@ InlineAdvisor::getMandatoryKind(CallBase &CB, FunctionAnalysisManager &FAM,
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
 
-  auto &TIR = FAM.getResult<TargetIRAnalysis>(Callee);
+  auto &TIR = FAM.getResult<TargetIRAnalysis>(*CB.getCaller());
 
   auto TrivialDecision =
       llvm::getAttributeBasedInliningDecision(CB, &Callee, TIR, GetTLI);
