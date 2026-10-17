@@ -266,7 +266,8 @@ infrastructure are described first, followed by tool-specific sections.
   non-macro operands.
 
 - Fixed false positive in {doc}`modernize-make-unique
-  <clang-tidy/checks/modernize/make-unique>` in presence of private destructor.
+  <clang-tidy/checks/modernize/make-unique>` in presence of private, preotcted
+  or deleted destructor.
 
 - Fixed a crash in {doc}`modernize-raw-string-literal
   <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
