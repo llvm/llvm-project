@@ -184,9 +184,6 @@ public:
   /// directives, etc. Source locations found in the clang AST will always
   /// point to one of these tokens.
   /// Tokens are in TU order (per SourceManager::isBeforeInTranslationUnit()).
-  /// FIXME: figure out how to handle token splitting, e.g. '>>' can be split
-  ///        into two '>' tokens by the parser. However, TokenBuffer currently
-  ///        keeps it as a single '>>' token.
   llvm::ArrayRef<syntax::Token> expandedTokens() const {
     return ExpandedTokens;
   }
@@ -336,7 +333,8 @@ private:
   struct MarkedFile {
     /// Lexed, but not preprocessed, tokens of the file. These map directly to
     /// text in the corresponding files and include tokens of all preprocessor
-    /// directives.
+    /// directives. A token split by the parser is stored as separate tokens, so
+    /// these can differ from the result of tokenize().
     /// FIXME: spelled tokens don't change across FileID that map to the same
     ///        FileEntry. We could consider deduplicating them to save memory.
     std::vector<syntax::Token> SpelledTokens;
@@ -400,7 +398,8 @@ spelledIdentifierTouching(SourceLocation Loc,
 /// by lexer in raw mode). This is a very low-level function, most users should
 /// prefer to use TokenCollector. Lexing in raw mode produces wildly different
 /// results from what one might expect when running a C++ frontend, e.g.
-/// preprocessor does not run at all.
+/// preprocessor does not run at all, and tokens that the parser would split
+/// (e.g. '>>' closing two template argument lists) are not split.
 /// The result will *not* have a 'eof' token at the end.
 std::vector<syntax::Token> tokenize(FileID FID, const SourceManager &SM,
                                     const LangOptions &LO);
@@ -448,7 +447,21 @@ private:
   class Builder;
   class CollectPPExpansions;
 
+  struct TokenSplit {
+    // Location of the token that was split.
+    SourceLocation TokLoc;
+    // Number of characters split from the front of the token at TokLoc.
+    unsigned Length;
+    // The location of the split token in a virtual buffer. AST nodes will
+    // report this location.
+    SourceLocation SplitLoc;
+    // Kind of the split token.
+    tok::TokenKind SplitKind;
+  };
+
   std::vector<syntax::Token> Expanded;
+  /// Token splits made by the parser, in the order they were made.
+  std::vector<TokenSplit> Splits;
   // FIXME: we only store macro expansions, also add directives(#pragma, etc.)
   PPExpansions Expansions;
   Preprocessor &PP;

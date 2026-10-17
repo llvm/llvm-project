@@ -720,6 +720,63 @@ CallExpression Expression
 )txt"}));
 }
 
+TEST_P(BuildSyntaxTreeTest, UnqualifiedId_TemplateId_SplitGreaterGreater) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template<typename T>
+struct ST {};
+template<typename T>
+void f();
+void test() {
+  [[f<ST<int>>()]];
+}
+)cpp",
+      {R"txt(
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
+|   |-'f'
+|   |-'<'
+|   |-'ST'
+|   |-'<'
+|   |-'int'
+|   |-'>'
+|   `-'>'
+|-'(' OpenParen
+`-')' CloseParen
+)txt"}));
+}
+
+TEST_P(BuildSyntaxTreeTest, SimpleDeclaration_SplitGreaterGreater) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template<typename T>
+struct ST {};
+void test() {
+  [[ST<ST<int>> s]];
+}
+)cpp",
+      {R"txt(
+SimpleDeclaration
+|-'ST'
+|-'<'
+|-'ST'
+|-'<'
+|-'int'
+|-'>'
+|-'>'
+`-DeclaratorList Declarators
+  `-SimpleDeclarator ListElement
+    `-'s'
+)txt"}));
+}
+
 TEST_P(BuildSyntaxTreeTest, QualifiedId_NamespaceSpecifier) {
   if (!GetParam().isCXX()) {
     return;
@@ -804,6 +861,39 @@ SimpleDeclaration
 `-DeclaratorList Declarators
   `-SimpleDeclarator ListElement
     `-'s2'
+)txt"}));
+}
+
+TEST_P(BuildSyntaxTreeTest, QualifiedId_TemplateSpecifier_SplitGreaterGreater) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template<typename T>
+struct ST {
+  struct S { };
+};
+void test() {
+  [[ST<ST<int>>::S s]];
+}
+)cpp",
+      {R"txt(
+SimpleDeclaration
+|-NestedNameSpecifier
+| |-SimpleTemplateNameSpecifier ListElement
+| | |-'ST'
+| | |-'<'
+| | |-'ST'
+| | |-'<'
+| | |-'int'
+| | |-'>'
+| | `-'>'
+| `-'::' ListDelimiter
+|-'S'
+`-DeclaratorList Declarators
+  `-SimpleDeclarator ListElement
+    `-'s'
 )txt"}));
 }
 

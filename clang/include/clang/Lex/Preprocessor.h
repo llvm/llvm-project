@@ -183,6 +183,9 @@ class Preprocessor {
   friend class VariadicMacroScopeGuard;
 
   llvm::unique_function<void(const clang::Token &)> OnToken;
+  llvm::unique_function<void(SourceLocation, unsigned, tok::TokenKind,
+                             SourceLocation)>
+      OnTokenSplit;
   /// Functor for getting the dependency preprocessor directives of a file.
   ///
   /// These are directives derived from a special form of lexing where the
@@ -1404,6 +1407,17 @@ public:
     OnToken = std::move(F);
   }
 
+  /// Register a function that is called each time SplitToken() splits a
+  /// token. It receives the arguments of SplitToken() and the location it
+  /// returned.
+  void setTokenSplitWatcher(
+      llvm::unique_function<void(SourceLocation TokLoc, unsigned Length,
+                                 tok::TokenKind SplitKind,
+                                 SourceLocation SplitLoc)>
+          F) {
+    OnTokenSplit = std::move(F);
+  }
+
   void setDependencyDirectivesGetter(DependencyDirectivesGetter &Get) {
     GetDependencyDirectives = &Get;
   }
@@ -2301,7 +2315,10 @@ public:
   /// Split the first Length characters out of the token starting at TokLoc
   /// and return a location pointing to the split token. Re-lexing from the
   /// split token will return the split token rather than the original.
-  SourceLocation SplitToken(SourceLocation TokLoc, unsigned Length);
+  /// SplitKind is the kind of the split token, e.g. tok::greater for the
+  /// first '>' of a '>>'.
+  SourceLocation SplitToken(SourceLocation TokLoc, unsigned Length,
+                            tok::TokenKind SplitKind);
 
   /// Computes the source location just past the end of the
   /// token at this source location.

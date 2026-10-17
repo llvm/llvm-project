@@ -14,10 +14,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -135,6 +137,59 @@ SourceRange spelledForExpandedSlow(SourceLocation First, SourceLocation Last,
   // Now we know that Candidate is a file range that covers [First, Last]
   // without encroaching on {Prev, Next}. Ship it!
   return Candidate;
+}
+
+// Returns the location in the token that the token at Loc was split from.
+SourceLocation getLocBeforeSplit(SourceLocation Loc, const SourceManager &SM) {
+  // A token can be split more than once, e.g. CUDA's '>>>'. The remainder of a
+  // split token can start inside the split token's buffer, so keep the offset.
+  while (Loc.isMacroID()) {
+    auto [FID, Offset] = SM.getDecomposedLoc(Loc);
+    const SrcMgr::ExpansionInfo &Exp = SM.getSLocEntry(FID).getExpansion();
+    if (Exp.isExpansionTokenRange())
+      break;
+    Loc = Exp.getExpansionLocStart().getLocWithOffset(Offset);
+  }
+  return Loc;
+}
+
+// Returns the length of the text in [Loc, Loc + Length) after removing
+// trailing escaped newlines.
+unsigned lengthWithoutTrailingEscapedNewlines(SourceLocation Loc,
+                                              unsigned Length,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
+  const char *Text = SM.getCharacterData(Loc);
+  unsigned End = 0;
+  while (End < Length) {
+    // Size includes the escaped newlines before the character.
+    unsigned Size = Lexer::getCharAndSizeNoWarn(Text + End, LangOpts).Size;
+    if (End + Size > Length)
+      break; // Only escaped newlines are left.
+    End += Size;
+  }
+  return End;
+}
+
+// Returns the kind of the token that remains when a token of kind SplitKind is
+// split from the front of a token of kind Kind, e.g. returns `equal` for a '>'
+// split from a '>='. Returns std::nullopt if the spelling of SplitKind is not a
+// prefix of the spelling of Kind, or the rest of the spelling is not a
+// punctuator.
+std::optional<tok::TokenKind> getRemainderKind(tok::TokenKind Kind,
+                                               tok::TokenKind SplitKind) {
+  const char *Spelling = tok::getPunctuatorSpelling(Kind);
+  const char *SplitSpelling = tok::getPunctuatorSpelling(SplitKind);
+  if (!Spelling || !SplitSpelling)
+    return std::nullopt;
+  llvm::StringRef Rest = Spelling;
+  if (!Rest.consume_front(SplitSpelling) || Rest.empty())
+    return std::nullopt;
+#define PUNCTUATOR(X, Y)                                                       \
+  if (Rest == Y)                                                               \
+    return tok::X;
+#include "clang/Basic/TokenKinds.def"
+  return std::nullopt;
 }
 
 } // namespace
@@ -425,21 +480,26 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
 
   // If the range is within one macro argument, the result may be only part of a
   // Mapping. We must use the general (SourceManager-based) algorithm.
-  if (FirstMapping && FirstMapping == LastMapping &&
-      SourceMgr->isMacroArgExpansion(First->location()) &&
-      SourceMgr->isMacroArgExpansion(Last->location())) {
-    // We use excluded Prev/Next token for bounds checking.
-    SourceLocation Prev = (First == &ExpandedTokens.front())
-                              ? SourceLocation()
-                              : (First - 1)->location();
-    SourceLocation Next = (Last == &ExpandedTokens.back())
-                              ? SourceLocation()
-                              : (Last + 1)->location();
-    SourceRange Range = spelledForExpandedSlow(
-        First->location(), Last->location(), Prev, Next, FID, *SourceMgr);
-    if (Range.isInvalid())
-      return std::nullopt;
-    return getTokensCovering(File.SpelledTokens, Range, *SourceMgr);
+  // A token split from a token in a macro argument is mapped through the token
+  // it was split from.
+  if (FirstMapping && FirstMapping == LastMapping) {
+    SourceLocation FirstLoc = getLocBeforeSplit(First->location(), *SourceMgr);
+    SourceLocation LastLoc = getLocBeforeSplit(Last->location(), *SourceMgr);
+    if (SourceMgr->isMacroArgExpansion(FirstLoc) &&
+        SourceMgr->isMacroArgExpansion(LastLoc)) {
+      // We use excluded Prev/Next token for bounds checking.
+      SourceLocation Prev = (First == &ExpandedTokens.front())
+                                ? SourceLocation()
+                                : (First - 1)->location();
+      SourceLocation Next = (Last == &ExpandedTokens.back())
+                                ? SourceLocation()
+                                : (Last + 1)->location();
+      SourceRange Range = spelledForExpandedSlow(FirstLoc, LastLoc, Prev, Next,
+                                                 FID, *SourceMgr);
+      if (Range.isInvalid())
+        return std::nullopt;
+      return getTokensCovering(File.SpelledTokens, Range, *SourceMgr);
+    }
   }
 
   // Otherwise, use the fast version based on Mappings.
@@ -705,6 +765,13 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
 
     );
   });
+  // The token watcher sees a token before the parser splits it, so record the
+  // splits too.
+  PP.setTokenSplitWatcher([this](SourceLocation TokLoc, unsigned Length,
+                                 tok::TokenKind SplitKind,
+                                 SourceLocation SplitLoc) {
+    Splits.push_back({TokLoc, Length, SplitLoc, SplitKind});
+  });
   // And locations of macro calls, to properly recover boundaries of those in
   // case of empty expansions.
   auto CB = std::make_unique<CollectPPExpansions>(*this);
@@ -716,9 +783,11 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
 /// token stream.
 class TokenCollector::Builder {
 public:
-  Builder(std::vector<syntax::Token> Expanded, PPExpansions CollectedExpansions,
-          const SourceManager &SM, const LangOptions &LangOpts)
-      : Result(SM), CollectedExpansions(std::move(CollectedExpansions)), SM(SM),
+  Builder(std::vector<syntax::Token> Expanded, std::vector<TokenSplit> Splits,
+          PPExpansions CollectedExpansions, const SourceManager &SM,
+          const LangOptions &LangOpts)
+      : Result(SM), Splits(std::move(Splits)),
+        CollectedExpansions(std::move(CollectedExpansions)), SM(SM),
         LangOpts(LangOpts) {
     Result.ExpandedTokens = std::move(Expanded);
   }
@@ -734,6 +803,9 @@ public:
       SourceLocation Loc = Result.ExpandedTokens.back().location();
       Result.ExpandedTokens.emplace_back(Loc, 0, tok::eof);
     }
+
+    // Replace the tokens that the parser split with the split tokens.
+    applySplits();
 
     // Tokenize every file that contributed tokens to the expanded stream.
     buildSpelledTokens();
@@ -775,6 +847,177 @@ public:
   }
 
 private:
+  // A token split from an expanded token. Offset is the offset of its first
+  // character within the expanded token.
+  struct Piece {
+    syntax::Token Tok;
+    unsigned Offset;
+  };
+
+  // Returns the pieces that Old becomes when the parser makes the split S, or
+  // std::nullopt if S does not apply to Old.
+  std::optional<llvm::SmallVector<Piece, 2>>
+  splitPiece(const Piece &Old, const TokenSplit &S) const {
+    if (S.Length > Old.Tok.length())
+      return std::nullopt;
+    // The parser includes trailing escaped newlines which we don't want.
+    Piece Split{syntax::Token(S.SplitLoc,
+                              lengthWithoutTrailingEscapedNewlines(
+                                  S.SplitLoc, S.Length, SM, LangOpts),
+                              S.SplitKind),
+                Old.Offset};
+    if (S.Length == Old.Tok.length()) {
+      // The parser split the remainder of the original token, which happens if
+      // it needs to prevent the subsequent token from being merged with the
+      // remainder, e.g. the middle `>` in `A<B<C<I>>>`.
+      return llvm::SmallVector<Piece, 2>{Split};
+    }
+    auto RestKind = getRemainderKind(Old.Tok.kind(), S.SplitKind);
+    if (!RestKind)
+      return std::nullopt;
+    Piece Rest{syntax::Token(S.TokLoc.getLocWithOffset(S.Length),
+                             Old.Tok.length() - S.Length, *RestKind),
+               Old.Offset + S.Length};
+    return llvm::SmallVector<Piece, 2>{Split, Rest};
+  }
+
+  // Applies Splits in order. Returns the pieces of each expanded token that
+  // the parser split, by its index into ExpandedTokens.
+  llvm::DenseMap<unsigned, llvm::SmallVector<Piece, 2>> computePieces() const {
+    const auto &Expanded = Result.ExpandedTokens;
+    // The index into Expanded of the token at the location of each split, or
+    // nullopt if there is none.
+    llvm::DenseMap<SourceLocation, std::optional<unsigned>> TokenIndexByLoc;
+    for (const TokenSplit &S : Splits)
+      TokenIndexByLoc.try_emplace(S.TokLoc);
+    for (unsigned I = 0; I < Expanded.size(); ++I) {
+      auto It = TokenIndexByLoc.find(Expanded[I].location());
+      if (It != TokenIndexByLoc.end() && !It->second.has_value())
+        It->second = I;
+    }
+    // The pieces of each expanded token that was split, by index into Expanded.
+    llvm::DenseMap<unsigned, llvm::SmallVector<Piece, 2>> PiecesByToken;
+    // Maps the location of each piece to its index into Expanded and index
+    // among that token's pieces.
+    llvm::DenseMap<SourceLocation, std::pair<unsigned, unsigned>> PieceByLoc;
+
+    for (const TokenSplit &S : Splits) {
+      unsigned TokenIndex, PieceIndex;
+      bool StartFromWholeToken = false;
+      if (auto It = PieceByLoc.find(S.TokLoc); It != PieceByLoc.end()) {
+        std::tie(TokenIndex, PieceIndex) = It->second;
+      } else if (auto It = TokenIndexByLoc.find(S.TokLoc);
+                 It != TokenIndexByLoc.end() && It->second.has_value()) {
+        TokenIndex = *It->second;
+        PieceIndex = 0;
+        StartFromWholeToken = true;
+      } else {
+        // The parser split a token that is not in the expanded stream.
+        continue;
+      }
+
+      auto &TokenPieces = PiecesByToken[TokenIndex];
+      if (StartFromWholeToken) {
+        // The parser can split a token again after backtracking, so throw out
+        // the previous split (if any) and start again.
+        for (const Piece &Stale : TokenPieces)
+          PieceByLoc.erase(Stale.Tok.location());
+        TokenPieces.assign(1, {Expanded[TokenIndex], 0});
+      }
+
+      auto Replacement = splitPiece(TokenPieces[PieceIndex], S);
+      if (!Replacement)
+        continue;
+      TokenPieces.erase(TokenPieces.begin() + PieceIndex);
+      TokenPieces.insert(TokenPieces.begin() + PieceIndex, Replacement->begin(),
+                         Replacement->end());
+      PieceByLoc.erase(S.TokLoc);
+      for (unsigned I = 0; I < TokenPieces.size(); ++I)
+        PieceByLoc[TokenPieces[I].Tok.location()] = {TokenIndex, I};
+    }
+    return PiecesByToken;
+  }
+
+  // Records the spelled tokens that must be split to match the pieces of the
+  // expanded token Orig, in SpelledSplits.
+  void recordSpelledSplit(const syntax::Token &Orig,
+                          llvm::ArrayRef<Piece> TokenPieces) {
+    // Find the spelled token: the expanded token itself, or the token in a
+    // macro argument that it was expanded from. The spelled token of a token
+    // from a macro body is in the #define, which is not split.
+    SourceLocation Spelled = Orig.location();
+    while (Spelled.isMacroID() && SM.isMacroArgExpansion(Spelled))
+      Spelled = SM.getImmediateSpellingLoc(Spelled);
+    if (!Spelled.isFileID())
+      return;
+    llvm::SmallVector<syntax::Token, 2> SpelledPieces;
+    for (const Piece &P : TokenPieces)
+      SpelledPieces.emplace_back(Spelled.getLocWithOffset(P.Offset),
+                                 P.Tok.length(), P.Tok.kind());
+    // A token in a macro argument can be expanded more than once. Keep the
+    // split of its first expansion.
+    if (SpelledSplits.try_emplace(Spelled, std::move(SpelledPieces)).second)
+      FilesWithSpelledSplits.insert(SM.getFileID(Spelled));
+  }
+
+  // Replaces each expanded token that the parser split with the tokens it was
+  // split into, and records the spelled tokens that must be split to match.
+  void applySplits() {
+    if (Splits.empty())
+      return;
+    auto PiecesByToken = computePieces();
+    if (PiecesByToken.empty())
+      return;
+
+    auto &Expanded = Result.ExpandedTokens;
+    size_t Added = 0;
+    for (const auto &[TokenIndex, TokenPieces] : PiecesByToken)
+      Added += TokenPieces.size() -
+               1; // A token split into N pieces adds N - 1 tokens.
+    std::vector<syntax::Token> NewExpanded;
+    NewExpanded.reserve(Expanded.size() + Added);
+    for (unsigned TokenIndex = 0; TokenIndex < Expanded.size(); ++TokenIndex) {
+      auto It = PiecesByToken.find(TokenIndex);
+      if (It == PiecesByToken.end()) {
+        NewExpanded.push_back(Expanded[TokenIndex]);
+        continue;
+      }
+      for (const Piece &P : It->second)
+        NewExpanded.push_back(P.Tok);
+      recordSpelledSplit(Expanded[TokenIndex], It->second);
+    }
+    Expanded = std::move(NewExpanded);
+  }
+
+  // Returns the location of an expanded token in the file it was spelled in,
+  // or an invalid location if it is part of a macro expansion.
+  SourceLocation fileLocation(const syntax::Token &T) const {
+    // A token split from a file token is spelled where its split started.
+    SourceLocation Loc = getLocBeforeSplit(T.location(), SM);
+    return Loc.isFileID() ? Loc : SourceLocation();
+  }
+
+  // Replaces the spelled tokens that were split by the parser with the tokens
+  // they were split into.
+  void splitSpelledTokens(FileID FID,
+                          std::vector<syntax::Token> &Spelled) const {
+    if (!FilesWithSpelledSplits.contains(FID))
+      return;
+    std::vector<syntax::Token> Out;
+    Out.reserve(Spelled.size());
+    for (const syntax::Token &T : Spelled) {
+      auto It = SpelledSplits.find(T.location());
+      if (It == SpelledSplits.end()) {
+        Out.push_back(T);
+        continue;
+      }
+      assert(It->second.back().endLocation() == T.endLocation() &&
+             "split tokens do not cover the spelled token");
+      llvm::append_range(Out, It->second);
+    }
+    Spelled = std::move(Out);
+  }
+
   // Consume a sequence of spelled tokens that didn't expand to anything.
   // In the simplest case, skips spelled tokens until finding one that produced
   // the NextExpanded token, and creates an empty mapping for them.
@@ -834,12 +1077,12 @@ private:
     const auto &SpelledTokens = Result.Files[File].SpelledTokens;
     auto &NextSpelled = this->NextSpelled[File];
 
-    if (Tok.location().isFileID()) {
+    if (fileLocation(Tok).isValid()) {
       // A run of file tokens continues while the expanded/spelled tokens match.
       while (NextSpelled < SpelledTokens.size() &&
              NextExpanded < Result.ExpandedTokens.size() &&
              SpelledTokens[NextSpelled].location() ==
-                 Result.ExpandedTokens[NextExpanded].location()) {
+                 fileLocation(Result.ExpandedTokens[NextExpanded])) {
         ++NextSpelled;
         ++NextExpanded;
       }
@@ -900,12 +1143,19 @@ private:
       // This is the first time we see this file.
       File.BeginExpanded = I;
       File.SpelledTokens = tokenize(FID, SM, LangOpts);
+      splitSpelledTokens(FID, File.SpelledTokens);
     }
   }
 
   TokenBuffer Result;
   unsigned NextExpanded = 0;                    // cursor in ExpandedTokens
   llvm::DenseMap<FileID, unsigned> NextSpelled; // cursor in SpelledTokens
+  std::vector<TokenSplit> Splits;
+  // The tokens to replace each split spelled token with, by its location.
+  llvm::DenseMap<SourceLocation, llvm::SmallVector<syntax::Token, 2>>
+      SpelledSplits;
+  // The files that contain a key of SpelledSplits.
+  llvm::DenseSet<FileID> FilesWithSpelledSplits;
   PPExpansions CollectedExpansions;
   const SourceManager &SM;
   const LangOptions &LangOpts;
@@ -913,8 +1163,9 @@ private:
 
 TokenBuffer TokenCollector::consume() && {
   PP.setTokenWatcher(nullptr);
+  PP.setTokenSplitWatcher(nullptr);
   Collector->disable();
-  return Builder(std::move(Expanded), std::move(Expansions),
+  return Builder(std::move(Expanded), std::move(Splits), std::move(Expansions),
                  PP.getSourceManager(), PP.getLangOpts())
       .build();
 }
