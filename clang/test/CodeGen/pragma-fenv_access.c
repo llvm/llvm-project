@@ -287,3 +287,36 @@ vector3ulong func_23(vector3float x) {
 }
 // CHECK-LABEL: @func_23
 // STRICT: call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float> {{.*}}, metadata !"fpexcept.ignore")
+
+float func_26() {
+  #pragma STDC FENV_ACCESS ON
+  return __builtin_expf(1.0F);
+}
+// CHECK-LABEL: @func_26
+// CHECK: call float @llvm.experimental.constrained.exp.f32(float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
+
+
+float func_27() {
+  #pragma STDC FENV_ACCESS ON
+  return __builtin_expf(0.0F);
+}
+// CHECK-LABEL: @func_27
+// CHECK: ret float 1.000000e+00
+
+
+float func_28() {
+  #pragma STDC FENV_ACCESS ON
+  return __builtin_expf(__builtin_inff());
+}
+// CHECK-LABEL: @func_28
+// CHECK: ret float +inf
+
+
+float func_29() {
+  #pragma STDC FENV_ACCESS ON
+  return __builtin_expf(-__builtin_inff());
+}
+// CHECK-LABEL: @func_29
+// CHECK: ret float 0.000000e+00
+
+

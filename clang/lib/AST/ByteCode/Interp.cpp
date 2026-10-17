@@ -1274,38 +1274,49 @@ bool CheckThis(InterpState &S, CodePtr OpPC) {
 
 bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
                       FPOptions FPO) {
-  // In a constant context, assume that any dynamic rounding mode or FP
-  // exception state matches the default floating-point environment.
+  // In a constant context (including C++/C23 constexpr and C initializers for
+  // objects with static or thread storage duration), assume that any dynamic
+  // rounding mode or FP exception state matches the default floating-point
+  // environment (C23 F.8.2, F.8.4, F.8.5).
   if (S.inConstantContext())
     return true;
 
-  if ((Status & APFloat::opInexact) &&
+  // The output result is exact and no exceptions are raised.
+  if (Status == APFloat::opOK)
+    return true;
+
+  // If the result is inexact, it depends on the rounding mode. If the requested
+  // mode is dynamic, compile-time evaluation cannot be performed.
+  // Floating-point exceptions other than "inexact" (e.g. exact infinities from
+  // division by zero) do not depend on the rounding mode and are not suppressed
+  // here.
+  if ((Status & APFloat::opStatus::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
-    // Inexact result means that it depends on rounding mode. If the requested
-    // mode is dynamic, the evaluation cannot be made in compile time.
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
     return false;
   }
 
-  if ((Status != APFloat::opOK) &&
-      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
-       FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
-       FPO.getAllowFEnvAccess())) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
-    return false;
-  }
+  // Note: We do not check MathErrno here. This function is called for all
+  // floating-point operations, including basic arithmetic operators
+  // (+, -, *, /) and casts, which never set errno. In addition, -fmath-errno
+  // is enabled by default on POSIX systems, so checking MathErrno here would
+  // incorrectly prevent constant folding of basic arithmetic expressions.
+  // Setting errno is specific to C standard library math functions (and varies
+  // by function: range errors, pole errors, domain errors), so MathErrno
+  // checks are handled by the math builtin evaluators directly.
 
-  if ((Status & APFloat::opStatus::opInvalidOp) &&
-      FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    // There is no usefully definable result.
-    S.FFDiag(E);
-    return false;
-  }
+  // No fenv access and floating point exceptions are ignored, so it is safe to
+  // perform compile-time evaluation.
+  if (!FPO.getAllowFEnvAccess() &&
+      FPO.getExceptionMode() == LangOptions::FPE_Ignore)
+    return true;
 
-  return true;
+  // Some floating point exception is raised and the FP mode is strict,
+  // exceptions may be trapped, or FENV access is enabled.
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+  return false;
 }
 
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,

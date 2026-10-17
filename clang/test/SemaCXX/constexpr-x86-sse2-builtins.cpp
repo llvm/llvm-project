@@ -14,7 +14,7 @@ constexpr __m128 a = { 0.0f, 1.0f, 2.0f, 3.0f };
 constexpr __m128d b = { 1.0000000000000002, 0.0 };
 constexpr __m128 r = _mm_cvtsd_ss(a, b);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@emmintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@emmintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_cvtsd_ss({0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00}, {1.000000e+00, 0.000000e+00})'}}
 }
 namespace Inf {
@@ -38,7 +38,7 @@ constexpr __m128 a = { 0.0f, 1.0f, 2.0f, 3.0f };
 constexpr __m128d b = { 1e-310, 0.0 };
 constexpr __m128 r = _mm_cvtsd_ss(a, b);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@emmintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@emmintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_cvtsd_ss({0.000000e+00, 1.000000e+00, 2.000000e+00, 3.000000e+00}, {1.000000e-310, 0.000000e+00})'}}
 }
 }
@@ -52,7 +52,7 @@ namespace Inexact {
 constexpr __m128d a = { 1.0000000000000002, 0.0 };
 constexpr __m128 r = _mm_cvtpd_ps(a);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@emmintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@emmintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_cvtpd_ps({1.000000e+00, 0.000000e+00})'}}
 }
 namespace Inf {
@@ -73,7 +73,7 @@ namespace Subnormal {
 constexpr __m128d a = { 1e-310, 0.0 };
 constexpr __m128 r = _mm_cvtpd_ps(a);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@emmintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@emmintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_cvtpd_ps({1.000000e-310, 0.000000e+00})'}}
 }
 }
