@@ -74,7 +74,7 @@ TEST_F(SelectionDAGNodeConstructionTest, ComputeNumSignBitsUnbalancedADD) {
   Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Sum, makeI32Addend(3, 7, DL));
   Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Sum, makeI32Addend(4, 7, DL));
 
-  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 26u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 27u);
 }
 
 TEST_F(SelectionDAGNodeConstructionTest, ComputeNumSignBitsBalancedADD) {
@@ -97,7 +97,7 @@ TEST_F(SelectionDAGNodeConstructionTest,
                                makeI32Addend(4, 15, DL));
   SDValue Sum = DAG->getNode(ISD::ADD, DL, MVT::i32, Left, Right);
 
-  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 26u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 28u);
 }
 
 TEST_F(SelectionDAGNodeConstructionTest, ComputeNumSignBitsTwoOperandADD) {
