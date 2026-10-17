@@ -152,10 +152,15 @@ public:
   /// single division operation as
   ///
   ///     a ceildiv b =
-  ///         let negative = a <= 0 in
-  ///         let absolute = negative ? -a : a - 1 in
-  ///         let quotient = absolute / b in
-  ///             negative ? -quotient : quotient + 1
+  ///         let quotient = a / b in
+  ///             a > quotient * b ? quotient + 1 : quotient
+  ///
+  /// Signed division rounds towards zero, so it already rounds up whenever the
+  /// exact quotient is negative. `quotient * b` is `a` minus the remainder, so
+  /// a positive divisor, which affine ceildiv requires, makes the comparison
+  /// hold exactly when the division is inexact and the exact quotient is
+  /// positive. Unlike the arith.ceildivsi expansion, no sign comparison is
+  /// needed.
   ///
   /// Note: not using arith.ceildivsi for the same reason as explained in the
   /// visitFloorDivExpr comment.
@@ -170,21 +175,15 @@ public:
     auto rhs = visit(expr.getRHS());
     assert(lhs && rhs && "unexpected affine expr lowering failure");
 
-    Value zeroCst = arith::ConstantIndexOp::create(builder, loc, 0);
     Value oneCst = arith::ConstantIndexOp::create(builder, loc, 1);
-    Value nonPositive = arith::CmpIOp::create(
-        builder, loc, arith::CmpIPredicate::sle, lhs, zeroCst);
-    Value negated = arith::SubIOp::create(builder, loc, zeroCst, lhs);
-    Value decremented = arith::SubIOp::create(builder, loc, lhs, oneCst);
-    Value dividend = arith::SelectOp::create(builder, loc, nonPositive, negated,
-                                             decremented);
-    Value quotient = arith::DivSIOp::create(builder, loc, dividend, rhs);
-    Value negatedQuotient =
-        arith::SubIOp::create(builder, loc, zeroCst, quotient);
+    Value quotient = arith::DivSIOp::create(builder, loc, lhs, rhs);
+    Value product = arith::MulIOp::create(builder, loc, quotient, rhs);
+    Value roundUp = arith::CmpIOp::create(
+        builder, loc, arith::CmpIPredicate::sgt, lhs, product);
     Value incrementedQuotient =
         arith::AddIOp::create(builder, loc, quotient, oneCst);
-    Value result = arith::SelectOp::create(
-        builder, loc, nonPositive, negatedQuotient, incrementedQuotient);
+    Value result = arith::SelectOp::create(builder, loc, roundUp,
+                                           incrementedQuotient, quotient);
     return result;
   }
 
