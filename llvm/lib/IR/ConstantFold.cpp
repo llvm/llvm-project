@@ -1194,6 +1194,35 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     default:
       break;
     }
+    Constant *C = C1, *K = C2;
+    CmpInst::Predicate Pred = Predicate;
+    if (!K->isNullValue() && !K->isAllOnesValue()) {
+      std::swap(C, K);
+      Pred = CmpInst::getSwappedPredicate(Pred);
+    }
+
+    if (K->isNullValue() || K->isAllOnesValue()) {
+      bool KTrue = K->isAllOnesValue();
+      auto NotC = [&] {
+        return ConstantExpr::getXor(C, Constant::getAllOnesValue(C->getType()));
+      };
+      switch (Pred) {
+      case ICmpInst::ICMP_SLT:
+      case ICmpInst::ICMP_UGT:
+        return KTrue ? Constant::getNullValue(ResultTy) : C;
+      case ICmpInst::ICMP_SGE:
+      case ICmpInst::ICMP_ULE:
+        return KTrue ? Constant::getAllOnesValue(ResultTy) : NotC();
+      case ICmpInst::ICMP_ULT:
+      case ICmpInst::ICMP_SGT:
+        return KTrue ? NotC() : Constant::getNullValue(ResultTy);
+      case ICmpInst::ICMP_UGE:
+      case ICmpInst::ICMP_SLE:
+        return KTrue ? C : Constant::getAllOnesValue(ResultTy);
+      default:
+        break;
+      }
+    }
   }
 
   if (isa<ConstantInt>(C1) && isa<ConstantInt>(C2)) {
