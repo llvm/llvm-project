@@ -368,14 +368,21 @@ def MOVIF32       : SHPseudo<(outs FR32:$dst), (ins f32imm:$src),
 // Conversion
 //===--------------------------------------------------------------------------===//
 
-def F32TOI32 : SHPseudo<(outs GPR:$dst), (ins FR32:$src),
-                             "! F32TOI32 $src, $dst",
-                             []>;
+def FTOI            : SHPseudo<(outs GPR:$dst), (ins FR32:$src),
+                               "! FTOI $src, $dst",
+                               []>;
 
-def I32TOF32 : SHPseudo<(outs FR32:$dst), (ins GPR:$src),
-                             "! I32TOF32 $src, $dst",
-                             []>;
+def ITOF            : SHPseudo<(outs FR32:$dst), (ins GPR:$src),
+                               "! ITOF $src, $dst",
+                               []>;
 
+def FTOIBITS        : SHPseudo<(outs GPR:$dst), (ins FR32:$src),
+                               "! FTOIBITS $src, $dst",
+                               []>;
+
+def ITOFBITS    : SHPseudo<(outs FR32:$dst), (ins GPR:$src),
+                               "! ITOFBITS $src, $dst",
+                               []>;
 
 
 
@@ -398,8 +405,10 @@ def SelectF32   : SHSelectPseudo<(outs FR32:$dst),
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 
-def : Pat<(i32 (fp_to_sint (f32  FR32:$src))),  (F32TOI32  FR32:$src)>;
-def : Pat<(f32 (sint_to_fp (i32   GPR:$src))),  (I32TOF32   GPR:$src)>;
+def : Pat<(i32 (fp_to_sint (f32  FR32:$src))),  (FTOI       FR32:$src)>;
+def : Pat<(f32 (sint_to_fp (i32   GPR:$src))),  (ITOF       GPR:$src)>;
+def : Pat<(i32 (bitconvert (f32  FR32:$src))),  (FTOIBITS   FR32:$src)>;
+def : Pat<(f32 (bitconvert (i32   GPR:$src))),  (ITOFBITS   GPR:$src)>;
 
 //===--------------------------------------------------------------------------===//
 // Loads
