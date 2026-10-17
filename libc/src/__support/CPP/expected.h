@@ -16,6 +16,7 @@
 
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -47,9 +48,21 @@ public:
 
   LIBC_INLINE constexpr bool has_value() const { return is_expected; }
 
-  LIBC_INLINE constexpr T &value() { return exp; }
+  LIBC_INLINE constexpr T &value() {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+    return exp;
+  }
   LIBC_INLINE constexpr E &error() { return unexp; }
-  LIBC_INLINE constexpr const T &value() const { return exp; }
+  LIBC_INLINE constexpr const T &value() const {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+    return exp;
+  }
   LIBC_INLINE constexpr const E &error() const { return unexp; }
 
   LIBC_INLINE constexpr explicit operator bool() const { return is_expected; }
@@ -74,7 +87,12 @@ public:
 
   LIBC_INLINE constexpr bool has_value() const { return is_expected; }
 
-  LIBC_INLINE constexpr void value() const {}
+  LIBC_INLINE constexpr void value() const {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!is_expected))
+      __builtin_trap();
+#endif
+  }
   LIBC_INLINE constexpr E &error() { return unexp; }
   LIBC_INLINE constexpr const E &error() const { return unexp; }
 

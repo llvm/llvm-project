@@ -170,3 +170,19 @@ static_assert(!LIBC_NAMESPACE::cpp::is_convertible_v<expected<int, long>, bool>,
 static_assert(
     !LIBC_NAMESPACE::cpp::is_convertible_v<expected<void, long>, bool>,
     "only explicit conversions allowed");
+
+#ifndef NDEBUG
+TEST(LlvmLibcExpectedTest, BadExpectedAccessDeath) {
+  expected<int, int> u(unexpected(404));
+  ASSERT_DEATH([&] { u.value(); }, WITH_SIGNAL(-1));
+
+  const expected<int, int> CU(unexpected(500));
+  ASSERT_DEATH([&] { CU.value(); }, WITH_SIGNAL(-1));
+
+  expected<void, int> vu(unexpected(404));
+  ASSERT_DEATH([&] { vu.value(); }, WITH_SIGNAL(-1));
+
+  const expected<void, int> CVU(unexpected(500));
+  ASSERT_DEATH([&] { CVU.value(); }, WITH_SIGNAL(-1));
+}
+#endif // NDEBUG

@@ -99,3 +99,15 @@ TEST(LlvmLibcOptionalTest, ValueOr) {
   optional<long> opt_long_full(100L);
   EXPECT_EQ(opt_long_full.value_or(42), 100L);
 }
+
+#ifndef NDEBUG
+TEST(LlvmLibcOptionalTest, BadOptionalAccessDeath) {
+  optional<int> opt_empty;
+  ASSERT_DEATH([&] { opt_empty.value(); }, WITH_SIGNAL(-1));
+
+  const optional<int> OPT_CONST_EMPTY;
+  ASSERT_DEATH([&] { OPT_CONST_EMPTY.value(); }, WITH_SIGNAL(-1));
+
+  ASSERT_DEATH([] { optional<int>().value(); }, WITH_SIGNAL(-1));
+}
+#endif // NDEBUG
