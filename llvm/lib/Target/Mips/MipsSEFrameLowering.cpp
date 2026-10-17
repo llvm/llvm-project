@@ -804,8 +804,6 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
   unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
   unsigned FP = ABI.GetFramePtr();
@@ -819,6 +817,13 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Mark $s7 as used if function has dedicated base pointer.
   if (hasBP(MF))
     setAliasRegs(MF, SavedRegs, BP);
+}
+
+void MipsSEFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
+  MipsABIInfo ABI = STI.getABI();
 
   // Create spill slots for eh data registers if function calls eh_return.
   if (MipsFI->callsEhReturn())
