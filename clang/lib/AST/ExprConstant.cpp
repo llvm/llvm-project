@@ -15582,6 +15582,8 @@ public:
     return true;
   }
 
+  bool ZeroInitialization(const Expr *E);
+
   bool VisitCastExpr(const CastExpr *E);
   bool VisitInitListExpr(const InitListExpr *E);
 };
@@ -15591,6 +15593,20 @@ static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info) {
   assert(E->isPRValue() && E->getType()->isConstantMatrixType() &&
          "not a matrix prvalue");
   return MatrixExprEvaluator(Info, Result).Visit(E);
+}
+
+bool MatrixExprEvaluator::ZeroInitialization(const Expr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  QualType EltTy = MT->getElementType();
+  APValue ZeroElement;
+  if (EltTy->isIntegerType())
+    ZeroElement = APValue(Info.Ctx.MakeIntValue(0, EltTy));
+  else
+    ZeroElement =
+        APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(EltTy)));
+
+  SmallVector<APValue, 16> Elements(MT->getNumElementsFlattened(), ZeroElement);
+  return Success(Elements, E);
 }
 
 bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
@@ -15640,6 +15656,9 @@ bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
 bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   const auto *MT = E->getType()->castAs<ConstantMatrixType>();
   QualType EltTy = MT->getElementType();
+
+  if (E->getNumInits() == 0)
+    return ZeroInitialization(E);
 
   assert(E->getNumInits() == MT->getNumElementsFlattened() &&
          "Expected number of elements in initializer list to match the number "

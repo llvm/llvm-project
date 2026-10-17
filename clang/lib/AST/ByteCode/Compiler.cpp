@@ -2661,7 +2661,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
   if (const auto *MT = QT->getAs<ConstantMatrixType>()) {
     unsigned NumElems = MT->getNumElementsFlattened();
-    assert(Inits.size() == NumElems);
+    assert(Inits.empty() || Inits.size() == NumElems);
 
     QualType ElemQT = MT->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
@@ -2670,8 +2670,12 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     // the matrix APValue convention and therefore no index remapping is
     // required.
     for (unsigned I = 0; I != NumElems; ++I) {
-      if (!this->visit(Inits[I]))
+      if (Inits.empty()) {
+        if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+          return false;
+      } else if (!this->visit(Inits[I])) {
         return false;
+      }
       if (!this->emitInitElem(ElemT, I, E))
         return false;
     }
@@ -4202,7 +4206,8 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
   if (OptPrimType T = classify(Ty))
     return this->visitZeroInitializer(*T, Ty, E);
 
-  if (Ty->isAnyComplexType() || Ty->isVectorType()) {
+  if (Ty->isAnyComplexType() || Ty->isVectorType() ||
+      Ty->isConstantMatrixType()) {
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
@@ -4216,6 +4221,9 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
     if (const auto *CT = Ty->getAs<ComplexType>()) {
       NumElems = 2;
       ElemQT = CT->getElementType();
+    } else if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+      NumElems = MT->getNumElementsFlattened();
+      ElemQT = MT->getElementType();
     } else {
       const auto *VT = Ty->castAs<VectorType>();
       NumElems = VT->getNumElements();

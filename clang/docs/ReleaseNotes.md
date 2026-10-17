@@ -1076,6 +1076,8 @@ features cannot lower the translation-unit ABI level;
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
 - Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
+- Fixed a crash when the constant evaluator initialized a `matrix_type`
+  variable with an empty initializer list, such as `m{}`. (#GH232999)
 
 ### OpenACC Specific Changes
 
