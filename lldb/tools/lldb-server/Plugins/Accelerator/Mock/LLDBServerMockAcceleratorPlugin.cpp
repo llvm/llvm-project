@@ -31,7 +31,7 @@ using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
 
 // Read a mock-accelerator setting from an environment variable so tests can
-// configure the connection the mock advertises; falls back to default_value.
+// configure the mock; falls back to default_value.
 static std::string GetMockEnvSetting(const char *env_var,
                                      std::string default_value) {
   if (const char *value = ::getenv(env_var))
@@ -150,12 +150,19 @@ std::optional<AcceleratorConnectionInfo>
 LLDBServerMockAcceleratorPlugin::CreateConnection() {
   Log *log = GetLog(GDBRLog::Plugin);
 
+  std::string triple =
+      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_TRIPLE",
+                        HostInfo::GetArchitecture().GetTriple().str());
+  std::string dynamic_loader_library_path = GetMockEnvSetting(
+      "LLDB_MOCK_ACCELERATOR_LIBRARY_PATH", "/path/to/lib.so");
+
   // An in-process gdb-remote server backed by a synthetic
   // ProcessMockAccelerator; no real process is launched.
-  m_process_manager_up =
-      std::make_unique<ProcessMockAccelerator::Manager>(m_mock_main_loop);
+  m_process_manager_up = std::make_unique<ProcessMockAccelerator::Manager>(
+      m_mock_main_loop, ArchSpec(triple), dynamic_loader_library_path);
   m_accelerator_gdb_server = std::make_unique<GDBRemoteCommunicationServerLLGS>(
       m_mock_main_loop, *m_process_manager_up);
+  m_accelerator_gdb_server->SetConnectionAcceleratorPlugin(*this);
 
   // LLGS creates its current process from a launch; the manager ignores the
   // path but requires a non-empty argument list.
@@ -214,9 +221,7 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
   // invalid-platform and incompatible-triple failures.
   info.platform_name =
       GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_PLATFORM", "host");
-  info.triple =
-      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_TRIPLE",
-                        HostInfo::GetArchitecture().GetTriple().str());
+  info.triple = std::move(triple);
   info.synchronous = true;
   return info;
 }
