@@ -335,7 +335,7 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
     return CC_AArch64_Win64_CFGuard_Check;
   if (Subtarget->isTargetDarwin())
     return CC_AArch64_DarwinPCS;
-  if (Subtarget->isTargetWindows())
+  if (Subtarget->isTargetWindowsOrUEFI())
     return CC_AArch64_Win64PCS;
   return CC_AArch64_AAPCS;
 }

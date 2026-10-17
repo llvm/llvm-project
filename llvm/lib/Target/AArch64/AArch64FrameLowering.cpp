@@ -346,12 +346,11 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  // TODO: Should this include targets like UEFI (which use Windows CFI)?
-  // Note: Currently, there is not AArch64 support for UEFI. The value returned
-  // here must align with the predicate used for returning the list of callee
-  // saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
-  // invalidateWindowsRegisterPairing() where appropriate.
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+  // Note: UEFI follows the Windows ARM64 ABI and uses Windows CFI. The value
+  // returned here must align with the predicate used for returning the list of
+  // callee saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we
+  // use invalidateWindowsRegisterPairing() where appropriate.
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindowsOrUEFI();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
@@ -600,7 +599,7 @@ bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
 
   // These OSes require the frame chain is valid, even if the current frame does
   // not use a frame pointer.
-  if (TT.isOSDarwin() || TT.isOSWindows())
+  if (TT.isOSDarwin() || TT.isOSWindowsOrUEFI())
     return true;
 
   // If the function has a frame pointer, it is reserved.
@@ -2629,7 +2628,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
-      !Subtarget.isTargetWindows()) {
+      !Subtarget.isTargetWindowsOrUEFI()) {
     // For Windows calling convention on a non-windows OS, where X18 is treated
     // as reserved, back up X18 when entering non-windows code (marked with the
     // Windows calling convention) and restore when returning regardless of

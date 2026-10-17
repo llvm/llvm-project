@@ -1,6 +1,7 @@
 ;; Testing that nest uses x15 on all calling conventions (except Arm64EC)
 
 ; RUN: llc < %s -mtriple=aarch64-pc-windows-msvc | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-unknown-uefi | FileCheck %s
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=aarch64-apple-darwin- | FileCheck %s
 
