@@ -9,6 +9,7 @@
 #include "llvm/DWARFCFIChecker/DWARFCFIAnalysis.h"
 #include "Registers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -19,14 +20,17 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSemExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include <optional>
 
 using namespace llvm;
@@ -51,6 +55,92 @@ getCFARegOffsetInfo(const dwarf::UnwindRow &UnwindRow) {
     return std::nullopt;
 
   return CFARegOffsetInfo(CFALocation.getRegister(), CFALocation.getOffset());
+}
+
+/// Returns the DWARF number of \p Reg. Sub-registers are rejected, because the
+/// analysis tracks super-registers and a sub-register only holds part of the
+/// value.
+static std::optional<DWARFRegNum> getDWARFSuperReg(const MCRegisterInfo *MCRI,
+                                                   MCRegister Reg, bool IsEH) {
+  if (!Reg.isValid() || !isSuperReg(MCRI, Reg))
+    return std::nullopt;
+  int DWARFReg = MCRI->getDwarfRegNum(Reg, IsEH);
+  if (DWARFReg < 0)
+    return std::nullopt;
+  return DWARFReg;
+}
+
+/// Matches an address of the form `Reg + Offset`.
+static std::optional<CFARegOffsetInfo>
+getRegPlusOffset(const MCRegisterInfo *MCRI, const MCSemAddrExpr &Expr,
+                 bool IsEH) {
+  if (Expr.isConstant() || Expr.getScale() != 1)
+    return std::nullopt;
+  auto MaybeReg = getDWARFSuperReg(MCRI, Expr.getReg(), IsEH);
+  if (!MaybeReg)
+    return std::nullopt;
+  return CFARegOffsetInfo(*MaybeReg, Expr.getOffset());
+}
+
+/// Matches a value of the form `Reg + Offset`.
+static std::optional<CFARegOffsetInfo>
+getRegPlusOffset(const MCRegisterInfo *MCRI, const MCSemExpr &Expr, bool IsEH) {
+  if (Expr.isConstant() || Expr.getScale() != 1 || !Expr.getLeaf().isReg())
+    return std::nullopt;
+  auto MaybeReg = getDWARFSuperReg(MCRI, Expr.getLeaf().getReg(), IsEH);
+  if (!MaybeReg)
+    return std::nullopt;
+  return CFARegOffsetInfo(*MaybeReg, Expr.getOffset());
+}
+
+/// Matches a plain load `mem[Reg + Offset]` and returns its address.
+static std::optional<CFARegOffsetInfo>
+getLoadAddress(const MCRegisterInfo *MCRI, const MCSemExpr &Expr, bool IsEH) {
+  if (Expr.isConstant() || Expr.getScale() != 1 || Expr.getOffset() != 0 ||
+      !Expr.getLeaf().isMem())
+    return std::nullopt;
+  return getRegPlusOffset(MCRI, Expr.getLeaf().getAddr(), IsEH);
+}
+
+/// Returns the register that holds the caller's value of \p Reg: \p Reg
+/// itself for `same_value`, or the other register for `register`.
+static std::optional<DWARFRegNum>
+getCallerValueReg(const dwarf::UnwindLocation &Loc, DWARFRegNum Reg) {
+  switch (Loc.getLocation()) {
+  case dwarf::UnwindLocation::Location::Same:
+    return Reg;
+  case dwarf::UnwindLocation::Location::RegPlusOffset:
+    if (!Loc.getDereference() && Loc.getOffset() == 0 && !Loc.hasAddressSpace())
+      return Loc.getRegister();
+    return std::nullopt;
+  default:
+    return std::nullopt;
+  }
+}
+
+/// The rule for \p Reg when its caller's value is held in \p ValueReg.
+static dwarf::UnwindLocation getRegisterRule(DWARFRegNum Reg,
+                                             DWARFRegNum ValueReg) {
+  if (Reg == ValueReg)
+    return dwarf::UnwindLocation::createSame();
+  return dwarf::UnwindLocation::createIsRegisterPlusOffset(ValueReg, 0);
+}
+
+/// Returns true if the two rules only differ in their offset, for example
+/// `CFA + 8` and `CFA + 16`.
+static bool isStructurallySimilar(const dwarf::UnwindLocation &LHS,
+                                  const dwarf::UnwindLocation &RHS) {
+  if (LHS.getLocation() != RHS.getLocation() ||
+      LHS.getDereference() != RHS.getDereference())
+    return false;
+  switch (LHS.getLocation()) {
+  case dwarf::UnwindLocation::Location::CFAPlusOffset:
+    return true;
+  case dwarf::UnwindLocation::Location::RegPlusOffset:
+    return LHS.getRegister() == RHS.getRegister();
+  default:
+    return false;
+  }
 }
 
 static SmallSet<DWARFRegNum, 4>
@@ -81,9 +171,9 @@ getUnwindRuleRegSet(const dwarf::UnwindRow &UnwindRow, DWARFRegNum Reg) {
 }
 
 DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
-                                   bool IsEH,
+                                   const MCInstrAnalysis *MCIA, bool IsEH,
                                    ArrayRef<MCCFIInstruction> Prologue)
-    : State(Context), Context(Context), MCII(MCII),
+    : State(Context), Context(Context), MCII(MCII), MCIA(MCIA),
       MCRI(Context->getRegisterInfo()), IsEH(IsEH) {
 
   for (auto LLVMReg : getTrackingRegs(MCRI)) {
@@ -151,6 +241,19 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
   }
 }
 
+std::optional<MCSemExpr> DWARFCFIAnalysis::getDefinedValue(
+    const MCInst &Inst, DWARFRegNum Reg,
+    const SmallSet<DWARFRegNum, 4> &Writes) const {
+  // The semantics can be incomplete, so `Writes` stays the source of truth for
+  // which registers are modified. Only ask about those.
+  if (!MCIA || !Writes.count(Reg))
+    return std::nullopt;
+  auto MaybeLLVMReg = MCRI->getLLVMRegNum(Reg, IsEH);
+  if (!MaybeLLVMReg)
+    return std::nullopt;
+  return MCIA->evaluateDefinedValue(Inst, *MaybeLLVMReg);
+}
+
 void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
                                     const dwarf::UnwindRow &PrevRow,
                                     const dwarf::UnwindRow &NextRow,
@@ -180,6 +283,83 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
     return;
   }
   const char *RegName = MCRI->getName(*MaybeLLVMReg);
+
+  // Abstract execution. Collect the rules that are valid for the register
+  // after this instruction. Everything, including the CFA, is read from the
+  // state before the instruction.
+  SmallVector<dwarf::UnwindLocation> PossibleNextLocs;
+  auto MaybePrevCFA = getCFARegOffsetInfo(PrevRow);
+  if (auto MaybeValueReg = getCallerValueReg(PrevLoc, Reg)) {
+    // The caller's value is in a register.
+    DWARFRegNum ValueReg = *MaybeValueReg;
+
+    if (!Writes.count(ValueReg))
+      PossibleNextLocs.push_back(PrevLoc);
+
+    // Spill: if `ValueReg` is stored at `CFAReg + N`, the caller's value is now
+    // at `CFA + (N - CFAOffset)`.
+    if (MCIA && MaybePrevCFA) {
+      auto StoreAddrs = MCIA->evaluateStoreAddress(Inst);
+      auto StoredValues = MCIA->getStoredValue(Inst);
+      if (StoreAddrs.size() == StoredValues.size()) {
+        for (auto &&[Addr, Value] : zip_equal(StoreAddrs, StoredValues)) {
+          auto MaybeAddr = getRegPlusOffset(MCRI, Addr, IsEH);
+          auto MaybeValue = getRegPlusOffset(MCRI, Value, IsEH);
+          if (!MaybeAddr || !MaybeValue ||
+              MaybeAddr->Reg != MaybePrevCFA->Reg ||
+              MaybeValue->Reg != ValueReg || MaybeValue->Offset != 0)
+            continue;
+          int64_t SlotOffset = MaybeAddr->Offset - MaybePrevCFA->Offset;
+          if (isInt<32>(SlotOffset))
+            PossibleNextLocs.push_back(
+                dwarf::UnwindLocation::createAtCFAPlusOffset(SlotOffset));
+        }
+      }
+    }
+
+    // Copy: `ValueReg` is moved to another register.
+    for (DWARFRegNum DefReg : Writes)
+      if (auto MaybeDefValue = getDefinedValue(Inst, DefReg, Writes))
+        if (auto MaybeDef = getRegPlusOffset(MCRI, *MaybeDefValue, IsEH);
+            MaybeDef && MaybeDef->Reg == ValueReg && MaybeDef->Offset == 0)
+          PossibleNextLocs.push_back(getRegisterRule(Reg, DefReg));
+  } else if (PrevLoc.getLocation() ==
+                 dwarf::UnwindLocation::Location::CFAPlusOffset &&
+             PrevLoc.getDereference()) {
+    // The caller's value is on the stack at `CFA + Offset`. Any store might
+    // overwrite it, since the list of stored addresses can be incomplete.
+    if (!MCII.get(Inst.getOpcode()).mayStore())
+      PossibleNextLocs.push_back(PrevLoc);
+
+    // Restore: the slot is loaded back into a register.
+    if (MaybePrevCFA)
+      for (DWARFRegNum DefReg : Writes)
+        if (auto MaybeDefValue = getDefinedValue(Inst, DefReg, Writes))
+          if (auto MaybeLoad = getLoadAddress(MCRI, *MaybeDefValue, IsEH);
+              MaybeLoad && MaybeLoad->Reg == MaybePrevCFA->Reg &&
+              MaybeLoad->Offset - MaybePrevCFA->Offset == PrevLoc.getOffset())
+            PossibleNextLocs.push_back(getRegisterRule(Reg, DefReg));
+  }
+
+  if (is_contained(PossibleNextLocs, NextLoc)) // Match
+    return;
+  // An unchanged rule that is not in the set may have been invalidated by the
+  // instruction. The fallback checks below report that.
+  if (!(PrevLoc == NextLoc)) {
+    for (auto &&PossibleNextLoc : PossibleNextLocs) {
+      if (!isStructurallySimilar(PossibleNextLoc, NextLoc))
+        continue;
+      Context->reportError(
+          Inst.getLoc(),
+          formatv("expected register {0} unwinding rule's offset to be {1}, "
+                  "but the CFI directives set it to {2}",
+                  RegName, PossibleNextLoc.getOffset(), NextLoc.getOffset()));
+      return;
+    }
+  }
+
+  // The abstract execution could not decide, so fall back to the checks based
+  // on the set of modified registers.
 
   // Each case is annotated with its corresponding number as described in
   // `llvm/include/llvm/DWARFCFIChecker/DWARFCFIAnalysis.h`.
@@ -277,6 +457,41 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
   auto MaybeLLVMNextReg = MCRI->getLLVMRegNum(NextCFA.Reg, IsEH);
   const char *NextCFARegName =
       MaybeLLVMNextReg ? MCRI->getName(*MaybeLLVMNextReg) : "";
+
+  // Abstract execution. Collect the CFA rules that are valid after this
+  // instruction, reading everything from the state before it.
+  SmallVector<CFARegOffsetInfo> PossibleNextCFAs;
+  if (!Writes.count(PrevCFA.Reg))
+    PossibleNextCFAs.push_back(PrevCFA);
+  // If `Reg := CFAReg + C`, then `CFA = CFAReg + Offset = Reg + (Offset - C)`.
+  // This covers push/pop on the stack pointer (Reg == CFAReg) and copying the
+  // stack pointer into the frame pointer.
+  for (DWARFRegNum DefReg : Writes)
+    if (auto MaybeDefValue = getDefinedValue(Inst, DefReg, Writes))
+      if (auto MaybeDef = getRegPlusOffset(MCRI, *MaybeDefValue, IsEH);
+          MaybeDef && MaybeDef->Reg == PrevCFA.Reg)
+        PossibleNextCFAs.emplace_back(DefReg,
+                                      PrevCFA.Offset - MaybeDef->Offset);
+
+  if (is_contained(PossibleNextCFAs, NextCFA)) // Match
+    return;
+  // An unchanged rule that is not in the set may have been invalidated by the
+  // instruction. The fallback checks below report that.
+  if (!(PrevCFA == NextCFA)) {
+    for (auto &&PossibleNextCFA : PossibleNextCFAs) {
+      if (PossibleNextCFA.Reg != NextCFA.Reg)
+        continue;
+      Context->reportError(
+          Inst.getLoc(),
+          formatv("expected CFA offset {0} from CFA register {1}, but the CFI "
+                  "directives set it to {2}",
+                  PossibleNextCFA.Offset, NextCFARegName, NextCFA.Offset));
+      return;
+    }
+  }
+
+  // The abstract execution could not decide, so fall back to the checks based
+  // on the set of modified registers.
 
   if (PrevCFA == NextCFA) {         // Case 1
     if (!Writes.count(PrevCFA.Reg)) // Case 1.a
