@@ -14,6 +14,9 @@
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_uread4)
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
 #if defined(__thumb__) && !defined(__thumb2__)
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         ldrb    r1, [r0]

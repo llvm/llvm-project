@@ -18,6 +18,9 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memcmp)
         bl      memcmp
         POP_PC_WITH_REGS r7
 #else
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         b       memcmp
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_memcmp)

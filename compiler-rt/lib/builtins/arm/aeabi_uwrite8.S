@@ -14,6 +14,9 @@
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_uwrite8)
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         strb    r0, [r2, #0]
         lsrs    r3, r0, #8
